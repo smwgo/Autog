@@ -186,7 +186,7 @@ export default function GerenciaDashboard() {
             <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 rounded-xl border border-red-100 dark:border-red-900/50">
               <div>
                 <p className="font-medium text-sm">Inventario Muerto</p>
-                <p className="text-xs">Sin movimiento > 6 meses</p>
+                <p className="text-xs">Sin movimiento &gt; 6 meses</p>
               </div>
               <p className="font-bold">$12,450.00</p>
             </div>
