@@ -1,10 +1,437 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
+model User {
+  id            String          @id @default(cuid())
+  email         String          @unique
+  password      String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  isActive      Boolean         @default(true)
+  lastLogin     DateTime?
+  location      Location        @default(PRINCIPAL)
+  name          String?
+  username      String          @unique
+  role          Role            @default(POS)
+  auditLogs     AuditLog[]
+  notifications Notification[]
+  permissions   Permission?
+  purchases     PurchaseOrder[]
+  timeEntries   TimeEntry[]
+  vehicles      Vehicle[]
+  assignedTasks WorkOrderTask[]
+}
+
+model Permission {
+  id                     String  @id @default(cuid())
+  userId                 String  @unique
+  canRead                Boolean @default(true)
+  canCreate              Boolean @default(false)
+  canEdit                Boolean @default(false)
+  canDelete              Boolean @default(false)
+  canApprove             Boolean @default(false)
+  canBill                Boolean @default(false)
+  canCloseRegister       Boolean @default(false)
+  canManageInventory     Boolean @default(false)
+  canManagePurchases     Boolean @default(false)
+  canViewReports         Boolean @default(false)
+  canManageCrossLocation Boolean @default(false)
+  canModifyPrices        Boolean @default(false)
+  user                   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String
+  location   Location
+  entityName String
+  entityId   String
+  oldValue   String?
+  newValue   String?
+  device     String?
+  ipAddress  String?
+  syncStatus String   @default("ONLINE")
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model Client {
+  id           String        @id @default(cuid())
+  name         String
+  phone        String?
+  email        String?       @unique
+  address      String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  documentId   String?       @unique
+  appointments Appointment[]
+  orders       Order[]
+  quotes       Quote[]
+  vehicles     Vehicle[]
+}
+
+model Vehicle {
+  id           String           @id @default(cuid())
+  plate        String           @unique
+  brand        String
+  model        String
+  vin          String?
+  color        String?
+  notes        String?
+  clientId     String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  mileage      Int?
+  engine       String?
+  fuel         String?
+  photoUrl     String?
+  transmission String?
+  userId       String?
+  version      String?
+  year         Int
+  appointments Appointment[]
+  orders       Order[]
+  quotes       Quote[]
+  services     ServiceHistory[]
+  client       Client           @relation(fields: [clientId], references: [id])
+  user         User?            @relation(fields: [userId], references: [id])
+  workOrders   WorkOrder[]
+}
+
+model Product {
+  id              String                 @id @default(cuid())
+  name            String
+  code            String?
+  category        String
+  minStock        Int                    @default(0)
+  price           Float
+  status          String                 @default("ACTIVE")
+  brand           String
+  description     String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  internalCost    Float
+  photoUrl        String?
+  providerId      String?
+  sku             String                 @unique
+  stockPrincipal  Int                    @default(0)
+  stockSucursal   Int                    @default(0)
+  warranty        String?
+  orderItems      OrderItem[]
+  provider        Provider?              @relation(fields: [providerId], references: [id])
+  compatibilities ProductCompatibility[]
+  quoteItems      QuoteItem[]
+  workOrderTasks  WorkOrderTask[]
+}
+
+model ProductCompatibility {
+  id        String  @id @default(cuid())
+  productId String
+  brand     String?
+  model     String?
+  year      Int?
+  version   String?
+  engine    String?
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Appointment {
+  id           String   @id @default(cuid())
+  date         DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  time         String
+  status       String   @default("SOLICITADO")
+  assignedTech String?
+  clientId     String
+  description  String
+  origin       Origin   @default(PRINCIPAL)
+  serviceType  String
+  vehicleId    String
+  location     Location
+  client       Client   @relation(fields: [clientId], references: [id])
+  vehicle      Vehicle  @relation(fields: [vehicleId], references: [id])
+}
+
+model Quote {
+  id         String      @id @default(cuid())
+  clientId   String
+  vehicleId  String
+  location   Location
+  origin     Origin      @default(PRINCIPAL)
+  status     String      @default("DRAFT")
+  total      Float
+  subtotal   Float
+  tax        Float
+  discount   Float       @default(0)
+  validUntil DateTime?
+  notes      String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  client     Client      @relation(fields: [clientId], references: [id])
+  vehicle    Vehicle     @relation(fields: [vehicleId], references: [id])
+  items      QuoteItem[]
+  workOrder  WorkOrder?
+}
+
+model QuoteItem {
+  id          String   @id @default(cuid())
+  quoteId     String
+  type        String
+  productId   String?
+  description String
+  quantity    Int
+  unitPrice   Float
+  total       Float
+  product     Product? @relation(fields: [productId], references: [id])
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id            String       @id @default(cuid())
+  clientId      String
+  vehicleId     String?
+  workOrderId   String?      @unique
+  location      Location
+  origin        Origin       @default(PRINCIPAL)
+  status        String       @default("PENDING")
+  total         Float
+  subtotal      Float
+  tax           Float
+  discount      Float        @default(0)
+  paymentMethod String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  client        Client       @relation(fields: [clientId], references: [id])
+  vehicle       Vehicle?     @relation(fields: [vehicleId], references: [id])
+  workOrder     WorkOrder?   @relation(fields: [workOrderId], references: [id])
+  items         OrderItem[]
+  sriDocument   SriDocument?
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  type        String
+  productId   String?
+  description String
+  quantity    Int
+  unitPrice   Float
+  total       Float
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product? @relation(fields: [productId], references: [id])
+}
+
+model WorkOrder {
+  id              String              @id @default(cuid())
+  vehicleId       String
+  status          String              @default("RECIBIDOS")
+  notes           String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  location        Location
+  mileageIn       Int?
+  mileageOut      Int?
+  priority        String              @default("NORMAL")
+  quoteId         String?             @unique
+  reportedProblem String?
+  order           Order?
+  timeEntries     TimeEntry[]
+  inspections     VehicleInspection[]
+  quote           Quote?              @relation(fields: [quoteId], references: [id])
+  vehicle         Vehicle             @relation(fields: [vehicleId], references: [id])
+  tasks           WorkOrderTask[]
+}
+
+model WorkOrderTask {
+  id             String    @id @default(cuid())
+  workOrderId    String
+  type           String
+  description    String
+  status         String    @default("PENDING")
+  productId      String?
+  quantity       Int       @default(1)
+  assignedTechId String?
+  isAdditional   Boolean   @default(false)
+  isApproved     Boolean   @default(true)
+  nextMileage    Int?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  assignedTech   User?     @relation(fields: [assignedTechId], references: [id])
+  product        Product?  @relation(fields: [productId], references: [id])
+  workOrder      WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+}
+
+model VehicleInspection {
+  id           String    @id @default(cuid())
+  workOrderId  String
+  category     String
+  status       String
+  notes        String?
+  measurements String?
+  photoUrl     String?
+  createdAt    DateTime  @default(now())
+  workOrder    WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+}
+
+model TimeEntry {
+  id          String    @id @default(cuid())
+  workOrderId String
+  userId      String
+  action      String
+  timestamp   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id])
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+}
+
+model ServiceHistory {
+  id           String    @id @default(cuid())
+  vehicleId    String
+  type         String
+  description  String
+  date         DateTime
+  mileage      Int
+  cost         Float?
+  notes        String?
+  warrantyEnd  DateTime?
+  warrantyCond String?
+  createdAt    DateTime  @default(now())
+  vehicle      Vehicle   @relation(fields: [vehicleId], references: [id])
+}
+
+model Provider {
+  id          String          @id @default(cuid())
+  ruc         String          @unique
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  address     String?
+  balance     Float           @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  products    Product[]
+  purchases   PurchaseOrder[]
+}
+
+model PurchaseOrder {
+  id         String    @id @default(cuid())
+  providerId String
+  userId     String
+  location   Location
+  total      Float
+  status     String    @default("DRAFT")
+  dueDate    DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  provider   Provider  @relation(fields: [providerId], references: [id])
+  user       User      @relation(fields: [userId], references: [id])
+}
+
+model InventoryTransfer {
+  id           String   @id @default(cuid())
+  fromLocation Location
+  toLocation   Location
+  status       String   @default("REQUESTED")
+  requestedBy  String
+  approvedBy   String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model CashRegister {
+  id             String    @id @default(cuid())
+  location       Location
+  openedAt       DateTime  @default(now())
+  closedAt       DateTime?
+  openedBy       String
+  closedBy       String?
+  expectedAmount Float?
+  actualAmount   Float?
+  difference     Float?
+  status         String    @default("OPEN")
+}
+
+model SriDocument {
+  id             String    @id @default(cuid())
+  type           String
+  location       Location
+  accessKey      String    @unique
+  xmlUrl         String?
+  rideUrl        String?
+  status         String    @default("PENDING")
+  generationDate DateTime  @default(now())
+  sentDate       DateTime?
+  authDate       DateTime?
+  responseCode   String?
+  errorMessage   String?
+  userId         String
+  orderId        String?   @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  order          Order?    @relation(fields: [orderId], references: [id])
+}
+
+model CloudDocument {
+  id         String   @id @default(cuid())
+  name       String
+  category   String
+  url        String
+  sizeBytes  Int
+  mimeType   String
+  uploadedBy String
+  location   Location
+  createdAt  DateTime @default(now())
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String?
+  role      Role?
+  location  Location?
+  title     String
+  message   String
+  type      String
+  link      String?
+  isRead    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  user      User?     @relation(fields: [userId], references: [id])
+}
+
+model SyncQueueLog {
+  id          String    @id @default(cuid())
+  operation   String
+  entity      String
+  entityId    String
+  payload     String
+  userId      String
+  locationId  Location
+  status      String    @default("PENDING")
+  retryCount  Int       @default(0)
+  syncedAt    DateTime?
+  errorReason String?
+  createdAt   DateTime  @default(now())
+}
+
+model SyncConflict {
+  id         String   @id @default(cuid())
+  entity     String
+  entityId   String
+  userId     String
+  locationId Location
+  oldVersion String
+  newVersion String
+  resolved   Boolean  @default(false)
+  resolvedBy String?
+  createdAt  DateTime @default(now())
 }
 
 enum Role {
@@ -27,447 +454,4 @@ enum Origin {
   ONLINE
   PRINCIPAL
   SUCURSAL
-}
-
-model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  username      String    @unique
-  name          String?
-  password      String
-  role          Role      @default(POS)
-  location      Location  @default(PRINCIPAL)
-  isActive      Boolean   @default(true)
-  lastLogin     DateTime?
-  
-  permissions   Permission?
-  auditLogs     AuditLog[]
-  vehicles      Vehicle[]
-  purchases     PurchaseOrder[]
-  assignedTasks WorkOrderTask[]
-  timeEntries   TimeEntry[]
-  notifications Notification[]
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-}
-
-model Permission {
-  id              String  @id @default(cuid())
-  userId          String  @unique
-  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  canRead         Boolean @default(true)
-  canCreate       Boolean @default(false)
-  canEdit         Boolean @default(false)
-  canDelete       Boolean @default(false)
-  canApprove      Boolean @default(false)
-  canBill         Boolean @default(false)
-  canCloseRegister Boolean @default(false)
-  canManageInventory Boolean @default(false)
-  canManagePurchases Boolean @default(false)
-  canViewReports  Boolean @default(false)
-  canManageCrossLocation Boolean @default(false)
-  canModifyPrices Boolean @default(false)
-}
-
-model AuditLog {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id])
-  action          String
-  location        Location
-  entityName      String
-  entityId        String
-  oldValue        String?
-  newValue        String?
-  device          String?
-  ipAddress       String?
-  syncStatus      String   @default("ONLINE")
-  createdAt       DateTime @default(now())
-}
-
-model Client {
-  id           String   @id @default(cuid())
-  name         String
-  email        String?  @unique
-  phone        String?
-  documentId   String?  @unique
-  address      String?
-  vehicles     Vehicle[]
-  quotes       Quote[]
-  orders       Order[]
-  appointments Appointment[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
-model Vehicle {
-  id             String   @id @default(cuid())
-  clientId       String
-  client         Client   @relation(fields: [clientId], references: [id])
-  brand          String
-  model          String
-  year           Int
-  version        String?
-  engine         String?
-  transmission   String?
-  fuel           String?
-  plate          String   @unique
-  vin            String?
-  mileage        Int?
-  color          String?
-  photoUrl       String?
-  notes          String?
-  
-  userId         String?
-  user           User?    @relation(fields: [userId], references: [id])
-
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  services       ServiceHistory[]
-  quotes         Quote[]
-  appointments   Appointment[]
-  orders         Order[]
-  workOrders     WorkOrder[]
-}
-
-model Product {
-  id             String   @id @default(cuid())
-  name           String
-  sku            String   @unique
-  code           String?
-  brand          String
-  category       String
-  description    String?
-  photoUrl       String?
-  price          Float
-  internalCost   Float
-  stockPrincipal Int      @default(0)
-  stockSucursal  Int      @default(0)
-  minStock       Int      @default(0)
-  providerId     String?
-  provider       Provider? @relation(fields: [providerId], references: [id])
-  warranty       String?
-  status         String   @default("ACTIVE")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  compatibilities ProductCompatibility[]
-  orderItems     OrderItem[]
-  quoteItems     QuoteItem[]
-  workOrderTasks WorkOrderTask[]
-}
-
-model ProductCompatibility {
-  id           String  @id @default(cuid())
-  productId    String
-  product      Product @relation(fields: [productId], references: [id])
-  brand        String?
-  model        String?
-  year         Int?
-  version      String?
-  engine       String?
-}
-
-model Appointment {
-  id           String   @id @default(cuid())
-  clientId     String
-  client       Client   @relation(fields: [clientId], references: [id])
-  vehicleId    String
-  vehicle      Vehicle  @relation(fields: [vehicleId], references: [id])
-  location     Location
-  origin       Origin   @default(PRINCIPAL)
-  serviceType  String
-  date         DateTime
-  time         String
-  description  String
-  status       String   @default("SOLICITADO") 
-  assignedTech String?  
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
-model Quote {
-  id           String   @id @default(cuid())
-  clientId     String
-  client       Client   @relation(fields: [clientId], references: [id])
-  vehicleId    String
-  vehicle      Vehicle  @relation(fields: [vehicleId], references: [id])
-  location     Location
-  origin       Origin   @default(PRINCIPAL)
-  status       String   @default("DRAFT") 
-  total        Float
-  subtotal     Float
-  tax          Float
-  discount     Float    @default(0)
-  validUntil   DateTime?
-  notes        String?
-  items        QuoteItem[]
-  workOrder    WorkOrder?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
-model QuoteItem {
-  id           String   @id @default(cuid())
-  quoteId      String
-  quote        Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
-  type         String   
-  productId    String?
-  product      Product? @relation(fields: [productId], references: [id])
-  description  String
-  quantity     Int
-  unitPrice    Float    
-  total        Float
-}
-
-model Order {
-  id           String   @id @default(cuid())
-  clientId     String
-  client       Client   @relation(fields: [clientId], references: [id])
-  vehicleId    String?
-  vehicle      Vehicle? @relation(fields: [vehicleId], references: [id])
-  workOrderId  String?  @unique
-  workOrder    WorkOrder? @relation(fields: [workOrderId], references: [id])
-  location     Location
-  origin       Origin   @default(PRINCIPAL)
-  status       String   @default("PENDING") 
-  total        Float
-  subtotal     Float
-  tax          Float
-  discount     Float    @default(0)
-  paymentMethod String? 
-  items        OrderItem[]
-  sriDocument  SriDocument?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
-model OrderItem {
-  id           String   @id @default(cuid())
-  orderId      String
-  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  type         String   
-  productId    String?
-  product      Product? @relation(fields: [productId], references: [id])
-  description  String
-  quantity     Int
-  unitPrice    Float
-  total        Float
-}
-
-// ---------------- TALLER MODELS ----------------
-
-model WorkOrder {
-  id           String   @id @default(cuid())
-  quoteId      String?  @unique
-  quote        Quote?   @relation(fields: [quoteId], references: [id])
-  vehicleId    String
-  vehicle      Vehicle  @relation(fields: [vehicleId], references: [id])
-  location     Location
-  status       String   @default("RECIBIDOS") 
-  priority     String   @default("NORMAL")
-  reportedProblem String?
-  notes        String?
-  mileageIn    Int?
-  mileageOut   Int?
-  
-  order        Order?
-  tasks        WorkOrderTask[]
-  inspections  VehicleInspection[]
-  timeEntries  TimeEntry[]
-  
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
-model WorkOrderTask {
-  id           String   @id @default(cuid())
-  workOrderId  String
-  workOrder    WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-  type         String   
-  description  String
-  status       String   @default("PENDING") 
-  productId    String?
-  product      Product? @relation(fields: [productId], references: [id])
-  quantity     Int      @default(1)
-  
-  assignedTechId String?
-  assignedTech   User?   @relation(fields: [assignedTechId], references: [id])
-  
-  isAdditional Boolean  @default(false)
-  isApproved   Boolean  @default(true) 
-  
-  nextMileage  Int?
-  
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
-model VehicleInspection {
-  id           String   @id @default(cuid())
-  workOrderId  String
-  workOrder    WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-  category     String   
-  status       String   
-  notes        String?
-  measurements String?
-  photoUrl     String?
-  createdAt    DateTime @default(now())
-}
-
-model TimeEntry {
-  id           String   @id @default(cuid())
-  workOrderId  String
-  workOrder    WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-  userId       String
-  user         User      @relation(fields: [userId], references: [id])
-  action       String    
-  timestamp    DateTime  @default(now())
-}
-
-model ServiceHistory {
-  id           String   @id @default(cuid())
-  vehicleId    String
-  vehicle      Vehicle  @relation(fields: [vehicleId], references: [id])
-  type         String
-  description  String
-  date         DateTime
-  mileage      Int
-  cost         Float?   
-  notes        String?
-  warrantyEnd  DateTime?
-  warrantyCond String?
-  createdAt    DateTime @default(now())
-}
-
-// ---------------- OFICINA MODELS ----------------
-model Provider {
-  id          String    @id @default(cuid())
-  ruc         String    @unique
-  name        String
-  contactName String?
-  email       String?
-  phone       String?
-  address     String?
-  balance     Float     @default(0)
-  products    Product[]
-  purchases   PurchaseOrder[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model PurchaseOrder {
-  id          String   @id @default(cuid())
-  providerId  String
-  provider    Provider @relation(fields: [providerId], references: [id])
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  location    Location
-  total       Float
-  status      String   @default("DRAFT")
-  dueDate     DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model InventoryTransfer {
-  id            String   @id @default(cuid())
-  fromLocation  Location
-  toLocation    Location
-  status        String   @default("REQUESTED")
-  requestedBy   String
-  approvedBy    String?
-  notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-model CashRegister {
-  id              String   @id @default(cuid())
-  location        Location
-  openedAt        DateTime @default(now())
-  closedAt        DateTime?
-  openedBy        String
-  closedBy        String?
-  expectedAmount  Float?
-  actualAmount    Float?
-  difference      Float?
-  status          String   @default("OPEN")
-}
-
-model SriDocument {
-  id               String   @id @default(cuid())
-  type             String   
-  location         Location
-  accessKey        String   @unique
-  xmlUrl           String?  
-  rideUrl          String?  
-  status           String   @default("PENDING") 
-  generationDate   DateTime @default(now())
-  sentDate         DateTime?
-  authDate         DateTime?
-  responseCode     String?
-  errorMessage     String?
-  userId           String
-  orderId          String?  @unique
-  order            Order?   @relation(fields: [orderId], references: [id])
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-}
-
-model CloudDocument {
-  id          String   @id @default(cuid())
-  name        String
-  category    String   
-  url         String   
-  sizeBytes   Int
-  mimeType    String
-  uploadedBy  String
-  location    Location
-  createdAt   DateTime @default(now())
-}
-
-// ---------------- SYSTEM INTEGRATION MODELS ----------------
-
-model Notification {
-  id          String   @id @default(cuid())
-  userId      String?  
-  user        User?    @relation(fields: [userId], references: [id])
-  role        Role?    
-  location    Location?
-  title       String
-  message     String
-  type        String   
-  link        String?
-  isRead      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-}
-
-model SyncQueueLog {
-  id          String   @id @default(cuid())
-  operation   String   // CREATE, UPDATE, DELETE
-  entity      String   // CLIENT, VEHICLE, ORDER
-  entityId    String
-  payload     String   // JSON of the payload
-  userId      String
-  locationId  Location
-  status      String   @default("PENDING") // PENDING, SYNCING, SYNCED, FAILED, CONFLICT
-  retryCount  Int      @default(0)
-  syncedAt    DateTime?
-  errorReason String?
-  createdAt   DateTime @default(now())
-}
-
-model SyncConflict {
-  id          String   @id @default(cuid())
-  entity      String
-  entityId    String
-  userId      String
-  locationId  Location
-  oldVersion  String   // JSON
-  newVersion  String   // JSON
-  resolved    Boolean  @default(false)
-  resolvedBy  String?
-  createdAt   DateTime @default(now())
 }

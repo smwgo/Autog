@@ -1,62 +1,95 @@
-export default function GerenciaDashboard() {
+"use client";
+
+import Link from "next/link";
+import { Header } from "@/components/Header";
+
+const modules = [
+  {
+    title: "Dashboard General",
+    description: "Métricas clave, resumen de ventas y estado global del negocio.",
+    icon: "📈",
+    href: "/gerencia/dashboard",
+    color: "bg-blue-500",
+  },
+  {
+    title: "Reportes Financieros",
+    description: "Flujo de caja, ingresos, egresos y facturación SRI.",
+    icon: "💰",
+    href: "/gerencia/reportes",
+    color: "bg-emerald-500",
+  },
+  {
+    title: "Gestión de Personal",
+    description: "Administración de usuarios, roles, permisos y horarios.",
+    icon: "👥",
+    href: "/gerencia/personal",
+    color: "bg-purple-500",
+  },
+  {
+    title: "Inventario Global",
+    description: "Control de stock entre sucursales, compras y proveedores.",
+    icon: "📦",
+    href: "/gerencia/inventario",
+    color: "bg-amber-500",
+  },
+  {
+    title: "Auditoría de Sistema",
+    description: "Registro de actividades, accesos y cambios críticos.",
+    icon: "🛡️",
+    href: "/gerencia/auditoria",
+    color: "bg-red-500",
+  },
+  {
+    title: "Configuración",
+    description: "Ajustes globales del sistema, sucursales y preferencias.",
+    icon: "⚙️",
+    href: "/gerencia/configuracion",
+    color: "bg-zinc-500",
+  },
+];
+
+export default function GerenciaPanel() {
   return (
-    <div className="h-full min-h-screen bg-[#efefef] p-0">
-      <div className="h-full bg-[#f4f4f4] border-l border-r border-zinc-300 p-4 md:p-6">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[14px] font-bold uppercase tracking-[0.18em] text-zinc-700">GERENCIA</p>
-            <h1 className="mt-1 text-[52px] font-black leading-[0.9] tracking-[-0.06em] text-zinc-900">Panel de control</h1>
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+      <Header />
+      <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
+        <div className="mb-10">
+          <div className="flex items-center gap-4 mb-2">
+            <span className="text-4xl">📊</span>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Panel de Gerencia
+            </h1>
           </div>
-
-          <button className="mt-2 inline-flex items-center justify-center rounded-full border border-zinc-300 bg-white px-4 py-2 text-[16px] font-medium text-blue-600 shadow-sm">
-            Consolidado
-            <span className="ml-2 text-zinc-500">▼</span>
-          </button>
+          <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl">
+            Centro de control administrativo. Selecciona un módulo para gestionar tu negocio.
+          </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-[14px] border border-red-200 bg-red-50 p-4 text-red-700">
-            <h3 className="text-[20px] font-black leading-tight">Inventario crítico</h3>
-            <p className="mt-2 text-[18px] leading-tight">12 productos por debajo del stock mínimo.</p>
-          </div>
-
-          <div className="rounded-[14px] border border-yellow-200 bg-yellow-50 p-4 text-yellow-700">
-            <h3 className="text-[20px] font-black leading-tight">Cuentas en mora</h3>
-            <p className="mt-2 text-[18px] leading-tight">3 clientes superaron los 30 días de crédito.</p>
-          </div>
-
-          <div className="rounded-[14px] border border-blue-200 bg-blue-50 p-4 text-blue-700">
-            <h3 className="text-[20px] font-black leading-tight">Servicios atrasados</h3>
-            <p className="mt-2 text-[18px] leading-tight">5 vehículos en taller esperan repuestos.</p>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {modules.map((mod) => (
+            <Link 
+              key={mod.href} 
+              href={mod.href}
+              className="group block bg-white dark:bg-zinc-900 rounded-3xl p-6 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 transition-all hover:shadow-xl hover:-translate-y-1 overflow-hidden relative"
+            >
+              <div className={`absolute top-0 right-0 w-32 h-32 ${mod.color} opacity-5 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110`}></div>
+              <div className="flex items-start gap-4">
+                <div className={`w-14 h-14 rounded-2xl ${mod.color} bg-opacity-10 dark:bg-opacity-20 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                  {mod.icon}
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    {mod.title}
+                  </h3>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    {mod.description}
+                  </p>
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
-
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <div className="rounded-[14px] border border-zinc-200 bg-zinc-50 p-5">
-            <p className="text-[16px] text-zinc-500">Ventas netas</p>
-            <p className="mt-3 text-[42px] font-black leading-none text-zinc-900">$124,500</p>
-            <div className="mt-4 inline-block rounded-full bg-blue-100 px-3 py-1 text-[16px] font-semibold text-blue-700">+14% vs mes anterior</div>
-          </div>
-
-          <div className="rounded-[14px] border border-zinc-200 bg-zinc-50 p-5">
-            <p className="text-[16px] text-zinc-500">Utilidad bruta</p>
-            <p className="mt-3 text-[42px] font-black leading-none text-zinc-900">$45,200</p>
-            <div className="mt-4 inline-block rounded-full bg-green-100 px-3 py-1 text-[16px] font-semibold text-green-700">+8% vs mes anterior</div>
-          </div>
-
-          <div className="rounded-[14px] border border-zinc-200 bg-zinc-50 p-5">
-            <p className="text-[16px] text-zinc-500">Órdenes taller</p>
-            <p className="mt-3 text-[42px] font-black leading-none text-zinc-900">142</p>
-            <div className="mt-4 inline-block rounded-full bg-yellow-100 px-3 py-1 text-[16px] font-semibold text-yellow-700">110 cerradas · 32 abiertas</div>
-          </div>
-
-          <div className="rounded-[14px] border border-zinc-200 bg-zinc-50 p-5">
-            <p className="text-[16px] text-zinc-500">Cuentas por cobrar</p>
-            <p className="mt-3 text-[42px] font-black leading-none text-zinc-900">$18,400</p>
-            <div className="mt-4 inline-block rounded-full bg-red-100 px-3 py-1 text-[16px] font-semibold text-red-700">Mora: $4,200</div>
-          </div>
-        </div>
-      </div>
+      </main>
     </div>
   );
 }

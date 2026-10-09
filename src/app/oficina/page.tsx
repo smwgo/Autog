@@ -1,134 +1,95 @@
-import { prisma } from "@/lib/auth";
+"use client";
 
-export default async function OficinaDashboard() {
+import Link from "next/link";
+import { Header } from "@/components/Header";
+
+const modules = [
+  {
+    title: "Gestión de Clientes",
+    description: "Directorio de clientes, historial de vehículos y contacto.",
+    icon: "👥",
+    href: "/oficina/clientes",
+    color: "bg-blue-500",
+  },
+  {
+    title: "Órdenes y Cotizaciones",
+    description: "Aprobación de cotizaciones y revisión de órdenes de trabajo.",
+    icon: "📄",
+    href: "/oficina/ordenes",
+    color: "bg-amber-500",
+  },
+  {
+    title: "Citas y Agenda",
+    description: "Calendario de servicios, asignación de bahías y técnicos.",
+    icon: "📅",
+    href: "/oficina/agenda",
+    color: "bg-emerald-500",
+  },
+  {
+    title: "Facturación y SRI",
+    description: "Emisión de facturas electrónicas, notas de crédito y cobranzas.",
+    icon: "🧾",
+    href: "/oficina/facturacion",
+    color: "bg-purple-500",
+  },
+  {
+    title: "Compras y Proveedores",
+    description: "Órdenes de compra, cuentas por pagar y catálogo de proveedores.",
+    icon: "🤝",
+    href: "/oficina/proveedores",
+    color: "bg-indigo-500",
+  },
+  {
+    title: "Caja y Liquidaciones",
+    description: "Cuadres diarios de caja, métodos de pago y liquidaciones.",
+    icon: "💵",
+    href: "/oficina/caja",
+    color: "bg-teal-500",
+  },
+];
+
+export default function OficinaPanel() {
   return (
-    <div className="space-y-6">
-      
-      <div className="flex justify-between items-end mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">Panel de Oficina</h1>
-          <p className="text-zinc-500 mt-1">Gestión administrativa, contable y operativa.</p>
-        </div>
-        <div className="flex gap-2">
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm">
-            <span>📥</span> Exportar Contabilidad (ZIP)
-          </button>
-        </div>
-      </div>
-
-      {/* SRI Status */}
-      <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-sm mb-6">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="font-bold text-lg flex items-center gap-2">
-            <span>🇪🇨</span> Estado SRI (Facturación Electrónica)
-          </h3>
-          <span className="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs font-bold rounded-full">
-            Conectado (Producción)
-          </span>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 text-center">
-            <p className="text-sm font-medium text-zinc-500">Pendientes</p>
-            <p className="text-2xl font-bold text-zinc-900 dark:text-white mt-1">12</p>
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+      <Header />
+      <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
+        <div className="mb-10">
+          <div className="flex items-center gap-4 mb-2">
+            <span className="text-4xl">🏢</span>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Panel de Oficina
+            </h1>
           </div>
-          <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 text-center">
-            <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Procesando</p>
-            <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mt-1">4</p>
-          </div>
-          <div className="p-4 rounded-2xl bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/50 text-center">
-            <p className="text-sm font-medium text-green-600 dark:text-green-400">Autorizadas</p>
-            <p className="text-2xl font-bold text-green-700 dark:text-green-300 mt-1">842</p>
-          </div>
-          <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/50 text-center">
-            <p className="text-sm font-medium text-red-600 dark:text-red-400">Rechazadas</p>
-            <p className="text-2xl font-bold text-red-700 dark:text-red-300 mt-1">2</p>
-          </div>
-          <div className="p-4 flex flex-col justify-center">
-            <button className="w-full text-xs font-medium py-2 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded-lg transition-colors mb-2">
-              Procesar Lote
-            </button>
-            <button className="w-full text-xs font-medium py-2 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 rounded-lg transition-colors">
-              Reintentar Errores
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        
-        {/* Inventario Transfers */}
-        <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-          <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><span>📦</span> Transferencias</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center text-sm p-3 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-100 dark:border-zinc-800">
-              <div>
-                <p className="font-medium">PRINCIPAL → SUCURSAL</p>
-                <p className="text-xs text-zinc-500">Solicitud #TR-042</p>
-              </div>
-              <span className="px-2 py-1 text-[10px] font-bold bg-amber-100 text-amber-800 rounded">PENDIENTE</span>
-            </div>
-            <div className="flex justify-between items-center text-sm p-3 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-100 dark:border-zinc-800">
-              <div>
-                <p className="font-medium">SUCURSAL → PRINCIPAL</p>
-                <p className="text-xs text-zinc-500">Solicitud #TR-041</p>
-              </div>
-              <span className="px-2 py-1 text-[10px] font-bold bg-blue-100 text-blue-800 rounded">EN TRÁNSITO</span>
-            </div>
-            <button className="w-full mt-2 text-sm text-blue-600 font-medium hover:underline">Ver todas las transferencias</button>
-          </div>
+          <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl">
+            Centro de operaciones administrativas y atención al cliente. Selecciona un módulo para comenzar.
+          </p>
         </div>
 
-        {/* Cuentas por Pagar (CxP) */}
-        <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-          <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><span>🏢</span> Compras y CxP</h3>
-          <div className="space-y-4">
-            <div className="flex justify-between text-sm">
-              <span className="text-zinc-500">Órdenes Abiertas:</span>
-              <span className="font-semibold text-zinc-900 dark:text-white">4</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-zinc-500">Saldo por Pagar:</span>
-              <span className="font-semibold text-red-600">$12,450.00</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-zinc-500">Vencimiento Próx. 7 días:</span>
-              <span className="font-semibold text-amber-600">$3,200.00</span>
-            </div>
-            <button className="w-full py-2 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-sm font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
-              Pagar Proveedores
-            </button>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {modules.map((mod) => (
+            <Link 
+              key={mod.href} 
+              href={mod.href}
+              className="group block bg-white dark:bg-zinc-900 rounded-3xl p-6 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 transition-all hover:shadow-xl hover:-translate-y-1 overflow-hidden relative"
+            >
+              <div className={`absolute top-0 right-0 w-32 h-32 ${mod.color} opacity-5 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110`}></div>
+              <div className="flex items-start gap-4">
+                <div className={`w-14 h-14 rounded-2xl ${mod.color} bg-opacity-10 dark:bg-opacity-20 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                  {mod.icon}
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    {mod.title}
+                  </h3>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    {mod.description}
+                  </p>
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
-
-        {/* Caja y Bancos */}
-        <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-          <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><span>💵</span> Cajas Activas</h3>
-          <div className="space-y-3">
-            <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/50 rounded-xl">
-              <div className="flex justify-between items-center mb-1">
-                <span className="font-medium text-sm text-green-800 dark:text-green-400">Caja PRINCIPAL</span>
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              </div>
-              <div className="flex justify-between items-end">
-                <span className="text-xs text-green-600 dark:text-green-500">Apertura: 08:00 AM</span>
-                <span className="font-bold text-green-700 dark:text-green-300">$1,450.00</span>
-              </div>
-            </div>
-            <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/50 rounded-xl">
-              <div className="flex justify-between items-center mb-1">
-                <span className="font-medium text-sm text-green-800 dark:text-green-400">Caja SUCURSAL</span>
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              </div>
-              <div className="flex justify-between items-end">
-                <span className="text-xs text-green-600 dark:text-green-500">Apertura: 08:30 AM</span>
-                <span className="font-bold text-green-700 dark:text-green-300">$890.00</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
+      </main>
     </div>
   );
 }

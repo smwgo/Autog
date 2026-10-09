@@ -11,7 +11,6 @@ export function Header() {
           <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-500 transition-colors">Inicio</Link>
           <Link href="/tienda" className="hover:text-blue-600 dark:hover:text-blue-500 transition-colors">Tienda</Link>
           <Link href="/servicios" className="hover:text-blue-600 dark:hover:text-blue-500 transition-colors">Servicios</Link>
-          <Link href="/portal/vehiculos" className="hover:text-blue-600 dark:hover:text-blue-500 transition-colors">Mi Vehículo</Link>
           <Link href="/promociones" className="hover:text-blue-600 dark:hover:text-blue-500 transition-colors">Promociones</Link>
           <Link href="/contacto" className="hover:text-blue-600 dark:hover:text-blue-500 transition-colors">Contacto</Link>
         </nav>
@@ -27,8 +26,7 @@ export function Header() {
               <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
             </span>
           </button>
-
-          <Link href="/auth/login" aria-label="Iniciar Sesión" className="hover:text-blue-600 transition-colors">
+          <Link href="/login" aria-label="Iniciar Sesión" className="hover:text-blue-600 transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
           </Link>
         </div>

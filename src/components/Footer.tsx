@@ -29,7 +29,6 @@ export function Footer() {
           <ul className="space-y-2 text-sm flex flex-col">
             <Link href="/tienda" className="hover:text-white transition-colors">Tienda</Link>
             <Link href="/servicios" className="hover:text-white transition-colors">Servicios</Link>
-            <Link href="/portal" className="hover:text-white transition-colors">Portal de Cliente</Link>
           </ul>
         </div>
         <div>
@@ -39,7 +38,6 @@ export function Footer() {
                WhatsApp
             </a>
             <a href="mailto:info@autopro.com" className="hover:text-white transition-colors">info@autopro.com</a>
-            <Link href="/auth/login" className="mt-4 text-blue-500 hover:text-blue-400 transition-colors block">Acceso Administrativo</Link>
           </ul>
         </div>
       </div>
