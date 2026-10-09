@@ -19,9 +19,6 @@ export function Header() {
           </span>
         </Link>
         <nav className="hidden md:flex gap-6 text-sm font-medium text-zinc-600 dark:text-zinc-300">
-          <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-500 transition-colors">Inicio</Link>
-          <Link href="/tienda" className="hover:text-blue-600 dark:hover:text-blue-500 transition-colors">Tienda</Link>
-          <Link href="/servicios" className="hover:text-blue-600 dark:hover:text-blue-500 transition-colors">Servicios</Link>
           <Link href="/promociones" className="hover:text-blue-600 dark:hover:text-blue-500 transition-colors">Promociones</Link>
           <Link href="/contacto" className="hover:text-blue-600 dark:hover:text-blue-500 transition-colors">Contacto</Link>
         </nav>
