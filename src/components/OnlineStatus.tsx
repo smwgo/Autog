@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { OfflineQueue } from "@/lib/offlineQueue";
+import { syncQueue } from "@/lib/offlineQueue";
 
 export function OnlineStatus() {
   const [isOnline, setIsOnline] = useState(true);
@@ -13,7 +13,7 @@ export function OnlineStatus() {
     setIsOnline(navigator.onLine);
 
     const updateQueueCount = async () => {
-      const count = await OfflineQueue.getQueueCount();
+      const count = await syncQueue.getQueueCount();
       setQueueCount(count);
     };
 
@@ -22,7 +22,7 @@ export function OnlineStatus() {
     const handleOnline = async () => {
       setIsOnline(true);
       setIsSyncing(true);
-      await OfflineQueue.processQueue();
+      await syncQueue.processQueue();
       // In a real scenario, here we check for returned 409 Conflicts from the server
       await updateQueueCount();
       setIsSyncing(false);
@@ -92,8 +92,8 @@ export function OnlineStatus() {
             <button 
               onClick={async () => {
                 setIsSyncing(true);
-                await OfflineQueue.processQueue();
-                setQueueCount(await OfflineQueue.getQueueCount());
+                await syncQueue.processQueue();
+                setQueueCount(await syncQueue.getQueueCount());
                 setIsSyncing(false);
               }}
               className="ml-2 text-xs underline hover:text-amber-200"

@@ -70,6 +70,11 @@ export class OfflineQueue {
     });
   }
 
+  async getQueueCount(): Promise<number> {
+    const ops = await this.getPendingOperations();
+    return ops.length;
+  }
+
   async removeOperation(id: string): Promise<void> {
     if (!this.db) await this.init();
     

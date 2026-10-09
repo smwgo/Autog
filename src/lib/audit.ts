@@ -12,7 +12,7 @@ type AuditParams = {
 };
 
 export async function createAuditLog(params: AuditParams) {
-  const headersList = headers();
+  const headersList = await headers();
   const ip = headersList.get("x-forwarded-for") || headersList.get("x-real-ip");
   const userAgent = headersList.get("user-agent");
 
