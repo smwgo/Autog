@@ -8,8 +8,9 @@ import { NotificationCenter } from "@/components/NotificationCenter";
 
 export default async function GerenciaLayout({ children }: { children: ReactNode }) {
   const session = await getServerSession(authOptions);
+  const userRole = String(session?.user?.role || "").toUpperCase();
 
-  if (!session || session.user.role !== "GERENCIA") {
+  if (!session || userRole !== "GERENCIA") {
     redirect("/auth/login");
   }
 
@@ -24,48 +25,51 @@ export default async function GerenciaLayout({ children }: { children: ReactNode
   ];
 
   return (
-    <div className="flex h-screen bg-zinc-100 dark:bg-zinc-950">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-800 flex flex-col h-full">
-        <div className="p-6 border-b border-zinc-200 dark:border-zinc-800">
-          <Link href="/dashboard" className="text-2xl font-bold tracking-tighter text-blue-600 dark:text-blue-500">
-            AutoPro <span className="text-zinc-400 text-sm font-normal tracking-normal ml-1">Gerencia</span>
+    <div className="flex h-screen bg-[#e8e8e8] text-zinc-800">
+      <aside className="w-[250px] border-r border-zinc-300 bg-[#f3f3f3] flex flex-col h-full">
+        <div className="px-6 py-5 border-b border-zinc-300/80">
+          <Link href="/dashboard" className="text-[30px] font-black tracking-tighter text-blue-600 leading-none">
+            AutoPro <span className="text-zinc-500 text-[18px] font-semibold tracking-normal align-middle ml-1">Gerencia</span>
           </Link>
         </div>
-        
+
         <nav className="flex-1 overflow-y-auto p-4 space-y-1">
           {navItems.map((item) => (
             <Link
               key={item.name}
               href={item.href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-800 transition-colors"
+              className={`flex items-center gap-3 px-3 py-3 rounded-xl text-[18px] font-medium transition-colors ${
+                item.href === "/gerencia"
+                  ? "bg-white text-zinc-900 shadow-sm border border-zinc-200"
+                  : "text-zinc-700 hover:bg-zinc-200/80"
+              }`}
             >
-              <span className="text-lg">{item.icon}</span>
+              <span className="text-[20px] w-6 inline-flex justify-center">{item.icon}</span>
               {item.name}
             </Link>
           ))}
         </nav>
 
-        <div className="p-4 border-t border-zinc-200 dark:border-zinc-800">
+        <div className="border-t border-zinc-300 bg-[#f5f5f5] p-4">
           <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
-              {session.user.name?.charAt(0) || "G"}
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">
+              {session.user.name?.charAt(0)?.toUpperCase() || "G"}
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-medium text-zinc-900 dark:text-white">{session.user.name}</span>
+              <span className="text-base font-semibold text-zinc-900">{session.user.name}</span>
               <span className="text-xs text-zinc-500">{session.user.location}</span>
             </div>
           </div>
+
           <form action="/api/auth/signout" method="POST">
-             <button type="submit" className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors">
-               Cerrar Sesión
-             </button>
+            <button type="submit" className="w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-zinc-700 hover:bg-zinc-200 transition-colors">
+              Cerrar Sesión
+            </button>
           </form>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-8">
+      <main className="flex-1 overflow-y-auto p-0">
         {children}
       </main>
     </div>

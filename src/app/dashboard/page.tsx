@@ -15,16 +15,18 @@ export default async function DashboardPage() {
     redirect("/auth/login");
   }
 
-  const role = session.user.role;
+  const role = String(session.user.role || "").toUpperCase();
+  const roleRoutes: Record<string, string> = {
+    GERENCIA: "/gerencia",
+    OFICINA: "/oficina",
+    TALLER: "/taller",
+    POS: "/pos",
+    CLIENTE: "/portal/vehiculos",
+    CAJA: "/pos",
+    SUPERVISOR: "/taller",
+  };
 
-  // Redirigir según el rol del usuario
-  if (role === 'GERENCIA') {
-    redirect('/gerencia');
-  } else if (role === 'CLIENTE') {
-    redirect('/portal/vehiculos');
-  } else {
-    redirect(`/${role.toLowerCase()}`);
-  }
+  redirect(roleRoutes[role] || "/dashboard");
 
   return null;
 }

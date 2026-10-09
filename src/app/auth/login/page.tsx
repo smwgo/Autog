@@ -1,13 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { signIn, getSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useEffect } from "react";
 
+const DEV_ROLE_PATHS: Record<string, string> = {
+  GERENCIA: "/gerencia",
+  OFICINA: "/oficina",
+  TALLER: "/taller",
+  POS: "/pos",
+  CLIENTE: "/portal/vehiculos",
+  CAJA: "/pos",
+  SUPERVISOR: "/taller",
+};
+
 export default function LoginPage() {
-  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -56,6 +64,11 @@ export default function LoginPage() {
     }
   };
 
+  const getRolePath = (role: string) => {
+    const normalizedRole = role.toUpperCase();
+    return DEV_ROLE_PATHS[normalizedRole] || "/dashboard";
+  };
+
   const handleDevLogin = async (role: string) => {
     setLoading(true);
     setError("");
@@ -69,7 +82,7 @@ export default function LoginPage() {
       setError(result.error);
       setLoading(false);
     } else {
-      window.location.href = "/dashboard";
+      window.location.href = getRolePath(role);
     }
   };
 

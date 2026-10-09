@@ -5,21 +5,22 @@ export default withAuth(
   function middleware(req) {
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
+    const role = String(token?.role || "").toUpperCase();
 
     // Route Protection Logic
-    if (path.startsWith("/gerencia") && token?.role !== "GERENCIA") {
+    if (path.startsWith("/gerencia") && role !== "GERENCIA") {
       return NextResponse.redirect(new URL("/unauthorized", req.url));
     }
     
-    if (path.startsWith("/oficina") && !["GERENCIA", "OFICINA"].includes(token?.role as string)) {
+    if (path.startsWith("/oficina") && !["GERENCIA", "OFICINA"].includes(role)) {
       return NextResponse.redirect(new URL("/unauthorized", req.url));
     }
 
-    if (path.startsWith("/pos") && !["GERENCIA", "POS", "CAJA", "SUPERVISOR"].includes(token?.role as string)) {
+    if (path.startsWith("/pos") && !["GERENCIA", "POS", "CAJA", "SUPERVISOR"].includes(role)) {
       return NextResponse.redirect(new URL("/unauthorized", req.url));
     }
 
-    if (path.startsWith("/taller") && !["GERENCIA", "TALLER", "SUPERVISOR"].includes(token?.role as string)) {
+    if (path.startsWith("/taller") && !["GERENCIA", "TALLER", "SUPERVISOR"].includes(role)) {
       return NextResponse.redirect(new URL("/unauthorized", req.url));
     }
 

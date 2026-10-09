@@ -7,8 +7,9 @@ import { OnlineStatus } from "@/components/OnlineStatus";
 
 export default async function TallerLayout({ children }: { children: ReactNode }) {
   const session = await getServerSession(authOptions);
+  const userRole = String(session?.user?.role || "").toUpperCase();
 
-  if (!session || !["GERENCIA", "TALLER", "SUPERVISOR"].includes(session.user.role)) {
+  if (!session || !["GERENCIA", "TALLER", "SUPERVISOR"].includes(userRole)) {
     redirect("/auth/login");
   }
 

@@ -6,8 +6,9 @@ import { redirect } from "next/navigation";
 
 export default async function OficinaLayout({ children }: { children: ReactNode }) {
   const session = await getServerSession(authOptions);
+  const userRole = String(session?.user?.role || "").toUpperCase();
 
-  if (!session || !["GERENCIA", "OFICINA"].includes(session.user.role)) {
+  if (!session || !["GERENCIA", "OFICINA"].includes(userRole)) {
     redirect("/auth/login");
   }
 

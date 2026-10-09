@@ -8,8 +8,9 @@ import { NotificationCenter } from "@/components/NotificationCenter";
 
 export default async function PosLayout({ children }: { children: ReactNode }) {
   const session = await getServerSession(authOptions);
+  const userRole = String(session?.user?.role || "").toUpperCase();
 
-  if (!session || !["GERENCIA", "POS", "CAJA", "SUPERVISOR"].includes(session.user.role)) {
+  if (!session || !["GERENCIA", "POS", "CAJA", "SUPERVISOR"].includes(userRole)) {
     redirect("/auth/login");
   }
 
