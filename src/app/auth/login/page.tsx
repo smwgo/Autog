@@ -27,8 +27,7 @@ export default function LoginPage() {
       setError(result.error);
       setLoading(false);
     } else {
-      router.push("/dashboard");
-      router.refresh();
+      window.location.href = "/dashboard";
     }
   };
 
@@ -45,8 +44,12 @@ export default function LoginPage() {
       setError(result.error);
       setLoading(false);
     } else {
-      router.push(`/${role.toLowerCase()}`);
-      router.refresh();
+      // Si el rol es cliente, enviarlo a sus vehículos
+      if (role === 'CLIENTE') {
+        window.location.href = '/portal/vehiculos';
+      } else {
+        window.location.href = `/${role.toLowerCase()}`;
+      }
     }
   };
 
@@ -127,7 +130,7 @@ export default function LoginPage() {
           <p className="text-center text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">
             Accesos Rápidos (Desarrollo)
           </p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
             <button type="button" onClick={() => handleDevLogin('GERENCIA')} className="flex flex-col items-center justify-center p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 transition-colors group">
               <span className="text-lg mb-1 group-hover:scale-110 transition-transform">📊</span>
               <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Gerencia</span>
@@ -143,6 +146,10 @@ export default function LoginPage() {
             <button type="button" onClick={() => handleDevLogin('POS')} className="flex flex-col items-center justify-center p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 transition-colors group">
               <span className="text-lg mb-1 group-hover:scale-110 transition-transform">🛒</span>
               <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">POS</span>
+            </button>
+            <button type="button" onClick={() => handleDevLogin('CLIENTE')} className="flex flex-col items-center justify-center p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 transition-colors group col-span-2 md:col-span-1">
+              <span className="text-lg mb-1 group-hover:scale-110 transition-transform">🚗</span>
+              <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Cliente</span>
             </button>
           </div>
         </div>

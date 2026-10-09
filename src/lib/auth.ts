@@ -30,7 +30,7 @@ export const authOptions: NextAuthOptions = {
             id: `dev-${role}`,
             name: `Usuario ${role} (Prueba)`,
             email: `${role.toLowerCase()}@autopro.test`,
-            role: role as any,
+            role: role === 'CLIENTE' ? 'CLIENTE' : role as any,
             location: "PRINCIPAL" as any,
             permissions: null,
           } as any;
