@@ -8,10 +8,10 @@ export function Hero() {
       
       <div className="relative z-10 container mx-auto px-6 py-24 md:py-32 flex flex-col items-center text-center">
         <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6 max-w-4xl">
-          Todo para tu vehículo <br className="hidden md:block"/> en un solo lugar
+          Todo para tu vehículo
         </h1>
         <p className="text-lg md:text-xl text-zinc-300 mb-10 max-w-2xl">
-          Encuentra repuestos exactos, agenda servicios de mantenimiento y gestiona el historial de tu auto fácilmente.
+          Repuestos, servicios y control total de tu auto al instante.
         </p>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-3xl mt-8">
