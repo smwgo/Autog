@@ -43,7 +43,7 @@ export default function PromocionesPage() {
             OFERTAS LIMITADAS
           </span>
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 mb-6">
-            Promociones Especiales
+            Promociones
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-400">
             Aprovecha nuestros descuentos exclusivos para mantener tu vehículo en óptimas condiciones al mejor precio.

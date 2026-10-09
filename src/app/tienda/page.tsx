@@ -56,10 +56,10 @@ export default async function TiendaPage() {
       <main className="flex-grow pt-24 pb-16 px-6 md:px-12 max-w-7xl mx-auto w-full">
         <div className="mb-12">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 mb-4">
-            Nuestra Tienda
+            Tienda
           </h1>
           <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl">
-            Encuentra los mejores repuestos y accesorios para tu vehículo. Calidad garantizada y los mejores precios del mercado.
+            Repuestos y accesorios de calidad para tu vehículo.
           </p>
         </div>
 

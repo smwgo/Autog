@@ -11,7 +11,12 @@ const REAL_DB_MOCK = {
   products: [
     { id: '1', category: 'Lubricantes', name: "Aceite Sintético 5W-30", price: 45.00, compatibility: ["Toyota Corolla", "Nissan Sentra"], stock: 12, isService: false },
     { id: '2', category: 'Filtros', name: "Filtro de Aceite Original", price: 12.50, compatibility: ["Toyota Corolla"], stock: 5, isService: false },
-    { id: '3', category: 'Servicios', name: "Mantenimiento Preventivo Básico", price: null, compatibility: ["Toyota Corolla", "Nissan Sentra"], isService: true, description: "Cambio de aceite, filtros y revisión de 20 puntos." }
+    { id: '3', category: 'Servicios', name: "Mantenimiento Preventivo", price: null, compatibility: ["Toyota Corolla", "Nissan Sentra"], isService: true, description: "Cambio de aceite, filtros y revisión de puntos de seguridad." },
+    { id: '4', category: 'Servicios', name: "Alineación y Balanceo", price: null, compatibility: ["Toyota Corolla", "Nissan Sentra"], isService: true, description: "Alineación computarizada 3D y balanceo de 4 ruedas." },
+    { id: '5', category: 'Servicios', name: "Frenos y Suspensión", price: null, compatibility: ["Toyota Corolla", "Nissan Sentra"], isService: true, description: "Revisión y cambio de pastillas, discos o amortiguadores." },
+    { id: '6', category: 'Servicios', name: "Diagnóstico Computarizado", price: null, compatibility: ["Toyota Corolla", "Nissan Sentra"], isService: true, description: "Escaneo completo con equipo original." },
+    { id: '7', category: 'Servicios', name: "Sistema Eléctrico", price: null, compatibility: ["Toyota Corolla", "Nissan Sentra"], isService: true, description: "Revisión de alternador, batería, y luces." },
+    { id: '8', category: 'Servicios', name: "Aire Acondicionado", price: null, compatibility: ["Toyota Corolla", "Nissan Sentra"], isService: true, description: "Recarga de gas, limpieza de ductos y cambio de filtro de cabina." }
   ]
 };
 
@@ -43,7 +48,7 @@ export function VehicleSearch() {
        <div className="w-full md:w-1/3 bg-zinc-50 dark:bg-zinc-900 p-8 md:p-10 border-r border-zinc-200 dark:border-zinc-800 flex flex-col gap-6">
           <div className="flex flex-col gap-1.5">
             <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Tu Vehículo</h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">Selecciona los datos exactos para garantizar compatibilidad real.</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">Selecciona tu vehículo.</p>
           </div>
 
           <div className="aspect-[4/3] w-full rounded-2xl bg-zinc-200/50 dark:bg-zinc-800/50 overflow-hidden relative flex items-center justify-center border border-zinc-200 dark:border-zinc-800/80">
@@ -61,29 +66,36 @@ export function VehicleSearch() {
           </div>
 
           <div className="flex flex-col gap-3">
-            <select value={brand} onChange={e => { setBrand(e.target.value); setModel(""); setYear(""); setVersion(""); }} className="w-full h-14 px-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium appearance-none shadow-sm cursor-pointer">
-              <option value="" disabled>1. Marca</option>
-              <option value="Toyota">Toyota</option>
-              <option value="Nissan">Nissan</option>
-            </select>
+            <SearchableSelect 
+              label="1. Marca"
+              value={brand}
+              options={Array.from(new Set(REAL_DB_MOCK.vehicles.map(v => v.brand)))}
+              onChange={val => { setBrand(val); setModel(""); setYear(""); setVersion(""); }}
+            />
             
-            <select value={model} onChange={e => { setModel(e.target.value); setYear(""); setVersion(""); }} disabled={!brand} className="w-full h-14 px-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium appearance-none shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-              <option value="" disabled>2. Modelo</option>
-              {brand === 'Toyota' && <option value="Corolla">Corolla</option>}
-              {brand === 'Nissan' && <option value="Sentra">Sentra</option>}
-            </select>
+            <SearchableSelect 
+              label="2. Modelo"
+              value={model}
+              disabled={!brand}
+              options={Array.from(new Set(REAL_DB_MOCK.vehicles.filter(v => v.brand === brand).map(v => v.model)))}
+              onChange={val => { setModel(val); setYear(""); setVersion(""); }}
+            />
 
-            <select value={year} onChange={e => { setYear(e.target.value); setVersion(""); }} disabled={!model} className="w-full h-14 px-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium appearance-none shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-              <option value="" disabled>3. Año</option>
-              <option value="2022">2022</option>
-              <option value="2021">2021</option>
-            </select>
+            <SearchableSelect 
+              label="3. Año"
+              value={year}
+              disabled={!model}
+              options={Array.from(new Set(REAL_DB_MOCK.vehicles.filter(v => v.brand === brand && v.model === model).map(v => v.year)))}
+              onChange={val => { setYear(val); setVersion(""); }}
+            />
 
-            <select value={version} onChange={e => setVersion(e.target.value)} disabled={!year} className="w-full h-14 px-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium appearance-none shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-              <option value="" disabled>4. Versión / Motor</option>
-              <option value="1.8L">1.8L</option>
-              <option value="2.0L">2.0L</option>
-            </select>
+            <SearchableSelect 
+              label="4. Versión / Motor"
+              value={version}
+              disabled={!year}
+              options={Array.from(new Set(REAL_DB_MOCK.vehicles.filter(v => v.brand === brand && v.model === model && v.year === year).map(v => v.version)))}
+              onChange={val => setVersion(val)}
+            />
           </div>
        </div>
 
@@ -91,7 +103,7 @@ export function VehicleSearch() {
        <div className="w-full md:w-2/3 p-8 md:p-10 flex flex-col bg-white dark:bg-zinc-950">
          <div className="mb-8">
            <h2 className="text-3xl font-black text-zinc-900 dark:text-white mb-2 tracking-tight">¿Qué necesitas?</h2>
-           <p className="text-zinc-500 dark:text-zinc-400">Encuentra repuestos exactos y servicios garantizados.</p>
+           <p className="text-zinc-500 dark:text-zinc-400">Repuestos y servicios garantizados.</p>
          </div>
 
          <div className="relative mb-10">
@@ -127,7 +139,7 @@ export function VehicleSearch() {
            <div className="flex flex-col flex-grow animate-in fade-in duration-500">
              {/* Filtros de Categorías */}
              <div className="flex gap-2 overflow-x-auto pb-4 hide-scrollbar mb-2">
-               {['Repuestos', 'Lubricantes', 'Filtros', 'Servicios'].map(cat => (
+               {['Repuestos', 'Lubricantes', 'Servicios', 'Taller'].map(cat => (
                  <button 
                    key={cat} 
                    onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
@@ -204,6 +216,56 @@ export function VehicleSearch() {
            </div>
          )}
        </div>
+    </div>
+  );
+}
+
+function SearchableSelect({ label, value, options, onChange, disabled }: { label: string, value: string, options: string[], onChange: (val: string) => void, disabled?: boolean }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const filtered = options.filter(o => o.toLowerCase().includes(query.toLowerCase()));
+
+  return (
+    <div className={`relative w-full ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div 
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className="w-full h-14 px-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex items-center justify-between cursor-pointer shadow-sm"
+      >
+        <span className={value ? "text-zinc-900 dark:text-white font-medium" : "text-zinc-500 font-medium"}>
+          {value || label}
+        </span>
+        <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
+          <div className="absolute top-full left-0 mt-2 w-full z-50 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden flex flex-col">
+            <input 
+              autoFocus
+              type="text" 
+              placeholder="Buscar..."
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              className="w-full p-4 border-b border-zinc-100 dark:border-zinc-800 bg-transparent outline-none text-zinc-900 dark:text-white"
+            />
+            <div className="max-h-48 overflow-y-auto">
+              {filtered.map(opt => (
+                <div 
+                  key={opt}
+                  onClick={() => { onChange(opt); setIsOpen(false); setQuery(""); }}
+                  className="p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer text-zinc-900 dark:text-zinc-200 border-b border-zinc-50 dark:border-zinc-800/50 last:border-0 transition-colors"
+                >
+                  {opt}
+                </div>
+              ))}
+              {filtered.length === 0 && (
+                <div className="p-4 text-zinc-500 text-sm text-center">Sin resultados</div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
