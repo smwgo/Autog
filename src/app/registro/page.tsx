@@ -1,10 +1,42 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function RegistroPage() {
   const [tipoFactura, setTipoFactura] = useState('persona');
+  const router = useRouter();
+
+  const handleRegister = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Simulación de creación de cuenta y autenticación
+    console.log("Cuenta creada. Procesando posible solicitud pendiente...");
+
+    try {
+      const pendingReqStr = sessionStorage.getItem('autoG_pendingRequest');
+      if (pendingReqStr) {
+        const req = JSON.parse(pendingReqStr);
+        // Validar en el servidor simulado (aquí lo hacemos en el cliente por el mock, pero en prod sería un Server Action)
+        if (req.isService) {
+          alert(`¡Cuenta creada! Tu servicio para ${req.productName} ha sido agendado.`);
+          sessionStorage.removeItem('autoG_pendingRequest');
+          router.push('/cliente/citas');
+        } else {
+          alert(`¡Cuenta creada! Tu repuesto ${req.productName} fue agregado a cotizaciones.`);
+          sessionStorage.removeItem('autoG_pendingRequest');
+          router.push('/cliente/cotizaciones');
+        }
+      } else {
+        alert('Cuenta creada exitosamente');
+        router.push('/cliente/perfil');
+      }
+    } catch (err) {
+      console.error("Error al procesar solicitud pendiente", err);
+      router.push('/cliente/perfil');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
@@ -32,7 +64,7 @@ export default function RegistroPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-xl">
         <div className="bg-white dark:bg-zinc-900 py-8 px-4 shadow-xl shadow-zinc-200/50 dark:shadow-none sm:rounded-3xl sm:px-10 border border-zinc-200 dark:border-zinc-800">
-          <form className="space-y-6" action="#" method="POST" onSubmit={(e) => { e.preventDefault(); alert('Registro completado'); }}>
+          <form className="space-y-6" onSubmit={handleRegister}>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Nombre y Apellido */}
