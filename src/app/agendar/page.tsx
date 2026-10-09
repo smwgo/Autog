@@ -1,0 +1,201 @@
+"use client";
+
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { useSearchParams } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import Link from "next/link";
+
+const allServices = [
+  { id: "1", title: "Mantenimiento Preventivo" },
+  { id: "2", title: "Alineación y Balanceo" },
+  { id: "3", title: "Frenos y Suspensión" },
+  { id: "4", title: "Diagnóstico Computarizado" },
+  { id: "mantenimiento-preventivo", title: "Mantenimiento Preventivo" },
+  { id: "alineacion-balanceo", title: "Alineación y Balanceo" },
+  { id: "frenos-suspension", title: "Frenos y Suspensión" },
+  { id: "diagnostico-computarizado", title: "Diagnóstico Computarizado" },
+  { id: "sistema-electrico", title: "Sistema Eléctrico" },
+  { id: "aire-acondicionado", title: "Aire Acondicionado" }
+];
+
+function BookingForm() {
+  const searchParams = useSearchParams();
+  const serviceParam = searchParams.get("service");
+  
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    brand: "",
+    model: "",
+    year: "",
+    plate: "",
+    serviceId: "",
+    date: "",
+    time: "",
+    notes: ""
+  });
+
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (serviceParam) {
+      setFormData(prev => ({ ...prev, serviceId: serviceParam }));
+    }
+  }, [serviceParam]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setIsSubmitted(true);
+    }, 1500);
+  };
+
+  if (isSubmitted) {
+    return (
+      <div className="bg-white dark:bg-zinc-900 rounded-3xl p-10 md:p-16 shadow-xl border border-zinc-200 dark:border-zinc-800 text-center max-w-2xl mx-auto">
+        <div className="w-24 h-24 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+          <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+        </div>
+        <h2 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 mb-4">¡Cita Agendada con Éxito!</h2>
+        <p className="text-zinc-600 dark:text-zinc-400 mb-8 text-lg">
+          Hemos recibido tu solicitud, {formData.name || 'cliente'}. Te hemos enviado un correo de confirmación con los detalles de tu cita para el <strong>{formData.date}</strong> a las <strong>{formData.time}</strong>.
+        </p>
+        <Link href="/" className="inline-block bg-blue-600 text-white px-8 py-4 rounded-full font-semibold hover:bg-blue-700 transition-colors">
+          Volver al Inicio
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-white dark:bg-zinc-900 rounded-3xl p-8 md:p-12 shadow-xl border border-zinc-200 dark:border-zinc-800 max-w-4xl mx-auto">
+      <div className="mb-10 pb-8 border-b border-zinc-100 dark:border-zinc-800">
+        <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 flex items-center">
+          <span className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">1</span>
+          Tus Datos Personales
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Nombre Completo *</label>
+            <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="Ej. Juan Pérez" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Correo Electrónico *</label>
+            <input required type="email" name="email" value={formData.email} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="juan@ejemplo.com" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Teléfono *</label>
+            <input required type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="Ej. 0991234567" />
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-10 pb-8 border-b border-zinc-100 dark:border-zinc-800">
+        <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 flex items-center">
+          <span className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">2</span>
+          Datos del Vehículo
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Marca *</label>
+            <input required type="text" name="brand" value={formData.brand} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="Ej. Toyota" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Modelo *</label>
+            <input required type="text" name="model" value={formData.model} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="Ej. Corolla" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Año *</label>
+            <input required type="number" name="year" value={formData.year} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="Ej. 2018" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Placa</label>
+            <input type="text" name="plate" value={formData.plate} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="Ej. ABC-1234" />
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-10">
+        <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 flex items-center">
+          <span className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">3</span>
+          Detalles de la Cita
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Servicio Requerido *</label>
+            <select required name="serviceId" value={formData.serviceId} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100 appearance-none">
+              <option value="" disabled>Seleccione un servicio...</option>
+              {allServices.map(s => (
+                <option key={s.id} value={s.id}>{s.title}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Fecha Deseada *</label>
+            <input required type="date" name="date" value={formData.date} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Hora Preferida *</label>
+            <input required type="time" name="time" value={formData.time} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Comentarios Adicionales</label>
+            <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="Describa cualquier problema específico o solicitud..." />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end pt-6 border-t border-zinc-100 dark:border-zinc-800">
+        <button 
+          type="submit" 
+          disabled={isSubmitting}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-full font-bold shadow-lg shadow-blue-500/30 transition-all transform hover:scale-105 disabled:opacity-70 disabled:hover:scale-100 flex items-center"
+        >
+          {isSubmitting ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              Procesando...
+            </>
+          ) : (
+            'Confirmar Cita'
+          )}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export default function AgendarPage() {
+  return (
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+      <Header />
+      <main className="flex-grow pt-24 pb-20 px-6 md:px-12 w-full">
+        <div className="text-center max-w-3xl mx-auto mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 mb-4">
+            Agenda tu Servicio
+          </h1>
+          <p className="text-lg text-zinc-600 dark:text-zinc-400">
+            Completa el formulario a continuación y reserva un espacio en nuestro taller. Te confirmaremos a la brevedad.
+          </p>
+        </div>
+        
+        <Suspense fallback={<div className="text-center py-20">Cargando formulario...</div>}>
+          <BookingForm />
+        </Suspense>
+      </main>
+      <Footer />
+    </div>
+  );
+}

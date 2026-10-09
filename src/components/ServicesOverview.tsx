@@ -20,7 +20,7 @@ export function ServicesOverview() {
               Nuestros talleres cuentan con tecnología de punta y mecánicos certificados para garantizar el mejor servicio para tu vehículo.
             </p>
           </div>
-          <Link href="/agendar" className="mt-6 md:mt-0 px-6 py-3 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors">
+          <Link href="/servicios" className="mt-6 md:mt-0 px-6 py-3 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors">
             Ver todos los servicios
           </Link>
         </div>

@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { OnlineStatus } from "@/components/OnlineStatus";
 
 export default async function DashboardPage() {
@@ -46,9 +47,9 @@ export default async function DashboardPage() {
           <div className="p-6 bg-white dark:bg-zinc-900 rounded-3xl shadow-sm border border-zinc-100 dark:border-zinc-800">
             <h3 className="font-semibold text-lg mb-4">Administración General</h3>
             <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">Visualiza ambas sedes y reportes consolidados.</p>
-            <button className="w-full py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl text-sm font-medium transition-colors">
+            <Link href="/gerencia" className="block text-center w-full py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl text-sm font-medium transition-colors">
               Ir a Gerencia
-            </button>
+            </Link>
           </div>
         )}
 
@@ -56,9 +57,9 @@ export default async function DashboardPage() {
           <div className="p-6 bg-white dark:bg-zinc-900 rounded-3xl shadow-sm border border-zinc-100 dark:border-zinc-800">
             <h3 className="font-semibold text-lg mb-4">Punto de Venta (POS)</h3>
             <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">Realiza ventas y cotizaciones en {location}.</p>
-            <button className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors">
+            <Link href="/pos" className="block text-center w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors">
               Abrir POS
-            </button>
+            </Link>
           </div>
         )}
 
@@ -66,9 +67,9 @@ export default async function DashboardPage() {
           <div className="p-6 bg-white dark:bg-zinc-900 rounded-3xl shadow-sm border border-zinc-100 dark:border-zinc-800">
             <h3 className="font-semibold text-lg mb-4">Garaje / Taller</h3>
             <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">Gestiona órdenes de servicio e inspecciones.</p>
-            <button className="w-full py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl text-sm font-medium transition-colors">
+            <Link href="/taller" className="block text-center w-full py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl text-sm font-medium transition-colors">
               Ir a Taller
-            </button>
+            </Link>
           </div>
         )}
 
@@ -76,9 +77,9 @@ export default async function DashboardPage() {
           <div className="p-6 bg-white dark:bg-zinc-900 rounded-3xl shadow-sm border border-zinc-100 dark:border-zinc-800">
             <h3 className="font-semibold text-lg mb-4">Inventario</h3>
             <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">Gestiona repuestos en {location}.</p>
-            <button className="w-full py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl text-sm font-medium transition-colors">
+            <Link href="/inventario" className="block text-center w-full py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl text-sm font-medium transition-colors">
               Ver Inventario
-            </button>
+            </Link>
           </div>
         )}
 

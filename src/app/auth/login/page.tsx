@@ -32,9 +32,30 @@ export default function LoginPage() {
     }
   };
 
+  const handleDevLogin = async (role: string) => {
+    setLoading(true);
+    setError("");
+    const result = await signIn("credentials", {
+      username: `dev_${role.toLowerCase()}`,
+      password: "dev", // The password doesn't matter for the backdoor
+      redirect: false,
+    });
+
+    if (result?.error) {
+      setError(result.error);
+      setLoading(false);
+    } else {
+      router.push(`/${role.toLowerCase()}`);
+      router.refresh();
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4">
-      <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl shadow-xl p-8 border border-zinc-100 dark:border-zinc-800">
+      <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl shadow-xl p-8 border border-zinc-100 dark:border-zinc-800 relative">
+        <Link href="/" aria-label="Volver al inicio" className="absolute top-8 left-8 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        </Link>
         <div className="text-center mb-8">
           <Link href="/" className="text-2xl font-bold tracking-tighter text-blue-600 dark:text-blue-500 mb-2 block">
             AutoPro
@@ -101,6 +122,30 @@ export default function LoginPage() {
             {loading ? "Iniciando..." : "Ingresar"}
           </button>
         </form>
+
+        <div className="mt-8 pt-8 border-t border-zinc-100 dark:border-zinc-800">
+          <p className="text-center text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">
+            Accesos Rápidos (Desarrollo)
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <button type="button" onClick={() => handleDevLogin('GERENCIA')} className="flex flex-col items-center justify-center p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 transition-colors group">
+              <span className="text-lg mb-1 group-hover:scale-110 transition-transform">📊</span>
+              <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Gerencia</span>
+            </button>
+            <button type="button" onClick={() => handleDevLogin('OFICINA')} className="flex flex-col items-center justify-center p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 transition-colors group">
+              <span className="text-lg mb-1 group-hover:scale-110 transition-transform">🏢</span>
+              <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Oficina</span>
+            </button>
+            <button type="button" onClick={() => handleDevLogin('TALLER')} className="flex flex-col items-center justify-center p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 transition-colors group">
+              <span className="text-lg mb-1 group-hover:scale-110 transition-transform">🔧</span>
+              <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Taller</span>
+            </button>
+            <button type="button" onClick={() => handleDevLogin('POS')} className="flex flex-col items-center justify-center p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 transition-colors group">
+              <span className="text-lg mb-1 group-hover:scale-110 transition-transform">🛒</span>
+              <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">POS</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

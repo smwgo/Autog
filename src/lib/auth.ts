@@ -23,6 +23,19 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Credenciales inválidas");
         }
 
+        // DEVELOPMENT MOCK LOGIN
+        if (process.env.NODE_ENV !== "production" && credentials.username.startsWith("dev_")) {
+          const role = credentials.username.replace("dev_", "").toUpperCase();
+          return {
+            id: `dev-${role}`,
+            name: `Usuario ${role} (Prueba)`,
+            email: `${role.toLowerCase()}@autopro.test`,
+            role: role as any,
+            location: "PRINCIPAL" as any,
+            permissions: null,
+          } as any;
+        }
+
         const user = await prisma.user.findFirst({
           where: {
             OR: [
