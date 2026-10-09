@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useEffect } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,23 +12,47 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [remember, setRemember] = useState(false);
+
+  // Cargar usuario guardado al iniciar
+  useEffect(() => {
+    const savedUsername = localStorage.getItem("rememberedUsername");
+    if (savedUsername) {
+      setUsername(savedUsername);
+      setRemember(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    const result = await signIn("credentials", {
-      username,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        username: username.trim(),
+        password,
+        redirect: false,
+      });
 
-    if (result?.error) {
-      setError(result.error);
+      console.log("SignIn result:", result);
+
+      if (result?.error) {
+        setError(result.error);
+        setLoading(false);
+      } else {
+        if (remember) {
+          localStorage.setItem("rememberedUsername", username);
+        } else {
+          localStorage.removeItem("rememberedUsername");
+        }
+        
+        window.location.href = "/dashboard";
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Error de conexión al servidor. Intenta nuevamente.");
       setLoading(false);
-    } else {
-      window.location.href = "/dashboard";
     }
   };
 
@@ -44,12 +69,7 @@ export default function LoginPage() {
       setError(result.error);
       setLoading(false);
     } else {
-      // Si el rol es cliente, enviarlo a sus vehículos
-      if (role === 'CLIENTE') {
-        window.location.href = '/portal/vehiculos';
-      } else {
-        window.location.href = `/${role.toLowerCase()}`;
-      }
+      window.location.href = "/dashboard";
     }
   };
 
@@ -106,6 +126,8 @@ export default function LoginPage() {
               <input
                 id="remember"
                 type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               <label htmlFor="remember" className="ml-2 block text-sm text-zinc-600 dark:text-zinc-400">

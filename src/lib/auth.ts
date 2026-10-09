@@ -39,8 +39,8 @@ export const authOptions: NextAuthOptions = {
         const user = await prisma.user.findFirst({
           where: {
             OR: [
-              { email: credentials.username },
-              { username: credentials.username }
+              { email: { equals: credentials.username, mode: 'insensitive' } },
+              { username: { equals: credentials.username, mode: 'insensitive' } }
             ]
           },
           include: {
@@ -49,14 +49,18 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!user || !user.isActive) {
+          console.error("Auth failed: User not found or inactive", credentials.username);
           throw new Error("Usuario no encontrado o inactivo");
         }
 
         const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
 
         if (!isPasswordValid) {
+          console.error("Auth failed: Invalid password for", credentials.username);
           throw new Error("Contraseña incorrecta");
         }
+
+        console.log("Auth successful for", credentials.username);
 
         // Update last login
         await prisma.user.update({
