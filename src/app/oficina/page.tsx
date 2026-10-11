@@ -5,13 +5,6 @@ import { Header } from "@/components/Header";
 
 const modules = [
   {
-    title: "Clientes",
-    description: "Directorio y contactos.",
-    icon: "👥",
-    href: "/oficina/clientes",
-    color: "bg-blue-500",
-  },
-  {
     title: "Órdenes",
     description: "Cotizaciones y órdenes.",
     icon: "📄",

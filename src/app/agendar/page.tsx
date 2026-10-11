@@ -51,15 +51,35 @@ function BookingForm() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const servicioTitulo = allServices.find(s => s.id === formData.serviceId)?.title || "Servicio de Taller";
+      const vehicleDesc = [formData.brand, formData.model, formData.year, formData.plate ? `Placa: ${formData.plate}` : ""].filter(Boolean).join(" ");
+      const fechaHora = formData.date ? `Fecha: ${formData.date} ${formData.time || ""}` : "";
+
+      await fetch("/api/solicitudes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "TALLER",
+          customerName: formData.name || "Cliente Taller",
+          customerPhone: formData.phone || null,
+          customerEmail: formData.email || null,
+          vehicleInfo: vehicleDesc || null,
+          itemsSummary: `Cita Taller: ${servicioTitulo}`,
+          notes: `${fechaHora} - ${formData.notes || ""}`.trim(),
+          totalEstimated: 0,
+        }),
+      });
+    } catch (err) {
+      console.error("Error al registrar solicitud:", err);
+    } finally {
       setIsSubmitting(false);
       setIsSubmitted(true);
-    }, 1500);
+    }
   };
 
   if (isSubmitted) {

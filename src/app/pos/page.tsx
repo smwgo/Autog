@@ -12,6 +12,20 @@ const modules = [
     color: "bg-emerald-500",
   },
   {
+    title: "Pedidos",
+    description: "Pedidos de tienda, repuestos y citas.",
+    icon: "📥",
+    href: "/pos/solicitudes",
+    color: "bg-amber-500",
+  },
+  {
+    title: "Clientes",
+    description: "Directorio y contactos.",
+    icon: "👥",
+    href: "/pos/clientes",
+    color: "bg-blue-500",
+  },
+  {
     title: "Catálogo",
     description: "Inventario y existencias.",
     icon: "📦",
@@ -81,11 +95,11 @@ export default function PosPanel() {
             <Link 
               key={mod.href} 
               href={mod.href}
-              className="group block bg-white dark:bg-zinc-900 rounded-3xl p-6 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 transition-all hover:shadow-xl hover:-translate-y-1 overflow-hidden relative"
+              className="group block bg-white dark:bg-zinc-900 rounded-xl p-6 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 transition-all hover:shadow-lg hover:-translate-y-0.5 overflow-hidden relative"
             >
               <div className={`absolute top-0 right-0 w-32 h-32 ${mod.color} opacity-5 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110`}></div>
               <div className="flex items-start gap-4">
-                <div className={`w-14 h-14 rounded-2xl ${mod.color} bg-opacity-10 dark:bg-opacity-20 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                <div className={`w-14 h-14 rounded-xl ${mod.color} bg-opacity-10 dark:bg-opacity-20 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-105 transition-transform`}>
                   {mod.icon}
                 </div>
                 <div>

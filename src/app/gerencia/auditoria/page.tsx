@@ -102,7 +102,7 @@ export default function AuditoriaSistema() {
                   <th className="px-6 py-4 font-medium">Usuario / IP</th>
                   <th className="px-6 py-4 font-medium">Módulo</th>
                   <th className="px-6 py-4 font-medium">Acción Realizada</th>
-                  <th className="px-6 py-4 font-medium">Detalles (Antes -> Después)</th>
+                  <th className="px-6 py-4 font-medium">Detalles (Antes &rarr; Después)</th>
                   <th className="px-6 py-4 font-medium text-center">Nivel</th>
                 </tr>
               </thead>

@@ -19,16 +19,29 @@ export default function ContactoPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await fetch("/api/solicitudes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "REPUESTO",
+          customerName: formData.name || "Cliente Web",
+          customerEmail: formData.email || null,
+          itemsSummary: `Consulta de Repuesto / Contacto: ${formData.subject || "Cotización"}`,
+          notes: formData.message || null,
+        }),
+      });
+    } catch (err) {
+      console.error("Error al enviar solicitud:", err);
+    } finally {
       setIsSubmitting(false);
       setIsSubmitted(true);
       setFormData({ name: "", email: "", subject: "", message: "" });
-    }, 1500);
+    }
   };
 
   return (

@@ -28,10 +28,18 @@ export function VehicleSearch() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
+  // Modal de Solicitud Web hacia POS
+  const [solicitudModalItem, setSolicitudModalItem] = useState<any | null>(null);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [notes, setNotes] = useState("");
+  const [enviandoSolicitud, setEnviandoSolicitud] = useState(false);
+  const [solicitudExitosa, setSolicitudExitosa] = useState<any | null>(null);
+
   // Estado derivado para la búsqueda
   const selectedVehicle = REAL_DB_MOCK.vehicles.find(v => v.brand === brand && v.model === model);
   const vehiclePhoto = selectedVehicle?.photoUrl || null;
-  const isVehicleSelected = brand && model && year && version;
+  const isVehicleSelected = Boolean(brand && model && year && version);
 
   const filteredProducts = REAL_DB_MOCK.products.filter(p => {
     if (!isVehicleSelected) return false;
@@ -42,27 +50,88 @@ export function VehicleSearch() {
     return true;
   });
 
+  const handleEnviarSolicitud = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!solicitudModalItem) return;
+    setEnviandoSolicitud(true);
+
+    try {
+      const type = solicitudModalItem.isService ? "SERVICIO" : "REPUESTO";
+      const vehicleDesc = `${brand} ${model} ${year} ${version}`.trim();
+      const payload = {
+        type,
+        customerName: customerName.trim() || "Cliente Web",
+        customerPhone: customerPhone.trim() || "",
+        customerEmail: "",
+        vehicleInfo: vehicleDesc,
+        itemsSummary: `${solicitudModalItem.name} (${type})`,
+        itemsJson: [
+          {
+            id: solicitudModalItem.id,
+            name: solicitudModalItem.name,
+            price: solicitudModalItem.price || 0,
+            quantity: 1,
+            category: solicitudModalItem.category || type,
+          },
+        ],
+        totalEstimated: solicitudModalItem.price || 0,
+        notes: notes.trim(),
+      };
+
+      const res = await fetch("/api/solicitudes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Error al enviar solicitud a Neon");
+      }
+
+      setSolicitudExitosa(data.solicitud);
+    } catch (err: any) {
+      alert("Error al enviar solicitud: " + err.message);
+    } finally {
+      setEnviandoSolicitud(false);
+    }
+  };
+
+  const cerrarModal = () => {
+    setSolicitudModalItem(null);
+    setSolicitudExitosa(null);
+    setCustomerName("");
+    setCustomerPhone("");
+    setNotes("");
+  };
+
   return (
-    <div className="w-full mx-auto bg-white dark:bg-zinc-950 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden flex flex-col md:flex-row">
-       {/* Columna Izquierda: Selección de Vehículo */}
-       <div className="w-full md:w-1/3 bg-zinc-50 dark:bg-zinc-900 p-8 md:p-10 border-r border-zinc-200 dark:border-zinc-800 flex flex-col gap-6">
+    <>
+      <div className="w-full mx-auto bg-white dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden flex flex-col md:flex-row">
+        {/* Columna Izquierda: Selección de Vehículo */}
+        <div className="w-full md:w-1/3 bg-zinc-50 dark:bg-zinc-900 p-8 md:p-10 border-r border-zinc-200 dark:border-zinc-800 flex flex-col gap-6">
           <div className="flex flex-col gap-1.5">
             <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Tu Vehículo</h3>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">Selecciona tu vehículo.</p>
           </div>
 
-          <div className="aspect-[4/3] w-full rounded-2xl bg-zinc-200/50 dark:bg-zinc-800/50 overflow-hidden relative flex items-center justify-center border border-zinc-200 dark:border-zinc-800/80">
-             {vehiclePhoto ? (
-               <>
-                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                 <img src={vehiclePhoto} alt={`${brand} ${model}`} className="w-full h-full object-cover animate-in fade-in duration-700" />
-               </>
-             ) : (
-               <div className="text-zinc-400 dark:text-zinc-500 flex flex-col items-center">
-                 <svg className="w-10 h-10 mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                 <span className="text-sm font-semibold tracking-wide">Esperando selección</span>
-               </div>
-             )}
+          <div className="aspect-[4/3] w-full rounded-xl bg-zinc-200/50 dark:bg-zinc-800/50 overflow-hidden relative flex items-center justify-center border border-zinc-200 dark:border-zinc-800/80">
+            {vehiclePhoto ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={vehiclePhoto} alt={`${brand} ${model}`} className="w-full h-full object-cover animate-in fade-in duration-700" />
+              </>
+            ) : (
+              <div className="text-center p-6 flex flex-col items-center">
+                <span className="text-5xl mb-3">🚗</span>
+                <p className="text-sm font-bold text-zinc-600 dark:text-zinc-300">
+                  {brand || "Tu vehículo"} {model}
+                </p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  Completa los 4 pasos para ver compatibilidad exacta
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-3">
@@ -72,7 +141,7 @@ export function VehicleSearch() {
               options={Array.from(new Set(REAL_DB_MOCK.vehicles.map(v => v.brand)))}
               onChange={val => { setBrand(val); setModel(""); setYear(""); setVersion(""); }}
             />
-            
+
             <SearchableSelect 
               label="2. Modelo"
               value={model}
@@ -97,63 +166,63 @@ export function VehicleSearch() {
               onChange={val => setVersion(val)}
             />
           </div>
-       </div>
+        </div>
 
-       {/* Columna Derecha: Búsqueda y Categorías */}
-       <div className="w-full md:w-2/3 p-8 md:p-10 flex flex-col bg-white dark:bg-zinc-950">
-         <div className="mb-8">
-           <h2 className="text-3xl font-black text-zinc-900 dark:text-white mb-2 tracking-tight">¿Qué necesitas?</h2>
-           <p className="text-zinc-500 dark:text-zinc-400">Repuestos y servicios garantizados.</p>
-         </div>
+        {/* Columna Derecha: Búsqueda y Categorías */}
+        <div className="w-full md:w-2/3 p-8 md:p-10 flex flex-col bg-white dark:bg-zinc-950">
+          <div className="mb-8">
+            <h2 className="text-3xl font-black text-zinc-900 dark:text-white mb-2 tracking-tight">¿Qué necesitas?</h2>
+            <p className="text-zinc-500 dark:text-zinc-400">Repuestos y servicios garantizados.</p>
+          </div>
 
-         <div className="relative mb-10">
-           <input 
-             type="text" 
-             placeholder="Ej. Filtro de aire, Aceite sintético..." 
-             value={searchQuery}
-             onChange={e => setSearchQuery(e.target.value)}
-             disabled={!isVehicleSelected}
-             className="w-full pl-14 pr-6 py-4 rounded-2xl border-2 border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-zinc-950 outline-none transition-all disabled:opacity-50 font-medium"
-           />
-           <svg className="w-6 h-6 absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-         </div>
+          <div className="relative mb-10">
+            <input 
+              type="text" 
+              placeholder="Ej. Filtro de aire, Aceite sintético..." 
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              disabled={!isVehicleSelected}
+              className="w-full pl-14 pr-6 py-4 rounded-xl border-2 border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white focus:border-blue-500 focus:bg-white dark:focus:bg-zinc-950 outline-none transition-all disabled:opacity-50 font-medium"
+            />
+            <svg className="w-6 h-6 absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
 
-         {!isVehicleSelected ? (
-           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-grow opacity-40 pointer-events-none grayscale transition-all duration-500">
-             {[
-               { title: "Repuestos y accesorios", icon: "⚙️", desc: "Piezas y componentes" },
-               { title: "Lubricantes", icon: "💧", desc: "Aceites y fluidos" },
-               { title: "Filtros", icon: "🎛️", desc: "Aire, aceite y cabina" },
-               { title: "Talleres y servicios", icon: "🛠️", desc: "Mantenimiento y revisión" }
-             ].map(cat => (
-               <div key={cat.title} className="p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-start gap-4 bg-zinc-50 dark:bg-zinc-900/50">
-                 <div className="w-12 h-12 rounded-xl bg-white dark:bg-zinc-800 flex items-center justify-center text-2xl shadow-sm">{cat.icon}</div>
-                 <div>
-                   <h4 className="font-bold text-zinc-900 dark:text-white">{cat.title}</h4>
-                   <p className="text-sm text-zinc-500">{cat.desc}</p>
-                 </div>
-               </div>
-             ))}
-           </div>
-         ) : (
-           <div className="flex flex-col flex-grow animate-in fade-in duration-500">
-             {/* Filtros de Categorías */}
-             <div className="flex gap-2 overflow-x-auto pb-4 hide-scrollbar mb-2">
-               {['Repuestos', 'Lubricantes', 'Servicios', 'Taller'].map(cat => (
-                 <button 
-                   key={cat} 
-                   onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
-                   className={`px-5 py-2.5 rounded-full whitespace-nowrap text-sm font-bold transition-all border ${activeCategory === cat ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-white dark:text-zinc-900 dark:border-white shadow-md' : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'}`}
-                 >
-                   {cat}
-                 </button>
-               ))}
-             </div>
+          {!isVehicleSelected ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-grow opacity-40 pointer-events-none grayscale transition-all duration-500">
+              {[
+                { title: "Repuestos y accesorios", icon: "⚙️", desc: "Piezas y componentes" },
+                { title: "Lubricantes", icon: "💧", desc: "Aceites y fluidos" },
+                { title: "Filtros", icon: "🎛️", desc: "Aire, aceite y cabina" },
+                { title: "Talleres y servicios", icon: "🛠️", desc: "Mantenimiento y revisión" }
+              ].map(cat => (
+                <div key={cat.title} className="p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 flex items-start gap-4 bg-zinc-50 dark:bg-zinc-900/50">
+                  <div className="w-12 h-12 rounded-lg bg-white dark:bg-zinc-800 flex items-center justify-center text-2xl shadow-sm">{cat.icon}</div>
+                  <div>
+                    <h4 className="font-bold text-zinc-900 dark:text-white">{cat.title}</h4>
+                    <p className="text-sm text-zinc-500">{cat.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col flex-grow animate-in fade-in duration-500">
+              {/* Filtros de Categorías */}
+              <div className="flex gap-2 overflow-x-auto pb-4 hide-scrollbar mb-2">
+                {['Repuestos', 'Lubricantes', 'Servicios', 'Taller'].map(cat => (
+                  <button 
+                    key={cat} 
+                    onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
+                    className={`px-5 py-2.5 rounded-full whitespace-nowrap text-sm font-bold transition-all border ${activeCategory === cat ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-white dark:text-zinc-900 dark:border-white shadow-md' : 'bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600'}`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
 
-             {/* Resultados */}
-             <div className="flex-grow rounded-2xl pt-4 overflow-y-auto max-h-[350px] pr-2">
+              {/* Resultados */}
+              <div className="flex-grow rounded-xl pt-4 overflow-y-auto max-h-[350px] pr-2">
                 {filteredProducts.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-zinc-500 text-center space-y-3 py-16 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl">
+                  <div className="h-full flex flex-col items-center justify-center text-zinc-500 text-center space-y-3 py-16 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl">
                     <svg className="w-12 h-12 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
                     <div>
                       <p className="font-bold text-zinc-700 dark:text-zinc-300">No hay existencias confirmadas</p>
@@ -163,9 +232,9 @@ export function VehicleSearch() {
                 ) : (
                   <div className="space-y-4">
                     {filteredProducts.map(p => (
-                      <div key={p.id} className="bg-zinc-50 dark:bg-zinc-900/50 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:shadow-sm transition-shadow group">
+                      <div key={p.id} className="bg-zinc-50 dark:bg-zinc-900/50 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:shadow-sm transition-shadow group">
                         <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-white dark:bg-zinc-800 flex items-center justify-center text-xl shrink-0 shadow-sm border border-zinc-100 dark:border-zinc-700">
+                          <div className="w-12 h-12 rounded-lg bg-white dark:bg-zinc-800 flex items-center justify-center text-xl shrink-0 shadow-sm border border-zinc-100 dark:border-zinc-700">
                             {p.isService ? '🛠️' : '📦'}
                           </div>
                           <div>
@@ -191,32 +260,139 @@ export function VehicleSearch() {
                             <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider bg-zinc-200/50 dark:bg-zinc-800 px-2 py-1 rounded">Precio por Diagnóstico</span>
                           )}
                           <button 
-                            onClick={() => {
-                              // Limitar y validar el contenido temporal (nunca guardar passwords o datos sensibles aquí)
-                              const requestIntent = {
-                                productId: p.id,
-                                productName: p.name,
-                                isService: p.isService,
-                                vehicle: { brand, model, year, version },
-                                timestamp: Date.now()
-                              };
-                              sessionStorage.setItem('autoG_pendingRequest', JSON.stringify(requestIntent));
-                              window.location.href = '/registro';
-                            }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md shadow-blue-500/20 active:scale-95"
+                            onClick={() => setSolicitudModalItem(p)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-md shadow-blue-500/20 active:scale-95"
                           >
-                            {p.isService ? 'Agendar' : 'Agregar'}
+                            {p.isService ? 'Agendar' : 'Solicitar'}
                           </button>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-             </div>
-           </div>
-         )}
-       </div>
-    </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modal de Solicitud Web hacia POS */}
+      {solicitudModalItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl max-w-md w-full p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800">
+            {solicitudExitosa ? (
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 text-3xl flex items-center justify-center mx-auto">
+                  ✓
+                </div>
+                <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
+                  ¡Solicitud Enviada!
+                </h3>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Tu solicitud ha sido registrada en el sistema de ventas/POS. Nuestro equipo en tienda la preparará de inmediato.
+                </p>
+                <div className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-left text-xs font-mono space-y-1">
+                  <div><strong>Nº Solicitud:</strong> {solicitudExitosa.requestNumber}</div>
+                  <div><strong>Ítem:</strong> {solicitudExitosa.itemsSummary}</div>
+                  <div><strong>Vehículo:</strong> {solicitudExitosa.vehicleInfo}</div>
+                  <div><strong>Estado:</strong> {solicitudExitosa.status}</div>
+                </div>
+                <button
+                  onClick={cerrarModal}
+                  className="w-full py-3 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-white text-white dark:text-zinc-900 rounded-lg font-bold text-sm transition-colors"
+                >
+                  Entendido
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleEnviarSolicitud} className="space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{solicitudModalItem.isService ? "🛠️" : "📦"}</span>
+                    <h3 className="font-bold text-base text-zinc-900 dark:text-white">
+                      {solicitudModalItem.isService ? "Agendar Servicio" : "Solicitar Repuesto"}
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={cerrarModal}
+                    className="text-zinc-400 hover:text-zinc-600 text-lg"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="p-3 bg-zinc-50 dark:bg-zinc-800/60 rounded-lg text-xs space-y-1">
+                  <div className="font-bold text-zinc-900 dark:text-white text-sm">{solicitudModalItem.name}</div>
+                  <div className="text-zinc-500">Vehículo: {brand} {model} {year} {version}</div>
+                  {solicitudModalItem.price && (
+                    <div className="text-emerald-600 dark:text-emerald-400 font-bold">
+                      Estimado: ${solicitudModalItem.price.toFixed(2)}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                    Tu Nombre
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Juan Pérez"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-blue-500 text-zinc-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                    Teléfono / WhatsApp
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="Ej. +58 414 1234567"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-blue-500 text-zinc-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                    Comentarios / Detalles (Opcional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="Indica cualquier detalle adicional..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-blue-500 text-zinc-900 dark:text-white"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={cerrarModal}
+                    className="flex-1 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 text-sm font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={enviandoSolicitud}
+                    className="flex-1 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-bold transition-all shadow-md shadow-blue-500/20"
+                  >
+                    {enviandoSolicitud ? "Enviando..." : "Enviar a Tienda / POS"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -234,7 +410,7 @@ function SearchableSelect({ label, value, options, onChange, disabled }: { label
         <span className={value ? "text-zinc-900 dark:text-white font-medium" : "text-zinc-500 font-medium"}>
           {value || label}
         </span>
-        <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>
+        <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
       </div>
 
       {isOpen && (

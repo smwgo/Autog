@@ -8,14 +8,40 @@ datasource db {
 }
 
 model User {
-  id                  String                @id @default(cuid())
-  email               String                @unique
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  name                String
-  avatar              String?
-  role                UserRole              @default(CLIENT)
-  FinancialComparison FinancialComparison[]
+  id                                                          String                          @id @default(cuid())
+  email                                                       String                          @unique
+  createdAt                                                   DateTime                        @default(now())
+  updatedAt                                                   DateTime                        @updatedAt
+  name                                                        String
+  avatar                                                      String?
+  role                                                        UserRole                        @default(CLIENT)
+  passwordHash                                                String?
+  AuthSession                                                 AuthSession[]
+  FinancialComparison                                         FinancialComparison[]
+  Route                                                       Route[]
+  SocialBlock_SocialBlock_blockedIdToUser                     SocialBlock[]                   @relation("SocialBlock_blockedIdToUser")
+  SocialBlock_SocialBlock_blockerIdToUser                     SocialBlock[]                   @relation("SocialBlock_blockerIdToUser")
+  SocialComment                                               SocialComment[]
+  SocialConnection_SocialConnection_receiverIdToUser          SocialConnection[]              @relation("SocialConnection_receiverIdToUser")
+  SocialConnection_SocialConnection_requesterIdToUser         SocialConnection[]              @relation("SocialConnection_requesterIdToUser")
+  SocialConversationParticipant                               SocialConversationParticipant[]
+  SocialGroupInvitation_SocialGroupInvitation_inviteeIdToUser SocialGroupInvitation[]         @relation("SocialGroupInvitation_inviteeIdToUser")
+  SocialGroupInvitation_SocialGroupInvitation_inviterIdToUser SocialGroupInvitation[]         @relation("SocialGroupInvitation_inviterIdToUser")
+  SocialLike                                                  SocialLike[]
+  SocialMessage                                               SocialMessage[]
+  SocialMessageReport                                         SocialMessageReport[]
+  SocialNotification_SocialNotification_actorIdToUser         SocialNotification[]            @relation("SocialNotification_actorIdToUser")
+  SocialNotification_SocialNotification_recipientIdToUser     SocialNotification[]            @relation("SocialNotification_recipientIdToUser")
+  SocialNotificationPreference                                SocialNotificationPreference?
+  SocialPost                                                  SocialPost[]
+  SocialPostAudience                                          SocialPostAudience[]
+  SocialProfile                                               SocialProfile?
+  SocialProfileReport                                         SocialProfileReport[]
+  SocialReport                                                SocialReport[]
+  SocialSavedPost                                             SocialSavedPost[]
+  SocialShare_SocialShare_recipientIdToUser                   SocialShare[]                   @relation("SocialShare_recipientIdToUser")
+  SocialShare_SocialShare_senderIdToUser                      SocialShare[]                   @relation("SocialShare_senderIdToUser")
+  SocialSourceAccessRequest                                   SocialSourceAccessRequest[]
 
   @@index([role])
 }
@@ -154,6 +180,407 @@ model ShoppingStore {
   @@index([name])
 }
 
+model AuthSession {
+  id        String   @id
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId, expiresAt])
+}
+
+model Route {
+  id          String      @id
+  userId      String
+  name        String
+  description String?
+  notes       String?
+  countryId   String
+  cityId      String
+  cityName    String?
+  countryName String?
+  plannedDate DateTime?
+  archivedAt  DateTime?
+  status      RouteStatus @default(ACTIVE)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime
+  User        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  RouteStop   RouteStop[]
+
+  @@index([cityId])
+  @@index([userId, status])
+}
+
+model RouteStop {
+  id                String            @id
+  routeId           String
+  title             String
+  itemType          RouteStopItemType @default(PLACE)
+  orderIndex        Int               @default(0)
+  status            RouteStopStatus   @default(PENDING)
+  category          String?
+  address           String?
+  description       String?
+  personalNote      String?
+  relatedToolId     String?
+  sourceId          String?
+  sourceRef         String?
+  sourceSection     String?
+  sourceCityId      String?
+  relatedRecordId   String?
+  relatedRecordType String?
+  actionType        String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime
+  Route             Route             @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@index([itemType])
+  @@index([routeId, orderIndex])
+  @@index([sourceId])
+}
+
+model SocialBlock {
+  id                               String   @id
+  blockerId                        String
+  blockedId                        String
+  createdAt                        DateTime @default(now())
+  User_SocialBlock_blockedIdToUser User     @relation("SocialBlock_blockedIdToUser", fields: [blockedId], references: [id], onDelete: Cascade)
+  User_SocialBlock_blockerIdToUser User     @relation("SocialBlock_blockerIdToUser", fields: [blockerId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId, blockerId])
+}
+
+model SocialComment {
+  id                  String          @id
+  postId              String
+  authorId            String
+  content             String
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime
+  parentCommentId     String?
+  User                User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  SocialComment       SocialComment?  @relation("SocialCommentToSocialComment", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  other_SocialComment SocialComment[] @relation("SocialCommentToSocialComment")
+  SocialPost          SocialPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([parentCommentId])
+  @@index([postId])
+}
+
+model SocialConnection {
+  id                                      String               @id
+  requesterId                             String
+  receiverId                              String
+  status                                  ConnectionStatus     @default(PENDING)
+  createdAt                               DateTime             @default(now())
+  updatedAt                               DateTime
+  receiverTag                             ConnectionTag        @default(NONE)
+  requesterTag                            ConnectionTag        @default(NONE)
+  User_SocialConnection_receiverIdToUser  User                 @relation("SocialConnection_receiverIdToUser", fields: [receiverId], references: [id], onDelete: Cascade)
+  User_SocialConnection_requesterIdToUser User                 @relation("SocialConnection_requesterIdToUser", fields: [requesterId], references: [id], onDelete: Cascade)
+  SocialNotification                      SocialNotification[]
+
+  @@unique([requesterId, receiverId])
+  @@index([receiverId, status])
+  @@index([requesterId, status])
+}
+
+model SocialConversation {
+  id                            String                          @id
+  kind                          String                          @default("DIRECT")
+  directKey                     String?                         @unique
+  createdAt                     DateTime                        @default(now())
+  updatedAt                     DateTime
+  name                          String?
+  description                   String?
+  archivedAt                    DateTime?
+  SocialConversationParticipant SocialConversationParticipant[]
+  SocialGroupInvitation         SocialGroupInvitation[]
+  SocialMessage                 SocialMessage[]
+  SocialNotification            SocialNotification[]
+  SocialPost                    SocialPost[]
+
+  @@index([updatedAt])
+}
+
+model SocialConversationParticipant {
+  id                 String             @id
+  conversationId     String
+  userId             String
+  joinedAt           DateTime           @default(now())
+  lastReadAt         DateTime?
+  muted              Boolean            @default(false)
+  hiddenAt           DateTime?
+  role               String             @default("MEMBER")
+  SocialConversation SocialConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  User               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId, hiddenAt])
+}
+
+model SocialGroupInvitation {
+  id                                         String               @id
+  conversationId                             String
+  inviterId                                  String
+  inviteeId                                  String
+  status                                     String               @default("PENDING")
+  createdAt                                  DateTime             @default(now())
+  respondedAt                                DateTime?
+  SocialConversation                         SocialConversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  User_SocialGroupInvitation_inviteeIdToUser User                 @relation("SocialGroupInvitation_inviteeIdToUser", fields: [inviteeId], references: [id], onDelete: Cascade)
+  User_SocialGroupInvitation_inviterIdToUser User                 @relation("SocialGroupInvitation_inviterIdToUser", fields: [inviterId], references: [id], onDelete: Cascade)
+  SocialNotification                         SocialNotification[]
+
+  @@unique([conversationId, inviteeId])
+  @@index([inviteeId, status, createdAt])
+}
+
+model SocialInvitation {
+  id        String           @id
+  senderId  String
+  token     String           @unique
+  email     String?
+  phone     String?
+  status    ConnectionStatus @default(PENDING)
+  expiresAt DateTime
+  createdAt DateTime         @default(now())
+
+  @@index([senderId])
+  @@index([token])
+}
+
+model SocialLike {
+  id         String     @id
+  postId     String
+  userId     String
+  createdAt  DateTime   @default(now())
+  reaction   String     @default("LIKE")
+  SocialPost SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  User       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+}
+
+model SocialMessage {
+  id                  String                @id
+  conversationId      String
+  senderId            String
+  content             String                @default("")
+  sharedType          String?
+  sharedId            String?
+  sharedTitle         String?
+  sharedUrl           String?
+  createdAt           DateTime              @default(now())
+  SocialConversation  SocialConversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  User                User                  @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  SocialMessageReport SocialMessageReport[]
+  SocialNotification  SocialNotification[]
+
+  @@index([conversationId, createdAt])
+  @@index([senderId, createdAt])
+}
+
+model SocialMessageReport {
+  id            String        @id
+  messageId     String
+  reporterId    String
+  reason        String
+  status        String        @default("PENDING")
+  createdAt     DateTime      @default(now())
+  SocialMessage SocialMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  User          User          @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@unique([reporterId, messageId])
+  @@index([createdAt])
+}
+
+model SocialNotification {
+  id                                        String                 @id
+  recipientId                               String
+  actorId                                   String
+  postId                                    String?
+  type                                      String                 @default("RECOMMENDATION")
+  createdAt                                 DateTime               @default(now())
+  readAt                                    DateTime?
+  conversationId                            String?
+  messageId                                 String?
+  connectionId                              String?
+  groupInvitationId                         String?
+  targetPath                                String?
+  dedupeKey                                 String?                @unique
+  User_SocialNotification_actorIdToUser     User                   @relation("SocialNotification_actorIdToUser", fields: [actorId], references: [id], onDelete: Cascade)
+  SocialConnection                          SocialConnection?      @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  SocialConversation                        SocialConversation?    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  SocialGroupInvitation                     SocialGroupInvitation? @relation(fields: [groupInvitationId], references: [id], onDelete: Cascade)
+  SocialMessage                             SocialMessage?         @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  SocialPost                                SocialPost?            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  User_SocialNotification_recipientIdToUser User                   @relation("SocialNotification_recipientIdToUser", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, recipientId, type])
+  @@index([recipientId, readAt, createdAt])
+}
+
+model SocialNotificationPreference {
+  userId                String   @id
+  enabled               Boolean  @default(true)
+  connectionInvitations Boolean  @default(true)
+  connectionAccepted    Boolean  @default(true)
+  newMessages           Boolean  @default(true)
+  reactions             Boolean  @default(true)
+  comments              Boolean  @default(true)
+  contentShared         Boolean  @default(true)
+  groupInvitations      Boolean  @default(true)
+  conversationChanges   Boolean  @default(true)
+  updatedAt             DateTime
+  User                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SocialPost {
+  id                        String                      @id
+  authorId                  String
+  content                   String
+  location                  String?
+  cityId                    String?
+  routeId                   String?
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime
+  privacy                   PrivacyLevel                @default(CONNECTIONS)
+  sharedData                Json?
+  sharedId                  String?
+  sharedType                String?
+  postType                  String                      @default("TEXT")
+  country                   String?
+  sourceType                String?
+  sourceId                  String?
+  sourceAvailability        String                      @default("UNKNOWN")
+  deletedAt                 DateTime?
+  groupId                   String?
+  SocialComment             SocialComment[]
+  SocialLike                SocialLike[]
+  SocialNotification        SocialNotification[]
+  User                      User                        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  SocialConversation        SocialConversation?         @relation(fields: [groupId], references: [id])
+  SocialPostAudience        SocialPostAudience[]
+  SocialReport              SocialReport[]
+  SocialSavedPost           SocialSavedPost[]
+  SocialShare               SocialShare[]
+  SocialSourceAccessRequest SocialSourceAccessRequest[]
+
+  @@index([authorId])
+  @@index([cityId])
+  @@index([createdAt])
+}
+
+model SocialPostAudience {
+  id         String     @id
+  postId     String
+  userId     String
+  SocialPost SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  User       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId, postId])
+}
+
+model SocialProfile {
+  id                       String                    @id
+  userId                   String                    @unique
+  username                 String?                   @unique
+  bio                      String?
+  country                  String?
+  city                     String?
+  languages                String[]
+  interests                String[]
+  occupation               String?
+  studies                  String?
+  knownPlaces              String[]
+  oxOpsProfileUrl          String?
+  privacyGlobal            PrivacyLevel              @default(CONNECTIONS)
+  privacyCity              PrivacyLevel              @default(PRIVATE)
+  privacyWork              PrivacyLevel              @default(PRIVATE)
+  privacyStudies           PrivacyLevel              @default(PRIVATE)
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime
+  locationVisibility       ProfileLocationVisibility @default(NONE)
+  travelDestinationCountry String?
+  travelDestinationCity    String?
+  travelDestinationPrivacy PrivacyLevel              @default(PRIVATE)
+  User                     User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  SocialProfileReport      SocialProfileReport[]
+}
+
+model SocialProfileReport {
+  id            String        @id
+  profileId     String
+  reporterId    String
+  reason        String
+  status        String        @default("PENDING")
+  createdAt     DateTime      @default(now())
+  SocialProfile SocialProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  User          User          @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, reporterId])
+  @@index([createdAt])
+}
+
+model SocialReport {
+  id         String     @id
+  postId     String
+  userId     String
+  reason     String
+  status     String     @default("PENDING")
+  createdAt  DateTime   @default(now())
+  SocialPost SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  User       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([createdAt])
+}
+
+model SocialSavedPost {
+  id         String     @id
+  postId     String
+  userId     String
+  createdAt  DateTime   @default(now())
+  SocialPost SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  User       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId, createdAt])
+}
+
+model SocialShare {
+  id                                 String     @id
+  postId                             String
+  senderId                           String
+  recipientId                        String
+  createdAt                          DateTime   @default(now())
+  SocialPost                         SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  User_SocialShare_recipientIdToUser User       @relation("SocialShare_recipientIdToUser", fields: [recipientId], references: [id], onDelete: Cascade)
+  User_SocialShare_senderIdToUser    User       @relation("SocialShare_senderIdToUser", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, senderId, recipientId])
+  @@index([recipientId, createdAt])
+}
+
+model SocialSourceAccessRequest {
+  id          String     @id
+  postId      String
+  requesterId String
+  status      String     @default("PENDING")
+  createdAt   DateTime   @default(now())
+  SocialPost  SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  User        User       @relation(fields: [requesterId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, requesterId])
+  @@index([createdAt])
+}
+
 enum ShoppingItemPriority {
   LOW
   MEDIUM
@@ -180,3 +607,212 @@ enum UserRole {
   SUPPORT
   ROOT
 }
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+  REJECTED
+  CANCELLED
+  EXPIRED
+}
+
+enum ConnectionTag {
+  FAMILY
+  FRIENDS
+  WORK
+  STUDIES
+  TRAVEL
+  OTHER
+  NONE
+}
+
+enum PrivacyLevel {
+  PRIVATE
+  CONNECTIONS
+  SELECTED
+  PUBLIC
+  GROUP
+}
+
+enum ProfileLocationVisibility {
+  NONE
+  COUNTRY
+  CITY
+}
+
+enum RouteStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+enum RouteStopItemType {
+  PLACE
+  TOOL_ACTIVITY
+  CUSTOM_TASK
+}
+
+enum RouteStopStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+model Customer {
+  id             String    @id @default(cuid())
+  identification String    @unique
+  name           String
+  type           String    @default("Personal")
+  phone          String
+  email          String?
+  address        String?
+  vip            Boolean   @default(false)
+  notes          String?
+  lastVisit      DateTime? @default(now())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  vehicles       Vehicle[]
+  sales          Sale[]
+
+  @@index([identification])
+  @@index([name])
+}
+
+model Vehicle {
+  id         String   @id @default(cuid())
+  customerId String
+  plate      String   @unique
+  brand      String
+  model      String
+  year       Int?
+  color      String?
+  mileage    Int?
+  vin        String?
+  fuelType   String?  @default("Gasolina")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([plate])
+}
+
+model Product {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  name      String
+  brand     String?
+  category  String     @default("General")
+  price     Decimal    @db.Decimal(12, 2)
+  costPrice Decimal?   @db.Decimal(12, 2)
+  stock     Int        @default(0)
+  minStock  Int        @default(5)
+  location  String?
+  status    String     @default("En Stock")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  saleItems SaleItem[]
+
+  @@index([code])
+  @@index([name])
+  @@index([category])
+}
+
+model Sale {
+  id            String     @id @default(cuid())
+  saleNumber    String     @unique
+  customerId    String?
+  customerName  String     @default("Consumidor Final")
+  subtotal      Decimal    @db.Decimal(12, 2)
+  tax           Decimal    @db.Decimal(12, 2)
+  discount      Decimal    @default(0) @db.Decimal(12, 2)
+  total         Decimal    @db.Decimal(12, 2)
+  paymentMethod String     @default("Efectivo")
+  status        String     @default("Completada")
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  customer      Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items         SaleItem[]
+
+  @@index([saleNumber])
+  @@index([createdAt])
+}
+
+model SaleItem {
+  id        String   @id @default(cuid())
+  saleId    String
+  productId String?
+  code      String
+  name      String
+  price     Decimal  @db.Decimal(12, 2)
+  quantity  Int      @default(1)
+  total     Decimal  @db.Decimal(12, 2)
+  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([saleId])
+  @@index([productId])
+}
+
+model OrderRequest {
+  id             String    @id @default(cuid())
+  requestNumber  String    @unique
+  type           String    @default("TIENDA") // "TIENDA", "REPUESTO", "SERVICIO", "TALLER"
+  customerName   String
+  customerPhone  String?
+  customerEmail  String?
+  vehicleInfo    String?
+  itemsSummary   String
+  itemsJson      String?
+  totalEstimated Decimal?  @db.Decimal(12, 2)
+  notes          String?
+  status         String    @default("PENDIENTE") // "PENDIENTE", "EN_DESPACHO", "DESPACHADO", "CANCELADO"
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([requestNumber])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model CashRegister {
+  id                 String         @id @default(cuid())
+  sessionNumber      String         @unique
+  status             String         @default("ABIERTA") // "ABIERTA", "CERRADA"
+  initialCash        Decimal        @default(0) @db.Decimal(12, 2)
+  declaredCash       Decimal?       @db.Decimal(12, 2)
+  declaredCard       Decimal?       @db.Decimal(12, 2)
+  declaredTransfer   Decimal?       @db.Decimal(12, 2)
+  expectedCash       Decimal?       @db.Decimal(12, 2)
+  differenceCash     Decimal?       @db.Decimal(12, 2)
+  differenceCard     Decimal?       @db.Decimal(12, 2)
+  differenceTransfer Decimal?       @db.Decimal(12, 2)
+  totalSalesCash     Decimal?       @default(0) @db.Decimal(12, 2)
+  totalSalesCard     Decimal?       @default(0) @db.Decimal(12, 2)
+  totalSalesTransfer Decimal?       @default(0) @db.Decimal(12, 2)
+  totalExpenses      Decimal?       @default(0) @db.Decimal(12, 2)
+  notes              String?
+  openedAt           DateTime       @default(now())
+  closedAt           DateTime?
+  movements          CashMovement[]
+
+  @@index([sessionNumber])
+  @@index([status])
+  @@index([openedAt])
+}
+
+model CashMovement {
+  id             String       @id @default(cuid())
+  cashRegisterId String
+  type           String // "INGRESO", "GASTO", "RETIRO"
+  amount         Decimal      @db.Decimal(12, 2)
+  reason         String
+  createdAt      DateTime     @default(now())
+  cashRegister   CashRegister @relation(fields: [cashRegisterId], references: [id], onDelete: Cascade)
+
+  @@index([cashRegisterId])
+}
+
+
