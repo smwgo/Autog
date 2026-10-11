@@ -5,43 +5,43 @@ import { Header } from "@/components/Header";
 
 const modules = [
   {
-    title: "Mis Vehículos",
-    description: "Revisa el estado, kilometraje y detalles de tus vehículos.",
+    title: "Vehículos",
+    description: "Estado y kilometraje.",
     icon: "🚗",
     href: "/cliente/vehiculos",
     color: "bg-blue-500",
   },
   {
-    title: "Agendar Cita",
-    description: "Programa mantenimientos y revisiones fácilmente.",
+    title: "Citas",
+    description: "Mantenimientos y agenda.",
     icon: "📅",
     href: "/cliente/citas",
     color: "bg-emerald-500",
   },
   {
-    title: "Historial de Servicios",
-    description: "Consulta los trabajos realizados y garantías activas.",
+    title: "Historial",
+    description: "Trabajos y garantías.",
     icon: "📖",
     href: "/cliente/historial",
     color: "bg-amber-500",
   },
   {
     title: "Cotizaciones",
-    description: "Revisa y aprueba presupuestos pendientes de tus vehículos.",
+    description: "Presupuestos pendientes.",
     icon: "📝",
     href: "/cliente/cotizaciones",
     color: "bg-purple-500",
   },
   {
-    title: "Facturas y Pagos",
-    description: "Descarga tus facturas electrónicas y revisa pagos.",
+    title: "Facturas",
+    description: "Comprobantes y pagos.",
     icon: "🧾",
     href: "/cliente/facturas",
     color: "bg-indigo-500",
   },
   {
-    title: "Mi Perfil",
-    description: "Actualiza tus datos de contacto y preferencias.",
+    title: "Perfil",
+    description: "Datos y preferencias.",
     icon: "⚙️",
     href: "/cliente/perfil",
     color: "bg-zinc-500",
@@ -53,16 +53,27 @@ export default function ClientePanel() {
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
       <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
+        <div className="mb-6">
+          <Link 
+            href="/" 
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors w-fit"
+          >
+            &larr; Volver al inicio
+          </Link>
+        </div>
+
         <div className="mb-10">
-          <div className="flex items-center gap-4 mb-2">
-            <span className="text-4xl">👤</span>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Portal de Cliente
-            </h1>
+          <div className="flex items-start gap-4">
+            <span className="text-4xl select-none mt-1">👤</span>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                Cliente
+              </h1>
+              <p className="text-lg text-zinc-600 dark:text-zinc-400 mt-1">
+                Tu área personal.
+              </p>
+            </div>
           </div>
-          <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl">
-            Tu área personal. Administra tus vehículos, revisa historiales y programa tus próximas visitas.
-          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -5,43 +5,43 @@ import { Header } from "@/components/Header";
 
 const modules = [
   {
-    title: "Órdenes Activas",
-    description: "Gestión de vehículos en taller y estado de reparación.",
+    title: "Órdenes",
+    description: "Vehículos y reparaciones.",
     icon: "🚗",
     href: "/taller/ordenes",
     color: "bg-blue-500",
   },
   {
-    title: "Inspecciones Técnicas",
-    description: "Checklist de recepción, diagnóstico y estado del vehículo.",
+    title: "Inspecciones",
+    description: "Diagnóstico y estado.",
     icon: "📋",
     href: "/taller/inspecciones",
     color: "bg-amber-500",
   },
   {
-    title: "Mis Tareas",
-    description: "Panel del mecánico con tareas asignadas y progreso.",
+    title: "Tareas",
+    description: "Asignaciones del mecánico.",
     icon: "🔧",
     href: "/taller/tareas",
     color: "bg-emerald-500",
   },
   {
-    title: "Historial de Servicios",
-    description: "Consultas de reparaciones anteriores por placa o cliente.",
+    title: "Historial",
+    description: "Servicios anteriores.",
     icon: "📖",
     href: "/taller/historial",
     color: "bg-purple-500",
   },
   {
-    title: "Solicitud de Repuestos",
-    description: "Petición de partes e insumos a la bodega o inventario.",
+    title: "Repuestos",
+    description: "Pedidos a bodega.",
     icon: "🔩",
     href: "/taller/repuestos",
     color: "bg-indigo-500",
   },
   {
-    title: "Control de Tiempos",
-    description: "Registro de horas trabajadas por cada orden de trabajo.",
+    title: "Tiempos",
+    description: "Horas por orden.",
     icon: "⏱️",
     href: "/taller/tiempos",
     color: "bg-rose-500",
@@ -53,16 +53,27 @@ export default function TallerPanel() {
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
       <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
+        <div className="mb-6">
+          <Link 
+            href="/" 
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors w-fit"
+          >
+            &larr; Volver al inicio
+          </Link>
+        </div>
+
         <div className="mb-10">
-          <div className="flex items-center gap-4 mb-2">
-            <span className="text-4xl">🔧</span>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Panel de Garaje / Taller
-            </h1>
+          <div className="flex items-start gap-4">
+            <span className="text-4xl select-none mt-1">🔧</span>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                Taller
+              </h1>
+              <p className="text-lg text-zinc-600 dark:text-zinc-400 mt-1">
+                Reparación y mantenimiento.
+              </p>
+            </div>
           </div>
-          <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl">
-            Centro de reparaciones y mantenimiento. Selecciona un módulo para ver el flujo de trabajo.
-          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

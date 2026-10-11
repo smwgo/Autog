@@ -5,43 +5,43 @@ import { Header } from "@/components/Header";
 
 const modules = [
   {
-    title: "Dashboard General",
-    description: "Métricas clave, resumen de ventas y estado global del negocio.",
+    title: "Dashboard",
+    description: "Métricas y KPIs clave.",
     icon: "📈",
     href: "/gerencia/dashboard",
     color: "bg-blue-500",
   },
   {
-    title: "Reportes Financieros",
-    description: "Flujo de caja, ingresos, egresos y facturación SRI.",
+    title: "Finanzas",
+    description: "Flujo de caja y balances.",
     icon: "💰",
     href: "/gerencia/reportes",
     color: "bg-emerald-500",
   },
   {
-    title: "Gestión de Personal",
-    description: "Administración de usuarios, roles, permisos y horarios.",
+    title: "Personal",
+    description: "Equipo y permisos.",
     icon: "👥",
     href: "/gerencia/personal",
     color: "bg-purple-500",
   },
   {
-    title: "Inventario Global",
-    description: "Control de stock entre sucursales, compras y proveedores.",
+    title: "Inventario",
+    description: "Stock y sucursales.",
     icon: "📦",
     href: "/gerencia/inventario",
     color: "bg-amber-500",
   },
   {
-    title: "Auditoría de Sistema",
-    description: "Registro de actividades, accesos y cambios críticos.",
+    title: "Auditoría",
+    description: "Actividades y accesos.",
     icon: "🛡️",
     href: "/gerencia/auditoria",
     color: "bg-red-500",
   },
   {
     title: "Configuración",
-    description: "Ajustes globales del sistema, sucursales y preferencias.",
+    description: "Ajustes del sistema.",
     icon: "⚙️",
     href: "/gerencia/configuracion",
     color: "bg-zinc-500",
@@ -53,16 +53,27 @@ export default function GerenciaPanel() {
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
       <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
+        <div className="mb-6">
+          <Link 
+            href="/" 
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors w-fit"
+          >
+            &larr; Volver al inicio
+          </Link>
+        </div>
+
         <div className="mb-10">
-          <div className="flex items-center gap-4 mb-2">
-            <span className="text-4xl">📊</span>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Panel de Gerencia
-            </h1>
+          <div className="flex items-start gap-4">
+            <span className="text-4xl select-none mt-1">📊</span>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                Gerencia
+              </h1>
+              <p className="text-lg text-zinc-600 dark:text-zinc-400 mt-1">
+                Control y métricas.
+              </p>
+            </div>
           </div>
-          <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl">
-            Centro de control administrativo. Selecciona un módulo para gestionar tu negocio.
-          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

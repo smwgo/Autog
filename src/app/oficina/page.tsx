@@ -5,43 +5,43 @@ import { Header } from "@/components/Header";
 
 const modules = [
   {
-    title: "Gestión de Clientes",
-    description: "Directorio de clientes, historial de vehículos y contacto.",
+    title: "Clientes",
+    description: "Directorio y contactos.",
     icon: "👥",
     href: "/oficina/clientes",
     color: "bg-blue-500",
   },
   {
-    title: "Órdenes y Cotizaciones",
-    description: "Aprobación de cotizaciones y revisión de órdenes de trabajo.",
+    title: "Órdenes",
+    description: "Cotizaciones y órdenes.",
     icon: "📄",
     href: "/oficina/ordenes",
     color: "bg-amber-500",
   },
   {
-    title: "Citas y Agenda",
-    description: "Calendario de servicios, asignación de bahías y técnicos.",
+    title: "Agenda",
+    description: "Citas y técnicos.",
     icon: "📅",
     href: "/oficina/agenda",
     color: "bg-emerald-500",
   },
   {
-    title: "Facturación y SRI",
-    description: "Emisión de facturas electrónicas, notas de crédito y cobranzas.",
+    title: "Facturación",
+    description: "Facturas y cobranzas.",
     icon: "🧾",
     href: "/oficina/facturacion",
     color: "bg-purple-500",
   },
   {
-    title: "Compras y Proveedores",
-    description: "Órdenes de compra, cuentas por pagar y catálogo de proveedores.",
+    title: "Proveedores",
+    description: "Compras y cuentas por pagar.",
     icon: "🤝",
     href: "/oficina/proveedores",
     color: "bg-indigo-500",
   },
   {
-    title: "Caja y Liquidaciones",
-    description: "Cuadres diarios de caja, métodos de pago y liquidaciones.",
+    title: "Caja",
+    description: "Cobros y liquidaciones.",
     icon: "💵",
     href: "/oficina/caja",
     color: "bg-teal-500",
@@ -53,16 +53,27 @@ export default function OficinaPanel() {
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
       <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
+        <div className="mb-6">
+          <Link 
+            href="/" 
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors w-fit"
+          >
+            &larr; Volver al inicio
+          </Link>
+        </div>
+
         <div className="mb-10">
-          <div className="flex items-center gap-4 mb-2">
-            <span className="text-4xl">🏢</span>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Panel de Oficina
-            </h1>
+          <div className="flex items-start gap-4">
+            <span className="text-4xl select-none mt-1">🏢</span>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                Oficina
+              </h1>
+              <p className="text-lg text-zinc-600 dark:text-zinc-400 mt-1">
+                Gestión y atención.
+              </p>
+            </div>
           </div>
-          <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl">
-            Centro de operaciones administrativas y atención al cliente. Selecciona un módulo para comenzar.
-          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

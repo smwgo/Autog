@@ -5,43 +5,43 @@ import { Header } from "@/components/Header";
 
 const modules = [
   {
-    title: "Nueva Venta",
-    description: "Interfaz rápida para facturación y venta de repuestos.",
+    title: "Venta",
+    description: "Facturación de mostrador.",
     icon: "🛒",
     href: "/pos/venta",
     color: "bg-emerald-500",
   },
   {
-    title: "Catálogo de Productos",
-    description: "Búsqueda de inventario, precios y existencias en tiempo real.",
+    title: "Catálogo",
+    description: "Inventario y existencias.",
     icon: "📦",
     href: "/pos/catalogo",
     color: "bg-blue-500",
   },
   {
-    title: "Cierre de Caja",
-    description: "Cuadre diario, declaración de efectivo y tarjetas.",
+    title: "Caja",
+    description: "Cuadres y métodos de pago.",
     icon: "💵",
     href: "/pos/caja",
     color: "bg-amber-500",
   },
   {
     title: "Devoluciones",
-    description: "Gestión de notas de crédito y cambios de productos.",
+    description: "Notas de crédito y cambios.",
     icon: "🔄",
     href: "/pos/devoluciones",
     color: "bg-rose-500",
   },
   {
-    title: "Historial de Ventas",
-    description: "Reimpresión de facturas y consultas de ventas pasadas.",
+    title: "Historial",
+    description: "Facturas emitidas.",
     icon: "🧾",
     href: "/pos/historial",
     color: "bg-indigo-500",
   },
   {
     title: "Cotizaciones",
-    description: "Creación rápida de proformas para clientes en mostrador.",
+    description: "Proformas rápidas.",
     icon: "📝",
     href: "/pos/cotizaciones",
     color: "bg-purple-500",
@@ -53,16 +53,27 @@ export default function PosPanel() {
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
       <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
+        <div className="mb-6">
+          <Link 
+            href="/" 
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors w-fit"
+          >
+            &larr; Volver al inicio
+          </Link>
+        </div>
+
         <div className="mb-10">
-          <div className="flex items-center gap-4 mb-2">
-            <span className="text-4xl">🛒</span>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Punto de Venta (POS)
-            </h1>
+          <div className="flex items-start gap-4">
+            <span className="text-4xl select-none mt-1">🛒</span>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                POS
+              </h1>
+              <p className="text-lg text-zinc-600 dark:text-zinc-400 mt-1">
+                Facturación y mostrador.
+              </p>
+            </div>
           </div>
-          <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl">
-            Centro de facturación y atención rápida en mostrador. Selecciona un módulo para continuar.
-          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
