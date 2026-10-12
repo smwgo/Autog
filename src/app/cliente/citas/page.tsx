@@ -21,10 +21,42 @@ const SERVICES = [
 export default function AgendarCitaPage() {
   const [selectedVehicle, setSelectedVehicle] = useState('');
   const [selectedService, setSelectedService] = useState('');
+  const [searchService, setSearchService] = useState('');
+  const [servicesList, setServicesList] = useState(SERVICES);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [comments, setComments] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // Cargar catálogo de servicios reales si están disponibles
+  React.useEffect(() => {
+    fetch('/api/servicios-taller?activos=true')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.servicios) && data.servicios.length > 0) {
+          const mapped = data.servicios.map((s: any) => ({
+            id: s.code || s.id,
+            name: s.name,
+            time: s.estimatedMinutes ? `${s.estimatedMinutes} min` : '30-45 min',
+            category: s.category || 'Taller',
+          }));
+          mapped.push({
+            id: 'SRV-OTRO',
+            name: 'Otro (Especificar en comentarios)',
+            time: 'Variable',
+            category: 'Personalizado',
+          });
+          setServicesList(mapped);
+        }
+      })
+      .catch((err) => console.error('Error cargando servicios para citas:', err));
+  }, []);
+
+  const filteredServices = servicesList.filter((s) => {
+    if (!searchService.trim()) return true;
+    const term = searchService.toLowerCase();
+    return s.name.toLowerCase().includes(term) || (s.category && s.category.toLowerCase().includes(term));
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,9 +117,6 @@ export default function AgendarCitaPage() {
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               Agendar Cita
             </h1>
-            <p className="text-zinc-600 dark:text-zinc-400">
-              Programa mantenimientos y revisiones fácilmente.
-            </p>
           </div>
         </div>
 
@@ -124,30 +153,104 @@ export default function AgendarCitaPage() {
 
             {/* Step 2: Service */}
             <div>
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
-                <span className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm">2</span>
-                ¿Qué servicio necesitas?
-              </h3>
-              <div className="grid grid-cols-1 gap-3">
-                {SERVICES.map((s) => (
-                  <label 
-                    key={s.id} 
-                    className={`cursor-pointer p-4 rounded-xl border-2 transition-all flex justify-between items-center ${selectedService === s.id ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10' : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'}`}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                <h3 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm">2</span>
+                  ¿Qué servicio necesitas?
+                </h3>
+                {selectedService && (
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 w-fit">
+                    ✓ 1 seleccionado
+                  </span>
+                )}
+              </div>
+
+              {/* Buscador de servicios */}
+              <div className="mb-3 relative">
+                <input
+                  type="text"
+                  placeholder="Buscar servicio (ej. aceite, frenos, diagnóstico, lavado)..."
+                  value={searchService}
+                  onChange={(e) => setSearchService(e.target.value)}
+                  className="w-full pl-10 pr-10 py-3 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm focus:outline-none focus:border-emerald-500 dark:text-white transition-all font-medium"
+                />
+                <span className="absolute left-3.5 top-3.5 text-zinc-400">🔍</span>
+                {searchService && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchService('')}
+                    className="absolute right-3.5 top-3 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm font-bold"
                   >
-                    <div className="flex items-center gap-3">
-                      <input 
-                        type="radio" 
-                        name="service" 
-                        className="w-5 h-5 accent-emerald-500"
-                        value={s.id}
-                        checked={selectedService === s.id}
-                        onChange={() => setSelectedService(s.id)}
-                      />
-                      <span className="font-bold text-zinc-900 dark:text-white">{s.name}</span>
-                    </div>
-                    <span className="text-sm text-zinc-500 dark:text-zinc-400">⏱️ {s.time}</span>
-                  </label>
-                ))}
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Lista interactiva de servicios */}
+              <div className="grid grid-cols-1 gap-2.5 max-h-96 overflow-y-auto pr-1">
+                {filteredServices.map((s) => {
+                  const isSelected = selectedService === s.id;
+                  return (
+                    <label 
+                      key={s.id} 
+                      className={`cursor-pointer p-4 rounded-xl border-2 transition-all flex justify-between items-center gap-3 ${
+                        isSelected 
+                          ? 'border-emerald-500 bg-emerald-50/80 dark:bg-emerald-500/15 shadow-sm ring-1 ring-emerald-500/30' 
+                          : 'border-zinc-200 dark:border-zinc-800 hover:border-emerald-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900/60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <input 
+                          type="radio" 
+                          name="service" 
+                          className="w-5 h-5 accent-emerald-500 flex-shrink-0 cursor-pointer"
+                          value={s.id}
+                          checked={isSelected}
+                          onChange={() => setSelectedService(s.id)}
+                        />
+                        <div className="min-w-0">
+                          <span className={`font-bold text-sm sm:text-base block truncate ${isSelected ? 'text-emerald-900 dark:text-emerald-200' : 'text-zinc-900 dark:text-white'}`}>
+                            {s.name}
+                          </span>
+                          {s.category && (
+                            <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
+                              {s.category}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 rounded-lg">
+                          ⏱️ {s.time}
+                        </span>
+                        {isSelected && (
+                          <span className="text-emerald-600 dark:text-emerald-400 text-base font-bold">
+                            ✓
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })}
+
+                {filteredServices.length === 0 && (
+                  <div className="p-6 text-center bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-700">
+                    <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-400 mb-2">
+                      No se encontró ningún servicio con &quot;{searchService}&quot;
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedService('SRV-OTRO');
+                        setSearchService('');
+                      }}
+                      className="text-xs font-bold text-emerald-600 hover:underline"
+                    >
+                      Seleccionar &quot;Otro (Especificar en comentarios)&quot;
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 

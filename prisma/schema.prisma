@@ -815,4 +815,64 @@ model CashMovement {
   @@index([cashRegisterId])
 }
 
+model WorkshopService {
+  id               String   @id @default(cuid())
+  code             String   @unique
+  name             String
+  category         String   @default("Mantenimiento Rápido")
+  price            Decimal  @db.Decimal(12, 2)
+  estimatedMinutes Int      @default(30)
+  description      String?
+  requiresBay      Boolean  @default(true)
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
+  @@index([code])
+  @@index([category])
+  @@index([active])
+}
+
+model WorkshopOrder {
+  id           String   @id @default(cuid())
+  orderNumber  String   @unique
+  vehicle      String
+  plate        String
+  client       String
+  clientPhone  String?
+  mechanic     String   @default("Carlos Rodríguez")
+  status       String   @default("En Diagnóstico")
+  progress     Int      @default(25)
+  servicesJson String?
+  notes        String?
+  dateIn       DateTime @default(now())
+  estimatedOut String?  @default("24 Horas")
+  totalCost    Decimal? @db.Decimal(12, 2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([orderNumber])
+  @@index([plate])
+  @@index([status])
+}
+
+model WorkshopInspection {
+  id               String   @id @default(cuid())
+  inspectionNumber String   @unique
+  vehicle          String
+  plate            String
+  client           String?
+  type             String   @default("Recepción")
+  status           String   @default("Pendiente")
+  assignedTo       String   @default("Carlos Rodríguez")
+  fuelLevel        String?  @default("Medio")
+  mileage          String?
+  checklistJson    String?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([inspectionNumber])
+  @@index([plate])
+  @@index([status])
+}

@@ -33,6 +33,13 @@ const modules = [
     color: "bg-blue-500",
   },
   {
+    title: "Servicios",
+    description: "Tarifario y mano de obra taller.",
+    icon: "⚙️",
+    href: "/pos/servicios",
+    color: "bg-teal-500",
+  },
+  {
     title: "Caja",
     description: "Cuadres y métodos de pago.",
     icon: "💵",

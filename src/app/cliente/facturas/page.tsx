@@ -1,47 +1,228 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Header } from "@/components/Header";
 
+interface InvoiceItem {
+  id: string;
+  uuid: string;
+  date: string;
+  concept: string;
+  amount: number;
+  status: 'Pagada' | 'Pendiente';
+  paymentMethod: string;
+  items?: { description: string; amount: number }[];
+}
+
 // Datos de prueba para facturas del cliente
-const INVOICES = [
+const INITIAL_INVOICES: InvoiceItem[] = [
   {
     id: 'F-2023-0899',
-    uuid: 'A1B2C3D4-E5F6-7890',
+    uuid: 'A1B2C3D4-E5F6-7890-9988-1234567890AB',
     date: '15 Sep 2023',
     concept: 'Servicio de Mantenimiento Preventivo (Hilux)',
     amount: 185.00,
-    status: 'Pagada', // Pagada, Pendiente
+    status: 'Pagada',
     paymentMethod: 'Tarjeta de Crédito',
+    items: [
+      { description: 'Mano de obra especializada (Mantenimiento)', amount: 65.00 },
+      { description: 'Aceite sintético 5W-30 y filtro de aceite', amount: 94.48 },
+    ]
   },
   {
     id: 'F-2023-0850',
-    uuid: 'B2C3D4E5-F6G7-8901',
+    uuid: 'B2C3D4E5-F6G7-8901-7766-2345678901BC',
     date: '02 Jul 2023',
     concept: 'Reparación de Frenos (Civic)',
     amount: 210.50,
     status: 'Pagada',
     paymentMethod: 'Transferencia Bancaria',
+    items: [
+      { description: 'Mano de obra: Reemplazo y purgado de frenos', amount: 80.00 },
+      { description: 'Pastillas delanteras de cerámica y rectificación', amount: 101.47 },
+    ]
   },
   {
     id: 'F-2023-0910',
-    uuid: 'C3D4E5F6-G7H8-9012',
+    uuid: 'C3D4E5F6-G7H8-9012-3322-8765432109DE',
     date: '08 Oct 2023',
     concept: 'Compra de Repuestos de Mostrador',
     amount: 45.00,
     status: 'Pendiente',
     paymentMethod: 'Por Definir',
+    items: [
+      { description: 'Juego de plumillas limpiaparabrisas Bosch 24"', amount: 38.79 },
+    ]
+  },
+  {
+    id: 'F-2022-0412',
+    uuid: 'D4E5F6G7-H8I9-0123-5544-3456789012CD',
+    date: '10 Nov 2022',
+    concept: 'Alineación y Balanceo (Escape)',
+    amount: 45.00,
+    status: 'Pagada',
+    paymentMethod: 'Efectivo',
+    items: [
+      { description: 'Alineación 3D computarizada y plomos de balanceo', amount: 38.79 },
+    ]
+  },
+  {
+    id: 'F-2022-0198',
+    uuid: 'E5F6G7H8-I9J0-1234-1122-4567890123EF',
+    date: '15 May 2022',
+    concept: 'Mantenimiento Preventivo (Hilux)',
+    amount: 150.00,
+    status: 'Pagada',
+    paymentMethod: 'Tarjeta de Débito',
+    items: [
+      { description: 'Cambio de fluidos e inspección general de seguridad', amount: 129.31 },
+    ]
   }
 ];
 
-export default function FacturasPagosPage() {
-  const [searchTerm, setSearchTerm] = useState('');
+function FacturasPagosContent() {
+  const searchParams = useSearchParams();
+  const idParam = searchParams.get('id') || searchParams.get('factura') || '';
+
+  const [invoices, setInvoices] = useState<InvoiceItem[]>(INITIAL_INVOICES);
+  const [searchTerm, setSearchTerm] = useState(idParam);
   const [statusFilter, setStatusFilter] = useState('Todas'); // Todas, Pagada, Pendiente
 
-  const filteredInvoices = INVOICES.filter(inv => {
+  // Estados interactivos para modales y notificaciones
+  const [selectedInvoiceModal, setSelectedInvoiceModal] = useState<InvoiceItem | null>(null);
+  const [invoiceToPay, setInvoiceToPay] = useState<InvoiceItem | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('Tarjeta de Crédito');
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [notification, setNotification] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (idParam) {
+      setSearchTerm(idParam);
+    }
+  }, [idParam]);
+
+  const showNotification = (msg: string) => {
+    setNotification(msg);
+    setTimeout(() => {
+      setNotification(null);
+    }, 3500);
+  };
+
+  // Descarga real de archivo XML (CFDI simulado)
+  const handleDownloadXML = (inv: InvoiceItem) => {
+    const subtotal = (inv.amount / 1.16).toFixed(2);
+    const iva = (inv.amount - Number(subtotal)).toFixed(2);
+
+    const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<cfdi:Comprobante 
+  xmlns:cfdi="http://www.sat.gob.mx/cfd/4" 
+  Version="4.0" 
+  Serie="F" 
+  Folio="${inv.id}" 
+  Fecha="${inv.date}" 
+  SubTotal="${subtotal}" 
+  Total="${inv.amount.toFixed(2)}" 
+  Moneda="MXN" 
+  TipoDeComprobante="I" 
+  MetodoPago="PUE" 
+  LugarExpedicion="64000">
+  <cfdi:Emisor Rfc="AGU200101XYZ" Nombre="AUTOG TALLER AUTOMOTRIZ S.A. DE C.V." RegimenFiscal="601"/>
+  <cfdi:Receptor Rfc="XAXX010101000" Nombre="PUBLICO EN GENERAL" UsoCFDI="G03" DomicilioFiscalReceptor="64000" RegimenFiscalReceptor="616"/>
+  <cfdi:Conceptos>
+    <cfdi:Concepto ClaveProdServ="78181500" Cantidad="1" ClaveUnidad="E48" Descripcion="${inv.concept}" ValorUnitario="${subtotal}" Importe="${subtotal}"/>
+  </cfdi:Conceptos>
+  <cfdi:Impuestos TotalImpuestosTrasladados="${iva}">
+    <cfdi:Traslados>
+      <cfdi:Traslado Base="${subtotal}" Impuesto="002" TipoFactor="Tasa" TasaOCuota="0.160000" Importe="${iva}"/>
+    </cfdi:Traslados>
+  </cfdi:Impuestos>
+  <cfdi:Complemento>
+    <tfd:TimbreFiscalDigital UUID="${inv.uuid}" FechaTimbrado="${inv.date}T12:00:00" RfcProvCertif="SAT970701NN3"/>
+  </cfdi:Complemento>
+</cfdi:Comprobante>`;
+
+    const blob = new Blob([xmlContent], { type: 'application/xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${inv.id}_CFDI.xml`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showNotification(`Factura XML (${inv.id}.xml) descargada con éxito.`);
+  };
+
+  // Descarga / Impresión de PDF
+  const handleDownloadPDF = (inv: InvoiceItem) => {
+    showNotification(`Generando comprobante PDF para ${inv.id}...`);
+    setSelectedInvoiceModal(inv);
+    setTimeout(() => {
+      if (typeof window !== 'undefined') {
+        window.print();
+      }
+    }, 500);
+  };
+
+  // Descarga de Reporte Anual en formato CSV
+  const handleDownloadAnnualReport = () => {
+    const csvRows = [
+      ['ID Factura', 'UUID', 'Fecha', 'Concepto', 'Total (MXN)', 'Estado', 'Forma de Pago'],
+      ...invoices.map(i => [
+        i.id,
+        i.uuid,
+        i.date,
+        `"${i.concept}"`,
+        i.amount.toFixed(2),
+        i.status,
+        `"${i.paymentMethod}"`
+      ])
+    ];
+
+    const csvContent = csvRows.map(e => e.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Reporte_Facturacion_AutoG_${new Date().getFullYear()}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showNotification('Reporte anual de facturación descargado en CSV.');
+  };
+
+  // Procesar Pago de Factura Pendiente
+  const handleConfirmPayment = () => {
+    if (!invoiceToPay) return;
+    setIsProcessingPayment(true);
+
+    setTimeout(() => {
+      setInvoices(prev => prev.map(inv => {
+        if (inv.id === invoiceToPay.id) {
+          return {
+            ...inv,
+            status: 'Pagada',
+            paymentMethod: selectedPaymentMethod
+          };
+        }
+        return inv;
+      }));
+
+      setIsProcessingPayment(false);
+      showNotification(`¡Pago registrado con éxito para ${invoiceToPay.id}!`);
+      setInvoiceToPay(null);
+    }, 1000);
+  };
+
+  const filteredInvoices = invoices.filter(inv => {
     const matchesSearch = inv.concept.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          inv.id.toLowerCase().includes(searchTerm.toLowerCase());
+                          inv.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          inv.uuid.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'Todas' || inv.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -49,6 +230,14 @@ export default function FacturasPagosPage() {
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
+
+      {/* Toast Notification */}
+      {notification && (
+        <div className="fixed bottom-6 right-6 z-50 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-semibold animate-in slide-in-from-bottom duration-200">
+          <span className="text-emerald-400">✓</span>
+          <span>{notification}</span>
+        </div>
+      )}
       
       <main className="flex-grow p-6 md:p-12 max-w-6xl mx-auto w-full">
         {/* Navigation / Breadcrumb */}
@@ -75,12 +264,13 @@ export default function FacturasPagosPage() {
                 Facturas y Pagos
               </h1>
             </div>
-            <p className="text-lg text-zinc-600 dark:text-zinc-400">
-              Descarga tus facturas electrónicas y revisa pagos pendientes.
-            </p>
           </div>
           
-          <button className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500 dark:hover:border-indigo-500 text-zinc-700 dark:text-zinc-300 px-5 py-3 rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2">
+          <button 
+            type="button"
+            onClick={handleDownloadAnnualReport}
+            className="cursor-pointer bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500 dark:hover:border-indigo-500 text-zinc-700 dark:text-zinc-300 px-5 py-3 rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2 active:scale-[0.98]"
+          >
             <span>⬇️</span> Descargar Reporte Anual
           </button>
         </div>
@@ -90,19 +280,29 @@ export default function FacturasPagosPage() {
           <div className="flex-grow relative">
             <input 
               type="text" 
-              placeholder="Buscar por número de factura o concepto..." 
-              className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all dark:text-white font-medium"
+              placeholder="Buscar por número de factura (ej. F-2023-0899) o concepto..." 
+              className="w-full pl-12 pr-10 py-3.5 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all dark:text-white font-medium text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <span className="absolute left-4 top-4 text-zinc-400 text-xl">🔍</span>
+            <span className="absolute left-4 top-3.5 text-zinc-400 text-lg">🔍</span>
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="cursor-pointer absolute right-4 top-3.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 font-bold"
+              >
+                ✕
+              </button>
+            )}
           </div>
           <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar shrink-0">
             {['Todas', 'Pagada', 'Pendiente'].map(status => (
               <button 
                 key={status}
+                type="button"
                 onClick={() => setStatusFilter(status)}
-                className={`px-5 py-3.5 rounded-2xl font-bold whitespace-nowrap transition-colors ${statusFilter === status ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+                className={`cursor-pointer px-5 py-3.5 rounded-2xl font-bold whitespace-nowrap transition-colors text-sm ${statusFilter === status ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
               >
                 {status}
               </button>
@@ -116,34 +316,61 @@ export default function FacturasPagosPage() {
             <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-12 text-center shadow-sm">
               <span className="text-4xl mb-4 block opacity-50">🧾</span>
               <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">No se encontraron facturas</h3>
-              <p className="text-zinc-500 dark:text-zinc-400">Intenta cambiar los filtros de búsqueda.</p>
+              <p className="text-zinc-500 dark:text-zinc-400 mb-4">Intenta cambiar los filtros o el término de búsqueda.</p>
+              {(searchTerm || statusFilter !== 'Todas') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setStatusFilter('Todas');
+                  }}
+                  className="cursor-pointer px-4 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 font-semibold text-sm hover:bg-indigo-100 transition-colors"
+                >
+                  Restablecer filtros
+                </button>
+              )}
             </div>
           ) : (
             filteredInvoices.map((inv) => (
-              <div key={inv.id} className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 md:p-8 shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all flex flex-col md:flex-row gap-6 items-center group">
-                
+              <div 
+                key={inv.id} 
+                className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 md:p-8 shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all flex flex-col md:flex-row gap-6 items-center group"
+              >
                 {/* Status Indicator */}
                 <div className="hidden md:flex flex-col items-center justify-center w-16 h-16 rounded-2xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 flex-shrink-0">
                   {inv.status === 'Pagada' ? (
-                    <span className="text-emerald-500 text-3xl">✓</span>
+                    <span className="text-emerald-500 text-3xl font-black">✓</span>
                   ) : (
-                    <span className="text-amber-500 text-3xl">!</span>
+                    <span className="text-amber-500 text-3xl font-black">!</span>
                   )}
                 </div>
 
                 {/* Details */}
                 <div className="flex-grow w-full">
                   <div className="flex justify-between items-start mb-2">
-                    <span className="font-bold font-mono text-indigo-600 dark:text-indigo-400">{inv.id}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedInvoiceModal(inv)}
+                      className="cursor-pointer font-bold font-mono text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1.5"
+                      title="Clic para ver detalle completo"
+                    >
+                      <span>{inv.id}</span>
+                      <span className="text-xs opacity-75">🔍</span>
+                    </button>
                     <span className={`md:hidden px-3 py-1 rounded-full text-xs font-bold border ${inv.status === 'Pagada' ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30' : 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30'}`}>
                       {inv.status}
                     </span>
                   </div>
-                  <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-1 leading-tight">{inv.concept}</h3>
+                  <h3 
+                    onClick={() => setSelectedInvoiceModal(inv)}
+                    className="cursor-pointer text-lg font-bold text-zinc-900 dark:text-white mb-1 leading-tight hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  >
+                    {inv.concept}
+                  </h3>
                   <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-zinc-500 dark:text-zinc-400 mt-3">
                     <span className="flex items-center gap-1">📅 {inv.date}</span>
                     <span className="flex items-center gap-1">💳 {inv.paymentMethod}</span>
-                    <span className="flex items-center gap-1 hidden lg:flex">📄 UUID: {inv.uuid}</span>
+                    <span className="flex items-center gap-1 hidden lg:flex font-mono text-xs">📄 UUID: {inv.uuid}</span>
                   </div>
                 </div>
 
@@ -158,17 +385,32 @@ export default function FacturasPagosPage() {
                     </span>
                   </div>
                   
+                  {/* Botones con funciones conectadas */}
                   <div className="flex gap-2">
                     {inv.status === 'Pendiente' ? (
-                      <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl transition-colors shadow-md shadow-indigo-500/20 whitespace-nowrap text-sm">
+                      <button 
+                        type="button"
+                        onClick={() => setInvoiceToPay(inv)}
+                        className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl transition-all shadow-md shadow-indigo-500/20 whitespace-nowrap text-sm active:scale-[0.98]"
+                      >
                         Pagar Ahora
                       </button>
                     ) : (
                       <>
-                        <button className="bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-bold px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap text-sm flex items-center gap-2" title="Descargar XML">
+                        <button 
+                          type="button"
+                          onClick={() => handleDownloadXML(inv)}
+                          className="cursor-pointer bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-bold px-4 py-2.5 rounded-xl transition-all whitespace-nowrap text-sm flex items-center gap-2 active:scale-[0.98]" 
+                          title="Descargar archivo CFDI XML"
+                        >
                           <span className="text-indigo-600 dark:text-indigo-400">{'</>'}</span> XML
                         </button>
-                        <button className="bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-bold px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap text-sm flex items-center gap-2" title="Descargar PDF">
+                        <button 
+                          type="button"
+                          onClick={() => handleDownloadPDF(inv)}
+                          className="cursor-pointer bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-bold px-4 py-2.5 rounded-xl transition-all whitespace-nowrap text-sm flex items-center gap-2 active:scale-[0.98]" 
+                          title="Ver e Imprimir comprobante PDF"
+                        >
                           📄 PDF
                         </button>
                       </>
@@ -180,8 +422,264 @@ export default function FacturasPagosPage() {
             ))
           )}
         </div>
-
       </main>
+
+      {/* ======================================================== */}
+      {/* MODAL: VISTA PREVIA Y DETALLE COMPLETO DE FACTURA        */}
+      {/* ======================================================== */}
+      {selectedInvoiceModal && (
+        <div 
+          onClick={() => setSelectedInvoiceModal(null)}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl relative my-8"
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedInvoiceModal(null)}
+              className="cursor-pointer absolute top-6 right-6 w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center justify-center font-bold text-lg"
+            >
+              ✕
+            </button>
+
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b border-zinc-200 dark:border-zinc-800 mb-6 pr-8">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-2xl">🧾</span>
+                  <span className="text-xl font-black text-zinc-900 dark:text-white">Auto/G Taller Automotriz</span>
+                </div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  RFC: AGU200101XYZ • Régimen General de Ley Personas Morales
+                </p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Av. Principal 1245, Zona Industrial
+                </p>
+              </div>
+
+              <div className="text-left sm:text-right">
+                <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold mb-2 border ${
+                  selectedInvoiceModal.status === 'Pagada'
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30'
+                    : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30'
+                }`}>
+                  {selectedInvoiceModal.status}
+                </span>
+                <p className="font-mono text-sm font-bold text-zinc-900 dark:text-white">
+                  {selectedInvoiceModal.id}
+                </p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Fecha: {selectedInvoiceModal.date}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 text-xs mb-6">
+              <div>
+                <p className="font-bold text-zinc-500 uppercase tracking-wider mb-1">Receptor:</p>
+                <p className="font-semibold text-zinc-900 dark:text-white">Cliente General</p>
+                <p className="text-zinc-500 dark:text-zinc-400">RFC: XAXX010101000</p>
+                <p className="text-zinc-500 dark:text-zinc-400">Uso CFDI: G03 - Gastos en general</p>
+              </div>
+              <div>
+                <p className="font-bold text-zinc-500 uppercase tracking-wider mb-1">Detalles de Operación:</p>
+                <p className="font-semibold text-zinc-900 dark:text-white">{selectedInvoiceModal.concept}</p>
+                <p className="text-zinc-500 dark:text-zinc-400">Forma de Pago: {selectedInvoiceModal.paymentMethod}</p>
+                <p className="font-mono text-zinc-500 dark:text-zinc-400">Moneda: MXN (Pesos)</p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <h4 className="font-bold text-xs uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-3">
+                Conceptos y Partidas
+              </h4>
+              <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden text-sm">
+                <table className="w-full text-left">
+                  <thead className="bg-zinc-100 dark:bg-zinc-800/80 text-xs font-bold text-zinc-600 dark:text-zinc-300">
+                    <tr>
+                      <th className="p-3">Descripción</th>
+                      <th className="p-3 text-right">Importe</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                    {(selectedInvoiceModal.items && selectedInvoiceModal.items.length > 0) ? (
+                      selectedInvoiceModal.items.map((item, idx) => (
+                        <tr key={idx}>
+                          <td className="p-3 text-zinc-900 dark:text-zinc-200">{item.description}</td>
+                          <td className="p-3 text-right font-medium text-zinc-900 dark:text-zinc-200">
+                            ${item.amount.toFixed(2)}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td className="p-3 text-zinc-900 dark:text-zinc-200">{selectedInvoiceModal.concept}</td>
+                        <td className="p-3 text-right font-medium text-zinc-900 dark:text-zinc-200">
+                          ${(selectedInvoiceModal.amount / 1.16).toFixed(2)}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-800 mb-6">
+              <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                <p className="font-mono">UUID Fiscal Timbrado:</p>
+                <p className="font-mono text-[11px] text-zinc-700 dark:text-zinc-300 break-all">
+                  {selectedInvoiceModal.uuid}
+                </p>
+              </div>
+              <div className="w-full sm:w-48 text-right space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">Subtotal:</span>
+                  <span className="font-semibold text-zinc-900 dark:text-white">
+                    ${(selectedInvoiceModal.amount / 1.16).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">IVA (16%):</span>
+                  <span className="font-semibold text-zinc-900 dark:text-white">
+                    ${(selectedInvoiceModal.amount - (selectedInvoiceModal.amount / 1.16)).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-base font-black border-t border-zinc-200 dark:border-zinc-700 pt-1 text-zinc-900 dark:text-white">
+                  <span>Total:</span>
+                  <span>${selectedInvoiceModal.amount.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 justify-end pt-4 border-t border-zinc-200 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => handleDownloadXML(selectedInvoiceModal)}
+                className="cursor-pointer px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold text-xs flex items-center gap-1.5 transition-colors"
+              >
+                <span>{'</>'}</span> Descargar XML
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== 'undefined') window.print();
+                }}
+                className="cursor-pointer px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-sm"
+              >
+                <span>📄</span> Imprimir / PDF
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedInvoiceModal(null)}
+                className="cursor-pointer px-4 py-2.5 rounded-xl bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-semibold text-xs transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: PAGAR AHORA (PASARELA DE PAGO)                    */}
+      {/* ======================================================== */}
+      {invoiceToPay && (
+        <div 
+          onClick={() => setInvoiceToPay(null)}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-md w-full p-6 shadow-2xl relative"
+          >
+            <button
+              type="button"
+              onClick={() => setInvoiceToPay(null)}
+              className="cursor-pointer absolute top-5 right-5 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center justify-center font-bold text-sm"
+            >
+              ✕
+            </button>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-2xl">
+                💳
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Pagar Factura</h3>
+                <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400">{invoiceToPay.id}</p>
+              </div>
+            </div>
+
+            <div className="bg-zinc-50 dark:bg-zinc-800/50 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 mb-5">
+              <p className="text-xs text-zinc-500 mb-1">Concepto:</p>
+              <p className="font-semibold text-zinc-900 dark:text-white text-sm mb-3">{invoiceToPay.concept}</p>
+              <div className="flex justify-between items-baseline border-t border-zinc-200 dark:border-zinc-700 pt-2">
+                <span className="text-xs text-zinc-500">Monto total:</span>
+                <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
+                  ${invoiceToPay.amount.toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
+                Selecciona Método de Pago
+              </label>
+              {[
+                { id: 'Tarjeta de Crédito', icon: '💳', label: 'Tarjeta de Crédito / Débito' },
+                { id: 'Transferencia Bancaria (SPEI)', icon: '🏦', label: 'Transferencia SPEI Inmediata' },
+                { id: 'Efectivo en Caja', icon: '💵', label: 'Pagar en Caja del Taller' },
+              ].map((m) => (
+                <label
+                  key={m.id}
+                  className={`cursor-pointer p-3.5 rounded-2xl border text-sm font-semibold flex items-center gap-3 transition-all ${
+                    selectedPaymentMethod === m.id
+                      ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300'
+                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="payMethod"
+                    checked={selectedPaymentMethod === m.id}
+                    onChange={() => setSelectedPaymentMethod(m.id)}
+                    className="text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>{m.icon}</span>
+                  <span>{m.label}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setInvoiceToPay(null)}
+                className="cursor-pointer flex-1 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isProcessingPayment}
+                onClick={handleConfirmPayment}
+                className="cursor-pointer flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-all text-sm shadow-md shadow-indigo-500/20 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isProcessingPayment ? 'Procesando...' : `Pagar $${invoiceToPay.amount.toFixed(2)}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function FacturasPagosPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center p-8 text-zinc-500">Cargando facturas...</div>}>
+      <FacturasPagosContent />
+    </Suspense>
   );
 }

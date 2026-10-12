@@ -5,7 +5,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function getPrisma(): PrismaClient {
-  if (globalForPrisma.prisma && (!(globalForPrisma.prisma as any).product || !(globalForPrisma.prisma as any).sale || !(globalForPrisma.prisma as any).orderRequest)) {
+  if (globalForPrisma.prisma && (!(globalForPrisma.prisma as any).product || !(globalForPrisma.prisma as any).workshopService || !(globalForPrisma.prisma as any).vehicle)) {
     try {
       globalForPrisma.prisma.$disconnect();
     } catch {}
@@ -36,3 +36,5 @@ export const prisma = new Proxy({} as PrismaClient, {
     return (client as any)[prop];
   },
 });
+
+export default prisma;

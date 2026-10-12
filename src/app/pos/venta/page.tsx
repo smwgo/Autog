@@ -14,6 +14,8 @@ interface Product {
   stock: number;
   minStock: number;
   status: string;
+  isService?: boolean;
+  estimatedMinutes?: number;
 }
 
 interface Customer {
@@ -37,6 +39,10 @@ interface VentaEnEspera {
 
 function getProductEmoji(name: string, category: string = ""): string {
   const text = (name + " " + category).toLowerCase();
+  if (text.includes("lavado") || text.includes("chasis") || text.includes("estética")) return "🚿";
+  if (text.includes("alineación") || text.includes("balanceo")) return "⚖️";
+  if (text.includes("diagnóstico") || text.includes("escáner") || text.includes("obd")) return "💻";
+  if (text.includes("clima") || text.includes("aire acondicionado")) return "❄️";
   if (text.includes("aceite") || text.includes("lubricante")) return "🛢️";
   if (text.includes("filtro")) return "⚙️";
   if (text.includes("freno") || text.includes("pastilla")) return "🛑";
@@ -115,17 +121,43 @@ export default function NuevaVentaPage() {
     }
   };
 
-  // 1. Cargar productos
+  // 1. Cargar productos y servicios de taller desde Neon
   const cargarProductos = useCallback(async () => {
     try {
       setCargandoProductos(true);
-      const res = await fetch("/api/productos");
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setProductos(data.productos || []);
+      const [resProd, resServ] = await Promise.all([
+        fetch("/api/productos"),
+        fetch("/api/servicios-taller?activos=true"),
+      ]);
+
+      const dataProd = await resProd.json();
+      const dataServ = await resServ.json();
+
+      let listaCombinada: Product[] = [];
+      if (resProd.ok && dataProd.success && Array.isArray(dataProd.productos)) {
+        listaCombinada = [...dataProd.productos];
       }
+
+      if (resServ.ok && dataServ.success && Array.isArray(dataServ.servicios)) {
+        const serviciosComoItems: Product[] = dataServ.servicios.map((s: any) => ({
+          id: s.id,
+          code: s.code,
+          name: s.name,
+          brand: "Servicio Taller",
+          category: s.category || "Servicios",
+          price: Number(s.price),
+          stock: 999, // Mano de obra disponible
+          minStock: 1,
+          status: "ACTIVO",
+          isService: true,
+          estimatedMinutes: s.estimatedMinutes,
+        }));
+        listaCombinada = [...listaCombinada, ...serviciosComoItems];
+      }
+
+      setProductos(listaCombinada);
     } catch (err) {
-      console.error("Error al cargar productos:", err);
+      console.error("Error al cargar productos y servicios:", err);
     } finally {
       setCargandoProductos(false);
     }
