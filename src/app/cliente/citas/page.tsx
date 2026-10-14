@@ -10,7 +10,9 @@ const MY_VEHICLES = [
   { id: 'VEH-003', name: 'Ford Escape 2021', plate: 'QWE-554' }
 ];
 
-const SERVICES = [
+type ServiceOption = { id: string; name: string; time: string; category?: string };
+
+const SERVICES: ServiceOption[] = [
   { id: 'SRV-01', name: 'Mantenimiento Preventivo (Cambio de aceite, filtros)', time: '1-2 hrs' },
   { id: 'SRV-02', name: 'Revisión General y Diagnóstico', time: '1 hr' },
   { id: 'SRV-03', name: 'Cambio de Pastillas de Freno', time: '2 hrs' },

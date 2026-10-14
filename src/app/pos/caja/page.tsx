@@ -197,9 +197,9 @@ export default function CajaPage() {
           declaredCard: cardNum,
           declaredTransfer: transferNum,
           expectedCash: dataCaja.expectedCash,
-          diffCash,
-          diffCard,
-          diffTransfer,
+          diffCash: cashDiff,
+          diffCard: cardDiff,
+          diffTransfer: transferDiff,
           notes: notes.trim(),
         }),
       });

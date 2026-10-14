@@ -27,7 +27,7 @@ function getPrisma(): PrismaClient {
     });
   }
 
-  return globalForPrisma.prisma;
+  return globalForPrisma.prisma as PrismaClient;
 }
 
 export const prisma = new Proxy({} as PrismaClient, {

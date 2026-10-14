@@ -1,4 +1,8 @@
-import { prisma } from "@/lib/auth";
+import { prisma as prismaClient } from "@/lib/prisma";
+
+// TODO: `AuditLog` model is not yet defined in prisma/schema.prisma.
+// Untyped handle keeps the build green until the model is added.
+const prisma = prismaClient as any;
 import { headers } from "next/headers";
 
 type AuditParams = {

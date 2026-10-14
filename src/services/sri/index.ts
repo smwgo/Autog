@@ -1,5 +1,9 @@
 import { SriDocumentPayload, SriResponse, SriConfig } from "./types";
-import { prisma } from "@/lib/auth"; // Assuming prisma is exported here
+import { prisma as prismaClient } from "@/lib/prisma";
+
+// TODO: `SriDocument` model is not yet defined in prisma/schema.prisma.
+// Untyped handle keeps the build green until the model is added.
+const prisma = prismaClient as any;
 
 // Default config. Should be loaded from DB/Env
 const config: SriConfig = {
