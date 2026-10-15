@@ -8,33 +8,44 @@ export async function GET(request: Request) {
     const busqueda = searchParams.get("busqueda")?.trim().toLowerCase() || "";
     const estado = searchParams.get("estado") || "";
     const tipo = searchParams.get("tipo") || "";
+    const countOnly = searchParams.get("countOnly") === "true";
 
-    const solicitudes = await (prisma as any).orderRequest.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+    if (countOnly) {
+      const pendientes = await (prisma as any).orderRequest.count({
+        where: { status: "PENDIENTE" },
+      });
+      return NextResponse.json({
+        success: true,
+        stats: { pendientes },
+      });
+    }
 
-    const filtradas = solicitudes.filter((s: any) => {
-      const matchBusqueda =
-        !busqueda ||
-        s.requestNumber.toLowerCase().includes(busqueda) ||
-        s.customerName.toLowerCase().includes(busqueda) ||
-        (s.customerPhone && s.customerPhone.toLowerCase().includes(busqueda)) ||
-        (s.vehicleInfo && s.vehicleInfo.toLowerCase().includes(busqueda)) ||
-        s.itemsSummary.toLowerCase().includes(busqueda);
+    const where: any = {};
+    if (estado) where.status = estado;
+    if (tipo) where.type = tipo;
+    if (busqueda) {
+      where.OR = [
+        { requestNumber: { contains: busqueda, mode: "insensitive" } },
+        { customerName: { contains: busqueda, mode: "insensitive" } },
+        { customerPhone: { contains: busqueda, mode: "insensitive" } },
+        { itemsSummary: { contains: busqueda, mode: "insensitive" } },
+      ];
+    }
 
-      const matchEstado = !estado || s.status === estado;
-      const matchTipo = !tipo || s.type === tipo;
-
-      return matchBusqueda && matchEstado && matchTipo;
-    });
-
-    const total = solicitudes.length;
-    const pendientes = solicitudes.filter((s: any) => s.status === "PENDIENTE").length;
-    const despachados = solicitudes.filter((s: any) => s.status === "DESPACHADO").length;
+    const [solicitudes, total, pendientes, despachados] = await Promise.all([
+      (prisma as any).orderRequest.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: 100,
+      }),
+      (prisma as any).orderRequest.count(),
+      (prisma as any).orderRequest.count({ where: { status: "PENDIENTE" } }),
+      (prisma as any).orderRequest.count({ where: { status: "DESPACHADO" } }),
+    ]);
 
     return NextResponse.json({
       success: true,
-      solicitudes: filtradas,
+      solicitudes,
       stats: { total, pendientes, despachados },
     });
   } catch (error: any) {

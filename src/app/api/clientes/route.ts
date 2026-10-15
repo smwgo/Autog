@@ -8,48 +8,56 @@ export async function GET(request: Request) {
     const busqueda = searchParams.get("busqueda")?.trim().toLowerCase() || "";
     const filtro = searchParams.get("filtro") || "todos";
 
-    // Traer todos los clientes con sus vehículos
+    const where: any = {};
+
+    if (filtro === "persona" || filtro === "personal") {
+      where.type = { in: ["Personal", "Persona"] };
+    } else if (filtro === "empresa") {
+      where.type = "Empresa";
+    }
+
+    if (busqueda) {
+      where.OR = [
+        { name: { contains: busqueda, mode: "insensitive" } },
+        { identification: { contains: busqueda, mode: "insensitive" } },
+        {
+          vehicles: {
+            some: {
+              OR: [
+                { plate: { contains: busqueda, mode: "insensitive" } },
+                { brand: { contains: busqueda, mode: "insensitive" } },
+                { model: { contains: busqueda, mode: "insensitive" } },
+              ],
+            },
+          },
+        },
+      ];
+    }
+
+    // Traer clientes filtrados en PostgreSQL con límite controlado
     const customers = await prisma.customer.findMany({
+      where,
       include: {
         vehicles: true,
       },
       orderBy: {
         createdAt: "desc",
       },
+      take: 200,
     });
 
-    // Calcular estadísticas globales
-    const totalClientes = customers.length;
-    const totalVehiculos = customers.reduce((acc, c) => acc + c.vehicles.length, 0);
-    const totalVip = customers.filter((c) => c.vip).length;
-    // Clientes creados en los últimos 30 días
+    // Estadísticas rápidas con índices de PostgreSQL
     const haceUnMes = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const totalNuevos = customers.filter((c) => new Date(c.createdAt) >= haceUnMes).length;
-
-    // Filtrar clientes en memoria para búsqueda flexible
-    const filtrados = customers.filter((c) => {
-      const matchSearch =
-        !busqueda ||
-        c.name.toLowerCase().includes(busqueda) ||
-        c.identification.toLowerCase().includes(busqueda) ||
-        c.vehicles.some(
-          (v) =>
-            v.plate.toLowerCase().includes(busqueda) ||
-            v.brand.toLowerCase().includes(busqueda) ||
-            v.model.toLowerCase().includes(busqueda)
-        );
-
-      if (!matchSearch) return false;
-
-      if (filtro === "persona" || filtro === "personal") return c.type === "Personal" || c.type === "Persona";
-      if (filtro === "empresa") return c.type === "Empresa";
-
-      return true;
-    });
+    const [totalClientes, totalVehiculos, totalVip, totalNuevos] = await Promise.all([
+      prisma.customer.count(),
+      prisma.vehicle.count(),
+      prisma.customer.count({ where: { vip: true } }),
+      prisma.customer.count({ where: { createdAt: { gte: haceUnMes } } }),
+    ]);
 
     return NextResponse.json({
       success: true,
-      clientes: filtrados,
+      clientes: customers,
       stats: {
         totalClientes,
         totalVehiculos,

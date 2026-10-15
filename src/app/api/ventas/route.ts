@@ -13,29 +13,34 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const busqueda = searchParams.get("busqueda")?.trim().toLowerCase() || "";
 
-    const sales = await prisma.sale.findMany({
-      include: {
-        items: true,
-        customer: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    const where: any = {};
+    if (busqueda) {
+      where.OR = [
+        { saleNumber: { contains: busqueda, mode: "insensitive" } },
+        { customerName: { contains: busqueda, mode: "insensitive" } },
+        { paymentMethod: { contains: busqueda, mode: "insensitive" } },
+      ];
+    }
 
-    const filtradas = sales.filter((s) => {
-      if (!busqueda) return true;
-      return (
-        s.saleNumber.toLowerCase().includes(busqueda) ||
-        s.customerName.toLowerCase().includes(busqueda) ||
-        s.paymentMethod.toLowerCase().includes(busqueda)
-      );
-    });
+    const [sales, totalVentas] = await Promise.all([
+      prisma.sale.findMany({
+        where,
+        include: {
+          items: true,
+          customer: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: 100,
+      }),
+      prisma.sale.count(),
+    ]);
 
     return NextResponse.json({
       success: true,
-      ventas: filtradas,
-      totalVentas: filtradas.length,
+      ventas: sales,
+      totalVentas,
     });
   } catch (error: any) {
     console.error("Error al obtener ventas de Neon:", error);

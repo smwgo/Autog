@@ -31,7 +31,7 @@ interface Customer {
 }
 
 export default function GestionClientes() {
-  const [clientes, setClientes] = useState<Customer[]>([]);
+  const [todosClientes, setTodosClientes] = useState<Customer[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filtro, setFiltro] = useState("todos");
@@ -71,22 +71,41 @@ export default function GestionClientes() {
     notes: "",
   });
 
+  // Filtrado instantáneo en memoria sin consumir CPU en Neon
+  const clientes = todosClientes.filter((c) => {
+    const q = busqueda.trim().toLowerCase();
+    const matchSearch =
+      !q ||
+      c.name.toLowerCase().includes(q) ||
+      c.identification.toLowerCase().includes(q) ||
+      (c.phone && c.phone.toLowerCase().includes(q)) ||
+      c.vehicles.some(
+        (v) =>
+          v.plate.toLowerCase().includes(q) ||
+          v.brand.toLowerCase().includes(q) ||
+          v.model.toLowerCase().includes(q)
+      );
+
+    if (!matchSearch) return false;
+
+    if (filtro === "persona" || filtro === "personal") return c.type === "Personal" || c.type === "Persona";
+    if (filtro === "empresa") return c.type === "Empresa";
+
+    return true;
+  });
+
   const cargarClientes = useCallback(async () => {
     try {
       setCargando(true);
       setError(null);
-      const params = new URLSearchParams();
-      if (busqueda) params.set("busqueda", busqueda);
-      if (filtro !== "todos") params.set("filtro", filtro);
-
-      const res = await fetch(`/api/clientes?${params.toString()}`);
+      const res = await fetch("/api/clientes");
       const data = await res.json();
 
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Error al cargar clientes desde Neon");
       }
 
-      setClientes(data.clientes || []);
+      setTodosClientes(data.clientes || []);
       if (data.stats) {
         setStats(data.stats);
       }
@@ -96,20 +115,10 @@ export default function GestionClientes() {
     } finally {
       setCargando(false);
     }
-  }, [busqueda, filtro]);
+  }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      cargarClientes();
-    }, 250);
-
-    const onFocus = () => cargarClientes();
-    window.addEventListener("focus", onFocus);
-
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("focus", onFocus);
-    };
+    cargarClientes();
   }, [cargarClientes]);
 
   const solicitarEliminar = (id: string, name: string) => {
@@ -165,7 +174,7 @@ export default function GestionClientes() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setClientes((prev) =>
+        setTodosClientes((prev: Customer[]) =>
           prev.map((c) => (c.id === cliente.id ? { ...c, vip: !cliente.vip } : c))
         );
         setStats((prev) => ({
@@ -227,11 +236,11 @@ export default function GestionClientes() {
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
 
-      <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
+      <main className="flex-grow p-3 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
         {/* Breadcrumb & Header */}
-        <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-sm text-zinc-500 mb-2">
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-2">
               <Link href="/pos" className="hover:text-blue-600 transition-colors flex items-center gap-1 font-medium">
                 <span>&larr;</span> POS
               </Link>
@@ -242,24 +251,34 @@ export default function GestionClientes() {
               <Link 
                 href="/pos"
                 title="Volver a Panel POS"
-                className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-sm active:scale-95 group"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
               >
                 <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
               </Link>
-              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                 Clientes
               </h1>
               <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
                 {stats.totalClientes}
               </span>
+              <button
+                onClick={() => cargarClientes()}
+                title="Actualizar datos desde Neon"
+                disabled={cargando}
+                className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-blue-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-all disabled:opacity-50"
+              >
+                <svg className={`w-3.5 h-3.5 ${cargando ? "animate-spin text-blue-500" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
             <Link 
               href="/pos/clientes/nuevo"
-              className="h-10 px-4 rounded-xl bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2 shadow-sm shadow-blue-500/20"
+              className="h-10 px-4 rounded-xl bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-sm shadow-blue-500/20 w-full sm:w-auto"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
               Nuevo Cliente
@@ -267,53 +286,53 @@ export default function GestionClientes() {
           </div>
         </div>
 
-        {/* Resumen Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 text-xl flex-shrink-0">
+        {/* Resumen Cards (2x2 en móvil para aprovechar la pantalla) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+          <div className="bg-white dark:bg-zinc-900 p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 text-lg sm:text-xl flex-shrink-0">
               👥
             </div>
             <div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">
+              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
                 {cargando && stats.totalClientes === 0 ? "..." : stats.totalClientes}
               </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Clientes</h3>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Clientes</h3>
             </div>
           </div>
           
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 text-xl flex-shrink-0">
+          <div className="bg-white dark:bg-zinc-900 p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 text-lg sm:text-xl flex-shrink-0">
               🚗
             </div>
             <div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">
+              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
                 {cargando && stats.totalVehiculos === 0 ? "..." : stats.totalVehiculos}
               </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Vehículos</h3>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Vehículos</h3>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 text-xl flex-shrink-0">
+          <div className="bg-white dark:bg-zinc-900 p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-full bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 text-lg sm:text-xl flex-shrink-0">
               ⭐
             </div>
             <div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">
+              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
                 {cargando && stats.totalVip === 0 ? "..." : stats.totalVip}
               </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">VIP</h3>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">VIP</h3>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-600 text-xl flex-shrink-0">
+          <div className="bg-white dark:bg-zinc-900 p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-full bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-600 text-lg sm:text-xl flex-shrink-0">
               📅
             </div>
             <div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">
+              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
                 {cargando && stats.totalNuevos === 0 ? "..." : stats.totalNuevos}
               </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Nuevos</h3>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Nuevos</h3>
             </div>
           </div>
         </div>
@@ -332,14 +351,14 @@ export default function GestionClientes() {
         )}
 
         {/* Filtros de Tabla */}
-        <div className="bg-white dark:bg-zinc-900 rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-4 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="relative w-full md:flex-1 md:max-w-3xl">
+        <div className="bg-white dark:bg-zinc-900 rounded-t-2xl sm:rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4">
+          <div className="relative w-full sm:flex-1 sm:max-w-3xl">
             <input 
               type="text" 
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar por cédula, nombre o placa..." 
-              className="w-full h-11 pl-11 pr-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-sm outline-none focus:border-blue-500 transition-colors shadow-sm"
+              className="w-full h-11 pl-11 pr-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500 transition-colors shadow-sm"
             />
             <svg className="w-4 h-4 absolute left-3.5 top-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             {busqueda && (
@@ -371,9 +390,141 @@ export default function GestionClientes() {
           </div>
         </div>
 
-        {/* Tabla de Clientes */}
-        <div className="bg-white dark:bg-zinc-900 border-x border-b border-zinc-100 dark:border-zinc-800 rounded-b-3xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
+        {/* Tabla de Clientes (Desktop) y Tarjetas Nativas (Móvil Android / iOS) */}
+        <div className="bg-white dark:bg-zinc-900 border-x border-b border-zinc-100 dark:border-zinc-800 rounded-b-2xl sm:rounded-b-3xl overflow-hidden shadow-sm">
+          {/* Vista Móvil (Tarjetas adaptadas para Android e iOS) */}
+          <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+            {cargando && clientes.length === 0 ? (
+              <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
+                <div className="w-7 h-7 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                <p className="text-sm">Cargando clientes...</p>
+              </div>
+            ) : clientes.length === 0 ? (
+              <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
+                <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-2xl text-blue-600 mx-auto mb-3">
+                  👥
+                </div>
+                <p className="text-sm font-medium mb-3">No hay clientes que coincidan</p>
+                <Link
+                  href="/pos/clientes/nuevo"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-semibold shadow-md shadow-blue-500/20 active:scale-95"
+                >
+                  <span>+</span> Registrar Cliente
+                </Link>
+              </div>
+            ) : (
+              clientes.map((row) => (
+                <div key={row.id} className="p-4 space-y-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border ${
+                        row.type === 'Empresa'
+                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30'
+                          : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30'
+                      }`}>
+                        {row.type === 'Empresa' ? '🏢' : row.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100">{row.name}</p>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                            {row.type === 'Empresa' ? 'Empresa' : 'Persona'}
+                          </span>
+                          {row.vip && <span title="Cliente VIP" className="text-xs">⭐</span>}
+                        </div>
+                        {row.identification && !row.identification.startsWith("CLI-") && (
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5">
+                            {row.type === 'Empresa' ? 'RUC' : 'Cédula'}: {row.identification}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Acciones Rápidas (Toque fácil en móvil) */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => abrirEdicion(row)}
+                        className="w-9 h-9 rounded-lg flex items-center justify-center text-zinc-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95"
+                        title="Editar"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => solicitarEliminar(row.id, row.name)}
+                        disabled={eliminandoId === row.id}
+                        className="w-9 h-9 rounded-lg flex items-center justify-center text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95"
+                        title="Eliminar"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Datos secundarios (WhatsApp, Vehículos, Fecha) */}
+                  <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                    {row.phone ? (
+                      <a
+                        href={`https://wa.me/${row.phone.replace(/\D/g, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 font-medium active:scale-95"
+                      >
+                        <span>📱</span> {row.phone}
+                      </a>
+                    ) : (
+                      <span className="text-zinc-400 dark:text-zinc-500 italic px-2 py-0.5">
+                        Sin WhatsApp
+                      </span>
+                    )}
+
+                    {row.vehicles && row.vehicles.length > 0 ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-sky-400 border border-blue-200 dark:border-blue-500/20 font-medium">
+                        🚗 {row.vehicles.length} {row.vehicles.length === 1 ? "vehículo" : "vehículos"}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80">
+                        0 vehículos
+                      </span>
+                    )}
+
+                    <span className="text-zinc-400 ml-auto text-[11px]">
+                      {new Date(row.createdAt).toLocaleDateString("es-EC", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
+
+                  {/* Vehículos detalle si tiene */}
+                  {row.vehicles && row.vehicles.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {row.vehicles.map((v) => (
+                        <span
+                          key={v.id}
+                          className="bg-zinc-100 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded text-[11px] font-medium inline-flex items-center gap-1 border border-zinc-200 dark:border-zinc-700/60 font-mono"
+                        >
+                          <span className="font-bold text-blue-600 dark:text-sky-400">{v.plate}</span>
+                          {(v.brand || v.model) && (
+                            <span className="text-zinc-500 font-sans text-[10px]">
+                              {[v.brand, v.model].filter(Boolean).join(" ")}
+                            </span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Vista Tabla (Desktop md+) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400">
                 <tr>
@@ -532,60 +683,62 @@ export default function GestionClientes() {
               </tbody>
             </table>
           </div>
-          <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-sm text-zinc-500">
+          <div className="p-3.5 sm:p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs sm:text-sm text-zinc-500">
             <span>{clientes.length} de {stats.totalClientes}</span>
           </div>
         </div>
 
-        {/* Modal de Edición de Cliente */}
+        {/* Modal de Edición de Cliente (Adaptado como Bottom Sheet en Móvil) */}
         {editando && clienteSeleccionado && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-xl p-6 shadow-2xl relative">
-              <div className="flex justify-between items-center mb-6 pb-3 border-b border-zinc-100 dark:border-zinc-800">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl w-full max-w-xl p-5 sm:p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-5 pb-3 border-b border-zinc-100 dark:border-zinc-800">
                 <div>
-                  <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
+                  <h3 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white">
                     Editar Cliente
                   </h3>
                   <p className="text-xs text-zinc-500">ID: {clienteSeleccionado.identification}</p>
                 </div>
                 <button
                   onClick={() => setEditando(false)}
-                  className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm"
                 >
                   ✕
                 </button>
               </div>
 
               <form onSubmit={guardarCambios} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300 mb-1">Nombres y Apellidos</label>
                     <input
                       type="text"
                       value={editForm.name}
                       onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                      className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-sm outline-none focus:border-blue-500"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500"
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300 mb-1">WhatsApp</label>
                     <input
-                      type="text"
+                      type="tel"
+                      inputMode="tel"
                       value={editForm.phone}
                       onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                      className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-sm outline-none focus:border-blue-500"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500 font-mono"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300 mb-1">Correo Electrónico</label>
                     <input
                       type="email"
+                      inputMode="email"
                       value={editForm.email}
                       onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                      className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-sm outline-none focus:border-blue-500"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500"
                     />
                   </div>
                   <div>
@@ -593,7 +746,7 @@ export default function GestionClientes() {
                     <select
                       value={editForm.type}
                       onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
-                      className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-sm outline-none focus:border-blue-500"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm outline-none focus:border-blue-500"
                     >
                       <option value="Personal">Personal</option>
                       <option value="Empresa">Empresa</option>
@@ -607,7 +760,7 @@ export default function GestionClientes() {
                     type="text"
                     value={editForm.address}
                     onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-sm outline-none focus:border-blue-500"
+                    className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500"
                   />
                 </div>
 
@@ -617,7 +770,7 @@ export default function GestionClientes() {
                     rows={2}
                     value={editForm.notes}
                     onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                    className="w-full p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-sm outline-none focus:border-blue-500 resize-none"
+                    className="w-full p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500 resize-none"
                   ></textarea>
                 </div>
 
@@ -656,23 +809,23 @@ export default function GestionClientes() {
         )}
         {/* Modal Flotante de Confirmación de Eliminación */}
         {clienteAEliminar && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-md p-6 shadow-2xl relative text-center">
-              <div className="w-16 h-16 rounded-full bg-rose-100 dark:bg-rose-500/10 text-rose-600 flex items-center justify-center text-3xl mx-auto mb-4 border border-rose-200 dark:border-rose-900/40">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl sm:rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl relative text-center">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-rose-100 dark:bg-rose-500/10 text-rose-600 flex items-center justify-center text-2xl sm:text-3xl mx-auto mb-3 sm:mb-4 border border-rose-200 dark:border-rose-900/40">
                 🗑️
               </div>
-              <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">
+              <h3 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white mb-1.5 sm:mb-2">
                 ¿Eliminar Cliente?
               </h3>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
+              <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mb-5 sm:mb-6">
                 ¿Deseas eliminar a <strong className="text-zinc-900 dark:text-zinc-100 font-semibold">{clienteAEliminar.name}</strong>?
               </p>
-              <div className="flex gap-3">
+              <div className="flex gap-2.5 sm:gap-3">
                 <button
                   type="button"
                   disabled={eliminandoId !== null}
                   onClick={() => setClienteAEliminar(null)}
-                  className="flex-1 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 font-semibold text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                  className="flex-1 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 font-semibold text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -680,7 +833,7 @@ export default function GestionClientes() {
                   type="button"
                   disabled={eliminandoId !== null}
                   onClick={confirmarEliminacion}
-                  className="flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm shadow-lg shadow-rose-600/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  className="flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm shadow-lg shadow-rose-600/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {eliminandoId ? (
                     <>
@@ -696,21 +849,21 @@ export default function GestionClientes() {
           </div>
         )}
 
-        {/* Notificación Flotante (Toast) */}
+        {/* Notificación Flotante (Toast adaptable a móvil) */}
         {toast && (
-          <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-top-3 duration-300">
-            <div className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-md ${
+          <div className="fixed top-4 left-3 right-3 sm:left-auto sm:right-6 sm:top-6 z-50 animate-in slide-in-from-top-3 duration-300">
+            <div className={`flex items-center gap-2.5 sm:gap-3 px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl shadow-2xl border backdrop-blur-md ${
               toast.tipo === 'exito'
                 ? 'bg-zinc-900/95 text-white border-zinc-800 dark:bg-white/95 dark:text-zinc-900 dark:border-zinc-200 shadow-emerald-500/10'
                 : 'bg-rose-600 text-white border-rose-500 shadow-rose-600/20'
             }`}>
-              <span className="text-lg">
+              <span className="text-base sm:text-lg">
                 {toast.tipo === 'exito' ? '✅' : '⚠️'}
               </span>
-              <span className="text-sm font-semibold">{toast.texto}</span>
+              <span className="text-xs sm:text-sm font-semibold flex-1">{toast.texto}</span>
               <button
                 onClick={() => setToast(null)}
-                className="ml-2 text-xs opacity-60 hover:opacity-100"
+                className="ml-2 text-xs opacity-60 hover:opacity-100 p-1"
               >
                 ✕
               </button>

@@ -1,24 +1,35 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+let cachedProducts: any[] | null = null;
+let lastCacheTime = 0;
+const CACHE_TTL_MS = 30000; // 30 segundos
+
 function calcularEstado(stock: number, minStock: number = 5): string {
   if (stock <= 0) return "Agotado";
   if (stock <= minStock) return "Bajo Stock";
   return "En Stock";
 }
 
-// GET: Consultar productos de Neon
+// GET: Consultar productos de Neon (con caché reguladora)
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const busqueda = searchParams.get("busqueda")?.trim().toLowerCase() || "";
     const categoria = searchParams.get("categoria") || "";
 
-    const products = await prisma.product.findMany({
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    let products = cachedProducts;
+    const now = Date.now();
+
+    if (!products || now - lastCacheTime > CACHE_TTL_MS) {
+      products = await prisma.product.findMany({
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+      cachedProducts = products;
+      lastCacheTime = now;
+    }
 
     // Extraer todas las categorías únicas disponibles en Neon
     const categoriesSet = new Set<string>();
@@ -113,6 +124,9 @@ export async function POST(request: Request) {
       },
     });
 
+    cachedProducts = null;
+    lastCacheTime = 0;
+
     return NextResponse.json({ success: true, producto: nuevoProducto }, { status: 201 });
   } catch (error: any) {
     console.error("Error al crear producto en Neon:", error);
@@ -153,6 +167,9 @@ export async function PUT(request: Request) {
       },
     });
 
+    cachedProducts = null;
+    lastCacheTime = 0;
+
     return NextResponse.json({ success: true, producto: actualizado });
   } catch (error: any) {
     console.error("Error al actualizar producto en Neon:", error);
@@ -176,6 +193,9 @@ export async function DELETE(request: Request) {
     await prisma.product.delete({
       where: { id },
     });
+
+    cachedProducts = null;
+    lastCacheTime = 0;
 
     return NextResponse.json({ success: true, message: "Producto eliminado correctamente." });
   } catch (error: any) {

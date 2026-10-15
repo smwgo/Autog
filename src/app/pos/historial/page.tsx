@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 
@@ -33,6 +33,8 @@ export default function HistorialVentasPage() {
   const [ventaDetalle, setVentaDetalle] = useState<Sale | null>(null);
   const [accionEnCurso, setAccionEnCurso] = useState(false);
 
+  const ultimaCargaRef = useRef<number>(Date.now());
+
   const cargarVentas = useCallback(async (silencioso = false) => {
     try {
       if (!silencioso) setCargando(true);
@@ -40,6 +42,7 @@ export default function HistorialVentasPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setVentas(data.ventas || []);
+        ultimaCargaRef.current = Date.now();
       }
     } catch (err) {
       console.error("Error al cargar ventas:", err);
@@ -50,11 +53,18 @@ export default function HistorialVentasPage() {
 
   useEffect(() => {
     cargarVentas();
-    // Actualización en tiempo real cada 5 segundos
-    const interval = setInterval(() => {
-      cargarVentas(true);
-    }, 5000);
-    return () => clearInterval(interval);
+
+    // Solo refrescar si la pestaña vuelve a estar visible y pasaron más de 60 segundos
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && Date.now() - ultimaCargaRef.current > 60000) {
+        cargarVentas(true);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [cargarVentas]);
 
   const handleAnularVenta = async (sale: Sale) => {
@@ -152,6 +162,16 @@ export default function HistorialVentasPage() {
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                 Historial
               </h1>
+              <button
+                onClick={() => cargarVentas(false)}
+                title="Actualizar ventas desde Neon"
+                disabled={cargando}
+                className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-emerald-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-all disabled:opacity-50"
+              >
+                <svg className={`w-4 h-4 ${cargando ? "animate-spin text-emerald-500" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
             </div>
           </div>
 

@@ -176,16 +176,16 @@ export default function NuevaVentaPage() {
     }
   }, []);
 
-  // 3. Cargar conteo de pedidos pendientes
+  const ultimoConteoWebRef = useRef<number>(Date.now());
+
+  // 3. Cargar conteo de pedidos pendientes (optimizado para bajo CPU)
   const cargarConteoWeb = useCallback(async () => {
     try {
-      const res = await fetch("/api/solicitudes");
+      const res = await fetch("/api/solicitudes?countOnly=true");
       const data = await res.json();
       if (res.ok && data.success) {
-        const count = typeof data.stats?.pendientes === "number"
-          ? data.stats.pendientes
-          : (data.solicitudes || []).filter((s: any) => s.status === "PENDIENTE").length;
-        setSolicitudesPendientesCount(count);
+        setSolicitudesPendientesCount(data.stats?.pendientes || 0);
+        ultimoConteoWebRef.current = Date.now();
       }
     } catch (err) {
       console.error("Error al cargar conteo solicitudes:", err);
@@ -197,13 +197,16 @@ export default function NuevaVentaPage() {
     cargarClientes();
     cargarConteoWeb();
 
-    const interval = setInterval(cargarConteoWeb, 10000);
-    const handleFocus = () => cargarConteoWeb();
-    window.addEventListener("focus", handleFocus);
+    // Solo consultar si el usuario vuelve a la pestaña y pasaron más de 90 segundos
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && Date.now() - ultimoConteoWebRef.current > 90000) {
+        cargarConteoWeb();
+      }
+    };
 
+    document.addEventListener("visibilitychange", handleVisibility);
     return () => {
-      clearInterval(interval);
-      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [cargarProductos, cargarClientes, cargarConteoWeb]);
 
