@@ -360,9 +360,8 @@ export default function GestionClientes() {
               className="w-full md:w-auto appearance-none bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-medium rounded-xl pl-4 pr-10 py-2.5 outline-none focus:border-blue-500 cursor-pointer shadow-sm hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
             >
               <option value="todos">Todos</option>
-              <option value="flota">Con Flota (Múltiples Vehículos)</option>
-              <option value="empresa">Empresas (RUC)</option>
-              <option value="vip">⭐ VIP</option>
+              <option value="persona">Persona</option>
+              <option value="empresa">Empresa</option>
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-zinc-400">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -379,7 +378,7 @@ export default function GestionClientes() {
               <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400">
                 <tr>
                   <th className="px-6 py-4 font-medium">Cliente</th>
-                  <th className="px-6 py-4 font-medium">Contacto</th>
+                  <th className="px-6 py-4 font-medium">WhatsApp</th>
                   <th className="px-6 py-4 font-medium">Vehículos</th>
                   <th className="px-6 py-4 font-medium">Registro / Visita</th>
                   <th className="px-6 py-4 font-medium text-right">Acciones</th>
@@ -417,40 +416,75 @@ export default function GestionClientes() {
                     <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${row.type === 'Empresa' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400'}`}>
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border ${row.type === 'Empresa' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30' : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30'}`}>
                             {row.type === 'Empresa' ? '🏢' : row.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <p className="font-bold text-zinc-900 dark:text-zinc-100">{row.name}</p>
-                              <button
-                                onClick={() => handleToggleVip(row)}
-                                title={row.vip ? "Quitar VIP" : "Marcar como VIP"}
-                                className="text-sm hover:scale-125 transition-transform"
-                              >
-                                {row.vip ? "⭐" : "☆"}
-                              </button>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                                {row.type === 'Empresa' ? 'Empresa' : 'Persona'}
+                              </span>
+                              {row.vip && (
+                                <span title="Cliente VIP" className="text-xs">⭐</span>
+                              )}
                             </div>
-                            <p className="text-xs text-zinc-500">ID: {row.identification}</p>
+                            {row.identification && !row.identification.startsWith("CLI-") && (
+                              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
+                                {row.type === 'Empresa' ? 'RUC' : 'Cédula'}: {row.identification}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <p className="text-zinc-900 dark:text-zinc-300 font-medium">{row.phone}</p>
-                        <p className="text-xs text-zinc-500">{row.email || "Sin email"}</p>
+                        {row.phone ? (
+                          <div className="space-y-0.5">
+                            <p className="text-zinc-900 dark:text-zinc-200 font-medium text-xs flex items-center gap-1.5">
+                              <span className="text-emerald-500">📱</span> {row.phone}
+                            </p>
+                            {row.email && (
+                              <p className="text-xs text-zinc-500 dark:text-zinc-400">{row.email}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-0.5">
+                            <span className="text-xs text-zinc-400 dark:text-zinc-500 italic">
+                              Sin WhatsApp
+                            </span>
+                            {row.email && (
+                              <p className="text-xs text-zinc-500 dark:text-zinc-400">{row.email}</p>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex flex-wrap gap-1 max-w-xs">
-                          {row.vehicles && row.vehicles.length > 0 ? (
-                            row.vehicles.map((v) => (
-                              <span key={v.id} className="bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2.5 py-1 rounded-lg text-xs font-medium inline-block border border-zinc-200/50 dark:border-zinc-700/50">
-                                <span className="font-semibold text-blue-600 dark:text-blue-400">{v.plate}</span> ({v.brand} {v.model})
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-xs text-zinc-400 italic">Sin vehículo registrado</span>
-                          )}
-                        </div>
+                        {row.vehicles && row.vehicles.length > 0 ? (
+                          <div className="space-y-1.5">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-sky-400 border border-blue-200 dark:border-blue-500/20 whitespace-nowrap">
+                              {row.vehicles.length} {row.vehicles.length === 1 ? "vehículo" : "vehículos"}
+                            </span>
+                            <div className="flex flex-wrap gap-1 max-w-xs">
+                              {row.vehicles.map((v) => (
+                                <span
+                                  key={v.id}
+                                  className="bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded-md text-xs font-medium inline-flex items-center gap-1 border border-zinc-200 dark:border-zinc-700/60"
+                                >
+                                  <span className="font-mono font-bold text-blue-600 dark:text-sky-400">{v.plate}</span>
+                                  {(v.brand || v.model) && (
+                                    <span className="text-zinc-500 dark:text-zinc-400 text-[11px]">
+                                      {[v.brand, v.model].filter(Boolean).join(" ")}
+                                    </span>
+                                  )}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-zinc-100 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700/50 whitespace-nowrap">
+                            0 vehículos
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400 text-xs">
                         {new Date(row.createdAt).toLocaleDateString("es-EC", {
@@ -499,7 +533,7 @@ export default function GestionClientes() {
             </table>
           </div>
           <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-sm text-zinc-500">
-            <span>Mostrando {clientes.length} de {stats.totalClientes} clientes</span>
+            <span>{clientes.length} de {stats.totalClientes}</span>
           </div>
         </div>
 

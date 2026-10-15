@@ -41,9 +41,8 @@ export async function GET(request: Request) {
 
       if (!matchSearch) return false;
 
-      if (filtro === "flota") return c.vehicles.length > 1;
+      if (filtro === "persona" || filtro === "personal") return c.type === "Personal" || c.type === "Persona";
       if (filtro === "empresa") return c.type === "Empresa";
-      if (filtro === "vip") return c.vip;
 
       return true;
     });
