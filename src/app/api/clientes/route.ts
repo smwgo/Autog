@@ -169,11 +169,39 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: "ID de cliente requerido" }, { status: 400 });
     }
 
-    await prisma.customer.delete({
-      where: { id },
+    const clienteExistente = await prisma.customer.findFirst({
+      where: {
+        OR: [
+          { id },
+          { identification: id },
+        ],
+      },
     });
 
-    return NextResponse.json({ success: true, message: "Cliente eliminado correctamente." });
+    if (!clienteExistente) {
+      return NextResponse.json({ success: false, error: "Cliente no encontrado" }, { status: 404 });
+    }
+
+    // Desvincular ventas si existieran
+    await prisma.sale.updateMany({
+      where: { customerId: clienteExistente.id },
+      data: { customerId: null },
+    });
+
+    // Eliminar vehículos asociados
+    await prisma.vehicle.deleteMany({
+      where: { customerId: clienteExistente.id },
+    });
+
+    // Eliminar el cliente definitivamente
+    await prisma.customer.delete({
+      where: { id: clienteExistente.id },
+    });
+
+    return NextResponse.json({ 
+      success: true, 
+      message: `Cliente ${clienteExistente.name} eliminado correctamente.` 
+    });
   } catch (error: any) {
     console.error("Error al eliminar cliente de Neon:", error);
     return NextResponse.json(

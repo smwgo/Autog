@@ -62,9 +62,6 @@ export default function OficinaPanel() {
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                 Oficina
               </h1>
-              <p className="text-lg text-zinc-600 dark:text-zinc-400 mt-1">
-                Gestión y atención.
-              </p>
             </div>
           </div>
         </div>
@@ -77,17 +74,14 @@ export default function OficinaPanel() {
               className="group block bg-white dark:bg-zinc-900 rounded-3xl p-6 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 transition-all hover:shadow-xl hover:-translate-y-1 overflow-hidden relative"
             >
               <div className={`absolute top-0 right-0 w-32 h-32 ${mod.color} opacity-5 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110`}></div>
-              <div className="flex items-start gap-4">
+              <div className="flex items-center gap-4">
                 <div className={`w-14 h-14 rounded-2xl ${mod.color} bg-opacity-10 dark:bg-opacity-20 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-110 transition-transform`}>
                   {mod.icon}
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  <h3 className="text-xl font-bold text-zinc-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                     {mod.title}
                   </h3>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                    {mod.description}
-                  </p>
                 </div>
               </div>
             </Link>

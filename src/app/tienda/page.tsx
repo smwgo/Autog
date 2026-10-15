@@ -161,11 +161,8 @@ export default function TiendaPage() {
         <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 mb-2">
-              Tienda de Repuestos y Accesorios
+              Tienda
             </h1>
-            <p className="text-base text-zinc-600 dark:text-zinc-400 max-w-2xl">
-              Solicita tus productos online y recíbelos despachados en tienda o a domicilio.
-            </p>
           </div>
         </div>
 

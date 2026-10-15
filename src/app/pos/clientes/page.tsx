@@ -49,6 +49,17 @@ export default function GestionClientes() {
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
 
+  // Flotante de confirmación de eliminación y Toast
+  const [clienteAEliminar, setClienteAEliminar] = useState<{ id: string; name: string } | null>(null);
+  const [toast, setToast] = useState<{ tipo: "exito" | "error"; texto: string } | null>(null);
+
+  const mostrarToast = (texto: string, tipo: "exito" | "error" = "exito") => {
+    setToast({ tipo, texto });
+    setTimeout(() => {
+      setToast(null);
+    }, 4000);
+  };
+
   // Form de edición
   const [editForm, setEditForm] = useState({
     name: "",
@@ -101,10 +112,13 @@ export default function GestionClientes() {
     };
   }, [cargarClientes]);
 
-  const handleEliminar = async (id: string, nombre: string) => {
-    if (!confirm(`¿Estás seguro de que deseas eliminar al cliente "${nombre}"? Esta acción borrará también sus vehículos asociados.`)) {
-      return;
-    }
+  const solicitarEliminar = (id: string, name: string) => {
+    setClienteAEliminar({ id, name });
+  };
+
+  const confirmarEliminacion = async () => {
+    if (!clienteAEliminar) return;
+    const { id, name } = clienteAEliminar;
 
     try {
       setEliminandoId(id);
@@ -113,9 +127,12 @@ export default function GestionClientes() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        alert(data.error || "No se pudo eliminar el cliente.");
+        mostrarToast(data.error || "No se pudo eliminar el cliente.", "error");
         return;
       }
+
+      setClienteAEliminar(null);
+      mostrarToast(`Cliente "${name}" eliminado correctamente.`, "exito");
 
       // Recargar lista
       await cargarClientes();
@@ -123,7 +140,7 @@ export default function GestionClientes() {
         setClienteSeleccionado(null);
       }
     } catch (err: any) {
-      alert("Error al eliminar cliente: " + err.message);
+      mostrarToast("Error al eliminar cliente: " + err.message, "error");
     } finally {
       setEliminandoId(null);
     }
@@ -342,7 +359,7 @@ export default function GestionClientes() {
               onChange={(e) => setFiltro(e.target.value)}
               className="w-full md:w-auto appearance-none bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-medium rounded-xl pl-4 pr-10 py-2.5 outline-none focus:border-blue-500 cursor-pointer shadow-sm hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
             >
-              <option value="todos">Todos los Clientes</option>
+              <option value="todos">Todos</option>
               <option value="flota">Con Flota (Múltiples Vehículos)</option>
               <option value="empresa">Empresas (RUC)</option>
               <option value="vip">⭐ VIP</option>
@@ -385,10 +402,9 @@ export default function GestionClientes() {
                         <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-3xl text-blue-600">
                           👥
                         </div>
-                        <h4 className="font-bold text-base text-zinc-900 dark:text-zinc-100">No hay clientes registrados</h4>
                         <Link
                           href="/pos/clientes/nuevo"
-                          className="mt-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-sm shadow-md shadow-blue-500/20 transition-all flex items-center gap-2"
+                          className="mt-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-normal text-sm shadow-md shadow-blue-500/20 transition-all flex items-center gap-2"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
                           Registrar Cliente
@@ -458,7 +474,7 @@ export default function GestionClientes() {
 
                           {/* Eliminar */}
                           <button 
-                            onClick={() => handleEliminar(row.id, row.name)}
+                            onClick={() => solicitarEliminar(row.id, row.name)}
                             disabled={eliminandoId === row.id}
                             className="p-2 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors disabled:opacity-50"
                             title="Eliminar Cliente"
@@ -601,6 +617,69 @@ export default function GestionClientes() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+        {/* Modal Flotante de Confirmación de Eliminación */}
+        {clienteAEliminar && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-md p-6 shadow-2xl relative text-center">
+              <div className="w-16 h-16 rounded-full bg-rose-100 dark:bg-rose-500/10 text-rose-600 flex items-center justify-center text-3xl mx-auto mb-4 border border-rose-200 dark:border-rose-900/40">
+                🗑️
+              </div>
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">
+                ¿Eliminar Cliente?
+              </h3>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
+                ¿Deseas eliminar a <strong className="text-zinc-900 dark:text-zinc-100 font-semibold">{clienteAEliminar.name}</strong>?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  disabled={eliminandoId !== null}
+                  onClick={() => setClienteAEliminar(null)}
+                  className="flex-1 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 font-semibold text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={eliminandoId !== null}
+                  onClick={confirmarEliminacion}
+                  className="flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm shadow-lg shadow-rose-600/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  {eliminandoId ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Eliminando...</span>
+                    </>
+                  ) : (
+                    "Sí, Eliminar"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notificación Flotante (Toast) */}
+        {toast && (
+          <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-top-3 duration-300">
+            <div className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-md ${
+              toast.tipo === 'exito'
+                ? 'bg-zinc-900/95 text-white border-zinc-800 dark:bg-white/95 dark:text-zinc-900 dark:border-zinc-200 shadow-emerald-500/10'
+                : 'bg-rose-600 text-white border-rose-500 shadow-rose-600/20'
+            }`}>
+              <span className="text-lg">
+                {toast.tipo === 'exito' ? '✅' : '⚠️'}
+              </span>
+              <span className="text-sm font-semibold">{toast.texto}</span>
+              <button
+                onClick={() => setToast(null)}
+                className="ml-2 text-xs opacity-60 hover:opacity-100"
+              >
+                ✕
+              </button>
             </div>
           </div>
         )}

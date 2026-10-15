@@ -14,7 +14,7 @@ export default function DashboardGeneral() {
             <div className="flex items-center gap-2 text-sm text-zinc-500 mb-2">
               <Link href="/gerencia" className="hover:text-blue-600 transition-colors">Gerencia</Link>
               <span>/</span>
-              <span className="text-zinc-900 dark:text-zinc-100 font-medium">Dashboard General</span>
+              <span className="text-zinc-900 dark:text-zinc-100 font-medium">Tablero General</span>
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               Resumen del Negocio
