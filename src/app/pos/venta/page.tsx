@@ -58,12 +58,18 @@ export default function NuevaVentaPage() {
   const [productos, setProductos] = useState<Product[]>([]);
   const [cargandoProductos, setCargandoProductos] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState<"todos" | "productos" | "servicios">("todos");
 
   // Clientes
   const [clientes, setClientes] = useState<Customer[]>([]);
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Customer | null>(null);
   const [mostrarModalClientes, setMostrarModalClientes] = useState(false);
   const [busquedaCliente, setBusquedaCliente] = useState("");
+  const [creandoClienteInline, setCreandoClienteInline] = useState(false);
+  const [nuevoClienteNombre, setNuevoClienteNombre] = useState("");
+  const [nuevoClienteIdent, setNuevoClienteIdent] = useState("");
+  const [nuevoClienteTelefono, setNuevoClienteTelefono] = useState("");
+  const [guardandoClienteInline, setGuardandoClienteInline] = useState(false);
 
   // Carrito
   const [cart, setCart] = useState<{ product: Product; qty: number }[]>([]);
@@ -96,6 +102,99 @@ export default function NuevaVentaPage() {
   // Solicitudes Web
   const [solicitudActiva, setSolicitudActiva] = useState<any | null>(null);
   const [solicitudesPendientesCount, setSolicitudesPendientesCount] = useState(0);
+
+  // Flotante: Apertura de Caja
+  const [mostrarModalApertura, setMostrarModalApertura] = useState(false);
+  const [fondoApertura, setFondoApertura] = useState("");
+  const [guardandoApertura, setGuardandoApertura] = useState(false);
+  const [cajaInfo, setCajaInfo] = useState<{ initialCash: number; expectedCash: number } | null>(null);
+
+  // Flotante: Cierre de Caja
+  const [mostrarModalCierre, setMostrarModalCierre] = useState(false);
+  const [conteoCierre, setConteoCierre] = useState("");
+  const [notasCierre, setNotasCierre] = useState("");
+  const [cerrandoCaja, setCerrandoCaja] = useState(false);
+
+  // Flotante: Pedidos (3 Orígenes: Landing, Tienda, Taller)
+  const [mostrarModalPedidos, setMostrarModalPedidos] = useState(false);
+  const [listaPedidos, setListaPedidos] = useState<any[]>([]);
+  const [cargandoPedidos, setCargandoPedidos] = useState(false);
+  const [filtroOrigenModal, setFiltroOrigenModal] = useState<"todos" | "Selector" | "Tienda" | "Taller">("todos");
+  const [pedidoParaVer, setPedidoParaVer] = useState<any | null>(null);
+  const [pedidoAEliminar, setPedidoAEliminar] = useState<{ id: string; requestNumber: string } | null>(null);
+  const [eliminandoPedido, setEliminandoPedido] = useState(false);
+
+  const handleRechazarPedido = (id: string, num: string) => {
+    setPedidoAEliminar({ id, requestNumber: num });
+  };
+
+  const confirmarEliminarPedido = async () => {
+    if (!pedidoAEliminar) return;
+    setEliminandoPedido(true);
+    try {
+      const res = await fetch(`/api/solicitudes?id=${pedidoAEliminar.id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setListaPedidos((prev) => prev.filter((p) => p.id !== pedidoAEliminar.id));
+        cargarConteoWeb();
+        if (pedidoParaVer?.id === pedidoAEliminar.id) setPedidoParaVer(null);
+        setPedidoAEliminar(null);
+      } else {
+        const fallback = await fetch("/api/solicitudes", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: pedidoAEliminar.id, status: "CANCELADO" }),
+        });
+        if (fallback.ok) {
+          setListaPedidos((prev) => prev.filter((p) => p.id !== pedidoAEliminar.id));
+          cargarConteoWeb();
+          if (pedidoParaVer?.id === pedidoAEliminar.id) setPedidoParaVer(null);
+          setPedidoAEliminar(null);
+        }
+      }
+    } catch (e) {
+      console.error("Error al eliminar pedido:", e);
+    } finally {
+      setEliminandoPedido(false);
+    }
+  };
+
+
+
+  const obtenerOrigenPedido = (tipo?: string): "Selector" | "Tienda" | "Taller" => {
+    if (!tipo) return "Selector";
+    const t = tipo.toUpperCase();
+    if (t.includes("TALLER") || t.includes("MECANICO") || t.includes("ORDEN")) return "Taller";
+    if (t.includes("TIENDA") || t.includes("ECOMMERCE") || t.includes("PRODUCTO")) return "Tienda";
+    return "Selector";
+  };
+
+  const renderOrigenBadge = (tipo?: string) => {
+    const origen = obtenerOrigenPedido(tipo);
+    if (origen === "Taller") {
+      return (
+        <span className="text-[10px] px-2 py-0.5 rounded-md font-medium border flex items-center gap-1 bg-amber-500/15 border-amber-500/30 text-amber-300">
+          <span>🔧</span>
+          <span>Taller</span>
+        </span>
+      );
+    }
+    if (origen === "Tienda") {
+      return (
+        <span className="text-[10px] px-2 py-0.5 rounded-md font-medium border flex items-center gap-1 bg-purple-500/15 border-purple-500/30 text-purple-300">
+          <span>🛒</span>
+          <span>Tienda</span>
+        </span>
+      );
+    }
+    return (
+      <span className="text-[10px] px-2 py-0.5 rounded-md font-medium border flex items-center gap-1 bg-cyan-500/15 border-cyan-500/30 text-cyan-300">
+        <span>🚗</span>
+        <span>Selector</span>
+      </span>
+    );
+  };
 
   // Ref para impresión de ticket
   const ticketRef = useRef<HTMLDivElement>(null);
@@ -176,6 +275,47 @@ export default function NuevaVentaPage() {
     }
   }, []);
 
+  // Registrar cliente nuevo directamente en Neon desde el POS
+  const handleGuardarClienteInline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nuevoClienteNombre.trim()) {
+      alert("El nombre del cliente es obligatorio.");
+      return;
+    }
+
+    setGuardandoClienteInline(true);
+    try {
+      const res = await fetch("/api/clientes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre: nuevoClienteNombre.trim(),
+          identificacion: nuevoClienteIdent.trim() || undefined,
+          telefono: nuevoClienteTelefono.trim() || undefined,
+          tipoCliente: "Personal",
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "No se pudo registrar el cliente en Neon.");
+      }
+
+      const creado = data.cliente;
+      setClientes((prev) => [creado, ...prev]);
+      setClienteSeleccionado(creado);
+      setNuevoClienteNombre("");
+      setNuevoClienteIdent("");
+      setNuevoClienteTelefono("");
+      setCreandoClienteInline(false);
+      setMostrarModalClientes(false);
+    } catch (err: any) {
+      alert(err.message || "Error al registrar cliente.");
+    } finally {
+      setGuardandoClienteInline(false);
+    }
+  };
+
   const ultimoConteoWebRef = useRef<number>(Date.now());
 
   // 3. Cargar conteo de pedidos pendientes (optimizado para bajo CPU)
@@ -209,6 +349,220 @@ export default function NuevaVentaPage() {
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [cargarProductos, cargarClientes, cargarConteoWeb]);
+
+  // Verificar apertura de caja al entrar a Venta
+  const verificarCajaApertura = useCallback(async () => {
+    try {
+      const res = await fetch("/api/caja");
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setCajaInfo({
+          initialCash: json.data.initialCash || 0,
+          expectedCash: json.data.expectedCash || 0,
+        });
+
+        // Al entrar: si no hay fondo inicial asignado o la sesión actual no ha sido abierta
+        const sesionAbierta = sessionStorage.getItem("pos_caja_abierta_sesion");
+        if (!sesionAbierta || json.data.initialCash === 0) {
+          if (json.data.initialCash > 0) {
+            setFondoApertura(json.data.initialCash.toString());
+          }
+          setMostrarModalApertura(true);
+        }
+      }
+    } catch (e) {
+      console.error("Error al consultar caja:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    verificarCajaApertura();
+  }, [verificarCajaApertura]);
+
+  const handleGuardarApertura = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const monto = parseFloat(fondoApertura) || 0;
+    if (monto < 0 || isNaN(monto)) {
+      alert("Monto inválido");
+      return;
+    }
+
+    setGuardandoApertura(true);
+    try {
+      const res = await fetch("/api/caja", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "SET_INITIAL",
+          initialCash: monto,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Error al abrir caja");
+      }
+
+      sessionStorage.setItem("pos_caja_abierta_sesion", "true");
+      setCajaInfo({
+        initialCash: monto,
+        expectedCash: monto,
+      });
+      setMostrarModalApertura(false);
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setGuardandoApertura(false);
+    }
+  };
+
+  const handleOmitirApertura = () => {
+    sessionStorage.setItem("pos_caja_abierta_sesion", "true");
+    setMostrarModalApertura(false);
+  };
+
+  const sumarFondoApertura = (monto: number) => {
+    const act = parseFloat(fondoApertura) || 0;
+    setFondoApertura((act + monto).toFixed(2));
+  };
+
+  const sumarConteoCierre = (monto: number) => {
+    const act = parseFloat(conteoCierre) || 0;
+    setConteoCierre((act + monto).toFixed(2));
+  };
+
+  const handleConfirmarCierre = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const contado = parseFloat(conteoCierre) || 0;
+    const esperado = cajaInfo?.expectedCash || 0;
+    const diferencia = contado - esperado;
+
+    setCerrandoCaja(true);
+    try {
+      const res = await fetch("/api/caja", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          declaredCash: contado,
+          expectedCash: esperado,
+          diffCash: diferencia,
+          notes: notasCierre,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Error al cerrar caja");
+      }
+
+      sessionStorage.removeItem("pos_caja_abierta_sesion");
+      setCajaInfo({ initialCash: 0, expectedCash: 0 });
+      setMostrarModalCierre(false);
+      setConteoCierre("");
+      setNotasCierre("");
+      alert("Caja cerrada correctamente");
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setCerrandoCaja(false);
+    }
+  };
+
+  // Abrir y cargar lista de pedidos pendientes
+  const abrirModalPedidos = async () => {
+    setMostrarModalPedidos(true);
+    setCargandoPedidos(true);
+    try {
+      const res = await fetch("/api/solicitudes?estado=PENDIENTE");
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const filtrados = (data.solicitudes || []).filter((s: any) => !s.type?.startsWith("CAJA"));
+        setListaPedidos(filtrados);
+      }
+    } catch (err) {
+      console.error("Error al cargar pedidos:", err);
+    } finally {
+      setCargandoPedidos(false);
+    }
+  };
+
+  // Cargar pedido directamente en el carrito de Venta
+  const despacharPedidoEnPos = (item: any) => {
+    if (cart.length > 0) {
+      // Auto-guardar la venta actual en espera para no perderla
+      const nuevaEspera: VentaEnEspera = {
+        id: "esp-" + Date.now(),
+        nombre: clienteSeleccionado?.name || "Venta en mostrador",
+        cart: [...cart],
+        clienteSeleccionado,
+        descuentoTipo,
+        descuentoValor,
+        solicitudActiva,
+        timestamp: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
+      };
+      const actualizadas = [nuevaEspera, ...ventasEnEspera];
+      setVentasEnEspera(actualizadas);
+      localStorage.setItem("pos_ventas_en_espera", JSON.stringify(actualizadas));
+    }
+
+    setSolicitudActiva(item);
+
+    if (item.customerName) {
+      setClienteSeleccionado({
+        id: "web-" + item.id,
+        identification: item.customerPhone || "N/A",
+        name: item.customerName,
+        phone: item.customerPhone || "",
+        type: obtenerOrigenPedido(item.type),
+      });
+    }
+
+    let loadedItems: { product: Product; qty: number }[] = [];
+    if (item.itemsJson) {
+      try {
+        const parsed = typeof item.itemsJson === "string" ? JSON.parse(item.itemsJson) : item.itemsJson;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          loadedItems = parsed.map((p: any, idx: number) => ({
+            product: {
+              id: p.id || `web-item-${idx}`,
+              code: p.code || `WEB-${idx + 1}`,
+              name: p.name || item.itemsSummary || "Solicitud de Cliente",
+              brand: p.brand || null,
+              category: item.type || "General",
+              price: p.price || item.totalEstimated || 0,
+              stock: 999,
+              minStock: 1,
+              status: "ACTIVO",
+            },
+            qty: p.qty || p.quantity || 1,
+          }));
+        }
+      } catch {
+        // fallback
+      }
+    }
+
+    if (loadedItems.length === 0) {
+      loadedItems = [
+        {
+          product: {
+            id: `web-sol-${item.id}`,
+            code: item.requestNumber || "SOL-WEB",
+            name: item.itemsSummary || `${item.type}: Solicitud Cliente`,
+            brand: item.vehicleInfo || null,
+            category: item.type || "General",
+            price: item.totalEstimated || 0,
+            stock: 999,
+            minStock: 1,
+            status: "ACTIVO",
+          },
+          qty: 1,
+        },
+      ];
+    }
+
+    setCart(loadedItems);
+    setMostrarModalPedidos(false);
+    setPedidoParaVer(null);
+  };
 
   // 4. Detectar si viene una solicitud web para despachar
   useEffect(() => {
@@ -279,8 +633,12 @@ export default function NuevaVentaPage() {
     }
   }, []);
 
-  // Filtrado de productos
+  // Filtrado de productos y servicios
   const filteredProducts = productos.filter((item) => {
+    // Filtro por tipo: Productos o Servicios
+    if (filtroTipo === "productos" && item.isService) return false;
+    if (filtroTipo === "servicios" && !item.isService) return false;
+
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     return (
@@ -433,6 +791,7 @@ export default function NuevaVentaPage() {
         customerId: clienteSeleccionado?.id || null,
         customerName: clienteSeleccionado?.name || "Consumidor Final",
         paymentMethod: metodoPago,
+        discount: descuentoCalculado,
         taxPercent: 0.16,
         items: cart.map((i) => ({
           productId: i.product.id,
@@ -466,6 +825,7 @@ export default function NuevaVentaPage() {
             }),
           });
           sessionStorage.removeItem("pos_despacho_solicitud");
+          setListaPedidos((prev) => prev.filter((p) => p.id !== solicitudActiva.id));
           setSolicitudActiva(null);
           cargarConteoWeb();
         } catch (e) {
@@ -520,72 +880,66 @@ export default function NuevaVentaPage() {
         {/* Panel Izquierdo: Catálogo y Búsqueda */}
         <div className="flex-grow flex flex-col h-full bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+            {/* Encabezado Superior con Pestañas: Venta | Caja | Pedidos */}
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
                 <Link
                   href="/pos"
-                  className="text-emerald-600 hover:text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 p-2 rounded-lg transition-colors"
+                  className="w-10 h-10 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-all active:scale-95 shadow-sm"
+                  title="POS"
                 >
                   &larr;
                 </Link>
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">🛒</span>
-                  <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Nueva Venta</h1>
+
+                {/* Pestañas de Navegación Rápida */}
+                <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-950/70 border border-zinc-200 dark:border-zinc-800/80 backdrop-blur-sm">
+                  {/* Pestaña: Venta (Activa) */}
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold text-xs shadow-[0_0_15px_rgba(16,185,129,0.12)]">
+                    <span className="text-sm">🛒</span>
+                    <span>Venta</span>
+                  </div>
+
+
+                  {/* Pestaña: Pedidos (Abre Flotante) */}
+                  <button
+                    type="button"
+                    onClick={abrirModalPedidos}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-zinc-800/50 font-semibold text-xs transition-all active:scale-95 cursor-pointer"
+                  >
+                    <span className="text-sm">📥</span>
+                    <span>Pedidos</span>
+                    {solicitudesPendientesCount > 0 && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/35 font-semibold">
+                        {solicitudesPendientesCount}
+                      </span>
+                    )}
+                  </button>
                 </div>
               </div>
 
-              {/* Botones Rápidos Superiores - Solo Iconos Minimalistas */}
+              {/* Botones de Acción Rápida */}
               <div className="flex items-center gap-2">
-                {/* Botón: Ítem Personalizado / Manual */}
+
+                {/* Botón: Cierre de Caja */}
                 <button
                   type="button"
-                  onClick={() => setMostrarModalItemManual(true)}
-                  className="w-10 h-10 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 flex items-center justify-center text-base transition-all shadow-sm active:scale-95"
-                  title="Ítem o servicio rápido"
+                  onClick={() => {
+                    verificarCajaApertura();
+                    setMostrarModalCierre(true);
+                  }}
+                  className="w-10 h-10 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-rose-300 border border-rose-500/30 flex items-center justify-center text-sm transition-all shadow-[0_0_15px_rgba(244,63,94,0.12)] cursor-pointer"
+                  title="Cierre"
                 >
-                  <span>⚡</span>
+                  <span>🔒</span>
                 </button>
-
-                {/* Botón: Ventas en Espera */}
-                <button
-                  type="button"
-                  onClick={() => setMostrarModalEspera(true)}
-                  className="relative w-10 h-10 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 flex items-center justify-center text-base transition-all shadow-sm active:scale-95"
-                  title="Ventas en espera"
-                >
-                  <span>⏸️</span>
-                  {ventasEnEspera.length > 0 && (
-                    <span className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full bg-purple-600 text-white text-[10px] font-black shadow-sm">
-                      {ventasEnEspera.length}
-                    </span>
-                  )}
-                </button>
-
-                {/* Botón: Pedidos Web */}
-                <Link
-                  href="/pos/solicitudes"
-                  className="relative h-10 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95"
-                  title="Pedidos"
-                >
-                  <span className="text-base">📥</span>
-                  <span
-                    className={`px-2 py-0.5 text-xs font-black rounded-full shadow-sm transition-all ${
-                      solicitudesPendientesCount > 0
-                        ? "bg-orange-500 text-white animate-pulse shadow-orange-500/40 ring-2 ring-orange-400/20"
-                        : "bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-                    }`}
-                  >
-                    {solicitudesPendientesCount}
-                  </span>
-                </Link>
               </div>
             </div>
 
             <div className="relative">
               <input
                 type="text"
-                placeholder="Escanear código de barras o buscar producto (Enter para agregar)..."
-                className="w-full pl-12 pr-4 py-3.5 rounded-lg border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all dark:text-white text-base font-medium"
+                placeholder="Buscar..."
+                className="w-full pl-12 pr-10 py-3.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/60 focus:outline-none focus:border-emerald-500/50 transition-all dark:text-white text-sm font-medium placeholder-zinc-500"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={(e) => {
@@ -615,6 +969,35 @@ export default function NuevaVentaPage() {
                   ✕
                 </button>
               )}
+            </div>
+
+            {/* Filtro: Productos y Servicios */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setFiltroTipo(filtroTipo === "productos" ? "todos" : "productos")}
+                className={`flex-1 py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  filtroTipo === "productos"
+                    ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.15)]"
+                    : "bg-zinc-100 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                }`}
+              >
+                <span>📦</span>
+                <span>Productos</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFiltroTipo(filtroTipo === "servicios" ? "todos" : "servicios")}
+                className={`flex-1 py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  filtroTipo === "servicios"
+                    ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.15)]"
+                    : "bg-zinc-100 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                }`}
+              >
+                <span>⚙️</span>
+                <span>Servicios</span>
+              </button>
             </div>
           </div>
 
@@ -670,7 +1053,7 @@ export default function NuevaVentaPage() {
                           {isAgotado ? "Agotado" : `${item.stock} en stock`}
                         </span>
                       </div>
-                      <h4 className="font-bold text-zinc-900 dark:text-white line-clamp-2 leading-tight mb-1 text-sm">
+                      <h4 className="font-normal text-xs text-zinc-900 dark:text-zinc-200 line-clamp-2 leading-snug mb-1">
                         {item.name}
                       </h4>
                       <p className="text-xs text-zinc-400 mb-3 mt-auto">
@@ -729,62 +1112,47 @@ export default function NuevaVentaPage() {
               </div>
             </button>
 
-            {/* Acciones de Cabecera: Pausar y Vaciar */}
+            {/* Acciones de Cabecera: Vaciar */}
             <div className="flex items-center gap-1">
               {cart.length > 0 && (
-                <>
-                  <button
-                    type="button"
-                    onClick={ponerEnEspera}
-                    className="text-xs text-purple-300 hover:text-purple-200 px-2 py-1 rounded-md hover:bg-purple-950/50 transition-colors flex items-center gap-1"
-                    title="Pausar venta actual y atender otro cliente"
-                  >
-                    <span>⏸️</span>
-                    <span className="text-[11px]">Espera</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      limpiarCarrito();
-                      if (solicitudActiva) {
-                        sessionStorage.removeItem("pos_despacho_solicitud");
-                        setSolicitudActiva(null);
-                      }
-                    }}
-                    className="text-xs text-zinc-400 hover:text-rose-400 px-2 py-1 rounded-md hover:bg-rose-500/10 transition-colors"
-                    title="Vaciar orden"
-                  >
-                    Vaciar
-                  </button>
-                </>
+                <button
+                  type="button"
+                  onClick={() => {
+                    limpiarCarrito();
+                    if (solicitudActiva) {
+                      sessionStorage.removeItem("pos_despacho_solicitud");
+                      setSolicitudActiva(null);
+                    }
+                  }}
+                  className="text-xs text-zinc-400 hover:text-rose-400 px-2 py-1 rounded-md hover:bg-rose-500/10 transition-colors"
+                  title="Vaciar orden"
+                >
+                  Vaciar
+                </button>
               )}
             </div>
           </div>
 
-          {/* Banner de Solicitud Web en Despacho */}
+          {/* Banner de Pedido en Despacho: Origen Landing, Tienda, Taller */}
           {solicitudActiva && (
-            <div className="bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-800/50 px-4 py-2.5 flex items-center justify-between text-xs text-amber-800 dark:text-amber-200">
+            <div className="bg-zinc-950/70 border-b border-zinc-800 px-4 py-2 flex items-center justify-between text-xs backdrop-blur-sm">
               <div className="flex items-center gap-2">
-                <span>⚡</span>
-                <div>
-                  <span className="font-semibold">Despachando {solicitudActiva.requestNumber}:</span>{" "}
-                  <span>{solicitudActiva.type}</span>
-                  {solicitudActiva.vehicleInfo && (
-                    <span className="block text-[11px] text-amber-600 dark:text-amber-400">
-                      🚗 {solicitudActiva.vehicleInfo}
-                    </span>
-                  )}
-                </div>
+                <span className="text-sm">📥</span>
+                <span className="font-mono font-bold text-white text-xs">
+                  {solicitudActiva.requestNumber}
+                </span>
+                {renderOrigenBadge(solicitudActiva.type)}
               </div>
               <button
+                type="button"
                 onClick={() => {
                   sessionStorage.removeItem("pos_despacho_solicitud");
                   setSolicitudActiva(null);
                 }}
-                className="text-amber-700 hover:text-amber-900 dark:text-amber-400 text-xs underline ml-2"
-                title="Desvincular solicitud"
+                className="text-xs text-zinc-400 hover:text-rose-400 px-2 py-0.5 rounded-md hover:bg-rose-500/10 transition-colors cursor-pointer"
+                title="Desvincular"
               >
-                Desvincular
+                Cerrar
               </button>
             </div>
           )}
@@ -792,15 +1160,8 @@ export default function NuevaVentaPage() {
           {/* Lista de Items en Carrito */}
           <div className="flex-grow overflow-y-auto p-3">
             {cart.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-zinc-400 p-8 text-center space-y-4">
-                <span className="text-6xl opacity-50">🛒</span>
-                <p className="text-sm">El carrito está vacío. Haz clic en los productos para agregarlos a la orden.</p>
-                <button
-                  onClick={() => setMostrarModalItemManual(true)}
-                  className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:text-blue-600"
-                >
-                  + Agregar Ítem Rápido
-                </button>
+              <div className="h-full flex flex-col items-center justify-center text-zinc-600 p-8 text-center">
+                <span className="text-5xl opacity-30">🛒</span>
               </div>
             ) : (
               <ul className="space-y-2">
@@ -820,7 +1181,7 @@ export default function NuevaVentaPage() {
                       </div>
                       <div className="flex-grow">
                         <div className="flex justify-between items-start mb-1">
-                          <h4 className="font-bold text-sm text-zinc-900 dark:text-white leading-tight pr-2">
+                          <h4 className="font-normal text-xs text-zinc-900 dark:text-zinc-200 leading-snug pr-2">
                             {item.product.name}
                           </h4>
                           <button
@@ -902,92 +1263,149 @@ export default function NuevaVentaPage() {
                 setMostrarModalPago(true);
               }}
               disabled={cart.length === 0}
-              className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 disabled:cursor-not-allowed text-white text-lg font-bold py-3.5 rounded-xl transition-all active:scale-95 shadow-md shadow-emerald-500/20 disabled:shadow-none flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-[0.99] border border-emerald-500/35 hover:border-emerald-500/50 text-emerald-300 text-sm font-medium transition-all flex items-center justify-center gap-2 cursor-pointer disabled:bg-zinc-900/40 disabled:border-zinc-800/60 disabled:text-zinc-600 disabled:cursor-not-allowed backdrop-blur-sm shadow-sm shadow-emerald-950/20"
             >
-              <span>💳</span> Cobrar Ahora
+              <span className="text-base">💳</span>
+              <span>Cobrar</span>
             </button>
           </div>
         </div>
       </main>
 
-      {/* MODAL 1: Seleccionar Cliente */}
+      {/* MODAL 1: Seleccionar Cliente - Moderno y Minimalista */}
       {mostrarModalClientes && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl w-full max-w-lg p-6 shadow-2xl relative">
-            <div className="flex justify-between items-center mb-4 pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Seleccionar Cliente</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+          <div className="bg-zinc-900/95 border border-zinc-800/80 rounded-2xl w-full max-w-lg p-5 shadow-2xl relative backdrop-blur-xl">
+            {/* Buscador minimalista con icono y botón de cerrar */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="relative flex-1">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-xs">🔍</span>
+                <input
+                  type="text"
+                  placeholder="Buscar..."
+                  value={busquedaCliente}
+                  onChange={(e) => setBusquedaCliente(e.target.value)}
+                  className="w-full pl-9 pr-8 py-2 rounded-xl border border-zinc-800 bg-zinc-950/60 text-sm text-zinc-200 placeholder-zinc-500 outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+                  autoFocus
+                />
+                {busquedaCliente && (
+                  <button
+                    onClick={() => setBusquedaCliente("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 text-xs p-1"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
               <button
                 onClick={() => setMostrarModalClientes(false)}
-                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                className="w-8 h-8 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-700/50 flex items-center justify-center text-xs transition-all"
+                title="Cerrar"
               >
                 ✕
               </button>
             </div>
 
-            <input
-              type="text"
-              placeholder="Buscar por nombre, documento o teléfono..."
-              value={busquedaCliente}
-              onChange={(e) => setBusquedaCliente(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm mb-4 outline-none focus:border-emerald-500 dark:text-white"
-              autoFocus
-            />
-
-            <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+            {/* Lista de clientes */}
+            <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
+              {/* Consumidor Final */}
               <button
                 onClick={() => {
                   setClienteSeleccionado(null);
                   setMostrarModalClientes(false);
                 }}
-                className={`w-full p-3 rounded-lg border text-left flex items-center justify-between transition-colors ${
+                className={`w-full p-2.5 rounded-xl border text-left flex items-center justify-between transition-all duration-150 group ${
                   clienteSeleccionado === null
-                    ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20"
-                    : "border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                    ? "border-emerald-500/35 bg-emerald-500/10 text-emerald-300"
+                    : "border-zinc-800/80 bg-zinc-950/40 hover:bg-zinc-800/40 hover:border-zinc-700/60"
                 }`}
               >
-                <div>
-                  <p className="font-bold text-sm text-zinc-900 dark:text-white">👤 Consumidor Final</p>
-                  <p className="text-xs text-zinc-500">Sin registro formal / venta rápida</p>
-                </div>
-                {clienteSeleccionado === null && <span className="text-emerald-600 font-bold">✓</span>}
-              </button>
-
-              {clientesFiltrados.map((cli) => (
-                <button
-                  key={cli.id}
-                  onClick={() => {
-                    setClienteSeleccionado(cli);
-                    setMostrarModalClientes(false);
-                  }}
-                  className={`w-full p-3 rounded-lg border text-left flex items-center justify-between transition-colors ${
-                    clienteSeleccionado?.id === cli.id
-                      ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20"
-                      : "border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800"
-                  }`}
-                >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs transition-colors ${
+                      clienteSeleccionado === null
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                        : "bg-zinc-800/70 text-zinc-400 border border-zinc-700/50 group-hover:text-zinc-200"
+                    }`}
+                  >
+                    👤
+                  </div>
                   <div>
-                    <p className="font-bold text-sm text-zinc-900 dark:text-white">{cli.name}</p>
-                    <p className="text-xs text-zinc-500">
-                      ID: {cli.identification} {cli.phone ? `• Tel: ${cli.phone}` : ""}
+                    <p className="text-sm font-medium text-zinc-200 group-hover:text-white leading-tight">
+                      Consumidor Final
+                    </p>
+                    <p className="text-[11px] text-zinc-500 mt-0.5">
+                      Venta rápida
                     </p>
                   </div>
-                  {clienteSeleccionado?.id === cli.id && (
-                    <span className="text-emerald-600 font-bold">✓</span>
-                  )}
-                </button>
-              ))}
+                </div>
+                {clienteSeleccionado === null && (
+                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-xs font-bold">
+                    ✓
+                  </div>
+                )}
+              </button>
+
+              {/* Clientes Registrados */}
+              {clientesFiltrados.map((cli) => {
+                const isSelected = clienteSeleccionado?.id === cli.id;
+                const iniciales = (cli.name || "CL").substring(0, 2).toUpperCase();
+                return (
+                  <button
+                    key={cli.id}
+                    onClick={() => {
+                      setClienteSeleccionado(cli);
+                      setMostrarModalClientes(false);
+                    }}
+                    className={`w-full p-2.5 rounded-xl border text-left flex items-center justify-between transition-all duration-150 group ${
+                      isSelected
+                        ? "border-emerald-500/35 bg-emerald-500/10 text-emerald-300"
+                        : "border-zinc-800/80 bg-zinc-950/40 hover:bg-zinc-800/40 hover:border-zinc-700/60"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-semibold tracking-wider transition-colors ${
+                          isSelected
+                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                            : "bg-zinc-800/70 text-zinc-400 border border-zinc-700/50 group-hover:text-zinc-200"
+                        }`}
+                      >
+                        {iniciales}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-zinc-200 group-hover:text-white leading-tight">
+                          {cli.name}
+                        </p>
+                        <p className="text-[11px] text-zinc-500 mt-0.5">
+                          {cli.identification || "Sin CI"} {cli.phone ? `• ${cli.phone}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-xs font-bold">
+                        ✓
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs">
-              <Link
-                href="/pos/clientes/nuevo"
-                className="text-emerald-600 hover:underline font-semibold"
-              >
-                + Crear Nuevo Cliente
-              </Link>
+            {/* Footer con acciones de una sola palabra */}
+            <div className="mt-3 pt-3 border-t border-zinc-800/80 flex justify-between items-center text-xs">
               <button
+                type="button"
+                onClick={() => setCreandoClienteInline(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 font-medium transition-all cursor-pointer"
+              >
+                <span>＋</span>
+                <span>Nuevo</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setMostrarModalClientes(false)}
-                className="px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300"
+                className="px-3.5 py-1.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-700/50 font-medium transition-all"
               >
                 Cerrar
               </button>
@@ -996,30 +1414,115 @@ export default function NuevaVentaPage() {
         </div>
       )}
 
-      {/* MODAL 2: Aplicar Descuento */}
-      {mostrarModalDescuento && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl w-full max-w-sm p-6 shadow-2xl relative">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-zinc-100 dark:border-zinc-800">
-              <h3 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                <span>🏷️</span> Aplicar Descuento
+      {/* MODAL 1.1: Crear Cliente Rápido en Neon */}
+      {creandoClienteInline && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+          <div className="bg-zinc-900/95 border border-zinc-800/80 rounded-2xl w-full max-w-sm p-5 shadow-2xl relative backdrop-blur-xl">
+            <div className="flex justify-between items-center mb-4 pb-2.5 border-b border-zinc-800/80">
+              <h3 className="text-sm font-medium text-zinc-200 flex items-center gap-2">
+                <span className="w-6 h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 flex items-center justify-center text-xs">👤</span>
+                <span>Cliente</span>
               </h3>
               <button
-                onClick={() => setMostrarModalDescuento(false)}
-                className="text-zinc-400 hover:text-zinc-600"
+                type="button"
+                onClick={() => setCreandoClienteInline(false)}
+                className="w-7 h-7 rounded-lg bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-700/50 flex items-center justify-center text-xs transition-all"
+                title="Cerrar"
               >
                 ✕
               </button>
             </div>
 
+            <form onSubmit={handleGuardarClienteInline} className="space-y-3">
+              <div>
+                <label className="block text-[11px] font-medium text-zinc-400 mb-1">
+                  Nombre completo *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Juan Pérez"
+                  value={nuevoClienteNombre}
+                  onChange={(e) => setNuevoClienteNombre(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-800 bg-zinc-950/60 text-xs text-zinc-200 placeholder-zinc-500 outline-none focus:border-emerald-500/40 transition-all"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-zinc-400 mb-1">
+                  Cédula / RUC
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej. 0928374651"
+                  value={nuevoClienteIdent}
+                  onChange={(e) => setNuevoClienteIdent(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-800 bg-zinc-950/60 text-xs text-zinc-200 placeholder-zinc-500 outline-none focus:border-emerald-500/40 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-zinc-400 mb-1">
+                  Teléfono / WhatsApp
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej. 0987654321"
+                  value={nuevoClienteTelefono}
+                  onChange={(e) => setNuevoClienteTelefono(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-800 bg-zinc-950/60 text-xs text-zinc-200 placeholder-zinc-500 outline-none focus:border-emerald-500/40 transition-all"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setCreandoClienteInline(false)}
+                  className="flex-1 py-2 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-700/50 text-xs font-medium transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={guardandoClienteInline}
+                  className="flex-1 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-medium transition-all flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                >
+                  {guardandoClienteInline ? "Guardando..." : "Guardar"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: Aplicar Descuento - Color suave y transparente */}
+      {mostrarModalDescuento && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+          <div className="bg-zinc-900/95 border border-zinc-800/80 rounded-2xl w-full max-w-sm p-5 shadow-2xl relative backdrop-blur-xl">
+            <div className="flex justify-between items-center mb-4 pb-2.5 border-b border-zinc-800/80">
+              <h3 className="text-sm font-medium text-zinc-200 flex items-center gap-2">
+                <span className="w-6 h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 flex items-center justify-center text-xs">🏷️</span>
+                <span>Descuento</span>
+              </h3>
+              <button
+                onClick={() => setMostrarModalDescuento(false)}
+                className="w-7 h-7 rounded-lg bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-700/50 flex items-center justify-center text-xs transition-all"
+                title="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Selector de Tipo: Monto Fijo o Porcentaje */}
             <div className="flex gap-2 mb-4">
               <button
                 type="button"
                 onClick={() => setDescuentoTipo("monto")}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors ${
+                className={`flex-1 py-2 rounded-xl text-xs font-medium border transition-all duration-150 ${
                   descuentoTipo === "monto"
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400"
+                    ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/35 shadow-sm shadow-emerald-950/20"
+                    : "bg-zinc-950/40 text-zinc-400 border-zinc-800/80 hover:bg-zinc-800/40 hover:text-zinc-200"
                 }`}
               >
                 $ Monto Fijo
@@ -1027,18 +1530,19 @@ export default function NuevaVentaPage() {
               <button
                 type="button"
                 onClick={() => setDescuentoTipo("porcentaje")}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors ${
+                className={`flex-1 py-2 rounded-xl text-xs font-medium border transition-all duration-150 ${
                   descuentoTipo === "porcentaje"
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400"
+                    ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/35 shadow-sm shadow-emerald-950/20"
+                    : "bg-zinc-950/40 text-zinc-400 border-zinc-800/80 hover:bg-zinc-800/40 hover:text-zinc-200"
                 }`}
               >
                 % Porcentaje
               </button>
             </div>
 
+            {/* Input de Valor */}
             <div className="mb-4">
-              <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">
                 {descuentoTipo === "monto" ? "Monto a descontar ($)" : "Porcentaje a descontar (%)"}
               </label>
               <input
@@ -1048,7 +1552,7 @@ export default function NuevaVentaPage() {
                 placeholder={descuentoTipo === "monto" ? "0.00" : "0%"}
                 value={descuentoValor || ""}
                 onChange={(e) => setDescuentoValor(Math.max(0, parseFloat(e.target.value) || 0))}
-                className="w-full px-3 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base font-bold outline-none focus:border-blue-500 dark:text-white"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base font-semibold text-zinc-100 placeholder-zinc-500 outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20 transition-all"
                 autoFocus
               />
             </div>
@@ -1061,7 +1565,7 @@ export default function NuevaVentaPage() {
                     key={pct}
                     type="button"
                     onClick={() => setDescuentoValor(pct)}
-                    className="py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-xs font-bold text-zinc-700 dark:text-zinc-300"
+                    className="py-1.5 rounded-xl bg-zinc-950/40 hover:bg-emerald-500/15 border border-zinc-800/80 hover:border-emerald-500/30 text-xs font-medium text-zinc-300 hover:text-emerald-300 transition-all"
                   >
                     {pct}%
                   </button>
@@ -1069,6 +1573,7 @@ export default function NuevaVentaPage() {
               </div>
             )}
 
+            {/* Botones de acción suaves y translúcidos */}
             <div className="flex gap-2">
               <button
                 type="button"
@@ -1076,14 +1581,14 @@ export default function NuevaVentaPage() {
                   setDescuentoValor(0);
                   setMostrarModalDescuento(false);
                 }}
-                className="flex-1 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-600 dark:text-zinc-300"
+                className="flex-1 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/25 text-xs font-medium transition-all"
               >
-                Quitar Descuento
+                Quitar
               </button>
               <button
                 type="button"
                 onClick={() => setMostrarModalDescuento(false)}
-                className="flex-1 py-2.5 rounded-lg bg-blue-600 text-white text-xs font-bold shadow-sm"
+                className="flex-1 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-medium transition-all"
               >
                 Aplicar
               </button>
@@ -1376,19 +1881,19 @@ export default function NuevaVentaPage() {
               </div>
             )}
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <button
                 onClick={() => setMostrarModalPago(false)}
-                className="flex-1 py-3 rounded-lg border border-zinc-200 dark:border-zinc-800 text-sm font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                className="flex-1 py-2.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-700/50 text-xs font-medium transition-all"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleConfirmarCobro}
                 disabled={procesandoVenta}
-                className="flex-1 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-sm font-bold shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="flex-1 py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-[0.99] border border-emerald-500/35 hover:border-emerald-500/50 text-emerald-300 text-xs font-medium shadow-sm shadow-emerald-950/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
-                {procesandoVenta ? "Procesando venta..." : "Completar Venta"}
+                {procesandoVenta ? "Procesando..." : "Confirmar"}
               </button>
             </div>
           </div>
@@ -1504,6 +2009,500 @@ export default function NuevaVentaPage() {
                 Nueva Venta
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Flotante: Apertura de Caja al Entrar */}
+      {mostrarModalApertura && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-sm rounded-3xl bg-zinc-900/95 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-5 text-center backdrop-blur-xl">
+            {/* Encabezado e Icono Suave Transparente */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-2xl shadow-[0_0_25px_rgba(16,185,129,0.15)]">
+                💵
+              </div>
+              <div>
+                <h3 className="text-xl font-bold tracking-tight text-white">Apertura</h3>
+                <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+                  Fondo
+                </span>
+              </div>
+            </div>
+
+            {/* Formulario Efectivo */}
+            <form onSubmit={handleGuardarApertura} className="flex flex-col gap-4">
+              <div className="relative flex items-center justify-center bg-zinc-950/70 border border-zinc-800 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20 rounded-2xl px-4 py-3 transition-all">
+                <span className="text-2xl font-bold text-zinc-500 mr-2">$</span>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  autoFocus
+                  placeholder="0.00"
+                  value={fondoApertura}
+                  onChange={(e) => setFondoApertura(e.target.value)}
+                  className="w-full text-3xl font-extrabold text-white text-center bg-transparent focus:outline-none tracking-tight"
+                />
+              </div>
+
+              {/* Botones de incremento rápido */}
+              <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                {[10, 20, 50, 100].map((val) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => sumarFondoApertura(val)}
+                    className="px-2.5 py-1.5 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 active:scale-95 text-xs font-semibold text-zinc-300 border border-zinc-700/40 transition-all"
+                  >
+                    +${val}
+                  </button>
+                ))}
+                {fondoApertura !== "" && (
+                  <button
+                    type="button"
+                    onClick={() => setFondoApertura("")}
+                    className="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-xs font-semibold text-rose-300 border border-rose-500/30 transition-all"
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
+
+              {/* Acciones Suaves y Transparentes */}
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={handleOmitirApertura}
+                  className="flex-1 py-3 px-4 rounded-2xl bg-zinc-800/40 hover:bg-zinc-800/70 active:scale-[0.98] text-zinc-400 hover:text-zinc-200 border border-zinc-700/40 text-xs font-semibold transition-all text-center"
+                >
+                  Omitir
+                </button>
+                <button
+                  type="submit"
+                  disabled={guardandoApertura}
+                  className="flex-1 py-3 px-4 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-[0.98] text-emerald-300 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5"
+                >
+                  {guardandoApertura ? "Guardando..." : "Abrir"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Flotante: Cierre de Caja */}
+      {mostrarModalCierre && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-sm rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/25 text-rose-400 flex items-center justify-center text-base shadow-[0_0_15px_rgba(244,63,94,0.12)]">
+                  🔒
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Cierre</h3>
+                </div>
+              </div>
+              <button
+                onClick={() => setMostrarModalCierre(false)}
+                className="w-8 h-8 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Cuadro Resumen de Esperado y Diferencia */}
+            <div className="bg-zinc-950/70 border border-zinc-800/80 p-3.5 rounded-2xl flex justify-between items-center">
+              <div>
+                <span className="text-xs text-zinc-400 font-medium">Esperado</span>
+                <p className="text-xl font-black text-emerald-400">
+                  ${(cajaInfo?.expectedCash || 0).toFixed(2)}
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="text-xs text-zinc-400 font-medium">Diferencia</span>
+                <p
+                  className={`text-base font-bold ${
+                    conteoCierre !== "" &&
+                    parseFloat(conteoCierre) - (cajaInfo?.expectedCash || 0) < 0
+                      ? "text-rose-400"
+                      : "text-emerald-400"
+                  }`}
+                >
+                  {conteoCierre === ""
+                    ? "$0.00"
+                    : `$${(parseFloat(conteoCierre) - (cajaInfo?.expectedCash || 0)).toFixed(2)}`}
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleConfirmarCierre} className="flex flex-col gap-3.5">
+              <div>
+                <label className="block text-xs font-bold text-zinc-400 mb-1.5">
+                  Contado
+                </label>
+                <div className="relative flex items-center bg-zinc-950/70 border border-zinc-800 focus-within:border-rose-500/50 rounded-2xl px-4 py-2.5">
+                  <span className="text-2xl font-bold text-zinc-500 mr-2">$</span>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    autoFocus
+                    placeholder="0.00"
+                    value={conteoCierre}
+                    onChange={(e) => setConteoCierre(e.target.value)}
+                    className="w-full text-2xl font-black text-white bg-transparent focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Atajos Rápidos */}
+              <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                {[5, 10, 20, 50, 100].map((val) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => sumarConteoCierre(val)}
+                    className="px-2.5 py-1.5 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 active:scale-95 text-xs font-semibold text-zinc-300 border border-zinc-700/40 transition-all"
+                  >
+                    +${val}
+                  </button>
+                ))}
+                {conteoCierre !== "" && (
+                  <button
+                    type="button"
+                    onClick={() => setConteoCierre("")}
+                    className="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-xs font-semibold text-rose-300 border border-rose-500/30 transition-all"
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-zinc-400 mb-1">
+                  Observaciones
+                </label>
+                <input
+                  type="text"
+                  placeholder="Opcional..."
+                  value={notasCierre}
+                  onChange={(e) => setNotasCierre(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-800 bg-zinc-950/60 text-xs text-white focus:outline-none focus:border-zinc-700"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setMostrarModalCierre(false)}
+                  className="flex-1 py-3 px-4 rounded-2xl bg-zinc-800/40 hover:bg-zinc-800/70 text-zinc-400 text-xs font-semibold transition-all text-center"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={cerrandoCaja}
+                  className="flex-1 py-3 px-4 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-rose-300 border border-rose-500/30 shadow-[0_0_20px_rgba(244,63,94,0.15)] text-xs font-bold transition-all text-center"
+                >
+                  {cerrandoCaja ? "Cerrando..." : "Cerrar"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Flotante: Pedidos para Vender en POS */}
+      {mostrarModalPedidos && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-xl max-h-[85vh] rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-4 overflow-hidden">
+            {/* Cabecera */}
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center text-lg">
+                  📥
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Pedidos</h3>
+                  <span className="text-xs text-zinc-400">
+                    {listaPedidos.length} pendientes
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMostrarModalPedidos(false)}
+                className="w-8 h-8 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Filtro Rápido de 3 Orígenes: Todos | Landing | Tienda | Taller */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setFiltroOrigenModal("todos")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  filtroOrigenModal === "todos"
+                    ? "bg-zinc-800 text-white border border-zinc-700 shadow-sm"
+                    : "bg-zinc-950/40 text-zinc-400 hover:text-zinc-200 border border-zinc-800"
+                }`}
+              >
+                Todos ({listaPedidos.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFiltroOrigenModal("Selector")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  filtroOrigenModal === "Selector"
+                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm"
+                    : "bg-cyan-500/10 text-cyan-400/80 hover:text-cyan-300 border border-cyan-500/20"
+                }`}
+              >
+                <span>🚗</span>
+                <span>Selector</span>
+                <span className="text-[10px] opacity-80">
+                  ({listaPedidos.filter((p) => obtenerOrigenPedido(p.type) === "Selector").length})
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFiltroOrigenModal("Tienda")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  filtroOrigenModal === "Tienda"
+                    ? "bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm"
+                    : "bg-purple-500/10 text-purple-400/80 hover:text-purple-300 border border-purple-500/20"
+                }`}
+              >
+                <span>🛒</span>
+                <span>Tienda</span>
+                <span className="text-[10px] opacity-80">
+                  ({listaPedidos.filter((p) => obtenerOrigenPedido(p.type) === "Tienda").length})
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFiltroOrigenModal("Taller")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  filtroOrigenModal === "Taller"
+                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm"
+                    : "bg-amber-500/10 text-amber-400/80 hover:text-amber-300 border border-amber-500/20"
+                }`}
+              >
+                <span>🔧</span>
+                <span>Taller</span>
+                <span className="text-[10px] opacity-80">
+                  ({listaPedidos.filter((p) => obtenerOrigenPedido(p.type) === "Taller").length})
+                </span>
+              </button>
+            </div>
+
+            {/* Lista de Pedidos Filtrados por Origen */}
+            <div className="flex-grow overflow-y-auto pr-1 space-y-3">
+              {cargandoPedidos ? (
+                <div className="py-12 text-center text-zinc-400 text-sm">Cargando...</div>
+              ) : (
+                (() => {
+                  const pedidosFiltrados = listaPedidos.filter((item) => {
+                    if (filtroOrigenModal === "todos") return true;
+                    return obtenerOrigenPedido(item.type) === filtroOrigenModal;
+                  });
+
+                  if (pedidosFiltrados.length === 0) {
+                    return (
+                      <div className="py-16 text-center text-zinc-500 text-sm flex flex-col items-center gap-2">
+                        <span className="text-3xl">📥</span>
+                        <span>Sin pedidos</span>
+                      </div>
+                    );
+                  }
+
+                  return pedidosFiltrados.map((item) => {
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => despacharPedidoEnPos(item)}
+                        className="p-4 rounded-2xl bg-zinc-950/70 border border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-zinc-700/80 hover:bg-zinc-900/60 transition-all cursor-pointer"
+                      >
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-sm text-white">
+                              {item.requestNumber}
+                            </span>
+                            {renderOrigenBadge(item.type)}
+                          </div>
+                          <p className="text-xs font-semibold text-zinc-300">
+                            {item.customerName || "Cliente"}
+                            {item.customerPhone && (
+                              <span className="text-zinc-500 font-normal ml-1">
+                                ({item.customerPhone})
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-xs text-zinc-400 line-clamp-1">
+                            {item.itemsSummary}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-800">
+                          <div className="text-left sm:text-right mr-1">
+                            <span className="text-[10px] text-zinc-500 block">Total</span>
+                            <span className="text-lg font-normal text-emerald-400">
+                              ${parseFloat(item.totalEstimated || 0).toFixed(2)}
+                            </span>
+                          </div>
+
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRechazarPedido(item.id, item.requestNumber);
+                            }}
+                            className="w-8 h-8 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/25 flex items-center justify-center text-xs transition-all cursor-pointer"
+                            title="Eliminar pedido"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()
+              )}
+            </div>
+
+            {/* Modal de Confirmación para Eliminar Pedido */}
+            {pedidoAEliminar && (
+              <div 
+                className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div 
+                  className="w-full max-w-sm rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-4 animate-in zoom-in-95 duration-150"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400 text-lg shrink-0">
+                      🗑️
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-white">¿Eliminar pedido?</h3>
+                      <p className="text-xs text-zinc-400">
+                        Pedido <span className="font-mono text-zinc-200 font-semibold">{pedidoAEliminar.requestNumber}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    ¿Estás seguro de eliminar este pedido?
+                  </p>
+
+                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-800">
+                    <button
+                      type="button"
+                      disabled={eliminandoPedido}
+                      onClick={() => setPedidoAEliminar(null)}
+                      className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      disabled={eliminandoPedido}
+                      onClick={confirmarEliminarPedido}
+                      className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-95 text-white text-xs font-bold transition-all shadow-[0_0_15px_rgba(225,29,72,0.3)] cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      {eliminandoPedido ? "Eliminando..." : "Sí, Eliminar"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Vista Previa de Detalle del Pedido */}
+            {pedidoParaVer && (
+              <div className="absolute inset-0 z-10 bg-zinc-950/95 backdrop-blur-md p-6 flex flex-col justify-between animate-in fade-in zoom-in-95 duration-150">
+                <div className="space-y-4 overflow-y-auto">
+                  <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-base text-white">
+                        {pedidoParaVer.requestNumber}
+                      </span>
+                      {renderOrigenBadge(pedidoParaVer.type)}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPedidoParaVer(null)}
+                      className="w-8 h-8 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800">
+                      <span className="text-zinc-500 block mb-0.5">Cliente</span>
+                      <p className="font-semibold text-white">{pedidoParaVer.customerName || "N/A"}</p>
+                      {pedidoParaVer.customerPhone && (
+                        <p className="text-zinc-400 mt-0.5">📞 {pedidoParaVer.customerPhone}</p>
+                      )}
+                    </div>
+                    <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800">
+                      <span className="text-zinc-500 block mb-0.5">Vehículo / Datos</span>
+                      <p className="font-semibold text-white">{pedidoParaVer.vehicleInfo || "No especificado"}</p>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-xs">
+                    <span className="text-zinc-500 block mb-1">Detalle Solicitado</span>
+                    <p className="text-zinc-200 leading-relaxed font-medium">{pedidoParaVer.itemsSummary}</p>
+                    {pedidoParaVer.notes && (
+                      <p className="text-zinc-400 mt-2 text-[11px] border-t border-zinc-800/80 pt-2 italic">
+                        Nota: {pedidoParaVer.notes}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
+                    <span className="text-xs font-semibold text-emerald-400">Total Estimado</span>
+                    <span className="text-lg font-normal text-emerald-300">
+                      ${parseFloat(pedidoParaVer.totalEstimated || 0).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 pt-4 border-t border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => handleRechazarPedido(pedidoParaVer.id, pedidoParaVer.requestNumber)}
+                    className="px-4 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-semibold transition-all cursor-pointer"
+                  >
+                    Descartar
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPedidoParaVer(null)}
+                      className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold transition-all cursor-pointer"
+                    >
+                      Volver
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => despacharPedidoEnPos(pedidoParaVer)}
+                      className="px-5 py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 font-bold text-xs transition-all shadow-[0_0_15px_rgba(16,185,129,0.15)] cursor-pointer flex items-center gap-1.5"
+                    >
+                      <span>🛒</span>
+                      <span>Vender</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -71,7 +71,7 @@ export default function NuevoProductoPage() {
             href="/pos/catalogo"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors w-fit"
           >
-            &larr; Volver a Catálogo
+            &larr; Volver a Productos
           </Link>
         </div>
 

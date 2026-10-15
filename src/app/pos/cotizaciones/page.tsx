@@ -271,27 +271,19 @@ export default function CotizacionesPage() {
       <Header />
 
       <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
-        {/* Navigation Bar */}
-        <div className="mb-6 flex justify-between items-center">
-          <Link
-            href="/pos"
-            className="text-base font-semibold text-purple-600 hover:text-purple-500 flex items-center gap-1.5 w-fit"
-          >
-            &larr; Volver a Punto de Venta
-          </Link>
-
-          <button
-            onClick={() => setVistaHistorial(!vistaHistorial)}
-            className="text-sm font-bold px-5 py-2.5 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
-          >
-            {vistaHistorial ? "Nueva Cotización" : "Cotizaciones"}
-          </button>
-        </div>
-
         {/* Page Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-purple-500/10 text-purple-600 flex items-center justify-center text-3xl">
+          <div className="flex items-center gap-3">
+            <Link 
+              href="/pos"
+              title="Volver a POS"
+              className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-purple-600 hover:border-purple-500 transition-all shadow-sm active:scale-95 group shrink-0"
+            >
+              <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center text-xl shrink-0">
               📝
             </div>
             <div>
@@ -301,14 +293,23 @@ export default function CotizacionesPage() {
             </div>
           </div>
 
-          {!vistaHistorial && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-zinc-500">Folio:</span>
-              <span className="font-mono text-sm font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 px-3.5 py-1.5 rounded-xl">
-                {quoteNumber}
-              </span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setVistaHistorial(!vistaHistorial)}
+              className="text-sm font-bold px-4 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+            >
+              {vistaHistorial ? "Nueva Cotización" : "Cotizaciones"}
+            </button>
+
+            {!vistaHistorial && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-zinc-500">Folio:</span>
+                <span className="font-mono text-sm font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 px-3.5 py-1.5 rounded-xl">
+                  {quoteNumber}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Notificación de Guardado */}
@@ -698,7 +699,7 @@ export default function CotizacionesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative">
             <div className="flex justify-between items-center mb-4 pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+              <h3 className="text-lg font-normal text-zinc-900 dark:text-white flex items-center gap-2">
                 <span>👥</span> Seleccionar Cliente Registrado
               </h3>
               <button

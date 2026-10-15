@@ -28,8 +28,8 @@ export default function ContactoPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: "REPUESTO",
-          customerName: formData.name || "Cliente Web",
+          type: "LANDING",
+          customerName: formData.name || "Cliente Landing",
           customerEmail: formData.email || null,
           itemsSummary: `Consulta de Repuesto / Contacto: ${formData.subject || "Cotización"}`,
           notes: formData.message || null,

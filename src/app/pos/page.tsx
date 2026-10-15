@@ -26,7 +26,7 @@ const modules = [
     color: "bg-blue-500",
   },
   {
-    title: "Catálogo",
+    title: "Productos",
     description: "Inventario y existencias.",
     icon: "📦",
     href: "/pos/catalogo",

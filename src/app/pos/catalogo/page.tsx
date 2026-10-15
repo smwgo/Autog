@@ -213,16 +213,6 @@ export default function CatalogoPage() {
       <Header />
 
       <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
-        {/* Navigation / Breadcrumb */}
-        <div className="mb-6">
-          <Link
-            href="/pos"
-            className="text-sm font-medium text-blue-600 hover:text-blue-500 flex items-center gap-1 w-fit"
-          >
-            &larr; Volver a POS
-          </Link>
-        </div>
-
         {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
           <div>
@@ -237,7 +227,7 @@ export default function CatalogoPage() {
                 </svg>
               </Link>
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                Catálogo
+                Productos
               </h1>
               <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
                 {productos.length}
@@ -273,7 +263,7 @@ export default function CatalogoPage() {
           <div className="flex-grow relative">
             <input
               type="text"
-              placeholder="Buscar por código, nombre o marca..."
+              placeholder="Buscar..."
               className="w-full pl-12 pr-4 py-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all dark:text-white font-medium"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}

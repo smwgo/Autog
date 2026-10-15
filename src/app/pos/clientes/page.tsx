@@ -237,16 +237,9 @@ export default function GestionClientes() {
       <Header />
 
       <main className="flex-grow p-3 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
-        {/* Breadcrumb & Header */}
+        {/* Header */}
         <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-2">
-              <Link href="/pos" className="hover:text-blue-600 transition-colors flex items-center gap-1 font-medium">
-                <span>&larr;</span> POS
-              </Link>
-              <span>/</span>
-              <span className="text-zinc-900 dark:text-zinc-100 font-medium">Clientes</span>
-            </div>
             <div className="flex items-center gap-3">
               <Link 
                 href="/pos"
@@ -263,16 +256,6 @@ export default function GestionClientes() {
               <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
                 {stats.totalClientes}
               </span>
-              <button
-                onClick={() => cargarClientes()}
-                title="Actualizar datos desde Neon"
-                disabled={cargando}
-                className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-blue-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-all disabled:opacity-50"
-              >
-                <svg className={`w-3.5 h-3.5 ${cargando ? "animate-spin text-blue-500" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </button>
             </div>
           </div>
           <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -357,7 +340,7 @@ export default function GestionClientes() {
               type="text" 
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar por cédula, nombre o placa..." 
+              placeholder="Buscar..." 
               className="w-full h-11 pl-11 pr-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500 transition-colors shadow-sm"
             />
             <svg className="w-4 h-4 absolute left-3.5 top-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>

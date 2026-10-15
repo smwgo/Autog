@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET: Consultar estado actual de caja, ventas del día en Neon y movimientos
+// GET: Consultar lista de sesiones de caja en Neon, métricas y estado activo
 export async function GET(request: Request) {
   try {
     // 1. Obtener todas las ventas registradas en Neon
@@ -9,7 +9,6 @@ export async function GET(request: Request) {
       orderBy: { createdAt: "desc" },
     });
 
-    // Calcular ventas por método de pago desde la base de datos real
     let salesCash = 0;
     let salesCard = 0;
     let salesTransfer = 0;
@@ -28,8 +27,7 @@ export async function GET(request: Request) {
       }
     });
 
-    // 2. Obtener movimientos de gastos o ingresos adicionales
-    // Almacenados mediante la tabla OrderRequest tipo CAJA_MOV o registrados como movimientos
+    // 2. Obtener movimientos adicionales
     let movements: any[] = [];
     try {
       const records = await (prisma as any).orderRequest.findMany({
@@ -47,22 +45,6 @@ export async function GET(request: Request) {
       // fallback
     }
 
-    // 3. Obtener fondo inicial y estado de cierre
-    let initialCash = 0;
-    let lastClosed: any = null;
-    try {
-      const config = await (prisma as any).orderRequest.findFirst({
-        where: { type: "CAJA_SESSION" },
-        orderBy: { createdAt: "desc" },
-      });
-      if (config) {
-        initialCash = parseFloat(config.totalEstimated?.toString() || "0");
-        lastClosed = config;
-      }
-    } catch {
-      // fallback
-    }
-
     const totalExpenses = movements
       .filter((m) => m.type === "GASTO")
       .reduce((acc, m) => acc + m.amount, 0);
@@ -71,11 +53,90 @@ export async function GET(request: Request) {
       .filter((m) => m.type === "INGRESO")
       .reduce((acc, m) => acc + m.amount, 0);
 
+    // 3. Obtener usuario del sistema para asignar como cajero
+    let defaultUserName = "Super Administrador";
+    try {
+      const defaultUser = await prisma.user.findFirst({
+        orderBy: { createdAt: "asc" },
+      });
+      if (defaultUser?.name) {
+        defaultUserName = defaultUser.name;
+      }
+    } catch {
+      // fallback
+    }
+
+    // 4. Obtener sesiones desde la tabla formal CashRegister
+    let dbSessions: any[] = [];
+    try {
+      dbSessions = await prisma.cashRegister.findMany({
+        orderBy: { openedAt: "desc" },
+        include: { movements: true },
+      });
+    } catch (e) {
+      console.warn("CashRegister findMany fallback:", e);
+    }
+
+    // Si aún no hay sesiones en CashRegister pero hay registros previos en orderRequest
+    if (dbSessions.length === 0) {
+      try {
+        const legacySessions = await (prisma as any).orderRequest.findMany({
+          where: { type: { in: ["CAJA_SESSION", "CAJA_CIERRE"] } },
+          orderBy: { createdAt: "desc" },
+        });
+
+        if (legacySessions.length > 0) {
+          dbSessions = legacySessions.map((s: any) => ({
+            id: s.id,
+            sessionNumber: s.requestNumber || `CAJA-${s.id.slice(-6)}`,
+            status: s.status === "CERRADA" ? "CERRADA" : "ABIERTA",
+            cashier: s.customerName && s.customerName !== "Apertura de Caja" ? s.customerName : defaultUserName,
+            initialCash: parseFloat(s.totalEstimated?.toString() || "0"),
+            declaredCash: s.status === "CERRADA" ? parseFloat(s.totalEstimated?.toString() || "0") : null,
+            expectedCash: parseFloat(s.totalEstimated?.toString() || "0") + salesCash,
+            differenceCash: 0,
+            openedAt: s.createdAt,
+            closedAt: s.status === "CERRADA" ? s.updatedAt || s.createdAt : null,
+            movements: [],
+          }));
+        }
+      } catch {
+        // fallback
+      }
+    }
+
+    // Mapear el cajero en cada sesión si viene de CashRegister
+    const sessionsWithCashier = dbSessions.map((s: any) => {
+      let cashier = s.cashier || defaultUserName;
+      if (s.notes && s.notes.includes("Cajero:")) {
+        cashier = s.notes.split("Cajero:")[1].trim();
+      }
+      return {
+        ...s,
+        cashier,
+      };
+    });
+
+    // Buscar sesión activa actualmente
+    const activeSession = sessionsWithCashier.find((s) => s.status === "ABIERTA") || null;
+    const initialCash = activeSession ? parseFloat(activeSession.initialCash?.toString() || "0") : 0;
     const expectedCash = initialCash + salesCash + totalIncome - totalExpenses;
     const totalSales = salesCash + salesCard + salesTransfer;
 
+    // Métricas para la vista Lista
+    const stats = {
+      totalSesiones: sessionsWithCashier.length,
+      abiertas: sessionsWithCashier.filter((s) => s.status === "ABIERTA").length,
+      cerradas: sessionsWithCashier.filter((s) => s.status === "CERRADA").length,
+      fondoTotal: initialCash,
+      ventasTotal: totalSales,
+    };
+
     return NextResponse.json({
       success: true,
+      sessions: sessionsWithCashier,
+      stats,
+      activeSession,
       data: {
         initialCash,
         salesCash,
@@ -87,7 +148,7 @@ export async function GET(request: Request) {
         expectedCash,
         movements,
         totalTransactions: sales.length,
-        lastClosed,
+        lastClosed: sessionsWithCashier.find((s) => s.status === "CERRADA") || null,
       },
     });
   } catch (error: any) {
@@ -99,20 +160,52 @@ export async function GET(request: Request) {
   }
 }
 
-// POST: Registrar movimiento de caja (Gasto o Ingreso) o Actualizar Fondo Inicial
+// POST: Registrar apertura de caja o movimiento (Gasto/Ingreso)
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { action, type, amount, concept, initialCash } = body;
+    const { action, type, amount, concept, initialCash, cashier } = body;
 
-    // Caso 1: Configurar fondo inicial de caja
-    if (action === "SET_INITIAL") {
+    // Caso 1: Abrir nueva sesión de caja o configurar fondo inicial
+    if (action === "SET_INITIAL" || action === "OPEN_SESSION") {
       const monto = parseFloat(initialCash) || 0;
+      const sessionNumber = `CAJA-${Date.now().toString().slice(-6)}`;
+
+      let defaultUserName = "Super Administrador";
+      try {
+        const defaultUser = await prisma.user.findFirst({
+          orderBy: { createdAt: "asc" },
+        });
+        if (defaultUser?.name) {
+          defaultUserName = defaultUser.name;
+        }
+      } catch {
+        // fallback
+      }
+      const cashierName = cashier?.trim() || defaultUserName;
+
+      let nuevaSesion: any = null;
+      try {
+        nuevaSesion = await prisma.cashRegister.create({
+          data: {
+            sessionNumber,
+            status: "ABIERTA",
+            initialCash: monto,
+            expectedCash: monto,
+            notes: `Cajero: ${cashierName}`,
+            openedAt: new Date(),
+          },
+        });
+      } catch (err) {
+        console.warn("Error creando en CashRegister, usando orderRequest:", err);
+      }
+
+      // Registro complementario en orderRequest
       await (prisma as any).orderRequest.create({
         data: {
-          requestNumber: `FONDO-${Date.now().toString().slice(-6)}`,
+          requestNumber: sessionNumber,
           type: "CAJA_SESSION",
-          customerName: "Apertura de Caja",
+          customerName: cashierName,
           itemsSummary: "Fondo inicial asignado",
           totalEstimated: monto,
           status: "ABIERTA",
@@ -121,7 +214,8 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Fondo inicial actualizado correctamente en Neon",
+        session: nuevaSesion,
+        message: "Caja abierta correctamente en Neon",
       });
     }
 
@@ -143,9 +237,9 @@ export async function POST(request: Request) {
       movement: nuevoMov,
     });
   } catch (error: any) {
-    console.error("Error al registrar movimiento en Neon:", error);
+    console.error("Error al registrar en Neon:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al registrar movimiento en Neon" },
+      { success: false, error: error.message || "Error al registrar en Neon" },
       { status: 500 }
     );
   }
@@ -156,6 +250,7 @@ export async function PUT(request: Request) {
   try {
     const body = await request.json();
     const {
+      sessionId,
       declaredCash = 0,
       declaredCard = 0,
       declaredTransfer = 0,
@@ -166,22 +261,70 @@ export async function PUT(request: Request) {
       diffTransfer = 0,
     } = body;
 
+    const declaredCashNum = parseFloat(declaredCash) || 0;
+    const expectedCashNum = parseFloat(expectedCash) || 0;
+    const diffCashNum = parseFloat(diffCash) || 0;
+
+    // 1. Actualizar en la tabla CashRegister
+    let sesionCerrada: any = null;
+    try {
+      if (sessionId) {
+        sesionCerrada = await prisma.cashRegister.update({
+          where: { id: sessionId },
+          data: {
+            status: "CERRADA",
+            declaredCash: declaredCashNum,
+            declaredCard: parseFloat(declaredCard) || 0,
+            declaredTransfer: parseFloat(declaredTransfer) || 0,
+            expectedCash: expectedCashNum,
+            differenceCash: diffCashNum,
+            differenceCard: parseFloat(diffCard) || 0,
+            differenceTransfer: parseFloat(diffTransfer) || 0,
+            notes: notes.trim(),
+            closedAt: new Date(),
+          },
+        });
+      } else {
+        const abierta = await prisma.cashRegister.findFirst({
+          where: { status: "ABIERTA" },
+          orderBy: { openedAt: "desc" },
+        });
+        if (abierta) {
+          sesionCerrada = await prisma.cashRegister.update({
+            where: { id: abierta.id },
+            data: {
+              status: "CERRADA",
+              declaredCash: declaredCashNum,
+              declaredCard: parseFloat(declaredCard) || 0,
+              declaredTransfer: parseFloat(declaredTransfer) || 0,
+              expectedCash: expectedCashNum,
+              differenceCash: diffCashNum,
+              notes: notes.trim(),
+              closedAt: new Date(),
+            },
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("CashRegister update warning:", e);
+    }
+
+    // 2. Registro complementario de auditoría en orderRequest
     const cierre = await (prisma as any).orderRequest.create({
       data: {
         requestNumber: `CIERRE-${Date.now().toString().slice(-6)}`,
         type: "CAJA_CIERRE",
         customerName: "Cierre de Caja Diario",
-        itemsSummary: `Efectivo: $${declaredCash} (Dif: $${diffCash}) | Tarjetas: $${declaredCard} | Transf: $${declaredTransfer}`,
+        itemsSummary: `Efectivo: $${declaredCashNum.toFixed(2)} (Dif: $${diffCashNum.toFixed(2)})`,
         itemsJson: JSON.stringify({
-          declaredCash,
+          sessionId,
+          declaredCash: declaredCashNum,
           declaredCard,
           declaredTransfer,
-          expectedCash,
-          diffCash,
-          diffCard,
-          diffTransfer,
+          expectedCash: expectedCashNum,
+          diffCash: diffCashNum,
         }),
-        totalEstimated: parseFloat(declaredCash) || 0,
+        totalEstimated: declaredCashNum,
         notes: notes.trim(),
         status: "CERRADA",
       },
@@ -189,7 +332,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({
       success: true,
-      cierre,
+      session: sesionCerrada || cierre,
       message: "Cierre de caja guardado con éxito en Neon",
     });
   } catch (error: any) {

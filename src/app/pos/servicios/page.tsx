@@ -248,16 +248,9 @@ export default function ServiciosPosPage() {
       <Header />
 
       <main className="flex-grow p-4 md:p-10 max-w-7xl mx-auto w-full">
-        {/* Breadcrumb & Header idéntico a las otras páginas de POS */}
+        {/* Header */}
         <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-sm text-zinc-500 mb-2">
-              <Link href="/pos" className="hover:text-blue-600 transition-colors flex items-center gap-1 font-medium">
-                <span>&larr;</span> POS
-              </Link>
-              <span>/</span>
-              <span className="text-zinc-900 dark:text-zinc-100 font-medium">Servicios</span>
-            </div>
             <div className="flex items-center gap-3">
               <Link 
                 href="/pos"
@@ -350,7 +343,7 @@ export default function ServiciosPosPage() {
           <div className="relative flex-1 w-full">
             <input
               type="text"
-              placeholder="Buscar servicio por código, nombre o descripción..."
+              placeholder="Buscar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"

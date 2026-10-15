@@ -48,6 +48,50 @@ const MOCK_REQUESTS = [
 
 export default function SolicitudRepuestosPage() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [mecanico, setMecanico] = useState('');
+  const [vehiculo, setVehiculo] = useState('');
+  const [repuestos, setRepuestos] = useState('');
+  const [urgencia, setUrgencia] = useState('Normal');
+  const [enviando, setEnviando] = useState(false);
+  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+
+  const handleCrearPeticionTaller = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mecanico.trim() || !repuestos.trim()) {
+      alert("Por favor completa el nombre del mecánico y los repuestos.");
+      return;
+    }
+
+    setEnviando(true);
+    try {
+      const res = await fetch("/api/solicitudes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "TALLER",
+          customerName: `Mecánico: ${mecanico.trim()}`,
+          vehicleInfo: vehiculo.trim() || "Vehículo Taller",
+          itemsSummary: `Petición Taller (${urgencia}): ${repuestos.trim()}`,
+          totalEstimated: 0,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Error al enviar la petición");
+      }
+
+      setMensajeExito(`Petición enviada al POS con éxito: #${data.solicitud?.requestNumber || ""}`);
+      setMecanico("");
+      setVehiculo("");
+      setRepuestos("");
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setEnviando(false);
+    }
+  };
 
   const filteredRequests = MOCK_REQUESTS.filter(req => 
     req.vehicle.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -98,7 +142,14 @@ export default function SolicitudRepuestosPage() {
             </p>
           </div>
           
-          <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2">
+          <button 
+            type="button"
+            onClick={() => {
+              setModalAbierto(true);
+              setMensajeExito(null);
+            }}
+            className="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-6 py-3 rounded-xl font-medium transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+          >
             <span>+</span> Nueva Petición
           </button>
         </div>
@@ -210,6 +261,117 @@ export default function SolicitudRepuestosPage() {
             </div>
           )}
         </div>
+
+        {/* Modal: Nueva Petición de Taller (Registra en Neon como TALLER) */}
+        {modalAbierto && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="relative w-full max-w-lg rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-4 text-white">
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center text-lg">
+                    🔧
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">Petición de Repuestos</h3>
+                    <span className="text-xs text-amber-400">Origen: Panel Taller</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setModalAbierto(false)}
+                  className="w-8 h-8 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {mensajeExito ? (
+                <div className="py-8 text-center flex flex-col items-center gap-3">
+                  <div className="w-16 h-16 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-3xl border border-amber-500/30">
+                    ✓
+                  </div>
+                  <h4 className="text-lg font-bold text-white">¡Petición Enviada!</h4>
+                  <p className="text-xs text-zinc-400 max-w-xs">{mensajeExito}</p>
+                  <button
+                    type="button"
+                    onClick={() => setModalAbierto(false)}
+                    className="mt-4 px-6 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleCrearPeticionTaller} className="space-y-4">
+                  <div>
+                    <label className="text-xs font-semibold text-zinc-400 block mb-1">Nombre del Mecánico *</label>
+                    <input
+                      type="text"
+                      required
+                      value={mecanico}
+                      onChange={(e) => setMecanico(e.target.value)}
+                      placeholder="Ej. Carlos Rodríguez"
+                      className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-zinc-400 block mb-1">Vehículo / Placa</label>
+                      <input
+                        type="text"
+                        value={vehiculo}
+                        onChange={(e) => setVehiculo(e.target.value)}
+                        placeholder="Ej. Hilux (ABC-123)"
+                        className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-zinc-400 block mb-1">Urgencia</label>
+                      <select
+                        value={urgencia}
+                        onChange={(e) => setUrgencia(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white focus:outline-none focus:border-amber-500"
+                      >
+                        <option value="Normal">Normal</option>
+                        <option value="Alta">Alta</option>
+                        <option value="Urgente">Urgente</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-zinc-400 block mb-1">Repuestos / Piezas Requeridas *</label>
+                    <textarea
+                      rows={3}
+                      required
+                      value={repuestos}
+                      onChange={(e) => setRepuestos(e.target.value)}
+                      placeholder="Detalla los repuestos y cantidades requeridas..."
+                      className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setModalAbierto(false)}
+                      className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold transition-all cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={enviando}
+                      className="px-6 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 active:scale-95 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all shadow-[0_0_15px_rgba(245,158,11,0.15)] cursor-pointer disabled:opacity-50"
+                    >
+                      {enviando ? "Enviando..." : "Enviar Petición"}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

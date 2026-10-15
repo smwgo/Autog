@@ -149,6 +149,35 @@ export async function POST(request: Request) {
       }
     }
 
+    // 3. Sincronizar automáticamente con la sesión de caja abierta en Neon
+    try {
+      const activeSession = await prisma.cashRegister.findFirst({
+        where: { status: "ABIERTA" },
+        orderBy: { openedAt: "desc" },
+      });
+
+      if (activeSession) {
+        const updateData: any = {};
+        if (paymentMethod === "Efectivo") {
+          updateData.totalSalesCash = { increment: totalCalc };
+          updateData.expectedCash = { increment: totalCalc };
+        } else if (paymentMethod === "Tarjeta") {
+          updateData.totalSalesCard = { increment: totalCalc };
+        } else if (paymentMethod === "Transferencia") {
+          updateData.totalSalesTransfer = { increment: totalCalc };
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          await prisma.cashRegister.update({
+            where: { id: activeSession.id },
+            data: updateData,
+          });
+        }
+      }
+    } catch (cajaErr) {
+      console.warn("No se pudo actualizar caja activa al cobrar:", cajaErr);
+    }
+
     return NextResponse.json({ success: true, venta: sale }, { status: 201 });
   } catch (error: any) {
     console.error("Error al registrar venta en Neon:", error);
@@ -198,6 +227,27 @@ export async function PATCH(request: Request) {
           } catch (e) {
             console.warn(`Error al reponer stock del producto ${item.productId}:`, e);
           }
+        }
+      }
+
+      // Si la venta anulada fue en efectivo, ajustar saldo esperado en la caja abierta
+      if (saleActual.paymentMethod === "Efectivo") {
+        try {
+          const activeSession = await prisma.cashRegister.findFirst({
+            where: { status: "ABIERTA" },
+            orderBy: { openedAt: "desc" },
+          });
+          if (activeSession) {
+            await prisma.cashRegister.update({
+              where: { id: activeSession.id },
+              data: {
+                totalSalesCash: { decrement: Number(saleActual.total) },
+                expectedCash: { decrement: Number(saleActual.total) },
+              },
+            });
+          }
+        } catch (cErr) {
+          console.warn("Error al ajustar caja por venta anulada:", cErr);
         }
       }
     }

@@ -142,21 +142,20 @@ export default function HistorialVentasPage() {
       <Header />
 
       <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
-        {/* Navigation / Breadcrumb */}
-        <div className="mb-6">
-          <Link
-            href="/pos"
-            className="text-sm font-medium text-emerald-600 hover:text-emerald-500 flex items-center gap-1.5 w-fit"
-          >
-            &larr; Volver a Punto de Venta
-          </Link>
-        </div>
-
         {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-2xl">
+              <Link 
+                href="/pos"
+                title="Volver a POS"
+                className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-emerald-500 hover:border-emerald-500 transition-all shadow-sm active:scale-95 group"
+              >
+                <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </Link>
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-xl">
                 🧾
               </div>
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -190,7 +189,7 @@ export default function HistorialVentasPage() {
           <div className="relative flex-grow">
             <input
               type="text"
-              placeholder="Buscar por número de venta, cliente o método de pago..."
+              placeholder="Buscar..."
               className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm focus:outline-none focus:border-emerald-500 dark:text-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
