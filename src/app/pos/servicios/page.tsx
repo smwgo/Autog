@@ -32,22 +32,8 @@ export default function ServiciosPosPage() {
   const [selectedCategory, setSelectedCategory] = useState("TODAS");
 
   // Modales
-  const [modalNuevo, setModalNuevo] = useState(false);
-  const [servicioAEditar, setServicioAEditar] = useState<WorkshopService | null>(null);
   const [servicioAEliminar, setServicioAEliminar] = useState<WorkshopService | null>(null);
-  const [guardando, setGuardando] = useState(false);
   const [eliminando, setEliminando] = useState(false);
-
-  // Form State
-  const [form, setForm] = useState({
-    code: "",
-    name: "",
-    category: "Mantenimiento Rápido",
-    price: "",
-    estimatedMinutes: "30",
-    description: "",
-    requiresBay: true,
-  });
 
   const cargarServicios = useCallback(async () => {
     try {
@@ -60,7 +46,7 @@ export default function ServiciosPosPage() {
       if (searchTerm) {
         params.set("busqueda", searchTerm);
       }
-      params.set("activos", "false"); // Mostrar todos para poder gestionar inactivos
+      params.set("activos", "false");
 
       const res = await fetch(`/api/servicios-taller?${params.toString()}`);
       const data = await res.json();
@@ -90,124 +76,6 @@ export default function ServiciosPosPage() {
   useEffect(() => {
     cargarServicios();
   }, [cargarServicios]);
-
-  const abrirModalCrear = () => {
-    setForm({
-      code: `SRV-${Math.floor(1000 + Math.random() * 9000)}`,
-      name: "",
-      category: "Mantenimiento Rápido",
-      price: "",
-      estimatedMinutes: "30",
-      description: "",
-      requiresBay: true,
-    });
-    setModalNuevo(true);
-  };
-
-  const abrirModalEditar = (s: WorkshopService) => {
-    setServicioAEditar(s);
-    setForm({
-      code: s.code,
-      name: s.name,
-      category: s.category,
-      price: String(s.price),
-      estimatedMinutes: String(s.estimatedMinutes),
-      description: s.description || "",
-      requiresBay: s.requiresBay,
-    });
-  };
-
-  const handleGuardarNuevo = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.name.trim() || !form.price) {
-      alert("Por favor completa el nombre y precio.");
-      return;
-    }
-
-    try {
-      setGuardando(true);
-      const res = await fetch("/api/servicios-taller", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: form.code,
-          name: form.name,
-          category: form.category,
-          price: form.price,
-          estimatedMinutes: form.estimatedMinutes,
-          description: form.description,
-          requiresBay: form.requiresBay,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "No se pudo registrar el servicio");
-      }
-
-      setModalNuevo(false);
-      cargarServicios();
-    } catch (err: any) {
-      alert("Error al guardar: " + err.message);
-    } finally {
-      setGuardando(false);
-    }
-  };
-
-  const handleActualizar = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!servicioAEditar) return;
-
-    try {
-      setGuardando(true);
-      const res = await fetch("/api/servicios-taller", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: servicioAEditar.id,
-          code: form.code,
-          name: form.name,
-          category: form.category,
-          price: form.price,
-          estimatedMinutes: form.estimatedMinutes,
-          description: form.description,
-          requiresBay: form.requiresBay,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "No se pudo actualizar el servicio");
-      }
-
-      setServicioAEditar(null);
-      cargarServicios();
-    } catch (err: any) {
-      alert("Error al actualizar: " + err.message);
-    } finally {
-      setGuardando(false);
-    }
-  };
-
-  const handleToggleEstado = async (s: WorkshopService) => {
-    try {
-      const res = await fetch("/api/servicios-taller", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: s.id,
-          active: !s.active,
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        cargarServicios();
-      }
-    } catch (err: any) {
-      alert("Error al cambiar estado: " + err.message);
-    }
-  };
 
   const handleEliminar = async () => {
     if (!servicioAEliminar) return;
@@ -277,12 +145,12 @@ export default function ServiciosPosPage() {
             >
               <span>🚗</span> Órdenes de Taller
             </Link>
-            <button
-              onClick={abrirModalCrear}
+            <Link
+              href="/pos/servicios/nuevo"
               className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-medium text-sm transition-all shadow-sm shadow-blue-500/20 flex items-center gap-2 cursor-pointer"
             >
               <span>+</span> Nuevo Servicio
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -389,12 +257,12 @@ export default function ServiciosPosPage() {
             <span className="text-5xl">🛠️</span>
             <p className="text-lg font-bold mt-3">No se encontraron servicios</p>
             <p className="text-sm text-zinc-500 mt-1">Prueba con otro término o agrega uno nuevo.</p>
-            <button
-              onClick={abrirModalCrear}
-              className="mt-4 px-4 py-2 bg-teal-600 text-white font-medium text-xs rounded-xl hover:bg-teal-700"
+            <Link
+              href="/pos/servicios/nuevo"
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium text-xs rounded-xl hover:bg-blue-700 shadow-sm transition-all"
             >
-              Crear Nuevo Servicio
-            </button>
+              <span>+</span> Crear Nuevo Servicio
+            </Link>
           </div>
         ) : (
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
@@ -402,22 +270,22 @@ export default function ServiciosPosPage() {
               <table className="w-full text-left border-collapse min-w-[850px]">
                 <thead>
                   <tr className="bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800">
-                    <th className="px-6 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-xs font-medium text-zinc-600 dark:text-zinc-400">
                       Servicio
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-xs font-medium text-zinc-600 dark:text-zinc-400">
                       Categoría
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-xs font-medium text-zinc-600 dark:text-zinc-400">
                       Tiempo / Bahía
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-xs font-medium text-zinc-600 dark:text-zinc-400">
                       Tarifa
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-xs font-medium text-zinc-600 dark:text-zinc-400">
                       Estado
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right">
+                    <th className="px-6 py-4 text-xs font-medium text-zinc-600 dark:text-zinc-400 text-right">
                       Acciones
                     </th>
                   </tr>
@@ -482,37 +350,24 @@ export default function ServiciosPosPage() {
                       </td>
 
                       <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-2">
                           <Link
-                            href={`/pos/venta?servicio=${encodeURIComponent(s.code)}`}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition-colors flex items-center gap-1 shadow-sm"
-                            title="Facturar en Mostrador POS"
+                            href={`/pos/servicios/editar?id=${s.id}`}
+                            className="px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800/60 bg-blue-50/80 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-medium text-xs transition-all active:scale-95 inline-flex items-center gap-1.5 shadow-sm"
+                            title="Editar servicio"
                           >
-                            <span>🛒</span> Facturar
+                            <span>✏️</span>
+                            <span>Editar</span>
                           </Link>
 
                           <button
-                            onClick={() => abrirModalEditar(s)}
-                            className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 transition-colors"
-                            title="Editar servicio"
-                          >
-                            ✏️
-                          </button>
-
-                          <button
-                            onClick={() => handleToggleEstado(s)}
-                            className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 transition-colors"
-                            title={s.active ? "Pausar servicio" : "Activar servicio"}
-                          >
-                            {s.active ? "⏸️" : "▶️"}
-                          </button>
-
-                          <button
+                            type="button"
                             onClick={() => setServicioAEliminar(s)}
-                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                            className="px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/80 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 font-medium text-xs transition-all active:scale-95 inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
                             title="Eliminar servicio"
                           >
-                            🗑️
+                            <span>🗑️</span>
+                            <span>Eliminar</span>
                           </button>
                         </div>
                       </td>
@@ -530,286 +385,7 @@ export default function ServiciosPosPage() {
         )}
       </main>
 
-      {/* Modal Nuevo Servicio */}
-      {modalNuevo && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-lg rounded-3xl p-6 md:p-8 border border-zinc-200 dark:border-zinc-800 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800 mb-6">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <span>➕</span> Nuevo Servicio de Taller
-              </h2>
-              <button
-                onClick={() => setModalNuevo(false)}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-lg font-bold"
-              >
-                ✕
-              </button>
-            </div>
 
-            <form onSubmit={handleGuardarNuevo} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1 block">
-                    Código Único *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={form.code}
-                    onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm font-mono focus:ring-2 focus:ring-teal-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1 block">
-                    Categoría *
-                  </label>
-                  <select
-                    value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
-                  >
-                    <option value="Lavado y Estética">Lavado y Estética</option>
-                    <option value="Mantenimiento Rápido">Mantenimiento Rápido</option>
-                    <option value="Frenos">Frenos</option>
-                    <option value="Suspensión y Dirección">Suspensión y Dirección</option>
-                    <option value="Diagnóstico">Diagnóstico</option>
-                    <option value="Climatización">Climatización</option>
-                    <option value="Mecánica General">Mecánica General</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1 block">
-                  Nombre del Servicio *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej: Lavado Integral con Chasis y Motor"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1 block">
-                    Tarifa / Precio ($) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    placeholder="25.00"
-                    value={form.price}
-                    onChange={(e) => setForm({ ...form, price: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm font-bold focus:ring-2 focus:ring-teal-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1 block">
-                    Tiempo Estimado (Minutos)
-                  </label>
-                  <input
-                    type="number"
-                    min="5"
-                    step="5"
-                    value={form.estimatedMinutes}
-                    onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1 block">
-                  Descripción / Qué incluye
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Detalla lo que cubre este servicio al cliente..."
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="requiresBayNew"
-                  checked={form.requiresBay}
-                  onChange={(e) => setForm({ ...form, requiresBay: e.target.checked })}
-                  className="rounded text-teal-600 focus:ring-teal-500 w-4 h-4"
-                />
-                <label htmlFor="requiresBayNew" className="text-xs text-zinc-600 dark:text-zinc-400 cursor-pointer">
-                  Requiere bahía o elevador físico en taller
-                </label>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setModalNuevo(false)}
-                  className="px-4 py-2 rounded-xl text-zinc-600 dark:text-zinc-400 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={guardando}
-                  className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm transition-all shadow-sm disabled:opacity-50"
-                >
-                  {guardando ? "Guardando..." : "Registrar Servicio"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Editar Servicio */}
-      {servicioAEditar && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-lg rounded-3xl p-6 md:p-8 border border-zinc-200 dark:border-zinc-800 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800 mb-6">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <span>✏️</span> Editar Servicio
-              </h2>
-              <button
-                onClick={() => setServicioAEditar(null)}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-lg font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleActualizar} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1 block">
-                    Código Único
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={form.code}
-                    onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm font-mono focus:ring-2 focus:ring-teal-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1 block">
-                    Categoría
-                  </label>
-                  <select
-                    value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
-                  >
-                    <option value="Lavado y Estética">Lavado y Estética</option>
-                    <option value="Mantenimiento Rápido">Mantenimiento Rápido</option>
-                    <option value="Frenos">Frenos</option>
-                    <option value="Suspensión y Dirección">Suspensión y Dirección</option>
-                    <option value="Diagnóstico">Diagnóstico</option>
-                    <option value="Climatización">Climatización</option>
-                    <option value="Mecánica General">Mecánica General</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1 block">
-                  Nombre del Servicio *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1 block">
-                    Tarifa / Precio ($) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={form.price}
-                    onChange={(e) => setForm({ ...form, price: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm font-bold focus:ring-2 focus:ring-teal-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1 block">
-                    Tiempo Estimado (Minutos)
-                  </label>
-                  <input
-                    type="number"
-                    min="5"
-                    step="5"
-                    value={form.estimatedMinutes}
-                    onChange={(e) => setForm({ ...form, estimatedMinutes: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-1 block">
-                  Descripción / Qué incluye
-                </label>
-                <textarea
-                  rows={2}
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="requiresBayEdit"
-                  checked={form.requiresBay}
-                  onChange={(e) => setForm({ ...form, requiresBay: e.target.checked })}
-                  className="rounded text-teal-600 focus:ring-teal-500 w-4 h-4"
-                />
-                <label htmlFor="requiresBayEdit" className="text-xs text-zinc-600 dark:text-zinc-400 cursor-pointer">
-                  Requiere bahía o elevador físico en taller
-                </label>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setServicioAEditar(null)}
-                  className="px-4 py-2 rounded-xl text-zinc-600 dark:text-zinc-400 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={guardando}
-                  className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm transition-all shadow-sm disabled:opacity-50"
-                >
-                  {guardando ? "Actualizando..." : "Guardar Cambios"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Modal Confirmación de Eliminación */}
       {servicioAEliminar && (

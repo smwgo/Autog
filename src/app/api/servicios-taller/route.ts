@@ -3,90 +3,6 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-// Seed inicial con servicios automotrices reales
-const INITIAL_SERVICES = [
-  {
-    code: "SRV-LAV-01",
-    name: "Lavado Premium y Chasis",
-    category: "Lavado y Estética",
-    price: 18.00,
-    estimatedMinutes: 45,
-    description: "Lavado exterior a presión con espuma activa, desengrase de chasis, aspirado profundo y silicona de llantas.",
-    requiresBay: true,
-    active: true,
-  },
-  {
-    code: "SRV-LAV-02",
-    name: "Lavado de Motor y Vano",
-    category: "Lavado y Estética",
-    price: 15.00,
-    estimatedMinutes: 30,
-    description: "Limpieza detallada con desengrasante dieléctrico y secado con aire a presión para proteger componentes electrónicos.",
-    requiresBay: false,
-    active: true,
-  },
-  {
-    code: "SRV-ACT-01",
-    name: "Cambio de Aceite y Filtro (Mano de Obra)",
-    category: "Mantenimiento Rápido",
-    price: 20.00,
-    estimatedMinutes: 35,
-    description: "Drenado seguro de aceite usado, cambio de filtro de aceite, purga e inspección de fugas en tapón de cárter.",
-    requiresBay: true,
-    active: true,
-  },
-  {
-    code: "SRV-ALN-01",
-    name: "Alineación 3D y Balanceo Computarizado",
-    category: "Suspensión y Dirección",
-    price: 35.00,
-    estimatedMinutes: 45,
-    description: "Calibración con sensores láser computarizados para los 4 ejes y balanceo dinámico de ruedas.",
-    requiresBay: true,
-    active: true,
-  },
-  {
-    code: "SRV-FRN-01",
-    name: "Mantenimiento y Calibración de Frenos",
-    category: "Frenos",
-    price: 40.00,
-    estimatedMinutes: 60,
-    description: "Limpieza y lubricación de mordazas, rectificación de discos y purga de líquido de frenos.",
-    requiresBay: true,
-    active: true,
-  },
-  {
-    code: "SRV-OBD-01",
-    name: "Diagnóstico Computarizado Escáner OBD2",
-    category: "Diagnóstico",
-    price: 25.00,
-    estimatedMinutes: 30,
-    description: "Lectura profunda de códigos de avería (DTC), test de actuadores y reporte técnico impreso/digital.",
-    requiresBay: false,
-    active: true,
-  },
-  {
-    code: "SRV-AEC-01",
-    name: "Mantenimiento de Aire Acondicionado",
-    category: "Climatización",
-    price: 45.00,
-    estimatedMinutes: 50,
-    description: "Vacío del sistema, recarga de gas ecológico R134a/R1234yf y desinfección antibacteriana de ductos.",
-    requiresBay: true,
-    active: true,
-  },
-  {
-    code: "SRV-REV-01",
-    name: "Inspección General de 35 Puntos",
-    category: "Mantenimiento Rápido",
-    price: 15.00,
-    estimatedMinutes: 40,
-    description: "Revisión preventiva de niveles de fluidos, tren delantero, luces, batería, neumáticos y amortiguadores.",
-    requiresBay: true,
-    active: true,
-  },
-];
-
 function generateId(): string {
   return "srv_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 }
@@ -125,7 +41,7 @@ async function executeDbOperation() {
   };
 }
 
-// GET: Listar servicios con filtro opcional por categoría o búsqueda
+// GET: Listar servicios REALES directamente desde Neon
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -137,13 +53,6 @@ export async function GET(request: Request) {
       const db = await executeDbOperation();
 
       if (db.type === "prisma") {
-        const count = await db.model.count();
-        if (count === 0) {
-          for (const s of INITIAL_SERVICES) {
-            await db.model.create({ data: s });
-          }
-        }
-
         const where: any = {};
         if (soloActivos) where.active = true;
         if (categoria && categoria !== "TODAS") where.category = categoria;
@@ -174,29 +83,6 @@ export async function GET(request: Request) {
           connectedToNeon: true,
         });
       } else {
-        // Fallback SQL directo sobre la tabla "WorkshopService" en Neon
-        const countResult: any = await prisma.$queryRawUnsafe('SELECT COUNT(*)::int as count FROM "WorkshopService"');
-        const count = countResult?.[0]?.count || 0;
-
-        if (count === 0) {
-          for (const s of INITIAL_SERVICES) {
-            const id = generateId();
-            await prisma.$executeRawUnsafe(
-              `INSERT INTO "WorkshopService" ("id", "code", "name", "category", "price", "estimatedMinutes", "description", "requiresBay", "active", "createdAt", "updatedAt")
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())`,
-              id,
-              s.code,
-              s.name,
-              s.category,
-              s.price,
-              s.estimatedMinutes,
-              s.description,
-              s.requiresBay,
-              s.active
-            );
-          }
-        }
-
         let query = 'SELECT * FROM "WorkshopService" WHERE 1=1';
         const params: any[] = [];
         let pIdx = 1;
@@ -231,36 +117,22 @@ export async function GET(request: Request) {
       }
     });
   } catch (error: any) {
-    console.error("Neon temporalmente no disponible, retornando servicios de respaldo:", error.message);
-    
-    // Retornar lista de servicios con flag de reconexión para que la app no colapse
-    let fallbackServices = INITIAL_SERVICES.map((s, idx) => ({
-      ...s,
-      id: `srv_init_${idx + 1}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }));
-
-    if (request.url.includes("categoria=") && !request.url.includes("categoria=TODAS")) {
-      const url = new URL(request.url);
-      const cat = url.searchParams.get("categoria");
-      fallbackServices = fallbackServices.filter((s) => s.category === cat);
-    }
-
-    const categories = Array.from(new Set(INITIAL_SERVICES.map((s) => s.category)));
-
-    return NextResponse.json({
-      success: true,
-      servicios: fallbackServices,
-      categories,
-      total: fallbackServices.length,
-      connectedToNeon: false,
-      warning: "Neon DB se está iniciando (cold-start). Mostrando catálogo en modo seguro.",
-    });
+    console.error("Error al consultar Neon DB:", error.message);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Error al conectar con la base de datos Neon: " + error.message,
+        servicios: [],
+        categories: [],
+        total: 0,
+        connectedToNeon: false,
+      },
+      { status: 500 }
+    );
   }
 }
 
-// POST: Crear un nuevo servicio
+// POST: Crear un nuevo servicio REAL en Neon
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -284,7 +156,7 @@ export async function POST(request: Request) {
         data: {
           code: generatedCode,
           name: name.trim(),
-          category: category?.trim() || "Mantenimiento Rápido",
+          category: category?.trim() || "General",
           price: parseFloat(price),
           estimatedMinutes: parseInt(estimatedMinutes) || 30,
           description: description?.trim() || null,
@@ -296,7 +168,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         servicio: nuevoServicio,
-        message: "Servicio registrado exitosamente.",
+        message: "Servicio registrado exitosamente en Neon.",
       });
     } else {
       const id = generateId();
@@ -306,7 +178,7 @@ export async function POST(request: Request) {
         id,
         generatedCode,
         name.trim(),
-        category?.trim() || "Mantenimiento Rápido",
+        category?.trim() || "General",
         parseFloat(price),
         parseInt(estimatedMinutes) || 30,
         description?.trim() || null,
@@ -319,19 +191,19 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         servicio: rows?.[0],
-        message: "Servicio registrado exitosamente.",
+        message: "Servicio registrado exitosamente en Neon.",
       });
     }
   } catch (error: any) {
-    console.error("Error al crear servicio:", error);
+    console.error("Error al crear servicio en Neon:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al crear servicio." },
+      { success: false, error: error.message || "Error al crear servicio en Neon." },
       { status: 500 }
     );
   }
 }
 
-// PUT: Actualizar un servicio
+// PUT: Actualizar un servicio REAL en Neon
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
@@ -365,7 +237,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({
         success: true,
         servicio: servicioActualizado,
-        message: "Servicio actualizado correctamente.",
+        message: "Servicio actualizado correctamente en Neon.",
       });
     } else {
       await prisma.$executeRawUnsafe(
@@ -396,19 +268,19 @@ export async function PUT(request: Request) {
       return NextResponse.json({
         success: true,
         servicio: rows?.[0],
-        message: "Servicio actualizado correctamente.",
+        message: "Servicio actualizado correctamente en Neon.",
       });
     }
   } catch (error: any) {
-    console.error("Error al actualizar servicio:", error);
+    console.error("Error al actualizar servicio en Neon:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al actualizar servicio." },
+      { success: false, error: error.message || "Error al actualizar servicio en Neon." },
       { status: 500 }
     );
   }
 }
 
-// DELETE: Eliminar un servicio por ID
+// DELETE: Eliminar un servicio REAL en Neon
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -433,12 +305,12 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "Servicio eliminado exitosamente.",
+      message: "Servicio eliminado exitosamente de Neon.",
     });
   } catch (error: any) {
-    console.error("Error al eliminar servicio:", error);
+    console.error("Error al eliminar servicio en Neon:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al eliminar servicio." },
+      { success: false, error: error.message || "Error al eliminar servicio en Neon." },
       { status: 500 }
     );
   }
