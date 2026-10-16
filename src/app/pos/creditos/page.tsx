@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 
@@ -10,87 +10,67 @@ interface CreditAccount {
   identification: string;
   phone: string;
   creditLimit: number;
-  currentBalance: number; // deuda actual
+  currentBalance: number;
   dueDate: string;
   status: "AL_DIA" | "POR_VENCER" | "VENCIDO";
   lastPaymentDate?: string;
   lastPaymentAmount?: number;
+  notes?: string;
 }
 
-const initialCredits: CreditAccount[] = [
-  {
-    id: "cred-1",
-    customerName: "Flota Taxis El Sol S.A.",
-    identification: "1792345678001",
-    phone: "0991234567",
-    creditLimit: 1500,
-    currentBalance: 650.0,
-    dueDate: "2026-11-15",
-    status: "AL_DIA",
-    lastPaymentDate: "2026-10-10",
-    lastPaymentAmount: 300,
-  },
-  {
-    id: "cred-2",
-    customerName: "Carlos Méndez (Taller Aliado)",
-    identification: "1718293041",
-    phone: "0987654321",
-    creditLimit: 800,
-    currentBalance: 780.0,
-    dueDate: "2026-10-18",
-    status: "POR_VENCER",
-    lastPaymentDate: "2026-09-25",
-    lastPaymentAmount: 150,
-  },
-  {
-    id: "cred-3",
-    customerName: "Transportes Andinos Cía. Ltda.",
-    identification: "1790011223001",
-    phone: "0998877665",
-    creditLimit: 3000,
-    currentBalance: 1200.0,
-    dueDate: "2026-09-30",
-    status: "VENCIDO",
-    lastPaymentDate: "2026-08-20",
-    lastPaymentAmount: 500,
-  },
-  {
-    id: "cred-4",
-    customerName: "María Belén Andrade",
-    identification: "1723456789",
-    phone: "0981122334",
-    creditLimit: 400,
-    currentBalance: 95.0,
-    dueDate: "2026-11-05",
-    status: "AL_DIA",
-    lastPaymentDate: "2026-10-01",
-    lastPaymentAmount: 100,
-  },
-];
-
 export default function CreditosPage() {
-  const [creditos, setCreditos] = useState<CreditAccount[]>(initialCredits);
+  const [creditos, setCreditos] = useState<CreditAccount[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<"TODOS" | "AL_DIA" | "POR_VENCER" | "VENCIDO">("TODOS");
 
-  // Modal registrar abono
+  // Modal registrar abono (PUT)
   const [cuentaAbono, setCuentaAbono] = useState<CreditAccount | null>(null);
   const [montoAbono, setMontoAbono] = useState<number>(0);
   const [metodoAbono, setMetodoAbono] = useState("Efectivo");
   const [notaAbono, setNotaAbono] = useState("");
 
-  // Modal nuevo crédito
+  // Modal Crear / Editar crédito (POST / PUT)
   const [modalNuevoCredito, setModalNuevoCredito] = useState(false);
+  const [creditoAEditar, setCreditoAEditar] = useState<CreditAccount | null>(null);
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [nuevaId, setNuevaId] = useState("");
   const [nuevoTelefono, setNuevoTelefono] = useState("");
   const [nuevoLimite, setNuevoLimite] = useState<number>(500);
   const [nuevaDeudaInicial, setNuevaDeudaInicial] = useState<number>(0);
   const [nuevoVencimiento, setNuevoVencimiento] = useState("2026-11-30");
+  const [nuevoEstado, setNuevoEstado] = useState<"AL_DIA" | "POR_VENCER" | "VENCIDO">("AL_DIA");
 
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
 
-  const handleAplicarAbono = (e: React.FormEvent) => {
+  const notify = (msg: string) => {
+    setMensajeExito(msg);
+    setTimeout(() => setMensajeExito(null), 4000);
+  };
+
+  const fetchCreditos = useCallback(async () => {
+    try {
+      setCargando(true);
+      const res = await fetch("/api/pos/creditos", { cache: "no-store" });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.creditos)) {
+        setCreditos(data.creditos);
+      }
+    } catch (err) {
+      console.error("Error cargando créditos desde Neon DB:", err);
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCreditos();
+  }, [fetchCreditos]);
+
+  // REGISTRAR ABONO EN NEON DB (PUT /api/pos/creditos)
+  const handleAplicarAbono = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cuentaAbono || montoAbono <= 0) return;
 
@@ -99,57 +79,125 @@ export default function CreditosPage() {
       return;
     }
 
-    const nuevoSaldo = Math.max(0, cuentaAbono.currentBalance - montoAbono);
-    const nuevoEstado = nuevoSaldo === 0 ? "AL_DIA" : cuentaAbono.status;
+    setGuardando(true);
+    try {
+      const res = await fetch("/api/pos/creditos", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: cuentaAbono.id,
+          paymentAmount: Number(montoAbono),
+          paymentMethod: metodoAbono,
+          paymentNote: notaAbono,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Error al aplicar abono en Neon DB");
+      }
 
-    setCreditos((prev) =>
-      prev.map((c) =>
-        c.id === cuentaAbono.id
-          ? {
-              ...c,
-              currentBalance: nuevoSaldo,
-              status: nuevoEstado,
-              lastPaymentDate: new Date().toISOString().split("T")[0],
-              lastPaymentAmount: montoAbono,
-            }
-          : c
-      )
-    );
-
-    setMensajeExito(`Abono de $${montoAbono.toFixed(2)} registrado exitosamente a ${cuentaAbono.customerName}.`);
-    setTimeout(() => setMensajeExito(null), 4000);
-    setCuentaAbono(null);
-    setMontoAbono(0);
-    setNotaAbono("");
+      notify(
+        `Abono de $${Number(montoAbono).toFixed(2)} registrado en Neon DB para ${cuentaAbono.customerName}.`
+      );
+      setCuentaAbono(null);
+      setMontoAbono(0);
+      setNotaAbono("");
+      await fetchCreditos();
+    } catch (err: any) {
+      notify(`Error: ${err.message}`);
+    } finally {
+      setGuardando(false);
+    }
   };
 
-  const handleCrearCredito = (e: React.FormEvent) => {
+  const abrirModalNuevo = () => {
+    setCreditoAEditar(null);
+    setNuevoNombre("");
+    setNuevaId("");
+    setNuevoTelefono("");
+    setNuevoLimite(500);
+    setNuevaDeudaInicial(0);
+    setNuevoVencimiento("2026-11-30");
+    setNuevoEstado("AL_DIA");
+    setModalNuevoCredito(true);
+  };
+
+  const abrirModalEditar = (c: CreditAccount) => {
+    setCreditoAEditar(c);
+    setNuevoNombre(c.customerName);
+    setNuevaId(c.identification);
+    setNuevoTelefono(c.phone);
+    setNuevoLimite(c.creditLimit);
+    setNuevaDeudaInicial(c.currentBalance);
+    setNuevoVencimiento(c.dueDate);
+    setNuevoEstado(c.status);
+    setModalNuevoCredito(true);
+  };
+
+  // CREAR O ACTUALIZAR CRÉDITO EN NEON DB (POST / PUT)
+  const handleGuardarCredito = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevoNombre.trim() || !nuevaId.trim()) {
       alert("Nombre y Cédula/RUC son obligatorios.");
       return;
     }
 
-    const nuevo: CreditAccount = {
-      id: `cred-${Date.now()}`,
-      customerName: nuevoNombre.trim(),
-      identification: nuevaId.trim(),
-      phone: nuevoTelefono.trim() || "N/A",
-      creditLimit: Number(nuevoLimite) || 500,
-      currentBalance: Number(nuevaDeudaInicial) || 0,
-      dueDate: nuevoVencimiento,
-      status: "AL_DIA",
-    };
+    setGuardando(true);
+    try {
+      const isEdit = Boolean(creditoAEditar);
+      const res = await fetch("/api/pos/creditos", {
+        method: isEdit ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(isEdit ? { id: creditoAEditar!.id } : {}),
+          customerName: nuevoNombre.trim(),
+          identification: nuevaId.trim(),
+          phone: nuevoTelefono.trim() || "N/A",
+          creditLimit: Number(nuevoLimite) || 500,
+          currentBalance: Number(nuevaDeudaInicial) || 0,
+          dueDate: nuevoVencimiento,
+          status: nuevoEstado,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Error al guardar crédito en Neon DB");
+      }
 
-    setCreditos([nuevo, ...creditos]);
-    setMensajeExito(`Línea de crédito para ${nuevo.customerName} creada con cupo de $${nuevo.creditLimit}.`);
-    setTimeout(() => setMensajeExito(null), 4000);
-    setModalNuevoCredito(false);
-    setNuevoNombre("");
-    setNuevaId("");
-    setNuevoTelefono("");
-    setNuevoLimite(500);
-    setNuevaDeudaInicial(0);
+      notify(
+        isEdit
+          ? `Cuenta de crédito de ${nuevoNombre} actualizada en Neon DB.`
+          : `Línea de crédito para ${nuevoNombre} creada en Neon DB con cupo de $${nuevoLimite}.`
+      );
+      setModalNuevoCredito(false);
+      setCreditoAEditar(null);
+      await fetchCreditos();
+    } catch (err: any) {
+      notify(`Error: ${err.message}`);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  // ELIMINAR CRÉDITO EN NEON DB (DELETE)
+  const handleEliminarCredito = async (cuenta: CreditAccount) => {
+    setGuardando(true);
+    try {
+      const res = await fetch(
+        `/api/pos/creditos?id=${encodeURIComponent(cuenta.id)}`,
+        { method: "DELETE" }
+      );
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Error al eliminar cuenta de crédito");
+      }
+      notify(`Cuenta de crédito de ${cuenta.customerName} eliminada de Neon DB.`);
+      await fetchCreditos();
+    } catch (err: any) {
+      notify(`Error: ${err.message}`);
+    } finally {
+      setGuardando(false);
+    }
   };
 
   const filtrados = creditos.filter((c) => {
@@ -172,13 +220,17 @@ export default function CreditosPage() {
       <Header />
       <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full">
         {/* Cabecera y Navegación */}
-        <div className="mb-6">
+        <div className="mb-6 flex justify-between items-center">
           <Link
             href="/pos"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors w-fit"
           >
             &larr; Volver al panel POS
           </Link>
+          <div className="flex items-center gap-2 text-xs font-mono bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 px-3 py-1 rounded-full border border-cyan-200 dark:border-cyan-800">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Créditos Neon DB ({creditos.length})</span>
+          </div>
         </div>
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -189,13 +241,13 @@ export default function CreditosPage() {
                 Créditos
               </h1>
               <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                Cuentas por cobrar, líneas de crédito para clientes y registro de abonos.
+                Cuentas por cobrar, líneas de crédito y registro de abonos sincronizados con Neon PostgreSQL.
               </p>
             </div>
           </div>
 
           <button
-            onClick={() => setModalNuevoCredito(true)}
+            onClick={abrirModalNuevo}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-semibold text-sm transition-all shadow-md shadow-cyan-500/20 active:scale-95 cursor-pointer"
           >
             <span>➕</span>
@@ -228,7 +280,7 @@ export default function CreditosPage() {
             <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400 mt-2">
               ${carteraTotal.toFixed(2)}
             </p>
-            <span className="text-xs text-zinc-500">Saldo pendiente de pago</span>
+            <span className="text-xs text-zinc-500">Saldo pendiente en Neon DB</span>
           </div>
 
           <div className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
@@ -298,7 +350,11 @@ export default function CreditosPage() {
 
         {/* Tabla de Créditos */}
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-          {filtrados.length === 0 ? (
+          {cargando ? (
+            <div className="p-12 text-center text-zinc-500 text-sm">
+              Cargando cuentas por cobrar desde Neon PostgreSQL...
+            </div>
+          ) : filtrados.length === 0 ? (
             <div className="p-12 text-center text-zinc-500 text-sm">
               No se encontraron cuentas de crédito con los filtros seleccionados.
             </div>
@@ -320,7 +376,7 @@ export default function CreditosPage() {
                   {filtrados.map((cuenta) => {
                     const porcentajeUso = Math.min(
                       100,
-                      Math.round((cuenta.currentBalance / cuenta.creditLimit) * 100)
+                      Math.round((cuenta.currentBalance / Math.max(1, cuenta.creditLimit)) * 100)
                     );
 
                     return (
@@ -379,16 +435,35 @@ export default function CreditosPage() {
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-center">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCuentaAbono(cuenta);
-                              setMontoAbono(cuenta.currentBalance);
-                            }}
-                            className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
-                          >
-                            Abonar
-                          </button>
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCuentaAbono(cuenta);
+                                setMontoAbono(cuenta.currentBalance);
+                              }}
+                              className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+                            >
+                              Abonar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => abrirModalEditar(cuenta)}
+                              className="px-2.5 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer"
+                              title="Editar línea de crédito"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              type="button"
+                              disabled={guardando}
+                              onClick={() => handleEliminarCredito(cuenta)}
+                              className="px-2.5 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-xs font-bold cursor-pointer"
+                              title="Eliminar de Neon DB"
+                            >
+                              🗑️
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -496,9 +571,10 @@ export default function CreditosPage() {
                 <div className="pt-3 flex items-center gap-3">
                   <button
                     type="submit"
-                    className="flex-1 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs shadow-md shadow-cyan-500/20 transition-all cursor-pointer"
+                    disabled={guardando}
+                    className="flex-1 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs shadow-md shadow-cyan-500/20 transition-all cursor-pointer disabled:opacity-50"
                   >
-                    Registrar Abono
+                    {guardando ? "Procesando en Neon..." : "Registrar Abono"}
                   </button>
                   <button
                     type="button"
@@ -513,14 +589,16 @@ export default function CreditosPage() {
           </div>
         )}
 
-        {/* Modal Nuevo Crédito */}
+        {/* Modal Nuevo / Editar Crédito */}
         {modalNuevoCredito && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl relative">
               <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800 mb-5">
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                   <span>💳</span>
-                  <span>Asignar Línea de Crédito</span>
+                  <span>
+                    {creditoAEditar ? `Editar Crédito: ${creditoAEditar.customerName}` : "Asignar Línea de Crédito"}
+                  </span>
                 </h3>
                 <button
                   onClick={() => setModalNuevoCredito(false)}
@@ -530,7 +608,7 @@ export default function CreditosPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleCrearCredito} className="space-y-4 text-sm">
+              <form onSubmit={handleGuardarCredito} className="space-y-4 text-sm">
                 <div>
                   <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
                     Cliente o Empresa
@@ -589,11 +667,12 @@ export default function CreditosPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                      Deuda Inicial ($)
+                      Saldo / Deuda ($)
                     </label>
                     <input
                       type="number"
                       min="0"
+                      step="0.01"
                       value={nuevaDeudaInicial}
                       onChange={(e) => setNuevaDeudaInicial(Number(e.target.value))}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-cyan-500 outline-none"
@@ -601,24 +680,41 @@ export default function CreditosPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                    Fecha Límite de Pago
-                  </label>
-                  <input
-                    type="date"
-                    value={nuevoVencimiento}
-                    onChange={(e) => setNuevoVencimiento(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-cyan-500 outline-none"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                      Fecha Límite de Pago
+                    </label>
+                    <input
+                      type="date"
+                      value={nuevoVencimiento}
+                      onChange={(e) => setNuevoVencimiento(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-cyan-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                      Estado
+                    </label>
+                    <select
+                      value={nuevoEstado}
+                      onChange={(e) => setNuevoEstado(e.target.value as any)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-cyan-500 outline-none"
+                    >
+                      <option value="AL_DIA">Al Día</option>
+                      <option value="POR_VENCER">Por Vencer</option>
+                      <option value="VENCIDO">Vencido</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="pt-3 flex items-center gap-3">
                   <button
                     type="submit"
-                    className="flex-1 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs shadow-md shadow-cyan-500/20 transition-all cursor-pointer"
+                    disabled={guardando}
+                    className="flex-1 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs shadow-md shadow-cyan-500/20 transition-all cursor-pointer disabled:opacity-50"
                   >
-                    Guardar Crédito
+                    {guardando ? "Guardando en Neon..." : "Guardar en Neon DB"}
                   </button>
                   <button
                     type="button"

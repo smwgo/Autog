@@ -957,3 +957,218 @@ model WorkshopTimeLog {
   @@index([mechanic])
 }
 
+model ClientAppointment {
+  id                String   @id @default(cuid())
+  appointmentNumber String   @unique
+  vehicle           String
+  plate             String
+  clientName        String   @default("Juan Pérez")
+  clientPhone       String?
+  serviceName       String
+  date              String
+  timeSlot          String
+  status            String   @default("Programada")
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([appointmentNumber])
+  @@index([plate])
+  @@index([status])
+}
+
+model ClientQuote {
+  id          String   @id @default(cuid())
+  quoteNumber String   @unique
+  date        String
+  vehicle     String
+  plate       String?
+  clientName  String   @default("Juan Pérez")
+  status      String   @default("Pendiente")
+  itemsJson   String   @default("[]")
+  subtotal    Decimal  @default(0) @db.Decimal(12, 2)
+  total       Decimal  @default(0) @db.Decimal(12, 2)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([quoteNumber])
+  @@index([status])
+}
+
+model ClientInvoice {
+  id            String   @id @default(cuid())
+  invoiceNumber String   @unique
+  uuid          String   @unique
+  date          String
+  concept       String
+  vehicle       String?
+  clientName    String   @default("Juan Pérez")
+  clientRfc     String   @default("XAXX010101000")
+  amount        Decimal  @default(0) @db.Decimal(12, 2)
+  status        String   @default("Pendiente")
+  paymentMethod String   @default("Por Definir")
+  itemsJson     String   @default("[]")
+  orderId       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([invoiceNumber])
+  @@index([status])
+}
+
+model PosPromotion {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  title         String
+  discountType  String   @default("PERCENT") // "PERCENT", "FIXED"
+  discountValue Decimal  @default(10) @db.Decimal(12, 2)
+  minPurchase   Decimal  @default(0) @db.Decimal(12, 2)
+  category      String   @default("General")
+  validUntil    String
+  active        Boolean  @default(true)
+  usesCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([code])
+  @@index([active])
+}
+
+model PosCreditAccount {
+  id                String   @id @default(cuid())
+  customerName      String
+  identification    String
+  phone             String   @default("N/A")
+  creditLimit       Decimal  @default(500) @db.Decimal(12, 2)
+  currentBalance    Decimal  @default(0) @db.Decimal(12, 2)
+  dueDate           String
+  status            String   @default("AL_DIA") // "AL_DIA", "POR_VENCER", "VENCIDO"
+  lastPaymentDate   String?
+  lastPaymentAmount Decimal? @db.Decimal(12, 2)
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([identification])
+  @@index([status])
+}
+
+model Supplier {
+  id           String   @id @default(cuid())
+  ruc          String   @unique
+  name         String
+  contact      String
+  email        String?
+  phone        String?
+  categories   String   @default("[]")
+  balance      Decimal  @default(0) @db.Decimal(12, 2)
+  status       String   @default("Activo")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([ruc])
+  @@index([name])
+}
+
+model PurchaseOrder {
+  id           String   @id @default(cuid())
+  orderNumber  String   @unique
+  supplierName String
+  supplierRuc  String?
+  expectedDate String
+  itemsJson    String   @default("[]")
+  total        Decimal  @default(0) @db.Decimal(12, 2)
+  status       String   @default("Solicitado")
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([orderNumber])
+  @@index([status])
+}
+
+model CreditNote {
+  id          String   @id @default(cuid())
+  noteNumber  String   @unique
+  date        String
+  clientName  String
+  clientRuc   String   @default("9999999999")
+  invoiceRef  String
+  total       Decimal  @default(0) @db.Decimal(12, 2)
+  status      String   @default("Autorizado")
+  accessKey   String   @default("...NC001")
+  reason      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([noteNumber])
+  @@index([status])
+}
+
+model Employee {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  phone       String?
+  role        String
+  department  String   @default("TALLER") // "TALLER", "POS", "OFICINA", "GERENCIA"
+  location    String   @default("Sede Principal")
+  lastLogin   String   @default("Hoy")
+  status      String   @default("Activo")
+  salary      Decimal? @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([email])
+  @@index([department])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  dateLabel String
+  userName  String
+  ipAddress String   @default("192.168.1.10")
+  module    String
+  action    String
+  details   String
+  level     String   @default("INFO") // "INFO", "ADVERTENCIA", "CRÍTICO"
+  createdAt DateTime @default(now())
+
+  @@index([module])
+  @@index([level])
+}
+
+model FinancialTransaction {
+  id          String   @id @default(cuid())
+  dateLabel   String
+  description String
+  category    String   @default("Ventas") // "Ventas", "Compras", "Operativos", "Impuestos SRI"
+  reference   String
+  amount      Decimal  @default(0) @db.Decimal(12, 2)
+  isIncome    Boolean  @default(true)
+  method      String   @default("Efectivo")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([isIncome])
+}
+
+model SystemSetting {
+  id        String   @id @default("default")
+  configJson String  @default("{}")
+  updatedAt DateTime @updatedAt
+}
+
+model Branch {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  phone     String?
+  isMain    Boolean  @default(false)
+  status    String   @default("Activa")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+

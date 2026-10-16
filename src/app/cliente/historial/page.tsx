@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Header } from "@/components/Header";
 
-// Estructura de registro de historial con detalles de facturación y garantía
 interface ServiceItem {
+  dbId?: string;
   id: string;
   invoiceId: string;
   uuid: string;
@@ -26,85 +26,6 @@ interface ServiceItem {
   };
 }
 
-const SERVICE_HISTORY: ServiceItem[] = [
-  {
-    id: 'ORD-2023-1045',
-    invoiceId: 'F-2023-0899',
-    uuid: 'A1B2C3D4-E5F6-7890-9988-1234567890AB',
-    date: '15 Sep 2023',
-    vehicle: 'Toyota Hilux 2020 (ABC-123)',
-    mileage: '45,200 km',
-    type: 'Mantenimiento Preventivo',
-    details: 'Cambio de aceite sintético 5W-30, filtro de aceite, revisión de fluidos y ajuste de frenos.',
-    laborCost: 65.00,
-    partsCost: 94.48,
-    cost: 185.00,
-    paymentMethod: 'Tarjeta de Crédito (Visa •••• 4242)',
-    warranty: {
-      active: true,
-      expires: '15 Mar 2024 o 50,000 km',
-      coverage: 'Cubre mano de obra de lubricación, estanqueidad de filtros y calibración de zapatas/pastillas.'
-    }
-  },
-  {
-    id: 'ORD-2023-0892',
-    invoiceId: 'F-2023-0850',
-    uuid: 'B2C3D4E5-F6G7-8901-7766-2345678901BC',
-    date: '02 Jul 2023',
-    vehicle: 'Honda Civic 2018 (XYZ-987)',
-    mileage: '65,500 km',
-    type: 'Reparación Sistema de Frenos',
-    details: 'Reemplazo de pastillas de freno delanteras cerámicas y rectificación de discos.',
-    laborCost: 80.00,
-    partsCost: 101.47,
-    cost: 210.50,
-    paymentMethod: 'Transferencia Bancaria (SPEI)',
-    warranty: {
-      active: true,
-      expires: '02 Ene 2024',
-      coverage: 'Garantía en rectificación de discos y libre de vibración al frenado por 6 meses.'
-    }
-  },
-  {
-    id: 'ORD-2022-1205',
-    invoiceId: 'F-2022-0412',
-    uuid: 'C3D4E5F6-G7H8-9012-5544-3456789012CD',
-    date: '10 Nov 2022',
-    vehicle: 'Ford Escape 2021 (QWE-554)',
-    mileage: '40,100 km',
-    type: 'Alineación y Balanceo',
-    details: 'Alineación computarizada, balanceo de 4 ruedas y rotación de llantas.',
-    laborCost: 38.79,
-    partsCost: 0.00,
-    cost: 45.00,
-    paymentMethod: 'Efectivo',
-    warranty: {
-      active: false,
-      expires: '10 Feb 2023',
-      coverage: 'Garantía de alineación y balanceo estándar por 90 días naturales.'
-    }
-  },
-  {
-    id: 'ORD-2022-0540',
-    invoiceId: 'F-2022-0198',
-    uuid: 'D4E5F6G7-H8I9-0123-3322-4567890123DE',
-    date: '15 May 2022',
-    vehicle: 'Toyota Hilux 2020 (ABC-123)',
-    mileage: '35,000 km',
-    type: 'Mantenimiento Preventivo',
-    details: 'Cambio de aceite, filtros de aire y cabina. Revisión general de suspensión.',
-    laborCost: 55.00,
-    partsCost: 74.31,
-    cost: 150.00,
-    paymentMethod: 'Tarjeta de Débito',
-    warranty: {
-      active: false,
-      expires: '15 Nov 2022',
-      coverage: 'Garantía de lubricantes y filtros de cabina hasta el siguiente intervalo programado.'
-    }
-  }
-];
-
 function HistorialServiciosContent() {
   const searchParams = useSearchParams();
   const vehiculoParam = searchParams.get('vehiculo');
@@ -118,12 +39,53 @@ function HistorialServiciosContent() {
     return vehiculoParam;
   };
 
+  const [historyList, setHistoryList] = useState<ServiceItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedVehicle, setSelectedVehicle] = useState(getInitialVehicle);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Estados para modales y feedback de acciones
   const [selectedWarranty, setSelectedWarranty] = useState<ServiceItem | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Modal Crear / Editar Servicio en Neon DB (POST / PUT)
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<ServiceItem | null>(null);
+  const [formVehicle, setFormVehicle] = useState('Toyota Hilux 2020 (ABC-123)');
+  const [formMileage, setFormMileage] = useState('48,000 km');
+  const [formType, setFormType] = useState('Mantenimiento Preventivo');
+  const [formDetails, setFormDetails] = useState('');
+  const [formCost, setFormCost] = useState('185.00');
+  const [formWarrantyActive, setFormWarrantyActive] = useState(true);
+  const [formWarrantyExpires, setFormWarrantyExpires] = useState('6 meses o 10,000 km');
+  const [formWarrantyCoverage, setFormWarrantyCoverage] = useState(
+    'Garantía integral en mano de obra y repuestos instalados por AutoG.'
+  );
+
+  const showToast = (msg: string) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 3500);
+  };
+
+  const fetchHistory = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/cliente/historial', { cache: 'no-store' });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.historial)) {
+        setHistoryList(data.historial);
+      }
+    } catch (err) {
+      console.error('Error cargando historial desde Neon DB:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
 
   useEffect(() => {
     if (vehiculoParam) {
@@ -131,7 +93,92 @@ function HistorialServiciosContent() {
     }
   }, [vehiculoParam]);
 
-  const filteredHistory = SERVICE_HISTORY.filter(record => {
+  const openCreateModal = () => {
+    setEditingRecord(null);
+    setFormVehicle('Toyota Hilux 2020 (ABC-123)');
+    setFormMileage('48,000 km');
+    setFormType('Mantenimiento Preventivo');
+    setFormDetails('');
+    setFormCost('185.00');
+    setFormWarrantyActive(true);
+    setFormWarrantyExpires('6 meses o 10,000 km');
+    setFormWarrantyCoverage('Garantía integral en mano de obra y repuestos instalados por AutoG.');
+    setIsFormOpen(true);
+  };
+
+  const openEditModal = (rec: ServiceItem) => {
+    setEditingRecord(rec);
+    setFormVehicle(rec.vehicle);
+    setFormMileage(rec.mileage);
+    setFormType(rec.type);
+    setFormDetails(rec.details);
+    setFormCost(String(rec.cost));
+    setFormWarrantyActive(rec.warranty.active);
+    setFormWarrantyExpires(rec.warranty.expires);
+    setFormWarrantyCoverage(rec.warranty.coverage);
+    setIsFormOpen(true);
+  };
+
+  const handleSaveRecord = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const method = editingRecord ? 'PUT' : 'POST';
+      const payload = {
+        ...(editingRecord ? { dbId: editingRecord.dbId, id: editingRecord.id } : {}),
+        vehicle: formVehicle,
+        mileage: formMileage,
+        type: formType,
+        details: formDetails,
+        cost: Number(formCost) || 0,
+        warrantyActive: formWarrantyActive,
+        warrantyExpires: formWarrantyExpires,
+        warrantyCoverage: formWarrantyCoverage,
+      };
+      const res = await fetch('/api/cliente/historial', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Error guardando historial en Neon DB');
+      }
+      setIsFormOpen(false);
+      showToast(
+        editingRecord
+          ? `Registro ${editingRecord.id} actualizado en Neon DB.`
+          : 'Nuevo servicio registrado en el historial de Neon DB.'
+      );
+      await fetchHistory();
+    } catch (err: any) {
+      showToast(`Error: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteRecord = async (rec: ServiceItem) => {
+    setIsSubmitting(true);
+    try {
+      const targetId = rec.dbId || rec.id;
+      const res = await fetch(`/api/cliente/historial?id=${encodeURIComponent(targetId)}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Error al eliminar registro');
+      }
+      showToast(`Registro ${rec.id} eliminado de Neon DB.`);
+      await fetchHistory();
+    } catch (err: any) {
+      showToast(`Error: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const filteredHistory = historyList.filter(record => {
     const matchesVehicle = selectedVehicle === 'Todos' || record.vehicle.toLowerCase().includes(selectedVehicle.toLowerCase());
     if (!matchesVehicle) return false;
 
@@ -162,21 +209,40 @@ function HistorialServiciosContent() {
 
       <main className="flex-grow p-6 md:p-12 max-w-5xl mx-auto w-full">
         {/* Navigation / Breadcrumb */}
-        <div className="mb-6">
+        <div className="mb-6 flex justify-between items-center">
           <Link href="/cliente" className="text-sm font-medium text-amber-600 hover:text-amber-500 flex items-center gap-1 w-fit">
             &larr; Volver a Portal de Cliente
           </Link>
+          <div className="flex items-center gap-2 text-xs font-mono bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-full border border-amber-200 dark:border-amber-800">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Historial Neon DB ({historyList.length})</span>
+          </div>
         </div>
 
         {/* Header Section */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-amber-500 bg-opacity-10 flex items-center justify-center text-2xl">
-              📖
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-amber-500 bg-opacity-10 flex items-center justify-center text-2xl">
+                📖
+              </div>
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                  Historial
+                </h1>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  Trabajos realizados y certificados de garantía en Neon PostgreSQL.
+                </p>
+              </div>
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Historial
-            </h1>
+
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="cursor-pointer bg-amber-500 hover:bg-amber-600 text-white font-bold px-5 py-3 rounded-2xl transition-all shadow-md shadow-amber-500/20 text-sm flex items-center gap-2 w-fit"
+            >
+              <span>+</span> Registrar Servicio
+            </button>
           </div>
           
           {/* Controles de Filtro: Desplegable y Buscador debajo de Historial */}
@@ -230,7 +296,11 @@ function HistorialServiciosContent() {
 
         {/* Timeline / List */}
         <div className="space-y-6">
-          {filteredHistory.length === 0 ? (
+          {loading ? (
+            <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-12 text-center text-zinc-500">
+              Cargando historial de servicios desde Neon PostgreSQL...
+            </div>
+          ) : filteredHistory.length === 0 ? (
             <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-12 text-center shadow-sm">
               <span className="text-4xl mb-4 block opacity-50">🔍</span>
               <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">No se encontraron resultados</h3>
@@ -253,7 +323,7 @@ function HistorialServiciosContent() {
           ) : (
             filteredHistory.map((record) => (
               <div
-                key={record.id}
+                key={record.dbId || record.id}
                 className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 md:p-8 shadow-sm hover:shadow-md hover:border-amber-300 dark:hover:border-amber-700 transition-all flex flex-col md:flex-row gap-6 relative overflow-hidden group"
               >
                 {/* Decorative Side Line (Timeline visual) */}
@@ -283,8 +353,8 @@ function HistorialServiciosContent() {
                     {record.details}
                   </p>
                   
-                  {/* Warranty Badge - Texto corto */}
-                  <div>
+                  {/* Warranty Badge & CRUD Actions */}
+                  <div className="flex flex-wrap items-center gap-2">
                     {record.warranty.active ? (
                       <button
                         type="button"
@@ -306,6 +376,22 @@ function HistorialServiciosContent() {
                         <span>Garantía Expirada</span>
                       </button>
                     )}
+
+                    <button
+                      type="button"
+                      onClick={() => openEditModal(record)}
+                      className="cursor-pointer px-2.5 py-1 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-xs font-semibold transition-colors"
+                    >
+                      ✏️ Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteRecord(record)}
+                      disabled={isSubmitting}
+                      className="cursor-pointer px-2.5 py-1 rounded-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-semibold transition-colors"
+                    >
+                      🗑️ Borrar
+                    </button>
                   </div>
                 </div>
 
@@ -313,7 +399,7 @@ function HistorialServiciosContent() {
                 <div className="md:w-1/6 flex flex-row md:flex-col justify-between items-end md:justify-center md:items-end border-t md:border-t-0 border-zinc-100 dark:border-zinc-800 pt-4 md:pt-0 pl-0 md:pl-6 shrink-0">
                   <div className="text-left md:text-right w-full mb-4">
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Costo Total</p>
-                    <p className="text-2xl font-black text-zinc-900 dark:text-white">${record.cost.toFixed(2)}</p>
+                    <p className="text-2xl font-black text-zinc-900 dark:text-white">${Number(record.cost).toFixed(2)}</p>
                   </div>
                   
                   {/* Botón Ver Factura - Navega a la página de facturas */}
@@ -396,6 +482,157 @@ function HistorialServiciosContent() {
             >
               Cerrar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: CREAR / EDITAR SERVICIO EN NEON DB                */}
+      {/* ======================================================== */}
+      {isFormOpen && (
+        <div
+          onClick={() => setIsFormOpen(false)}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative"
+          >
+            <button
+              type="button"
+              onClick={() => setIsFormOpen(false)}
+              className="cursor-pointer absolute top-5 right-5 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 flex items-center justify-center font-bold"
+            >
+              ✕
+            </button>
+
+            <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-4">
+              {editingRecord ? `Editar Registro ${editingRecord.id}` : 'Registrar Servicio en Historial'}
+            </h3>
+
+            <form onSubmit={handleSaveRecord} className="space-y-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
+                    Vehículo (y Placa)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formVehicle}
+                    onChange={(e) => setFormVehicle(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
+                    Kilometraje
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formMileage}
+                    onChange={(e) => setFormMileage(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
+                    Tipo de Servicio
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formType}
+                    onChange={(e) => setFormType(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
+                    Costo Total ($)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={formCost}
+                    onChange={(e) => setFormCost(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
+                  Detalles del Trabajo Realizado
+                </label>
+                <textarea
+                  rows={2}
+                  required
+                  value={formDetails}
+                  onChange={(e) => setFormDetails(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 items-center">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
+                    Vigencia Garantía
+                  </label>
+                  <input
+                    type="text"
+                    value={formWarrantyExpires}
+                    onChange={(e) => setFormWarrantyExpires(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                  />
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer mt-4">
+                  <input
+                    type="checkbox"
+                    checked={formWarrantyActive}
+                    onChange={(e) => setFormWarrantyActive(e.target.checked)}
+                    className="w-4 h-4 accent-emerald-600"
+                  />
+                  <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                    Garantía Activa
+                  </span>
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
+                  Cobertura de Garantía
+                </label>
+                <input
+                  type="text"
+                  value={formWarrantyCoverage}
+                  onChange={(e) => setFormWarrantyCoverage(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsFormOpen(false)}
+                  className="cursor-pointer flex-1 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="cursor-pointer flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm"
+                >
+                  {isSubmitting ? 'Guardando...' : 'Guardar en Neon DB'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

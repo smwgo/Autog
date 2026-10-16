@@ -2,10 +2,133 @@
 
 import Link from "next/link";
 import { Header } from "@/components/Header";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function FacturacionSRI() {
   const [tab, setTab] = useState<"facturas" | "notas">("facturas");
+  const [facturas, setFacturas] = useState<any[]>([]);
+  const [notas, setNotas] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+
+  const [form, setForm] = useState({
+    docType: "factura",
+    clientName: "",
+    clientRfc: "",
+    concept: "",
+    amount: "",
+    status: "Autorizado",
+  });
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/oficina/facturacion");
+      if (res.ok) {
+        const data = await res.json();
+        setFacturas(data.facturas || []);
+        setNotas(data.notas || []);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const openNew = () => {
+    setEditingItem(null);
+    setForm({
+      docType: tab === "facturas" ? "factura" : "nota",
+      clientName: "",
+      clientRfc: "",
+      concept: tab === "facturas" ? "Servicio Automotriz" : "Aplica a F-1042",
+      amount: "",
+      status: "Autorizado",
+    });
+    setModalOpen(true);
+  };
+
+  const openEdit = (row: any, docType: "factura" | "nota") => {
+    setEditingItem({ ...row, docType });
+    setForm({
+      docType,
+      clientName: row.clientName || "",
+      clientRfc: docType === "factura" ? (row.clientRfc || "") : (row.clientRuc || ""),
+      concept: docType === "factura" ? (row.concept || "") : (row.invoiceRef || ""),
+      amount: String(docType === "factura" ? row.amount : row.total),
+      status: row.status || "Autorizado",
+    });
+    setModalOpen(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const method = editingItem ? "PUT" : "POST";
+      const payload = editingItem
+        ? {
+            id: editingItem.id,
+            docType: form.docType,
+            clientName: form.clientName,
+            clientRfc: form.clientRfc,
+            concept: form.concept,
+            invoiceRef: form.concept,
+            amount: form.amount,
+            total: form.amount,
+            status: form.status,
+          }
+        : {
+            docType: form.docType,
+            clientName: form.clientName,
+            clientRfc: form.clientRfc,
+            clientRuc: form.clientRfc,
+            concept: form.concept,
+            invoiceRef: form.concept,
+            amount: form.amount,
+            total: form.amount,
+            status: form.status,
+          };
+
+      const res = await fetch("/api/oficina/facturacion", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        setModalOpen(false);
+        await loadData();
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string, docType: "factura" | "nota") => {
+    if (!confirm("¿Eliminar este comprobante electrónico de Neon DB?")) return;
+    await fetch(`/api/oficina/facturacion?id=${id}&docType=${docType}`, { method: "DELETE" });
+    await loadData();
+  };
+
+  const filteredFacturas = facturas.filter((f) =>
+    `${f.invoiceNumber} ${f.clientName} ${f.clientRfc}`.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const filteredNotas = notas.filter((n) =>
+    `${n.noteNumber} ${n.clientName} ${n.invoiceRef}`.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const totalFacturado = facturas
+    .filter((f) => f.status === "Autorizado" || f.status === "Pagada")
+    .reduce((acc, f) => acc + Number(f.amount || 0), 0);
+  const pendientesCount = facturas.filter((f) => f.status === "Pendiente").length;
+  const rechazadosCount = facturas.filter((f) => f.status === "Rechazado").length;
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
@@ -24,9 +147,12 @@ export default function FacturacionSRI() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            <button className="h-10 px-4 rounded-xl bg-purple-600 text-white font-medium text-sm hover:bg-purple-700 transition-colors flex items-center gap-2 shadow-sm">
+            <button
+              onClick={openNew}
+              className="h-10 px-4 rounded-xl bg-purple-600 text-white font-medium text-sm hover:bg-purple-700 transition-colors flex items-center gap-2 shadow-sm"
+            >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
-              Emitir Factura Manual
+              {tab === "facturas" ? "Emitir Factura Manual" : "Emitir Nota de Crédito"}
             </button>
           </div>
         </div>
@@ -38,8 +164,8 @@ export default function FacturacionSRI() {
               💵
             </div>
             <div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">$1,840</p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Facturado (Hoy)</h3>
+              <p className="text-2xl font-bold text-zinc-900 dark:text-white">${totalFacturado.toFixed(2)}</p>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Facturado Autorizado</h3>
             </div>
           </div>
           
@@ -48,7 +174,7 @@ export default function FacturacionSRI() {
               ⏳
             </div>
             <div>
-              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">3</p>
+              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{pendientesCount}</p>
               <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Pendientes de Autorizar</h3>
             </div>
           </div>
@@ -58,7 +184,7 @@ export default function FacturacionSRI() {
               ❌
             </div>
             <div>
-              <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">1</p>
+              <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">{rechazadosCount}</p>
               <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Documento Rechazado</h3>
             </div>
           </div>
@@ -68,8 +194,8 @@ export default function FacturacionSRI() {
               🧾
             </div>
             <div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">14</p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Notas de Crédito (Mes)</h3>
+              <p className="text-2xl font-bold text-zinc-900 dark:text-white">{notas.length}</p>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Notas de Crédito</h3>
             </div>
           </div>
         </div>
@@ -81,24 +207,22 @@ export default function FacturacionSRI() {
               onClick={() => setTab("facturas")}
               className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'facturas' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
             >
-              Facturas
+              Facturas ({facturas.length})
             </button>
             <button 
               onClick={() => setTab("notas")}
               className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'notas' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
             >
-              Notas de Crédito
+              Notas de Crédito ({notas.length})
             </button>
           </div>
           
           <div className="flex gap-2 w-full md:w-auto">
-            <select className="h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent px-4 text-sm font-medium outline-none focus:border-purple-500 text-zinc-600 dark:text-zinc-400 hidden md:block">
-              <option>Octubre 2026</option>
-              <option>Septiembre 2026</option>
-            </select>
             <div className="relative flex-grow md:w-72">
               <input 
                 type="text" 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar cliente o # documento..." 
                 className="w-full h-10 pl-10 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-sm outline-none focus:border-purple-500"
               />
@@ -118,89 +242,196 @@ export default function FacturacionSRI() {
                   <th className="px-6 py-4 font-medium">Cliente</th>
                   <th className="px-6 py-4 font-medium text-right">Total</th>
                   <th className="px-6 py-4 font-medium text-center">Estado SRI</th>
-                  <th className="px-6 py-4 font-medium text-right">Clave Acceso</th>
+                  <th className="px-6 py-4 font-medium text-right">Clave / Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {tab === 'facturas' ? [
-                  { id: "001-001-00001042", date: "Hoy, 10:45 AM", client: "Ricardo Montero", ruc: "0923456789", total: "$350.00", status: "Autorizado", key: "...89012" },
-                  { id: "001-001-00001041", date: "Hoy, 09:30 AM", client: "Logística Express S.A.", ruc: "1792345678001", total: "$1,250.00", status: "Autorizado", key: "...89011" },
-                  { id: "001-001-00001040", date: "Hoy, 08:15 AM", client: "Daniela Alvarado", ruc: "0956781234", total: "$85.50", status: "Rechazado", key: "N/A" },
-                  { id: "001-001-00001039", date: "Ayer", client: "Consumidor Final", ruc: "9999999999", total: "$15.00", status: "Pendiente", key: "Procesando..." },
-                  { id: "001-001-00001038", date: "Ayer", client: "Carlos Villagómez", ruc: "0912345678", total: "$420.00", status: "Autorizado", key: "...89008" },
-                ].map((row, i) => (
-                  <tr key={i} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
-                    <td className="px-6 py-4">
-                      <span className="font-bold text-zinc-900 dark:text-zinc-100 font-mono text-xs">{row.id}</span>
-                    </td>
-                    <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{row.date}</td>
-                    <td className="px-6 py-4">
-                      <p className="font-medium text-zinc-900 dark:text-zinc-100">{row.client}</p>
-                      <p className="text-xs text-zinc-500">{row.ruc}</p>
-                    </td>
-                    <td className="px-6 py-4 text-right font-bold text-zinc-900 dark:text-zinc-100">{row.total}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                        row.status === 'Pendiente' ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' :
-                        row.status === 'Autorizado' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' :
-                        'bg-rose-50 text-rose-600 dark:bg-rose-500/10'
-                      }`}>
-                        {row.status}
-                      </span>
-                      {row.status === 'Rechazado' && (
-                        <p className="text-[10px] text-rose-500 mt-1">Firma inválida</p>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-3">
-                        <span className="text-xs font-mono text-zinc-400">{row.key}</span>
-                        <button className="p-1.5 text-zinc-400 hover:text-rose-600 transition-colors" title="Descargar PDF">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                        </button>
-                      </div>
-                    </td>
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando documentos desde Neon DB...</td>
                   </tr>
-                )) : [
-                  { id: "001-001-00000015", date: "24 Oct 2026", client: "Ricardo Montero", ref: "Aplica a F-1042", total: "$50.00", status: "Autorizado", key: "...NC015" },
-                  { id: "001-001-00000014", date: "20 Oct 2026", client: "Andrea Suárez", ref: "Aplica a F-1020", total: "$310.00", status: "Autorizado", key: "...NC014" },
-                ].map((row, i) => (
-                  <tr key={i} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
-                    <td className="px-6 py-4">
-                      <span className="font-bold text-zinc-900 dark:text-zinc-100 font-mono text-xs">{row.id}</span>
-                    </td>
-                    <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{row.date}</td>
-                    <td className="px-6 py-4">
-                      <p className="font-medium text-zinc-900 dark:text-zinc-100">{row.client}</p>
-                      <p className="text-xs text-zinc-500">{row.ref}</p>
-                    </td>
-                    <td className="px-6 py-4 text-right font-bold text-rose-600 dark:text-rose-400">- {row.total}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="px-2 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10">
-                        {row.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-3">
-                        <span className="text-xs font-mono text-zinc-400">{row.key}</span>
-                        <button className="p-1.5 text-zinc-400 hover:text-rose-600 transition-colors" title="Descargar PDF">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                ) : tab === 'facturas' ? (
+                  filteredFacturas.map((row) => (
+                    <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
+                      <td className="px-6 py-4">
+                        <span className="font-bold text-zinc-900 dark:text-zinc-100 font-mono text-xs">{row.invoiceNumber}</span>
+                      </td>
+                      <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{row.date}</td>
+                      <td className="px-6 py-4">
+                        <p className="font-medium text-zinc-900 dark:text-zinc-100">{row.clientName}</p>
+                        <p className="text-xs text-zinc-500">{row.clientRfc} — {row.concept}</p>
+                      </td>
+                      <td className="px-6 py-4 text-right font-bold text-zinc-900 dark:text-zinc-100">
+                        ${Number(row.amount || 0).toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
+                          row.status === 'Pendiente' ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' :
+                          row.status === 'Autorizado' || row.status === 'Pagada' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' :
+                          'bg-rose-50 text-rose-600 dark:bg-rose-500/10'
+                        }`}>
+                          {row.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-xs font-mono text-zinc-400">{row.uuid}</span>
+                          <button
+                            onClick={() => openEdit(row, "factura")}
+                            className="p-1.5 text-zinc-400 hover:text-purple-600 transition-colors"
+                            title="Editar / Autorizar SRI"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(row.id, "factura")}
+                            className="p-1.5 text-zinc-400 hover:text-rose-600 transition-colors"
+                            title="Eliminar Factura"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  filteredNotas.map((row) => (
+                    <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
+                      <td className="px-6 py-4">
+                        <span className="font-bold text-zinc-900 dark:text-zinc-100 font-mono text-xs">{row.noteNumber}</span>
+                      </td>
+                      <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{row.date}</td>
+                      <td className="px-6 py-4">
+                        <p className="font-medium text-zinc-900 dark:text-zinc-100">{row.clientName}</p>
+                        <p className="text-xs text-zinc-500">{row.invoiceRef}</p>
+                      </td>
+                      <td className="px-6 py-4 text-right font-bold text-rose-600 dark:text-rose-400">
+                        - ${Number(row.total || 0).toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="px-2 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10">
+                          {row.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-xs font-mono text-zinc-400">{row.accessKey}</span>
+                          <button
+                            onClick={() => openEdit(row, "nota")}
+                            className="p-1.5 text-zinc-400 hover:text-purple-600 transition-colors"
+                            title="Editar Nota de Crédito"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(row.id, "nota")}
+                            className="p-1.5 text-zinc-400 hover:text-rose-600 transition-colors"
+                            title="Eliminar Nota de Crédito"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
           <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-sm text-zinc-500">
-            <span>Mostrando {tab === 'facturas' ? '5' : '2'} documentos</span>
-            <div className="flex gap-2">
-              <button className="px-3 py-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50" disabled>Anterior</button>
-              <button className="px-3 py-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50" disabled>Siguiente</button>
-            </div>
+            <span>Mostrando {tab === 'facturas' ? filteredFacturas.length : filteredNotas.length} documentos en Neon DB</span>
           </div>
         </div>
       </main>
+
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-md w-full p-6 border border-zinc-200 dark:border-zinc-800 shadow-2xl">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-4">
+              {editingItem ? "Editar Comprobante SRI" : form.docType === "factura" ? "Emitir Factura SRI" : "Emitir Nota de Crédito"}
+            </h2>
+            <form onSubmit={handleSave} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 mb-1">Razón Social / Cliente</label>
+                <input
+                  required
+                  type="text"
+                  value={form.clientName}
+                  onChange={(e) => setForm({ ...form, clientName: e.target.value })}
+                  placeholder="Ej. Logística Express S.A."
+                  className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 mb-1">RUC / Cédula</label>
+                <input
+                  required
+                  type="text"
+                  value={form.clientRfc}
+                  onChange={(e) => setForm({ ...form, clientRfc: e.target.value })}
+                  placeholder="1792345678001"
+                  className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 mb-1">
+                  {form.docType === "factura" ? "Concepto" : "Factura Referencia"}
+                </label>
+                <input
+                  required
+                  type="text"
+                  value={form.concept}
+                  onChange={(e) => setForm({ ...form, concept: e.target.value })}
+                  placeholder={form.docType === "factura" ? "Mantenimiento General" : "Aplica a F-1042"}
+                  className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Monto Total ($)</label>
+                  <input
+                    required
+                    type="number"
+                    step="0.01"
+                    value={form.amount}
+                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                    placeholder="350.00"
+                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Estado SRI</label>
+                  <select
+                    value={form.status}
+                    onChange={(e) => setForm({ ...form, status: e.target.value })}
+                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm"
+                  >
+                    <option>Autorizado</option>
+                    <option>Pendiente</option>
+                    <option>Rechazado</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2 rounded-xl bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 disabled:opacity-50"
+                >
+                  {saving ? "Guardando..." : "Guardar en Neon"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

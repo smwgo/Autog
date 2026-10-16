@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, withRetry } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
 
 // GET: Consultar cotizaciones registradas en Neon
 export async function GET(request: Request) {
@@ -7,10 +9,12 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const busqueda = searchParams.get("busqueda")?.trim().toLowerCase() || "";
 
-    const cotizaciones = await (prisma as any).orderRequest.findMany({
-      where: { type: "COTIZACION" },
-      orderBy: { createdAt: "desc" },
-    });
+    const cotizaciones: any[] = await withRetry(() =>
+      (prisma as any).orderRequest.findMany({
+        where: { type: "COTIZACION" },
+        orderBy: { createdAt: "desc" },
+      })
+    );
 
     const filtradas = cotizaciones.filter((c: any) => {
       if (!busqueda) return true;
@@ -60,20 +64,22 @@ export async function POST(request: Request) {
       .map((i: any) => `${i.qty || 1}x ${i.name || i.product?.name}`)
       .join(", ");
 
-    const cotizacion = await (prisma as any).orderRequest.create({
-      data: {
-        requestNumber: folio,
-        type: "COTIZACION",
-        customerName,
-        customerPhone: customerPhone || null,
-        customerEmail: customerEmail || null,
-        itemsSummary,
-        itemsJson: JSON.stringify(items),
-        totalEstimated: total,
-        notes: notes || `Cotización mostrador. Total: $${Number(total).toFixed(2)}`,
-        status: "PENDIENTE",
-      },
-    });
+    const cotizacion = await withRetry(() =>
+      (prisma as any).orderRequest.create({
+        data: {
+          requestNumber: folio,
+          type: "COTIZACION",
+          customerName,
+          customerPhone: customerPhone || null,
+          customerEmail: customerEmail || null,
+          itemsSummary,
+          itemsJson: JSON.stringify(items),
+          totalEstimated: total,
+          notes: notes || `Cotización mostrador. Total: $${Number(total).toFixed(2)}`,
+          status: "PENDIENTE",
+        },
+      })
+    );
 
     return NextResponse.json({
       success: true,
@@ -85,6 +91,54 @@ export async function POST(request: Request) {
     console.error("Error al guardar cotización:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Error al registrar cotización" },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT: Actualizar cotización existente en Neon (cliente, artículos, total o estado)
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, customerName, customerPhone, customerEmail, items, total, status, notes } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "ID de cotización requerido para actualizar." },
+        { status: 400 }
+      );
+    }
+
+    const dataToUpdate: any = {};
+    if (customerName !== undefined) dataToUpdate.customerName = customerName;
+    if (customerPhone !== undefined) dataToUpdate.customerPhone = customerPhone || null;
+    if (customerEmail !== undefined) dataToUpdate.customerEmail = customerEmail || null;
+    if (status !== undefined) dataToUpdate.status = status;
+    if (notes !== undefined) dataToUpdate.notes = notes;
+    if (total !== undefined) dataToUpdate.totalEstimated = Number(total) || 0;
+    if (Array.isArray(items) && items.length > 0) {
+      dataToUpdate.itemsJson = JSON.stringify(items);
+      dataToUpdate.itemsSummary = items
+        .map((i: any) => `${i.qty || 1}x ${i.name || i.product?.name}`)
+        .join(", ");
+    }
+
+    const updated = await withRetry(() =>
+      (prisma as any).orderRequest.update({
+        where: { id },
+        data: dataToUpdate,
+      })
+    );
+
+    return NextResponse.json({
+      success: true,
+      cotizacion: updated,
+      message: "Cotización actualizada en Neon DB.",
+    });
+  } catch (error: any) {
+    console.error("Error al actualizar cotización:", error);
+    return NextResponse.json(
+      { success: false, error: error.message || "Error al actualizar cotización" },
       { status: 500 }
     );
   }
@@ -103,9 +157,11 @@ export async function DELETE(request: Request) {
       );
     }
 
-    await (prisma as any).orderRequest.delete({
-      where: { id },
-    });
+    await withRetry(() =>
+      (prisma as any).orderRequest.delete({
+        where: { id },
+      })
+    );
 
     return NextResponse.json({ success: true, message: "Cotización eliminada." });
   } catch (error: any) {

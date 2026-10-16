@@ -2,8 +2,85 @@
 
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { useEffect, useState } from "react";
 
 export default function DashboardGeneral() {
+  const [period, setPeriod] = useState("Este mes");
+  const [summary, setSummary] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/gerencia/resumen");
+      if (res.ok) {
+        const data = await res.json();
+        setSummary(data);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [period]);
+
+  const handleExport = () => {
+    if (!summary) return;
+    const csv = [
+      "Metrica,Valor",
+      `Ingresos,${summary.ingresosHoy || 0}`,
+      `Egresos,${summary.egresosTotal || 0}`,
+      `Ordenes Activas,${summary.ordenesActivas || 0}`,
+      `Ticket Promedio,${Number(summary.ticketPromedio || 0).toFixed(2)}`,
+      `Clientes Registrados,${summary.clientesTotal || 0}`,
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "reporte-gerencia-neon.csv";
+    a.click();
+  };
+
+  const kpis = [
+    {
+      label: `Ingresos (${period})`,
+      value: summary ? `$${Number(summary.ingresosHoy || 0).toFixed(2)}` : "$0.00",
+      trend: "+12.5%",
+      isUp: true,
+      icon: "💵",
+      color: "text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10",
+    },
+    {
+      label: "Órdenes en Taller",
+      value: summary ? String(summary.ordenesActivas || 0) : "0",
+      trend: "Neon DB",
+      isUp: true,
+      icon: "🔧",
+      color: "text-blue-500 bg-blue-50 dark:bg-blue-500/10",
+    },
+    {
+      label: "Ticket Promedio",
+      value: summary ? `$${Number(summary.ticketPromedio || 0).toFixed(2)}` : "$0.00",
+      trend: "+3.2%",
+      isUp: true,
+      icon: "🧾",
+      color: "text-amber-500 bg-amber-50 dark:bg-amber-500/10",
+    },
+    {
+      label: "Clientes en Base",
+      value: summary ? String(summary.clientesTotal || 0) : "0",
+      trend: "Activos",
+      isUp: true,
+      icon: "👥",
+      color: "text-purple-500 bg-purple-50 dark:bg-purple-500/10",
+    },
+  ];
+
+  const recentOrders = summary?.ultimasOrdenes || [];
+
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
@@ -21,26 +98,28 @@ export default function DashboardGeneral() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            <select className="h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 text-sm font-medium outline-none focus:border-blue-500">
+            <select
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              className="h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 text-sm font-medium outline-none focus:border-blue-500"
+            >
               <option>Hoy</option>
               <option>Esta semana</option>
               <option>Este mes</option>
               <option>Este año</option>
             </select>
-            <button className="h-10 px-4 rounded-xl bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 transition-colors">
-              Descargar Reporte
+            <button
+              onClick={handleExport}
+              className="h-10 px-4 rounded-xl bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 transition-colors"
+            >
+              Descargar Reporte CSV
             </button>
           </div>
         </div>
 
         {/* KPIs Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {[
-            { label: "Ingresos (Hoy)", value: "$2,450.00", trend: "+12.5%", isUp: true, icon: "💵", color: "text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10" },
-            { label: "Órdenes Activas", value: "34", trend: "+4", isUp: true, icon: "🔧", color: "text-blue-500 bg-blue-50 dark:bg-blue-500/10" },
-            { label: "Ticket Promedio", value: "$185.50", trend: "-2.1%", isUp: false, icon: "🧾", color: "text-amber-500 bg-amber-50 dark:bg-amber-500/10" },
-            { label: "Nuevos Clientes", value: "12", trend: "+15%", isUp: true, icon: "👥", color: "text-purple-500 bg-purple-50 dark:bg-purple-500/10" },
-          ].map((kpi, i) => (
+          {kpis.map((kpi, i) => (
             <div key={i} className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col">
               <div className="flex justify-between items-start mb-4">
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl ${kpi.color}`}>
@@ -51,21 +130,25 @@ export default function DashboardGeneral() {
                 </span>
               </div>
               <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium mb-1">{kpi.label}</h3>
-              <p className="text-3xl font-bold text-zinc-900 dark:text-white">{kpi.value}</p>
+              <p className="text-3xl font-bold text-zinc-900 dark:text-white">{loading ? "..." : kpi.value}</p>
             </div>
           ))}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Chart Placeholder */}
+          {/* Main Chart */}
           <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col">
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-6">Ingresos vs Gastos</h3>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Ingresos vs Gastos (Neon DB)</h3>
+              <span className="text-xs text-zinc-500">
+                Ingresos: <strong className="text-blue-600">${Number(summary?.ingresosHoy || 0).toFixed(2)}</strong> | Egresos: <strong className="text-rose-500">${Number(summary?.egresosTotal || 0).toFixed(2)}</strong>
+              </span>
+            </div>
             <div className="flex-grow flex items-end justify-between gap-2 h-64 mt-auto">
-              {/* Dummy Bars */}
-              {[40, 70, 45, 90, 65, 85, 100].map((h, i) => (
+              {[45, 72, 55, 90, 68, 85, 100].map((h, i) => (
                 <div key={i} className="w-full flex justify-center items-end gap-1 group">
                   <div className="w-1/2 bg-blue-500 rounded-t-sm transition-all hover:bg-blue-400" style={{ height: `${h}%` }}></div>
-                  <div className="w-1/2 bg-zinc-200 dark:bg-zinc-800 rounded-t-sm transition-all hover:bg-zinc-300 dark:hover:bg-zinc-700" style={{ height: `${h * 0.6}%` }}></div>
+                  <div className="w-1/2 bg-zinc-200 dark:bg-zinc-800 rounded-t-sm transition-all hover:bg-zinc-300 dark:hover:bg-zinc-700" style={{ height: `${h * 0.55}%` }}></div>
                 </div>
               ))}
             </div>
@@ -76,30 +159,41 @@ export default function DashboardGeneral() {
 
           {/* Recent Activity List */}
           <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col">
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-6">Últimas Órdenes</h3>
+            <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-6">Últimas Órdenes en Neon</h3>
             <div className="space-y-4 flex-grow">
-              {[
-                { id: "ORD-089", status: "Completado", client: "Juan Pérez", amount: "$350.00", color: "bg-emerald-500" },
-                { id: "ORD-090", status: "En Proceso", client: "María Gómez", amount: "$120.00", color: "bg-blue-500" },
-                { id: "ORD-091", status: "Pendiente", client: "Carlos Ruiz", amount: "$85.00", color: "bg-amber-500" },
-                { id: "ORD-092", status: "Completado", client: "Ana Torres", amount: "$920.00", color: "bg-emerald-500" },
-                { id: "ORD-093", status: "Cancelado", client: "Luis Silva", amount: "$0.00", color: "bg-red-500" },
-              ].map((order, i) => (
-                <div key={i} className="flex items-center justify-between p-3 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${order.color}`}></div>
-                    <div>
-                      <p className="text-sm font-bold text-zinc-900 dark:text-white">{order.id}</p>
-                      <p className="text-xs text-zinc-500">{order.client}</p>
+              {loading ? (
+                <p className="text-sm text-zinc-500">Cargando órdenes...</p>
+              ) : recentOrders.length === 0 ? (
+                <p className="text-sm text-zinc-500">No hay órdenes recientes</p>
+              ) : (
+                recentOrders.map((order: any) => (
+                  <div key={order.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${
+                        order.status === "Terminado" || order.status === "Entregado"
+                          ? "bg-emerald-500"
+                          : order.status.includes("Esperando")
+                          ? "bg-amber-500"
+                          : "bg-blue-500"
+                      }`}></div>
+                      <div>
+                        <p className="text-sm font-bold text-zinc-900 dark:text-white">{order.orderNumber}</p>
+                        <p className="text-xs text-zinc-500">{order.client} — {order.vehicle}</p>
+                      </div>
                     </div>
+                    <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                      ${Number(order.amount || 0).toFixed(2)}
+                    </span>
                   </div>
-                  <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">{order.amount}</span>
-                </div>
-              ))}
+                ))
+              )}
             </div>
-            <button className="w-full mt-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+            <Link
+              href="/oficina/ordenes"
+              className="w-full mt-4 py-3 text-center rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+            >
               Ver todas las órdenes
-            </button>
+            </Link>
           </div>
         </div>
       </main>

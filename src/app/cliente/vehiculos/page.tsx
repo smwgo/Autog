@@ -252,9 +252,38 @@ export default function MisVehiculosPage() {
     setAppointmentNotes('');
   };
 
-  const handleSubmitAppointment = (e: React.FormEvent) => {
+  const handleSubmitAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAppointmentSuccess(true);
+    if (!appointmentVehicle) return;
+    setIsSubmitting(true);
+    try {
+      const srvObj = SERVICES_LIST.find((s) => s.id === selectedService);
+      const res = await fetch('/api/cliente/citas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vehicleId: appointmentVehicle.id,
+          vehicleName: `${appointmentVehicle.brand} ${appointmentVehicle.model} ${appointmentVehicle.year || ''}`.trim(),
+          plate: appointmentVehicle.plate,
+          serviceId: selectedService,
+          serviceName: srvObj ? srvObj.name : selectedService,
+          preferredDate: selectedDate,
+          preferredTime: selectedTimeSlot,
+          comments: appointmentNotes,
+          status: 'Pendiente',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'No se pudo guardar la cita en Neon DB');
+      }
+      setAppointmentSuccess(true);
+      showToast(`Cita ${data.cita?.code || ''} registrada en Neon DB.`);
+    } catch (err: any) {
+      showToast(`Error: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

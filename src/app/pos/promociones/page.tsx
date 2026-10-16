@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 
@@ -17,65 +17,19 @@ interface Promotion {
   usesCount: number;
 }
 
-const initialPromotions: Promotion[] = [
-  {
-    id: "promo-1",
-    code: "CAMBIO-ACEITE20",
-    title: "20% en Cambio de Aceite y Filtro",
-    discountType: "PERCENT",
-    discountValue: 20,
-    minPurchase: 35,
-    category: "Servicios",
-    validUntil: "2026-12-31",
-    active: true,
-    usesCount: 42,
-  },
-  {
-    id: "promo-2",
-    code: "FRENOS15",
-    title: "$15 de Descuento en Pastillas de Freno",
-    discountType: "FIXED",
-    discountValue: 15,
-    minPurchase: 60,
-    category: "Repuestos",
-    validUntil: "2026-11-30",
-    active: true,
-    usesCount: 18,
-  },
-  {
-    id: "promo-3",
-    code: "LLANTAS-COMBO",
-    title: "Alineación Gratis por Compra de 2 Llantas",
-    discountType: "FIXED",
-    discountValue: 25,
-    minPurchase: 120,
-    category: "Llantas",
-    validUntil: "2026-12-15",
-    active: true,
-    usesCount: 9,
-  },
-  {
-    id: "promo-4",
-    code: "BIENVENIDA10",
-    title: "10% en tu primera compra en mostrador",
-    discountType: "PERCENT",
-    discountValue: 10,
-    minPurchase: 20,
-    category: "General",
-    validUntil: "2026-10-31",
-    active: false,
-    usesCount: 65,
-  },
-];
-
 export default function PromocionesPage() {
-  const [promociones, setPromociones] = useState<Promotion[]>(initialPromotions);
+  const [promociones, setPromociones] = useState<Promotion[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<"TODAS" | "ACTIVAS" | "INACTIVAS">("TODAS");
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [promoAEditar, setPromoAEditar] = useState<Promotion | null>(null);
   const [copiadoId, setCopiadoId] = useState<string | null>(null);
 
-  // Formulario nueva promo
+  // Formulario Crear / Editar promo
   const [nuevoCodigo, setNuevoCodigo] = useState("");
   const [nuevoTitulo, setNuevoTitulo] = useState("");
   const [nuevoTipo, setNuevoTipo] = useState<"PERCENT" | "FIXED">("PERCENT");
@@ -84,38 +38,146 @@ export default function PromocionesPage() {
   const [nuevaCategoria, setNuevaCategoria] = useState("General");
   const [nuevaFecha, setNuevaFecha] = useState("2026-12-31");
 
-  const handleCrear = (e: React.FormEvent) => {
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const fetchPromociones = useCallback(async () => {
+    try {
+      setCargando(true);
+      const res = await fetch("/api/pos/promociones", { cache: "no-store" });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.promociones)) {
+        setPromociones(data.promociones);
+      }
+    } catch (err) {
+      console.error("Error cargando promociones desde Neon DB:", err);
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPromociones();
+  }, [fetchPromociones]);
+
+  const abrirModalCrear = () => {
+    setPromoAEditar(null);
+    setNuevoCodigo("");
+    setNuevoTitulo("");
+    setNuevoTipo("PERCENT");
+    setNuevoValor(10);
+    setNuevoMinimo(0);
+    setNuevaCategoria("General");
+    setNuevaFecha("2026-12-31");
+    setModalAbierto(true);
+  };
+
+  const abrirModalEditar = (p: Promotion) => {
+    setPromoAEditar(p);
+    setNuevoCodigo(p.code);
+    setNuevoTitulo(p.title);
+    setNuevoTipo(p.discountType);
+    setNuevoValor(p.discountValue);
+    setNuevoMinimo(p.minPurchase);
+    setNuevaCategoria(p.category);
+    setNuevaFecha(p.validUntil);
+    setModalAbierto(true);
+  };
+
+  // CREAR O ACTUALIZAR PROMOCIÓN EN NEON DB (POST / PUT)
+  const handleGuardar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevoCodigo.trim() || !nuevoTitulo.trim()) {
-      alert("Por favor completa el código y título de la promoción.");
+      showToast("Por favor completa el código y título de la promoción.");
       return;
     }
 
-    const promo: Promotion = {
-      id: `promo-${Date.now()}`,
-      code: nuevoCodigo.trim().toUpperCase(),
-      title: nuevoTitulo.trim(),
-      discountType: nuevoTipo,
-      discountValue: Number(nuevoValor),
-      minPurchase: Number(nuevoMinimo),
-      category: nuevaCategoria,
-      validUntil: nuevaFecha,
-      active: true,
-      usesCount: 0,
-    };
+    setGuardando(true);
+    try {
+      const isEdit = Boolean(promoAEditar);
+      const res = await fetch("/api/pos/promociones", {
+        method: isEdit ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(isEdit ? { id: promoAEditar!.id } : {}),
+          code: nuevoCodigo.trim().toUpperCase(),
+          title: nuevoTitulo.trim(),
+          discountType: nuevoTipo,
+          discountValue: Number(nuevoValor),
+          minPurchase: Number(nuevoMinimo),
+          category: nuevaCategoria,
+          validUntil: nuevaFecha,
+          active: isEdit ? promoAEditar!.active : true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Error al guardar promoción en Neon DB");
+      }
 
-    setPromociones([promo, ...promociones]);
-    setModalAbierto(false);
-    setNuevoCodigo("");
-    setNuevoTitulo("");
-    setNuevoValor(10);
-    setNuevoMinimo(0);
+      setModalAbierto(false);
+      setPromoAEditar(null);
+      showToast(
+        isEdit
+          ? `Promoción ${nuevoCodigo.toUpperCase()} actualizada en Neon DB.`
+          : `Promoción ${nuevoCodigo.toUpperCase()} creada en Neon DB.`
+      );
+      await fetchPromociones();
+    } catch (err: any) {
+      showToast(`Error: ${err.message}`);
+    } finally {
+      setGuardando(false);
+    }
   };
 
-  const toggleEstado = (id: string) => {
-    setPromociones((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, active: !p.active } : p))
-    );
+  // ACTIVAR / DESACTIVAR PROMOCIÓN EN NEON DB (PUT)
+  const toggleEstado = async (promo: Promotion) => {
+    setGuardando(true);
+    try {
+      const res = await fetch("/api/pos/promociones", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: promo.id,
+          active: !promo.active,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Error al actualizar estado en Neon DB");
+      }
+      showToast(
+        `Promoción ${promo.code} ${!promo.active ? "activada" : "desactivada"} en Neon DB.`
+      );
+      await fetchPromociones();
+    } catch (err: any) {
+      showToast(`Error: ${err.message}`);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  // ELIMINAR PROMOCIÓN DE NEON DB (DELETE)
+  const handleEliminar = async (promo: Promotion) => {
+    setGuardando(true);
+    try {
+      const res = await fetch(
+        `/api/pos/promociones?id=${encodeURIComponent(promo.id)}`,
+        { method: "DELETE" }
+      );
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Error al eliminar promoción de Neon DB");
+      }
+      showToast(`Promoción ${promo.code} eliminada de Neon DB.`);
+      await fetchPromociones();
+    } catch (err: any) {
+      showToast(`Error: ${err.message}`);
+    } finally {
+      setGuardando(false);
+    }
   };
 
   const copiarCodigo = (code: string, id: string) => {
@@ -142,15 +204,27 @@ export default function PromocionesPage() {
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
+
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-sm font-semibold animate-in slide-in-from-bottom duration-200">
+          <span className="text-emerald-400">✓</span>
+          <span>{toast}</span>
+        </div>
+      )}
+
       <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full">
         {/* Navegación y Título */}
-        <div className="mb-6">
+        <div className="mb-6 flex justify-between items-center">
           <Link
             href="/pos"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors w-fit"
           >
             &larr; Volver al panel POS
           </Link>
+          <div className="flex items-center gap-2 text-xs font-mono bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-3 py-1 rounded-full border border-orange-200 dark:border-orange-800">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Promociones Neon DB ({promociones.length})</span>
+          </div>
         </div>
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -161,13 +235,13 @@ export default function PromocionesPage() {
                 Promociones
               </h1>
               <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                Cupones, descuentos de temporada y combos promocionales para el mostrador.
+                Cupones, descuentos de temporada y combos promocionales sincronizados con Neon PostgreSQL.
               </p>
             </div>
           </div>
 
           <button
-            onClick={() => setModalAbierto(true)}
+            onClick={abrirModalCrear}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-semibold text-sm transition-all shadow-md shadow-orange-500/20 active:scale-95 cursor-pointer"
           >
             <span>➕</span>
@@ -213,7 +287,7 @@ export default function PromocionesPage() {
             <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mt-2">
               {promociones.length}
             </p>
-            <span className="text-xs text-zinc-500">Campañas registradas</span>
+            <span className="text-xs text-zinc-500">Campañas registradas en Neon</span>
           </div>
         </div>
 
@@ -250,103 +324,133 @@ export default function PromocionesPage() {
         </div>
 
         {/* Lista de Promociones en Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filtradas.map((promo) => (
-            <div
-              key={promo.id}
-              className={`rounded-2xl p-6 border transition-all relative overflow-hidden bg-white dark:bg-zinc-900 ${
-                promo.active
-                  ? "border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md"
-                  : "border-zinc-200/50 dark:border-zinc-800/50 opacity-60 bg-zinc-50/50 dark:bg-zinc-900/50"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <span className="px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20">
-                  {promo.category}
-                </span>
-                <span
-                  className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                    promo.active
-                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                      : "bg-zinc-500/10 text-zinc-500 border border-zinc-500/20"
-                  }`}
-                >
-                  {promo.active ? "Activo" : "Inactivo"}
-                </span>
-              </div>
-
-              <h3 className="font-bold text-lg text-zinc-900 dark:text-white mb-1">
-                {promo.title}
-              </h3>
-
-              {/* Badge de Descuento */}
-              <div className="my-4 flex items-baseline gap-2">
-                <span className="text-3xl font-extrabold text-orange-600 dark:text-orange-400">
-                  {promo.discountType === "PERCENT"
-                    ? `${promo.discountValue}%`
-                    : `$${promo.discountValue}`}
-                </span>
-                <span className="text-xs text-zinc-500 font-medium">de descuento</span>
-              </div>
-
-              {/* Código con botón copiar */}
-              <div className="p-3 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 flex items-center justify-between mb-4 border border-zinc-200/70 dark:border-zinc-700/60">
-                <span className="font-mono font-bold text-xs text-zinc-800 dark:text-zinc-200 tracking-wide">
-                  {promo.code}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => copiarCodigo(promo.code, promo.id)}
-                  className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold hover:bg-zinc-50 shadow-xs cursor-pointer"
-                >
-                  {copiadoId === promo.id ? "¡Copiado!" : "Copiar"}
-                </button>
-              </div>
-
-              <div className="text-xs text-zinc-500 space-y-1 mb-5">
-                <div className="flex justify-between">
-                  <span>Compra mínima:</span>
-                  <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                    {promo.minPurchase > 0 ? `$${promo.minPurchase}` : "Sin mínimo"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Válido hasta:</span>
-                  <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                    {promo.validUntil}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Canjes:</span>
-                  <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                    {promo.usesCount} ventas
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => toggleEstado(promo.id)}
-                className={`w-full py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+        {cargando ? (
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-12 text-center text-zinc-500">
+            Cargando promociones desde Neon PostgreSQL...
+          </div>
+        ) : filtradas.length === 0 ? (
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-12 text-center text-zinc-500">
+            No se encontraron promociones con los filtros aplicados.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filtradas.map((promo) => (
+              <div
+                key={promo.id}
+                className={`rounded-2xl p-6 border transition-all relative overflow-hidden bg-white dark:bg-zinc-900 ${
                   promo.active
-                    ? "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-700 dark:text-zinc-300"
-                    : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                    ? "border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md"
+                    : "border-zinc-200/50 dark:border-zinc-800/50 opacity-60 bg-zinc-50/50 dark:bg-zinc-900/50"
                 }`}
               >
-                {promo.active ? "Desactivar" : "Activar Promoción"}
-              </button>
-            </div>
-          ))}
-        </div>
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20">
+                    {promo.category}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        promo.active
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                          : "bg-zinc-500/10 text-zinc-500 border border-zinc-500/20"
+                      }`}
+                    >
+                      {promo.active ? "Activo" : "Inactivo"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => abrirModalEditar(promo)}
+                      className="cursor-pointer px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-xs hover:bg-zinc-200"
+                      title="Editar promoción"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleEliminar(promo)}
+                      disabled={guardando}
+                      className="cursor-pointer px-2 py-0.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs hover:bg-rose-100"
+                      title="Eliminar de Neon DB"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
 
-        {/* Modal Crear Promoción */}
+                <h3 className="font-bold text-lg text-zinc-900 dark:text-white mb-1">
+                  {promo.title}
+                </h3>
+
+                {/* Badge de Descuento */}
+                <div className="my-4 flex items-baseline gap-2">
+                  <span className="text-3xl font-extrabold text-orange-600 dark:text-orange-400">
+                    {promo.discountType === "PERCENT"
+                      ? `${promo.discountValue}%`
+                      : `$${promo.discountValue}`}
+                  </span>
+                  <span className="text-xs text-zinc-500 font-medium">de descuento</span>
+                </div>
+
+                {/* Código con botón copiar */}
+                <div className="p-3 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 flex items-center justify-between mb-4 border border-zinc-200/70 dark:border-zinc-700/60">
+                  <span className="font-mono font-bold text-xs text-zinc-800 dark:text-zinc-200 tracking-wide">
+                    {promo.code}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => copiarCodigo(promo.code, promo.id)}
+                    className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold hover:bg-zinc-50 shadow-xs cursor-pointer"
+                  >
+                    {copiadoId === promo.id ? "¡Copiado!" : "Copiar"}
+                  </button>
+                </div>
+
+                <div className="text-xs text-zinc-500 space-y-1 mb-5">
+                  <div className="flex justify-between">
+                    <span>Compra mínima:</span>
+                    <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                      {promo.minPurchase > 0 ? `$${promo.minPurchase}` : "Sin mínimo"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Válido hasta:</span>
+                    <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                      {promo.validUntil}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Canjes:</span>
+                    <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                      {promo.usesCount} ventas
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={guardando}
+                  onClick={() => toggleEstado(promo)}
+                  className={`w-full py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    promo.active
+                      ? "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-700 dark:text-zinc-300"
+                      : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                  }`}
+                >
+                  {promo.active ? "Desactivar" : "Activar Promoción"}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Modal Crear / Editar Promoción */}
         {modalAbierto && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl relative">
               <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800 mb-5">
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                   <span>🏷️</span>
-                  <span>Nueva Promoción / Cupón</span>
+                  <span>{promoAEditar ? `Editar ${promoAEditar.code}` : "Nueva Promoción / Cupón"}</span>
                 </h3>
                 <button
                   onClick={() => setModalAbierto(false)}
@@ -356,7 +460,7 @@ export default function PromocionesPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleCrear} className="space-y-4 text-sm">
+              <form onSubmit={handleGuardar} className="space-y-4 text-sm">
                 <div>
                   <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
                     Código de Cupón
@@ -456,9 +560,10 @@ export default function PromocionesPage() {
                 <div className="pt-3 flex items-center gap-3">
                   <button
                     type="submit"
-                    className="flex-1 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-md shadow-orange-500/20 transition-all cursor-pointer"
+                    disabled={guardando}
+                    className="flex-1 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-md shadow-orange-500/20 transition-all cursor-pointer disabled:opacity-50"
                   >
-                    Guardar Promoción
+                    {guardando ? "Guardando en Neon..." : "Guardar en Neon DB"}
                   </button>
                   <button
                     type="button"

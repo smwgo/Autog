@@ -37,4 +37,20 @@ export const prisma = new Proxy({} as PrismaClient, {
   },
 });
 
+export async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 600): Promise<T> {
+  let lastError: any;
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      lastError = err;
+      if (i < retries) {
+        await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
+      }
+    }
+  }
+  throw lastError;
+}
+
 export default prisma;
+

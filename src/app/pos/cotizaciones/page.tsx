@@ -256,7 +256,57 @@ export default function CotizacionesPage() {
     }
   };
 
+  const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
+
+  const handleCargarParaEditar = (item: any) => {
+    setEditingQuoteId(item.id);
+    setQuoteNumber(item.requestNumber);
+    setClientName(item.customerName || "");
+    setClientPhone(item.customerPhone || "");
+    setClientEmail(item.customerEmail || "");
+    try {
+      const parsed = item.itemsJson ? JSON.parse(item.itemsJson) : [];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        setQuoteItems(parsed);
+      }
+    } catch {
+      // ignore parse error
+    }
+    setVistaHistorial(false);
+  };
+
+  const handleActualizarCotizacionExistente = async () => {
+    if (!editingQuoteId || quoteItems.length === 0) return;
+    try {
+      setGuardando(true);
+      const res = await fetch("/api/cotizaciones", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingQuoteId,
+          customerName: clientName || "Consumidor Final",
+          customerPhone: clientPhone || null,
+          customerEmail: clientEmail || null,
+          items: quoteItems,
+          total: granTotal,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGuardadoExitoso(quoteNumber);
+        setEditingQuoteId(null);
+      } else {
+        alert(data.error || "Error al actualizar cotización.");
+      }
+    } catch {
+      alert("Error al actualizar en Neon DB.");
+    } finally {
+      setGuardando(false);
+    }
+  };
+
   const nuevaCotizacionReset = () => {
+    setEditingQuoteId(null);
     setQuoteItems([]);
     setClientName("");
     setClientPhone("");
@@ -319,7 +369,7 @@ export default function CotizacionesPage() {
               <span className="text-2xl">✅</span>
               <div>
                 <h4 className="text-base font-bold text-emerald-900 dark:text-emerald-100">
-                  Cotización guardada exitosamente
+                  Cotización guardada exitosamente en Neon DB
                 </h4>
                 <p className="text-sm text-emerald-700 dark:text-emerald-300">
                   Comprobante: <span className="font-mono font-bold">{guardadoExitoso}</span>
@@ -347,10 +397,10 @@ export default function CotizacionesPage() {
         {vistaHistorial ? (
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm">
             <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-6">
-              Cotizaciones
+              Cotizaciones en Neon DB
             </h3>
             {cargandoHistorial ? (
-              <p className="text-center py-12 text-zinc-500 font-medium">Cargando...</p>
+              <p className="text-center py-12 text-zinc-500 font-medium">Cargando desde Neon PostgreSQL...</p>
             ) : historialCotizaciones.length === 0 ? (
               <p className="text-center py-12 text-zinc-500 font-medium">
                 No hay cotizaciones registradas todavía.
@@ -387,12 +437,20 @@ export default function CotizacionesPage() {
                           {new Date(item.createdAt).toLocaleDateString("es-ES")}
                         </td>
                         <td className="py-4 px-4 text-right">
-                          <button
-                            onClick={() => handleEliminarCotizacion(item.id)}
-                            className="text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/40 px-3 py-1.5 rounded-lg"
-                          >
-                            Eliminar
-                          </button>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => handleCargarParaEditar(item)}
+                              className="cursor-pointer text-xs font-bold text-purple-600 hover:text-purple-700 bg-purple-50 dark:bg-purple-950/40 px-3 py-1.5 rounded-lg"
+                            >
+                              ✏️ Editar
+                            </button>
+                            <button
+                              onClick={() => handleEliminarCotizacion(item.id)}
+                              className="cursor-pointer text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/40 px-3 py-1.5 rounded-lg"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -680,11 +738,11 @@ export default function CotizacionesPage() {
                       <span>🖨️</span> Imprimir
                     </button>
                     <button
-                      onClick={handleGuardarCotizacion}
+                      onClick={editingQuoteId ? handleActualizarCotizacionExistente : handleGuardarCotizacion}
                       disabled={quoteItems.length === 0 || guardando}
                       className="flex-1 py-4 px-6 rounded-2xl bg-purple-600 hover:bg-purple-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 font-bold text-base text-white transition-colors flex items-center justify-center gap-2 disabled:cursor-not-allowed cursor-pointer shadow-sm active:scale-98"
                     >
-                      <span>💾</span> {guardando ? "Guardando..." : "Guardar Cotización"}
+                      <span>💾</span> {guardando ? "Guardando..." : editingQuoteId ? "Actualizar Cotización" : "Guardar Cotización"}
                     </button>
                   </div>
                 </div>

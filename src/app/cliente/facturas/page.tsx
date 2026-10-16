@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Header } from "@/components/Header";
 
 interface InvoiceItem {
+  dbId?: string;
   id: string;
   uuid: string;
   date: string;
@@ -16,77 +17,12 @@ interface InvoiceItem {
   items?: { description: string; amount: number }[];
 }
 
-// Datos de prueba para facturas del cliente
-const INITIAL_INVOICES: InvoiceItem[] = [
-  {
-    id: 'F-2023-0899',
-    uuid: 'A1B2C3D4-E5F6-7890-9988-1234567890AB',
-    date: '15 Sep 2023',
-    concept: 'Servicio de Mantenimiento Preventivo (Hilux)',
-    amount: 185.00,
-    status: 'Pagada',
-    paymentMethod: 'Tarjeta de Crédito',
-    items: [
-      { description: 'Mano de obra especializada (Mantenimiento)', amount: 65.00 },
-      { description: 'Aceite sintético 5W-30 y filtro de aceite', amount: 94.48 },
-    ]
-  },
-  {
-    id: 'F-2023-0850',
-    uuid: 'B2C3D4E5-F6G7-8901-7766-2345678901BC',
-    date: '02 Jul 2023',
-    concept: 'Reparación de Frenos (Civic)',
-    amount: 210.50,
-    status: 'Pagada',
-    paymentMethod: 'Transferencia Bancaria',
-    items: [
-      { description: 'Mano de obra: Reemplazo y purgado de frenos', amount: 80.00 },
-      { description: 'Pastillas delanteras de cerámica y rectificación', amount: 101.47 },
-    ]
-  },
-  {
-    id: 'F-2023-0910',
-    uuid: 'C3D4E5F6-G7H8-9012-3322-8765432109DE',
-    date: '08 Oct 2023',
-    concept: 'Compra de Repuestos de Mostrador',
-    amount: 45.00,
-    status: 'Pendiente',
-    paymentMethod: 'Por Definir',
-    items: [
-      { description: 'Juego de plumillas limpiaparabrisas Bosch 24"', amount: 38.79 },
-    ]
-  },
-  {
-    id: 'F-2022-0412',
-    uuid: 'D4E5F6G7-H8I9-0123-5544-3456789012CD',
-    date: '10 Nov 2022',
-    concept: 'Alineación y Balanceo (Escape)',
-    amount: 45.00,
-    status: 'Pagada',
-    paymentMethod: 'Efectivo',
-    items: [
-      { description: 'Alineación 3D computarizada y plomos de balanceo', amount: 38.79 },
-    ]
-  },
-  {
-    id: 'F-2022-0198',
-    uuid: 'E5F6G7H8-I9J0-1234-1122-4567890123EF',
-    date: '15 May 2022',
-    concept: 'Mantenimiento Preventivo (Hilux)',
-    amount: 150.00,
-    status: 'Pagada',
-    paymentMethod: 'Tarjeta de Débito',
-    items: [
-      { description: 'Cambio de fluidos e inspección general de seguridad', amount: 129.31 },
-    ]
-  }
-];
-
 function FacturasPagosContent() {
   const searchParams = useSearchParams();
   const idParam = searchParams.get('id') || searchParams.get('factura') || '';
 
-  const [invoices, setInvoices] = useState<InvoiceItem[]>(INITIAL_INVOICES);
+  const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState(idParam);
   const [statusFilter, setStatusFilter] = useState('Todas'); // Todas, Pagada, Pendiente
 
@@ -97,11 +33,12 @@ function FacturasPagosContent() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (idParam) {
-      setSearchTerm(idParam);
-    }
-  }, [idParam]);
+  // Modal para crear nueva factura en Neon DB (POST)
+  const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [newConcept, setNewConcept] = useState('');
+  const [newAmount, setNewAmount] = useState('150.00');
+  const [newStatus, setNewStatus] = useState<'Pagada' | 'Pendiente'>('Pendiente');
+  const [newPaymentMethod, setNewPaymentMethod] = useState('Por Definir');
 
   const showNotification = (msg: string) => {
     setNotification(msg);
@@ -109,6 +46,31 @@ function FacturasPagosContent() {
       setNotification(null);
     }, 3500);
   };
+
+  const fetchInvoices = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/cliente/facturas', { cache: 'no-store' });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.facturas)) {
+        setInvoices(data.facturas);
+      }
+    } catch (err) {
+      console.error('Error cargando facturas desde Neon DB:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchInvoices();
+  }, [fetchInvoices]);
+
+  useEffect(() => {
+    if (idParam) {
+      setSearchTerm(idParam);
+    }
+  }, [idParam]);
 
   // Descarga real de archivo XML (CFDI simulado)
   const handleDownloadXML = (inv: InvoiceItem) => {
@@ -176,7 +138,7 @@ function FacturasPagosContent() {
         i.uuid,
         i.date,
         `"${i.concept}"`,
-        i.amount.toFixed(2),
+        Number(i.amount).toFixed(2),
         i.status,
         `"${i.paymentMethod}"`
       ])
@@ -196,27 +158,87 @@ function FacturasPagosContent() {
     showNotification('Reporte anual de facturación descargado en CSV.');
   };
 
-  // Procesar Pago de Factura Pendiente
-  const handleConfirmPayment = () => {
+  // Procesar Pago Real en Neon DB (PUT /api/cliente/facturas)
+  const handleConfirmPayment = async () => {
     if (!invoiceToPay) return;
     setIsProcessingPayment(true);
-
-    setTimeout(() => {
-      setInvoices(prev => prev.map(inv => {
-        if (inv.id === invoiceToPay.id) {
-          return {
-            ...inv,
-            status: 'Pagada',
-            paymentMethod: selectedPaymentMethod
-          };
-        }
-        return inv;
-      }));
-
-      setIsProcessingPayment(false);
-      showNotification(`¡Pago registrado con éxito para ${invoiceToPay.id}!`);
+    try {
+      const res = await fetch('/api/cliente/facturas', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: invoiceToPay.id,
+          status: 'Pagada',
+          paymentMethod: selectedPaymentMethod,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Error al registrar pago en Neon DB');
+      }
+      showNotification(`¡Pago registrado en Neon DB para ${invoiceToPay.id}!`);
       setInvoiceToPay(null);
-    }, 1000);
+      await fetchInvoices();
+    } catch (err: any) {
+      showNotification(`Error: ${err.message}`);
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
+  // Crear nueva factura en Neon DB (POST /api/cliente/facturas)
+  const handleCreateInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newConcept.trim()) return;
+    setIsProcessingPayment(true);
+    try {
+      const amountVal = Number(newAmount) || 0;
+      const res = await fetch('/api/cliente/facturas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          concept: newConcept.trim(),
+          amount: amountVal,
+          status: newStatus,
+          paymentMethod: newStatus === 'Pagada' && newPaymentMethod === 'Por Definir' ? 'Tarjeta de Crédito' : newPaymentMethod,
+          items: [{ description: newConcept.trim(), amount: Number((amountVal / 1.16).toFixed(2)) }],
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Error al crear factura en Neon DB');
+      }
+      setIsNewModalOpen(false);
+      setNewConcept('');
+      setNewAmount('150.00');
+      showNotification(`Factura ${data.factura?.id || ''} creada en Neon DB.`);
+      await fetchInvoices();
+    } catch (err: any) {
+      showNotification(`Error: ${err.message}`);
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
+  // Eliminar factura de Neon DB (DELETE /api/cliente/facturas)
+  const handleDeleteInvoice = async (invId: string) => {
+    setIsProcessingPayment(true);
+    try {
+      const res = await fetch(`/api/cliente/facturas?id=${encodeURIComponent(invId)}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Error al eliminar factura');
+      }
+      setSelectedInvoiceModal(null);
+      showNotification(`Factura ${invId} eliminada de Neon DB.`);
+      await fetchInvoices();
+    } catch (err: any) {
+      showNotification(`Error: ${err.message}`);
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   const filteredInvoices = invoices.filter(inv => {
@@ -241,15 +263,21 @@ function FacturasPagosContent() {
       
       <main className="flex-grow p-6 md:p-12 max-w-6xl mx-auto w-full">
         {/* Navigation / Breadcrumb */}
-        <div className="mb-6 flex justify-between items-center">
+        <div className="mb-6 flex flex-wrap justify-between items-center gap-3">
           <Link href="/cliente" className="text-sm font-medium text-indigo-600 hover:text-indigo-500 flex items-center gap-1 w-fit">
             &larr; Volver a Portal de Cliente
           </Link>
-          <div className="text-sm font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-            <span>RFC:</span>
-            <span className="font-bold text-zinc-900 dark:text-white bg-white dark:bg-zinc-800 px-2 py-1 rounded-md border border-zinc-200 dark:border-zinc-700">
-              XAXX010101000
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-xs font-mono bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 px-3 py-1 rounded-full border border-indigo-200 dark:border-indigo-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Facturas Neon DB ({invoices.length})</span>
+            </div>
+            <div className="text-sm font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+              <span>RFC:</span>
+              <span className="font-bold text-zinc-900 dark:text-white bg-white dark:bg-zinc-800 px-2 py-1 rounded-md border border-zinc-200 dark:border-zinc-700">
+                XAXX010101000
+              </span>
+            </div>
           </div>
         </div>
 
@@ -266,13 +294,22 @@ function FacturasPagosContent() {
             </div>
           </div>
           
-          <button 
-            type="button"
-            onClick={handleDownloadAnnualReport}
-            className="cursor-pointer bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500 dark:hover:border-indigo-500 text-zinc-700 dark:text-zinc-300 px-5 py-3 rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2 active:scale-[0.98]"
-          >
-            <span>⬇️</span> Descargar Reporte Anual
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setIsNewModalOpen(true)}
+              className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl font-bold transition-colors shadow-md shadow-indigo-500/20 flex items-center gap-2 text-sm"
+            >
+              <span>+</span> Nueva Factura
+            </button>
+            <button 
+              type="button"
+              onClick={handleDownloadAnnualReport}
+              className="cursor-pointer bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500 dark:hover:border-indigo-500 text-zinc-700 dark:text-zinc-300 px-5 py-3 rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2 active:scale-[0.98] text-sm"
+            >
+              <span>⬇️</span> Descargar Reporte Anual
+            </button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -312,7 +349,11 @@ function FacturasPagosContent() {
 
         {/* Invoices List */}
         <div className="space-y-4">
-          {filteredInvoices.length === 0 ? (
+          {loading ? (
+            <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-12 text-center text-zinc-500">
+              Cargando facturas desde Neon PostgreSQL...
+            </div>
+          ) : filteredInvoices.length === 0 ? (
             <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-12 text-center shadow-sm">
               <span className="text-4xl mb-4 block opacity-50">🧾</span>
               <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">No se encontraron facturas</h3>
@@ -378,7 +419,7 @@ function FacturasPagosContent() {
                 <div className="w-full md:w-auto flex flex-row md:flex-col justify-between items-center md:items-end gap-4 border-t md:border-t-0 border-zinc-100 dark:border-zinc-800 pt-4 md:pt-0 pl-0 md:pl-6 shrink-0">
                   <div className="text-left md:text-right">
                     <p className={`text-2xl font-black ${inv.status === 'Pagada' ? 'text-zinc-900 dark:text-white' : 'text-amber-600 dark:text-amber-400'}`}>
-                      ${inv.amount.toFixed(2)}
+                      ${Number(inv.amount).toFixed(2)}
                     </p>
                     <span className={`hidden md:inline-block px-2 py-0.5 mt-1 rounded text-xs font-bold border ${inv.status === 'Pagada' ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' : 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'}`}>
                       {inv.status}
@@ -508,7 +549,7 @@ function FacturasPagosContent() {
                         <tr key={idx}>
                           <td className="p-3 text-zinc-900 dark:text-zinc-200">{item.description}</td>
                           <td className="p-3 text-right font-medium text-zinc-900 dark:text-zinc-200">
-                            ${item.amount.toFixed(2)}
+                            ${Number(item.amount).toFixed(2)}
                           </td>
                         </tr>
                       ))
@@ -547,42 +588,52 @@ function FacturasPagosContent() {
                 </div>
                 <div className="flex justify-between text-base font-black border-t border-zinc-200 dark:border-zinc-700 pt-1 text-zinc-900 dark:text-white">
                   <span>Total:</span>
-                  <span>${selectedInvoiceModal.amount.toFixed(2)}</span>
+                  <span>${Number(selectedInvoiceModal.amount).toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 justify-end pt-4 border-t border-zinc-200 dark:border-zinc-800">
+            <div className="flex flex-wrap gap-2 justify-between pt-4 border-t border-zinc-200 dark:border-zinc-800">
               <button
                 type="button"
-                onClick={() => handleDownloadXML(selectedInvoiceModal)}
-                className="cursor-pointer px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold text-xs flex items-center gap-1.5 transition-colors"
+                onClick={() => handleDeleteInvoice(selectedInvoiceModal.id)}
+                disabled={isProcessingPayment}
+                className="cursor-pointer px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold text-xs transition-colors"
               >
-                <span>{'</>'}</span> Descargar XML
+                🗑️ Eliminar de Neon DB
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (typeof window !== 'undefined') window.print();
-                }}
-                className="cursor-pointer px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-sm"
-              >
-                <span>📄</span> Imprimir / PDF
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedInvoiceModal(null)}
-                className="cursor-pointer px-4 py-2.5 rounded-xl bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-semibold text-xs transition-colors"
-              >
-                Cerrar
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDownloadXML(selectedInvoiceModal)}
+                  className="cursor-pointer px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold text-xs flex items-center gap-1.5 transition-colors"
+                >
+                  <span>{'</>'}</span> Descargar XML
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') window.print();
+                  }}
+                  className="cursor-pointer px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-sm"
+                >
+                  <span>📄</span> Imprimir / PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedInvoiceModal(null)}
+                  className="cursor-pointer px-4 py-2.5 rounded-xl bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-semibold text-xs transition-colors"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* ======================================================== */}
-      {/* MODAL: PAGAR AHORA (PASARELA DE PAGO)                    */}
+      {/* MODAL: PAGAR AHORA (PASARELA DE PAGO EN NEON DB)         */}
       {/* ======================================================== */}
       {invoiceToPay && (
         <div 
@@ -617,7 +668,7 @@ function FacturasPagosContent() {
               <div className="flex justify-between items-baseline border-t border-zinc-200 dark:border-zinc-700 pt-2">
                 <span className="text-xs text-zinc-500">Monto total:</span>
                 <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
-                  ${invoiceToPay.amount.toFixed(2)}
+                  ${Number(invoiceToPay.amount).toFixed(2)}
                 </span>
               </div>
             </div>
@@ -666,9 +717,113 @@ function FacturasPagosContent() {
                 onClick={handleConfirmPayment}
                 className="cursor-pointer flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-all text-sm shadow-md shadow-indigo-500/20 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {isProcessingPayment ? 'Procesando...' : `Pagar $${invoiceToPay.amount.toFixed(2)}`}
+                {isProcessingPayment ? 'Procesando...' : `Pagar $${Number(invoiceToPay.amount).toFixed(2)}`}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: NUEVA FACTURA EN NEON DB (POST)                   */}
+      {/* ======================================================== */}
+      {isNewModalOpen && (
+        <div
+          onClick={() => setIsNewModalOpen(false)}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-md w-full p-6 shadow-2xl relative"
+          >
+            <button
+              type="button"
+              onClick={() => setIsNewModalOpen(false)}
+              className="cursor-pointer absolute top-5 right-5 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 flex items-center justify-center font-bold"
+            >
+              ✕
+            </button>
+            <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-4">
+              Emitir Nueva Factura (Neon DB)
+            </h3>
+            <form onSubmit={handleCreateInvoice} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
+                  Concepto de Facturación
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Mantenimiento Preventivo Toyota Hilux"
+                  value={newConcept}
+                  onChange={(e) => setNewConcept(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
+                    Monto Total ($)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={newAmount}
+                    onChange={(e) => setNewAmount(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
+                    Estado
+                  </label>
+                  <select
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(e.target.value as 'Pagada' | 'Pendiente')}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                  >
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="Pagada">Pagada</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
+                  Forma de Pago
+                </label>
+                <select
+                  value={newPaymentMethod}
+                  onChange={(e) => setNewPaymentMethod(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                >
+                  <option value="Por Definir">Por Definir</option>
+                  <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
+                  <option value="Tarjeta de Débito">Tarjeta de Débito</option>
+                  <option value="Transferencia Bancaria">Transferencia Bancaria</option>
+                  <option value="Efectivo">Efectivo</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsNewModalOpen(false)}
+                  className="cursor-pointer flex-1 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isProcessingPayment}
+                  className="cursor-pointer flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm"
+                >
+                  {isProcessingPayment ? 'Guardando...' : 'Guardar en Neon DB'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

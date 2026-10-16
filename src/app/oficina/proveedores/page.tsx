@@ -2,10 +2,148 @@
 
 import Link from "next/link";
 import { Header } from "@/components/Header";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function ComprasProveedores() {
   const [tab, setTab] = useState<"proveedores" | "ordenes">("proveedores");
+  const [proveedores, setProveedores] = useState<any[]>([]);
+  const [ordenes, setOrdenes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+
+  const [form, setForm] = useState({
+    docType: "proveedor",
+    name: "",
+    ruc: "",
+    contact: "",
+    email: "",
+    categories: "Lubricantes, Filtros",
+    balance: "0",
+    supplierName: "",
+    expectedDate: "Mañana",
+    total: "",
+    status: "Solicitado",
+  });
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/oficina/proveedores");
+      if (res.ok) {
+        const data = await res.json();
+        setProveedores(data.proveedores || []);
+        setOrdenes(data.ordenes || []);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const openNew = () => {
+    setEditingItem(null);
+    setForm({
+      docType: tab === "proveedores" ? "proveedor" : "orden",
+      name: "",
+      ruc: "",
+      contact: "",
+      email: "",
+      categories: "Repuestos, Lubricantes",
+      balance: "0",
+      supplierName: proveedores[0]?.name || "Importadora AutoParts Cía. Ltda.",
+      expectedDate: "Mañana",
+      total: "",
+      status: "Solicitado",
+    });
+    setModalOpen(true);
+  };
+
+  const openEdit = (row: any, docType: "proveedor" | "orden") => {
+    setEditingItem({ ...row, docType });
+    let catsStr = "General";
+    try {
+      const parsed = JSON.parse(row.categories || "[]");
+      if (Array.isArray(parsed)) catsStr = parsed.join(", ");
+    } catch {
+      catsStr = row.categories || "General";
+    }
+    setForm({
+      docType,
+      name: row.name || "",
+      ruc: row.ruc || "",
+      contact: row.contact || "",
+      email: row.email || "",
+      categories: catsStr,
+      balance: String(row.balance || 0),
+      supplierName: row.supplierName || "",
+      expectedDate: row.expectedDate || "Hoy",
+      total: String(row.total || 0),
+      status: row.status || "Solicitado",
+    });
+    setModalOpen(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const method = editingItem ? "PUT" : "POST";
+      const payload = editingItem ? { id: editingItem.id, ...form } : form;
+      const res = await fetch("/api/oficina/proveedores", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        setModalOpen(false);
+        await loadData();
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePayBalance = async (sup: any) => {
+    await fetch("/api/oficina/proveedores", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: sup.id, docType: "proveedor", balance: 0 }),
+    });
+    await loadData();
+  };
+
+  const handleMarkReceived = async (po: any) => {
+    await fetch("/api/oficina/proveedores", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: po.id, docType: "orden", status: "Recibido" }),
+    });
+    await loadData();
+  };
+
+  const handleDelete = async (id: string, docType: "proveedor" | "orden") => {
+    if (!confirm("¿Eliminar este registro de Neon DB?")) return;
+    await fetch(`/api/oficina/proveedores?id=${id}&docType=${docType}`, { method: "DELETE" });
+    await loadData();
+  };
+
+  const filteredSuppliers = proveedores.filter((p) =>
+    `${p.name} ${p.ruc} ${p.contact}`.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const filteredOrders = ordenes.filter((o) =>
+    `${o.orderNumber} ${o.supplierName} ${o.status}`.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const totalPayable = proveedores.reduce((acc, p) => acc + Number(p.balance || 0), 0);
+  const transitOrders = ordenes.filter((o) => o.status === "En Tránsito" || o.status === "Solicitado").length;
+  const totalPurchases = ordenes.reduce((acc, o) => acc + Number(o.total || 0), 0);
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
@@ -25,12 +163,18 @@ export default function ComprasProveedores() {
           </div>
           <div className="flex items-center gap-3">
             {tab === 'proveedores' ? (
-              <button className="h-10 px-4 rounded-xl bg-indigo-600 text-white font-medium text-sm hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-sm">
+              <button
+                onClick={openNew}
+                className="h-10 px-4 rounded-xl bg-indigo-600 text-white font-medium text-sm hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-sm"
+              >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
                 Nuevo Proveedor
               </button>
             ) : (
-              <button className="h-10 px-4 rounded-xl bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm">
+              <button
+                onClick={openNew}
+                className="h-10 px-4 rounded-xl bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
+              >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
                 Crear Orden de Compra
               </button>
@@ -45,7 +189,7 @@ export default function ComprasProveedores() {
               🤝
             </div>
             <div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">42</p>
+              <p className="text-2xl font-bold text-zinc-900 dark:text-white">{proveedores.length}</p>
               <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Proveedores Activos</h3>
             </div>
           </div>
@@ -55,7 +199,7 @@ export default function ComprasProveedores() {
               💵
             </div>
             <div>
-              <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">$4,250</p>
+              <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">${totalPayable.toFixed(2)}</p>
               <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Cuentas por Pagar</h3>
             </div>
           </div>
@@ -65,7 +209,7 @@ export default function ComprasProveedores() {
               ⏳
             </div>
             <div>
-              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">5</p>
+              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{transitOrders}</p>
               <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Órdenes en Tránsito</h3>
             </div>
           </div>
@@ -75,8 +219,8 @@ export default function ComprasProveedores() {
               📦
             </div>
             <div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">$12.4k</p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Compras (Mes)</h3>
+              <p className="text-2xl font-bold text-zinc-900 dark:text-white">${totalPurchases.toFixed(2)}</p>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Total Órdenes Compra</h3>
             </div>
           </div>
         </div>
@@ -88,19 +232,21 @@ export default function ComprasProveedores() {
               onClick={() => setTab("proveedores")}
               className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'proveedores' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
             >
-              Directorio de Proveedores
+              Directorio de Proveedores ({proveedores.length})
             </button>
             <button 
               onClick={() => setTab("ordenes")}
               className={`flex-1 md:flex-none px-6 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'ordenes' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
             >
-              Órdenes de Compra
+              Órdenes de Compra ({ordenes.length})
             </button>
           </div>
           
           <div className="relative w-full md:w-72">
             <input 
               type="text" 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               placeholder={tab === 'proveedores' ? "Buscar proveedor o RUC..." : "Buscar orden OC-..."} 
               className="w-full h-10 pl-10 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-sm outline-none focus:border-indigo-500"
             />
@@ -133,99 +279,285 @@ export default function ComprasProveedores() {
                 )}
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {tab === 'proveedores' ? [
-                  { name: "Importadora AutoParts Cía. Ltda.", ruc: "0991234567001", contact: "Mario Valdés", email: "ventas@autoparts.com", cats: ["Lubricantes", "Filtros"], balance: "$1,250.00" },
-                  { name: "Frenos del Pacífico S.A.", ruc: "1792345678001", contact: "Lucía Paredes", email: "pedidos@frenospac.com", cats: ["Frenos"], balance: "$0.00" },
-                  { name: "Distribuidora Eléctrica Motors", ruc: "0998765432001", contact: "Carlos Ruiz", email: "carlos@emotors.com", cats: ["Eléctrico", "Baterías"], balance: "$3,000.00" },
-                  { name: "Herramientas y Equipos Industriales", ruc: "1798887776001", contact: "Ana Torres", email: "info@herramientasec.com", cats: ["Equipos Taller"], balance: "$0.00" },
-                ].map((row, i) => (
-                  <tr key={i} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
-                    <td className="px-6 py-4">
-                      <p className="font-bold text-zinc-900 dark:text-zinc-100">{row.name}</p>
-                      <p className="text-xs text-zinc-500 font-mono mt-0.5">{row.ruc}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-zinc-900 dark:text-zinc-300 font-medium">{row.contact}</p>
-                      <p className="text-xs text-zinc-500">{row.email}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-1 flex-wrap">
-                        {row.cats.map((c, idx) => (
-                          <span key={idx} className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-2 py-1 rounded-lg text-xs font-medium">
-                            {c}
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando desde Neon DB...</td>
+                  </tr>
+                ) : tab === 'proveedores' ? (
+                  filteredSuppliers.map((row) => {
+                    let cats: string[] = [];
+                    try {
+                      cats = JSON.parse(row.categories || "[]");
+                    } catch {
+                      cats = [row.categories || "General"];
+                    }
+                    const bal = Number(row.balance || 0);
+                    return (
+                      <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
+                        <td className="px-6 py-4">
+                          <p className="font-bold text-zinc-900 dark:text-zinc-100">{row.name}</p>
+                          <p className="text-xs text-zinc-500 font-mono mt-0.5">{row.ruc}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-zinc-900 dark:text-zinc-300 font-medium">{row.contact}</p>
+                          <p className="text-xs text-zinc-500">{row.email}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-1 flex-wrap">
+                            {cats.map((c, idx) => (
+                              <span key={idx} className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-2 py-1 rounded-lg text-xs font-medium">
+                                {c}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <span className={`font-bold ${bal === 0 ? 'text-zinc-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                            ${bal.toFixed(2)}
                           </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <span className={`font-bold ${row.balance === '$0.00' ? 'text-zinc-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                        {row.balance}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {row.balance !== '$0.00' && (
-                          <button className="p-1.5 text-zinc-400 hover:text-rose-600 transition-colors" title="Registrar Pago">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {bal > 0 && (
+                              <button
+                                onClick={() => handlePayBalance(row)}
+                                className="p-1.5 text-zinc-400 hover:text-emerald-600 transition-colors"
+                                title="Liquidar Saldo (Marcar Pagado)"
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                              </button>
+                            )}
+                            <button
+                              onClick={() => openEdit(row, "proveedor")}
+                              className="p-1.5 text-zinc-400 hover:text-indigo-600 transition-colors"
+                              title="Editar Proveedor"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(row.id, "proveedor")}
+                              className="p-1.5 text-zinc-400 hover:text-rose-600 transition-colors"
+                              title="Eliminar Proveedor"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  filteredOrders.map((row) => (
+                    <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
+                      <td className="px-6 py-4">
+                        <span className="font-bold text-zinc-900 dark:text-zinc-100 font-mono text-xs">{row.orderNumber}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="font-medium text-zinc-900 dark:text-zinc-100">{row.supplierName}</p>
+                      </td>
+                      <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{row.expectedDate}</td>
+                      <td className="px-6 py-4 text-right font-bold text-zinc-900 dark:text-zinc-100">
+                        ${Number(row.total || 0).toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
+                          row.status === 'Borrador' ? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800' :
+                          row.status === 'Solicitado' ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10' :
+                          row.status === 'En Tránsito' ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' :
+                          'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10'
+                        }`}>
+                          {row.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {row.status !== 'Recibido' && (
+                            <button
+                              onClick={() => handleMarkReceived(row)}
+                              className="p-1.5 text-zinc-400 hover:text-emerald-600 transition-colors"
+                              title="Marcar como Recibido"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => openEdit(row, "orden")}
+                            className="p-1.5 text-zinc-400 hover:text-blue-600 transition-colors"
+                            title="Editar Orden de Compra"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                           </button>
-                        )}
-                        <button className="p-1.5 text-zinc-400 hover:text-indigo-600 transition-colors" title="Ver Perfil">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )) : [
-                  { id: "OC-00105", provider: "Importadora AutoParts Cía. Ltda.", date: "Hoy", total: "$450.00", status: "En Tránsito" },
-                  { id: "OC-00104", provider: "Distribuidora Eléctrica Motors", date: "Mañana", total: "$1,200.00", status: "Solicitado" },
-                  { id: "OC-00103", provider: "Frenos del Pacífico S.A.", date: "24 Oct 2026", total: "$280.00", status: "Recibido" },
-                  { id: "OC-00102", provider: "Importadora AutoParts Cía. Ltda.", date: "22 Oct 2026", total: "$800.00", status: "Borrador" },
-                ].map((row, i) => (
-                  <tr key={i} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
-                    <td className="px-6 py-4">
-                      <span className="font-bold text-zinc-900 dark:text-zinc-100 font-mono text-xs">{row.id}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="font-medium text-zinc-900 dark:text-zinc-100">{row.provider}</p>
-                    </td>
-                    <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{row.date}</td>
-                    <td className="px-6 py-4 text-right font-bold text-zinc-900 dark:text-zinc-100">{row.total}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                        row.status === 'Borrador' ? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800' :
-                        row.status === 'Solicitado' ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10' :
-                        row.status === 'En Tránsito' ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' :
-                        'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10'
-                      }`}>
-                        {row.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {row.status === 'En Tránsito' && (
-                          <button className="p-1.5 text-zinc-400 hover:text-emerald-600 transition-colors" title="Marcar como Recibido">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                          <button
+                            onClick={() => handleDelete(row.id, "orden")}
+                            className="p-1.5 text-zinc-400 hover:text-rose-600 transition-colors"
+                            title="Eliminar Orden"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                           </button>
-                        )}
-                        <button className="p-1.5 text-zinc-400 hover:text-blue-600 transition-colors" title="Ver PDF / Imprimir">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
           <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-sm text-zinc-500">
-            <span>Mostrando 4 registros</span>
-            <div className="flex gap-2">
-              <button className="px-3 py-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50" disabled>Anterior</button>
-              <button className="px-3 py-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50" disabled>Siguiente</button>
-            </div>
+            <span>Mostrando {tab === 'proveedores' ? filteredSuppliers.length : filteredOrders.length} registros en Neon DB</span>
           </div>
         </div>
       </main>
+
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-md w-full p-6 border border-zinc-200 dark:border-zinc-800 shadow-2xl">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-4">
+              {editingItem ? "Editar Registro" : form.docType === "proveedor" ? "Nuevo Proveedor" : "Nueva Orden de Compra"}
+            </h2>
+            <form onSubmit={handleSave} className="space-y-4">
+              {form.docType === "proveedor" ? (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-500 mb-1">Razón Social del Proveedor</label>
+                    <input
+                      required
+                      type="text"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      placeholder="Importadora AutoParts Cía. Ltda."
+                      className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-500 mb-1">RUC</label>
+                      <input
+                        required
+                        type="text"
+                        value={form.ruc}
+                        onChange={(e) => setForm({ ...form, ruc: e.target.value })}
+                        placeholder="0991234567001"
+                        className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-500 mb-1">Saldo por Pagar ($)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={form.balance}
+                        onChange={(e) => setForm({ ...form, balance: e.target.value })}
+                        className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-500 mb-1">Contacto</label>
+                      <input
+                        required
+                        type="text"
+                        value={form.contact}
+                        onChange={(e) => setForm({ ...form, contact: e.target.value })}
+                        placeholder="Mario Valdés"
+                        className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-500 mb-1">Correo</label>
+                      <input
+                        type="email"
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        placeholder="ventas@autoparts.com"
+                        className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-500 mb-1">Categorías (separadas por coma)</label>
+                    <input
+                      type="text"
+                      value={form.categories}
+                      onChange={(e) => setForm({ ...form, categories: e.target.value })}
+                      placeholder="Lubricantes, Filtros, Frenos"
+                      className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-500 mb-1">Proveedor</label>
+                    <input
+                      required
+                      type="text"
+                      value={form.supplierName}
+                      onChange={(e) => setForm({ ...form, supplierName: e.target.value })}
+                      placeholder="Importadora AutoParts Cía. Ltda."
+                      className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-500 mb-1">Fecha Esperada</label>
+                      <input
+                        required
+                        type="text"
+                        value={form.expectedDate}
+                        onChange={(e) => setForm({ ...form, expectedDate: e.target.value })}
+                        placeholder="Mañana"
+                        className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-500 mb-1">Total ($)</label>
+                      <input
+                        required
+                        type="number"
+                        step="0.01"
+                        value={form.total}
+                        onChange={(e) => setForm({ ...form, total: e.target.value })}
+                        placeholder="450.00"
+                        className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-500 mb-1">Estado</label>
+                    <select
+                      value={form.status}
+                      onChange={(e) => setForm({ ...form, status: e.target.value })}
+                      className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm"
+                    >
+                      <option>Solicitado</option>
+                      <option>En Tránsito</option>
+                      <option>Recibido</option>
+                      <option>Borrador</option>
+                    </select>
+                  </div>
+                </>
+              )}
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {saving ? "Guardando..." : "Guardar en Neon"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

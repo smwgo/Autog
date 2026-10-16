@@ -2,10 +2,121 @@
 
 import Link from "next/link";
 import { Header } from "@/components/Header";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function CitasAgenda() {
-  const [currentDate] = useState("Jueves, 26 de Octubre");
+  const [currentDate] = useState("Agenda Operativa (Hoy)");
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [techFilter, setTechFilter] = useState("Todos los Técnicos");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+
+  const [form, setForm] = useState({
+    timeSlot: "09:00 AM",
+    clientName: "",
+    vehicle: "",
+    plate: "",
+    serviceName: "",
+    tech: "Carlos Ruiz",
+    bay: "Bahía 1",
+    status: "Confirmada",
+  });
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/oficina/agenda");
+      if (res.ok) {
+        const data = await res.json();
+        setAppointments(Array.isArray(data) ? data : []);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const openNew = () => {
+    setEditingItem(null);
+    setForm({
+      timeSlot: "10:00 AM",
+      clientName: "",
+      vehicle: "",
+      plate: "",
+      serviceName: "",
+      tech: "Carlos Ruiz",
+      bay: "Bahía 1",
+      status: "Confirmada",
+    });
+    setModalOpen(true);
+  };
+
+  const openEdit = (row: any) => {
+    setEditingItem(row);
+    setForm({
+      timeSlot: row.timeSlot || "09:00 AM",
+      clientName: row.clientName || "",
+      vehicle: row.vehicle || "",
+      plate: row.plate || "",
+      serviceName: row.serviceName || "",
+      tech: row.tech || "Sin Asignar",
+      bay: row.bay || "Por definir",
+      status: row.status || "Confirmada",
+    });
+    setModalOpen(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const method = editingItem ? "PUT" : "POST";
+      const payload = editingItem ? { id: editingItem.id, ...form } : form;
+      const res = await fetch("/api/oficina/agenda", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        setModalOpen(false);
+        await loadData();
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleStartWork = async (row: any) => {
+    await fetch("/api/oficina/agenda", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: row.id,
+        status: "En Curso",
+        tech: row.tech === "Sin Asignar" ? "Carlos Ruiz" : row.tech,
+        bay: row.bay === "Por definir" ? "Bahía 1" : row.bay,
+      }),
+    });
+    await loadData();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("¿Eliminar esta cita de la agenda?")) return;
+    await fetch(`/api/oficina/agenda?id=${id}`, { method: "DELETE" });
+    await loadData();
+  };
+
+  const filtered = appointments.filter((a) =>
+    techFilter === "Todos los Técnicos" ? true : a.tech === techFilter
+  );
+
+  const waitingCount = appointments.filter((a) => a.status === "Esperando" || a.status === "Solicitada").length;
+  const occupiedBays = appointments.filter((a) => a.status === "En Curso").length;
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
@@ -24,11 +135,16 @@ export default function CitasAgenda() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            <button className="h-10 px-4 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium text-sm hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2 shadow-sm">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-              Ver Calendario Mensual
+            <button
+              onClick={loadData}
+              className="h-10 px-4 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium text-sm hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2 shadow-sm"
+            >
+              Actualizar Agenda
             </button>
-            <button className="h-10 px-4 rounded-xl bg-emerald-600 text-white font-medium text-sm hover:bg-emerald-700 transition-colors flex items-center gap-2 shadow-sm">
+            <button
+              onClick={openNew}
+              className="h-10 px-4 rounded-xl bg-emerald-600 text-white font-medium text-sm hover:bg-emerald-700 transition-colors flex items-center gap-2 shadow-sm"
+            >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
               Agendar Cita
             </button>
@@ -42,8 +158,8 @@ export default function CitasAgenda() {
               📅
             </div>
             <div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">12</p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Citas para Hoy</h3>
+              <p className="text-2xl font-bold text-zinc-900 dark:text-white">{appointments.length}</p>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Citas Registradas</h3>
             </div>
           </div>
           
@@ -52,7 +168,7 @@ export default function CitasAgenda() {
               ⏳
             </div>
             <div>
-              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">3</p>
+              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{waitingCount}</p>
               <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Vehículos en Espera</h3>
             </div>
           </div>
@@ -62,7 +178,7 @@ export default function CitasAgenda() {
               🚖
             </div>
             <div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">2 / 6</p>
+              <p className="text-2xl font-bold text-zinc-900 dark:text-white">{Math.max(0, 6 - occupiedBays)} / 6</p>
               <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Bahías Disponibles</h3>
             </div>
           </div>
@@ -81,22 +197,20 @@ export default function CitasAgenda() {
         {/* Día y Filtros */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
           <div className="flex items-center gap-4">
-            <button className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors shadow-sm">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
-            </button>
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-white min-w-[200px] text-center">{currentDate}</h2>
-            <button className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors shadow-sm">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
-            </button>
-            <button className="px-4 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-sm font-medium text-zinc-900 dark:text-white ml-2">Hoy</button>
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-white">{currentDate}</h2>
           </div>
           
           <div className="flex gap-2">
-            <select className="h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 text-sm font-medium outline-none focus:border-emerald-500 text-zinc-600 dark:text-zinc-400 shadow-sm">
+            <select
+              value={techFilter}
+              onChange={(e) => setTechFilter(e.target.value)}
+              className="h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 text-sm font-medium outline-none focus:border-emerald-500 text-zinc-600 dark:text-zinc-400 shadow-sm"
+            >
               <option>Todos los Técnicos</option>
               <option>Carlos Ruiz</option>
               <option>José Mendoza</option>
               <option>Mario Cedeño</option>
+              <option>Sin Asignar</option>
             </select>
           </div>
         </div>
@@ -107,7 +221,7 @@ export default function CitasAgenda() {
             <table className="w-full text-left text-sm">
               <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400">
                 <tr>
-                  <th className="px-6 py-4 font-medium w-24">Hora</th>
+                  <th className="px-6 py-4 font-medium w-28">Hora</th>
                   <th className="px-6 py-4 font-medium">Cliente / Vehículo</th>
                   <th className="px-6 py-4 font-medium">Servicio Solicitado</th>
                   <th className="px-6 py-4 font-medium">Asignación</th>
@@ -116,32 +230,29 @@ export default function CitasAgenda() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {[
-                  { time: "08:00 AM", client: "Fernando López", vehicle: "PCE-1234 (Toyota)", service: "Mantenimiento 50k KM", tech: "Carlos Ruiz", bay: "Bahía 1", status: "En Curso" },
-                  { time: "09:30 AM", client: "Andrea Suárez", vehicle: "UBT-1122 (Ford)", service: "Cambio de Pastillas de Freno", tech: "José Mendoza", bay: "Bahía 2", status: "Esperando" },
-                  { time: "10:00 AM", client: "Logística Express", vehicle: "GBA-5678 (Hino)", service: "Revisión Preventiva Flota", tech: "Mario Cedeño", bay: "Elevador Principal", status: "Confirmada" },
-                  { time: "11:30 AM", client: "Daniela Alvarado", vehicle: "GSD-9012 (Chevrolet)", service: "Diagnóstico Computarizado", tech: "Carlos Ruiz", bay: "Bahía 1", status: "Confirmada" },
-                  { time: "02:00 PM", client: "Roberto Gómez", vehicle: "PBZ-8899 (Kia)", service: "Cambio de Aceite y Filtros", tech: "Sin Asignar", bay: "Por definir", status: "Solicitada" },
-                  { time: "04:00 PM", client: "María Torres", vehicle: "GTC-5544 (Nissan)", service: "Alineación y Balanceo", tech: "Sin Asignar", bay: "Por definir", status: "Reprogramada" },
-                ].map((row, i) => (
-                  <tr key={i} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando agenda desde Neon DB...</td>
+                  </tr>
+                ) : filtered.map((row) => (
+                  <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
                     <td className="px-6 py-4">
-                      <span className="font-bold text-zinc-900 dark:text-zinc-100">{row.time}</span>
+                      <span className="font-bold text-zinc-900 dark:text-zinc-100">{row.timeSlot}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="font-bold text-zinc-900 dark:text-zinc-100">{row.client}</p>
-                      <p className="text-xs text-zinc-500 mt-0.5">{row.vehicle}</p>
+                      <p className="font-bold text-zinc-900 dark:text-zinc-100">{row.clientName}</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">{row.vehicle} ({row.plate})</p>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-zinc-700 dark:text-zinc-300 font-medium">{row.service}</span>
+                      <span className="text-zinc-700 dark:text-zinc-300 font-medium">{row.serviceName}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <div className="flex flex-col">
                           <span className={`text-xs font-bold ${row.tech === 'Sin Asignar' ? 'text-amber-500' : 'text-blue-600 dark:text-blue-400'}`}>
-                            {row.tech}
+                            {row.tech || "Sin Asignar"}
                           </span>
-                          <span className="text-[10px] text-zinc-500 uppercase tracking-wider">{row.bay}</span>
+                          <span className="text-[10px] text-zinc-500 uppercase tracking-wider">{row.bay || "Por definir"}</span>
                         </div>
                       </div>
                     </td>
@@ -149,7 +260,7 @@ export default function CitasAgenda() {
                       <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
                         row.status === 'En Curso' ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10' :
                         row.status === 'Esperando' ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' :
-                        row.status === 'Confirmada' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' :
+                        row.status === 'Confirmada' || row.status === 'Programada' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' :
                         row.status === 'Solicitada' ? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800' :
                         'bg-rose-50 text-rose-600 dark:bg-rose-500/10'
                       }`}>
@@ -158,11 +269,28 @@ export default function CitasAgenda() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button className="p-1.5 text-zinc-400 hover:text-emerald-600 transition-colors" title="Iniciar Trabajo / Ingresar a Bahía">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        </button>
-                        <button className="p-1.5 text-zinc-400 hover:text-blue-600 transition-colors" title="Editar / Asignar Técnico">
+                        {row.status !== "En Curso" && (
+                          <button
+                            onClick={() => handleStartWork(row)}
+                            className="p-1.5 text-zinc-400 hover:text-emerald-600 transition-colors"
+                            title="Iniciar Trabajo / Ingresar a Bahía"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => openEdit(row)}
+                          className="p-1.5 text-zinc-400 hover:text-blue-600 transition-colors"
+                          title="Editar / Asignar Técnico"
+                        >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(row.id)}
+                          className="p-1.5 text-zinc-400 hover:text-rose-600 transition-colors"
+                          title="Eliminar Cita"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         </button>
                       </div>
                     </td>
@@ -173,6 +301,136 @@ export default function CitasAgenda() {
           </div>
         </div>
       </main>
+
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-md w-full p-6 border border-zinc-200 dark:border-zinc-800 shadow-2xl">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-4">
+              {editingItem ? "Editar Cita y Asignación" : "Agendar Nueva Cita"}
+            </h2>
+            <form onSubmit={handleSave} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Hora</label>
+                  <input
+                    required
+                    type="text"
+                    value={form.timeSlot}
+                    onChange={(e) => setForm({ ...form, timeSlot: e.target.value })}
+                    placeholder="09:30 AM"
+                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Estado</label>
+                  <select
+                    value={form.status}
+                    onChange={(e) => setForm({ ...form, status: e.target.value })}
+                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm"
+                  >
+                    <option>Confirmada</option>
+                    <option>En Curso</option>
+                    <option>Esperando</option>
+                    <option>Solicitada</option>
+                    <option>Reprogramada</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 mb-1">Cliente</label>
+                <input
+                  required
+                  type="text"
+                  value={form.clientName}
+                  onChange={(e) => setForm({ ...form, clientName: e.target.value })}
+                  placeholder="Nombre del cliente"
+                  className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Vehículo</label>
+                  <input
+                    required
+                    type="text"
+                    value={form.vehicle}
+                    onChange={(e) => setForm({ ...form, vehicle: e.target.value })}
+                    placeholder="Ford F-150"
+                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Placa</label>
+                  <input
+                    required
+                    type="text"
+                    value={form.plate}
+                    onChange={(e) => setForm({ ...form, plate: e.target.value })}
+                    placeholder="UBT-1122"
+                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 mb-1">Servicio Solicitado</label>
+                <input
+                  required
+                  type="text"
+                  value={form.serviceName}
+                  onChange={(e) => setForm({ ...form, serviceName: e.target.value })}
+                  placeholder="Mantenimiento 50k KM"
+                  className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Técnico Asignado</label>
+                  <select
+                    value={form.tech}
+                    onChange={(e) => setForm({ ...form, tech: e.target.value })}
+                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm"
+                  >
+                    <option>Carlos Ruiz</option>
+                    <option>José Mendoza</option>
+                    <option>Mario Cedeño</option>
+                    <option>Sin Asignar</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Bahía</label>
+                  <select
+                    value={form.bay}
+                    onChange={(e) => setForm({ ...form, bay: e.target.value })}
+                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm"
+                  >
+                    <option>Bahía 1</option>
+                    <option>Bahía 2</option>
+                    <option>Bahía 3</option>
+                    <option>Elevador Principal</option>
+                    <option>Por definir</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {saving ? "Guardando..." : "Guardar en Neon"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,86 +1,136 @@
 "use client";
 
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 
+interface PosResumenStats {
+  venta: number;
+  facturas: number;
+  clientes: number;
+  catalogo: number;
+  servicios: number;
+  caja: number;
+  cotizaciones: number;
+  promociones: number;
+  creditos: number;
+}
+
 const modules = [
   {
+    key: "venta" as keyof PosResumenStats,
     title: "Venta",
     description: "Facturación de mostrador.",
     icon: "🛒",
     href: "/pos/venta",
     color: "bg-emerald-500",
+    badgeLabel: "pedidos pend.",
   },
   {
+    key: "facturas" as keyof PosResumenStats,
     title: "Facturas",
     description: "Consulta, comprobantes y reimpresión.",
     icon: "🧾",
     href: "/pos/facturas",
     color: "bg-indigo-500",
+    badgeLabel: "emitidas",
   },
   {
+    key: "clientes" as keyof PosResumenStats,
     title: "Clientes",
     description: "Directorio y contactos.",
     icon: "👥",
     href: "/pos/clientes",
     color: "bg-blue-500",
+    badgeLabel: "registrados",
   },
   {
+    key: "catalogo" as keyof PosResumenStats,
     title: "Productos",
     description: "Inventario y existencias.",
     icon: "📦",
     href: "/pos/catalogo",
     color: "bg-blue-500",
+    badgeLabel: "en catálogo",
   },
   {
+    key: "servicios" as keyof PosResumenStats,
     title: "Servicios",
     description: "Tarifario y mano de obra taller.",
     icon: "⚙️",
     href: "/pos/servicios",
     color: "bg-teal-500",
+    badgeLabel: "servicios",
   },
   {
+    key: "caja" as keyof PosResumenStats,
     title: "Caja",
     description: "Cuadres y métodos de pago.",
     icon: "💵",
     href: "/pos/caja",
     color: "bg-amber-500",
+    badgeLabel: "sesiones",
   },
   {
+    key: "cotizaciones" as keyof PosResumenStats,
     title: "Cotizaciones",
     description: "Proformas rápidas.",
     icon: "📝",
     href: "/pos/cotizaciones",
     color: "bg-purple-500",
+    badgeLabel: "proformas",
   },
   {
+    key: "promociones" as keyof PosResumenStats,
     title: "Promociones",
     description: "Cupones, combos y descuentos.",
     icon: "🏷️",
     href: "/pos/promociones",
     color: "bg-orange-500",
+    badgeLabel: "cupones",
   },
   {
+    key: "creditos" as keyof PosResumenStats,
     title: "Créditos",
     description: "Cuentas por cobrar y abonos.",
     icon: "💳",
     href: "/pos/creditos",
     color: "bg-cyan-500",
+    badgeLabel: "cuentas",
   },
 ];
 
 export default function PosPanel() {
+  const [stats, setStats] = useState<PosResumenStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/pos/resumen", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.stats) {
+          setStats(data.stats);
+        }
+      })
+      .catch((err) => console.error("Error cargando resumen POS:", err))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
       <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
-        <div className="mb-6">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <Link 
             href="/" 
             className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors w-fit"
           >
             &larr; Volver al inicio
           </Link>
+          <div className="flex items-center gap-2 text-xs font-mono bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>POS Conectado a Neon PostgreSQL • CRUD Real</span>
+          </div>
         </div>
 
         <div className="mb-10">
@@ -90,30 +140,55 @@ export default function PosPanel() {
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                 POS
               </h1>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                Punto de venta, facturación, inventario, caja, cotizaciones, promociones y créditos en tiempo real.
+              </p>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {modules.map((mod) => (
-            <Link 
-              key={mod.href} 
-              href={mod.href}
-              className="group block bg-white dark:bg-zinc-900 rounded-xl p-6 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 transition-all hover:shadow-lg hover:-translate-y-0.5 overflow-hidden relative"
-            >
-              <div className={`absolute top-0 right-0 w-32 h-32 ${mod.color} opacity-5 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110`}></div>
-              <div className="flex items-center gap-4">
-                <div className={`w-14 h-14 rounded-xl ${mod.color} bg-opacity-10 dark:bg-opacity-20 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-105 transition-transform`}>
-                  {mod.icon}
+          {modules.map((mod) => {
+            const count = stats ? stats[mod.key] : null;
+            return (
+              <Link 
+                key={mod.href} 
+                href={mod.href}
+                className="group block bg-white dark:bg-zinc-900 rounded-xl p-6 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 transition-all hover:shadow-lg hover:-translate-y-0.5 overflow-hidden relative"
+              >
+                <div className={`absolute top-0 right-0 w-32 h-32 ${mod.color} opacity-5 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110`}></div>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-14 h-14 rounded-xl ${mod.color} bg-opacity-10 dark:bg-opacity-20 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-105 transition-transform`}>
+                      {mod.icon}
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-zinc-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        {mod.title}
+                      </h3>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                        {mod.description}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    {loading ? (
+                      <span className="inline-block w-8 h-6 rounded-lg bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+                    ) : count !== null ? (
+                      <div className="flex flex-col items-end">
+                        <span className="text-lg font-black text-zinc-900 dark:text-white leading-none">
+                          {count}
+                        </span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mt-1">
+                          {mod.badgeLabel}
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-zinc-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    {mod.title}
-                  </h3>
-                </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       </main>
     </div>

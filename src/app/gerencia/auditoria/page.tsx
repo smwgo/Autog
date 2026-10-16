@@ -2,8 +2,98 @@
 
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { useEffect, useState } from "react";
 
 export default function AuditoriaSistema() {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modFilter, setModFilter] = useState("Todos los eventos");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const [form, setForm] = useState({
+    userName: "Juan Pérez (Gerente)",
+    ipAddress: "192.168.1.10",
+    module: "Facturación",
+    action: "",
+    details: "",
+    level: "INFO",
+  });
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/gerencia/auditoria");
+      if (res.ok) {
+        const data = await res.json();
+        setLogs(Array.isArray(data) ? data : []);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const res = await fetch("/api/gerencia/auditoria", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (res.ok) {
+        setModalOpen(false);
+        setForm({
+          userName: "Juan Pérez (Gerente)",
+          ipAddress: "192.168.1.10",
+          module: "Facturación",
+          action: "",
+          details: "",
+          level: "INFO",
+        });
+        await loadData();
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("¿Eliminar este registro de auditoría?")) return;
+    await fetch(`/api/gerencia/auditoria?id=${id}`, { method: "DELETE" });
+    await loadData();
+  };
+
+  const handleDownloadLogs = () => {
+    const csv = [
+      "Fecha,Usuario,IP,Modulo,Accion,Detalles,Nivel",
+      ...logs.map((l) =>
+        `"${l.dateLabel}","${l.userName}","${l.ipAddress}","${l.module}","${l.action}","${l.details}","${l.level}"`
+      ),
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "auditoria-neon-logs.csv";
+    a.click();
+  };
+
+  const filtered = logs.filter((l) => {
+    if (modFilter === "Críticos") return l.level === "CRÍTICO";
+    if (modFilter !== "Todos los eventos" && l.module !== modFilter) return false;
+    return true;
+  });
+
+  const warningCount = logs.filter((l) => l.level === "ADVERTENCIA").length;
+  const criticalCount = logs.filter((l) => l.level === "CRÍTICO").length;
+  const loginCount = logs.filter((l) => l.module === "Inicios de sesión" || l.action.includes("Sesión")).length;
+
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
@@ -21,7 +111,16 @@ export default function AuditoriaSistema() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            <button className="h-10 px-4 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium text-sm hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2 shadow-sm">
+            <button
+              onClick={() => setModalOpen(true)}
+              className="h-10 px-4 rounded-xl bg-red-600 text-white font-medium text-sm hover:bg-red-700 transition-colors flex items-center gap-2 shadow-sm"
+            >
+              + Registrar Evento
+            </button>
+            <button
+              onClick={handleDownloadLogs}
+              className="h-10 px-4 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium text-sm hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2 shadow-sm"
+            >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
               Descargar Logs
             </button>
@@ -35,8 +134,8 @@ export default function AuditoriaSistema() {
               📝
             </div>
             <div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">1,452</p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Eventos (24h)</h3>
+              <p className="text-2xl font-bold text-zinc-900 dark:text-white">{logs.length}</p>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Eventos Registrados</h3>
             </div>
           </div>
           
@@ -45,8 +144,8 @@ export default function AuditoriaSistema() {
               ⚠️
             </div>
             <div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">12</p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Modificaciones</h3>
+              <p className="text-2xl font-bold text-zinc-900 dark:text-white">{warningCount}</p>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Advertencias</h3>
             </div>
           </div>
 
@@ -55,7 +154,7 @@ export default function AuditoriaSistema() {
               ⛔
             </div>
             <div>
-              <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">3</p>
+              <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">{criticalCount}</p>
               <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Alertas Críticas</h3>
             </div>
           </div>
@@ -65,7 +164,7 @@ export default function AuditoriaSistema() {
               🔐
             </div>
             <div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">45</p>
+              <p className="text-2xl font-bold text-zinc-900 dark:text-white">{loginCount}</p>
               <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Inicios de Sesión</h3>
             </div>
           </div>
@@ -74,21 +173,20 @@ export default function AuditoriaSistema() {
         {/* Filtros de Tabla */}
         <div className="bg-white dark:bg-zinc-900 rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-4 flex flex-col lg:flex-row justify-between items-center gap-4">
           <div className="flex gap-2 overflow-x-auto w-full lg:w-auto pb-2 lg:pb-0">
-            <button className="px-4 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-sm font-medium text-zinc-900 dark:text-white whitespace-nowrap">Todos los eventos</button>
-            <button className="px-4 py-2 rounded-xl text-sm font-medium text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors whitespace-nowrap">Inicios de sesión</button>
-            <button className="px-4 py-2 rounded-xl text-sm font-medium text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors whitespace-nowrap">Facturación</button>
-            <button className="px-4 py-2 rounded-xl text-sm font-medium text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors whitespace-nowrap">Inventario</button>
-            <button className="px-4 py-2 rounded-xl text-sm font-medium text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors whitespace-nowrap flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-              Críticos
-            </button>
-          </div>
-          <div className="flex gap-2 w-full lg:w-auto">
-            <select className="h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent px-4 text-sm font-medium outline-none focus:border-red-500 text-zinc-600 dark:text-zinc-400">
-              <option>Últimas 24 horas</option>
-              <option>Últimos 7 días</option>
-              <option>Último mes</option>
-            </select>
+            {["Todos los eventos", "Inicios de sesión", "Facturación", "Inventario", "Taller", "Críticos"].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setModFilter(tab)}
+                className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap flex items-center gap-1 transition-colors ${
+                  modFilter === tab
+                    ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white"
+                    : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                }`}
+              >
+                {tab === "Críticos" && <span className="w-2 h-2 rounded-full bg-rose-500"></span>}
+                {tab}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -104,25 +202,24 @@ export default function AuditoriaSistema() {
                   <th className="px-6 py-4 font-medium">Acción Realizada</th>
                   <th className="px-6 py-4 font-medium">Detalles (Antes &rarr; Después)</th>
                   <th className="px-6 py-4 font-medium text-center">Nivel</th>
+                  <th className="px-6 py-4 font-medium text-right">Acción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {[
-                  { date: "Hoy, 10:45:12 AM", user: "Ana Torres (Cajera)", ip: "192.168.1.45", mod: "Caja/POS", action: "Anulación de Factura", details: "Factura F-001-089 anulada. Motivo: Error de digitación", level: "CRÍTICO" },
-                  { date: "Hoy, 10:15:00 AM", user: "Carlos Ruiz (Mecánico)", ip: "192.168.1.112", mod: "Taller", action: "Cierre de Orden", details: "Orden de Trabajo #1042 marcada como 'Completada'", level: "INFO" },
-                  { date: "Hoy, 09:30:22 AM", user: "Juan Pérez (Gerente)", ip: "192.168.1.10", mod: "Inventario", action: "Modificación de Precio", details: "Batería 12V 60Ah: Precio $80.00 -> $85.00", level: "ADVERTENCIA" },
-                  { date: "Hoy, 09:15:05 AM", user: "Ana Torres (Cajera)", ip: "192.168.1.45", mod: "Sistema", action: "Inicio de Sesión", details: "Login exitoso desde Sede Principal", level: "INFO" },
-                  { date: "Hoy, 08:05:40 AM", user: "Sistema", ip: "localhost", mod: "Inventario", action: "Alerta de Stock", details: "Aceite Sintético 10W-40: Stock menor a mínimo (4 unidades)", level: "ADVERTENCIA" },
-                ].map((row, i) => (
-                  <tr key={i} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
-                    <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">{row.date}</td>
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-8 text-center text-zinc-500">Cargando auditoría desde Neon DB...</td>
+                  </tr>
+                ) : filtered.map((row) => (
+                  <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
+                    <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">{row.dateLabel}</td>
                     <td className="px-6 py-4">
-                      <p className="font-medium text-zinc-900 dark:text-zinc-100">{row.user}</p>
-                      <p className="text-xs text-zinc-500">{row.ip}</p>
+                      <p className="font-medium text-zinc-900 dark:text-zinc-100">{row.userName}</p>
+                      <p className="text-xs text-zinc-500">{row.ipAddress}</p>
                     </td>
                     <td className="px-6 py-4">
                       <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-2 py-1 rounded-lg text-xs font-medium">
-                        {row.mod}
+                        {row.module}
                       </span>
                     </td>
                     <td className="px-6 py-4 font-medium text-zinc-800 dark:text-zinc-200">{row.action}</td>
@@ -138,20 +235,112 @@ export default function AuditoriaSistema() {
                         {row.level}
                       </span>
                     </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => handleDelete(row.id)}
+                        className="p-1.5 text-zinc-400 hover:text-rose-600 transition-colors"
+                        title="Eliminar evento"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
           <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-sm text-zinc-500">
-            <span>Mostrando 5 eventos recientes</span>
-            <div className="flex gap-2">
-              <button className="px-3 py-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50" disabled>Anterior</button>
-              <button className="px-3 py-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">Siguiente</button>
-            </div>
+            <span>Mostrando {filtered.length} eventos en Neon DB</span>
           </div>
         </div>
       </main>
+
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-md w-full p-6 border border-zinc-200 dark:border-zinc-800 shadow-2xl">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-4">
+              Registrar Evento de Auditoría
+            </h2>
+            <form onSubmit={handleSave} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Usuario</label>
+                  <input
+                    required
+                    type="text"
+                    value={form.userName}
+                    onChange={(e) => setForm({ ...form, userName: e.target.value })}
+                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Nivel</label>
+                  <select
+                    value={form.level}
+                    onChange={(e) => setForm({ ...form, level: e.target.value })}
+                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm"
+                  >
+                    <option>INFO</option>
+                    <option>ADVERTENCIA</option>
+                    <option>CRÍTICO</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 mb-1">Módulo</label>
+                <select
+                  value={form.module}
+                  onChange={(e) => setForm({ ...form, module: e.target.value })}
+                  className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm"
+                >
+                  <option>Facturación</option>
+                  <option>Inventario</option>
+                  <option>Taller</option>
+                  <option>Inicios de sesión</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 mb-1">Acción Realizada</label>
+                <input
+                  required
+                  type="text"
+                  value={form.action}
+                  onChange={(e) => setForm({ ...form, action: e.target.value })}
+                  placeholder="Ej. Modificación de Precio"
+                  className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 mb-1">Detalles</label>
+                <textarea
+                  required
+                  rows={2}
+                  value={form.details}
+                  onChange={(e) => setForm({ ...form, details: e.target.value })}
+                  placeholder="Descripción detallada del cambio..."
+                  className="w-full p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 disabled:opacity-50"
+                >
+                  {saving ? "Guardando..." : "Guardar en Neon"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
