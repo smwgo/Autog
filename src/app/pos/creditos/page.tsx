@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { PosMobileNav } from "@/components/PosMobileNav";
 
 interface CreditAccount {
   id: string;
@@ -25,6 +26,7 @@ export default function CreditosPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<"TODOS" | "AL_DIA" | "POR_VENCER" | "VENCIDO">("TODOS");
+  const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
 
   // Modal registrar abono (PUT)
   const [cuentaAbono, setCuentaAbono] = useState<CreditAccount | null>(null);
@@ -32,23 +34,12 @@ export default function CreditosPage() {
   const [metodoAbono, setMetodoAbono] = useState("Efectivo");
   const [notaAbono, setNotaAbono] = useState("");
 
-  // Modal Crear / Editar crédito (POST / PUT)
-  const [modalNuevoCredito, setModalNuevoCredito] = useState(false);
-  const [creditoAEditar, setCreditoAEditar] = useState<CreditAccount | null>(null);
-  const [nuevoNombre, setNuevoNombre] = useState("");
-  const [nuevaId, setNuevaId] = useState("");
-  const [nuevoTelefono, setNuevoTelefono] = useState("");
-  const [nuevoLimite, setNuevoLimite] = useState<number>(500);
-  const [nuevaDeudaInicial, setNuevaDeudaInicial] = useState<number>(0);
-  const [nuevoVencimiento, setNuevoVencimiento] = useState("2026-11-30");
-  const [nuevoEstado, setNuevoEstado] = useState<"AL_DIA" | "POR_VENCER" | "VENCIDO">("AL_DIA");
 
-  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+  // Modal Flotante de Confirmación de Eliminación
+  const [creditoAEliminar, setCreditoAEliminar] = useState<CreditAccount | null>(null);
+  const [eliminando, setEliminando] = useState(false);
 
-  const notify = (msg: string) => {
-    setMensajeExito(msg);
-    setTimeout(() => setMensajeExito(null), 4000);
-  };
+  const notify = (_msg: string) => {};
 
   const fetchCreditos = useCallback(async () => {
     try {
@@ -110,93 +101,27 @@ export default function CreditosPage() {
     }
   };
 
-  const abrirModalNuevo = () => {
-    setCreditoAEditar(null);
-    setNuevoNombre("");
-    setNuevaId("");
-    setNuevoTelefono("");
-    setNuevoLimite(500);
-    setNuevaDeudaInicial(0);
-    setNuevoVencimiento("2026-11-30");
-    setNuevoEstado("AL_DIA");
-    setModalNuevoCredito(true);
-  };
 
-  const abrirModalEditar = (c: CreditAccount) => {
-    setCreditoAEditar(c);
-    setNuevoNombre(c.customerName);
-    setNuevaId(c.identification);
-    setNuevoTelefono(c.phone);
-    setNuevoLimite(c.creditLimit);
-    setNuevaDeudaInicial(c.currentBalance);
-    setNuevoVencimiento(c.dueDate);
-    setNuevoEstado(c.status);
-    setModalNuevoCredito(true);
-  };
-
-  // CREAR O ACTUALIZAR CRÉDITO EN NEON DB (POST / PUT)
-  const handleGuardarCredito = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nuevoNombre.trim() || !nuevaId.trim()) {
-      alert("Nombre y Cédula/RUC son obligatorios.");
-      return;
-    }
-
-    setGuardando(true);
-    try {
-      const isEdit = Boolean(creditoAEditar);
-      const res = await fetch("/api/pos/creditos", {
-        method: isEdit ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...(isEdit ? { id: creditoAEditar!.id } : {}),
-          customerName: nuevoNombre.trim(),
-          identification: nuevaId.trim(),
-          phone: nuevoTelefono.trim() || "N/A",
-          creditLimit: Number(nuevoLimite) || 500,
-          currentBalance: Number(nuevaDeudaInicial) || 0,
-          dueDate: nuevoVencimiento,
-          status: nuevoEstado,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Error al guardar crédito en Neon DB");
-      }
-
-      notify(
-        isEdit
-          ? `Cuenta de crédito de ${nuevoNombre} actualizada en Neon DB.`
-          : `Línea de crédito para ${nuevoNombre} creada en Neon DB con cupo de $${nuevoLimite}.`
-      );
-      setModalNuevoCredito(false);
-      setCreditoAEditar(null);
-      await fetchCreditos();
-    } catch (err: any) {
-      notify(`Error: ${err.message}`);
-    } finally {
-      setGuardando(false);
-    }
-  };
-
-  // ELIMINAR CRÉDITO EN NEON DB (DELETE)
-  const handleEliminarCredito = async (cuenta: CreditAccount) => {
-    setGuardando(true);
+  // CONFIRMAR ELIMINAR CRÉDITO EN NEON DB (DELETE)
+  const confirmarEliminarCredito = async () => {
+    if (!creditoAEliminar) return;
+    setEliminando(true);
     try {
       const res = await fetch(
-        `/api/pos/creditos?id=${encodeURIComponent(cuenta.id)}`,
+        `/api/pos/creditos?id=${encodeURIComponent(creditoAEliminar.id)}`,
         { method: "DELETE" }
       );
       const data = await res.json();
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Error al eliminar cuenta de crédito");
       }
-      notify(`Cuenta de crédito de ${cuenta.customerName} eliminada de Neon DB.`);
+      notify(`Cuenta de crédito de ${creditoAEliminar.customerName} eliminada.`);
+      setCreditoAEliminar(null);
       await fetchCreditos();
     } catch (err: any) {
       notify(`Error: ${err.message}`);
     } finally {
-      setGuardando(false);
+      setEliminando(false);
     }
   };
 
@@ -218,101 +143,86 @@ export default function CreditosPage() {
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
-      <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full">
-        {/* Cabecera y Navegación */}
-        <div className="mb-6 flex justify-between items-center">
-          <Link
-            href="/pos"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors w-fit"
-          >
-            &larr; Volver al panel POS
-          </Link>
-          <div className="flex items-center gap-2 text-xs font-mono bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 px-3 py-1 rounded-full border border-cyan-200 dark:border-cyan-800">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Créditos Neon DB ({creditos.length})</span>
-          </div>
-        </div>
-
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div className="flex items-start gap-4">
-            <span className="text-4xl select-none mt-1">💳</span>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                Créditos
-              </h1>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                Cuentas por cobrar, líneas de crédito y registro de abonos sincronizados con Neon PostgreSQL.
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={abrirModalNuevo}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-semibold text-sm transition-all shadow-md shadow-cyan-500/20 active:scale-95 cursor-pointer"
-          >
-            <span>➕</span>
-            <span>Nuevo Crédito</span>
-          </button>
-        </div>
-
-        {/* Mensaje éxito */}
-        {mensajeExito && (
-          <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-sm font-medium animate-in fade-in flex items-center justify-between">
-            <span>✓ {mensajeExito}</span>
-            <button
-              onClick={() => setMensajeExito(null)}
-              className="text-emerald-500 hover:text-emerald-700 text-xs font-bold"
+      <main className="flex-grow p-4 md:p-8 pb-24 md:pb-8 max-w-7xl mx-auto w-full">
+        {/* Header */}
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link 
+              href="/pos"
+              title="Volver a Panel POS"
+              className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
             >
-              ✕
-            </button>
+              <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Créditos
+            </h1>
+            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
+              {creditos.length}
+            </span>
           </div>
-        )}
+
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <Link
+              href="/pos/creditos/nuevo"
+              className="h-11 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-all shadow-sm shadow-blue-500/20 active:scale-95 cursor-pointer flex items-center justify-center gap-2 w-full sm:w-auto"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Nuevo Crédito</span>
+            </Link>
+          </div>
+        </div>
+
 
         {/* KPIs / Resumen de Cartera */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <div className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                Cartera Total por Cobrar
-              </span>
-              <span className="text-xl">💰</span>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          {/* Cartera por Cobrar */}
+          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/25 text-cyan-400 flex items-center justify-center text-xl shrink-0">
+              💰
             </div>
-            <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400 mt-2">
-              ${carteraTotal.toFixed(2)}
-            </p>
-            <span className="text-xs text-zinc-500">Saldo pendiente en Neon DB</span>
+            <div>
+              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                ${carteraTotal.toFixed(2)}
+              </p>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Por Cobrar</h3>
+            </div>
           </div>
 
-          <div className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                Cupo Total Otorgado
-              </span>
-              <span className="text-xl">🛡️</span>
+          {/* Cupo Otorgado */}
+          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center text-xl shrink-0">
+              🛡️
             </div>
-            <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mt-2">
-              ${cupoTotalOtorgado.toFixed(2)}
-            </p>
-            <span className="text-xs text-zinc-500">Límite global autorizado</span>
+            <div>
+              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                ${cupoTotalOtorgado.toFixed(2)}
+              </p>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Cupo Otorgado</h3>
+            </div>
           </div>
 
-          <div className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                Cuentas Vencidas
-              </span>
-              <span className="text-xl">⚠️</span>
+          {/* Cuentas Vencidas */}
+          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-500/15 border border-rose-500/25 text-rose-400 flex items-center justify-center text-xl shrink-0">
+              ⚠️
             </div>
-            <p className="text-2xl font-bold text-rose-500 mt-2">
-              {totalVencidos}
-            </p>
-            <span className="text-xs text-zinc-500">Requieren gestión de cobro</span>
+            <div>
+              <p className="text-xl sm:text-2xl font-bold text-rose-500 dark:text-rose-400">
+                {totalVencidos}
+              </p>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Cuentas Vencidas</h3>
+            </div>
           </div>
         </div>
 
         {/* Buscador y Filtros */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-          <div className="relative w-full sm:w-96">
+          <div className="relative w-full flex-1">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
               🔍
             </span>
@@ -320,35 +230,81 @@ export default function CreditosPage() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por cliente, RUC o teléfono..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all placeholder:text-zinc-400"
+              placeholder="Buscar..."
+              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
             />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm cursor-pointer"
+                title="Limpiar búsqueda"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-            {(["TODOS", "AL_DIA", "POR_VENCER", "VENCIDO"] as const).map((estado) => (
-              <button
-                key={estado}
-                onClick={() => setFiltroEstado(estado)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                  filtroEstado === estado
-                    ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm"
-                    : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                }`}
-              >
-                {estado === "TODOS"
-                  ? "Todos"
-                  : estado === "AL_DIA"
+          <div className="relative w-full sm:w-48 shrink-0">
+            <button
+              type="button"
+              onClick={() => setFiltroMenuAbierto(!filtroMenuAbierto)}
+              className="w-full h-11 px-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-sm font-medium flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+            >
+              <span>
+                {filtroEstado === "AL_DIA"
                   ? "Al Día"
-                  : estado === "POR_VENCER"
+                  : filtroEstado === "POR_VENCER"
                   ? "Por Vencer"
-                  : "Vencidos"}
-              </button>
-            ))}
+                  : filtroEstado === "VENCIDO"
+                  ? "Vencidos"
+                  : "Estado"}
+              </span>
+              <svg className={`w-4 h-4 text-zinc-400 transition-transform ${filtroMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {filtroMenuAbierto && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setFiltroMenuAbierto(false)} 
+                />
+                <div className="absolute right-0 mt-1.5 w-full bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                  {[
+                    { id: "TODOS", label: "Estado" },
+                    { id: "AL_DIA", label: "Al Día" },
+                    { id: "POR_VENCER", label: "Por Vencer" },
+                    { id: "VENCIDO", label: "Vencidos" },
+                  ].map((opcion) => (
+                    <button
+                      key={opcion.id}
+                      type="button"
+                      onClick={() => {
+                        setFiltroEstado(opcion.id as any);
+                        setFiltroMenuAbierto(false);
+                      }}
+                      className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                        filtroEstado === opcion.id
+                          ? "bg-blue-600/15 text-blue-400"
+                          : "text-zinc-300 hover:bg-zinc-800/80 hover:text-white"
+                      }`}
+                    >
+                      <span>{opcion.label}</span>
+                      {filtroEstado === opcion.id && (
+                        <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Tabla de Créditos */}
+        {/* Cuentas de Crédito */}
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
           {cargando ? (
             <div className="p-12 text-center text-zinc-500 text-sm">
@@ -359,46 +315,56 @@ export default function CreditosPage() {
               No se encontraron cuentas de crédito con los filtros seleccionados.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider font-semibold">
-                  <tr>
-                    <th className="py-3.5 px-4">Cliente</th>
-                    <th className="py-3.5 px-4">RUC / Cédula</th>
-                    <th className="py-3.5 px-4">Uso de Cupo</th>
-                    <th className="py-3.5 px-4 text-right">Saldo Deudor</th>
-                    <th className="py-3.5 px-4">Vencimiento</th>
-                    <th className="py-3.5 px-4 text-center">Estado</th>
-                    <th className="py-3.5 px-4 text-center">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                  {filtrados.map((cuenta) => {
-                    const porcentajeUso = Math.min(
-                      100,
-                      Math.round((cuenta.currentBalance / Math.max(1, cuenta.creditLimit)) * 100)
-                    );
+            <>
+              {/* Mobile Card List (md:hidden) */}
+              <div className="divide-y divide-zinc-200 dark:divide-zinc-800 md:hidden">
+                {filtrados.map((cuenta) => {
+                  const porcentajeUso = Math.min(
+                    100,
+                    Math.round((cuenta.currentBalance / Math.max(1, cuenta.creditLimit)) * 100)
+                  );
 
-                    return (
-                      <tr
-                        key={cuenta.id}
-                        className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
-                      >
-                        <td className="py-3.5 px-4 font-bold text-zinc-900 dark:text-white">
-                          <div>{cuenta.customerName}</div>
-                          <span className="text-xs font-normal text-zinc-400">
-                            📞 {cuenta.phone}
+                  return (
+                    <div key={cuenta.id} className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-bold text-base text-zinc-900 dark:text-white">
+                            {cuenta.customerName}
+                          </h4>
+                          <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400 mt-0.5">
+                            ID: {cuenta.identification} • 📞 {cuenta.phone}
+                          </p>
+                        </div>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold shrink-0 ${
+                            cuenta.status === "AL_DIA"
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                              : cuenta.status === "POR_VENCER"
+                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                              : "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                          }`}
+                        >
+                          {cuenta.status === "AL_DIA"
+                            ? "Al Día"
+                            : cuenta.status === "POR_VENCER"
+                            ? "Por Vencer"
+                            : "Vencido"}
+                        </span>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-zinc-500">Saldo Deudor:</span>
+                          <span className="text-lg font-black text-zinc-900 dark:text-white">
+                            ${cuenta.currentBalance.toFixed(2)}
                           </span>
-                        </td>
-                        <td className="py-3.5 px-4 font-mono text-zinc-600 dark:text-zinc-400">
-                          {cuenta.identification}
-                        </td>
-                        <td className="py-3.5 px-4 min-w-[160px]">
+                        </div>
+                        <div>
                           <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-zinc-500 font-semibold">{porcentajeUso}%</span>
+                            <span className="text-zinc-500">Uso: {porcentajeUso}%</span>
                             <span className="text-zinc-400">Cupo: ${cuenta.creditLimit}</span>
                           </div>
-                          <div className="w-full h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                          <div className="w-full h-2 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all ${
                                 porcentajeUso > 90
@@ -410,74 +376,168 @@ export default function CreditosPage() {
                               style={{ width: `${porcentajeUso}%` }}
                             />
                           </div>
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-extrabold text-zinc-900 dark:text-white text-base">
-                          ${cuenta.currentBalance.toFixed(2)}
-                        </td>
-                        <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-400 text-xs">
-                          {cuenta.dueDate}
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                              cuenta.status === "AL_DIA"
-                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                                : cuenta.status === "POR_VENCER"
-                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                                : "bg-rose-500/10 text-rose-500 border border-rose-500/20"
-                            }`}
-                          >
-                            {cuenta.status === "AL_DIA"
-                              ? "Al Día"
-                              : cuenta.status === "POR_VENCER"
-                              ? "Por Vencer"
-                              : "Vencido"}
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-zinc-500 pt-1">
+                          <span>Vence:</span>
+                          <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                            {cuenta.dueDate}
                           </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setCuentaAbono(cuenta);
-                                setMontoAbono(cuenta.currentBalance);
-                              }}
-                              className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCuentaAbono(cuenta);
+                            setMontoAbono(cuenta.currentBalance);
+                          }}
+                          className="h-11 flex items-center justify-center rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+                        >
+                          Abonar
+                        </button>
+                        <Link
+                          href={`/pos/creditos/nuevo?id=${cuenta.id}`}
+                          className="h-11 flex items-center justify-center gap-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer active:scale-95"
+                          title="Editar línea de crédito"
+                        >
+                          ✏️ Editar
+                        </Link>
+                        <button
+                          type="button"
+                          disabled={guardando || eliminando}
+                          onClick={() => setCreditoAEliminar(cuenta)}
+                          className="h-11 flex items-center justify-center gap-1 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-xs font-bold cursor-pointer active:scale-95"
+                          title="Eliminar crédito"
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Table (hidden md:block) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider font-semibold">
+                    <tr>
+                      <th className="py-3.5 px-4">Cliente</th>
+                      <th className="py-3.5 px-4">RUC / Cédula</th>
+                      <th className="py-3.5 px-4">Uso de Cupo</th>
+                      <th className="py-3.5 px-4 text-right">Saldo Deudor</th>
+                      <th className="py-3.5 px-4">Vencimiento</th>
+                      <th className="py-3.5 px-4 text-center">Estado</th>
+                      <th className="py-3.5 px-4 text-center">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                    {filtrados.map((cuenta) => {
+                      const porcentajeUso = Math.min(
+                        100,
+                        Math.round((cuenta.currentBalance / Math.max(1, cuenta.creditLimit)) * 100)
+                      );
+
+                      return (
+                        <tr
+                          key={cuenta.id}
+                          className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
+                        >
+                          <td className="py-3.5 px-4 font-bold text-zinc-900 dark:text-white">
+                            <div>{cuenta.customerName}</div>
+                            <span className="text-xs font-normal text-zinc-400">
+                              📞 {cuenta.phone}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-zinc-600 dark:text-zinc-400">
+                            {cuenta.identification}
+                          </td>
+                          <td className="py-3.5 px-4 min-w-[160px]">
+                            <div className="flex items-center justify-between text-xs mb-1">
+                              <span className="text-zinc-500 font-semibold">{porcentajeUso}%</span>
+                              <span className="text-zinc-400">Cupo: ${cuenta.creditLimit}</span>
+                            </div>
+                            <div className="w-full h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${
+                                  porcentajeUso > 90
+                                    ? "bg-rose-500"
+                                    : porcentajeUso > 70
+                                    ? "bg-amber-500"
+                                    : "bg-cyan-500"
+                                }`}
+                                style={{ width: `${porcentajeUso}%` }}
+                              />
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-extrabold text-zinc-900 dark:text-white text-base">
+                            ${cuenta.currentBalance.toFixed(2)}
+                          </td>
+                          <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-400 text-xs">
+                            {cuenta.dueDate}
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                                cuenta.status === "AL_DIA"
+                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                  : cuenta.status === "POR_VENCER"
+                                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                                  : "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                              }`}
                             >
-                              Abonar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => abrirModalEditar(cuenta)}
-                              className="px-2.5 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer"
-                              title="Editar línea de crédito"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              type="button"
-                              disabled={guardando}
-                              onClick={() => handleEliminarCredito(cuenta)}
-                              className="px-2.5 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-xs font-bold cursor-pointer"
-                              title="Eliminar de Neon DB"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                              {cuenta.status === "AL_DIA"
+                                ? "Al Día"
+                                : cuenta.status === "POR_VENCER"
+                                ? "Por Vencer"
+                                : "Vencido"}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCuentaAbono(cuenta);
+                                  setMontoAbono(cuenta.currentBalance);
+                                }}
+                                className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+                              >
+                                Abonar
+                              </button>
+                              <Link
+                                href={`/pos/creditos/nuevo?id=${cuenta.id}`}
+                                className="px-2.5 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer flex items-center justify-center"
+                                title="Editar línea de crédito"
+                              >
+                                ✏️
+                              </Link>
+                              <button
+                                type="button"
+                                disabled={guardando || eliminando}
+                                onClick={() => setCreditoAEliminar(cuenta)}
+                                className="px-2.5 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-xs font-bold cursor-pointer active:scale-95"
+                                title="Eliminar crédito"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 
         {/* Modal Registrar Abono */}
         {cuentaAbono && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl relative">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800 mb-5">
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                   <span>💵</span>
@@ -485,7 +545,7 @@ export default function CreditosPage() {
                 </h3>
                 <button
                   onClick={() => setCuentaAbono(null)}
-                  className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 flex items-center justify-center font-bold cursor-pointer"
+                  className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 flex items-center justify-center font-bold cursor-pointer"
                 >
                   ✕
                 </button>
@@ -517,13 +577,13 @@ export default function CreditosPage() {
                     required
                     value={montoAbono}
                     onChange={(e) => setMontoAbono(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 font-bold text-lg text-cyan-600 focus:ring-2 focus:ring-cyan-500 outline-none"
+                    className="w-full px-3.5 h-12 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 font-bold text-lg text-cyan-600 focus:ring-2 focus:ring-cyan-500 outline-none"
                   />
                   <div className="flex gap-2 mt-2">
                     <button
                       type="button"
                       onClick={() => setMontoAbono(cuentaAbono.currentBalance)}
-                      className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold cursor-pointer hover:bg-zinc-200"
+                      className="h-9 px-3 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold cursor-pointer hover:bg-zinc-200 active:scale-95 flex items-center justify-center"
                     >
                       Pagar Total (${cuentaAbono.currentBalance})
                     </button>
@@ -531,7 +591,7 @@ export default function CreditosPage() {
                       <button
                         type="button"
                         onClick={() => setMontoAbono(Math.round(cuentaAbono.currentBalance / 2))}
-                        className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold cursor-pointer hover:bg-zinc-200"
+                        className="h-9 px-3 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold cursor-pointer hover:bg-zinc-200 active:scale-95 flex items-center justify-center"
                       >
                         50%
                       </button>
@@ -546,7 +606,7 @@ export default function CreditosPage() {
                   <select
                     value={metodoAbono}
                     onChange={(e) => setMetodoAbono(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-cyan-500 outline-none"
+                    className="w-full px-3.5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-cyan-500 outline-none text-base sm:text-sm"
                   >
                     <option value="Efectivo">Efectivo</option>
                     <option value="Transferencia">Transferencia Bancaria</option>
@@ -564,7 +624,7 @@ export default function CreditosPage() {
                     value={notaAbono}
                     onChange={(e) => setNotaAbono(e.target.value)}
                     placeholder="Comprobante # o notas adicionales..."
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-cyan-500 outline-none"
+                    className="w-full px-3.5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-cyan-500 outline-none text-base sm:text-sm"
                   />
                 </div>
 
@@ -572,14 +632,14 @@ export default function CreditosPage() {
                   <button
                     type="submit"
                     disabled={guardando}
-                    className="flex-1 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs shadow-md shadow-cyan-500/20 transition-all cursor-pointer disabled:opacity-50"
+                    className="flex-1 h-11 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-sm shadow-md shadow-cyan-500/20 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center active:scale-98"
                   >
                     {guardando ? "Procesando en Neon..." : "Registrar Abono"}
                   </button>
                   <button
                     type="button"
                     onClick={() => setCuentaAbono(null)}
-                    className="px-5 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 font-semibold text-xs cursor-pointer"
+                    className="px-5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 font-semibold text-sm cursor-pointer flex items-center justify-center"
                   >
                     Cancelar
                   </button>
@@ -589,146 +649,50 @@ export default function CreditosPage() {
           </div>
         )}
 
-        {/* Modal Nuevo / Editar Crédito */}
-        {modalNuevoCredito && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl relative">
-              <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800 mb-5">
-                <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <span>💳</span>
-                  <span>
-                    {creditoAEditar ? `Editar Crédito: ${creditoAEditar.customerName}` : "Asignar Línea de Crédito"}
+
+        {/* Modal Flotante de Confirmación de Eliminación */}
+        {creditoAEliminar && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl relative animate-in zoom-in-95 duration-150 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center text-xl mx-auto mb-3">
+                🗑️
+              </div>
+              <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">
+                ¿Eliminar crédito?
+              </h3>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-5">
+                Se eliminará la cuenta de <strong className="text-zinc-900 dark:text-white font-medium">{creditoAEliminar.customerName}</strong>.
+                {creditoAEliminar.currentBalance > 0 && (
+                  <span className="block mt-2 text-xs font-semibold text-rose-500">
+                    ⚠️ Deuda: ${creditoAEliminar.currentBalance.toFixed(2)}
                   </span>
-                </h3>
+                )}
+              </p>
+              <div className="grid grid-cols-2 gap-2.5">
                 <button
-                  onClick={() => setModalNuevoCredito(false)}
-                  className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 flex items-center justify-center font-bold cursor-pointer"
+                  type="button"
+                  onClick={() => setCreditoAEliminar(null)}
+                  disabled={eliminando}
+                  className="h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                 >
-                  ✕
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmarEliminarCredito}
+                  disabled={eliminando}
+                  className="h-10 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-sm font-medium transition-all disabled:opacity-50 cursor-pointer shadow-sm shadow-rose-500/20"
+                >
+                  {eliminando ? "Eliminando..." : "Eliminar"}
                 </button>
               </div>
-
-              <form onSubmit={handleGuardarCredito} className="space-y-4 text-sm">
-                <div>
-                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                    Cliente o Empresa
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={nuevoNombre}
-                    onChange={(e) => setNuevoNombre(e.target.value)}
-                    placeholder="Ej: Taller Mecánico San José"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-cyan-500 outline-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                      RUC o Cédula
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={nuevaId}
-                      onChange={(e) => setNuevaId(e.target.value)}
-                      placeholder="1790000000001"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 font-mono focus:ring-2 focus:ring-cyan-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                      Teléfono
-                    </label>
-                    <input
-                      type="text"
-                      value={nuevoTelefono}
-                      onChange={(e) => setNuevoTelefono(e.target.value)}
-                      placeholder="0991234567"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-cyan-500 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                      Cupo Límite ($)
-                    </label>
-                    <input
-                      type="number"
-                      min="50"
-                      required
-                      value={nuevoLimite}
-                      onChange={(e) => setNuevoLimite(Number(e.target.value))}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-cyan-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                      Saldo / Deuda ($)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={nuevaDeudaInicial}
-                      onChange={(e) => setNuevaDeudaInicial(Number(e.target.value))}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-cyan-500 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                      Fecha Límite de Pago
-                    </label>
-                    <input
-                      type="date"
-                      value={nuevoVencimiento}
-                      onChange={(e) => setNuevoVencimiento(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-cyan-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                      Estado
-                    </label>
-                    <select
-                      value={nuevoEstado}
-                      onChange={(e) => setNuevoEstado(e.target.value as any)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-cyan-500 outline-none"
-                    >
-                      <option value="AL_DIA">Al Día</option>
-                      <option value="POR_VENCER">Por Vencer</option>
-                      <option value="VENCIDO">Vencido</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="pt-3 flex items-center gap-3">
-                  <button
-                    type="submit"
-                    disabled={guardando}
-                    className="flex-1 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs shadow-md shadow-cyan-500/20 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    {guardando ? "Guardando en Neon..." : "Guardar en Neon DB"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setModalNuevoCredito(false)}
-                    className="px-5 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 font-semibold text-xs cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </form>
             </div>
           </div>
         )}
       </main>
+
+      {/* Floating Bottom Nav for Mobile */}
+      <PosMobileNav />
     </div>
   );
 }

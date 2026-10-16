@@ -4,56 +4,7 @@ import { prisma } from "@/lib/prisma";
 // GET: Consultar lista de sesiones de caja en Neon, métricas y estado activo
 export async function GET(request: Request) {
   try {
-    // 1. Obtener todas las ventas registradas en Neon
-    const sales = await prisma.sale.findMany({
-      orderBy: { createdAt: "desc" },
-    });
-
-    let salesCash = 0;
-    let salesCard = 0;
-    let salesTransfer = 0;
-
-    sales.forEach((s) => {
-      const total = parseFloat(s.total.toString()) || 0;
-      const method = (s.paymentMethod || "").toLowerCase();
-      if (method.includes("efectivo") || method.includes("cash")) {
-        salesCash += total;
-      } else if (method.includes("tarjeta") || method.includes("card") || method.includes("pos")) {
-        salesCard += total;
-      } else if (method.includes("transfer") || method.includes("banco")) {
-        salesTransfer += total;
-      } else {
-        salesCash += total;
-      }
-    });
-
-    // 2. Obtener movimientos adicionales
-    let movements: any[] = [];
-    try {
-      const records = await (prisma as any).orderRequest.findMany({
-        where: { type: "CAJA_MOV" },
-        orderBy: { createdAt: "desc" },
-      });
-      movements = records.map((r: any) => ({
-        id: r.id,
-        type: r.status === "INGRESO" ? "INGRESO" : "GASTO",
-        concept: r.itemsSummary,
-        amount: parseFloat(r.totalEstimated?.toString() || "0"),
-        createdAt: r.createdAt,
-      }));
-    } catch {
-      // fallback
-    }
-
-    const totalExpenses = movements
-      .filter((m) => m.type === "GASTO")
-      .reduce((acc, m) => acc + m.amount, 0);
-
-    const totalIncome = movements
-      .filter((m) => m.type === "INGRESO")
-      .reduce((acc, m) => acc + m.amount, 0);
-
-    // 3. Obtener usuario del sistema para asignar como cajero
+    // 1. Obtener usuario del sistema para asignar como cajero por defecto
     let defaultUserName = "Super Administrador";
     try {
       const defaultUser = await prisma.user.findFirst({
@@ -66,7 +17,7 @@ export async function GET(request: Request) {
       // fallback
     }
 
-    // 4. Obtener sesiones desde la tabla formal CashRegister
+    // 2. Obtener sesiones desde la tabla formal CashRegister
     let dbSessions: any[] = [];
     try {
       dbSessions = await prisma.cashRegister.findMany({
@@ -86,19 +37,22 @@ export async function GET(request: Request) {
         });
 
         if (legacySessions.length > 0) {
-          dbSessions = legacySessions.map((s: any) => ({
-            id: s.id,
-            sessionNumber: s.requestNumber || `CAJA-${s.id.slice(-6)}`,
-            status: s.status === "CERRADA" ? "CERRADA" : "ABIERTA",
-            cashier: s.customerName && s.customerName !== "Apertura de Caja" ? s.customerName : defaultUserName,
-            initialCash: parseFloat(s.totalEstimated?.toString() || "0"),
-            declaredCash: s.status === "CERRADA" ? parseFloat(s.totalEstimated?.toString() || "0") : null,
-            expectedCash: parseFloat(s.totalEstimated?.toString() || "0") + salesCash,
-            differenceCash: 0,
-            openedAt: s.createdAt,
-            closedAt: s.status === "CERRADA" ? s.updatedAt || s.createdAt : null,
-            movements: [],
-          }));
+          dbSessions = legacySessions.map((s: any) => {
+            const initial = parseFloat(s.totalEstimated?.toString() || "0");
+            return {
+              id: s.id,
+              sessionNumber: s.requestNumber || `CAJA-${s.id.slice(-6)}`,
+              status: s.status === "CERRADA" ? "CERRADA" : "ABIERTA",
+              cashier: s.customerName && s.customerName !== "Apertura de Caja" ? s.customerName : defaultUserName,
+              initialCash: initial,
+              declaredCash: s.status === "CERRADA" ? initial : null,
+              expectedCash: initial,
+              differenceCash: 0,
+              openedAt: s.createdAt,
+              closedAt: s.status === "CERRADA" ? s.updatedAt || s.createdAt : null,
+              movements: [],
+            };
+          });
         }
       } catch {
         // fallback
@@ -115,17 +69,99 @@ export async function GET(request: Request) {
         ...s,
         initialCash: parseFloat(s.initialCash?.toString() || "0"),
         declaredCash: s.declaredCash != null ? parseFloat(s.declaredCash?.toString() || "0") : null,
-        expectedCash: s.expectedCash != null ? parseFloat(s.expectedCash?.toString() || "0") : null,
+        expectedCash: s.expectedCash != null ? parseFloat(s.expectedCash?.toString() || "0") : parseFloat(s.initialCash?.toString() || "0"),
         differenceCash: s.differenceCash != null ? parseFloat(s.differenceCash?.toString() || "0") : 0,
         cashier,
       };
     });
 
-    // Buscar sesión activa actualmente
+    // 3. Buscar sesión activa actualmente
     const activeSession = sessionsWithCashier.find((s) => s.status === "ABIERTA") || null;
     const initialCash = activeSession ? parseFloat(activeSession.initialCash?.toString() || "0") : 0;
-    const expectedCash = initialCash + salesCash + totalIncome - totalExpenses;
-    const totalSales = salesCash + salesCard + salesTransfer;
+
+    // 4. Obtener ÚNICAMENTE las ventas realizadas durante la sesión activa actual
+    let salesCash = 0;
+    let salesCard = 0;
+    let salesTransfer = 0;
+    let totalSales = 0;
+    let sessionSalesCount = 0;
+
+    if (activeSession && activeSession.openedAt) {
+      try {
+        const sessionSales = await prisma.sale.findMany({
+          where: {
+            createdAt: { gte: new Date(activeSession.openedAt) },
+            status: { not: "ANULADA" },
+          },
+          orderBy: { createdAt: "desc" },
+        });
+
+        sessionSalesCount = sessionSales.length;
+
+        sessionSales.forEach((s) => {
+          const total = parseFloat(s.total.toString()) || 0;
+          const method = (s.paymentMethod || "").toLowerCase();
+          if (method.includes("efectivo") || method.includes("cash")) {
+            salesCash += total;
+          } else if (method.includes("tarjeta") || method.includes("card") || method.includes("pos")) {
+            salesCard += total;
+          } else if (method.includes("transfer") || method.includes("banco")) {
+            salesTransfer += total;
+          } else {
+            salesCash += total;
+          }
+        });
+
+        totalSales = salesCash + salesCard + salesTransfer;
+      } catch (err) {
+        console.warn("Error consultando ventas de sesión activa:", err);
+      }
+    }
+
+    // 5. Movimientos (Gastos e Ingresos) de la sesión activa actual
+    let movements: any[] = [];
+    let totalExpenses = 0;
+    let totalIncome = 0;
+
+    if (activeSession && activeSession.openedAt) {
+      try {
+        const records = await (prisma as any).orderRequest.findMany({
+          where: {
+            type: "CAJA_MOV",
+            createdAt: { gte: new Date(activeSession.openedAt) },
+          },
+          orderBy: { createdAt: "desc" },
+        });
+
+        movements = records.map((r: any) => ({
+          id: r.id,
+          type: r.status === "INGRESO" ? "INGRESO" : "GASTO",
+          concept: r.itemsSummary,
+          amount: parseFloat(r.totalEstimated?.toString() || "0"),
+          createdAt: r.createdAt,
+        }));
+
+        totalExpenses = movements
+          .filter((m) => m.type === "GASTO")
+          .reduce((acc, m) => acc + m.amount, 0);
+
+        totalIncome = movements
+          .filter((m) => m.type === "INGRESO")
+          .reduce((acc, m) => acc + m.amount, 0);
+      } catch {
+        // fallback
+      }
+    }
+
+    // El efectivo esperado en caja es: Fondo Inicial + Ventas en Efectivo de la Sesión + Ingresos - Gastos
+    const expectedCash = activeSession
+      ? initialCash + salesCash + totalIncome - totalExpenses
+      : 0;
+
+    // Actualizar expectedCash en la sesión activa dentro de la lista
+    if (activeSession) {
+      activeSession.expectedCash = expectedCash;
+    }
 
     // Métricas para la vista Lista
     const stats = {
@@ -151,7 +187,7 @@ export async function GET(request: Request) {
         totalIncome,
         expectedCash,
         movements,
-        totalTransactions: sales.length,
+        totalTransactions: sessionSalesCount,
         lastClosed: sessionsWithCashier.find((s) => s.status === "CERRADA") || null,
       },
     });

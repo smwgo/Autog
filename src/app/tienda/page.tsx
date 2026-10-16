@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { PublicMobileNav } from "@/components/PublicMobileNav";
 
 interface Product {
   id: string;
@@ -231,17 +232,17 @@ export default function TiendaPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
 
-      <main className="flex-grow pt-24 pb-16 px-6 md:px-12 max-w-7xl mx-auto w-full">
+      <main className="flex-grow pt-16 sm:pt-24 pb-28 md:pb-16 px-4 sm:px-6 md:px-12 max-w-7xl mx-auto w-full">
         {/* Cabecera de la Tienda */}
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-5">
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-5">
           <div>
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
               Tienda
             </h1>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+            <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
               Repuestos, accesorios y suministros de alta calidad para tu vehículo.
             </p>
           </div>
@@ -249,7 +250,7 @@ export default function TiendaPage() {
           {/* Botón rápido para abrir el Carrito lateral */}
           <button
             onClick={() => setIsCartOpen(true)}
-            className="flex items-center gap-3 px-5 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 rounded-xl shadow-sm text-zinc-800 dark:text-zinc-200 font-semibold text-sm transition-all cursor-pointer group"
+            className="flex items-center justify-center gap-3 px-5 py-2.5 min-h-[44px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 rounded-xl shadow-sm text-zinc-800 dark:text-zinc-200 font-semibold text-sm transition-all cursor-pointer group"
           >
             <div className="relative">
               <span className="text-xl">🛒</span>
@@ -379,7 +380,7 @@ export default function TiendaPage() {
       {/* Botón Flotante del Carrito (Mobile y Desktop) */}
       <button
         onClick={() => setIsCartOpen(true)}
-        className="fixed bottom-6 right-6 z-40 bg-zinc-900 dark:bg-blue-600 hover:bg-zinc-800 dark:hover:bg-blue-700 text-white p-3.5 sm:px-5 sm:py-3.5 rounded-full shadow-2xl flex items-center gap-3 transition-transform hover:scale-105 cursor-pointer border border-white/10"
+        className="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-40 bg-zinc-900 dark:bg-blue-600 hover:bg-zinc-800 dark:hover:bg-blue-700 text-white p-3.5 sm:px-5 sm:py-3.5 rounded-full shadow-2xl flex items-center gap-3 transition-transform hover:scale-105 cursor-pointer border border-white/10 min-h-[48px] min-w-[48px]"
         aria-label="Abrir Carrito de Compras"
       >
         <div className="relative">
@@ -406,10 +407,10 @@ export default function TiendaPage() {
             onClick={() => setIsCartOpen(false)}
           />
 
-          <div className="fixed inset-y-0 right-0 max-w-full flex pl-8 sm:pl-12">
-            <div className="w-screen max-w-md sm:max-w-lg bg-white dark:bg-zinc-900 shadow-2xl flex flex-col border-l border-zinc-200 dark:border-zinc-800 animate-in slide-in-from-right duration-300">
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-12 w-full sm:w-auto">
+            <div className="w-full sm:w-screen max-w-full sm:max-w-lg bg-white dark:bg-zinc-900 shadow-2xl flex flex-col border-l border-zinc-200 dark:border-zinc-800 animate-in slide-in-from-right duration-300 h-full">
               {/* Encabezado del Carrito */}
-              <div className="p-4 sm:p-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/50">
+              <div className="p-4 sm:p-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/50 pt-[calc(1rem+env(safe-area-inset-top,0px))] sm:pt-5">
                 <div className="flex items-center gap-2.5">
                   <span className="text-2xl">🛒</span>
                   <div>
@@ -428,7 +429,7 @@ export default function TiendaPage() {
 
                 <button
                   onClick={() => setIsCartOpen(false)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-lg cursor-pointer"
+                  className="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-lg cursor-pointer"
                   aria-label="Cerrar carrito"
                 >
                   ✕
@@ -574,18 +575,18 @@ export default function TiendaPage() {
                                 <button
                                   type="button"
                                   onClick={() => modificarCantidad(product.id, -1)}
-                                  className="w-7 h-7 flex items-center justify-center text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+                                  className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center text-sm sm:text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
                                   title="Disminuir"
                                 >
                                   -
                                 </button>
-                                <span className="w-7 text-center text-xs font-bold text-zinc-900 dark:text-white">
+                                <span className="w-8 sm:w-7 text-center text-xs font-bold text-zinc-900 dark:text-white">
                                   {quantity}
                                 </span>
                                 <button
                                   type="button"
                                   onClick={() => modificarCantidad(product.id, 1)}
-                                  className="w-7 h-7 flex items-center justify-center text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+                                  className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center text-sm sm:text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
                                   title="Aumentar"
                                 >
                                   +
@@ -600,7 +601,7 @@ export default function TiendaPage() {
                                 <button
                                   type="button"
                                   onClick={() => eliminarProducto(product.id)}
-                                  className="text-[11px] text-zinc-400 hover:text-red-500 transition-colors mt-0.5 cursor-pointer"
+                                  className="text-[11px] text-zinc-400 hover:text-red-500 transition-colors mt-0.5 cursor-pointer min-h-[36px] flex items-center"
                                   title="Eliminar"
                                 >
                                   Quitar
@@ -659,7 +660,7 @@ export default function TiendaPage() {
                           placeholder="Ej. Carlos Mendoza"
                           value={customerName}
                           onChange={(e) => setCustomerName(e.target.value)}
-                          className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
+                          className="w-full px-3 py-2.5 h-11 text-base sm:text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
                         />
                       </div>
 
@@ -674,7 +675,7 @@ export default function TiendaPage() {
                             placeholder="Ej. +58 412 1234567"
                             value={customerPhone}
                             onChange={(e) => setCustomerPhone(e.target.value)}
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
+                            className="w-full px-3 py-2.5 h-11 text-base sm:text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
                           />
                         </div>
 
@@ -687,7 +688,7 @@ export default function TiendaPage() {
                             placeholder="correo@ejemplo.com"
                             value={customerEmail}
                             onChange={(e) => setCustomerEmail(e.target.value)}
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
+                            className="w-full px-3 py-2.5 h-11 text-base sm:text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
                           />
                         </div>
                       </div>
@@ -701,7 +702,7 @@ export default function TiendaPage() {
                           placeholder="Ej. Toyota Corolla 2018 1.8L"
                           value={vehicleInfo}
                           onChange={(e) => setVehicleInfo(e.target.value)}
-                          className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
+                          className="w-full px-3 py-2.5 h-11 text-base sm:text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
                         />
                       </div>
 
@@ -714,7 +715,7 @@ export default function TiendaPage() {
                           placeholder="Retiro por sucursal principal o envío a..."
                           value={notes}
                           onChange={(e) => setNotes(e.target.value)}
-                          className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
+                          className="w-full p-3 text-base sm:text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
                         />
                       </div>
 
@@ -723,7 +724,7 @@ export default function TiendaPage() {
                         <button
                           type="submit"
                           disabled={enviando}
-                          className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-extrabold text-sm rounded-xl transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 cursor-pointer"
+                          className="w-full h-12 py-3.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-extrabold text-sm rounded-xl transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 cursor-pointer"
                         >
                           {enviando ? (
                             <>
@@ -751,6 +752,7 @@ export default function TiendaPage() {
       )}
 
       <Footer />
+      <PublicMobileNav />
     </div>
   );
 }

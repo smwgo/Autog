@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { TallerMobileNav } from "@/components/TallerMobileNav";
 
 interface RequestedPartItem {
   name: string;
@@ -237,32 +238,32 @@ export default function SolicitudRepuestosPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
 
-      <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
+      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
         {/* Navigation / Breadcrumb */}
         <div className="mb-6">
           <Link
             href="/taller"
-            className="text-sm font-medium text-indigo-600 hover:text-indigo-500 flex items-center gap-1 w-fit"
+            className="text-sm font-medium text-indigo-600 hover:text-indigo-500 flex items-center gap-1 w-fit min-h-[44px] md:min-h-0 items-center"
           >
             &larr; Volver al Panel de Taller
           </Link>
         </div>
 
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-10">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6 sm:mb-10">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-xl bg-indigo-500 bg-opacity-10 flex items-center justify-center text-2xl">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-500 bg-opacity-10 flex items-center justify-center text-2xl shrink-0">
                 🔩
               </div>
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                   Solicitud de Repuestos
                 </h1>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
                   {requests.length} peticiones sincronizadas con Neon DB y Bodega/POS
                 </p>
               </div>
@@ -275,29 +276,29 @@ export default function SolicitudRepuestosPage() {
               setModalAbierto(true);
               setMensajeExito(null);
             }}
-            className="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-6 py-3 rounded-xl font-medium transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+            className="h-11 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white px-6 rounded-xl font-medium transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
           >
             <span>+</span> Nueva Petición
           </button>
         </div>
 
         {/* Filters / Search */}
-        <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm mb-8 flex flex-col md:flex-row gap-4">
+        <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm mb-6 sm:mb-8 flex flex-col md:flex-row gap-3 sm:gap-4">
           <div className="flex-grow relative">
             <input
               type="text"
               placeholder="Buscar por ID, vehículo, orden o mecánico..."
-              className="w-full pl-10 pr-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow dark:text-white"
+              className="w-full h-11 pl-10 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow dark:text-white text-base sm:text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <span className="absolute left-3 top-3.5 text-zinc-400">🔍</span>
+            <span className="absolute left-3 top-3 text-zinc-400">🔍</span>
           </div>
           <div className="flex gap-2">
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white font-medium cursor-pointer"
+              className="w-full sm:w-auto h-11 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white font-medium cursor-pointer text-base sm:text-sm"
             >
               <option value="">Todos los Estados</option>
               <option value="Pendiente">Pendiente</option>
@@ -314,14 +315,14 @@ export default function SolicitudRepuestosPage() {
             <p className="text-sm font-medium text-zinc-500">Cargando solicitudes desde Neon DB...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {requests.map((req) => (
               <div
                 key={req.dbId || req.id}
                 className="bg-white dark:bg-zinc-900 rounded-3xl overflow-hidden border border-zinc-200 dark:border-zinc-800 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all shadow-sm flex flex-col"
               >
                 {/* Card Header */}
-                <div className="p-5 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-start bg-zinc-50/50 dark:bg-zinc-800/20">
+                <div className="p-4 sm:p-5 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-start bg-zinc-50/50 dark:bg-zinc-800/20">
                   <div>
                     <div className="flex items-center gap-3 mb-1">
                       <span className="text-sm font-bold text-zinc-900 dark:text-white">{req.id}</span>
@@ -329,7 +330,7 @@ export default function SolicitudRepuestosPage() {
                         disabled={actualizandoId === req.dbId || actualizandoId === req.id}
                         value={req.status}
                         onChange={(e) => handleCambiarEstado(req, e.target.value)}
-                        className={`text-xs font-bold px-2.5 py-1 rounded-full border cursor-pointer focus:outline-none ${getStatusStyle(
+                        className={`h-11 text-xs font-bold px-3 rounded-xl border cursor-pointer focus:outline-none ${getStatusStyle(
                           req.status
                         )}`}
                       >
@@ -347,7 +348,7 @@ export default function SolicitudRepuestosPage() {
                       type="button"
                       onClick={() => handleEliminar(req)}
                       title="Eliminar solicitud"
-                      className="text-zinc-400 hover:text-rose-500 p-1 rounded-lg transition-colors text-xs cursor-pointer"
+                      className="w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center text-zinc-400 hover:text-rose-500 rounded-xl transition-colors text-xs cursor-pointer"
                     >
                       ✕
                     </button>
@@ -355,7 +356,7 @@ export default function SolicitudRepuestosPage() {
                 </div>
 
                 {/* Card Body */}
-                <div className="p-5 flex-grow">
+                <div className="p-4 sm:p-5 flex-grow">
                   <div className="mb-4">
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Vehículo / Orden</p>
                     <div className="flex items-center justify-between">
@@ -407,7 +408,7 @@ export default function SolicitudRepuestosPage() {
                 </div>
 
                 {/* Card Footer */}
-                <div className="p-5 pt-0 mt-auto">
+                <div className="p-4 sm:p-5 pt-0 mt-auto">
                   <div className="flex justify-between items-center pt-4 border-t border-zinc-100 dark:border-zinc-800">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs">
@@ -426,7 +427,7 @@ export default function SolicitudRepuestosPage() {
                     <button
                       type="button"
                       onClick={() => setDetalleReq(req)}
-                      className="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm font-bold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 px-4 py-2 rounded-xl transition-colors cursor-pointer"
+                      className="h-11 px-4 text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm font-bold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 rounded-xl transition-colors cursor-pointer flex items-center justify-center"
                     >
                       Ver Detalles
                     </button>
@@ -449,10 +450,10 @@ export default function SolicitudRepuestosPage() {
           </div>
         )}
 
-        {/* Modal Detalles de Petición */}
+        {/* Modal Detalles de Petición (Bottom-sheet on small screens) */}
         {detalleReq && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl space-y-4">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 pb-8 sm:pb-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
                 <div>
                   <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
@@ -465,7 +466,7 @@ export default function SolicitudRepuestosPage() {
                 <button
                   type="button"
                   onClick={() => setDetalleReq(null)}
-                  className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                  className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center text-sm cursor-pointer"
                 >
                   ✕
                 </button>
@@ -523,19 +524,19 @@ export default function SolicitudRepuestosPage() {
                 </div>
               )}
 
-              <div className="flex flex-wrap justify-between items-center gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+              <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => handleCambiarEstado(detalleReq, "Aprobado")}
-                    className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer"
+                    className="flex-1 sm:flex-none h-11 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer flex items-center justify-center"
                   >
                     Aprobar
                   </button>
                   <button
                     type="button"
                     onClick={() => handleCambiarEstado(detalleReq, "Entregado")}
-                    className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer"
+                    className="flex-1 sm:flex-none h-11 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer flex items-center justify-center"
                   >
                     Marcar Entregado
                   </button>
@@ -543,7 +544,7 @@ export default function SolicitudRepuestosPage() {
                 <button
                   type="button"
                   onClick={() => setDetalleReq(null)}
-                  className="px-4 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-semibold cursor-pointer"
+                  className="h-11 px-5 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-semibold cursor-pointer flex items-center justify-center"
                 >
                   Cerrar
                 </button>
@@ -552,13 +553,13 @@ export default function SolicitudRepuestosPage() {
           </div>
         )}
 
-        {/* Modal: Nueva Petición de Taller (Registra en Neon en WorkshopPartRequest y OrderRequest) */}
+        {/* Modal: Nueva Petición de Taller (Bottom-sheet on small screens) */}
         {modalAbierto && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="relative w-full max-w-lg rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-4 text-white max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="relative w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-6 pb-8 sm:pb-6 shadow-2xl flex flex-col gap-4 text-white max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 flex items-center justify-center text-lg">
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 flex items-center justify-center text-lg shrink-0">
                     🔩
                   </div>
                   <div>
@@ -571,7 +572,7 @@ export default function SolicitudRepuestosPage() {
                 <button
                   type="button"
                   onClick={() => setModalAbierto(false)}
-                  className="w-8 h-8 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                  className="w-10 h-10 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center text-sm cursor-pointer"
                 >
                   ✕
                 </button>
@@ -587,7 +588,7 @@ export default function SolicitudRepuestosPage() {
                   <button
                     type="button"
                     onClick={() => setModalAbierto(false)}
-                    className="mt-4 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all cursor-pointer"
+                    className="mt-4 h-11 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all cursor-pointer flex items-center justify-center"
                   >
                     Cerrar
                   </button>
@@ -602,7 +603,7 @@ export default function SolicitudRepuestosPage() {
                       <select
                         value={orderId}
                         onChange={(e) => handleSelectOrder(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white focus:outline-none focus:border-indigo-500"
+                        className="w-full h-11 px-4 rounded-xl bg-zinc-950 border border-zinc-800 text-base sm:text-sm text-white focus:outline-none focus:border-indigo-500"
                       >
                         <option value="">-- Seleccionar orden o escribir abajo --</option>
                         {ordenesActivas.map((o) => (
@@ -622,7 +623,7 @@ export default function SolicitudRepuestosPage() {
                       <select
                         value={mecanico}
                         onChange={(e) => setMecanico(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white focus:outline-none focus:border-indigo-500"
+                        className="w-full h-11 px-4 rounded-xl bg-zinc-950 border border-zinc-800 text-base sm:text-sm text-white focus:outline-none focus:border-indigo-500"
                       >
                         <option value="Carlos Rodríguez">Carlos Rodríguez</option>
                         <option value="Luis Martínez">Luis Martínez</option>
@@ -638,7 +639,7 @@ export default function SolicitudRepuestosPage() {
                       <select
                         value={urgencia}
                         onChange={(e) => setUrgencia(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white focus:outline-none focus:border-indigo-500"
+                        className="w-full h-11 px-4 rounded-xl bg-zinc-950 border border-zinc-800 text-base sm:text-sm text-white focus:outline-none focus:border-indigo-500"
                       >
                         <option value="Normal">Normal</option>
                         <option value="Alta">Alta</option>
@@ -657,7 +658,7 @@ export default function SolicitudRepuestosPage() {
                       value={vehiculo}
                       onChange={(e) => setVehiculo(e.target.value)}
                       placeholder="Ej. Toyota Hilux (ABC-123)"
-                      className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white focus:outline-none focus:border-indigo-500"
+                      className="w-full h-11 px-4 rounded-xl bg-zinc-950 border border-zinc-800 text-base sm:text-sm text-white focus:outline-none focus:border-indigo-500"
                     />
                   </div>
 
@@ -672,7 +673,7 @@ export default function SolicitudRepuestosPage() {
                             key={p.id}
                             type="button"
                             onClick={() => handleAgregarProductoCatalogo(p)}
-                            className="text-[11px] px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-indigo-600 text-zinc-200 hover:text-white transition-colors cursor-pointer"
+                            className="text-xs px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-indigo-600 text-zinc-200 hover:text-white transition-colors cursor-pointer min-h-[36px]"
                           >
                             + {p.name} ({p.stock})
                           </button>
@@ -691,7 +692,7 @@ export default function SolicitudRepuestosPage() {
                       value={repuestos}
                       onChange={(e) => setRepuestos(e.target.value)}
                       placeholder={"Ej:\n1x Filtro de Aceite\n4x Aceite Sintético 5W-30"}
-                      className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white focus:outline-none focus:border-indigo-500"
+                      className="w-full p-3 rounded-xl bg-zinc-950 border border-zinc-800 text-base sm:text-sm text-white focus:outline-none focus:border-indigo-500 resize-y"
                     />
                   </div>
 
@@ -704,22 +705,22 @@ export default function SolicitudRepuestosPage() {
                       value={notas}
                       onChange={(e) => setNotas(e.target.value)}
                       placeholder="Especificaciones de marca o número de parte..."
-                      className="w-full px-4 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-indigo-500"
+                      className="w-full h-11 px-4 rounded-xl bg-zinc-950 border border-zinc-800 text-base sm:text-sm text-white focus:outline-none focus:border-indigo-500"
                     />
                   </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-2">
+                  <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-2">
                     <button
                       type="button"
                       onClick={() => setModalAbierto(false)}
-                      className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold transition-all cursor-pointer"
+                      className="h-11 px-5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center"
                     >
                       Cancelar
                     </button>
                     <button
                       type="submit"
                       disabled={enviando}
-                      className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                      className="h-11 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center"
                     >
                       {enviando ? "Enviando..." : "Enviar Petición"}
                     </button>
@@ -730,6 +731,8 @@ export default function SolicitudRepuestosPage() {
           </div>
         )}
       </main>
+
+      <TallerMobileNav />
     </div>
   );
 }

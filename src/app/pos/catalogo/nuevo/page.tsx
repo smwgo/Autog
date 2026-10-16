@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
+import { PosMobileNav } from "@/components/PosMobileNav";
 
 export default function NuevoProductoPage() {
   const router = useRouter();
@@ -61,7 +62,7 @@ export default function NuevoProductoPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
 
       <main className="flex-grow p-6 md:p-12 max-w-4xl mx-auto w-full">
@@ -266,6 +267,8 @@ export default function NuevoProductoPage() {
           </div>
         </form>
       </main>
+
+      <PosMobileNav />
     </div>
   );
 }

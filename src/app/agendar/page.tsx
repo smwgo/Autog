@@ -2,6 +2,7 @@
 
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { PublicMobileNav } from "@/components/PublicMobileNav";
 import { useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
@@ -100,62 +101,62 @@ function BookingForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white dark:bg-zinc-900 rounded-3xl p-8 md:p-12 shadow-xl border border-zinc-200 dark:border-zinc-800 max-w-4xl mx-auto">
-      <div className="mb-10 pb-8 border-b border-zinc-100 dark:border-zinc-800">
+    <form onSubmit={handleSubmit} className="bg-white dark:bg-zinc-900 rounded-3xl p-5 sm:p-8 md:p-12 shadow-xl border border-zinc-200 dark:border-zinc-800 max-w-4xl mx-auto">
+      <div className="mb-8 sm:mb-10 pb-6 sm:pb-8 border-b border-zinc-100 dark:border-zinc-800">
         <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 flex items-center">
           <span className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">1</span>
           Tus Datos Personales
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Nombre Completo *</label>
-            <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="Ej. Juan Pérez" />
+            <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-4 h-11 sm:h-12 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-base sm:text-sm text-zinc-900 dark:text-zinc-100" placeholder="Ej. Juan Pérez" />
           </div>
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Correo Electrónico *</label>
-            <input required type="email" name="email" value={formData.email} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="juan@ejemplo.com" />
+            <input required type="email" name="email" value={formData.email} onChange={handleChange} className="w-full px-4 h-11 sm:h-12 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-base sm:text-sm text-zinc-900 dark:text-zinc-100" placeholder="juan@ejemplo.com" />
           </div>
-          <div>
+          <div className="md:col-span-2">
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Teléfono *</label>
-            <input required type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="Ej. 0991234567" />
+            <input required type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full px-4 h-11 sm:h-12 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-base sm:text-sm text-zinc-900 dark:text-zinc-100" placeholder="Ej. 0991234567" />
           </div>
         </div>
       </div>
 
-      <div className="mb-10 pb-8 border-b border-zinc-100 dark:border-zinc-800">
+      <div className="mb-8 sm:mb-10 pb-6 sm:pb-8 border-b border-zinc-100 dark:border-zinc-800">
         <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 flex items-center">
           <span className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">2</span>
           Datos del Vehículo
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Marca *</label>
-            <input required type="text" name="brand" value={formData.brand} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="Ej. Toyota" />
+            <input required type="text" name="brand" value={formData.brand} onChange={handleChange} className="w-full px-4 h-11 sm:h-12 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-base sm:text-sm text-zinc-900 dark:text-zinc-100" placeholder="Ej. Toyota" />
           </div>
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Modelo *</label>
-            <input required type="text" name="model" value={formData.model} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="Ej. Corolla" />
+            <input required type="text" name="model" value={formData.model} onChange={handleChange} className="w-full px-4 h-11 sm:h-12 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-base sm:text-sm text-zinc-900 dark:text-zinc-100" placeholder="Ej. Corolla" />
           </div>
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Año *</label>
-            <input required type="number" name="year" value={formData.year} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="Ej. 2018" />
+            <input required type="number" name="year" value={formData.year} onChange={handleChange} className="w-full px-4 h-11 sm:h-12 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-base sm:text-sm text-zinc-900 dark:text-zinc-100" placeholder="Ej. 2018" />
           </div>
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Placa</label>
-            <input type="text" name="plate" value={formData.plate} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="Ej. ABC-1234" />
+            <input type="text" name="plate" value={formData.plate} onChange={handleChange} className="w-full px-4 h-11 sm:h-12 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-base sm:text-sm text-zinc-900 dark:text-zinc-100" placeholder="Ej. ABC-1234" />
           </div>
         </div>
       </div>
 
-      <div className="mb-10">
+      <div className="mb-8 sm:mb-10">
         <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-6 flex items-center">
           <span className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">3</span>
           Detalles de la Cita
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Servicio Requerido *</label>
-            <select required name="serviceId" value={formData.serviceId} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100 appearance-none">
+            <select required name="serviceId" value={formData.serviceId} onChange={handleChange} className="w-full px-4 h-11 sm:h-12 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-base sm:text-sm text-zinc-900 dark:text-zinc-100">
               <option value="" disabled>Seleccione un servicio...</option>
               {allServices.map(s => (
                 <option key={s.id} value={s.id}>{s.title}</option>
@@ -164,15 +165,15 @@ function BookingForm() {
           </div>
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Fecha Deseada *</label>
-            <input required type="date" name="date" value={formData.date} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" />
+            <input required type="date" name="date" value={formData.date} onChange={handleChange} className="w-full px-4 h-11 sm:h-12 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-base sm:text-sm text-zinc-900 dark:text-zinc-100" />
           </div>
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Hora Preferida *</label>
-            <input required type="time" name="time" value={formData.time} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" />
+            <input required type="time" name="time" value={formData.time} onChange={handleChange} className="w-full px-4 h-11 sm:h-12 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-base sm:text-sm text-zinc-900 dark:text-zinc-100" />
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Comentarios Adicionales</label>
-            <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="Describa cualquier problema específico o solicitud..." />
+            <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3} className="w-full p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-base sm:text-sm text-zinc-900 dark:text-zinc-100" placeholder="Describa cualquier problema específico o solicitud..." />
           </div>
         </div>
       </div>
@@ -181,7 +182,7 @@ function BookingForm() {
         <button 
           type="submit" 
           disabled={isSubmitting}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-full font-bold shadow-lg shadow-blue-500/30 transition-all transform hover:scale-105 disabled:opacity-70 disabled:hover:scale-100 flex items-center"
+          className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-10 h-12 rounded-xl sm:rounded-full font-bold shadow-lg shadow-blue-500/30 transition-all transform hover:scale-105 disabled:opacity-70 disabled:hover:scale-100 flex items-center justify-center text-base sm:text-sm"
         >
           {isSubmitting ? (
             <>
@@ -199,14 +200,14 @@ function BookingForm() {
 
 export default function AgendarPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
-      <main className="flex-grow pt-24 pb-20 px-6 md:px-12 w-full">
-        <div className="text-center max-w-3xl mx-auto mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 mb-4">
+      <main className="flex-grow pt-16 sm:pt-24 pb-24 md:pb-20 px-4 sm:px-6 md:px-12 w-full">
+        <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-12">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 mb-3 sm:mb-4">
             Agenda tu Servicio
           </h1>
-          <p className="text-lg text-zinc-600 dark:text-zinc-400">
+          <p className="text-base sm:text-lg text-zinc-600 dark:text-zinc-400">
             Completa el formulario a continuación y reserva un espacio en nuestro taller. Te confirmaremos a la brevedad.
           </p>
         </div>
@@ -216,6 +217,8 @@ export default function AgendarPage() {
         </Suspense>
       </main>
       <Footer />
+      <PublicMobileNav />
     </div>
   );
 }
+

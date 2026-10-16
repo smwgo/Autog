@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
+import { PosMobileNav } from "@/components/PosMobileNav";
 
 interface WorkshopService {
   id: string;
@@ -30,6 +31,9 @@ export default function ServiciosPosPage() {
   // Filtros
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("TODAS");
+  const [selectedEstado, setSelectedEstado] = useState("TODOS");
+  const [catMenuAbierto, setCatMenuAbierto] = useState(false);
+  const [estadoMenuAbierto, setEstadoMenuAbierto] = useState(false);
 
   // Modales
   const [servicioAEliminar, setServicioAEliminar] = useState<WorkshopService | null>(null);
@@ -100,6 +104,13 @@ export default function ServiciosPosPage() {
     }
   };
 
+  // Filtrado local por Estado
+  const serviciosFiltrados = servicios.filter((s) => {
+    if (selectedEstado === "ACTIVOS") return s.active;
+    if (selectedEstado === "PAUSADOS") return !s.active;
+    return true;
+  });
+
   // Métricas
   const totalActivos = servicios.filter((s) => s.active).length;
   const promedioMinutos =
@@ -112,7 +123,7 @@ export default function ServiciosPosPage() {
   const bahiaCount = servicios.filter((s) => s.requiresBay).length;
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 pb-24 md:pb-0">
       <Header />
 
       <main className="flex-grow p-4 md:p-10 max-w-7xl mx-auto w-full">
@@ -133,7 +144,7 @@ export default function ServiciosPosPage() {
                 Servicios
               </h1>
               <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
-                {cargando ? "..." : servicios.length}
+                {cargando ? "..." : serviciosFiltrados.length}
               </span>
             </div>
           </div>
@@ -154,85 +165,210 @@ export default function ServiciosPosPage() {
           </div>
         </div>
 
-        {/* Resumen Cards con una sola palabra en cada métrica */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 text-xl flex-shrink-0">
+        {/* Resumen Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-400 flex items-center justify-center text-xl shrink-0">
               ⚙️
             </div>
             <div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">
+              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
                 {cargando ? "..." : servicios.length}
               </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Totales</h3>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Totales</h3>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 text-xl flex-shrink-0">
+          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center text-xl shrink-0">
               ✅
             </div>
             <div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">
+              <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                 {cargando ? "..." : totalActivos}
               </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Activos</h3>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Activos</h3>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 text-xl flex-shrink-0">
+          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-400 flex items-center justify-center text-xl shrink-0">
               ⏱️
             </div>
             <div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">
+              <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
                 {cargando ? "..." : `${promedioMinutos} min`}
               </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Promedio</h3>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Promedio</h3>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-600 text-xl flex-shrink-0">
+          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-400 flex items-center justify-center text-xl shrink-0">
               🚗
             </div>
             <div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-white">
+              <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">
                 {cargando ? "..." : bahiaCount}
               </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">Bahía</h3>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Bahía</h3>
             </div>
           </div>
         </div>
 
-        {/* Barra de Filtros y Búsqueda */}
-        <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm mb-6 flex flex-col md:flex-row gap-3 items-center">
-          {/* Buscador a la izquierda (flex-1) */}
-          <div className="relative flex-1 w-full">
+        {/* Buscador y Filtros */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 mb-6">
+          <div className="relative w-full flex-1">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
+              🔍
+            </span>
             <input
               type="text"
-              placeholder="Buscar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+              placeholder="Buscar..."
+              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
             />
-            <span className="absolute left-3.5 top-3 text-zinc-400">🔍</span>
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm cursor-pointer"
+                title="Limpiar búsqueda"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
-          {/* Desplegable de Categoría a la derecha */}
-          <div className="w-full md:w-64 flex-shrink-0">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-sm font-semibold text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all cursor-pointer"
-            >
-              <option value="TODAS">Categorías</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            {/* Filtro Categorías */}
+            <div className="relative w-full sm:w-44 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setCatMenuAbierto(!catMenuAbierto);
+                  setEstadoMenuAbierto(false);
+                }}
+                className="w-full h-11 px-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-sm font-medium flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+              >
+                <span className="truncate">{selectedCategory === "TODAS" ? "Categorías" : selectedCategory}</span>
+                <svg className={`w-4 h-4 text-zinc-400 transition-transform shrink-0 ml-1.5 ${catMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {catMenuAbierto && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setCatMenuAbierto(false)} 
+                  />
+                  <div className="absolute right-0 mt-1.5 w-full bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory("TODAS");
+                        setCatMenuAbierto(false);
+                      }}
+                      className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                        selectedCategory === "TODAS"
+                          ? "bg-blue-600/15 text-blue-400"
+                          : "text-zinc-300 hover:bg-zinc-800/80 hover:text-white"
+                      }`}
+                    >
+                      <span>Categorías</span>
+                      {selectedCategory === "TODAS" && (
+                        <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                    {categories.map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCategory(cat);
+                          setCatMenuAbierto(false);
+                        }}
+                        className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                          selectedCategory === cat
+                            ? "bg-blue-600/15 text-blue-400"
+                            : "text-zinc-300 hover:bg-zinc-800/80 hover:text-white"
+                        }`}
+                      >
+                        <span className="truncate">{cat}</span>
+                        {selectedCategory === cat && (
+                          <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Filtro Estado */}
+            <div className="relative w-full sm:w-40 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setEstadoMenuAbierto(!estadoMenuAbierto);
+                  setCatMenuAbierto(false);
+                }}
+                className="w-full h-11 px-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-sm font-medium flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+              >
+                <span>
+                  {selectedEstado === "ACTIVOS"
+                    ? "Activos"
+                    : selectedEstado === "PAUSADOS"
+                    ? "Pausados"
+                    : "Estado"}
+                </span>
+                <svg className={`w-4 h-4 text-zinc-400 transition-transform shrink-0 ml-1.5 ${estadoMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {estadoMenuAbierto && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setEstadoMenuAbierto(false)} 
+                  />
+                  <div className="absolute right-0 mt-1.5 w-full bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                    {[
+                      { id: "TODOS", label: "Estado" },
+                      { id: "ACTIVOS", label: "Activos" },
+                      { id: "PAUSADOS", label: "Pausados" },
+                    ].map((opcion) => (
+                      <button
+                        key={opcion.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedEstado(opcion.id);
+                          setEstadoMenuAbierto(false);
+                        }}
+                        className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                          selectedEstado === opcion.id
+                            ? "bg-blue-600/15 text-blue-400"
+                            : "text-zinc-300 hover:bg-zinc-800/80 hover:text-white"
+                        }`}
+                      >
+                        <span>{opcion.label}</span>
+                        {selectedEstado === opcion.id && (
+                          <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -252,7 +388,7 @@ export default function ServiciosPosPage() {
               Reintentar
             </button>
           </div>
-        ) : servicios.length === 0 ? (
+        ) : serviciosFiltrados.length === 0 ? (
           <div className="text-center py-20 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">
             <span className="text-5xl">🛠️</span>
             <p className="text-lg font-bold mt-3">No se encontraron servicios</p>
@@ -266,7 +402,81 @@ export default function ServiciosPosPage() {
           </div>
         ) : (
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
+            {/* Mobile Cards (md:hidden) */}
+            <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+              {serviciosFiltrados.map((s) => (
+                <div
+                  key={s.id}
+                  className={`p-4 space-y-3 ${
+                    !s.active ? "opacity-60 bg-zinc-50/50 dark:bg-zinc-950/50" : ""
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-mono text-xs font-bold px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded border border-zinc-200 dark:border-zinc-700">
+                          {s.code}
+                        </span>
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            s.active
+                              ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                              : "bg-zinc-200 dark:bg-zinc-800 text-zinc-500"
+                          }`}
+                        >
+                          {s.active ? "Activo" : "Pausado"}
+                        </span>
+                      </div>
+                      <div className="font-bold text-zinc-900 dark:text-white text-base">
+                        {s.name}
+                      </div>
+                      {s.description && (
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 mt-1">
+                          {s.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xl font-black text-zinc-900 dark:text-white block">
+                        ${Number(s.price).toFixed(2)}
+                      </span>
+                      <span className="text-[10px] text-zinc-400">Tarifa</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-800/40">
+                      {s.category}
+                    </span>
+                    <div className="flex items-center gap-2 text-zinc-500 text-xs">
+                      <span>⏱️ {s.estimatedMinutes} min</span>
+                      <span>•</span>
+                      <span>{s.requiresBay ? "🚗 Bahía" : "🧰 Mano de Obra"}</span>
+                    </div>
+                  </div>
+
+                  {/* Botones de acción móvil (Touch target >= 44px) */}
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800/60">
+                    <Link
+                      href={`/pos/servicios/editar?id=${s.id}`}
+                      className="h-11 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 text-blue-600 dark:text-blue-400 text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow-sm"
+                    >
+                      <span>✏️</span> Editar
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setServicioAEliminar(s)}
+                      className="h-11 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-sm"
+                    >
+                      <span>🗑️</span> Eliminar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table (hidden md:block) */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[850px]">
                 <thead>
                   <tr className="bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800">
@@ -291,7 +501,7 @@ export default function ServiciosPosPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                  {servicios.map((s) => (
+                  {serviciosFiltrados.map((s) => (
                     <tr
                       key={s.id}
                       className={`hover:bg-teal-50/40 dark:hover:bg-teal-900/10 transition-colors group ${
@@ -385,27 +595,25 @@ export default function ServiciosPosPage() {
         )}
       </main>
 
-
-
-      {/* Modal Confirmación de Eliminación */}
+      {/* Modal Flotante de Confirmación de Eliminación */}
       {servicioAEliminar && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950/40 text-rose-600 flex items-center justify-center text-2xl mx-auto mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl relative animate-in zoom-in-95 duration-150 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center text-xl mx-auto mb-3">
               🗑️
             </div>
-            <h3 className="text-lg font-bold text-center text-zinc-900 dark:text-white">
-              ¿Eliminar este servicio?
+            <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">
+              ¿Eliminar servicio?
             </h3>
-            <p className="text-sm text-center text-zinc-500 mt-2">
-              Se eliminará <strong className="text-zinc-800 dark:text-zinc-200">{servicioAEliminar.name}</strong> ({servicioAEliminar.code}) permanentemente del sistema.
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-5">
+              Se eliminará <strong className="text-zinc-900 dark:text-white font-medium">{servicioAEliminar.name}</strong>.
             </p>
-
-            <div className="flex gap-3 mt-6">
+            <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
                 onClick={() => setServicioAEliminar(null)}
-                className="flex-1 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                disabled={eliminando}
+                className="h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
@@ -413,14 +621,16 @@ export default function ServiciosPosPage() {
                 type="button"
                 onClick={handleEliminar}
                 disabled={eliminando}
-                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold transition-colors disabled:opacity-50"
+                className="h-10 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-sm font-medium transition-all disabled:opacity-50 cursor-pointer shadow-sm shadow-rose-500/20"
               >
-                {eliminando ? "Eliminando..." : "Sí, Eliminar"}
+                {eliminando ? "Eliminando..." : "Eliminar"}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      <PosMobileNav />
     </div>
   );
 }

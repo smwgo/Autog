@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { PosMobileNav } from "@/components/PosMobileNav";
 
 interface Promotion {
   id: string;
@@ -25,8 +26,11 @@ export default function PromocionesPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<"TODAS" | "ACTIVAS" | "INACTIVAS">("TODAS");
+  const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [promoAEditar, setPromoAEditar] = useState<Promotion | null>(null);
+  const [promoAEliminar, setPromoAEliminar] = useState<Promotion | null>(null);
+  const [eliminando, setEliminando] = useState(false);
   const [copiadoId, setCopiadoId] = useState<string | null>(null);
 
   // Formulario Crear / Editar promo
@@ -159,24 +163,26 @@ export default function PromocionesPage() {
     }
   };
 
-  // ELIMINAR PROMOCIÓN DE NEON DB (DELETE)
-  const handleEliminar = async (promo: Promotion) => {
-    setGuardando(true);
+  // CONFIRMAR ELIMINAR PROMOCIÓN DE NEON DB (DELETE)
+  const confirmarEliminar = async () => {
+    if (!promoAEliminar) return;
+    setEliminando(true);
     try {
       const res = await fetch(
-        `/api/pos/promociones?id=${encodeURIComponent(promo.id)}`,
+        `/api/pos/promociones?id=${encodeURIComponent(promoAEliminar.id)}`,
         { method: "DELETE" }
       );
       const data = await res.json();
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Error al eliminar promoción de Neon DB");
       }
-      showToast(`Promoción ${promo.code} eliminada de Neon DB.`);
+      showToast(`Promoción ${promoAEliminar.code} eliminada.`);
+      setPromoAEliminar(null);
       await fetchPromociones();
     } catch (err: any) {
       showToast(`Error: ${err.message}`);
     } finally {
-      setGuardando(false);
+      setEliminando(false);
     }
   };
 
@@ -212,88 +218,85 @@ export default function PromocionesPage() {
         </div>
       )}
 
-      <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full">
-        {/* Navegación y Título */}
-        <div className="mb-6 flex justify-between items-center">
-          <Link
-            href="/pos"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors w-fit"
-          >
-            &larr; Volver al panel POS
-          </Link>
-          <div className="flex items-center gap-2 text-xs font-mono bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-3 py-1 rounded-full border border-orange-200 dark:border-orange-800">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Promociones Neon DB ({promociones.length})</span>
-          </div>
-        </div>
-
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div className="flex items-start gap-4">
-            <span className="text-4xl select-none mt-1">🏷️</span>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                Promociones
-              </h1>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                Cupones, descuentos de temporada y combos promocionales sincronizados con Neon PostgreSQL.
-              </p>
-            </div>
+      <main className="flex-grow p-4 md:p-8 pb-24 md:pb-8 max-w-7xl mx-auto w-full">
+        {/* Header */}
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link 
+              href="/pos"
+              title="Volver a Panel POS"
+              className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
+            >
+              <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Promociones
+            </h1>
+            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
+              {promociones.length}
+            </span>
           </div>
 
-          <button
-            onClick={abrirModalCrear}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-semibold text-sm transition-all shadow-md shadow-orange-500/20 active:scale-95 cursor-pointer"
-          >
-            <span>➕</span>
-            <span>Nueva Promoción</span>
-          </button>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <button
+              onClick={abrirModalCrear}
+              className="h-11 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-all shadow-sm shadow-blue-500/20 active:scale-95 cursor-pointer flex items-center justify-center gap-2 w-full sm:w-auto"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Nueva Promoción</span>
+            </button>
+          </div>
         </div>
 
         {/* Métricas / KPIs */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <div className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                Promociones Activas
-              </span>
-              <span className="text-xl">🔥</span>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          {/* Promociones Activas */}
+          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-orange-500/15 border border-orange-500/25 text-orange-400 flex items-center justify-center text-xl shrink-0">
+              🔥
             </div>
-            <p className="text-2xl font-bold text-orange-600 dark:text-orange-400 mt-2">
-              {activasCount}
-            </p>
-            <span className="text-xs text-zinc-500">Disponibles para aplicar en POS</span>
+            <div>
+              <p className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400">
+                {activasCount}
+              </p>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Activas</h3>
+            </div>
           </div>
 
-          <div className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                Total Canjes Realizados
-              </span>
-              <span className="text-xl">🎟️</span>
+          {/* Canjes Realizados */}
+          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-400 flex items-center justify-center text-xl shrink-0">
+              🎟️
             </div>
-            <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mt-2">
-              {totalUsos}
-            </p>
-            <span className="text-xs text-zinc-500">Cupones utilizados en ventas</span>
+            <div>
+              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                {totalUsos}
+              </p>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Canjes</h3>
+            </div>
           </div>
 
-          <div className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                Total Promociones
-              </span>
-              <span className="text-xl">📊</span>
+          {/* Total Promociones */}
+          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-400 flex items-center justify-center text-xl shrink-0">
+              📊
             </div>
-            <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mt-2">
-              {promociones.length}
-            </p>
-            <span className="text-xs text-zinc-500">Campañas registradas en Neon</span>
+            <div>
+              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                {promociones.length}
+              </p>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Total Campañas</h3>
+            </div>
           </div>
         </div>
 
         {/* Filtros y Buscador */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-          <div className="relative w-full sm:w-96">
+          <div className="relative w-full flex-1">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
               🔍
             </span>
@@ -301,25 +304,74 @@ export default function PromocionesPage() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por código, título o categoría..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all placeholder:text-zinc-400"
+              placeholder="Buscar..."
+              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
             />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm cursor-pointer"
+                title="Limpiar búsqueda"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            {(["TODAS", "ACTIVAS", "INACTIVAS"] as const).map((estado) => (
-              <button
-                key={estado}
-                onClick={() => setFiltroEstado(estado)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                  filtroEstado === estado
-                    ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm"
-                    : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                }`}
-              >
-                {estado === "TODAS" ? "Todas" : estado === "ACTIVAS" ? "Activas" : "Inactivas"}
-              </button>
-            ))}
+          <div className="relative w-full sm:w-48 shrink-0">
+            <button
+              type="button"
+              onClick={() => setFiltroMenuAbierto(!filtroMenuAbierto)}
+              className="w-full h-11 px-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-sm font-medium flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+            >
+              <span>
+                {filtroEstado === "ACTIVAS"
+                  ? "Activas"
+                  : filtroEstado === "INACTIVAS"
+                  ? "Inactivas"
+                  : "Estado"}
+              </span>
+              <svg className={`w-4 h-4 text-zinc-400 transition-transform ${filtroMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {filtroMenuAbierto && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setFiltroMenuAbierto(false)} 
+                />
+                <div className="absolute right-0 mt-1.5 w-full bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                  {[
+                    { id: "TODAS", label: "Estado" },
+                    { id: "ACTIVAS", label: "Activas" },
+                    { id: "INACTIVAS", label: "Inactivas" },
+                  ].map((opcion) => (
+                    <button
+                      key={opcion.id}
+                      type="button"
+                      onClick={() => {
+                        setFiltroEstado(opcion.id as any);
+                        setFiltroMenuAbierto(false);
+                      }}
+                      className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                        filtroEstado === opcion.id
+                          ? "bg-blue-600/15 text-blue-400"
+                          : "text-zinc-300 hover:bg-zinc-800/80 hover:text-white"
+                      }`}
+                    >
+                      <span>{opcion.label}</span>
+                      {filtroEstado === opcion.id && (
+                        <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -360,17 +412,17 @@ export default function PromocionesPage() {
                     <button
                       type="button"
                       onClick={() => abrirModalEditar(promo)}
-                      className="cursor-pointer px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-xs hover:bg-zinc-200"
+                      className="cursor-pointer w-9 h-9 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-sm hover:bg-zinc-200 flex items-center justify-center active:scale-95"
                       title="Editar promoción"
                     >
                       ✏️
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleEliminar(promo)}
-                      disabled={guardando}
-                      className="cursor-pointer px-2 py-0.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs hover:bg-rose-100"
-                      title="Eliminar de Neon DB"
+                      onClick={() => setPromoAEliminar(promo)}
+                      disabled={guardando || eliminando}
+                      className="cursor-pointer w-9 h-9 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-sm hover:bg-rose-100 flex items-center justify-center active:scale-95"
+                      title="Eliminar promoción"
                     >
                       🗑️
                     </button>
@@ -399,7 +451,7 @@ export default function PromocionesPage() {
                   <button
                     type="button"
                     onClick={() => copiarCodigo(promo.code, promo.id)}
-                    className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold hover:bg-zinc-50 shadow-xs cursor-pointer"
+                    className="h-9 px-3 rounded-lg bg-white dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold hover:bg-zinc-50 shadow-xs cursor-pointer flex items-center justify-center active:scale-95"
                   >
                     {copiadoId === promo.id ? "¡Copiado!" : "Copiar"}
                   </button>
@@ -430,7 +482,7 @@ export default function PromocionesPage() {
                   type="button"
                   disabled={guardando}
                   onClick={() => toggleEstado(promo)}
-                  className={`w-full py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`w-full h-11 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center active:scale-98 ${
                     promo.active
                       ? "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-700 dark:text-zinc-300"
                       : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
@@ -445,8 +497,8 @@ export default function PromocionesPage() {
 
         {/* Modal Crear / Editar Promoción */}
         {modalAbierto && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl relative">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800 mb-5">
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                   <span>🏷️</span>
@@ -454,7 +506,7 @@ export default function PromocionesPage() {
                 </h3>
                 <button
                   onClick={() => setModalAbierto(false)}
-                  className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 flex items-center justify-center font-bold cursor-pointer"
+                  className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 flex items-center justify-center font-bold cursor-pointer"
                 >
                   ✕
                 </button>
@@ -471,7 +523,7 @@ export default function PromocionesPage() {
                     value={nuevoCodigo}
                     onChange={(e) => setNuevoCodigo(e.target.value.toUpperCase())}
                     placeholder="EJ: VERANO20"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 font-mono font-bold uppercase focus:ring-2 focus:ring-orange-500 outline-none"
+                    className="w-full px-3.5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 font-mono font-bold uppercase focus:ring-2 focus:ring-orange-500 outline-none text-base sm:text-sm"
                   />
                 </div>
 
@@ -485,7 +537,7 @@ export default function PromocionesPage() {
                     value={nuevoTitulo}
                     onChange={(e) => setNuevoTitulo(e.target.value)}
                     placeholder="20% de descuento en cambio de aceite"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-orange-500 outline-none"
+                    className="w-full px-3.5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-orange-500 outline-none text-base sm:text-sm"
                   />
                 </div>
 
@@ -497,7 +549,7 @@ export default function PromocionesPage() {
                     <select
                       value={nuevoTipo}
                       onChange={(e) => setNuevoTipo(e.target.value as any)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-orange-500 outline-none"
+                      className="w-full px-3.5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-orange-500 outline-none text-base sm:text-sm"
                     >
                       <option value="PERCENT">Porcentaje (%)</option>
                       <option value="FIXED">Monto Fijo ($)</option>
@@ -513,7 +565,7 @@ export default function PromocionesPage() {
                       required
                       value={nuevoValor}
                       onChange={(e) => setNuevoValor(Number(e.target.value))}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-orange-500 outline-none"
+                      className="w-full px-3.5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-orange-500 outline-none text-base sm:text-sm"
                     />
                   </div>
                 </div>
@@ -528,7 +580,7 @@ export default function PromocionesPage() {
                       min="0"
                       value={nuevoMinimo}
                       onChange={(e) => setNuevoMinimo(Number(e.target.value))}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-orange-500 outline-none"
+                      className="w-full px-3.5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-orange-500 outline-none text-base sm:text-sm"
                     />
                   </div>
                   <div>
@@ -540,7 +592,7 @@ export default function PromocionesPage() {
                       value={nuevaCategoria}
                       onChange={(e) => setNuevaCategoria(e.target.value)}
                       placeholder="Servicios / Repuestos"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-orange-500 outline-none"
+                      className="w-full px-3.5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-orange-500 outline-none text-base sm:text-sm"
                     />
                   </div>
                 </div>
@@ -553,7 +605,7 @@ export default function PromocionesPage() {
                     type="date"
                     value={nuevaFecha}
                     onChange={(e) => setNuevaFecha(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-orange-500 outline-none"
+                    className="w-full px-3.5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-orange-500 outline-none text-base sm:text-sm"
                   />
                 </div>
 
@@ -561,14 +613,14 @@ export default function PromocionesPage() {
                   <button
                     type="submit"
                     disabled={guardando}
-                    className="flex-1 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-md shadow-orange-500/20 transition-all cursor-pointer disabled:opacity-50"
+                    className="flex-1 h-11 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm shadow-md shadow-orange-500/20 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center active:scale-98"
                   >
                     {guardando ? "Guardando en Neon..." : "Guardar en Neon DB"}
                   </button>
                   <button
                     type="button"
                     onClick={() => setModalAbierto(false)}
-                    className="px-5 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 font-semibold text-xs cursor-pointer"
+                    className="px-5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 font-semibold text-sm cursor-pointer flex items-center justify-center"
                   >
                     Cancelar
                   </button>
@@ -577,7 +629,44 @@ export default function PromocionesPage() {
             </div>
           </div>
         )}
+        {/* Modal Flotante de Confirmación de Eliminación */}
+        {promoAEliminar && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl relative animate-in zoom-in-95 duration-150 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center text-xl mx-auto mb-3">
+                🗑️
+              </div>
+              <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">
+                ¿Eliminar promoción?
+              </h3>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-5">
+                Se eliminará <strong className="text-zinc-900 dark:text-white font-medium">{promoAEliminar.code}</strong> ({promoAEliminar.title}).
+              </p>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setPromoAEliminar(null)}
+                  disabled={eliminando}
+                  className="h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmarEliminar}
+                  disabled={eliminando}
+                  className="h-10 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-sm font-medium transition-all disabled:opacity-50 cursor-pointer shadow-sm shadow-rose-500/20"
+                >
+                  {eliminando ? "Eliminando..." : "Eliminar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
+
+      {/* Floating Bottom Nav for Mobile */}
+      <PosMobileNav />
     </div>
   );
 }

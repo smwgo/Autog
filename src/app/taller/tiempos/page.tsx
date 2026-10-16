@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { TallerMobileNav } from "@/components/TallerMobileNav";
 
 interface TimeRecord {
   id: string;
@@ -230,32 +231,32 @@ export default function ControlTiemposPage() {
   ).map(([, v]) => v);
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
 
-      <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
+      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
         {/* Navigation / Breadcrumb */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <Link
             href="/taller"
-            className="text-sm font-medium text-rose-600 hover:text-rose-500 flex items-center gap-1 w-fit"
+            className="text-sm font-medium text-rose-600 hover:text-rose-500 flex items-center gap-1 w-fit min-h-[44px]"
           >
             &larr; Volver al Panel de Taller
           </Link>
         </div>
 
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-10">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6 sm:mb-10">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-xl bg-rose-500 bg-opacity-10 flex items-center justify-center text-2xl">
+              <div className="w-12 h-12 rounded-xl bg-rose-500 bg-opacity-10 flex items-center justify-center text-2xl shrink-0">
                 ⏱️
               </div>
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                   Control de Tiempos
                 </h1>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
                   Registro de horas trabajadas conectado en tiempo real a Neon DB.
                 </p>
               </div>
@@ -265,7 +266,7 @@ export default function ControlTiemposPage() {
           <button
             type="button"
             onClick={() => setModalReporte(true)}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-rose-500 text-zinc-700 dark:text-zinc-300 px-6 py-3 rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2 cursor-pointer"
+            className="w-full md:w-auto min-h-[44px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-rose-500 text-zinc-700 dark:text-zinc-300 px-6 py-2.5 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer text-sm"
           >
             <span>📊</span> Ver Reporte Mensual
           </button>
@@ -274,18 +275,18 @@ export default function ControlTiemposPage() {
         {/* Top Widgets: Active Timer & Summary */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Active Timer Widget */}
-          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between gap-4">
+          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-5 sm:p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between gap-4">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <div className="w-16 h-16 rounded-full bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center text-3xl">
+              <div className="flex items-center gap-3 sm:gap-4 w-full md:w-auto">
+                <div className="relative shrink-0">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center text-2xl sm:text-3xl">
                     👨‍🔧
                   </div>
                   {activeTimer && (
                     <span className="absolute top-0 right-0 w-4 h-4 bg-emerald-500 border-2 border-white dark:border-zinc-900 rounded-full animate-ping"></span>
                   )}
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
                     Cronómetro Activo de Bahía
                   </p>
@@ -293,7 +294,7 @@ export default function ControlTiemposPage() {
                     type="text"
                     value={timerTask}
                     onChange={(e) => setTimerTask(e.target.value)}
-                    className="text-lg font-bold text-zinc-900 dark:text-white bg-transparent border-b border-transparent focus:border-rose-500 outline-none"
+                    className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white bg-transparent border-b border-zinc-200 dark:border-zinc-700 sm:border-transparent focus:border-rose-500 outline-none w-full py-0.5"
                   />
                   <div className="flex flex-wrap items-center gap-2 mt-1">
                     {ordenesActivas.length > 0 ? (
@@ -308,7 +309,7 @@ export default function ControlTiemposPage() {
                             setTimerMechanic(ord.mechanic || "Carlos Rodríguez");
                           }
                         }}
-                        className="text-xs font-mono text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-800 outline-none"
+                        className="h-10 text-xs sm:text-xs font-mono text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-800 outline-none"
                       >
                         {ordenesActivas.map((o) => (
                           <option key={o.id} value={o.id}>
@@ -326,31 +327,33 @@ export default function ControlTiemposPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 self-end md:self-center">
-                <div className="text-center">
-                  <p className="text-4xl font-black text-zinc-900 dark:text-white font-mono tracking-tighter">
+              <div className="flex items-center justify-between w-full md:w-auto gap-3 sm:gap-4 pt-2 md:pt-0 border-t border-zinc-100 dark:border-zinc-800 md:border-t-0">
+                <div className="text-left md:text-center">
+                  <p className="text-3xl sm:text-4xl font-black text-zinc-900 dark:text-white font-mono tracking-tighter">
                     {timerDisplay.main}
-                    <span className="text-2xl text-zinc-400">{timerDisplay.sec}</span>
+                    <span className="text-xl sm:text-2xl text-zinc-400">{timerDisplay.sec}</span>
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveTimer(!activeTimer)}
-                  title={activeTimer ? "Pausar cronómetro" : "Iniciar cronómetro"}
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl text-white shadow-md transition-transform hover:scale-105 active:scale-95 cursor-pointer ${
-                    activeTimer ? "bg-amber-500 hover:bg-amber-600" : "bg-emerald-500 hover:bg-emerald-600"
-                  }`}
-                >
-                  {activeTimer ? "⏸" : "▶️"}
-                </button>
-                <button
-                  type="button"
-                  disabled={guardandoTimer || elapsedSeconds === 0}
-                  onClick={handleFinalizarYGuardarCronometro}
-                  className="px-4 py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
-                >
-                  {guardandoTimer ? "Guardando..." : "💾 Guardar Tiempo"}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTimer(!activeTimer)}
+                    title={activeTimer ? "Pausar cronómetro" : "Iniciar cronómetro"}
+                    className={`w-12 h-12 min-h-[44px] min-w-[44px] rounded-2xl flex items-center justify-center text-xl text-white shadow-md transition-transform hover:scale-105 active:scale-95 cursor-pointer ${
+                      activeTimer ? "bg-amber-500 hover:bg-amber-600" : "bg-emerald-500 hover:bg-emerald-600"
+                    }`}
+                  >
+                    {activeTimer ? "⏸" : "▶️"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={guardandoTimer || elapsedSeconds === 0}
+                    onClick={handleFinalizarYGuardarCronometro}
+                    className="h-12 min-h-[44px] px-4 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                  >
+                    {guardandoTimer ? "Guardando..." : "💾 Guardar"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -372,11 +375,11 @@ export default function ControlTiemposPage() {
           </div>
         </div>
 
-        {/* Logged Sessions Table */}
+        {/* Logged Sessions */}
         <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
-          <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
+          <div className="p-4 sm:p-6 border-b border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
-              <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+              <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white">
                 Registros de Tiempo en Base de Datos
               </h3>
               <p className="text-xs text-zinc-500">
@@ -386,7 +389,7 @@ export default function ControlTiemposPage() {
             <button
               type="button"
               onClick={() => setModalManual(true)}
-              className="text-sm font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 px-4 py-2.5 rounded-xl transition-colors cursor-pointer"
+              className="w-full sm:w-auto min-h-[44px] flex items-center justify-center text-sm font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 px-4 py-2.5 rounded-xl transition-colors cursor-pointer"
             >
               + Registro Manual
             </button>
@@ -398,97 +401,155 @@ export default function ControlTiemposPage() {
               <p className="text-sm font-medium text-zinc-500">Cargando registros desde Neon...</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800">
-                    <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                      ID / Tarea
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                      Orden / Vehículo
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                      Fecha
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                      Tiempo Invertido
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right">
-                      Facturable
-                    </th>
-                    <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right">
-                      Acción
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                  {records.map((record) => (
-                    <tr
-                      key={record.dbId || record.id}
-                      className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono text-zinc-400">{record.id}</span>
-                          <span className="font-bold text-zinc-900 dark:text-white">
-                            {record.task}
+            <>
+              {/* Mobile View: Cards */}
+              <div className="block md:hidden divide-y divide-zinc-100 dark:divide-zinc-800 p-4 space-y-3">
+                {records.map((record) => (
+                  <div
+                    key={record.dbId || record.id}
+                    className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 flex flex-col gap-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="text-xs font-mono text-zinc-400">{record.id}</span>
+                        <h4 className="font-bold text-zinc-900 dark:text-white text-base">
+                          {record.task}
+                        </h4>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                          👨‍🔧 {record.mechanic} • {record.date}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleEliminar(record)}
+                        title="Eliminar registro"
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-rose-600 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer text-sm"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="font-mono bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 rounded-lg text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                        {record.orderId}
+                      </span>
+                      {record.vehicle && (
+                        <span className="text-zinc-500 dark:text-zinc-400">
+                          {record.vehicle}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-zinc-200/50 dark:border-zinc-800">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                        ⏱️ {record.duration}
+                      </span>
+                      <span className="text-sm font-black text-zinc-900 dark:text-white font-mono">
+                        {record.revenue}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {records.length === 0 && (
+                  <p className="py-8 text-center text-sm text-zinc-500">
+                    No hay registros de tiempo. Inicia el cronómetro o agrega un registro manual.
+                  </p>
+                )}
+              </div>
+
+              {/* Desktop View: Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800">
+                      <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                        ID / Tarea
+                      </th>
+                      <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                        Orden / Vehículo
+                      </th>
+                      <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                        Fecha
+                      </th>
+                      <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                        Tiempo Invertido
+                      </th>
+                      <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right">
+                        Facturable
+                      </th>
+                      <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right">
+                        Acción
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    {records.map((record) => (
+                      <tr
+                        key={record.dbId || record.id}
+                        className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono text-zinc-400">{record.id}</span>
+                            <span className="font-bold text-zinc-900 dark:text-white">
+                              {record.task}
+                            </span>
+                          </div>
+                          <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                            👨‍🔧 {record.mechanic}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-xs font-mono bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 inline-block">
+                            {record.orderId}
                           </span>
-                        </div>
-                        <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                          👨‍🔧 {record.mechanic}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-xs font-mono bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 inline-block">
-                          {record.orderId}
-                        </span>
-                        {record.vehicle && (
-                          <div className="text-xs text-zinc-500 mt-1">{record.vehicle}</div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-300">
-                        {record.date}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-bold bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400">
-                          ⏱️ {record.duration}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <span className="text-sm font-bold text-zinc-900 dark:text-white">
-                          {record.revenue}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => handleEliminar(record)}
-                          title="Eliminar registro"
-                          className="text-zinc-400 hover:text-rose-600 p-1.5 rounded-lg transition-colors text-xs cursor-pointer"
-                        >
-                          ✕
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {records.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center text-sm text-zinc-500">
-                        No hay registros de tiempo. Inicia el cronómetro o agrega un registro manual.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                          {record.vehicle && (
+                            <div className="text-xs text-zinc-500 mt-1">{record.vehicle}</div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-300">
+                          {record.date}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-bold bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                            ⏱️ {record.duration}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <span className="text-sm font-bold text-zinc-900 dark:text-white">
+                            {record.revenue}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleEliminar(record)}
+                            title="Eliminar registro"
+                            className="text-zinc-400 hover:text-rose-600 p-1.5 rounded-lg transition-colors text-xs cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {records.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-12 text-center text-sm text-zinc-500">
+                          No hay registros de tiempo. Inicia el cronómetro o agrega un registro manual.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 
         {/* Modal Registro Manual */}
         {modalManual && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl space-y-4">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 pb-8 sm:pb-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
                   ⏱️ Registrar Tiempo Manualmente (Neon DB)
@@ -496,7 +557,7 @@ export default function ControlTiemposPage() {
                 <button
                   type="button"
                   onClick={() => setModalManual(false)}
-                  className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                  className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center text-sm cursor-pointer"
                 >
                   ✕
                 </button>
@@ -519,7 +580,7 @@ export default function ControlTiemposPage() {
                           setManualMechanic(found.mechanic || "Carlos Rodríguez");
                         }
                       }}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                      className="w-full h-11 text-base sm:text-sm px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 dark:text-white"
                     >
                       <option value="">-- Seleccionar orden o escribir abajo --</option>
                       {ordenesActivas.map((o) => (
@@ -541,7 +602,7 @@ export default function ControlTiemposPage() {
                     placeholder="Ej: Desmontaje y limpieza de inyectores"
                     value={manualTask}
                     onChange={(e) => setManualTask(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                    className="w-full h-11 text-base sm:text-sm px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 dark:text-white"
                   />
                 </div>
 
@@ -556,7 +617,7 @@ export default function ControlTiemposPage() {
                       placeholder="Ej: ORD-2024-105"
                       value={manualOrderId}
                       onChange={(e) => setManualOrderId(e.target.value.toUpperCase())}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm font-mono dark:text-white"
+                      className="w-full h-11 text-base sm:text-sm px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 font-mono dark:text-white"
                     />
                   </div>
                   <div>
@@ -566,7 +627,7 @@ export default function ControlTiemposPage() {
                     <select
                       value={manualMechanic}
                       onChange={(e) => setManualMechanic(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                      className="w-full h-11 text-base sm:text-sm px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 dark:text-white"
                     >
                       <option value="Carlos Rodríguez">Carlos Rodríguez</option>
                       <option value="Luis Martínez">Luis Martínez</option>
@@ -587,7 +648,7 @@ export default function ControlTiemposPage() {
                       required
                       value={manualMinutes}
                       onChange={(e) => setManualMinutes(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                      className="w-full h-11 text-base sm:text-sm px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 dark:text-white"
                     />
                   </div>
                   <div>
@@ -600,23 +661,23 @@ export default function ControlTiemposPage() {
                       required
                       value={manualRevenue}
                       onChange={(e) => setManualRevenue(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                      className="w-full h-11 text-base sm:text-sm px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 dark:text-white"
                     />
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2">
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setModalManual(false)}
-                    className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-300"
+                    className="w-full sm:w-auto h-11 min-h-[44px] px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-semibold text-zinc-700 dark:text-zinc-300"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={guardandoManual}
-                    className="px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm disabled:opacity-50 cursor-pointer"
+                    className="w-full sm:w-auto h-11 min-h-[44px] px-6 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold shadow-sm disabled:opacity-50 cursor-pointer"
                   >
                     {guardandoManual ? "Guardando..." : "Guardar Registro"}
                   </button>
@@ -628,8 +689,8 @@ export default function ControlTiemposPage() {
 
         {/* Modal Reporte Mensual */}
         {modalReporte && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl space-y-4">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 pb-8 sm:pb-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
                   📊 Reporte de Productividad por Mecánico (Neon DB)
@@ -637,7 +698,7 @@ export default function ControlTiemposPage() {
                 <button
                   type="button"
                   onClick={() => setModalReporte(false)}
-                  className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                  className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center text-sm cursor-pointer"
                 >
                   ✕
                 </button>
@@ -679,7 +740,7 @@ export default function ControlTiemposPage() {
                 <button
                   type="button"
                   onClick={() => setModalReporte(false)}
-                  className="px-5 py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-800 text-white text-xs font-bold cursor-pointer"
+                  className="w-full sm:w-auto h-11 min-h-[44px] px-6 rounded-xl bg-zinc-900 dark:bg-zinc-800 text-white text-sm font-bold cursor-pointer"
                 >
                   Cerrar
                 </button>
@@ -688,6 +749,9 @@ export default function ControlTiemposPage() {
           </div>
         )}
       </main>
+
+      {/* Mobile Navigation Bar */}
+      <TallerMobileNav />
     </div>
   );
 }

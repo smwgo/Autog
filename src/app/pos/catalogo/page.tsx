@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { PosMobileNav } from "@/components/PosMobileNav";
 
 interface Product {
   id: string;
@@ -26,10 +27,14 @@ export default function CatalogoPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [catMenuAbierto, setCatMenuAbierto] = useState(false);
+  const [selectedEstado, setSelectedEstado] = useState("TODOS");
+  const [estadoMenuAbierto, setEstadoMenuAbierto] = useState(false);
 
   // Modales
   const [mostrarModalNuevo, setMostrarModalNuevo] = useState(false);
   const [productoAEditar, setProductoAEditar] = useState<Product | null>(null);
+  const [productoAEliminar, setProductoAEliminar] = useState<Product | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
 
@@ -170,14 +175,12 @@ export default function CatalogoPage() {
     }
   };
 
-  const handleEliminar = async (id: string, name: string) => {
-    if (!confirm(`¿Estás seguro de que deseas eliminar el producto "${name}"?`)) {
-      return;
-    }
+  const confirmarEliminarProducto = async () => {
+    if (!productoAEliminar) return;
 
     try {
-      setEliminandoId(id);
-      const res = await fetch(`/api/productos?id=${id}`, {
+      setEliminandoId(productoAEliminar.id);
+      const res = await fetch(`/api/productos?id=${productoAEliminar.id}`, {
         method: "DELETE",
       });
 
@@ -187,6 +190,7 @@ export default function CatalogoPage() {
         return;
       }
 
+      setProductoAEliminar(null);
       await cargarProductos();
     } catch (err: any) {
       alert("Error al eliminar: " + err.message);
@@ -208,40 +212,113 @@ export default function CatalogoPage() {
     }
   };
 
+  const enStockCount = productos.filter((p) => p.status === "En Stock" || p.stock > p.minStock).length;
+  const bajoStockCount = productos.filter((p) => p.status === "Bajo Stock" || (p.stock > 0 && p.stock <= p.minStock)).length;
+  const agotadosCount = productos.filter((p) => p.status === "Agotado" || p.stock <= 0).length;
+
+  const productosFiltrados = productos.filter((p) => {
+    if (selectedEstado === "EN_STOCK") {
+      return p.status === "En Stock" || p.stock > p.minStock;
+    }
+    if (selectedEstado === "BAJO_STOCK") {
+      return p.status === "Bajo Stock" || (p.stock > 0 && p.stock <= p.minStock);
+    }
+    if (selectedEstado === "AGOTADO") {
+      return p.status === "Agotado" || p.stock <= 0;
+    }
+    return true;
+  });
+
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
 
-      <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
-          <div>
-            <div className="flex items-center gap-3">
-              <Link 
-                href="/pos"
-                title="Volver a POS"
-                className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 transition-all shadow-sm active:scale-95 group"
-              >
-                <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-              </Link>
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                Productos
-              </h1>
-              <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
-                {productos.length}
-              </span>
+      <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full">
+        {/* Header */}
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link 
+              href="/pos"
+              title="Volver a Panel POS"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
+            >
+              <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Productos
+            </h1>
+            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
+              {cargando && productos.length === 0 ? "..." : productosFiltrados.length}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <Link
+              href="/pos/catalogo/nuevo"
+              className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-all shadow-sm shadow-blue-500/20 active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Nuevo Producto</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Resumen Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          {/* Total Productos */}
+          <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-500 flex items-center justify-center text-xl shrink-0">
+              📦
+            </div>
+            <div>
+              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                {cargando && productos.length === 0 ? "..." : productos.length}
+              </p>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Productos</h3>
             </div>
           </div>
 
-          <div className="flex gap-3">
-            <Link
-              href="/pos/catalogo/nuevo"
-              className="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-5 py-3 rounded-xl font-medium transition-all shadow-sm shadow-blue-500/20 flex items-center gap-2 cursor-pointer"
-            >
-              <span>+</span> Nuevo Producto
-            </Link>
+          {/* En Stock */}
+          <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-500 flex items-center justify-center text-xl shrink-0">
+              🟢
+            </div>
+            <div>
+              <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                {cargando ? "..." : enStockCount}
+              </p>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">En Stock</h3>
+            </div>
+          </div>
+
+          {/* Bajo Stock */}
+          <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-500 flex items-center justify-center text-xl shrink-0">
+              ⚠️
+            </div>
+            <div>
+              <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
+                {cargando ? "..." : bajoStockCount}
+              </p>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Bajo Stock</h3>
+            </div>
+          </div>
+
+          {/* Agotados */}
+          <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-500/15 border border-rose-500/25 text-rose-500 flex items-center justify-center text-xl shrink-0">
+              🛑
+            </div>
+            <div>
+              <p className="text-xl sm:text-2xl font-bold text-rose-600 dark:text-rose-400">
+                {cargando ? "..." : agotadosCount}
+              </p>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Agotados</h3>
+            </div>
           </div>
         </div>
 
@@ -258,111 +335,201 @@ export default function CatalogoPage() {
           </div>
         )}
 
-        {/* Filters / Search */}
-        <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm mb-8 flex flex-col md:flex-row gap-4">
-          <div className="flex-grow relative">
+        {/* Buscador y Filtros */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 mb-6">
+          <div className="relative w-full flex-1">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
+              🔍
+            </span>
             <input
               type="text"
-              placeholder="Buscar..."
-              className="w-full pl-12 pr-4 py-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all dark:text-white font-medium"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar..."
+              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
             />
-            <span className="absolute left-4 top-3.5 text-zinc-400 text-lg">🔍</span>
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm("")}
-                className="absolute right-4 top-3.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm cursor-pointer"
+                title="Limpiar búsqueda"
               >
                 ✕
               </button>
             )}
           </div>
-          <div className="relative w-full md:w-64">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full appearance-none px-4 py-3 pr-10 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-bold text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 cursor-pointer shadow-sm transition-all"
-            >
-              <option value="">Categorías</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-zinc-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
-              </svg>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            {/* Filtro Categorías */}
+            <div className="relative w-full sm:w-44 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setCatMenuAbierto(!catMenuAbierto);
+                  setEstadoMenuAbierto(false);
+                }}
+                className="w-full h-11 px-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-sm font-medium flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+              >
+                <span className="truncate">{!selectedCategory ? "Categorías" : selectedCategory}</span>
+                <svg className={`w-4 h-4 text-zinc-400 transition-transform shrink-0 ml-1.5 ${catMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {catMenuAbierto && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setCatMenuAbierto(false)} 
+                  />
+                  <div className="absolute right-0 mt-1.5 w-full bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory("");
+                        setCatMenuAbierto(false);
+                      }}
+                      className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                        !selectedCategory
+                          ? "bg-blue-600/15 text-blue-400"
+                          : "text-zinc-300 hover:bg-zinc-800/80 hover:text-white"
+                      }`}
+                    >
+                      <span>Categorías</span>
+                      {!selectedCategory && (
+                        <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                    {categories.map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCategory(cat);
+                          setCatMenuAbierto(false);
+                        }}
+                        className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                          selectedCategory === cat
+                            ? "bg-blue-600/15 text-blue-400"
+                            : "text-zinc-300 hover:bg-zinc-800/80 hover:text-white"
+                        }`}
+                      >
+                        <span className="truncate">{cat}</span>
+                        {selectedCategory === cat && (
+                          <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Filtro Estado */}
+            <div className="relative w-full sm:w-40 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setEstadoMenuAbierto(!estadoMenuAbierto);
+                  setCatMenuAbierto(false);
+                }}
+                className="w-full h-11 px-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-sm font-medium flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+              >
+                <span>
+                  {selectedEstado === "EN_STOCK"
+                    ? "En Stock"
+                    : selectedEstado === "BAJO_STOCK"
+                    ? "Bajo Stock"
+                    : selectedEstado === "AGOTADO"
+                    ? "Agotados"
+                    : "Estado"}
+                </span>
+                <svg className={`w-4 h-4 text-zinc-400 transition-transform shrink-0 ml-1.5 ${estadoMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {estadoMenuAbierto && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setEstadoMenuAbierto(false)} 
+                  />
+                  <div className="absolute right-0 mt-1.5 w-full bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                    {[
+                      { id: "TODOS", label: "Estado" },
+                      { id: "EN_STOCK", label: "En Stock" },
+                      { id: "BAJO_STOCK", label: "Bajo Stock" },
+                      { id: "AGOTADO", label: "Agotados" },
+                    ].map((opcion) => (
+                      <button
+                        key={opcion.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedEstado(opcion.id);
+                          setEstadoMenuAbierto(false);
+                        }}
+                        className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                          selectedEstado === opcion.id
+                            ? "bg-blue-600/15 text-blue-400"
+                            : "text-zinc-300 hover:bg-zinc-800/80 hover:text-white"
+                        }`}
+                      >
+                        <span>{opcion.label}</span>
+                        {selectedEstado === opcion.id && (
+                          <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Products Table */}
+        {/* Products List / Table */}
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[800px]">
-              <thead>
-                <tr className="bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800">
-                  <th className="px-6 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    Producto
-                  </th>
-                  <th className="px-6 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    Categoría
-                  </th>
-                  <th className="px-6 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    Precio
-                  </th>
-                  <th className="px-6 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    Stock
-                  </th>
-                  <th className="px-6 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    Ubicación
-                  </th>
-                  <th className="px-6 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {cargando && productos.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-16 text-center text-zinc-500 dark:text-zinc-400">
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <div className="w-7 h-7 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                        <p className="text-sm">Cargando catálogo...</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : productos.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-16 text-center">
-                      <div className="flex flex-col items-center justify-center gap-3 max-w-sm mx-auto">
-                        <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-3xl text-blue-600">
-                          📦
+          {cargando && productos.length === 0 ? (
+            <div className="p-12 text-center text-zinc-500 dark:text-zinc-400">
+              <div className="w-7 h-7 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+              <p className="text-sm">Cargando catálogo...</p>
+            </div>
+          ) : productosFiltrados.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="flex flex-col items-center justify-center gap-3 max-w-sm mx-auto">
+                <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-3xl text-blue-600">
+                  📦
+                </div>
+                <h4 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
+                  No hay productos registrados
+                </h4>
+                <Link
+                  href="/pos/catalogo/nuevo"
+                  className="mt-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-sm shadow-md shadow-blue-500/20 transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <span>+</span> Registrar Producto
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Mobile Cards (md:hidden) */}
+              <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+                {productosFiltrados.map((item) => (
+                  <div key={item.id} className="p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <div className="font-bold text-zinc-900 dark:text-white text-base leading-snug">
+                          {item.name}
                         </div>
-                        <h4 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
-                          No hay productos registrados
-                        </h4>
-                        <Link
-                          href="/pos/catalogo/nuevo"
-                          className="mt-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-sm shadow-md shadow-blue-500/20 transition-all flex items-center gap-2 cursor-pointer"
-                        >
-                          <span>+</span> Registrar Producto
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  productos.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors group"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="font-bold text-zinc-900 dark:text-white mb-1">{item.name}</div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs font-mono bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
                             {item.code}
                           </span>
@@ -372,71 +539,157 @@ export default function CatalogoPage() {
                             </span>
                           )}
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xl font-black text-zinc-900 dark:text-white block">
+                          ${Number(item.price).toFixed(2)}
+                        </span>
+                        <span className="text-[10px] text-zinc-400">P.V.P</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
                           {item.category}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 font-black text-zinc-900 dark:text-white">
-                        ${Number(item.price).toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1.5 items-start">
-                          <span className="font-bold text-zinc-900 dark:text-white">
-                            {item.stock} <span className="text-sm font-normal text-zinc-500">uds.</span>
+                        <span
+                          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${getStatusColor(
+                            item.status
+                          )}`}
+                        >
+                          {item.status} ({item.stock} uds)
+                        </span>
+                      </div>
+                      {item.location && (
+                        <span className="text-zinc-400 text-xs flex items-center gap-1">
+                          <span>📍</span> {item.location}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Action buttons (Touch target >= 44px) */}
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800/60">
+                      <button
+                        onClick={() => abrirModalEditar(item)}
+                        className="h-11 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 text-blue-600 dark:text-blue-400 text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95"
+                      >
+                        <span>✏️</span> Editar
+                      </button>
+                      <button
+                        onClick={() => setProductoAEliminar(item)}
+                        disabled={eliminandoId === item.id}
+                        className="h-11 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50 cursor-pointer"
+                      >
+                        <span>🗑️</span> Eliminar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table (hidden md:block) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[800px]">
+                  <thead>
+                    <tr className="bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800">
+                      <th className="px-6 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                        Producto
+                      </th>
+                      <th className="px-6 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                        Categoría
+                      </th>
+                      <th className="px-6 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                        Precio
+                      </th>
+                      <th className="px-6 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                        Stock
+                      </th>
+                      <th className="px-6 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                        Ubicación
+                      </th>
+                      <th className="px-6 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    {productosFiltrados.map((item) => (
+                      <tr
+                        key={item.id}
+                        className="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors group"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="font-bold text-zinc-900 dark:text-white mb-1">{item.name}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                              {item.code}
+                            </span>
+                            {item.brand && (
+                              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                                {item.brand}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                            {item.category}
                           </span>
-                          <span
-                            className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${getStatusColor(
-                              item.status
-                            )}`}
-                          >
-                            {item.status}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400 font-medium">
-                        {item.location ? (
-                          <span className="flex items-center gap-1.5">
-                            <span className="text-zinc-400">📍</span> {item.location}
-                          </span>
-                        ) : (
-                          <span className="text-zinc-400 text-xs italic">Sin ubicación</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => abrirModalEditar(item)}
-                            className="text-sm font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 px-3.5 py-1.5 rounded-xl transition-colors cursor-pointer"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => handleEliminar(item.id, item.name)}
-                            disabled={eliminandoId === item.id}
-                            className="p-2 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
-                            title="Eliminar Producto"
-                          >
-                            {eliminandoId === item.id ? (
-                              <svg className="w-4 h-4 animate-spin text-rose-600" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                              </svg>
-                            ) : (
+                        </td>
+                        <td className="px-6 py-4 font-black text-zinc-900 dark:text-white">
+                          ${Number(item.price).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-1.5 items-start">
+                            <span className="font-bold text-zinc-900 dark:text-white">
+                              {item.stock} <span className="text-sm font-normal text-zinc-500">uds.</span>
+                            </span>
+                            <span
+                              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${getStatusColor(
+                                item.status
+                              )}`}
+                            >
+                              {item.status}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400 font-medium">
+                          {item.location ? (
+                            <span className="flex items-center gap-1.5">
+                              <span className="text-zinc-400">📍</span> {item.location}
+                            </span>
+                          ) : (
+                            <span className="text-zinc-400 text-xs italic">Sin ubicación</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => abrirModalEditar(item)}
+                              className="text-sm font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 px-3.5 py-1.5 rounded-xl transition-colors cursor-pointer"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => setProductoAEliminar(item)}
+                              disabled={eliminandoId === item.id}
+                              className="p-2 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                              title="Eliminar Producto"
+                            >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>
-                            )}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
           <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-sm text-zinc-500">
             <span>Mostrando {productos.length} productos</span>
           </div>
@@ -444,8 +697,8 @@ export default function CatalogoPage() {
 
         {/* Modal: Crear / Editar Producto */}
         {(mostrarModalNuevo || productoAEditar) && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl w-full max-w-xl p-6 md:p-8 shadow-2xl relative">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-2xl w-full max-w-xl p-6 md:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6 pb-3 border-b border-zinc-100 dark:border-zinc-800">
                 <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
                   {productoAEditar ? "Editar Producto" : "Nuevo Producto"}
@@ -455,7 +708,7 @@ export default function CatalogoPage() {
                     setMostrarModalNuevo(false);
                     setProductoAEditar(null);
                   }}
-                  className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
                 >
                   ✕
                 </button>
@@ -464,7 +717,7 @@ export default function CatalogoPage() {
               <form onSubmit={productoAEditar ? guardarEdicion : guardarNuevoProducto} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
+                    <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
                       Código / SKU
                     </label>
                     <input
@@ -472,11 +725,11 @@ export default function CatalogoPage() {
                       placeholder="PROD-001"
                       value={form.code}
                       onChange={(e) => setForm({ ...form, code: e.target.value })}
-                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-sm font-mono uppercase outline-none focus:border-blue-500"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm font-mono uppercase outline-none focus:border-blue-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
+                    <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
                       Marca
                     </label>
                     <input
@@ -484,13 +737,13 @@ export default function CatalogoPage() {
                       placeholder="Mobil 1, Bosch, etc."
                       value={form.brand}
                       onChange={(e) => setForm({ ...form, brand: e.target.value })}
-                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-sm outline-none focus:border-blue-500"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
+                  <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
                     Nombre del Producto
                   </label>
                   <input
@@ -498,13 +751,13 @@ export default function CatalogoPage() {
                     placeholder="Aceite Sintético 5W-30"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-sm outline-none focus:border-blue-500"
+                    className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
+                    <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
                       Categoría
                     </label>
                     <input
@@ -512,11 +765,11 @@ export default function CatalogoPage() {
                       placeholder="Lubricantes, Filtros, etc."
                       value={form.category}
                       onChange={(e) => setForm({ ...form, category: e.target.value })}
-                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-sm outline-none focus:border-blue-500"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
+                    <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
                       Precio de Venta ($)
                     </label>
                     <input
@@ -526,14 +779,14 @@ export default function CatalogoPage() {
                       placeholder="15.50"
                       value={form.price}
                       onChange={(e) => setForm({ ...form, price: e.target.value })}
-                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-sm font-bold outline-none focus:border-blue-500"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm font-bold outline-none focus:border-blue-500"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
+                    <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
                       Stock Actual
                     </label>
                     <input
@@ -541,11 +794,11 @@ export default function CatalogoPage() {
                       min="0"
                       value={form.stock}
                       onChange={(e) => setForm({ ...form, stock: e.target.value })}
-                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-sm outline-none focus:border-blue-500"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
+                    <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
                       Stock Mínimo Alerta
                     </label>
                     <input
@@ -553,13 +806,13 @@ export default function CatalogoPage() {
                       min="0"
                       value={form.minStock}
                       onChange={(e) => setForm({ ...form, minStock: e.target.value })}
-                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-sm outline-none focus:border-blue-500"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
+                  <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
                     Ubicación en Almacén
                   </label>
                   <input
@@ -567,7 +820,7 @@ export default function CatalogoPage() {
                     placeholder="Pasillo 2, Estante A"
                     value={form.location}
                     onChange={(e) => setForm({ ...form, location: e.target.value })}
-                    className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-sm outline-none focus:border-blue-500"
+                    className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500"
                   />
                 </div>
 
@@ -578,14 +831,14 @@ export default function CatalogoPage() {
                       setMostrarModalNuevo(false);
                       setProductoAEditar(null);
                     }}
-                    className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                    className="flex-1 sm:flex-none h-11 px-4 rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer flex items-center justify-center"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={guardando}
-                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold shadow-md shadow-blue-500/20 transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                    className="flex-1 sm:flex-none h-11 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold shadow-md shadow-blue-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {guardando
                       ? "Guardando..."
@@ -598,7 +851,48 @@ export default function CatalogoPage() {
             </div>
           </div>
         )}
+        {/* Modal Flotante de Confirmación de Eliminación */}
+        {productoAEliminar && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl relative animate-in zoom-in-95 duration-150 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center text-xl mx-auto mb-3">
+                🗑️
+              </div>
+              <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">
+                ¿Eliminar producto?
+              </h3>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-5">
+                Se eliminará <strong className="text-zinc-900 dark:text-white font-medium">{productoAEliminar.name}</strong>.
+                {productoAEliminar.stock > 0 && (
+                  <span className="block mt-2 text-xs font-semibold text-amber-500">
+                    ⚠️ Stock: {productoAEliminar.stock} uds.
+                  </span>
+                )}
+              </p>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setProductoAEliminar(null)}
+                  disabled={!!eliminandoId}
+                  className="h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmarEliminarProducto}
+                  disabled={!!eliminandoId}
+                  className="h-10 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-sm font-medium transition-all disabled:opacity-50 cursor-pointer shadow-sm shadow-rose-500/20"
+                >
+                  {eliminandoId ? "Eliminando..." : "Eliminar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
+
+      <PosMobileNav />
     </div>
   );
 }

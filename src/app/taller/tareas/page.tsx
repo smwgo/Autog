@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { TallerMobileNav } from "@/components/TallerMobileNav";
 
 interface TaskItem {
   id: string;
@@ -216,7 +217,7 @@ export default function MisTareasPage() {
 
     return (
       <div
-        className={`bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all group ${
+        className={`bg-white dark:bg-zinc-900 p-4 sm:p-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all group ${
           isBusy ? "opacity-50 pointer-events-none" : ""
         }`}
       >
@@ -243,14 +244,14 @@ export default function MisTareasPage() {
               type="button"
               onClick={() => handleEliminarTarea(task)}
               title="Eliminar tarea"
-              className="text-zinc-400 hover:text-rose-500 p-1 rounded-lg transition-colors text-xs"
+              className="w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center text-zinc-400 hover:text-rose-500 rounded-xl transition-colors text-xs"
             >
               ✕
             </button>
           </div>
         </div>
 
-        <h4 className="font-bold text-zinc-900 dark:text-white mb-2 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+        <h4 className="font-bold text-zinc-900 dark:text-white mb-2 text-base group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
           {task.title}
         </h4>
 
@@ -268,18 +269,18 @@ export default function MisTareasPage() {
           </p>
         )}
 
-        <div className="flex justify-between items-center pt-3 border-t border-zinc-100 dark:border-zinc-800">
+        <div className="flex justify-between items-center pt-3 border-t border-zinc-100 dark:border-zinc-800 gap-2">
           <span className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5 font-medium">
             <span>⏱️</span> {task.timeEst}
           </span>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <select
               value={task.status}
               onChange={(e) =>
                 handleCambiarEstado(task, e.target.value as "pending" | "in-progress" | "done")
               }
-              className="text-[11px] font-semibold px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 focus:outline-none cursor-pointer"
+              className="h-11 text-xs font-semibold px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 focus:outline-none cursor-pointer"
             >
               <option value="pending">Por Hacer</option>
               <option value="in-progress">En Progreso</option>
@@ -290,7 +291,7 @@ export default function MisTareasPage() {
               type="button"
               onClick={() => handleCambiarEstado(task, nextStatus)}
               title={nextLabel}
-              className="text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 p-1.5 rounded-lg transition-colors cursor-pointer"
+              className="h-11 w-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-xl transition-colors cursor-pointer border border-emerald-200 dark:border-emerald-800/50"
             >
               <svg
                 className="w-5 h-5"
@@ -309,15 +310,15 @@ export default function MisTareasPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
 
-      <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
+      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
         {/* Navigation / Breadcrumb */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <Link
             href="/taller"
-            className="text-sm font-medium text-emerald-600 hover:text-emerald-500 flex items-center gap-1 w-fit"
+            className="text-sm font-medium text-emerald-600 hover:text-emerald-500 flex items-center gap-1 w-fit min-h-[44px] sm:min-h-0 items-center"
           >
             &larr; Volver al Panel de Taller
           </Link>
@@ -325,35 +326,35 @@ export default function MisTareasPage() {
           <button
             type="button"
             onClick={() => setModalAbierto(true)}
-            className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+            className="h-11 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-5 rounded-xl font-bold text-sm transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
           >
             <span>+</span> Nueva Tarea
           </button>
         </div>
 
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-10">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6 sm:mb-10">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500 bg-opacity-10 flex items-center justify-center text-2xl">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500 bg-opacity-10 flex items-center justify-center text-2xl shrink-0">
                 🔧
               </div>
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                   Mis Tareas
                 </h1>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
                   {tasks.length} tareas registradas en Neon DB
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
             <select
               value={filterMechanic}
               onChange={(e) => setFilterMechanic(e.target.value)}
-              className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm font-medium dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="h-11 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-base sm:text-sm font-medium dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
             >
               <option value="">Todos los Mecánicos</option>
               <option value="Carlos Rodríguez">Carlos Rodríguez</option>
@@ -362,11 +363,11 @@ export default function MisTareasPage() {
               <option value="Ana Torres">Ana Torres</option>
             </select>
 
-            <div className="relative flex-grow md:flex-grow-0">
+            <div className="relative flex-grow">
               <input
                 type="text"
                 placeholder="Buscar tarea o placa..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow dark:text-white text-sm"
+                className="w-full h-11 pl-10 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow dark:text-white text-base sm:text-sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -453,10 +454,10 @@ export default function MisTareasPage() {
           </div>
         )}
 
-        {/* Modal Nueva Tarea */}
+        {/* Modal Nueva Tarea (Bottom-sheet on small screens) */}
         {modalAbierto && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl space-y-4">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 pb-8 sm:pb-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                   <span>🔧</span> Asignar Nueva Tarea (Neon DB)
@@ -464,7 +465,7 @@ export default function MisTareasPage() {
                 <button
                   type="button"
                   onClick={() => setModalAbierto(false)}
-                  className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                  className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center text-sm cursor-pointer"
                 >
                   ✕
                 </button>
@@ -479,7 +480,7 @@ export default function MisTareasPage() {
                     <select
                       value={orderNumber}
                       onChange={(e) => handleSeleccionarOrden(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm dark:text-white"
                     >
                       <option value="">-- Seleccionar orden existente o ingresar manual --</option>
                       {ordenesActivas.map((o) => (
@@ -501,7 +502,7 @@ export default function MisTareasPage() {
                     placeholder="Ej: Cambio de Correa de Distribución"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                    className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm dark:text-white"
                   />
                 </div>
 
@@ -516,7 +517,7 @@ export default function MisTareasPage() {
                       placeholder="Ej: Toyota Hilux (ABC-123)"
                       value={vehicle}
                       onChange={(e) => setVehicle(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm dark:text-white"
                     />
                   </div>
                   <div>
@@ -526,7 +527,7 @@ export default function MisTareasPage() {
                     <select
                       value={mechanic}
                       onChange={(e) => setMechanic(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm dark:text-white"
                     >
                       <option value="Carlos Rodríguez">Carlos Rodríguez</option>
                       <option value="Luis Martínez">Luis Martínez</option>
@@ -544,7 +545,7 @@ export default function MisTareasPage() {
                     <select
                       value={priority}
                       onChange={(e) => setPriority(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm dark:text-white"
                     >
                       <option value="Baja">Baja</option>
                       <option value="Media">Media</option>
@@ -560,7 +561,7 @@ export default function MisTareasPage() {
                       placeholder="Ej: 1h 30m"
                       value={timeEst}
                       onChange={(e) => setTimeEst(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm dark:text-white"
                     />
                   </div>
                 </div>
@@ -574,22 +575,22 @@ export default function MisTareasPage() {
                     placeholder="Instrucciones o especificaciones para el mecánico..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                    className="w-full p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm dark:text-white resize-y"
                   />
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2">
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setModalAbierto(false)}
-                    className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-300"
+                    className="h-11 px-5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center justify-center"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={guardando}
-                    className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm disabled:opacity-50 cursor-pointer"
+                    className="h-11 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm disabled:opacity-50 cursor-pointer flex items-center justify-center"
                   >
                     {guardando ? "Guardando..." : "Crear Tarea"}
                   </button>
@@ -599,6 +600,8 @@ export default function MisTareasPage() {
           </div>
         )}
       </main>
+
+      <TallerMobileNav />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { PosMobileNav } from "@/components/PosMobileNav";
 
 interface Vehicle {
   id: string;
@@ -35,6 +36,7 @@ export default function GestionClientes() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filtro, setFiltro] = useState("todos");
+  const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [stats, setStats] = useState({
     totalClientes: 0,
@@ -233,7 +235,7 @@ export default function GestionClientes() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
 
       <main className="flex-grow p-3 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
@@ -355,21 +357,54 @@ export default function GestionClientes() {
             )}
           </div>
 
-          <div className="relative w-full md:w-auto">
-            <select
-              value={filtro}
-              onChange={(e) => setFiltro(e.target.value)}
-              className="w-full md:w-auto appearance-none bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-medium rounded-xl pl-4 pr-10 py-2.5 outline-none focus:border-blue-500 cursor-pointer shadow-sm hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
+          <div className="relative w-full sm:w-44 shrink-0">
+            <button
+              type="button"
+              onClick={() => setFiltroMenuAbierto(!filtroMenuAbierto)}
+              className="w-full h-11 px-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-sm font-medium flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
             >
-              <option value="todos">Todos</option>
-              <option value="persona">Persona</option>
-              <option value="empresa">Empresa</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-zinc-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <span>{filtro === "persona" ? "Persona" : filtro === "empresa" ? "Empresa" : "Todos"}</span>
+              <svg className={`w-4 h-4 text-zinc-400 transition-transform ${filtroMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
               </svg>
-            </div>
+            </button>
+
+            {filtroMenuAbierto && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setFiltroMenuAbierto(false)} 
+                />
+                <div className="absolute right-0 mt-1.5 w-full bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                  {[
+                    { id: "todos", label: "Todos" },
+                    { id: "persona", label: "Persona" },
+                    { id: "empresa", label: "Empresa" },
+                  ].map((opcion) => (
+                    <button
+                      key={opcion.id}
+                      type="button"
+                      onClick={() => {
+                        setFiltro(opcion.id);
+                        setFiltroMenuAbierto(false);
+                      }}
+                      className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                        filtro === opcion.id
+                          ? "bg-blue-600/15 text-blue-400"
+                          : "text-zinc-300 hover:bg-zinc-800/80 hover:text-white"
+                      }`}
+                    >
+                      <span>{opcion.label}</span>
+                      {filtro === opcion.id && (
+                        <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -423,24 +458,24 @@ export default function GestionClientes() {
                       </div>
                     </div>
 
-                    {/* Acciones Rápidas (Toque fácil en móvil) */}
-                    <div className="flex items-center gap-1 shrink-0">
+                    {/* Acciones Rápidas (Toque fácil en móvil >= 44px) */}
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         onClick={() => abrirEdicion(row)}
-                        className="w-9 h-9 rounded-lg flex items-center justify-center text-zinc-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95"
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all"
                         title="Editar"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                         </svg>
                       </button>
                       <button
                         onClick={() => solicitarEliminar(row.id, row.name)}
                         disabled={eliminandoId === row.id}
-                        className="w-9 h-9 rounded-lg flex items-center justify-center text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95"
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-rose-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95 transition-all disabled:opacity-50"
                         title="Eliminar"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       </button>
@@ -792,8 +827,8 @@ export default function GestionClientes() {
         )}
         {/* Modal Flotante de Confirmación de Eliminación */}
         {clienteAEliminar && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl sm:rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl relative text-center">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl relative text-center max-h-[90vh] overflow-y-auto">
               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-rose-100 dark:bg-rose-500/10 text-rose-600 flex items-center justify-center text-2xl sm:text-3xl mx-auto mb-3 sm:mb-4 border border-rose-200 dark:border-rose-900/40">
                 🗑️
               </div>
@@ -808,7 +843,7 @@ export default function GestionClientes() {
                   type="button"
                   disabled={eliminandoId !== null}
                   onClick={() => setClienteAEliminar(null)}
-                  className="flex-1 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 font-semibold text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                  className="flex-1 h-11 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 font-semibold text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer flex items-center justify-center"
                 >
                   Cancelar
                 </button>
@@ -816,7 +851,7 @@ export default function GestionClientes() {
                   type="button"
                   disabled={eliminandoId !== null}
                   onClick={confirmarEliminacion}
-                  className="flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm shadow-lg shadow-rose-600/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="flex-1 h-11 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm shadow-lg shadow-rose-600/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {eliminandoId ? (
                     <>
@@ -854,6 +889,8 @@ export default function GestionClientes() {
           </div>
         )}
       </main>
+
+      <PosMobileNav />
     </div>
   );
 }

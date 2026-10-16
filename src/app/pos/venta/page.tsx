@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { PosMobileNav } from "@/components/PosMobileNav";
 
 interface Product {
   id: string;
@@ -59,6 +60,7 @@ export default function NuevaVentaPage() {
   const [cargandoProductos, setCargandoProductos] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroTipo, setFiltroTipo] = useState<"todos" | "productos" | "servicios">("todos");
+  const [vistaMovil, setVistaMovil] = useState<"catalogo" | "carrito">("catalogo");
 
   // Clientes
   const [clientes, setClientes] = useState<Customer[]>([]);
@@ -103,7 +105,8 @@ export default function NuevaVentaPage() {
   const [solicitudActiva, setSolicitudActiva] = useState<any | null>(null);
   const [solicitudesPendientesCount, setSolicitudesPendientesCount] = useState(0);
 
-  // Flotante: Apertura de Caja
+  // Flotante: Apertura / Cierre de Caja
+  const [cajaActiva, setCajaActiva] = useState<any | null>(null);
   const [mostrarModalApertura, setMostrarModalApertura] = useState(false);
   const [fondoApertura, setFondoApertura] = useState("");
   const [guardandoApertura, setGuardandoApertura] = useState(false);
@@ -356,18 +359,15 @@ export default function NuevaVentaPage() {
       const res = await fetch("/api/caja");
       const json = await res.json();
       if (res.ok && json.success) {
-        setCajaInfo({
-          initialCash: json.data.initialCash || 0,
-          expectedCash: json.data.expectedCash || 0,
-        });
-
-        // Al entrar: si no hay fondo inicial asignado o la sesión actual no ha sido abierta
-        const sesionAbierta = sessionStorage.getItem("pos_caja_abierta_sesion");
-        if (!sesionAbierta || json.data.initialCash === 0) {
-          if (json.data.initialCash > 0) {
-            setFondoApertura(json.data.initialCash.toString());
-          }
-          setMostrarModalApertura(true);
+        const active = json.activeSession || null;
+        setCajaActiva(active);
+        if (active) {
+          setCajaInfo({
+            initialCash: parseFloat(active.initialCash?.toString() || "0"),
+            expectedCash: parseFloat(json.data?.expectedCash?.toString() || active.initialCash?.toString() || "0"),
+          });
+        } else {
+          setCajaInfo(null);
         }
       }
     } catch (e) {
@@ -402,12 +402,8 @@ export default function NuevaVentaPage() {
         throw new Error(json.error || "Error al abrir caja");
       }
 
-      sessionStorage.setItem("pos_caja_abierta_sesion", "true");
-      setCajaInfo({
-        initialCash: monto,
-        expectedCash: monto,
-      });
       setMostrarModalApertura(false);
+      await verificarCajaApertura();
     } catch (err: any) {
       alert("Error: " + err.message);
     } finally {
@@ -416,7 +412,6 @@ export default function NuevaVentaPage() {
   };
 
   const handleOmitirApertura = () => {
-    sessionStorage.setItem("pos_caja_abierta_sesion", "true");
     setMostrarModalApertura(false);
   };
 
@@ -433,7 +428,7 @@ export default function NuevaVentaPage() {
   const handleConfirmarCierre = async (e: React.FormEvent) => {
     e.preventDefault();
     const contado = parseFloat(conteoCierre) || 0;
-    const esperado = cajaInfo?.expectedCash || 0;
+    const esperado = parseFloat(cajaInfo?.expectedCash?.toString() || "0");
     const diferencia = contado - esperado;
 
     setCerrandoCaja(true);
@@ -442,6 +437,7 @@ export default function NuevaVentaPage() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          sessionId: cajaActiva?.id,
           declaredCash: contado,
           expectedCash: esperado,
           diffCash: diferencia,
@@ -453,12 +449,12 @@ export default function NuevaVentaPage() {
         throw new Error(json.error || "Error al cerrar caja");
       }
 
-      sessionStorage.removeItem("pos_caja_abierta_sesion");
-      setCajaInfo({ initialCash: 0, expectedCash: 0 });
+      setCajaActiva(null);
+      setCajaInfo(null);
       setMostrarModalCierre(false);
       setConteoCierre("");
       setNotasCierre("");
-      alert("Caja cerrada correctamente");
+      await verificarCajaApertura();
     } catch (err: any) {
       alert("Error: " + err.message);
     } finally {
@@ -873,65 +869,108 @@ export default function NuevaVentaPage() {
   });
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
 
-      <main className="flex-grow flex flex-col md:flex-row p-4 md:p-6 gap-6 w-full max-w-[1600px] mx-auto h-[calc(100vh-80px)]">
+      <main className="flex-grow flex flex-col md:flex-row p-3 sm:p-4 md:p-6 gap-4 md:gap-6 w-full max-w-[1600px] mx-auto min-h-[calc(100vh-80px)] md:h-[calc(100vh-80px)]">
+        {/* Selector de Vista en Móvil (Android / iOS) */}
+        <div className="flex md:hidden items-center bg-zinc-200 dark:bg-zinc-800 p-1 rounded-2xl gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => setVistaMovil("catalogo")}
+            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              vistaMovil === "catalogo"
+                ? "bg-white dark:bg-zinc-900 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+            }`}
+          >
+            <span>📦</span>
+            <span>Catálogo ({filteredProducts.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setVistaMovil("carrito")}
+            className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              vistaMovil === "carrito"
+                ? "bg-white dark:bg-zinc-900 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+            }`}
+          >
+            <span>🛒</span>
+            <span>Ticket ({cart.reduce((a, b) => a + b.qty, 0)})</span>
+            {cart.length > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black">
+                ${total.toFixed(2)}
+              </span>
+            )}
+          </button>
+        </div>
+
         {/* Panel Izquierdo: Catálogo y Búsqueda */}
-        <div className="flex-grow flex flex-col h-full bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <div className={`${vistaMovil === "carrito" ? "hidden md:flex" : "flex"} flex-grow flex-col h-full bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden`}>
           <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex flex-col gap-4">
-            {/* Encabezado Superior con Pestañas: Venta | Caja | Pedidos */}
+            {/* Header */}
             <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Link
+              <div className="flex items-center gap-3">
+                <Link 
                   href="/pos"
-                  className="w-10 h-10 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-all active:scale-95 shadow-sm"
-                  title="POS"
+                  title="Volver a Panel POS"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
                 >
-                  &larr;
+                  <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
                 </Link>
-
-                {/* Pestañas de Navegación Rápida */}
-                <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-950/70 border border-zinc-200 dark:border-zinc-800/80 backdrop-blur-sm">
-                  {/* Pestaña: Venta (Activa) */}
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold text-xs shadow-[0_0_15px_rgba(16,185,129,0.12)]">
-                    <span className="text-sm">🛒</span>
-                    <span>Venta</span>
-                  </div>
-
-
-                  {/* Pestaña: Pedidos (Abre Flotante) */}
-                  <button
-                    type="button"
-                    onClick={abrirModalPedidos}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-zinc-800/50 font-semibold text-xs transition-all active:scale-95 cursor-pointer"
-                  >
-                    <span className="text-sm">📥</span>
-                    <span>Pedidos</span>
-                    {solicitudesPendientesCount > 0 && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/35 font-semibold">
-                        {solicitudesPendientesCount}
-                      </span>
-                    )}
-                  </button>
-                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                  Venta
+                </h1>
+                <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
+                  {productos.length}
+                </span>
               </div>
 
-              {/* Botones de Acción Rápida */}
+              {/* Botones de Acción: Pedidos y Caja */}
               <div className="flex items-center gap-2">
-
-                {/* Botón: Cierre de Caja */}
                 <button
                   type="button"
-                  onClick={() => {
-                    verificarCajaApertura();
-                    setMostrarModalCierre(true);
-                  }}
-                  className="w-10 h-10 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-rose-300 border border-rose-500/30 flex items-center justify-center text-sm transition-all shadow-[0_0_15px_rgba(244,63,94,0.12)] cursor-pointer"
-                  title="Cierre"
+                  onClick={abrirModalPedidos}
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-zinc-600 dark:text-zinc-300 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 font-semibold text-xs transition-all active:scale-95 cursor-pointer"
                 >
-                  <span>🔒</span>
+                  <span className="text-sm">📥</span>
+                  <span>Pedidos</span>
+                  {solicitudesPendientesCount > 0 && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/35 font-semibold">
+                      {solicitudesPendientesCount}
+                    </span>
+                  )}
                 </button>
+
+                {/* Botón de Caja: Verde si está para abrir, Rojo (🔒) si está abierta para cerrar */}
+                {cajaActiva ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      verificarCajaApertura();
+                      setMostrarModalCierre(true);
+                    }}
+                    className="w-10 h-10 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-rose-300 border border-rose-500/30 flex items-center justify-center text-sm transition-all shadow-[0_0_15px_rgba(244,63,94,0.12)] cursor-pointer"
+                    title="Cerrar Caja"
+                  >
+                    <span>🔒</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFondoApertura("");
+                      setMostrarModalApertura(true);
+                    }}
+                    className="w-10 h-10 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 flex items-center justify-center text-sm transition-all shadow-[0_0_15px_rgba(16,185,129,0.15)] cursor-pointer"
+                    title="Abrir Caja (Apertura)"
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1083,7 +1122,22 @@ export default function NuevaVentaPage() {
         </div>
 
         {/* Panel Derecho: Carrito / Ticket */}
-        <div className="w-full md:w-[420px] lg:w-[460px] flex-shrink-0 flex flex-col bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden h-full">
+        <div className={`${vistaMovil === "catalogo" ? "hidden md:flex" : "flex"} w-full md:w-[420px] lg:w-[460px] flex-shrink-0 flex-col bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden h-full`}>
+          {/* Botón Volver al Catálogo en Móvil */}
+          <div className="md:hidden p-2.5 bg-zinc-100 dark:bg-zinc-800/80 border-b border-zinc-200 dark:border-zinc-700/60 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setVistaMovil("catalogo")}
+              className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 active:scale-95 transition-all cursor-pointer"
+            >
+              <span>&larr;</span>
+              <span>Seguir agregando productos</span>
+            </button>
+            <span className="text-xs font-bold text-zinc-500">
+              {cart.reduce((a, b) => a + b.qty, 0)} ítems
+            </span>
+          </div>
+
           {/* Cabecera del Cliente - Minimalista */}
           <div className="px-4 py-3 bg-zinc-900 dark:bg-zinc-950 text-white border-b border-zinc-800 flex justify-between items-center">
             <button
@@ -1162,6 +1216,14 @@ export default function NuevaVentaPage() {
             {cart.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-zinc-600 p-8 text-center">
                 <span className="text-5xl opacity-30">🛒</span>
+                <p className="text-sm mt-3 text-zinc-500">Ticket vacío</p>
+                <button
+                  type="button"
+                  onClick={() => setVistaMovil("catalogo")}
+                  className="mt-3 md:hidden text-xs font-bold text-emerald-600 bg-emerald-500/10 px-3 py-1.5 rounded-lg"
+                >
+                  Agregar productos desde el catálogo
+                </button>
               </div>
             ) : (
               <ul className="space-y-2">
@@ -1186,23 +1248,26 @@ export default function NuevaVentaPage() {
                           </h4>
                           <button
                             onClick={() => removeFromCart(item.product.id)}
-                            className="text-zinc-400 hover:text-rose-500 opacity-60 group-hover:opacity-100 transition-opacity p-0.5 cursor-pointer"
+                            className="text-zinc-400 hover:text-rose-500 p-2 sm:p-0.5 active:scale-95 transition-all cursor-pointer text-sm"
+                            title="Eliminar del ticket"
                           >
                             ✕
                           </button>
                         </div>
                         <div className="flex justify-between items-end">
-                          <div className="flex items-center gap-3 bg-white dark:bg-zinc-900 rounded-md border border-zinc-200 dark:border-zinc-700 p-0.5">
+                          <div className="flex items-center gap-2 sm:gap-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-1">
                             <button
                               onClick={() => updateQty(item.product.id, -1)}
-                              className="w-6 h-6 flex items-center justify-center text-zinc-500 hover:text-emerald-600 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer font-bold"
+                              className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-emerald-500 rounded-lg bg-zinc-100 dark:bg-zinc-800 active:scale-95 cursor-pointer font-black text-base sm:text-sm"
+                              title="Restar cantidad"
                             >
                               -
                             </button>
-                            <span className="text-sm font-bold w-4 text-center">{item.qty}</span>
+                            <span className="text-sm sm:text-xs font-bold w-6 text-center">{item.qty}</span>
                             <button
                               onClick={() => updateQty(item.product.id, 1)}
-                              className="w-6 h-6 flex items-center justify-center text-zinc-500 hover:text-emerald-600 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer font-bold"
+                              className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-emerald-500 rounded-lg bg-zinc-100 dark:bg-zinc-800 active:scale-95 cursor-pointer font-black text-base sm:text-sm"
+                              title="Aumentar cantidad"
                             >
                               +
                             </button>
@@ -1220,7 +1285,7 @@ export default function NuevaVentaPage() {
           </div>
 
           {/* Resumen y Botón de Cobro */}
-          <div className="p-5 bg-zinc-50 dark:bg-zinc-900/80 border-t border-zinc-200 dark:border-zinc-800 mt-auto">
+          <div className="p-4 sm:p-5 bg-zinc-50 dark:bg-zinc-900/80 border-t border-zinc-200 dark:border-zinc-800 mt-auto">
             <div className="space-y-2 mb-4 text-sm">
               <div className="flex justify-between text-zinc-500 dark:text-zinc-400">
                 <span>Subtotal</span>
@@ -1263,7 +1328,7 @@ export default function NuevaVentaPage() {
                 setMostrarModalPago(true);
               }}
               disabled={cart.length === 0}
-              className="w-full py-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-[0.99] border border-emerald-500/35 hover:border-emerald-500/50 text-emerald-300 text-sm font-medium transition-all flex items-center justify-center gap-2 cursor-pointer disabled:bg-zinc-900/40 disabled:border-zinc-800/60 disabled:text-zinc-600 disabled:cursor-not-allowed backdrop-blur-sm shadow-sm shadow-emerald-950/20"
+              className="w-full h-12 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white text-base font-bold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed shadow-md shadow-emerald-950/20"
             >
               <span className="text-base">💳</span>
               <span>Cobrar</span>
@@ -1274,8 +1339,8 @@ export default function NuevaVentaPage() {
 
       {/* MODAL 1: Seleccionar Cliente - Moderno y Minimalista */}
       {mostrarModalClientes && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-          <div className="bg-zinc-900/95 border border-zinc-800/80 rounded-2xl w-full max-w-lg p-5 shadow-2xl relative backdrop-blur-xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+          <div className="bg-zinc-900/95 border border-zinc-800/80 rounded-t-3xl sm:rounded-2xl w-full max-w-lg p-5 shadow-2xl relative backdrop-blur-xl max-h-[85vh] flex flex-col">
             {/* Buscador minimalista con icono y botón de cerrar */}
             <div className="flex items-center gap-2 mb-3">
               <div className="relative flex-1">
@@ -1285,7 +1350,7 @@ export default function NuevaVentaPage() {
                   placeholder="Buscar..."
                   value={busquedaCliente}
                   onChange={(e) => setBusquedaCliente(e.target.value)}
-                  className="w-full pl-9 pr-8 py-2 rounded-xl border border-zinc-800 bg-zinc-950/60 text-sm text-zinc-200 placeholder-zinc-500 outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+                  className="w-full h-11 pl-9 pr-8 py-2 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm text-zinc-200 placeholder-zinc-500 outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20 transition-all"
                   autoFocus
                 />
                 {busquedaCliente && (
@@ -1416,8 +1481,8 @@ export default function NuevaVentaPage() {
 
       {/* MODAL 1.1: Crear Cliente Rápido en Neon */}
       {creandoClienteInline && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-          <div className="bg-zinc-900/95 border border-zinc-800/80 rounded-2xl w-full max-w-sm p-5 shadow-2xl relative backdrop-blur-xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+          <div className="bg-zinc-900/95 border border-zinc-800/80 rounded-t-3xl sm:rounded-2xl w-full max-w-sm p-5 shadow-2xl relative backdrop-blur-xl">
             <div className="flex justify-between items-center mb-4 pb-2.5 border-b border-zinc-800/80">
               <h3 className="text-sm font-medium text-zinc-200 flex items-center gap-2">
                 <span className="w-6 h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 flex items-center justify-center text-xs">👤</span>
@@ -1444,7 +1509,7 @@ export default function NuevaVentaPage() {
                   placeholder="Ej. Juan Pérez"
                   value={nuevoClienteNombre}
                   onChange={(e) => setNuevoClienteNombre(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-800 bg-zinc-950/60 text-xs text-zinc-200 placeholder-zinc-500 outline-none focus:border-emerald-500/40 transition-all"
+                  className="w-full h-11 px-3 py-2 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-xs text-zinc-200 placeholder-zinc-500 outline-none focus:border-emerald-500/40 transition-all"
                   autoFocus
                 />
               </div>
@@ -1458,7 +1523,7 @@ export default function NuevaVentaPage() {
                   placeholder="Ej. 0928374651"
                   value={nuevoClienteIdent}
                   onChange={(e) => setNuevoClienteIdent(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-800 bg-zinc-950/60 text-xs text-zinc-200 placeholder-zinc-500 outline-none focus:border-emerald-500/40 transition-all"
+                  className="w-full h-11 px-3 py-2 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-xs text-zinc-200 placeholder-zinc-500 outline-none focus:border-emerald-500/40 transition-all"
                 />
               </div>
 
@@ -1471,7 +1536,7 @@ export default function NuevaVentaPage() {
                   placeholder="Ej. 0987654321"
                   value={nuevoClienteTelefono}
                   onChange={(e) => setNuevoClienteTelefono(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-800 bg-zinc-950/60 text-xs text-zinc-200 placeholder-zinc-500 outline-none focus:border-emerald-500/40 transition-all"
+                  className="w-full h-11 px-3 py-2 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-xs text-zinc-200 placeholder-zinc-500 outline-none focus:border-emerald-500/40 transition-all"
                 />
               </div>
 
@@ -1479,14 +1544,14 @@ export default function NuevaVentaPage() {
                 <button
                   type="button"
                   onClick={() => setCreandoClienteInline(false)}
-                  className="flex-1 py-2 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-700/50 text-xs font-medium transition-all"
+                  className="flex-1 h-11 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-700/50 text-xs font-medium transition-all"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={guardandoClienteInline}
-                  className="flex-1 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-medium transition-all flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                  className="flex-1 h-11 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-medium transition-all flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
                 >
                   {guardandoClienteInline ? "Guardando..." : "Guardar"}
                 </button>
@@ -1498,8 +1563,8 @@ export default function NuevaVentaPage() {
 
       {/* MODAL 2: Aplicar Descuento - Color suave y transparente */}
       {mostrarModalDescuento && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-          <div className="bg-zinc-900/95 border border-zinc-800/80 rounded-2xl w-full max-w-sm p-5 shadow-2xl relative backdrop-blur-xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+          <div className="bg-zinc-900/95 border border-zinc-800/80 rounded-t-3xl sm:rounded-2xl w-full max-w-sm p-5 shadow-2xl relative backdrop-blur-xl">
             <div className="flex justify-between items-center mb-4 pb-2.5 border-b border-zinc-800/80">
               <h3 className="text-sm font-medium text-zinc-200 flex items-center gap-2">
                 <span className="w-6 h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 flex items-center justify-center text-xs">🏷️</span>
@@ -1519,7 +1584,7 @@ export default function NuevaVentaPage() {
               <button
                 type="button"
                 onClick={() => setDescuentoTipo("monto")}
-                className={`flex-1 py-2 rounded-xl text-xs font-medium border transition-all duration-150 ${
+                className={`flex-1 h-11 py-2 rounded-xl text-xs font-medium border transition-all duration-150 cursor-pointer ${
                   descuentoTipo === "monto"
                     ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/35 shadow-sm shadow-emerald-950/20"
                     : "bg-zinc-950/40 text-zinc-400 border-zinc-800/80 hover:bg-zinc-800/40 hover:text-zinc-200"
@@ -1530,7 +1595,7 @@ export default function NuevaVentaPage() {
               <button
                 type="button"
                 onClick={() => setDescuentoTipo("porcentaje")}
-                className={`flex-1 py-2 rounded-xl text-xs font-medium border transition-all duration-150 ${
+                className={`flex-1 h-11 py-2 rounded-xl text-xs font-medium border transition-all duration-150 cursor-pointer ${
                   descuentoTipo === "porcentaje"
                     ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/35 shadow-sm shadow-emerald-950/20"
                     : "bg-zinc-950/40 text-zinc-400 border-zinc-800/80 hover:bg-zinc-800/40 hover:text-zinc-200"
@@ -1552,7 +1617,7 @@ export default function NuevaVentaPage() {
                 placeholder={descuentoTipo === "monto" ? "0.00" : "0%"}
                 value={descuentoValor || ""}
                 onChange={(e) => setDescuentoValor(Math.max(0, parseFloat(e.target.value) || 0))}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base font-semibold text-zinc-100 placeholder-zinc-500 outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+                className="w-full h-11 px-3.5 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm font-semibold text-zinc-100 placeholder-zinc-500 outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20 transition-all"
                 autoFocus
               />
             </div>
@@ -1565,7 +1630,7 @@ export default function NuevaVentaPage() {
                     key={pct}
                     type="button"
                     onClick={() => setDescuentoValor(pct)}
-                    className="py-1.5 rounded-xl bg-zinc-950/40 hover:bg-emerald-500/15 border border-zinc-800/80 hover:border-emerald-500/30 text-xs font-medium text-zinc-300 hover:text-emerald-300 transition-all"
+                    className="h-10 rounded-xl bg-zinc-950/40 hover:bg-emerald-500/15 border border-zinc-800/80 hover:border-emerald-500/30 text-xs font-bold text-zinc-300 hover:text-emerald-300 transition-all cursor-pointer"
                   >
                     {pct}%
                   </button>
@@ -1581,14 +1646,14 @@ export default function NuevaVentaPage() {
                   setDescuentoValor(0);
                   setMostrarModalDescuento(false);
                 }}
-                className="flex-1 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/25 text-xs font-medium transition-all"
+                className="flex-1 h-11 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/25 text-xs font-medium transition-all cursor-pointer"
               >
                 Quitar
               </button>
               <button
                 type="button"
                 onClick={() => setMostrarModalDescuento(false)}
-                className="flex-1 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-medium transition-all"
+                className="flex-1 h-11 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-medium transition-all cursor-pointer"
               >
                 Aplicar
               </button>
@@ -1599,15 +1664,15 @@ export default function NuevaVentaPage() {
 
       {/* MODAL 3: Ventas en Espera (Pausa) */}
       {mostrarModalEspera && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl w-full max-w-md p-6 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-2xl w-full max-w-md p-5 sm:p-6 shadow-2xl relative max-h-[85vh] flex flex-col">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-zinc-100 dark:border-zinc-800">
               <h3 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                 <span>⏸️</span> Ventas en Espera ({ventasEnEspera.length})
               </h3>
               <button
                 onClick={() => setMostrarModalEspera(false)}
-                className="text-zinc-400 hover:text-zinc-600"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
               >
                 ✕
               </button>
@@ -1625,7 +1690,7 @@ export default function NuevaVentaPage() {
                   return (
                     <div
                       key={v.id}
-                      className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-between gap-3"
+                      className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-between gap-3"
                     >
                       <div>
                         <div className="flex items-center gap-2">
@@ -1640,14 +1705,14 @@ export default function NuevaVentaPage() {
                         <button
                           type="button"
                           onClick={() => recuperarVentaEnEspera(v)}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 shadow-sm"
+                          className="h-10 px-3 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 shadow-sm active:scale-95 cursor-pointer"
                         >
                           Recuperar
                         </button>
                         <button
                           type="button"
                           onClick={() => eliminarVentaEnEspera(v.id)}
-                          className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-500 text-xs"
+                          className="w-10 h-10 rounded-xl text-zinc-400 hover:text-rose-500 text-xs flex items-center justify-center cursor-pointer"
                           title="Eliminar de espera"
                         >
                           ✕
@@ -1663,7 +1728,7 @@ export default function NuevaVentaPage() {
               <button
                 type="button"
                 onClick={() => setMostrarModalEspera(false)}
-                className="px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 text-xs font-bold text-zinc-600 dark:text-zinc-300"
+                className="w-full sm:w-auto h-11 px-5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs font-bold text-zinc-600 dark:text-zinc-300 cursor-pointer"
               >
                 Cerrar
               </button>
@@ -1674,15 +1739,15 @@ export default function NuevaVentaPage() {
 
       {/* MODAL 4: Ítem Rápido / Manual */}
       {mostrarModalItemManual && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl w-full max-w-md p-6 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-2xl w-full max-w-md p-5 sm:p-6 shadow-2xl relative">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-zinc-100 dark:border-zinc-800">
               <h3 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                 <span>⚡</span> Agregar Ítem o Servicio Rápido
               </h3>
               <button
                 onClick={() => setMostrarModalItemManual(false)}
-                className="text-zinc-400 hover:text-zinc-600"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
               >
                 ✕
               </button>
@@ -1698,7 +1763,7 @@ export default function NuevaVentaPage() {
                   placeholder="Ej. Mano de obra urgente, Repuesto especial, Instalación..."
                   value={manualNombre}
                   onChange={(e) => setManualNombre(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm font-medium outline-none focus:border-blue-500 dark:text-white"
+                  className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm font-medium outline-none focus:border-blue-500 dark:text-white"
                   autoFocus
                 />
               </div>
@@ -1715,7 +1780,7 @@ export default function NuevaVentaPage() {
                     placeholder="0.00"
                     value={manualPrecio}
                     onChange={(e) => setManualPrecio(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm font-bold outline-none focus:border-blue-500 dark:text-white"
+                    className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm font-bold outline-none focus:border-blue-500 dark:text-white"
                   />
                 </div>
                 <div>
@@ -1727,7 +1792,7 @@ export default function NuevaVentaPage() {
                     min="1"
                     value={manualCantidad}
                     onChange={(e) => setManualCantidad(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm font-bold outline-none focus:border-blue-500 dark:text-white"
+                    className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm font-bold outline-none focus:border-blue-500 dark:text-white"
                   />
                 </div>
               </div>
@@ -1739,7 +1804,7 @@ export default function NuevaVentaPage() {
                 <select
                   value={manualCategoria}
                   onChange={(e) => setManualCategoria(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs font-bold text-zinc-700 dark:text-zinc-300 outline-none focus:border-blue-500"
+                  className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-xs font-bold text-zinc-700 dark:text-zinc-300 outline-none focus:border-blue-500"
                 >
                   <option value="Servicio">Servicio / Taller</option>
                   <option value="Repuesto">Repuesto Especial</option>
@@ -1752,13 +1817,13 @@ export default function NuevaVentaPage() {
                 <button
                   type="button"
                   onClick={() => setMostrarModalItemManual(false)}
-                  className="flex-1 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-600 dark:text-zinc-300"
+                  className="flex-1 h-11 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-600 dark:text-zinc-300 cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm"
+                  className="flex-1 h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm active:scale-95 cursor-pointer"
                 >
                   Agregar a la Orden
                 </button>
@@ -1770,13 +1835,13 @@ export default function NuevaVentaPage() {
 
       {/* MODAL 5: Cobro con Calculadora de Cambio */}
       {mostrarModalPago && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl w-full max-w-md p-6 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-2xl w-full max-w-md p-5 sm:p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-3 pb-3 border-b border-zinc-100 dark:border-zinc-800">
               <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Procesar Cobro</h3>
               <button
                 onClick={() => setMostrarModalPago(false)}
-                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
               >
                 ✕
               </button>
@@ -1807,7 +1872,7 @@ export default function NuevaVentaPage() {
                     key={m}
                     type="button"
                     onClick={() => setMetodoPago(m)}
-                    className={`py-3 px-2 rounded-lg text-xs font-bold border transition-all ${
+                    className={`h-11 py-2 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                       metodoPago === m
                         ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shadow-sm"
                         : "border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
@@ -1845,7 +1910,7 @@ export default function NuevaVentaPage() {
                   placeholder="0.00"
                   value={montoRecibido}
                   onChange={(e) => setMontoRecibido(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-zinc-900 text-lg font-black text-zinc-900 dark:text-white outline-none focus:border-amber-500"
+                  className="w-full h-11 px-3.5 rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-zinc-900 text-base sm:text-lg font-black text-zinc-900 dark:text-white outline-none focus:border-amber-500"
                 />
 
                 {/* Botones de denominaciones rápidas */}
@@ -1855,7 +1920,7 @@ export default function NuevaVentaPage() {
                       key={billete}
                       type="button"
                       onClick={() => setMontoRecibido(billete.toString())}
-                      className="py-1 rounded-md bg-white dark:bg-zinc-800 border border-amber-200 dark:border-amber-800/50 text-xs font-bold text-amber-900 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                      className="h-10 rounded-xl bg-white dark:bg-zinc-800 border border-amber-200 dark:border-amber-800/50 text-xs font-bold text-amber-900 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 cursor-pointer active:scale-95"
                     >
                       ${billete}
                     </button>
@@ -1884,14 +1949,14 @@ export default function NuevaVentaPage() {
             <div className="flex items-center gap-2.5">
               <button
                 onClick={() => setMostrarModalPago(false)}
-                className="flex-1 py-2.5 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-700/50 text-xs font-medium transition-all"
+                className="flex-1 h-11 rounded-xl bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-700/50 text-xs font-medium transition-all cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleConfirmarCobro}
                 disabled={procesandoVenta}
-                className="flex-1 py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-[0.99] border border-emerald-500/35 hover:border-emerald-500/50 text-emerald-300 text-xs font-medium shadow-sm shadow-emerald-950/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="flex-1 h-11 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-[0.99] border border-emerald-500/35 hover:border-emerald-500/50 text-emerald-300 text-xs font-medium shadow-sm shadow-emerald-950/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 {procesandoVenta ? "Procesando..." : "Confirmar"}
               </button>
@@ -1902,14 +1967,14 @@ export default function NuevaVentaPage() {
 
       {/* MODAL 6: Venta Exitosa con Impresión de Ticket Térmico */}
       {ventaCompletada && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in print:p-0 print:bg-white">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl w-full max-w-md p-6 shadow-2xl relative text-center print:border-none print:shadow-none print:p-0 print:max-w-none">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in print:p-0 print:bg-white">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-2xl w-full max-w-md p-5 sm:p-6 shadow-2xl relative text-center print:border-none print:shadow-none print:p-0 print:max-w-none max-h-[92vh] overflow-y-auto">
             {/* Header del modal (no imprimible) */}
             <div className="print:hidden">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center text-3xl mx-auto mb-4">
+              <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center text-3xl mx-auto mb-3">
                 ✅
               </div>
-              <h3 className="text-2xl font-bold text-zinc-900 dark:text-white mb-1">
+              <h3 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white mb-1">
                 ¡Venta Registrada!
               </h3>
               <p className="text-xs text-zinc-500 mb-4">Venta procesada y stock actualizado correctamente</p>
@@ -1987,24 +2052,24 @@ export default function NuevaVentaPage() {
             </div>
 
             {/* Botones de Acción (no imprimibles) */}
-            <div className="flex items-center gap-2 print:hidden">
+            <div className="flex items-center gap-2 print:hidden flex-wrap sm:flex-nowrap">
               <button
                 type="button"
                 onClick={imprimirTicket}
-                className="flex-1 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="flex-1 h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <span>🖨️</span>
                 <span>Imprimir Ticket</span>
               </button>
               <Link
                 href="/pos/facturas"
-                className="px-3 py-3 rounded-lg border border-zinc-200 dark:border-zinc-800 text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                className="h-11 px-4 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex items-center justify-center"
               >
                 Facturas
               </Link>
               <button
                 onClick={() => setVentaCompletada(null)}
-                className="flex-1 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+                className="flex-1 h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center"
               >
                 Nueva Venta
               </button>
@@ -2015,8 +2080,8 @@ export default function NuevaVentaPage() {
 
       {/* Flotante: Apertura de Caja al Entrar */}
       {mostrarModalApertura && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-sm rounded-3xl bg-zinc-900/95 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-5 text-center backdrop-blur-xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-zinc-900/95 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-5 text-center backdrop-blur-xl">
             {/* Encabezado e Icono Suave Transparente */}
             <div className="flex flex-col items-center gap-3">
               <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-2xl shadow-[0_0_25px_rgba(16,185,129,0.15)]">
@@ -2053,7 +2118,7 @@ export default function NuevaVentaPage() {
                     key={val}
                     type="button"
                     onClick={() => sumarFondoApertura(val)}
-                    className="px-2.5 py-1.5 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 active:scale-95 text-xs font-semibold text-zinc-300 border border-zinc-700/40 transition-all"
+                    className="h-10 px-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 active:scale-95 text-xs font-semibold text-zinc-300 border border-zinc-700/40 transition-all cursor-pointer"
                   >
                     +${val}
                   </button>
@@ -2062,7 +2127,7 @@ export default function NuevaVentaPage() {
                   <button
                     type="button"
                     onClick={() => setFondoApertura("")}
-                    className="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-xs font-semibold text-rose-300 border border-rose-500/30 transition-all"
+                    className="h-10 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-xs font-semibold text-rose-300 border border-rose-500/30 transition-all cursor-pointer"
                   >
                     Limpiar
                   </button>
@@ -2074,14 +2139,14 @@ export default function NuevaVentaPage() {
                 <button
                   type="button"
                   onClick={handleOmitirApertura}
-                  className="flex-1 py-3 px-4 rounded-2xl bg-zinc-800/40 hover:bg-zinc-800/70 active:scale-[0.98] text-zinc-400 hover:text-zinc-200 border border-zinc-700/40 text-xs font-semibold transition-all text-center"
+                  className="flex-1 h-11 px-4 rounded-2xl bg-zinc-800/40 hover:bg-zinc-800/70 active:scale-[0.98] text-zinc-400 hover:text-zinc-200 border border-zinc-700/40 text-xs font-semibold transition-all text-center cursor-pointer"
                 >
                   Omitir
                 </button>
                 <button
                   type="submit"
                   disabled={guardandoApertura}
-                  className="flex-1 py-3 px-4 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-[0.98] text-emerald-300 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5"
+                  className="flex-1 h-11 px-4 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-[0.98] text-emerald-300 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   {guardandoApertura ? "Guardando..." : "Abrir"}
                 </button>
@@ -2093,8 +2158,8 @@ export default function NuevaVentaPage() {
 
       {/* Flotante: Cierre de Caja */}
       {mostrarModalCierre && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-sm rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-4">
             <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/25 text-rose-400 flex items-center justify-center text-base shadow-[0_0_15px_rgba(244,63,94,0.12)]">
@@ -2117,7 +2182,7 @@ export default function NuevaVentaPage() {
               <div>
                 <span className="text-xs text-zinc-400 font-medium">Esperado</span>
                 <p className="text-xl font-black text-emerald-400">
-                  ${(cajaInfo?.expectedCash || 0).toFixed(2)}
+                  ${(parseFloat(cajaInfo?.expectedCash?.toString() || "0") || 0).toFixed(2)}
                 </p>
               </div>
               <div className="text-right">
@@ -2125,14 +2190,14 @@ export default function NuevaVentaPage() {
                 <p
                   className={`text-base font-bold ${
                     conteoCierre !== "" &&
-                    parseFloat(conteoCierre) - (cajaInfo?.expectedCash || 0) < 0
+                    parseFloat(conteoCierre) - (parseFloat(cajaInfo?.expectedCash?.toString() || "0") || 0) < 0
                       ? "text-rose-400"
                       : "text-emerald-400"
                   }`}
                 >
                   {conteoCierre === ""
                     ? "$0.00"
-                    : `$${(parseFloat(conteoCierre) - (cajaInfo?.expectedCash || 0)).toFixed(2)}`}
+                    : `$${(parseFloat(conteoCierre) - (parseFloat(cajaInfo?.expectedCash?.toString() || "0") || 0)).toFixed(2)}`}
                 </p>
               </div>
             </div>
@@ -2164,7 +2229,7 @@ export default function NuevaVentaPage() {
                     key={val}
                     type="button"
                     onClick={() => sumarConteoCierre(val)}
-                    className="px-2.5 py-1.5 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 active:scale-95 text-xs font-semibold text-zinc-300 border border-zinc-700/40 transition-all"
+                    className="h-10 px-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 active:scale-95 text-xs font-semibold text-zinc-300 border border-zinc-700/40 transition-all cursor-pointer"
                   >
                     +${val}
                   </button>
@@ -2173,7 +2238,7 @@ export default function NuevaVentaPage() {
                   <button
                     type="button"
                     onClick={() => setConteoCierre("")}
-                    className="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-xs font-semibold text-rose-300 border border-rose-500/30 transition-all"
+                    className="h-10 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-xs font-semibold text-rose-300 border border-rose-500/30 transition-all cursor-pointer"
                   >
                     Limpiar
                   </button>
@@ -2189,7 +2254,7 @@ export default function NuevaVentaPage() {
                   placeholder="Opcional..."
                   value={notasCierre}
                   onChange={(e) => setNotasCierre(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-800 bg-zinc-950/60 text-xs text-white focus:outline-none focus:border-zinc-700"
+                  className="w-full h-11 px-3.5 py-2.5 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-xs text-white focus:outline-none focus:border-zinc-700"
                 />
               </div>
 
@@ -2197,14 +2262,14 @@ export default function NuevaVentaPage() {
                 <button
                   type="button"
                   onClick={() => setMostrarModalCierre(false)}
-                  className="flex-1 py-3 px-4 rounded-2xl bg-zinc-800/40 hover:bg-zinc-800/70 text-zinc-400 text-xs font-semibold transition-all text-center"
+                  className="flex-1 h-11 px-4 rounded-2xl bg-zinc-800/40 hover:bg-zinc-800/70 text-zinc-400 text-xs font-semibold transition-all text-center cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={cerrandoCaja}
-                  className="flex-1 py-3 px-4 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-rose-300 border border-rose-500/30 shadow-[0_0_20px_rgba(244,63,94,0.15)] text-xs font-bold transition-all text-center"
+                  className="flex-1 h-11 px-4 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-rose-300 border border-rose-500/30 shadow-[0_0_20px_rgba(244,63,94,0.15)] text-xs font-bold transition-all text-center cursor-pointer"
                 >
                   {cerrandoCaja ? "Cerrando..." : "Cerrar"}
                 </button>
@@ -2216,8 +2281,8 @@ export default function NuevaVentaPage() {
 
       {/* Flotante: Pedidos para Vender en POS */}
       {mostrarModalPedidos && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-xl max-h-[85vh] rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-4 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-xl max-h-[90vh] rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-5 sm:p-6 shadow-2xl flex flex-col gap-4 overflow-hidden">
             {/* Cabecera */}
             <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
               <div className="flex items-center gap-2.5">
@@ -2378,11 +2443,11 @@ export default function NuevaVentaPage() {
             {/* Modal de Confirmación para Eliminar Pedido */}
             {pedidoAEliminar && (
               <div 
-                className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150"
+                className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div 
-                  className="w-full max-w-sm rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-4 animate-in zoom-in-95 duration-150"
+                  className="w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-4 animate-in zoom-in-95 duration-150"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center gap-3">
@@ -2506,6 +2571,28 @@ export default function NuevaVentaPage() {
           </div>
         </div>
       )}
+
+      {/* Barra flotante de cobro rápido en móvil */}
+      {vistaMovil === "catalogo" && cart.length > 0 && (
+        <div className="md:hidden fixed bottom-16 left-3 right-3 z-30 animate-in slide-in-from-bottom duration-200">
+          <button
+            type="button"
+            onClick={() => setVistaMovil("carrito")}
+            className="w-full bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white p-3.5 rounded-2xl shadow-xl flex items-center justify-between font-bold text-sm transition-transform cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <span className="bg-emerald-700 px-2.5 py-1 rounded-xl text-xs font-black">
+                {cart.reduce((a, b) => a + b.qty, 0)} {cart.reduce((a, b) => a + b.qty, 0) === 1 ? "ítem" : "ítems"}
+              </span>
+              <span>Ver Ticket / Cobrar</span>
+            </div>
+            <span className="text-base font-black">${total.toFixed(2)} &rarr;</span>
+          </button>
+        </div>
+      )}
+
+      {/* Navegación móvil POS fija al fondo */}
+      <PosMobileNav />
     </div>
   );
 }

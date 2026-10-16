@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { PosMobileNav } from "@/components/PosMobileNav";
 
 interface SaleItem {
   id: string;
@@ -42,6 +43,7 @@ export default function FacturasPosPage() {
   const [cargando, setCargando] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<"TODAS" | "COMPLETADA" | "ANULADA">("TODAS");
+  const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
   
   // Modales
   const [ventaDetalle, setVentaDetalle] = useState<Sale | null>(null);
@@ -220,7 +222,7 @@ export default function FacturasPosPage() {
   const totalAnuladas = ventas.filter((v) => v.status?.toLowerCase() === "anulada").length;
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <div className="print:hidden">
         <Header />
       </div>
@@ -228,49 +230,35 @@ export default function FacturasPosPage() {
       <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full print:p-0 print:m-0">
         {/* Cabecera / Navegación */}
         <div className="print:hidden">
-          <div className="mb-6 flex items-center justify-between">
-            <Link
-              href="/pos"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors w-fit"
-            >
-              &larr; Volver al panel POS
-            </Link>
-
-            <button
-              onClick={() => cargarVentas(searchTerm)}
-              disabled={cargando}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
-            >
-              <span className={cargando ? "animate-spin" : ""}>🔄</span>
-              <span>Actualizar datos de Neon</span>
-            </button>
-          </div>
-
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <div className="flex items-start gap-4">
-              <span className="text-4xl select-none mt-1">🧾</span>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                    Facturas
-                  </h1>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                    🟢 Conectado a Neon
-                  </span>
-                </div>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                  Control integral de ventas del POS: consulta, edición de datos, reimpresión, anulación y eliminación real.
-                </p>
-              </div>
+          {/* Header */}
+          <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Link 
+                href="/pos"
+                title="Volver a Panel POS"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
+              >
+                <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </Link>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                Facturas
+              </h1>
+              <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
+                {ventas.length}
+              </span>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
               <Link
                 href="/pos/venta"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-all shadow-md shadow-blue-500/20 active:scale-95"
+                className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-all shadow-sm shadow-blue-500/20 active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
               >
-                <span>🛒</span>
-                <span>Facturar en POS</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Nueva Factura</span>
               </Link>
             </div>
           </div>
@@ -301,50 +289,50 @@ export default function FacturasPosPage() {
           )}
 
           {/* KPIs / Resumen */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            <div className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                  Total Facturado
-                </span>
-                <span className="text-xl">💰</span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+            {/* Total Facturado */}
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/25 text-cyan-400 flex items-center justify-center text-xl shrink-0">
+                💰
               </div>
-              <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mt-2">
-                ${totalFacturado.toFixed(2)}
-              </p>
-              <span className="text-xs text-zinc-500">Monto total de ventas válidas en Neon</span>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                  ${totalFacturado.toFixed(2)}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Total Facturado</h3>
+              </div>
             </div>
 
-            <div className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                  Facturas Válidas
-                </span>
-                <span className="text-xl">✅</span>
+            {/* Facturas Válidas */}
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center text-xl shrink-0">
+                ✅
               </div>
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-2">
-                {totalCompletadas}
-              </p>
-              <span className="text-xs text-zinc-500">Comprobantes activos</span>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                  {totalCompletadas}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Completadas</h3>
+              </div>
             </div>
 
-            <div className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                  Anuladas
-                </span>
-                <span className="text-xl">⚠️</span>
+            {/* Anuladas */}
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-500/15 border border-rose-500/25 text-rose-400 flex items-center justify-center text-xl shrink-0">
+                ⚠️
               </div>
-              <p className="text-2xl font-bold text-rose-500 mt-2">
-                {totalAnuladas}
-              </p>
-              <span className="text-xs text-zinc-500">Ventas anuladas</span>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-rose-500 dark:text-rose-400">
+                  {totalAnuladas}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Anuladas</h3>
+              </div>
             </div>
           </div>
 
           {/* Filtros y Buscador */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-            <div className="relative w-full sm:w-96">
+            <div className="relative w-full flex-1">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
                 🔍
               </span>
@@ -352,25 +340,74 @@ export default function FacturasPosPage() {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar por # factura, cliente, cédula..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400"
+                placeholder="Buscar..."
+                className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
               />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm cursor-pointer"
+                  title="Limpiar búsqueda"
+                >
+                  ✕
+                </button>
+              )}
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              {(["TODAS", "COMPLETADA", "ANULADA"] as const).map((estado) => (
-                <button
-                  key={estado}
-                  onClick={() => setFiltroEstado(estado)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                    filtroEstado === estado
-                      ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm"
-                      : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                  }`}
-                >
-                  {estado === "TODAS" ? "Todas" : estado === "COMPLETADA" ? "Completadas" : "Anuladas"}
-                </button>
-              ))}
+            <div className="relative w-full sm:w-48 shrink-0">
+              <button
+                type="button"
+                onClick={() => setFiltroMenuAbierto(!filtroMenuAbierto)}
+                className="w-full h-11 px-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-sm font-medium flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+              >
+                <span>
+                  {filtroEstado === "COMPLETADA"
+                    ? "Completadas"
+                    : filtroEstado === "ANULADA"
+                    ? "Anuladas"
+                    : "Estado"}
+                </span>
+                <svg className={`w-4 h-4 text-zinc-400 transition-transform ${filtroMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {filtroMenuAbierto && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setFiltroMenuAbierto(false)} 
+                  />
+                  <div className="absolute right-0 mt-1.5 w-full bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                    {[
+                      { id: "TODAS", label: "Estado" },
+                      { id: "COMPLETADA", label: "Completadas" },
+                      { id: "ANULADA", label: "Anuladas" },
+                    ].map((opcion) => (
+                      <button
+                        key={opcion.id}
+                        type="button"
+                        onClick={() => {
+                          setFiltroEstado(opcion.id as any);
+                          setFiltroMenuAbierto(false);
+                        }}
+                        className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                          filtroEstado === opcion.id
+                            ? "bg-blue-600/15 text-blue-400"
+                            : "text-zinc-300 hover:bg-zinc-800/80 hover:text-white"
+                        }`}
+                      >
+                        <span>{opcion.label}</span>
+                        {filtroEstado === opcion.id && (
+                          <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -387,60 +424,28 @@ export default function FacturasPosPage() {
               No se encontraron facturas en Neon con los criterios seleccionados.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider font-semibold">
-                  <tr>
-                    <th className="py-3.5 px-4"># Factura</th>
-                    <th className="py-3.5 px-4">Fecha y Hora</th>
-                    <th className="py-3.5 px-4">Cliente</th>
-                    <th className="py-3.5 px-4">Método</th>
-                    <th className="py-3.5 px-4 text-right">Total</th>
-                    <th className="py-3.5 px-4 text-center">Estado</th>
-                    <th className="py-3.5 px-4 text-center">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                  {ventasFiltradas.map((v) => {
-                    const esAnulada = v.status?.toLowerCase() === "anulada";
-                    const fecha = new Date(v.createdAt).toLocaleString("es-EC", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    });
+            <>
+              {/* Vista Móvil (Cards) */}
+              <div className="md:hidden divide-y divide-zinc-200 dark:divide-zinc-800">
+                {ventasFiltradas.map((v) => {
+                  const esAnulada = v.status?.toLowerCase() === "anulada";
+                  const fecha = new Date(v.createdAt).toLocaleString("es-EC", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
 
-                    return (
-                      <tr
-                        key={v.id}
-                        className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
-                      >
-                        <td className="py-3.5 px-4 font-mono font-bold text-zinc-900 dark:text-zinc-100">
-                          {v.saleNumber}
-                        </td>
-                        <td className="py-3.5 px-4 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
-                          {fecha}
-                        </td>
-                        <td className="py-3.5 px-4 font-medium text-zinc-800 dark:text-zinc-200">
-                          <div>{v.customerName || "Consumidor Final"}</div>
-                          {v.customer?.identification && (
-                            <span className="text-[11px] text-zinc-400 font-mono">
-                              CI: {v.customer.identification}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <span className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-medium">
-                            {v.paymentMethod || "Efectivo"}
+                  return (
+                    <div key={v.id} className="p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-base text-zinc-900 dark:text-zinc-100">
+                            #{v.saleNumber}
                           </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-bold text-zinc-900 dark:text-zinc-100">
-                          ${Number(v.total || 0).toFixed(2)}
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                               esAnulada
                                 ? "bg-rose-500/10 text-rose-500 border border-rose-500/20"
                                 : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
@@ -448,65 +453,204 @@ export default function FacturasPosPage() {
                           >
                             {esAnulada ? "Anulada" : "Completada"}
                           </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                            {/* Ver / Imprimir */}
-                            <button
-                              onClick={() => setVentaDetalle(v)}
-                              className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
-                              title="Ver Comprobante"
-                            >
-                              <span>👁️</span>
-                              <span>Ver</span>
-                            </button>
+                        </div>
+                        <span className="text-xs text-zinc-400">{fecha}</span>
+                      </div>
 
-                            {/* Editar */}
-                            <button
-                              onClick={() => abrirModalEditar(v)}
-                              disabled={accionEnCurso}
-                              className="px-2.5 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-semibold transition-colors cursor-pointer"
-                              title="Editar datos de Factura"
-                            >
-                              ✏️
-                            </button>
-
-                            {/* Anular */}
-                            {!esAnulada && (
-                              <button
-                                onClick={() => handleAnular(v)}
-                                disabled={accionEnCurso}
-                                className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
-                                title="Anular Factura y devolver stock"
-                              >
-                                Anular
-                              </button>
-                            )}
-
-                            {/* Eliminar Definitivamente */}
-                            <button
-                              onClick={() => handleEliminar(v)}
-                              disabled={accionEnCurso}
-                              className="px-2 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
-                              title="Eliminar permanentemente de Neon"
-                            >
-                              🗑️
-                            </button>
+                      <div className="flex justify-between items-start gap-2">
+                        <div>
+                          <div className="font-semibold text-sm text-zinc-800 dark:text-zinc-200">
+                            {v.customerName || "Consumidor Final"}
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          {v.customer?.identification && (
+                            <div className="text-xs text-zinc-400 font-mono">
+                              CI: {v.customer.identification}
+                            </div>
+                          )}
+                          <div className="mt-1">
+                            <span className="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-medium">
+                              {v.paymentMethod || "Efectivo"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs text-zinc-400 block">Total</span>
+                          <span className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
+                            ${Number(v.total || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Botones de acción móvil (touch target >= 44px) */}
+                      <div className="grid grid-cols-4 gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800/60">
+                        <button
+                          onClick={() => setVentaDetalle(v)}
+                          className="min-h-[44px] flex flex-col items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-xs font-semibold active:scale-95 transition-all"
+                        >
+                          <span className="text-base leading-none">👁️</span>
+                          <span className="text-[10px] mt-0.5">Ver</span>
+                        </button>
+
+                        <button
+                          onClick={() => abrirModalEditar(v)}
+                          disabled={accionEnCurso}
+                          className="min-h-[44px] flex flex-col items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-semibold active:scale-95 transition-all disabled:opacity-50"
+                        >
+                          <span className="text-base leading-none">✏️</span>
+                          <span className="text-[10px] mt-0.5">Editar</span>
+                        </button>
+
+                        {!esAnulada ? (
+                          <button
+                            onClick={() => handleAnular(v)}
+                            disabled={accionEnCurso}
+                            className="min-h-[44px] flex flex-col items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold active:scale-95 transition-all disabled:opacity-50"
+                          >
+                            <span className="text-base leading-none">⚠️</span>
+                            <span className="text-[10px] mt-0.5">Anular</span>
+                          </button>
+                        ) : (
+                          <div className="min-h-[44px] flex items-center justify-center opacity-20">
+                            -
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => handleEliminar(v)}
+                          disabled={accionEnCurso}
+                          className="min-h-[44px] flex flex-col items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-semibold active:scale-95 transition-all disabled:opacity-50"
+                        >
+                          <span className="text-base leading-none">🗑️</span>
+                          <span className="text-[10px] mt-0.5">Eliminar</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Vista Desktop (Tabla) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider font-semibold">
+                    <tr>
+                      <th className="py-3.5 px-4"># Factura</th>
+                      <th className="py-3.5 px-4">Fecha y Hora</th>
+                      <th className="py-3.5 px-4">Cliente</th>
+                      <th className="py-3.5 px-4">Método</th>
+                      <th className="py-3.5 px-4 text-right">Total</th>
+                      <th className="py-3.5 px-4 text-center">Estado</th>
+                      <th className="py-3.5 px-4 text-center">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                    {ventasFiltradas.map((v) => {
+                      const esAnulada = v.status?.toLowerCase() === "anulada";
+                      const fecha = new Date(v.createdAt).toLocaleString("es-EC", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      });
+
+                      return (
+                        <tr
+                          key={v.id}
+                          className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
+                        >
+                          <td className="py-3.5 px-4 font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                            {v.saleNumber}
+                          </td>
+                          <td className="py-3.5 px-4 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                            {fecha}
+                          </td>
+                          <td className="py-3.5 px-4 font-medium text-zinc-800 dark:text-zinc-200">
+                            <div>{v.customerName || "Consumidor Final"}</div>
+                            {v.customer?.identification && (
+                              <span className="text-[11px] text-zinc-400 font-mono">
+                                CI: {v.customer.identification}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-medium">
+                              {v.paymentMethod || "Efectivo"}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-bold text-zinc-900 dark:text-zinc-100">
+                            ${Number(v.total || 0).toFixed(2)}
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                                esAnulada
+                                  ? "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                                  : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                              }`}
+                            >
+                              {esAnulada ? "Anulada" : "Completada"}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                              {/* Ver / Imprimir */}
+                              <button
+                                onClick={() => setVentaDetalle(v)}
+                                className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                                title="Ver Comprobante"
+                              >
+                                <span>👁️</span>
+                                <span>Ver</span>
+                              </button>
+
+                              {/* Editar */}
+                              <button
+                                onClick={() => abrirModalEditar(v)}
+                                disabled={accionEnCurso}
+                                className="px-2.5 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-semibold transition-colors cursor-pointer"
+                                title="Editar datos de Factura"
+                              >
+                                ✏️
+                              </button>
+
+                              {/* Anular */}
+                              {!esAnulada && (
+                                <button
+                                  onClick={() => handleAnular(v)}
+                                  disabled={accionEnCurso}
+                                  className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+                                  title="Anular Factura y devolver stock"
+                                >
+                                  Anular
+                                </button>
+                              )}
+
+                              {/* Eliminar Definitivamente */}
+                              <button
+                                onClick={() => handleEliminar(v)}
+                                disabled={accionEnCurso}
+                                className="px-2 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+                                title="Eliminar permanentemente de Neon"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 
         {/* Modal: Editar Factura (UPDATE) */}
         {ventaEditar && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl relative">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800 mb-5">
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                   <span>✏️</span>
@@ -530,7 +674,7 @@ export default function FacturasPosPage() {
                     required
                     value={editNombreCliente}
                     onChange={(e) => setEditNombreCliente(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3.5 h-11 text-base sm:text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
 
@@ -541,7 +685,7 @@ export default function FacturasPosPage() {
                   <select
                     value={editMetodoPago}
                     onChange={(e) => setEditMetodoPago(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3.5 h-11 text-base sm:text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="Efectivo">Efectivo</option>
                     <option value="Tarjeta">Tarjeta Débito/Crédito</option>
@@ -557,7 +701,7 @@ export default function FacturasPosPage() {
                   <select
                     value={editEstado}
                     onChange={(e) => setEditEstado(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-3.5 h-11 text-base sm:text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="Completada">Completada</option>
                     <option value="Anulada">Anulada</option>
@@ -583,14 +727,14 @@ export default function FacturasPosPage() {
                   <button
                     type="submit"
                     disabled={accionEnCurso}
-                    className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all cursor-pointer disabled:opacity-50"
+                    className="flex-1 h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center"
                   >
                     {accionEnCurso ? "Guardando en Neon..." : "Guardar Cambios"}
                   </button>
                   <button
                     type="button"
                     onClick={() => setVentaEditar(null)}
-                    className="px-5 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 font-semibold text-xs cursor-pointer"
+                    className="px-5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 font-semibold text-xs cursor-pointer flex items-center justify-center"
                   >
                     Cancelar
                   </button>
@@ -602,8 +746,8 @@ export default function FacturasPosPage() {
 
         {/* Modal de Detalle / Comprobante de Factura (READ & PRINT) */}
         {ventaDetalle && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl relative max-h-[90vh] flex flex-col">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl relative max-h-[90vh] flex flex-col">
               {/* Header Modal */}
               <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800 print:hidden">
                 <div className="flex items-center gap-2">
@@ -729,7 +873,7 @@ export default function FacturasPosPage() {
                 <button
                   type="button"
                   onClick={handleImprimir}
-                  className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  className="flex-1 h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                 >
                   <span>🖨️</span>
                   <span>Imprimir Comprobante</span>
@@ -737,7 +881,7 @@ export default function FacturasPosPage() {
                 <button
                   type="button"
                   onClick={() => setVentaDetalle(null)}
-                  className="px-5 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 font-semibold text-xs cursor-pointer"
+                  className="px-5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 font-semibold text-xs cursor-pointer flex items-center justify-center"
                 >
                   Cerrar
                 </button>
@@ -746,6 +890,10 @@ export default function FacturasPosPage() {
           </div>
         )}
       </main>
+
+      <div className="print:hidden">
+        <PosMobileNav />
+      </div>
     </div>
   );
 }

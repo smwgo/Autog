@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { TallerMobileNav } from "@/components/TallerMobileNav";
 
 interface OrderItem {
   id: string;
@@ -143,7 +144,7 @@ export default function ActiveOrdersPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 pb-24 md:pb-0">
       <Header />
 
       <main className="flex-grow p-4 md:p-10 max-w-7xl mx-auto w-full">
@@ -151,7 +152,7 @@ export default function ActiveOrdersPage() {
         <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <Link
             href="/taller"
-            className="text-sm font-medium text-blue-600 hover:text-blue-500 flex items-center gap-1 w-fit"
+            className="text-sm font-medium text-blue-600 hover:text-blue-500 flex items-center gap-1 w-fit min-h-[44px] md:min-h-0 flex items-center"
           >
             &larr; Volver al Panel de Taller
           </Link>
@@ -159,14 +160,14 @@ export default function ActiveOrdersPage() {
           <div className="flex items-center gap-2">
             <Link
               href="/pos/servicios"
-              className="px-4 py-2 rounded-xl bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 text-sm font-semibold hover:bg-teal-100 dark:hover:bg-teal-500/20 transition-all flex items-center gap-2"
+              className="h-11 px-4 rounded-xl bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 text-sm font-semibold hover:bg-teal-100 dark:hover:bg-teal-500/20 transition-all flex items-center gap-2"
             >
               <span>⚙️</span> Servicios
             </Link>
 
             <Link
               href="/taller/ordenes/nueva"
-              className="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-5 py-2 rounded-xl font-semibold text-sm transition-all shadow-sm shadow-blue-500/20 flex items-center gap-2"
+              className="h-11 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-5 rounded-xl font-semibold text-sm transition-all shadow-sm shadow-blue-500/20 flex items-center gap-2"
             >
               <span>+</span> Nueva Orden
             </Link>
@@ -177,11 +178,11 @@ export default function ActiveOrdersPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <div className="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-2xl">
+              <div className="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-2xl shrink-0">
                 🚗
               </div>
               <div>
-                <h1 className="text-3xl font-extrabold tracking-tight">Órdenes</h1>
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Órdenes</h1>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                   {orders.length} {orders.length === 1 ? "orden activa" : "órdenes registradas"}
                 </p>
@@ -191,12 +192,12 @@ export default function ActiveOrdersPage() {
         </div>
 
         {/* Filters / Search */}
-        <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm mb-8 flex flex-col md:flex-row gap-4">
+        <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm mb-6 sm:mb-8 flex flex-col md:flex-row gap-3 sm:gap-4">
           <div className="flex-grow relative">
             <input
               type="text"
               placeholder="Buscar por placa, cliente o vehículo..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-shadow dark:text-white"
+              className="w-full h-11 pl-10 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base sm:text-sm transition-shadow dark:text-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -206,7 +207,7 @@ export default function ActiveOrdersPage() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white text-sm font-medium"
+              className="w-full sm:w-auto h-11 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white text-base sm:text-sm font-medium"
             >
               <option value="">Estados</option>
               <option value="diagnóstico">En Diagnóstico</option>
@@ -225,9 +226,136 @@ export default function ActiveOrdersPage() {
           </div>
         )}
 
-        {/* Orders Table List */}
+        {/* Orders Mobile Card View (md:hidden) */}
         {!cargando && (
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
+          <div className="md:hidden space-y-4">
+            {orders.map((order) => (
+              <div
+                key={order.dbId || order.id}
+                className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 shadow-sm space-y-3"
+              >
+                {/* Header row: ID, Plate & Status Select */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                      {order.id}
+                    </span>
+                    <span className="text-xs font-mono font-bold bg-zinc-200 dark:bg-zinc-800 px-2 py-0.5 rounded text-zinc-800 dark:text-zinc-200">
+                      {order.plate}
+                    </span>
+                  </div>
+                  <select
+                    disabled={guardandoId === order.id || guardandoId === order.dbId}
+                    value={order.status}
+                    onChange={(e) => handleCambiarEstado(order.dbId || order.id, e.target.value)}
+                    className={`h-11 text-xs font-bold px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer ${
+                      guardandoId === order.id || guardandoId === order.dbId ? "opacity-50" : ""
+                    }`}
+                  >
+                    {STATUS_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Vehicle & Client */}
+                <div>
+                  <h3 className="font-bold text-zinc-900 dark:text-white text-base">
+                    {order.vehicle}
+                  </h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    Cliente: <span className="font-semibold text-zinc-800 dark:text-zinc-200">{order.client}</span>
+                    {order.clientPhone && <span> • {order.clientPhone}</span>}
+                  </p>
+                </div>
+
+                {/* Services */}
+                <div className="flex flex-wrap gap-1">
+                  {order.services && order.services.length > 0 ? (
+                    order.services.map((srv, idx) => (
+                      <span
+                        key={idx}
+                        className="text-[11px] px-2 py-0.5 rounded-md bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-100 dark:border-teal-800/40 font-medium"
+                      >
+                        ⚙️ {srv}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-zinc-400 italic">Revisión General</span>
+                  )}
+                </div>
+
+                {/* Mechanic & Dates */}
+                <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 pt-1 border-t border-zinc-100 dark:border-zinc-800">
+                  <span className="flex items-center gap-1 font-medium text-zinc-800 dark:text-zinc-200">
+                    <span>👨‍🔧</span> {order.mechanic}
+                  </span>
+                  <span className="text-[11px] text-zinc-400">
+                    {order.dateIn} &rarr; {order.estimatedOut}
+                  </span>
+                </div>
+
+                {/* Progress bar */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span className="text-zinc-500 font-normal">Avance</span>
+                    <span className="text-zinc-900 dark:text-white font-bold">{order.progress}%</span>
+                  </div>
+                  <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className={`h-2.5 rounded-full ${order.color} transition-all duration-500`}
+                      style={{ width: `${order.progress}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Mobile Touch Action Buttons (at least 44px height) */}
+                <div className="flex items-center gap-2 pt-2">
+                  <Link
+                    href={`/pos/venta?placa=${encodeURIComponent(order.plate)}`}
+                    className="flex-1 h-11 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5"
+                    title="Cobrar en Mostrador POS"
+                  >
+                    <span>🛒</span> Cobrar en POS
+                  </Link>
+
+                  <button
+                    onClick={() => handleEliminarOrden(order.dbId || order.id, order.id)}
+                    disabled={eliminandoId === order.id || eliminandoId === order.dbId}
+                    title="Eliminar orden"
+                    className="h-11 w-11 shrink-0 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 flex items-center justify-center transition-colors text-sm"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {orders.length === 0 && (
+              <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-8 text-center">
+                <span className="text-4xl mb-3 block">🔍</span>
+                <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">
+                  No se encontraron órdenes
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">
+                  Intenta con otros términos o registra una nueva orden.
+                </p>
+                <Link
+                  href="/taller/ordenes/nueva"
+                  className="inline-flex items-center justify-center gap-1.5 h-11 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-all"
+                >
+                  <span>+</span> Crear Primera Orden
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Orders Desktop Table (hidden md:block) */}
+        {!cargando && (
+          <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[950px]">
                 <thead>
@@ -402,6 +530,8 @@ export default function ActiveOrdersPage() {
           </div>
         )}
       </main>
+
+      <TallerMobileNav />
     </div>
   );
 }

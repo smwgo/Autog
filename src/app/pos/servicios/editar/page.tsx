@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
+import { PosMobileNav } from "@/components/PosMobileNav";
 
 const TIEMPOS_RAPIDOS = [
   { label: "15 min", value: "15" },
@@ -245,7 +246,7 @@ function EditarServicioForm() {
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
                   placeholder="SRV-1001"
-                  className="w-full h-11 px-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-300 dark:border-zinc-700 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                  className="w-full h-11 px-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-300 dark:border-zinc-700 text-base sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
                 />
               </div>
 
@@ -259,7 +260,7 @@ function EditarServicioForm() {
                   placeholder="Ej: Mantenimiento"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full h-11 px-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-300 dark:border-zinc-700 text-sm font-normal focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                  className="w-full h-11 px-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-300 dark:border-zinc-700 text-base sm:text-sm font-normal focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
                 />
               </div>
             </div>
@@ -289,7 +290,7 @@ function EditarServicioForm() {
                 placeholder="Detalles del servicio..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-300 dark:border-zinc-700 text-sm font-normal focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all resize-y"
+                className="w-full p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-300 dark:border-zinc-700 text-base sm:text-sm font-normal focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all resize-y"
               />
             </div>
           </div>
@@ -449,13 +450,15 @@ function EditarServicioForm() {
 
 export default function EditarServicioPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 pb-24 md:pb-0">
       <Header />
       <main className="flex-grow pt-24 pb-16 px-4 sm:px-6 md:px-12 max-w-4xl mx-auto w-full">
         <Suspense fallback={<div className="py-24 text-center">Cargando editor...</div>}>
           <EditarServicioForm />
         </Suspense>
       </main>
+
+      <PosMobileNav />
     </div>
   );
 }

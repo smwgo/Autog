@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { TallerMobileNav } from "@/components/TallerMobileNav";
 
 interface InspectionItem {
   id: string;
@@ -123,7 +124,7 @@ export default function InspeccionesPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 pb-24 md:pb-0">
       <Header />
 
       <main className="flex-grow p-4 md:p-10 max-w-7xl mx-auto w-full">
@@ -131,7 +132,7 @@ export default function InspeccionesPage() {
         <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <Link
             href="/taller"
-            className="text-sm font-medium text-amber-600 hover:text-amber-500 flex items-center gap-1 w-fit"
+            className="text-sm font-medium text-amber-600 hover:text-amber-500 flex items-center gap-1 w-fit min-h-[44px] md:min-h-0 items-center"
           >
             &larr; Volver al Panel de Taller
           </Link>
@@ -141,11 +142,11 @@ export default function InspeccionesPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <div className="w-11 h-11 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-2xl">
+              <div className="w-11 h-11 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-2xl shrink-0">
                 📋
               </div>
               <div>
-                <h1 className="text-3xl font-extrabold tracking-tight">Inspecciones</h1>
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Inspecciones</h1>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                   {inspections.length} {inspections.length === 1 ? "inspección registrada" : "inspecciones registradas"}
                 </p>
@@ -155,19 +156,19 @@ export default function InspeccionesPage() {
 
           <Link
             href="/taller/inspecciones/nueva"
-            className="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-md shadow-amber-500/20 flex items-center gap-2 cursor-pointer"
+            className="h-11 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white px-5 rounded-xl font-bold text-sm transition-all shadow-md shadow-amber-500/20 flex items-center gap-2 cursor-pointer w-fit"
           >
             <span>+</span> Nueva Inspección
           </Link>
         </div>
 
         {/* Filters / Search */}
-        <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm mb-8 flex flex-col md:flex-row gap-4">
+        <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm mb-6 sm:mb-8 flex flex-col md:flex-row gap-3 sm:gap-4">
           <div className="flex-grow relative">
             <input
               type="text"
               placeholder="Buscar por placa, vehículo, cliente o ID..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm transition-shadow dark:text-white"
+              className="w-full h-11 pl-10 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 focus:outline-none focus:ring-2 focus:ring-amber-500 text-base sm:text-sm transition-shadow dark:text-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -177,7 +178,7 @@ export default function InspeccionesPage() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:text-white text-sm font-medium cursor-pointer"
+              className="w-full sm:w-auto h-11 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:text-white text-base sm:text-sm font-medium cursor-pointer"
             >
               <option value="">Estado</option>
               <option value="Pendiente">Pendiente</option>
@@ -195,9 +196,114 @@ export default function InspeccionesPage() {
           </div>
         )}
 
-        {/* Inspections Table / List */}
+        {/* Inspections Mobile Cards View (md:hidden) */}
         {!cargando && (
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
+          <div className="md:hidden space-y-4">
+            {inspections.map((insp) => (
+              <div
+                key={insp.dbId || insp.id}
+                className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 shadow-sm space-y-3"
+              >
+                {/* Header row: ID, Plate & Status Select */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                      {insp.id}
+                    </span>
+                    <span className="text-xs font-mono font-bold bg-zinc-200 dark:bg-zinc-800 px-2 py-0.5 rounded text-zinc-800 dark:text-zinc-200">
+                      {insp.plate}
+                    </span>
+                  </div>
+                  <select
+                    disabled={guardandoId === insp.id || guardandoId === insp.dbId}
+                    value={insp.status}
+                    onChange={(e) => handleCambiarEstado(insp.dbId || insp.id, e.target.value)}
+                    className={`h-11 text-xs font-bold px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer ${
+                      guardandoId === insp.id || guardandoId === insp.dbId ? "opacity-50" : ""
+                    }`}
+                  >
+                    {STATUS_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Vehicle & Client */}
+                <div>
+                  <h3 className="font-bold text-zinc-900 dark:text-white text-base">
+                    {insp.vehicle}
+                  </h3>
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 flex items-center justify-between">
+                    <span>Cliente: <strong className="text-zinc-800 dark:text-zinc-200 font-semibold">{insp.client}</strong></span>
+                    {insp.date && <span className="text-[11px] text-zinc-400">{insp.date}</span>}
+                  </div>
+                </div>
+
+                {/* Type & Details row */}
+                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800 text-xs text-zinc-500 dark:text-zinc-400">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                    {insp.type}
+                  </span>
+                  <span className="flex items-center gap-1 font-medium">
+                    ⛽ {insp.fuelLevel || "N/A"}
+                  </span>
+                  {insp.mileage && (
+                    <span className="text-zinc-400 font-mono">
+                      • {insp.mileage}
+                    </span>
+                  )}
+                  <span className="ml-auto flex items-center gap-1 text-zinc-700 dark:text-zinc-300">
+                    👤 {insp.assignedTo}
+                  </span>
+                </div>
+
+                {/* Touch Action Buttons (at least 44px) */}
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setDetalleInsp(insp)}
+                    className="flex-1 h-11 px-4 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold hover:bg-amber-100 transition-colors flex items-center justify-center cursor-pointer"
+                  >
+                    Ver Checklist Técnico
+                  </button>
+
+                  <button
+                    onClick={() => handleEliminar(insp.dbId || insp.id, insp.id)}
+                    disabled={eliminandoId === insp.id || eliminandoId === insp.dbId}
+                    title="Eliminar inspección"
+                    className="h-11 w-11 shrink-0 rounded-xl border border-zinc-200 dark:border-zinc-700 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 flex items-center justify-center transition-colors text-sm cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {inspections.length === 0 && (
+              <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-8 text-center">
+                <span className="text-4xl mb-3 block">📋</span>
+                <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">
+                  No se encontraron inspecciones
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">
+                  Intenta con otros términos o registra una nueva inspección.
+                </p>
+                <Link
+                  href="/taller/inspecciones/nueva"
+                  className="inline-flex items-center justify-center gap-1.5 h-11 px-5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs transition-all"
+                >
+                  <span>+</span> Crear Primera Inspección
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Inspections Desktop Table (hidden md:block) */}
+        {!cargando && (
+          <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[900px]">
                 <thead>
@@ -348,10 +454,10 @@ export default function InspeccionesPage() {
           </div>
         )}
 
-        {/* Modal Checklist Detalle */}
+        {/* Modal Checklist Detalle (Bottom-sheet on small screens) */}
         {detalleInsp && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl space-y-4">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 pb-8 sm:pb-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
                 <div>
                   <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">
@@ -364,7 +470,7 @@ export default function InspeccionesPage() {
                 <button
                   type="button"
                   onClick={() => setDetalleInsp(null)}
-                  className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                  className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center text-sm cursor-pointer"
                 >
                   ✕
                 </button>
@@ -420,7 +526,7 @@ export default function InspeccionesPage() {
                 <button
                   type="button"
                   onClick={() => setDetalleInsp(null)}
-                  className="px-5 py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-800 text-white text-xs font-bold cursor-pointer"
+                  className="w-full sm:w-auto h-11 px-6 rounded-xl bg-zinc-900 dark:bg-zinc-800 text-white text-xs font-bold cursor-pointer flex items-center justify-center"
                 >
                   Cerrar
                 </button>
@@ -429,6 +535,8 @@ export default function InspeccionesPage() {
           </div>
         )}
       </main>
+
+      <TallerMobileNav />
     </div>
   );
 }

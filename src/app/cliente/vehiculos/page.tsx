@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Header } from "@/components/Header";
+import { ClienteMobileNav } from "@/components/ClienteMobileNav";
 
 // Estructura del Vehículo en Neon PostgreSQL
 interface NeonVehicle {
@@ -287,7 +288,7 @@ export default function MisVehiculosPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
 
       {/* Notificación Toast flotante */}
@@ -298,26 +299,26 @@ export default function MisVehiculosPage() {
         </div>
       )}
 
-      <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
+      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
         {/* Navigation / Breadcrumb */}
         <div className="mb-6 flex justify-between items-center">
-          <Link href="/cliente" className="text-sm font-medium text-blue-600 hover:text-blue-500 flex items-center gap-1 w-fit">
+          <Link href="/cliente" className="text-sm font-medium text-blue-600 hover:text-blue-500 flex items-center gap-1 w-fit min-h-[44px] sm:min-h-0 items-center">
             &larr; Volver a Portal de Cliente
           </Link>
           <div className="flex items-center gap-2 text-xs font-mono bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-full border border-blue-200 dark:border-blue-800">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Vehículos Registrados ({vehicles.length})</span>
+            <span>Vehículos ({vehicles.length})</span>
           </div>
         </div>
 
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-10">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8 sm:mb-10">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <div className="w-12 h-12 rounded-xl bg-blue-500 bg-opacity-10 flex items-center justify-center text-2xl">
                 🚗
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                 Mis Vehículos
               </h1>
             </div>
@@ -326,7 +327,7 @@ export default function MisVehiculosPage() {
           <button
             type="button"
             onClick={openCreateModal}
-            className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2 hover:shadow-md active:scale-[0.98]"
+            className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-5 sm:px-6 h-11 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center gap-2 hover:shadow-md active:scale-[0.98] w-full sm:w-auto"
           >
             <span className="text-xl leading-none font-bold">+</span> Agregar Vehículo
           </button>
@@ -456,14 +457,14 @@ export default function MisVehiculosPage() {
                     <div className="flex gap-3">
                       <Link
                         href={`/cliente/historial?vehiculo=${encodeURIComponent(vehicle.brand + ' ' + vehicle.model)}`}
-                        className="cursor-pointer flex-1 py-3 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm text-center flex items-center justify-center active:scale-[0.98]"
+                        className="cursor-pointer flex-1 h-11 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-xs sm:text-sm text-center flex items-center justify-center active:scale-[0.98]"
                       >
                         Ver Historial
                       </Link>
                       <button
                         type="button"
                         onClick={() => handleOpenAppointment(vehicle)}
-                        className="cursor-pointer flex-1 py-3 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 font-bold text-blue-600 dark:text-blue-400 transition-colors text-sm text-center active:scale-[0.98]"
+                        className="cursor-pointer flex-1 h-11 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 font-bold text-blue-600 dark:text-blue-400 transition-colors text-xs sm:text-sm text-center flex items-center justify-center active:scale-[0.98]"
                       >
                         Agendar Cita
                       </button>
@@ -497,16 +498,16 @@ export default function MisVehiculosPage() {
       {isAddVehicleOpen && (
         <div 
           onClick={() => setIsAddVehicleOpen(false)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl relative my-8"
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto"
           >
             <button
               type="button"
               onClick={() => setIsAddVehicleOpen(false)}
-              className="cursor-pointer absolute top-6 right-6 w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 flex items-center justify-center font-bold text-lg"
+              className="cursor-pointer absolute top-6 right-6 w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 flex items-center justify-center font-bold text-lg"
             >
               ✕
             </button>
@@ -528,7 +529,7 @@ export default function MisVehiculosPage() {
             )}
 
             <form onSubmit={handleCreateVehicle} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1.5">
                     Marca *
@@ -539,7 +540,7 @@ export default function MisVehiculosPage() {
                     placeholder="Ej. Toyota"
                     value={formBrand}
                     onChange={(e) => setFormBrand(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full h-11 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-base sm:text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
                 <div>
@@ -552,12 +553,12 @@ export default function MisVehiculosPage() {
                     placeholder="Ej. Hilux / Yaris"
                     value={formModel}
                     onChange={(e) => setFormModel(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full h-11 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-base sm:text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1.5">
                     Año
@@ -568,7 +569,7 @@ export default function MisVehiculosPage() {
                     max="2030"
                     value={formYear}
                     onChange={(e) => setFormYear(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full h-11 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-base sm:text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
                 <div>
@@ -581,12 +582,12 @@ export default function MisVehiculosPage() {
                     placeholder="Ej. ABC-123"
                     value={formPlate}
                     onChange={(e) => setFormPlate(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm uppercase focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full h-11 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-base sm:text-sm uppercase focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1.5">
                     Kilometraje Actual (km)
@@ -596,7 +597,7 @@ export default function MisVehiculosPage() {
                     placeholder="Ej. 45000"
                     value={formMileage}
                     onChange={(e) => setFormMileage(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full h-11 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-base sm:text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
                 <div>
@@ -606,7 +607,7 @@ export default function MisVehiculosPage() {
                   <select
                     value={formFuelType}
                     onChange={(e) => setFormFuelType(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full h-11 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-base sm:text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="Gasolina">Gasolina</option>
                     <option value="Diésel">Diésel</option>
@@ -617,18 +618,18 @@ export default function MisVehiculosPage() {
                 </div>
               </div>
 
-              <div className="flex gap-3 justify-end pt-4 border-t border-zinc-200 dark:border-zinc-800">
+              <div className="flex flex-col-reverse sm:flex-row gap-3 justify-end pt-4 border-t border-zinc-200 dark:border-zinc-800">
                 <button
                   type="button"
                   onClick={() => setIsAddVehicleOpen(false)}
-                  className="cursor-pointer px-5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm"
+                  className="cursor-pointer h-11 px-5 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm flex items-center justify-center"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="cursor-pointer px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors text-sm shadow-sm active:scale-[0.98] disabled:opacity-50"
+                  className="cursor-pointer h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors text-sm shadow-sm active:scale-[0.98] disabled:opacity-50 flex items-center justify-center"
                 >
                   {isSubmitting ? 'Guardando...' : 'Guardar Vehículo'}
                 </button>
@@ -644,16 +645,16 @@ export default function MisVehiculosPage() {
       {editingVehicle && (
         <div 
           onClick={() => setEditingVehicle(null)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl relative my-8"
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto"
           >
             <button
               type="button"
               onClick={() => setEditingVehicle(null)}
-              className="cursor-pointer absolute top-6 right-6 w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 flex items-center justify-center font-bold text-lg"
+              className="cursor-pointer absolute top-6 right-6 w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 flex items-center justify-center font-bold text-lg"
             >
               ✕
             </button>
@@ -675,7 +676,7 @@ export default function MisVehiculosPage() {
             )}
 
             <form onSubmit={handleUpdateVehicle} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1.5">
                     Marca
@@ -685,7 +686,7 @@ export default function MisVehiculosPage() {
                     required
                     value={formBrand}
                     onChange={(e) => setFormBrand(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full h-11 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-base sm:text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
                 <div>
@@ -697,12 +698,12 @@ export default function MisVehiculosPage() {
                     required
                     value={formModel}
                     onChange={(e) => setFormModel(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full h-11 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-base sm:text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1.5">
                     Año
@@ -711,7 +712,7 @@ export default function MisVehiculosPage() {
                     type="number"
                     value={formYear}
                     onChange={(e) => setFormYear(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full h-11 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-base sm:text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
                 <div>
@@ -723,12 +724,12 @@ export default function MisVehiculosPage() {
                     required
                     value={formPlate}
                     onChange={(e) => setFormPlate(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm uppercase focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full h-11 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-base sm:text-sm uppercase focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 mb-1.5">
                     Kilometraje (km)
@@ -737,7 +738,7 @@ export default function MisVehiculosPage() {
                     type="number"
                     value={formMileage}
                     onChange={(e) => setFormMileage(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full h-11 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-base sm:text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
                 <div>
@@ -747,7 +748,7 @@ export default function MisVehiculosPage() {
                   <select
                     value={formFuelType}
                     onChange={(e) => setFormFuelType(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full h-11 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-base sm:text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   >
                     <option value="Gasolina">Gasolina</option>
                     <option value="Diésel">Diésel</option>
@@ -758,18 +759,18 @@ export default function MisVehiculosPage() {
                 </div>
               </div>
 
-              <div className="flex gap-3 justify-end pt-4 border-t border-zinc-200 dark:border-zinc-800">
+              <div className="flex flex-col-reverse sm:flex-row gap-3 justify-end pt-4 border-t border-zinc-200 dark:border-zinc-800">
                 <button
                   type="button"
                   onClick={() => setEditingVehicle(null)}
-                  className="cursor-pointer px-5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm"
+                  className="cursor-pointer h-11 px-5 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm flex items-center justify-center"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="cursor-pointer px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors text-sm shadow-sm active:scale-[0.98] disabled:opacity-50"
+                  className="cursor-pointer h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors text-sm shadow-sm active:scale-[0.98] disabled:opacity-50 flex items-center justify-center"
                 >
                   {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
                 </button>
@@ -785,11 +786,11 @@ export default function MisVehiculosPage() {
       {vehicleToDelete && (
         <div 
           onClick={() => setVehicleToDelete(null)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl relative"
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl relative"
           >
             <div className="w-16 h-16 rounded-full bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center text-3xl mx-auto mb-4">
               🗑️
@@ -805,7 +806,7 @@ export default function MisVehiculosPage() {
               <button
                 type="button"
                 onClick={() => setVehicleToDelete(null)}
-                className="cursor-pointer flex-1 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm"
+                className="cursor-pointer flex-1 h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm flex items-center justify-center"
               >
                 Cancelar
               </button>
@@ -813,7 +814,7 @@ export default function MisVehiculosPage() {
                 type="button"
                 disabled={isSubmitting}
                 onClick={handleDeleteVehicle}
-                className="cursor-pointer flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm transition-colors shadow-sm active:scale-[0.98] disabled:opacity-50"
+                className="cursor-pointer flex-1 h-11 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm transition-colors shadow-sm active:scale-[0.98] disabled:opacity-50 flex items-center justify-center"
               >
                 {isSubmitting ? 'Borrando...' : 'Sí, Eliminar'}
               </button>
@@ -828,11 +829,11 @@ export default function MisVehiculosPage() {
       {appointmentVehicle && (
         <div 
           onClick={() => setAppointmentVehicle(null)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-end animate-in fade-in duration-300"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-stretch sm:justify-end animate-in fade-in duration-300"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 w-full max-w-md sm:max-w-lg h-full shadow-2xl flex flex-col justify-between overflow-y-auto p-6 md:p-8 animate-in slide-in-from-right duration-300 relative"
+            className="bg-white dark:bg-zinc-900 border-t sm:border-t-0 sm:border-l border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-none w-full max-w-md sm:max-w-lg max-h-[90vh] sm:max-h-none h-auto sm:h-full shadow-2xl flex flex-col justify-between overflow-y-auto p-6 md:p-8 animate-in slide-in-from-bottom sm:slide-in-from-right duration-300 relative"
           >
             {/* Header del Panel Lateral */}
             <div className="flex items-start justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800 mb-6">
@@ -850,7 +851,7 @@ export default function MisVehiculosPage() {
               <button
                 type="button"
                 onClick={() => setAppointmentVehicle(null)}
-                className="cursor-pointer w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center justify-center font-bold text-base transition-colors"
+                className="cursor-pointer w-11 h-11 sm:w-9 sm:h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center justify-center font-bold text-base transition-colors"
                 title="Cerrar panel"
               >
                 ✕
@@ -894,13 +895,13 @@ export default function MisVehiculosPage() {
                 <div className="flex flex-col sm:flex-row gap-3 w-full">
                   <button
                     onClick={() => setAppointmentVehicle(null)}
-                    className="cursor-pointer flex-1 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors text-sm shadow-sm"
+                    className="cursor-pointer flex-1 min-h-[44px] h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors text-base sm:text-sm shadow-sm flex items-center justify-center"
                   >
                     Cerrar
                   </button>
                   <Link
                     href="/cliente/citas"
-                    className="flex-1 px-6 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm text-center flex items-center justify-center"
+                    className="flex-1 min-h-[44px] h-11 px-6 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-base sm:text-sm text-center flex items-center justify-center"
                   >
                     Ver mis citas
                   </Link>
@@ -937,7 +938,7 @@ export default function MisVehiculosPage() {
                     <select
                       value={selectedService}
                       onChange={(e) => setSelectedService(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-base sm:text-sm min-h-[44px] focus:ring-2 focus:ring-blue-500 outline-none"
                     >
                       {SERVICES_LIST.map((srv) => (
                         <option key={srv.id} value={srv.id}>
@@ -957,7 +958,7 @@ export default function MisVehiculosPage() {
                       required
                       value={selectedDate}
                       onChange={(e) => setSelectedDate(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-base sm:text-sm min-h-[44px] focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
 
@@ -974,7 +975,7 @@ export default function MisVehiculosPage() {
                       ].map((slot) => (
                         <label
                           key={slot}
-                          className={`cursor-pointer p-3 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all ${
+                          className={`cursor-pointer p-3 min-h-[44px] rounded-xl border text-xs sm:text-xs font-semibold flex items-center gap-2 transition-all ${
                             selectedTimeSlot === slot
                               ? 'border-blue-600 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300'
                               : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-300'
@@ -985,7 +986,7 @@ export default function MisVehiculosPage() {
                             name="timeSlot"
                             checked={selectedTimeSlot === slot}
                             onChange={() => setSelectedTimeSlot(slot)}
-                            className="text-blue-600 focus:ring-blue-500"
+                            className="text-blue-600 focus:ring-blue-500 w-4 h-4"
                           />
                           <span>{slot}</span>
                         </label>
@@ -1003,7 +1004,7 @@ export default function MisVehiculosPage() {
                       value={appointmentNotes}
                       onChange={(e) => setAppointmentNotes(e.target.value)}
                       placeholder="Ej. Ruido en las pastillas delanteras, cambio de aceite..."
-                      className="w-full px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                      className="w-full px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-base sm:text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
                     />
                   </div>
                 </div>
@@ -1013,13 +1014,13 @@ export default function MisVehiculosPage() {
                   <button
                     type="button"
                     onClick={() => setAppointmentVehicle(null)}
-                    className="cursor-pointer flex-1 px-5 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm"
+                    className="cursor-pointer flex-1 min-h-[44px] h-11 px-5 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-base sm:text-sm flex items-center justify-center"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="cursor-pointer flex-1 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors text-sm shadow-md active:scale-[0.98]"
+                    className="cursor-pointer flex-1 min-h-[44px] h-11 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors text-base sm:text-sm shadow-md active:scale-[0.98] flex items-center justify-center"
                   >
                     Confirmar Cita
                   </button>
@@ -1029,6 +1030,9 @@ export default function MisVehiculosPage() {
           </div>
         </div>
       )}
+
+      {/* Navegación móvil fija */}
+      <ClienteMobileNav />
     </div>
   );
 }

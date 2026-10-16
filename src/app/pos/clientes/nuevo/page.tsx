@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
+import { PosMobileNav } from "@/components/PosMobileNav";
 
 export default function NuevoClientePage() {
   const router = useRouter();
@@ -81,7 +82,7 @@ export default function NuevoClientePage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-950 text-white font-sans selection:bg-blue-600 selection:text-white">
+    <div className="flex flex-col min-h-screen bg-zinc-950 text-white font-sans selection:bg-blue-600 selection:text-white pb-24 md:pb-0">
       <Header />
 
       <main className="flex-grow flex items-start sm:items-center justify-center p-3 sm:p-6 md:p-12 relative overflow-y-auto pb-12 sm:pb-8">
@@ -497,6 +498,8 @@ export default function NuevoClientePage() {
 
         </div>
       </main>
+
+      <PosMobileNav />
     </div>
   );
 }

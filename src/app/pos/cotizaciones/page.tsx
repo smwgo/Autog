@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { PosMobileNav } from "@/components/PosMobileNav";
 
 interface Product {
   id: string;
@@ -114,6 +115,7 @@ export default function CotizacionesPage() {
   useEffect(() => {
     cargarProductos();
     cargarClientes();
+    cargarHistorial();
   }, []);
 
   useEffect(() => {
@@ -320,27 +322,25 @@ export default function CotizacionesPage() {
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
 
-      <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+      <main className="flex-grow p-4 sm:p-6 md:p-12 pb-24 md:pb-12 max-w-7xl mx-auto w-full">
+        {/* Header */}
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link 
               href="/pos"
-              title="Volver a POS"
-              className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-purple-600 hover:border-purple-500 transition-all shadow-sm active:scale-95 group shrink-0"
+              title="Volver a Panel POS"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
             >
               <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </Link>
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center text-xl shrink-0">
-              📝
-            </div>
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                Cotizaciones
-              </h1>
-            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Cotizaciones
+            </h1>
+            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
+              {historialCotizaciones.length}
+            </span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -406,57 +406,110 @@ export default function CotizacionesPage() {
                 No hay cotizaciones registradas todavía.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-zinc-200 dark:border-zinc-800 text-xs uppercase font-bold text-zinc-500 dark:text-zinc-400">
-                      <th className="pb-3.5 px-4">Folio</th>
-                      <th className="pb-3.5 px-4">Cliente</th>
-                      <th className="pb-3.5 px-4">Artículos</th>
-                      <th className="pb-3.5 px-4 text-right">Total</th>
-                      <th className="pb-3.5 px-4 text-right">Fecha</th>
-                      <th className="pb-3.5 px-4 text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800 text-sm">
-                    {historialCotizaciones.map((item) => (
-                      <tr key={item.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40">
-                        <td className="py-4 px-4 font-mono font-bold text-purple-600 dark:text-purple-400">
-                          {item.requestNumber}
-                        </td>
-                        <td className="py-4 px-4 font-semibold text-zinc-900 dark:text-white">
-                          {item.customerName}
-                        </td>
-                        <td className="py-4 px-4 text-zinc-600 dark:text-zinc-400 max-w-xs truncate">
+              <>
+                {/* Mobile Cards (md:hidden) */}
+                <div className="grid grid-cols-1 gap-3 md:hidden">
+                  {historialCotizaciones.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/40 flex flex-col gap-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="font-mono font-bold text-xs text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 px-2 py-0.5 rounded-md">
+                            {item.requestNumber}
+                          </span>
+                          <h4 className="font-bold text-base text-zinc-900 dark:text-white mt-1">
+                            {item.customerName}
+                          </h4>
+                          <span className="text-xs text-zinc-500">
+                            {new Date(item.createdAt).toLocaleDateString("es-ES")}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-lg font-black text-zinc-900 dark:text-white block">
+                            ${Number(item.totalEstimated).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {item.itemsSummary && (
+                        <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 bg-white dark:bg-zinc-900/60 p-2 rounded-lg border border-zinc-100 dark:border-zinc-800">
                           {item.itemsSummary}
-                        </td>
-                        <td className="py-4 px-4 text-right font-black text-zinc-900 dark:text-white">
-                          ${Number(item.totalEstimated).toFixed(2)}
-                        </td>
-                        <td className="py-4 px-4 text-right text-xs text-zinc-500">
-                          {new Date(item.createdAt).toLocaleDateString("es-ES")}
-                        </td>
-                        <td className="py-4 px-4 text-right">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={() => handleCargarParaEditar(item)}
-                              className="cursor-pointer text-xs font-bold text-purple-600 hover:text-purple-700 bg-purple-50 dark:bg-purple-950/40 px-3 py-1.5 rounded-lg"
-                            >
-                              ✏️ Editar
-                            </button>
-                            <button
-                              onClick={() => handleEliminarCotizacion(item.id)}
-                              className="cursor-pointer text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/40 px-3 py-1.5 rounded-lg"
-                            >
-                              Eliminar
-                            </button>
-                          </div>
-                        </td>
+                        </p>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-zinc-200/60 dark:border-zinc-700/60">
+                        <button
+                          onClick={() => handleCargarParaEditar(item)}
+                          className="h-11 flex items-center justify-center gap-1.5 text-xs font-bold text-purple-600 hover:text-purple-700 bg-purple-50 dark:bg-purple-950/40 active:scale-95 border border-purple-200 dark:border-purple-800 rounded-xl cursor-pointer"
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          onClick={() => handleEliminarCotizacion(item.id)}
+                          className="h-11 flex items-center justify-center gap-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/40 active:scale-95 border border-rose-200 dark:border-rose-800 rounded-xl cursor-pointer"
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table (hidden md:block) */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-zinc-200 dark:border-zinc-800 text-xs uppercase font-bold text-zinc-500 dark:text-zinc-400">
+                        <th className="pb-3.5 px-4">Folio</th>
+                        <th className="pb-3.5 px-4">Cliente</th>
+                        <th className="pb-3.5 px-4">Artículos</th>
+                        <th className="pb-3.5 px-4 text-right">Total</th>
+                        <th className="pb-3.5 px-4 text-right">Fecha</th>
+                        <th className="pb-3.5 px-4 text-right">Acciones</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800 text-sm">
+                      {historialCotizaciones.map((item) => (
+                        <tr key={item.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40">
+                          <td className="py-4 px-4 font-mono font-bold text-purple-600 dark:text-purple-400">
+                            {item.requestNumber}
+                          </td>
+                          <td className="py-4 px-4 font-semibold text-zinc-900 dark:text-white">
+                            {item.customerName}
+                          </td>
+                          <td className="py-4 px-4 text-zinc-600 dark:text-zinc-400 max-w-xs truncate">
+                            {item.itemsSummary}
+                          </td>
+                          <td className="py-4 px-4 text-right font-black text-zinc-900 dark:text-white">
+                            ${Number(item.totalEstimated).toFixed(2)}
+                          </td>
+                          <td className="py-4 px-4 text-right text-xs text-zinc-500">
+                            {new Date(item.createdAt).toLocaleDateString("es-ES")}
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => handleCargarParaEditar(item)}
+                                className="cursor-pointer text-xs font-bold text-purple-600 hover:text-purple-700 bg-purple-50 dark:bg-purple-950/40 px-3 py-1.5 rounded-lg"
+                              >
+                                ✏️ Editar
+                              </button>
+                              <button
+                                onClick={() => handleEliminarCotizacion(item.id)}
+                                className="cursor-pointer text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/40 px-3 py-1.5 rounded-lg"
+                              >
+                                Eliminar
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         ) : (
@@ -648,17 +701,17 @@ export default function CotizacionesPage() {
                                   <button
                                     type="button"
                                     onClick={() => updateQuantity(item.id, item.qty - 1)}
-                                    className="px-2.5 py-1.5 text-sm font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                                    className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center text-base font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 cursor-pointer"
                                   >
                                     -
                                   </button>
-                                  <span className="px-3 text-sm font-bold min-w-[28px] text-center">
+                                  <span className="px-2 text-sm font-bold min-w-[28px] text-center">
                                     {item.qty}
                                   </span>
                                   <button
                                     type="button"
                                     onClick={() => updateQuantity(item.id, item.qty + 1)}
-                                    className="px-2.5 py-1.5 text-sm font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer"
+                                    className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center text-base font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 cursor-pointer"
                                   >
                                     +
                                   </button>
@@ -672,7 +725,7 @@ export default function CotizacionesPage() {
                                   type="number"
                                   min="0"
                                   max="100"
-                                  className="w-16 text-center py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm font-bold focus:outline-none focus:border-purple-500"
+                                  className="w-16 h-9 sm:h-8 text-center rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm font-bold focus:outline-none focus:border-purple-500"
                                   value={item.discount}
                                   onChange={(e) =>
                                     updateDiscount(item.id, parseInt(e.target.value) || 0)
@@ -690,7 +743,7 @@ export default function CotizacionesPage() {
                               <td className="py-4 text-right pl-2">
                                 <button
                                   onClick={() => removeItem(item.id)}
-                                  className="text-zinc-400 hover:text-rose-500 transition-colors p-1 text-base cursor-pointer"
+                                  className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors text-base cursor-pointer"
                                   title="Quitar"
                                 >
                                   ✕
@@ -754,33 +807,33 @@ export default function CotizacionesPage() {
 
       {/* MODAL: Búsqueda de Clientes Registrados */}
       {mostrarModalClientes && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative">
-            <div className="flex justify-between items-center mb-4 pb-3 border-b border-zinc-100 dark:border-zinc-800">
-              <h3 className="text-lg font-normal text-zinc-900 dark:text-white flex items-center gap-2">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-2xl w-full max-w-lg p-5 sm:p-6 shadow-2xl relative max-h-[85vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4 pb-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
+              <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                 <span>👥</span> Seleccionar Cliente Registrado
               </h3>
               <button
                 onClick={() => setMostrarModalClientes(false)}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 text-lg cursor-pointer"
+                className="w-10 h-10 flex items-center justify-center rounded-xl text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-lg cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="relative mb-4">
+            <div className="relative mb-4 shrink-0">
               <input
                 type="text"
                 placeholder="Buscar por nombre, teléfono o identificación..."
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm focus:outline-none focus:border-purple-500 dark:text-white"
+                className="w-full pl-10 pr-4 h-11 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm focus:outline-none focus:border-purple-500 dark:text-white"
                 value={busquedaCliente}
                 onChange={(e) => setBusquedaCliente(e.target.value)}
                 autoFocus
               />
-              <span className="absolute left-3.5 top-3 text-zinc-400">🔍</span>
+              <span className="absolute left-3.5 top-2.5 text-zinc-400">🔍</span>
             </div>
 
-            <div className="max-h-72 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800">
+            <div className="overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800 flex-grow pr-1">
               {clientesFiltrados.length === 0 ? (
                 <p className="text-center py-8 text-sm text-zinc-400 font-medium">
                   No se encontraron clientes registrados.
@@ -790,7 +843,7 @@ export default function CotizacionesPage() {
                   <div
                     key={cli.id}
                     onClick={() => seleccionarCliente(cli)}
-                    className="p-3.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 rounded-xl cursor-pointer transition-colors flex justify-between items-center group"
+                    className="p-3.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 rounded-xl cursor-pointer transition-colors flex justify-between items-center group min-h-[52px]"
                   >
                     <div>
                       <p className="text-sm font-bold text-zinc-900 dark:text-white">
@@ -800,7 +853,7 @@ export default function CotizacionesPage() {
                         {cli.phone ? `📞 ${cli.phone} • ` : ""}{cli.email || "Sin correo"}
                       </p>
                     </div>
-                    <span className="text-xs font-bold text-purple-600 dark:text-purple-400 group-hover:underline">
+                    <span className="text-xs font-bold text-purple-600 dark:text-purple-400 group-hover:underline px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/40">
                       Seleccionar
                     </span>
                   </div>
@@ -810,6 +863,9 @@ export default function CotizacionesPage() {
           </div>
         </div>
       )}
+
+      {/* Mobile Floating Bottom Bar */}
+      <PosMobileNav />
     </div>
   );
 }

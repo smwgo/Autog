@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Header } from "@/components/Header";
+import { ClienteMobileNav } from "@/components/ClienteMobileNav";
 
 interface VehicleOption {
   id: string;
@@ -239,42 +240,43 @@ export default function AgendarCitaPage() {
 
   if (isSubmitted) {
     return (
-      <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+      <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
         <Header />
-        <main className="flex-grow flex items-center justify-center p-6">
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-12 max-w-lg w-full text-center border border-zinc-200 dark:border-zinc-800 shadow-xl">
-            <div className="w-24 h-24 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center text-5xl mx-auto mb-6">
+        <main className="flex-grow flex items-center justify-center p-4 sm:p-6">
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl p-6 sm:p-12 max-w-lg w-full text-center border border-zinc-200 dark:border-zinc-800 shadow-xl">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center text-4xl sm:text-5xl mx-auto mb-6">
               ✓
             </div>
-            <h2 className="text-3xl font-bold text-zinc-900 dark:text-white mb-4">Cita Guardada en Neon DB</h2>
-            <p className="text-zinc-600 dark:text-zinc-400 mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white mb-4">Cita Guardada en Neon DB</h2>
+            <p className="text-zinc-600 dark:text-zinc-400 text-sm sm:text-base mb-8">
               Tu solicitud ha sido registrada con éxito en la base de datos del taller. Nos contactaremos pronto para confirmar tu asistencia.
             </p>
-            <div className="flex gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
               <button 
                 onClick={() => {
                   setIsSubmitted(false);
                   setComments('');
                 }}
-                className="cursor-pointer px-6 py-3 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                className="cursor-pointer min-h-[44px] h-11 px-6 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-base sm:text-sm flex items-center justify-center"
               >
                 Ver Mis Citas / Agendar Otra
               </button>
               <Link 
                 href="/cliente"
-                className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-colors shadow-lg shadow-emerald-500/20"
+                className="min-h-[44px] h-11 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-colors shadow-lg shadow-emerald-500/20 text-base sm:text-sm flex items-center justify-center"
               >
                 Volver al Inicio
               </Link>
             </div>
           </div>
         </main>
+        <ClienteMobileNav />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
 
       {/* Toast Notification */}
@@ -380,14 +382,14 @@ export default function AgendarCitaPage() {
                     <button
                       type="button"
                       onClick={() => handleOpenEdit(cita)}
-                      className="cursor-pointer px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold transition-colors"
+                      className="cursor-pointer min-h-[44px] px-4 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold transition-colors flex items-center justify-center"
                     >
                       ✏️ Editar / Reprogramar
                     </button>
                     <button
                       type="button"
                       onClick={() => setCitaToDelete(cita)}
-                      className="cursor-pointer px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold transition-colors"
+                      className="cursor-pointer min-h-[44px] px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold transition-colors flex items-center justify-center"
                     >
                       🗑️ Eliminar
                     </button>
@@ -454,14 +456,14 @@ export default function AgendarCitaPage() {
                   placeholder="Buscar servicio (ej. aceite, frenos, diagnóstico, lavado)..."
                   value={searchService}
                   onChange={(e) => setSearchService(e.target.value)}
-                  className="w-full pl-10 pr-10 py-3 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm focus:outline-none focus:border-emerald-500 dark:text-white transition-all font-medium"
+                  className="w-full pl-10 pr-10 py-3 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] focus:outline-none focus:border-emerald-500 dark:text-white transition-all font-medium"
                 />
                 <span className="absolute left-3.5 top-3.5 text-zinc-400">🔍</span>
                 {searchService && (
                   <button
                     type="button"
                     onClick={() => setSearchService('')}
-                    className="absolute right-3.5 top-3 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm font-bold"
+                    className="absolute right-3.5 top-3 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm font-bold min-h-[44px] min-w-[44px] flex items-center justify-center -mr-2 -mt-1.5"
                   >
                     ✕
                   </button>
@@ -475,7 +477,7 @@ export default function AgendarCitaPage() {
                   return (
                     <label 
                       key={s.id} 
-                      className={`cursor-pointer p-4 rounded-xl border-2 transition-all flex justify-between items-center gap-3 ${
+                      className={`cursor-pointer p-4 min-h-[48px] rounded-xl border-2 transition-all flex justify-between items-center gap-3 ${
                         isSelected 
                           ? 'border-emerald-500 bg-emerald-50/80 dark:bg-emerald-500/15 shadow-sm ring-1 ring-emerald-500/30' 
                           : 'border-zinc-200 dark:border-zinc-800 hover:border-emerald-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900/60'
@@ -527,7 +529,7 @@ export default function AgendarCitaPage() {
                         setSelectedService('SRV-OTRO');
                         setSearchService('');
                       }}
-                      className="text-xs font-bold text-emerald-600 hover:underline"
+                      className="text-xs font-bold text-emerald-600 hover:underline min-h-[44px] inline-flex items-center"
                     >
                       Seleccionar &quot;Otro (Especificar en comentarios)&quot;
                     </button>
@@ -547,7 +549,7 @@ export default function AgendarCitaPage() {
                   <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2">Fecha Sugerida</label>
                   <input 
                     type="date" 
-                    className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-emerald-500 dark:text-white font-medium"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-emerald-500 dark:text-white font-medium text-base sm:text-sm min-h-[44px]"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
                   />
@@ -555,7 +557,7 @@ export default function AgendarCitaPage() {
                 <div>
                   <label className="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2">Hora Sugerida</label>
                   <select 
-                    className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-emerald-500 dark:text-white font-medium"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-emerald-500 dark:text-white font-medium text-base sm:text-sm min-h-[44px]"
                     value={selectedTime}
                     onChange={(e) => setSelectedTime(e.target.value)}
                   >
@@ -578,7 +580,7 @@ export default function AgendarCitaPage() {
               </h3>
               <textarea 
                 placeholder="Ej. Hay un ruido extraño al frenar..."
-                className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-emerald-500 transition-all dark:text-white resize-none h-32"
+                className="w-full px-4 py-3 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-emerald-500 transition-all dark:text-white resize-none h-32 text-base sm:text-sm"
                 value={comments}
                 onChange={(e) => setComments(e.target.value)}
               />
@@ -589,7 +591,7 @@ export default function AgendarCitaPage() {
               <button 
                 type="submit"
                 disabled={isSubmitting || !selectedVehicle || !selectedService || !selectedDate || !selectedTime}
-                className="cursor-pointer w-full md:w-auto ml-auto block bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-white text-lg font-bold px-10 py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+                className="cursor-pointer w-full md:w-auto ml-auto block bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-white text-base sm:text-lg font-bold px-10 py-4 min-h-[48px] rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
               >
                 {isSubmitting ? 'Guardando en Neon DB...' : 'Solicitar Cita'}
               </button>
@@ -605,16 +607,16 @@ export default function AgendarCitaPage() {
       {editingCita && (
         <div
           onClick={() => setEditingCita(null)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-md w-full p-6 shadow-2xl relative"
+            className="bg-white dark:bg-zinc-900 border-t sm:border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl max-w-md w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200"
           >
             <button
               type="button"
               onClick={() => setEditingCita(null)}
-              className="cursor-pointer absolute top-5 right-5 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center justify-center font-bold text-sm"
+              className="cursor-pointer absolute top-4 right-4 w-11 h-11 sm:w-8 sm:h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center justify-center font-bold text-base sm:text-sm"
             >
               ✕
             </button>
@@ -636,11 +638,11 @@ export default function AgendarCitaPage() {
                   required
                   value={editService}
                   onChange={(e) => setEditService(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
                     Fecha
@@ -650,7 +652,7 @@ export default function AgendarCitaPage() {
                     required
                     value={editDate}
                     onChange={(e) => setEditDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                   />
                 </div>
                 <div>
@@ -662,7 +664,7 @@ export default function AgendarCitaPage() {
                     required
                     value={editTime}
                     onChange={(e) => setEditTime(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -674,7 +676,7 @@ export default function AgendarCitaPage() {
                 <select
                   value={editStatus}
                   onChange={(e) => setEditStatus(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                 >
                   <option value="Pendiente">Pendiente</option>
                   <option value="Confirmada">Confirmada</option>
@@ -690,7 +692,7 @@ export default function AgendarCitaPage() {
                   rows={3}
                   value={editComments}
                   onChange={(e) => setEditComments(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white resize-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm text-zinc-900 dark:text-white resize-none"
                 />
               </div>
 
@@ -698,14 +700,14 @@ export default function AgendarCitaPage() {
                 <button
                   type="button"
                   onClick={() => setEditingCita(null)}
-                  className="cursor-pointer flex-1 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-sm text-zinc-700 dark:text-zinc-300"
+                  className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-base sm:text-sm text-zinc-700 dark:text-zinc-300 flex items-center justify-center"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="cursor-pointer flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm"
+                  className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base sm:text-sm flex items-center justify-center"
                 >
                   {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
                 </button>
@@ -721,11 +723,11 @@ export default function AgendarCitaPage() {
       {citaToDelete && (
         <div
           onClick={() => setCitaToDelete(null)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl"
+            className="bg-white dark:bg-zinc-900 border-t sm:border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl animate-in slide-in-from-bottom duration-200"
           >
             <div className="w-14 h-14 rounded-full bg-rose-100 dark:bg-rose-950/50 text-rose-600 flex items-center justify-center text-2xl mx-auto mb-4">
               🗑️
@@ -740,7 +742,7 @@ export default function AgendarCitaPage() {
               <button
                 type="button"
                 onClick={() => setCitaToDelete(null)}
-                className="cursor-pointer flex-1 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-sm"
+                className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-base sm:text-sm flex items-center justify-center"
               >
                 Cancelar
               </button>
@@ -748,7 +750,7 @@ export default function AgendarCitaPage() {
                 type="button"
                 disabled={isSubmitting}
                 onClick={handleDeleteCita}
-                className="cursor-pointer flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm"
+                className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-base sm:text-sm flex items-center justify-center"
               >
                 {isSubmitting ? 'Borrando...' : 'Sí, Eliminar'}
               </button>
@@ -756,6 +758,9 @@ export default function AgendarCitaPage() {
           </div>
         </div>
       )}
+
+      {/* Navegación móvil fija */}
+      <ClienteMobileNav />
     </div>
   );
 }

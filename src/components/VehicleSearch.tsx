@@ -185,8 +185,8 @@ export function VehicleSearch() {
 
       {/* Modal Flotante de Pedido Directo desde Landing */}
       {modalAbierto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-4 text-white">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-5 sm:p-6 shadow-2xl flex flex-col gap-4 text-white max-h-[90dvh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 flex items-center justify-center text-lg">
@@ -202,7 +202,8 @@ export function VehicleSearch() {
               <button
                 type="button"
                 onClick={() => setModalAbierto(false)}
-                className="w-8 h-8 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                className="min-w-[44px] min-h-[44px] rounded-xl bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center text-sm cursor-pointer"
+                aria-label="Cerrar modal"
               >
                 ✕
               </button>
@@ -220,7 +221,7 @@ export function VehicleSearch() {
                 <button
                   type="button"
                   onClick={() => setModalAbierto(false)}
-                  className="mt-4 px-6 py-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition-all cursor-pointer"
+                  className="mt-4 px-6 h-11 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition-all cursor-pointer flex items-center justify-center"
                 >
                   Cerrar
                 </button>
@@ -235,7 +236,7 @@ export function VehicleSearch() {
                     value={nombre}
                     onChange={(e) => setNombre(e.target.value)}
                     placeholder="Ej. Juan Pérez"
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white focus:outline-none focus:border-cyan-500"
+                    className="w-full h-11 px-4 rounded-xl bg-zinc-950 border border-zinc-800 text-base sm:text-sm text-white focus:outline-none focus:border-cyan-500"
                   />
                 </div>
 
@@ -248,7 +249,7 @@ export function VehicleSearch() {
                       value={telefono}
                       onChange={(e) => setTelefono(e.target.value)}
                       placeholder="0991234567"
-                      className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white focus:outline-none focus:border-cyan-500"
+                      className="w-full h-11 px-4 rounded-xl bg-zinc-950 border border-zinc-800 text-base sm:text-sm text-white focus:outline-none focus:border-cyan-500"
                     />
                   </div>
                   <div>
@@ -258,7 +259,7 @@ export function VehicleSearch() {
                       value={vehiculoInfo}
                       onChange={(e) => setVehiculoInfo(e.target.value)}
                       placeholder="Ej. Toyota Hilux 2022"
-                      className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white focus:outline-none focus:border-cyan-500"
+                      className="w-full h-11 px-4 rounded-xl bg-zinc-950 border border-zinc-800 text-base sm:text-sm text-white focus:outline-none focus:border-cyan-500"
                     />
                   </div>
                 </div>
@@ -271,22 +272,22 @@ export function VehicleSearch() {
                     value={detalle}
                     onChange={(e) => setDetalle(e.target.value)}
                     placeholder="Detalla qué repuesto o trabajo necesitas..."
-                    className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white focus:outline-none focus:border-cyan-500"
+                    className="w-full p-3 rounded-xl bg-zinc-950 border border-zinc-800 text-base sm:text-sm text-white focus:outline-none focus:border-cyan-500"
                   />
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-2">
+                <div className="flex items-center justify-end gap-2 pt-2 pb-2 sm:pb-0">
                   <button
                     type="button"
                     onClick={() => setModalAbierto(false)}
-                    className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold transition-all cursor-pointer"
+                    className="px-4 h-11 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={enviando}
-                    className="px-6 py-2.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 active:scale-95 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition-all shadow-[0_0_15px_rgba(6,182,212,0.15)] cursor-pointer disabled:opacity-50"
+                    className="px-6 h-11 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 active:scale-95 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition-all shadow-[0_0_15px_rgba(6,182,212,0.15)] cursor-pointer disabled:opacity-50 flex items-center justify-center"
                   >
                     {enviando ? "Enviando..." : "Enviar Pedido"}
                   </button>

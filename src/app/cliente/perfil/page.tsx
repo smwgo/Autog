@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Header } from "@/components/Header";
+import { ClienteMobileNav } from "@/components/ClienteMobileNav";
 
 interface ClientProfile {
   id: string;
@@ -197,7 +198,7 @@ export default function MiPerfilPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
       
       <main className="flex-grow p-6 md:p-12 max-w-5xl mx-auto w-full">
@@ -223,12 +224,12 @@ export default function MiPerfilPage() {
                 Mi Perfil
               </h1>
             </div>
-            <p className="text-lg text-zinc-600 dark:text-zinc-400">
+            <p className="text-base sm:text-lg text-zinc-600 dark:text-zinc-400">
               Actualiza tus datos de contacto y preferencias directamente en Neon PostgreSQL.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             {profiles.length > 0 && (
               <select
                 value={selectedProfileId}
@@ -236,7 +237,7 @@ export default function MiPerfilPage() {
                   const found = profiles.find((p) => p.id === e.target.value);
                   if (found) applyProfileToForm(found);
                 }}
-                className="px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-bold text-zinc-800 dark:text-zinc-200"
+                className="px-3.5 py-2.5 min-h-[44px] rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-base sm:text-xs font-bold text-zinc-800 dark:text-zinc-200 flex-1 sm:flex-initial"
               >
                 {profiles.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -248,7 +249,7 @@ export default function MiPerfilPage() {
             <button
               type="button"
               onClick={() => setIsNewModalOpen(true)}
-              className="cursor-pointer px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 text-white text-xs font-bold transition-colors"
+              className="cursor-pointer min-h-[44px] h-11 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 text-white text-base sm:text-xs font-bold transition-colors flex items-center justify-center flex-1 sm:flex-initial"
             >
               + Nuevo Perfil
             </button>
@@ -266,19 +267,19 @@ export default function MiPerfilPage() {
             <div className="w-full md:w-64 shrink-0 flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0 hide-scrollbar">
               <button 
                 onClick={() => setActiveTab('personales')}
-                className={`cursor-pointer text-left px-5 py-3.5 rounded-2xl font-bold transition-all whitespace-nowrap ${activeTab === 'personales' ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-md' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'}`}
+                className={`cursor-pointer min-h-[44px] text-left px-5 py-3.5 rounded-2xl font-bold transition-all whitespace-nowrap text-base sm:text-sm flex items-center ${activeTab === 'personales' ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-md' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'}`}
               >
                 👤 Datos Personales
               </button>
               <button 
                 onClick={() => setActiveTab('seguridad')}
-                className={`cursor-pointer text-left px-5 py-3.5 rounded-2xl font-bold transition-all whitespace-nowrap ${activeTab === 'seguridad' ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-md' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'}`}
+                className={`cursor-pointer min-h-[44px] text-left px-5 py-3.5 rounded-2xl font-bold transition-all whitespace-nowrap text-base sm:text-sm flex items-center ${activeTab === 'seguridad' ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-md' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'}`}
               >
                 🔒 Seguridad
               </button>
               <button 
                 onClick={() => setActiveTab('notificaciones')}
-                className={`cursor-pointer text-left px-5 py-3.5 rounded-2xl font-bold transition-all whitespace-nowrap ${activeTab === 'notificaciones' ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-md' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'}`}
+                className={`cursor-pointer min-h-[44px] text-left px-5 py-3.5 rounded-2xl font-bold transition-all whitespace-nowrap text-base sm:text-sm flex items-center ${activeTab === 'notificaciones' ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-md' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'}`}
               >
                 🔔 Notificaciones
               </button>
@@ -312,7 +313,7 @@ export default function MiPerfilPage() {
                           type="button"
                           onClick={handleDeleteProfile}
                           disabled={isSaving}
-                          className="cursor-pointer px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-bold transition-colors"
+                          className="cursor-pointer min-h-[44px] px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-bold transition-colors flex items-center justify-center"
                         >
                           🗑️ Eliminar Perfil
                         </button>
@@ -327,7 +328,7 @@ export default function MiPerfilPage() {
                           required
                           value={name}
                           onChange={(e) => setName(e.target.value)}
-                          className="w-full px-4 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-all dark:text-white font-medium"
+                          className="w-full px-4 py-3.5 min-h-[44px] rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-all dark:text-white font-medium text-base sm:text-sm"
                         />
                       </div>
                       <div>
@@ -336,7 +337,7 @@ export default function MiPerfilPage() {
                           type="text" 
                           value={taxId}
                           onChange={(e) => setTaxId(e.target.value)}
-                          className="w-full px-4 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-all dark:text-white font-medium"
+                          className="w-full px-4 py-3.5 min-h-[44px] rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-all dark:text-white font-medium text-base sm:text-sm"
                         />
                       </div>
                       <div>
@@ -345,7 +346,7 @@ export default function MiPerfilPage() {
                           type="email" 
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="w-full px-4 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-all dark:text-white font-medium"
+                          className="w-full px-4 py-3.5 min-h-[44px] rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-all dark:text-white font-medium text-base sm:text-sm"
                         />
                       </div>
                       <div>
@@ -354,7 +355,7 @@ export default function MiPerfilPage() {
                           type="tel" 
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
-                          className="w-full px-4 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-all dark:text-white font-medium"
+                          className="w-full px-4 py-3.5 min-h-[44px] rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-all dark:text-white font-medium text-base sm:text-sm"
                         />
                       </div>
                       <div className="md:col-span-2">
@@ -363,7 +364,7 @@ export default function MiPerfilPage() {
                           type="text" 
                           value={address}
                           onChange={(e) => setAddress(e.target.value)}
-                          className="w-full px-4 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-all dark:text-white font-medium"
+                          className="w-full px-4 py-3.5 min-h-[44px] rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-all dark:text-white font-medium text-base sm:text-sm"
                         />
                       </div>
                     </div>
@@ -372,7 +373,7 @@ export default function MiPerfilPage() {
                       <button
                         type="submit"
                         disabled={isSaving}
-                        className="cursor-pointer bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 px-8 py-3.5 rounded-2xl font-bold transition-colors shadow-lg disabled:opacity-50"
+                        className="cursor-pointer min-h-[44px] h-12 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 px-8 rounded-2xl font-bold transition-colors shadow-lg disabled:opacity-50 text-base sm:text-sm flex items-center justify-center w-full sm:w-auto"
                       >
                         {isSaving ? 'Guardando en Neon...' : 'Guardar Cambios'}
                       </button>
@@ -392,7 +393,7 @@ export default function MiPerfilPage() {
                           value={currentPass}
                           onChange={(e) => setCurrentPass(e.target.value)}
                           placeholder="••••••••"
-                          className="w-full px-4 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-all dark:text-white"
+                          className="w-full px-4 py-3.5 min-h-[44px] rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-all dark:text-white text-base sm:text-sm"
                         />
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -403,7 +404,7 @@ export default function MiPerfilPage() {
                             value={newPass}
                             onChange={(e) => setNewPass(e.target.value)}
                             placeholder="Mínimo 8 caracteres"
-                            className="w-full px-4 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-all dark:text-white"
+                            className="w-full px-4 py-3.5 min-h-[44px] rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-all dark:text-white text-base sm:text-sm"
                           />
                         </div>
                         <div>
@@ -413,7 +414,7 @@ export default function MiPerfilPage() {
                             value={confirmPass}
                             onChange={(e) => setConfirmPass(e.target.value)}
                             placeholder="Repite la nueva contraseña"
-                            className="w-full px-4 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-all dark:text-white"
+                            className="w-full px-4 py-3.5 min-h-[44px] rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-all dark:text-white text-base sm:text-sm"
                           />
                         </div>
                       </div>
@@ -423,7 +424,7 @@ export default function MiPerfilPage() {
                       <button
                         type="submit"
                         disabled={isSaving}
-                        className="cursor-pointer bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 px-8 py-3.5 rounded-2xl font-bold transition-colors shadow-lg disabled:opacity-50"
+                        className="cursor-pointer min-h-[44px] h-12 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 px-8 rounded-2xl font-bold transition-colors shadow-lg disabled:opacity-50 text-base sm:text-sm flex items-center justify-center w-full sm:w-auto"
                       >
                         {isSaving ? 'Actualizando...' : 'Actualizar Contraseña'}
                       </button>
@@ -436,42 +437,42 @@ export default function MiPerfilPage() {
                     <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-6">Preferencias de Notificación</h2>
                     
                     <div className="space-y-4">
-                      <label className="flex items-center justify-between p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors">
+                      <label className="flex items-center justify-between p-4 min-h-[48px] rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors">
                         <div>
-                          <h4 className="font-bold text-zinc-900 dark:text-white">Recordatorios de Servicio</h4>
-                          <p className="text-sm text-zinc-500 dark:text-zinc-400">Recibe alertas cuando tu auto necesite mantenimiento.</p>
+                          <h4 className="font-bold text-zinc-900 dark:text-white text-sm sm:text-base">Recordatorios de Servicio</h4>
+                          <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">Recibe alertas cuando tu auto necesite mantenimiento.</p>
                         </div>
                         <input
                           type="checkbox"
                           checked={notifReminders}
                           onChange={(e) => setNotifReminders(e.target.checked)}
-                          className="w-5 h-5 accent-zinc-900 dark:accent-white"
+                          className="w-5 h-5 accent-zinc-900 dark:accent-white shrink-0 ml-3"
                         />
                       </label>
 
-                      <label className="flex items-center justify-between p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors">
+                      <label className="flex items-center justify-between p-4 min-h-[48px] rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors">
                         <div>
-                          <h4 className="font-bold text-zinc-900 dark:text-white">Estado de Reparaciones</h4>
-                          <p className="text-sm text-zinc-500 dark:text-zinc-400">Actualizaciones en tiempo real por SMS sobre trabajos en curso.</p>
+                          <h4 className="font-bold text-zinc-900 dark:text-white text-sm sm:text-base">Estado de Reparaciones</h4>
+                          <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">Actualizaciones en tiempo real por SMS sobre trabajos en curso.</p>
                         </div>
                         <input
                           type="checkbox"
                           checked={notifRepairs}
                           onChange={(e) => setNotifRepairs(e.target.checked)}
-                          className="w-5 h-5 accent-zinc-900 dark:accent-white"
+                          className="w-5 h-5 accent-zinc-900 dark:accent-white shrink-0 ml-3"
                         />
                       </label>
 
-                      <label className="flex items-center justify-between p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors">
+                      <label className="flex items-center justify-between p-4 min-h-[48px] rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors">
                         <div>
-                          <h4 className="font-bold text-zinc-900 dark:text-white">Promociones y Ofertas</h4>
-                          <p className="text-sm text-zinc-500 dark:text-zinc-400">Descuentos exclusivos en repuestos y mano de obra.</p>
+                          <h4 className="font-bold text-zinc-900 dark:text-white text-sm sm:text-base">Promociones y Ofertas</h4>
+                          <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">Descuentos exclusivos en repuestos y mano de obra.</p>
                         </div>
                         <input
                           type="checkbox"
                           checked={notifPromos}
                           onChange={(e) => setNotifPromos(e.target.checked)}
-                          className="w-5 h-5 accent-zinc-900 dark:accent-white"
+                          className="w-5 h-5 accent-zinc-900 dark:accent-white shrink-0 ml-3"
                         />
                       </label>
                     </div>
@@ -480,7 +481,7 @@ export default function MiPerfilPage() {
                       <button
                         type="submit"
                         disabled={isSaving}
-                        className="cursor-pointer bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 px-8 py-3.5 rounded-2xl font-bold transition-colors shadow-lg disabled:opacity-50"
+                        className="cursor-pointer min-h-[44px] h-12 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 px-8 rounded-2xl font-bold transition-colors shadow-lg disabled:opacity-50 text-base sm:text-sm flex items-center justify-center w-full sm:w-auto"
                       >
                         {isSaving ? 'Guardando...' : 'Guardar Preferencias'}
                       </button>
@@ -501,16 +502,16 @@ export default function MiPerfilPage() {
       {isNewModalOpen && (
         <div
           onClick={() => setIsNewModalOpen(false)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-md w-full p-6 shadow-2xl relative"
+            className="bg-white dark:bg-zinc-900 border-t sm:border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl max-w-md w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200"
           >
             <button
               type="button"
               onClick={() => setIsNewModalOpen(false)}
-              className="cursor-pointer absolute top-5 right-5 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 flex items-center justify-center font-bold"
+              className="cursor-pointer absolute top-4 right-4 sm:top-5 sm:right-5 w-11 h-11 sm:w-8 sm:h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center justify-center font-bold text-base sm:text-sm"
             >
               ✕
             </button>
@@ -527,10 +528,10 @@ export default function MiPerfilPage() {
                   required
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
                     RFC / Documento
@@ -539,7 +540,7 @@ export default function MiPerfilPage() {
                     type="text"
                     value={newTaxId}
                     onChange={(e) => setNewTaxId(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                   />
                 </div>
                 <div>
@@ -550,7 +551,7 @@ export default function MiPerfilPage() {
                     type="tel"
                     value={newPhone}
                     onChange={(e) => setNewPhone(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -562,7 +563,7 @@ export default function MiPerfilPage() {
                   type="email"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                 />
               </div>
               <div>
@@ -573,21 +574,21 @@ export default function MiPerfilPage() {
                   type="text"
                   value={newAddress}
                   onChange={(e) => setNewAddress(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                 />
               </div>
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsNewModalOpen(false)}
-                  className="cursor-pointer flex-1 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-sm"
+                  className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-base sm:text-sm flex items-center justify-center text-zinc-700 dark:text-zinc-300"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="cursor-pointer flex-1 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold text-sm"
+                  className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold text-base sm:text-sm flex items-center justify-center"
                 >
                   {isSaving ? 'Guardando...' : 'Crear en Neon DB'}
                 </button>
@@ -596,6 +597,9 @@ export default function MiPerfilPage() {
           </div>
         </div>
       )}
+
+      {/* Navegación móvil fija */}
+      <ClienteMobileNav />
     </div>
   );
 }

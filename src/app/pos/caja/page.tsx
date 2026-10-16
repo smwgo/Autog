@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { PosMobileNav } from "@/components/PosMobileNav";
 
 interface CashSession {
   id: string;
@@ -25,6 +26,12 @@ const toMonto = (val: any): string => {
   if (val === null || val === undefined || val === "") return "0.00";
   const num = typeof val === "number" ? val : parseFloat(val.toString());
   return isNaN(num) ? "0.00" : num.toFixed(2);
+};
+
+const toNumero = (val: any): number => {
+  if (val === null || val === undefined || val === "") return 0;
+  const num = typeof val === "number" ? val : parseFloat(val.toString());
+  return isNaN(num) ? 0 : num;
 };
 
 export default function GestionCaja() {
@@ -230,7 +237,7 @@ export default function GestionCaja() {
     if (!sesionParaCerrar) return;
 
     const contado = parseFloat(conteoEfectivo) || 0;
-    const esperado = sesionParaCerrar.expectedCash || (sesionParaCerrar.initialCash + (stats.ventasTotal || 0));
+    const esperado = toNumero(sesionParaCerrar.expectedCash) || (toNumero(sesionParaCerrar.initialCash) + (stats.ventasTotal || 0));
     const diferencia = contado - esperado;
 
     setCerrandoCaja(true);
@@ -264,73 +271,27 @@ export default function GestionCaja() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-emerald-500/20 selection:text-emerald-300">
+    <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-emerald-500/20 selection:text-emerald-300 pb-24 md:pb-0">
       <Header />
 
       <main className="flex-grow p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full flex flex-col gap-6">
-        {/* Barra Superior con Pestañas y Botones Suaves */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Link
-              href="/pos"
-              className="w-10 h-10 rounded-2xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center transition-all active:scale-95 shadow-sm"
-              title="Volver"
-            >
-              &larr;
-            </Link>
-
-            {/* Pestañas: Venta | Caja | Pedidos */}
-            <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-950/70 border border-zinc-800/80 backdrop-blur-sm">
-              <Link
-                href="/pos/venta"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800/50 font-semibold text-xs transition-all active:scale-95"
-              >
-                <span className="text-sm">🛒</span>
-                <span>Venta</span>
-              </Link>
-
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold text-xs shadow-[0_0_15px_rgba(16,185,129,0.12)]">
-                <span className="text-sm">💵</span>
-                <span>Caja</span>
-                {stats.abiertas > 0 && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Acciones Rápidas con Colores Suaves y Transparentes */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => setMostrarModalFondo(true)}
-              className="h-10 px-4 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 font-semibold text-xs transition-all active:scale-95 shadow-[0_0_15px_rgba(16,185,129,0.1)] flex items-center gap-1.5"
-            >
-              <span>➕</span>
-              <span>Apertura</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setTipoMovimiento("GASTO");
-                setMostrarModalMovimiento(true);
-              }}
-              className="h-10 px-4 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 font-semibold text-xs transition-all active:scale-95 shadow-[0_0_15px_rgba(244,63,94,0.1)] flex items-center gap-1.5"
-            >
-              <span>🔻</span>
-              <span>Gasto</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setTipoMovimiento("INGRESO");
-                setMostrarModalMovimiento(true);
-              }}
-              className="h-10 px-4 rounded-2xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 font-semibold text-xs transition-all active:scale-95 shadow-[0_0_15px_rgba(14,165,233,0.1)] flex items-center gap-1.5"
-            >
-              <span>🔺</span>
-              <span>Ingreso</span>
-            </button>
-          </div>
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <Link 
+            href="/pos"
+            title="Volver a Panel POS"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
+          >
+            <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </Link>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Caja
+          </h1>
+          <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
+            {stats.totalSesiones}
+          </span>
         </div>
 
         {/* 4 Tarjetas Métricas Superiores */}
@@ -554,14 +515,14 @@ export default function GestionCaja() {
                           setSesionParaCerrar(s);
                           setConteoEfectivo("");
                         }}
-                        className="flex-1 py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all text-center cursor-pointer"
+                        className="flex-1 h-11 min-h-[44px] rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all flex items-center justify-center cursor-pointer"
                       >
                         Cerrar
                       </button>
                     ) : (
                       <button
                         onClick={() => setSesionDetalle(s)}
-                        className="flex-1 py-2.5 rounded-xl bg-zinc-800/40 hover:bg-zinc-800/70 active:scale-95 text-zinc-300 border border-zinc-700/40 text-xs font-semibold transition-all text-center cursor-pointer"
+                        className="flex-1 h-11 min-h-[44px] rounded-xl bg-zinc-800/40 hover:bg-zinc-800/70 active:scale-95 text-zinc-300 border border-zinc-700/40 text-xs font-semibold transition-all flex items-center justify-center cursor-pointer"
                       >
                         Arqueo
                       </button>
@@ -569,9 +530,9 @@ export default function GestionCaja() {
                     <button
                       onClick={() => setSesionParaEliminar(s)}
                       title="Eliminar sesión"
-                      className="w-10 h-10 rounded-xl bg-red-500/10 hover:bg-red-500/20 active:scale-95 text-red-400 hover:text-red-300 border border-red-500/20 flex items-center justify-center transition-all cursor-pointer shrink-0"
+                      className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-red-500/10 hover:bg-red-500/20 active:scale-95 text-red-400 hover:text-red-300 border border-red-500/20 flex items-center justify-center transition-all cursor-pointer shrink-0"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                     </button>
@@ -714,8 +675,8 @@ export default function GestionCaja() {
 
       {/* MODAL 1: CERRAR / ARQUEO DE CAJA */}
       {sesionParaCerrar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-5">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center text-lg">
@@ -741,7 +702,7 @@ export default function GestionCaja() {
               <div>
                 <span className="text-xs text-zinc-400 font-medium">Esperado</span>
                 <p className="text-2xl font-black text-emerald-400">
-                  ${(sesionParaCerrar.expectedCash || 0).toFixed(2)}
+                  ${toMonto(sesionParaCerrar.expectedCash)}
                 </p>
               </div>
               <div className="text-right">
@@ -749,14 +710,14 @@ export default function GestionCaja() {
                 <p
                   className={`text-lg font-bold ${
                     conteoEfectivo !== "" &&
-                    parseFloat(conteoEfectivo) - (sesionParaCerrar.expectedCash || 0) < 0
+                    parseFloat(conteoEfectivo) - toNumero(sesionParaCerrar.expectedCash) < 0
                       ? "text-rose-400"
                       : "text-emerald-400"
                   }`}
                 >
                   {conteoEfectivo === ""
                     ? "$0.00"
-                    : `$${(parseFloat(conteoEfectivo) - (sesionParaCerrar.expectedCash || 0)).toFixed(2)}`}
+                    : `$${toMonto(parseFloat(conteoEfectivo) - toNumero(sesionParaCerrar.expectedCash))}`}
                 </p>
               </div>
             </div>
@@ -813,7 +774,7 @@ export default function GestionCaja() {
                   placeholder="Opcional..."
                   value={conteoNotas}
                   onChange={(e) => setConteoNotas(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-800 bg-zinc-950/60 text-xs text-white focus:outline-none focus:border-zinc-700"
+                  className="w-full h-11 px-3.5 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-xs text-white focus:outline-none focus:border-zinc-700"
                 />
               </div>
 
@@ -821,14 +782,14 @@ export default function GestionCaja() {
                 <button
                   type="button"
                   onClick={() => setSesionParaCerrar(null)}
-                  className="flex-1 py-3 px-4 rounded-2xl bg-zinc-800/40 hover:bg-zinc-800/70 text-zinc-400 text-xs font-semibold transition-all text-center"
+                  className="flex-1 h-11 py-3 px-4 rounded-2xl bg-zinc-800/40 hover:bg-zinc-800/70 text-zinc-400 text-xs font-semibold transition-all flex items-center justify-center cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={cerrandoCaja}
-                  className="flex-1 py-3 px-4 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] text-xs font-bold transition-all text-center"
+                  className="flex-1 h-11 py-3 px-4 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] text-xs font-bold transition-all flex items-center justify-center cursor-pointer"
                 >
                   {cerrandoCaja ? "Cerrando..." : "Cerrar"}
                 </button>
@@ -840,8 +801,8 @@ export default function GestionCaja() {
 
       {/* MODAL 2: FONDO / APERTURA */}
       {mostrarModalFondo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-sm rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-5 text-center">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-5 text-center max-h-[90vh] overflow-y-auto">
             <div className="flex flex-col items-center gap-2.5">
               <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-xl">
                 💵
@@ -871,14 +832,14 @@ export default function GestionCaja() {
                 <button
                   type="button"
                   onClick={() => setMostrarModalFondo(false)}
-                  className="flex-1 py-3 px-4 rounded-2xl bg-zinc-800/40 hover:bg-zinc-800/70 text-zinc-400 text-xs font-semibold transition-all text-center"
+                  className="flex-1 h-11 py-3 px-4 rounded-2xl bg-zinc-800/40 hover:bg-zinc-800/70 text-zinc-400 text-xs font-semibold transition-all flex items-center justify-center cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={guardandoFondo}
-                  className="flex-1 py-3 px-4 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] text-xs font-bold transition-all text-center"
+                  className="flex-1 h-11 py-3 px-4 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] text-xs font-bold transition-all flex items-center justify-center cursor-pointer"
                 >
                   {guardandoFondo ? "Guardando..." : "Abrir"}
                 </button>
@@ -890,8 +851,8 @@ export default function GestionCaja() {
 
       {/* MODAL 3: GASTO / INGRESO */}
       {mostrarModalMovimiento && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-sm rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-5">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
               <h3 className="text-base font-bold text-white capitalize">{tipoMovimiento.toLowerCase()}</h3>
               <button
@@ -927,7 +888,7 @@ export default function GestionCaja() {
                   placeholder="Detalle..."
                   value={conceptoMovimiento}
                   onChange={(e) => setConceptoMovimiento(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-800 bg-zinc-950/60 text-xs text-white focus:outline-none focus:border-zinc-700"
+                  className="w-full h-11 px-3.5 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-xs text-white focus:outline-none focus:border-zinc-700"
                 />
               </div>
 
@@ -935,14 +896,14 @@ export default function GestionCaja() {
                 <button
                   type="button"
                   onClick={() => setMostrarModalMovimiento(false)}
-                  className="flex-1 py-3 px-4 rounded-2xl bg-zinc-800/40 hover:bg-zinc-800/70 text-zinc-400 text-xs font-semibold transition-all text-center"
+                  className="flex-1 h-11 py-3 px-4 rounded-2xl bg-zinc-800/40 hover:bg-zinc-800/70 text-zinc-400 text-xs font-semibold transition-all flex items-center justify-center cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={guardandoMovimiento}
-                  className={`flex-1 py-3 px-4 rounded-2xl font-bold text-xs transition-all text-center border shadow-lg ${
+                  className={`flex-1 h-11 py-3 px-4 rounded-2xl font-bold text-xs transition-all flex items-center justify-center border shadow-lg cursor-pointer ${
                     tipoMovimiento === "GASTO"
                       ? "bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border-rose-500/30"
                       : "bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border-sky-500/30"
@@ -958,8 +919,8 @@ export default function GestionCaja() {
 
       {/* MODAL 4: DETALLE / ARQUEO DE SESIÓN CERRADA */}
       {sesionDetalle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-sm rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
               <h3 className="text-base font-bold text-white">Arqueo</h3>
               <button
@@ -1008,7 +969,7 @@ export default function GestionCaja() {
 
             <button
               onClick={() => setSesionDetalle(null)}
-              className="w-full mt-2 py-3 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold transition-all"
+              className="w-full mt-2 h-11 py-3 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold transition-all flex items-center justify-center cursor-pointer"
             >
               Cerrar
             </button>
@@ -1018,8 +979,8 @@ export default function GestionCaja() {
 
       {/* MODAL 5: CONFIRMACIÓN DE ELIMINACIÓN DE SESIÓN */}
       {sesionParaEliminar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-sm rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col items-center text-center gap-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col items-center text-center gap-4 max-h-[90vh] overflow-y-auto">
             <div className="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-400 flex items-center justify-center text-2xl">
               🗑️
             </div>
@@ -1053,7 +1014,7 @@ export default function GestionCaja() {
                 type="button"
                 onClick={() => setSesionParaEliminar(null)}
                 disabled={eliminando}
-                className="flex-1 py-3 px-4 rounded-2xl bg-zinc-800/60 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+                className="flex-1 h-11 py-3 px-4 rounded-2xl bg-zinc-800/60 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center"
               >
                 Cancelar
               </button>
@@ -1061,7 +1022,7 @@ export default function GestionCaja() {
                 type="button"
                 onClick={handleConfirmarEliminacion}
                 disabled={eliminando}
-                className="flex-1 py-3 px-4 rounded-2xl bg-red-600 hover:bg-red-500 active:scale-95 text-white font-bold text-xs transition-all shadow-[0_0_20px_rgba(239,68,68,0.25)] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="flex-1 h-11 py-3 px-4 rounded-2xl bg-red-600 hover:bg-red-500 active:scale-95 text-white font-bold text-xs transition-all shadow-[0_0_20px_rgba(239,68,68,0.25)] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {eliminando ? (
                   <>
@@ -1076,6 +1037,8 @@ export default function GestionCaja() {
           </div>
         </div>
       )}
+
+      <PosMobileNav />
     </div>
   );
 }

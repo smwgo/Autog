@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { TallerMobileNav } from "@/components/TallerMobileNav";
 
 interface HistoryRecord {
   id: string;
@@ -155,43 +156,43 @@ export default function HistorialServiciosPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
 
-      <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
+      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
         {/* Navigation / Breadcrumb */}
         <div className="mb-6">
           <Link
             href="/taller"
-            className="text-sm font-medium text-purple-600 hover:text-purple-500 flex items-center gap-1 w-fit"
+            className="text-sm font-medium text-purple-600 hover:text-purple-500 flex items-center gap-1 w-fit min-h-[44px] md:min-h-0 items-center"
           >
             &larr; Volver al Panel de Taller
           </Link>
         </div>
 
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-10">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6 sm:mb-10">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-xl bg-purple-500 bg-opacity-10 flex items-center justify-center text-2xl">
+              <div className="w-12 h-12 rounded-2xl bg-purple-500 bg-opacity-10 flex items-center justify-center text-2xl shrink-0">
                 📖
               </div>
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                   Historial de Servicios
                 </h1>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
                   {records.length} servicios almacenados en Neon DB
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
             <button
               type="button"
               onClick={handleExportarCSV}
-              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-purple-500 dark:hover:border-purple-500 text-zinc-700 dark:text-zinc-300 px-5 py-2.5 rounded-xl font-medium text-sm transition-colors shadow-sm flex items-center gap-2 cursor-pointer"
+              className="h-11 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-purple-500 dark:hover:border-purple-500 text-zinc-700 dark:text-zinc-300 px-5 rounded-xl font-medium text-sm transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>📥</span> Exportar Reporte
             </button>
@@ -199,7 +200,7 @@ export default function HistorialServiciosPage() {
             <button
               type="button"
               onClick={() => setModalNuevo(true)}
-              className="bg-purple-600 hover:bg-purple-700 active:scale-95 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+              className="h-11 bg-purple-600 hover:bg-purple-700 active:scale-95 text-white px-5 rounded-xl font-bold text-sm transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>+</span> Registrar Servicio
             </button>
@@ -207,16 +208,16 @@ export default function HistorialServiciosPage() {
         </div>
 
         {/* Big Search Bar */}
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm mb-8">
+        <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm mb-6 sm:mb-8">
           <div className="relative max-w-3xl mx-auto">
             <input
               type="text"
               placeholder="Ingresa la placa (Ej: ABC-123), nombre del cliente o ID del servicio..."
-              className="w-full pl-14 pr-6 py-4 rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all dark:text-white text-lg"
+              className="w-full pl-12 sm:pl-14 pr-4 sm:pr-6 py-3.5 sm:py-4 rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all dark:text-white text-base sm:text-lg"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <span className="absolute left-5 top-4 text-zinc-400 text-2xl">🔍</span>
+            <span className="absolute left-4 sm:left-5 top-3.5 sm:top-4 text-zinc-400 text-xl sm:text-2xl">🔍</span>
           </div>
         </div>
 
@@ -226,18 +227,18 @@ export default function HistorialServiciosPage() {
             <p className="text-sm font-medium text-zinc-500">Consultando historial en Neon DB...</p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {records.map((record) => (
               <div
                 key={record.dbId || record.id}
-                className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 hover:border-purple-300 dark:hover:border-purple-700 transition-colors shadow-sm flex flex-col md:flex-row gap-6"
+                className="bg-white dark:bg-zinc-900 p-5 sm:p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 hover:border-purple-300 dark:hover:border-purple-700 transition-colors shadow-sm flex flex-col md:flex-row gap-4 sm:gap-6"
               >
                 {/* Left Column: Date & ID */}
                 <div className="md:w-48 flex-shrink-0 flex flex-col justify-center border-b md:border-b-0 md:border-r border-zinc-100 dark:border-zinc-800 pb-4 md:pb-0 md:pr-6">
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-1 font-medium">
+                  <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mb-1 font-medium">
                     Fecha de Servicio
                   </p>
-                  <p className="text-xl font-bold text-purple-700 dark:text-purple-400 mb-2">
+                  <p className="text-lg sm:text-xl font-bold text-purple-700 dark:text-purple-400 mb-2">
                     {record.date}
                   </p>
                   <span className="inline-block bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-xs font-mono px-2.5 py-1 rounded-md w-fit">
@@ -247,12 +248,12 @@ export default function HistorialServiciosPage() {
 
                 {/* Middle Column: Vehicle & Services */}
                 <div className="flex-grow">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-2">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between mb-3 sm:mb-4 gap-2">
                     <div>
-                      <h3 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                      <h3 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                         {record.vehicle}
                       </h3>
-                      <div className="flex items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
                         <span className="font-mono bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded text-zinc-700 dark:text-zinc-300 font-bold">
                           {record.plate}
                         </span>
@@ -261,16 +262,16 @@ export default function HistorialServiciosPage() {
                       </div>
                     </div>
                     <div className="text-left md:text-right">
-                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-0.5">Kilometraje</p>
-                      <p className="font-medium text-zinc-700 dark:text-zinc-300">{record.mileage}</p>
+                      <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mb-0.5">Kilometraje</p>
+                      <p className="font-medium text-xs sm:text-sm text-zinc-700 dark:text-zinc-300">{record.mileage}</p>
                     </div>
                   </div>
 
-                  <div className="bg-purple-50 dark:bg-purple-500/5 rounded-xl p-4 border border-purple-100 dark:border-purple-500/10">
-                    <p className="text-sm font-bold text-purple-900 dark:text-purple-300 mb-2">
+                  <div className="bg-purple-50 dark:bg-purple-500/5 rounded-2xl p-3.5 sm:p-4 border border-purple-100 dark:border-purple-500/10">
+                    <p className="text-xs sm:text-sm font-bold text-purple-900 dark:text-purple-300 mb-2">
                       Trabajos Realizados:
                     </p>
-                    <ul className="list-disc list-inside text-zinc-700 dark:text-zinc-300 text-sm space-y-1">
+                    <ul className="list-disc list-inside text-zinc-700 dark:text-zinc-300 text-xs sm:text-sm space-y-1">
                       {record.services.map((service, idx) => (
                         <li key={idx}>{service}</li>
                       ))}
@@ -285,28 +286,32 @@ export default function HistorialServiciosPage() {
 
                 {/* Right Column: Cost & Actions */}
                 <div className="md:w-48 flex-shrink-0 flex flex-col justify-between border-t md:border-t-0 md:border-l border-zinc-100 dark:border-zinc-800 pt-4 md:pt-0 md:pl-6">
-                  <div>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">Mecánico</p>
-                    <p className="text-sm font-medium text-zinc-900 dark:text-white mb-4">
-                      {record.mechanic}
-                    </p>
+                  <div className="flex md:flex-col justify-between items-end md:items-start">
+                    <div>
+                      <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mb-1">Mecánico</p>
+                      <p className="text-sm font-medium text-zinc-900 dark:text-white mb-2 md:mb-4">
+                        {record.mechanic}
+                      </p>
+                    </div>
 
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">Costo Total</p>
-                    <p className="text-2xl font-bold text-zinc-900 dark:text-white">{record.cost}</p>
+                    <div>
+                      <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mb-1">Costo Total</p>
+                      <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">{record.cost}</p>
+                    </div>
                   </div>
 
                   <div className="flex flex-col gap-2 mt-4">
                     <button
                       type="button"
                       onClick={() => setDetalleSeleccionado(record)}
-                      className="w-full bg-purple-100 hover:bg-purple-200 text-purple-700 dark:bg-purple-500/20 dark:hover:bg-purple-500/30 dark:text-purple-300 py-2.5 rounded-xl text-sm font-bold transition-colors cursor-pointer"
+                      className="w-full h-11 bg-purple-100 hover:bg-purple-200 text-purple-700 dark:bg-purple-500/20 dark:hover:bg-purple-500/30 dark:text-purple-300 rounded-xl text-sm font-bold transition-colors cursor-pointer flex items-center justify-center"
                     >
                       Ver Factura / Detalle
                     </button>
                     <button
                       type="button"
                       onClick={() => handleEliminar(record)}
-                      className="w-full text-xs text-zinc-400 hover:text-rose-500 py-1 transition-colors cursor-pointer"
+                      className="w-full h-11 text-xs text-zinc-400 hover:text-rose-500 transition-colors cursor-pointer flex items-center justify-center"
                     >
                       Eliminar registro
                     </button>
@@ -329,10 +334,10 @@ export default function HistorialServiciosPage() {
           </div>
         )}
 
-        {/* Modal Detalle / Factura */}
+        {/* Modal Detalle / Factura (Bottom-sheet on small screens) */}
         {detalleSeleccionado && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl space-y-5">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 pb-8 sm:pb-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
                 <div>
                   <span className="text-xs font-mono font-bold text-purple-600 dark:text-purple-400">
@@ -345,7 +350,7 @@ export default function HistorialServiciosPage() {
                 <button
                   type="button"
                   onClick={() => setDetalleSeleccionado(null)}
-                  className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                  className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center text-sm cursor-pointer"
                 >
                   ✕
                 </button>
@@ -400,17 +405,17 @@ export default function HistorialServiciosPage() {
                 </span>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
                 <Link
                   href={`/pos/venta?placa=${encodeURIComponent(detalleSeleccionado.plate)}`}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
+                  className="h-11 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center"
                 >
                   Ir a Facturación POS
                 </Link>
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold cursor-pointer"
+                  className="h-11 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold cursor-pointer flex items-center justify-center"
                 >
                   🖨️ Imprimir
                 </button>
@@ -419,10 +424,10 @@ export default function HistorialServiciosPage() {
           </div>
         )}
 
-        {/* Modal Nuevo Registro en Historial */}
+        {/* Modal Nuevo Registro en Historial (Bottom-sheet on small screens) */}
         {modalNuevo && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl space-y-4">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 pb-8 sm:pb-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
                   📖 Registrar Servicio en Historial (Neon DB)
@@ -430,7 +435,7 @@ export default function HistorialServiciosPage() {
                 <button
                   type="button"
                   onClick={() => setModalNuevo(false)}
-                  className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                  className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center text-sm cursor-pointer"
                 >
                   ✕
                 </button>
@@ -448,7 +453,7 @@ export default function HistorialServiciosPage() {
                       placeholder="Ej: Mazda CX-5 2021"
                       value={vehicle}
                       onChange={(e) => setVehicle(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm dark:text-white"
                     />
                   </div>
                   <div>
@@ -461,7 +466,7 @@ export default function HistorialServiciosPage() {
                       placeholder="Ej: PBA-4512"
                       value={plate}
                       onChange={(e) => setPlate(e.target.value.toUpperCase())}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm font-mono uppercase dark:text-white"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm font-mono uppercase dark:text-white"
                     />
                   </div>
                 </div>
@@ -477,7 +482,7 @@ export default function HistorialServiciosPage() {
                       placeholder="Ej: Fernanda Morales"
                       value={client}
                       onChange={(e) => setClient(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm dark:text-white"
                     />
                   </div>
                   <div>
@@ -489,7 +494,7 @@ export default function HistorialServiciosPage() {
                       placeholder="Ej: 55,000 km"
                       value={mileage}
                       onChange={(e) => setMileage(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm dark:text-white"
                     />
                   </div>
                 </div>
@@ -502,7 +507,7 @@ export default function HistorialServiciosPage() {
                     <select
                       value={mechanic}
                       onChange={(e) => setMechanic(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm dark:text-white"
                     >
                       <option value="Carlos Rodríguez">Carlos Rodríguez</option>
                       <option value="Luis Martínez">Luis Martínez</option>
@@ -521,7 +526,7 @@ export default function HistorialServiciosPage() {
                       placeholder="Ej: 145.00"
                       value={costInput}
                       onChange={(e) => setCostInput(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm dark:text-white"
                     />
                   </div>
                 </div>
@@ -536,7 +541,7 @@ export default function HistorialServiciosPage() {
                     placeholder="Ej: Cambio de aceite, Alineación 3D, Limpieza de frenos"
                     value={servicesInput}
                     onChange={(e) => setServicesInput(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                    className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm dark:text-white"
                   />
                 </div>
 
@@ -549,22 +554,22 @@ export default function HistorialServiciosPage() {
                     placeholder="Notas de entrega o recomendaciones..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm dark:text-white"
+                    className="w-full p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm dark:text-white resize-y"
                   />
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2">
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setModalNuevo(false)}
-                    className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-300"
+                    className="h-11 px-5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center justify-center"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={guardando}
-                    className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-sm disabled:opacity-50 cursor-pointer"
+                    className="h-11 px-6 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-sm disabled:opacity-50 cursor-pointer flex items-center justify-center"
                   >
                     {guardando ? "Guardando..." : "Guardar en Historial"}
                   </button>
@@ -574,6 +579,8 @@ export default function HistorialServiciosPage() {
           </div>
         )}
       </main>
+
+      <TallerMobileNav />
     </div>
   );
 }

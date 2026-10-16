@@ -2,7 +2,7 @@ import React from 'react';
 
 export function ActiveOrdersModule() {
   return (
-    <div className="relative overflow-hidden rounded-[24px] border border-slate-100 bg-white p-6 shadow-sm hover:shadow-md transition-all cursor-pointer max-w-[340px]">
+    <div className="relative overflow-hidden rounded-[24px] border border-slate-100 bg-white p-5 sm:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer w-full max-w-full sm:max-w-[340px]">
       {/* Decorative background element for the top right corner */}
       <div className="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-blue-50/50 blur-3xl pointer-events-none"></div>
 

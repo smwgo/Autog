@@ -2,6 +2,7 @@
 
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { PublicMobileNav } from "@/components/PublicMobileNav";
 import { useState } from "react";
 
 export default function ContactoPage() {
@@ -45,9 +46,9 @@ export default function ContactoPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
-      <main className="flex-grow pt-24 pb-20 px-6 md:px-12 max-w-7xl mx-auto w-full">
+      <main className="flex-grow pt-16 sm:pt-24 pb-24 md:pb-20 px-4 sm:px-6 md:px-12 max-w-7xl mx-auto w-full">
         
         {/* Header Section */}
         <div className="text-center max-w-3xl mx-auto mb-16">
@@ -105,44 +106,44 @@ export default function ContactoPage() {
           </div>
 
           {/* Contact Form */}
-          <div className="lg:col-span-3 bg-white dark:bg-zinc-900 rounded-3xl p-8 md:p-12 shadow-xl border border-zinc-200 dark:border-zinc-800">
-            <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mb-8">Envíanos un Mensaje</h2>
+          <div className="lg:col-span-3 bg-white dark:bg-zinc-900 rounded-3xl p-5 sm:p-8 md:p-12 shadow-xl border border-zinc-200 dark:border-zinc-800">
+            <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-50 mb-6 sm:mb-8">Envíanos un Mensaje</h2>
             
             {isSubmitted ? (
               <div className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 p-6 rounded-2xl border border-green-200 dark:border-green-800 flex items-center">
-                <svg className="w-8 h-8 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <svg className="w-8 h-8 mr-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 <div>
                   <h4 className="font-bold text-lg mb-1">¡Mensaje enviado con éxito!</h4>
-                  <p>Gracias por contactarnos. Nos comunicaremos contigo lo más pronto posible.</p>
+                  <p className="text-sm">Gracias por contactarnos. Nos comunicaremos contigo lo más pronto posible.</p>
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Tu Nombre *</label>
-                    <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="Ej. Juan Pérez" />
+                    <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-4 h-11 sm:h-12 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-base sm:text-sm text-zinc-900 dark:text-zinc-100" placeholder="Ej. Juan Pérez" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Tu Correo *</label>
-                    <input required type="email" name="email" value={formData.email} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="juan@ejemplo.com" />
+                    <input required type="email" name="email" value={formData.email} onChange={handleChange} className="w-full px-4 h-11 sm:h-12 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-base sm:text-sm text-zinc-900 dark:text-zinc-100" placeholder="juan@ejemplo.com" />
                   </div>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Asunto *</label>
-                  <input required type="text" name="subject" value={formData.subject} onChange={handleChange} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100" placeholder="Ej. Cotización de servicio" />
+                  <input required type="text" name="subject" value={formData.subject} onChange={handleChange} className="w-full px-4 h-11 sm:h-12 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-base sm:text-sm text-zinc-900 dark:text-zinc-100" placeholder="Ej. Cotización de servicio" />
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Mensaje *</label>
-                  <textarea required name="message" value={formData.message} onChange={handleChange} rows={5} className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-zinc-900 dark:text-zinc-100 resize-none" placeholder="Escribe tu mensaje aquí..." />
+                  <textarea required name="message" value={formData.message} onChange={handleChange} rows={5} className="w-full p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-base sm:text-sm text-zinc-900 dark:text-zinc-100 resize-none" placeholder="Escribe tu mensaje aquí..." />
                 </div>
                 
                 <button 
                   type="submit" 
                   disabled={isSubmitting}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-bold transition-all disabled:opacity-70 mt-2 flex items-center justify-center"
+                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 h-12 rounded-xl font-bold transition-all disabled:opacity-70 mt-2 flex items-center justify-center text-base sm:text-sm"
                 >
                   {isSubmitting ? (
                     <>
@@ -159,6 +160,7 @@ export default function ContactoPage() {
         </div>
       </main>
       <Footer />
+      <PublicMobileNav />
     </div>
   );
 }

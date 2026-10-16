@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Header } from "@/components/Header";
+import { ClienteMobileNav } from "@/components/ClienteMobileNav";
 
 interface InvoiceItem {
   dbId?: string;
@@ -250,7 +251,7 @@ function FacturasPagosContent() {
   });
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
 
       {/* Toast Notification */}
@@ -294,20 +295,20 @@ function FacturasPagosContent() {
             </div>
           </div>
           
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             <button
               type="button"
               onClick={() => setIsNewModalOpen(true)}
-              className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl font-bold transition-colors shadow-md shadow-indigo-500/20 flex items-center gap-2 text-sm"
+              className="cursor-pointer min-h-[44px] h-11 bg-indigo-600 hover:bg-indigo-700 text-white px-5 rounded-xl font-bold transition-colors shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 text-base sm:text-sm flex-1 sm:flex-initial"
             >
               <span>+</span> Nueva Factura
             </button>
             <button 
               type="button"
               onClick={handleDownloadAnnualReport}
-              className="cursor-pointer bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500 dark:hover:border-indigo-500 text-zinc-700 dark:text-zinc-300 px-5 py-3 rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2 active:scale-[0.98] text-sm"
+              className="cursor-pointer min-h-[44px] h-11 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-indigo-500 dark:hover:border-indigo-500 text-zinc-700 dark:text-zinc-300 px-5 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center gap-2 active:scale-[0.98] text-base sm:text-sm flex-1 sm:flex-initial"
             >
-              <span>⬇️</span> Descargar Reporte Anual
+              <span>⬇️</span> Reporte Anual
             </button>
           </div>
         </div>
@@ -318,7 +319,7 @@ function FacturasPagosContent() {
             <input 
               type="text" 
               placeholder="Buscar por número de factura (ej. F-2023-0899) o concepto..." 
-              className="w-full pl-12 pr-10 py-3.5 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all dark:text-white font-medium text-sm"
+              className="w-full pl-12 pr-12 py-3.5 min-h-[44px] rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all dark:text-white font-medium text-base sm:text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -327,7 +328,7 @@ function FacturasPagosContent() {
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                className="cursor-pointer absolute right-4 top-3.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 font-bold"
+                className="cursor-pointer absolute right-2 top-2 w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 font-bold"
               >
                 ✕
               </button>
@@ -339,7 +340,7 @@ function FacturasPagosContent() {
                 key={status}
                 type="button"
                 onClick={() => setStatusFilter(status)}
-                className={`cursor-pointer px-5 py-3.5 rounded-2xl font-bold whitespace-nowrap transition-colors text-sm ${statusFilter === status ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+                className={`cursor-pointer min-h-[44px] px-5 py-2.5 rounded-2xl font-bold whitespace-nowrap transition-colors text-base sm:text-sm flex items-center justify-center ${statusFilter === status ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
               >
                 {status}
               </button>
@@ -392,7 +393,7 @@ function FacturasPagosContent() {
                     <button
                       type="button"
                       onClick={() => setSelectedInvoiceModal(inv)}
-                      className="cursor-pointer font-bold font-mono text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1.5"
+                      className="cursor-pointer min-h-[44px] font-bold font-mono text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1.5"
                       title="Clic para ver detalle completo"
                     >
                       <span>{inv.id}</span>
@@ -432,7 +433,7 @@ function FacturasPagosContent() {
                       <button 
                         type="button"
                         onClick={() => setInvoiceToPay(inv)}
-                        className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl transition-all shadow-md shadow-indigo-500/20 whitespace-nowrap text-sm active:scale-[0.98]"
+                        className="cursor-pointer min-h-[44px] bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl transition-all shadow-md shadow-indigo-500/20 whitespace-nowrap text-base sm:text-sm active:scale-[0.98] flex items-center justify-center"
                       >
                         Pagar Ahora
                       </button>
@@ -441,7 +442,7 @@ function FacturasPagosContent() {
                         <button 
                           type="button"
                           onClick={() => handleDownloadXML(inv)}
-                          className="cursor-pointer bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-bold px-4 py-2.5 rounded-xl transition-all whitespace-nowrap text-sm flex items-center gap-2 active:scale-[0.98]" 
+                          className="cursor-pointer min-h-[44px] bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-bold px-4 py-2.5 rounded-xl transition-all whitespace-nowrap text-base sm:text-sm flex items-center gap-2 active:scale-[0.98]" 
                           title="Descargar archivo CFDI XML"
                         >
                           <span className="text-indigo-600 dark:text-indigo-400">{'</>'}</span> XML
@@ -449,7 +450,7 @@ function FacturasPagosContent() {
                         <button 
                           type="button"
                           onClick={() => handleDownloadPDF(inv)}
-                          className="cursor-pointer bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-bold px-4 py-2.5 rounded-xl transition-all whitespace-nowrap text-sm flex items-center gap-2 active:scale-[0.98]" 
+                          className="cursor-pointer min-h-[44px] bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-bold px-4 py-2.5 rounded-xl transition-all whitespace-nowrap text-base sm:text-sm flex items-center gap-2 active:scale-[0.98]" 
                           title="Ver e Imprimir comprobante PDF"
                         >
                           📄 PDF
@@ -468,19 +469,22 @@ function FacturasPagosContent() {
       {/* ======================================================== */}
       {/* MODAL: VISTA PREVIA Y DETALLE COMPLETO DE FACTURA        */}
       {/* ======================================================== */}
+      {/* ======================================================== */}
+      {/* MODAL: VISTA PREVIA Y DETALLE COMPLETO DE FACTURA        */}
+      {/* ======================================================== */}
       {selectedInvoiceModal && (
         <div 
           onClick={() => setSelectedInvoiceModal(null)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl relative my-8"
+            className="bg-white dark:bg-zinc-900 border-t sm:border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200"
           >
             <button
               type="button"
               onClick={() => setSelectedInvoiceModal(null)}
-              className="cursor-pointer absolute top-6 right-6 w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center justify-center font-bold text-lg"
+              className="cursor-pointer absolute top-4 right-4 sm:top-6 sm:right-6 w-11 h-11 sm:w-9 sm:h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center justify-center font-bold text-base sm:text-lg"
             >
               ✕
             </button>
@@ -535,8 +539,8 @@ function FacturasPagosContent() {
               <h4 className="font-bold text-xs uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-3">
                 Conceptos y Partidas
               </h4>
-              <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden text-sm">
-                <table className="w-full text-left">
+              <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden text-sm overflow-x-auto">
+                <table className="w-full text-left min-w-[280px]">
                   <thead className="bg-zinc-100 dark:bg-zinc-800/80 text-xs font-bold text-zinc-600 dark:text-zinc-300">
                     <tr>
                       <th className="p-3">Descripción</th>
@@ -593,12 +597,12 @@ function FacturasPagosContent() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 justify-between pt-4 border-t border-zinc-200 dark:border-zinc-800">
+            <div className="flex flex-col sm:flex-row gap-2 justify-between pt-4 border-t border-zinc-200 dark:border-zinc-800">
               <button
                 type="button"
                 onClick={() => handleDeleteInvoice(selectedInvoiceModal.id)}
                 disabled={isProcessingPayment}
-                className="cursor-pointer px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold text-xs transition-colors"
+                className="cursor-pointer min-h-[44px] h-11 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold text-base sm:text-xs transition-colors flex items-center justify-center"
               >
                 🗑️ Eliminar de Neon DB
               </button>
@@ -606,23 +610,23 @@ function FacturasPagosContent() {
                 <button
                   type="button"
                   onClick={() => handleDownloadXML(selectedInvoiceModal)}
-                  className="cursor-pointer px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold text-xs flex items-center gap-1.5 transition-colors"
+                  className="cursor-pointer min-h-[44px] h-11 px-4 rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold text-base sm:text-xs flex items-center justify-center gap-1.5 transition-colors flex-1 sm:flex-initial"
                 >
-                  <span>{'</>'}</span> Descargar XML
+                  <span>{'</>'}</span> XML
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     if (typeof window !== 'undefined') window.print();
                   }}
-                  className="cursor-pointer px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-sm"
+                  className="cursor-pointer min-h-[44px] h-11 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-base sm:text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm flex-1 sm:flex-initial"
                 >
                   <span>📄</span> Imprimir / PDF
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedInvoiceModal(null)}
-                  className="cursor-pointer px-4 py-2.5 rounded-xl bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-semibold text-xs transition-colors"
+                  className="cursor-pointer min-h-[44px] h-11 px-4 rounded-xl bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-semibold text-base sm:text-xs transition-colors flex items-center justify-center flex-1 sm:flex-initial"
                 >
                   Cerrar
                 </button>
@@ -638,16 +642,16 @@ function FacturasPagosContent() {
       {invoiceToPay && (
         <div 
           onClick={() => setInvoiceToPay(null)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-md w-full p-6 shadow-2xl relative"
+            className="bg-white dark:bg-zinc-900 border-t sm:border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl max-w-md w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200"
           >
             <button
               type="button"
               onClick={() => setInvoiceToPay(null)}
-              className="cursor-pointer absolute top-5 right-5 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center justify-center font-bold text-sm"
+              className="cursor-pointer absolute top-4 right-4 sm:top-5 sm:right-5 w-11 h-11 sm:w-8 sm:h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center justify-center font-bold text-base sm:text-sm"
             >
               ✕
             </button>
@@ -684,7 +688,7 @@ function FacturasPagosContent() {
               ].map((m) => (
                 <label
                   key={m.id}
-                  className={`cursor-pointer p-3.5 rounded-2xl border text-sm font-semibold flex items-center gap-3 transition-all ${
+                  className={`cursor-pointer p-3.5 min-h-[48px] rounded-2xl border text-sm font-semibold flex items-center gap-3 transition-all ${
                     selectedPaymentMethod === m.id
                       ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300'
                       : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-300'
@@ -695,7 +699,7 @@ function FacturasPagosContent() {
                     name="payMethod"
                     checked={selectedPaymentMethod === m.id}
                     onChange={() => setSelectedPaymentMethod(m.id)}
-                    className="text-indigo-600 focus:ring-indigo-500"
+                    className="text-indigo-600 focus:ring-indigo-500 w-4 h-4"
                   />
                   <span>{m.icon}</span>
                   <span>{m.label}</span>
@@ -707,7 +711,7 @@ function FacturasPagosContent() {
               <button
                 type="button"
                 onClick={() => setInvoiceToPay(null)}
-                className="cursor-pointer flex-1 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-sm"
+                className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-base sm:text-sm flex items-center justify-center"
               >
                 Cancelar
               </button>
@@ -715,7 +719,7 @@ function FacturasPagosContent() {
                 type="button"
                 disabled={isProcessingPayment}
                 onClick={handleConfirmPayment}
-                className="cursor-pointer flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-all text-sm shadow-md shadow-indigo-500/20 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-all text-base sm:text-sm shadow-md shadow-indigo-500/20 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {isProcessingPayment ? 'Procesando...' : `Pagar $${Number(invoiceToPay.amount).toFixed(2)}`}
               </button>
@@ -730,16 +734,16 @@ function FacturasPagosContent() {
       {isNewModalOpen && (
         <div
           onClick={() => setIsNewModalOpen(false)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-md w-full p-6 shadow-2xl relative"
+            className="bg-white dark:bg-zinc-900 border-t sm:border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl max-w-md w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200"
           >
             <button
               type="button"
               onClick={() => setIsNewModalOpen(false)}
-              className="cursor-pointer absolute top-5 right-5 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 flex items-center justify-center font-bold"
+              className="cursor-pointer absolute top-4 right-4 sm:top-5 sm:right-5 w-11 h-11 sm:w-8 sm:h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center justify-center font-bold text-base sm:text-sm"
             >
               ✕
             </button>
@@ -757,11 +761,11 @@ function FacturasPagosContent() {
                   placeholder="Ej. Mantenimiento Preventivo Toyota Hilux"
                   value={newConcept}
                   onChange={(e) => setNewConcept(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
                     Monto Total ($)
@@ -772,7 +776,7 @@ function FacturasPagosContent() {
                     required
                     value={newAmount}
                     onChange={(e) => setNewAmount(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                   />
                 </div>
                 <div>
@@ -782,7 +786,7 @@ function FacturasPagosContent() {
                   <select
                     value={newStatus}
                     onChange={(e) => setNewStatus(e.target.value as 'Pagada' | 'Pendiente')}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                   >
                     <option value="Pendiente">Pendiente</option>
                     <option value="Pagada">Pagada</option>
@@ -797,7 +801,7 @@ function FacturasPagosContent() {
                 <select
                   value={newPaymentMethod}
                   onChange={(e) => setNewPaymentMethod(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                 >
                   <option value="Por Definir">Por Definir</option>
                   <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
@@ -811,14 +815,14 @@ function FacturasPagosContent() {
                 <button
                   type="button"
                   onClick={() => setIsNewModalOpen(false)}
-                  className="cursor-pointer flex-1 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-sm"
+                  className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-base sm:text-sm flex items-center justify-center text-zinc-700 dark:text-zinc-300"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isProcessingPayment}
-                  className="cursor-pointer flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm"
+                  className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base sm:text-sm flex items-center justify-center"
                 >
                   {isProcessingPayment ? 'Guardando...' : 'Guardar en Neon DB'}
                 </button>
@@ -827,6 +831,9 @@ function FacturasPagosContent() {
           </div>
         </div>
       )}
+
+      {/* Navegación móvil fija */}
+      <ClienteMobileNav />
     </div>
   );
 }

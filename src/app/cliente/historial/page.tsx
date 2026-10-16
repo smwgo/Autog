@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Header } from "@/components/Header";
+import { ClienteMobileNav } from "@/components/ClienteMobileNav";
 
 interface ServiceItem {
   dbId?: string;
@@ -196,7 +197,7 @@ function HistorialServiciosContent() {
   });
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
       
       {/* Toast Notification */}
@@ -239,7 +240,7 @@ function HistorialServiciosContent() {
             <button
               type="button"
               onClick={openCreateModal}
-              className="cursor-pointer bg-amber-500 hover:bg-amber-600 text-white font-bold px-5 py-3 rounded-2xl transition-all shadow-md shadow-amber-500/20 text-sm flex items-center gap-2 w-fit"
+              className="cursor-pointer min-h-[44px] h-11 bg-amber-500 hover:bg-amber-600 text-white font-bold px-5 rounded-2xl transition-all shadow-md shadow-amber-500/20 text-base sm:text-sm flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <span>+</span> Registrar Servicio
             </button>
@@ -259,13 +260,13 @@ function HistorialServiciosContent() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar por servicio, repuesto, orden (ej. ORD-2023-1045)..."
-                className="w-full pl-10 pr-9 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
+                className="w-full pl-10 pr-9 py-2.5 min-h-[44px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-base sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
               />
               {searchTerm && (
                 <button
                   type="button"
                   onClick={() => setSearchTerm('')}
-                  className="cursor-pointer absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xs"
+                  className="cursor-pointer absolute inset-y-0 right-0 pr-3 w-10 flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xs"
                   title="Limpiar búsqueda"
                 >
                   ✕
@@ -278,7 +279,7 @@ function HistorialServiciosContent() {
               <select
                 value={selectedVehicle}
                 onChange={(e) => setSelectedVehicle(e.target.value)}
-                className="cursor-pointer appearance-none w-full pl-3.5 pr-8 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-semibold text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
+                className="cursor-pointer appearance-none w-full pl-3.5 pr-8 py-2.5 min-h-[44px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-base sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
               >
                 <option value="Todos">Todos los vehículos</option>
                 <option value="Toyota Hilux">Toyota Hilux</option>
@@ -359,7 +360,7 @@ function HistorialServiciosContent() {
                       <button
                         type="button"
                         onClick={() => setSelectedWarranty(record)}
-                        className="cursor-pointer text-left inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors"
+                        className="cursor-pointer text-left inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors"
                         title={`Vence: ${record.warranty.expires} (Clic para ver certificado)`}
                       >
                         <span>🛡️</span>
@@ -369,7 +370,7 @@ function HistorialServiciosContent() {
                       <button
                         type="button"
                         onClick={() => setSelectedWarranty(record)}
-                        className="cursor-pointer text-left inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 text-xs font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                        className="cursor-pointer text-left inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 text-xs font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
                         title="Garantía concluida"
                       >
                         <span>⚠️</span>
@@ -380,7 +381,7 @@ function HistorialServiciosContent() {
                     <button
                       type="button"
                       onClick={() => openEditModal(record)}
-                      className="cursor-pointer px-2.5 py-1 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 text-xs font-semibold transition-colors"
+                      className="cursor-pointer min-h-[44px] px-3.5 py-2 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-bold transition-colors flex items-center justify-center"
                     >
                       ✏️ Editar
                     </button>
@@ -388,7 +389,7 @@ function HistorialServiciosContent() {
                       type="button"
                       onClick={() => handleDeleteRecord(record)}
                       disabled={isSubmitting}
-                      className="cursor-pointer px-2.5 py-1 rounded-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-semibold transition-colors"
+                      className="cursor-pointer min-h-[44px] px-3.5 py-2 rounded-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-bold transition-colors flex items-center justify-center"
                     >
                       🗑️ Borrar
                     </button>
@@ -405,7 +406,7 @@ function HistorialServiciosContent() {
                   {/* Botón Ver Factura - Navega a la página de facturas */}
                   <Link
                     href={`/cliente/facturas?id=${record.invoiceId}`}
-                    className="cursor-pointer text-amber-700 dark:text-amber-400 font-bold bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 px-4 py-2.5 rounded-xl transition-all whitespace-nowrap active:scale-[0.98] border border-amber-200/60 dark:border-amber-500/20 shadow-xs flex items-center justify-center text-sm"
+                    className="cursor-pointer text-amber-700 dark:text-amber-400 font-bold bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 px-4 py-2.5 min-h-[44px] h-11 rounded-xl transition-all whitespace-nowrap active:scale-[0.98] border border-amber-200/60 dark:border-amber-500/20 shadow-xs flex items-center justify-center text-base sm:text-sm"
                   >
                     Ver Factura
                   </Link>
@@ -422,16 +423,16 @@ function HistorialServiciosContent() {
       {selectedWarranty && (
         <div 
           onClick={() => setSelectedWarranty(null)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-md w-full p-6 shadow-2xl relative"
+            className="bg-white dark:bg-zinc-900 border-t sm:border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl max-w-md w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200"
           >
             <button
               type="button"
               onClick={() => setSelectedWarranty(null)}
-              className="cursor-pointer absolute top-5 right-5 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center justify-center font-bold text-sm"
+              className="cursor-pointer absolute top-4 right-4 sm:top-5 sm:right-5 w-11 h-11 sm:w-8 sm:h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center justify-center font-bold text-base sm:text-sm"
             >
               ✕
             </button>
@@ -442,7 +443,7 @@ function HistorialServiciosContent() {
               </div>
               <div>
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Certificado de Garantía</h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">Orden: {selectedWarranty.id}</p>
+                <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400">Orden: {selectedWarranty.id}</p>
               </div>
             </div>
 
@@ -459,7 +460,7 @@ function HistorialServiciosContent() {
                   <span>{selectedWarranty.warranty.expires}</span>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                     selectedWarranty.warranty.active
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
+                       ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
                       : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-400'
                   }`}>
                     {selectedWarranty.warranty.active ? 'Activa' : 'Expirada'}
@@ -478,7 +479,7 @@ function HistorialServiciosContent() {
             <button
               type="button"
               onClick={() => setSelectedWarranty(null)}
-              className="cursor-pointer w-full py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-semibold text-sm transition-colors"
+              className="cursor-pointer w-full min-h-[44px] h-11 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-semibold text-base sm:text-sm transition-colors flex items-center justify-center"
             >
               Cerrar
             </button>
@@ -492,16 +493,16 @@ function HistorialServiciosContent() {
       {isFormOpen && (
         <div
           onClick={() => setIsFormOpen(false)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative"
+            className="bg-white dark:bg-zinc-900 border-t sm:border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200"
           >
             <button
               type="button"
               onClick={() => setIsFormOpen(false)}
-              className="cursor-pointer absolute top-5 right-5 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 flex items-center justify-center font-bold"
+              className="cursor-pointer absolute top-4 right-4 sm:top-5 sm:right-5 w-11 h-11 sm:w-8 sm:h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center justify-center font-bold text-base sm:text-sm"
             >
               ✕
             </button>
@@ -511,7 +512,7 @@ function HistorialServiciosContent() {
             </h3>
 
             <form onSubmit={handleSaveRecord} className="space-y-3.5">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
                     Vehículo (y Placa)
@@ -521,7 +522,7 @@ function HistorialServiciosContent() {
                     required
                     value={formVehicle}
                     onChange={(e) => setFormVehicle(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                   />
                 </div>
                 <div>
@@ -533,12 +534,12 @@ function HistorialServiciosContent() {
                     required
                     value={formMileage}
                     onChange={(e) => setFormMileage(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
                     Tipo de Servicio
@@ -548,7 +549,7 @@ function HistorialServiciosContent() {
                     required
                     value={formType}
                     onChange={(e) => setFormType(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                   />
                 </div>
                 <div>
@@ -561,7 +562,7 @@ function HistorialServiciosContent() {
                     required
                     value={formCost}
                     onChange={(e) => setFormCost(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -575,11 +576,11 @@ function HistorialServiciosContent() {
                   required
                   value={formDetails}
                   onChange={(e) => setFormDetails(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white resize-none"
+                  className="w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm text-zinc-900 dark:text-white resize-none"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3 items-center">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
                 <div>
                   <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
                     Vigencia Garantía
@@ -588,15 +589,15 @@ function HistorialServiciosContent() {
                     type="text"
                     value={formWarrantyExpires}
                     onChange={(e) => setFormWarrantyExpires(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                    className="w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                   />
                 </div>
-                <label className="flex items-center gap-2 cursor-pointer mt-4">
+                <label className="flex items-center gap-2 cursor-pointer mt-1 sm:mt-4 min-h-[44px]">
                   <input
                     type="checkbox"
                     checked={formWarrantyActive}
                     onChange={(e) => setFormWarrantyActive(e.target.checked)}
-                    className="w-4 h-4 accent-emerald-600"
+                    className="w-5 h-5 accent-emerald-600"
                   />
                   <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
                     Garantía Activa
@@ -612,7 +613,7 @@ function HistorialServiciosContent() {
                   type="text"
                   value={formWarrantyCoverage}
                   onChange={(e) => setFormWarrantyCoverage(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                  className="w-full px-3 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                 />
               </div>
 
@@ -620,14 +621,14 @@ function HistorialServiciosContent() {
                 <button
                   type="button"
                   onClick={() => setIsFormOpen(false)}
-                  className="cursor-pointer flex-1 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-sm"
+                  className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-base sm:text-sm flex items-center justify-center text-zinc-700 dark:text-zinc-300"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="cursor-pointer flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm"
+                  className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-base sm:text-sm flex items-center justify-center"
                 >
                   {isSubmitting ? 'Guardando...' : 'Guardar en Neon DB'}
                 </button>
@@ -636,6 +637,9 @@ function HistorialServiciosContent() {
           </div>
         </div>
       )}
+
+      {/* Navegación móvil fija */}
+      <ClienteMobileNav />
     </div>
   );
 }

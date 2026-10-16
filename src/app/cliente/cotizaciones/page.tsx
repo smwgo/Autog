@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Header } from "@/components/Header";
+import { ClienteMobileNav } from "@/components/ClienteMobileNav";
 
 interface QuoteLineItem {
   name: string;
@@ -206,7 +207,7 @@ export default function CotizacionesClientePage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
 
       {/* Toast Notification */}
@@ -239,7 +240,7 @@ export default function CotizacionesClientePage() {
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                 Mis Cotizaciones
               </h1>
-              <p className="text-lg text-zinc-600 dark:text-zinc-400">
+              <p className="text-base sm:text-lg text-zinc-600 dark:text-zinc-400">
                 Revisa, solicita y aprueba presupuestos de tus vehículos en tiempo real.
               </p>
             </div>
@@ -248,7 +249,7 @@ export default function CotizacionesClientePage() {
           <button
             type="button"
             onClick={() => setIsNewModalOpen(true)}
-            className="cursor-pointer bg-purple-600 hover:bg-purple-700 text-white font-bold px-5 py-3 rounded-2xl transition-all shadow-lg shadow-purple-500/20 flex items-center gap-2 text-sm"
+            className="cursor-pointer min-h-[44px] h-11 bg-purple-600 hover:bg-purple-700 text-white font-bold px-5 rounded-2xl transition-all shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2 text-base sm:text-sm w-full sm:w-auto"
           >
             <span>+</span> Nueva Cotización
           </button>
@@ -323,11 +324,11 @@ export default function CotizacionesClientePage() {
                   <div className="p-6 md:p-8 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 flex flex-col gap-1">
                     <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
                       <span className="text-sm font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Detalle del Presupuesto</span>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <button
                           type="button"
                           onClick={openEditQuoteModal}
-                          className="cursor-pointer text-xs font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 px-3 py-2 rounded-xl transition-colors"
+                          className="cursor-pointer min-h-[44px] text-xs font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 px-3.5 py-2.5 rounded-xl transition-colors flex items-center justify-center"
                         >
                           ✏️ Editar
                         </button>
@@ -335,7 +336,7 @@ export default function CotizacionesClientePage() {
                           type="button"
                           onClick={() => handleDeleteQuote(activeQuote.id)}
                           disabled={isSubmitting}
-                          className="cursor-pointer text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 px-3 py-2 rounded-xl transition-colors"
+                          className="cursor-pointer min-h-[44px] text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 px-3.5 py-2.5 rounded-xl transition-colors flex items-center justify-center"
                         >
                           🗑️ Eliminar
                         </button>
@@ -344,7 +345,7 @@ export default function CotizacionesClientePage() {
                           onClick={() => {
                             if (typeof window !== 'undefined') window.print();
                           }}
-                          className="cursor-pointer text-xs font-bold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 dark:bg-purple-500/10 dark:text-purple-400 dark:hover:bg-purple-500/20 px-3.5 py-2 rounded-xl transition-colors"
+                          className="cursor-pointer min-h-[44px] text-xs font-bold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 dark:bg-purple-500/10 dark:text-purple-400 dark:hover:bg-purple-500/20 px-3.5 py-2.5 rounded-xl transition-colors flex items-center justify-center"
                         >
                           📄 Descargar PDF
                         </button>
@@ -355,7 +356,7 @@ export default function CotizacionesClientePage() {
                   </div>
 
                   {/* Items List */}
-                  <div className="p-6 md:p-8 flex-grow">
+                  <div className="p-6 md:p-8 flex-grow overflow-x-auto">
                     
                     {activeQuote.notes && (
                       <div className="mb-8 p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl flex items-start gap-3 text-amber-800 dark:text-amber-300">
@@ -364,7 +365,7 @@ export default function CotizacionesClientePage() {
                       </div>
                     )}
 
-                    <table className="w-full text-left">
+                    <table className="w-full text-left min-w-[320px]">
                       <thead>
                         <tr className="text-xs uppercase tracking-wider text-zinc-500 border-b border-zinc-200 dark:border-zinc-800">
                           <th className="pb-3 font-bold">Concepto</th>
@@ -411,12 +412,12 @@ export default function CotizacionesClientePage() {
                     </div>
 
                     {activeQuote.status === 'Pendiente' ? (
-                      <div className="flex gap-4">
+                      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                         <button 
                           type="button"
                           disabled={isSubmitting}
                           onClick={() => handleStatusChange('Rechazada')}
-                          className="cursor-pointer flex-1 py-4 rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 font-bold text-zinc-700 dark:text-zinc-300 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 dark:hover:bg-rose-500/10 dark:hover:text-rose-400 dark:hover:border-rose-500/30 transition-colors"
+                          className="cursor-pointer flex-1 min-h-[48px] h-12 rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 font-bold text-zinc-700 dark:text-zinc-300 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 dark:hover:bg-rose-500/10 dark:hover:text-rose-400 dark:hover:border-rose-500/30 transition-colors flex items-center justify-center text-base sm:text-sm"
                         >
                           Rechazar
                         </button>
@@ -424,7 +425,7 @@ export default function CotizacionesClientePage() {
                           type="button"
                           disabled={isSubmitting}
                           onClick={() => handleStatusChange('Aprobada')}
-                          className="cursor-pointer flex-1 py-4 rounded-2xl bg-purple-600 hover:bg-purple-700 font-bold text-white transition-colors shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2"
+                          className="cursor-pointer flex-1 min-h-[48px] h-12 rounded-2xl bg-purple-600 hover:bg-purple-700 font-bold text-white transition-colors shadow-lg shadow-purple-500/20 flex items-center justify-center gap-2 text-base sm:text-sm"
                         >
                           <span>✓</span> {isSubmitting ? 'Procesando...' : 'Aprobar Trabajo'}
                         </button>
@@ -435,13 +436,13 @@ export default function CotizacionesClientePage() {
                         <button
                           type="button"
                           onClick={() => handleStatusChange('Pendiente')}
-                          className="cursor-pointer text-xs underline"
+                          className="cursor-pointer text-xs underline min-h-[44px] flex items-center"
                         >
                           Reabrir como Pendiente
                         </button>
                       </div>
                     ) : (
-                      <div className="w-full py-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400 font-bold text-center flex justify-center items-center gap-2">
+                      <div className="w-full py-4 min-h-[48px] rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400 font-bold text-center flex justify-center items-center gap-2">
                         <span>✅</span> Este presupuesto ya fue aprobado en Neon DB
                       </div>
                     )}
@@ -462,16 +463,16 @@ export default function CotizacionesClientePage() {
       {isNewModalOpen && (
         <div
           onClick={() => setIsNewModalOpen(false)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl relative"
+            className="bg-white dark:bg-zinc-900 border-t sm:border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200"
           >
             <button
               type="button"
               onClick={() => setIsNewModalOpen(false)}
-              className="cursor-pointer absolute top-5 right-5 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 flex items-center justify-center font-bold"
+              className="cursor-pointer absolute top-4 right-4 w-11 h-11 sm:w-8 sm:h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center justify-center font-bold text-base sm:text-sm"
             >
               ✕
             </button>
@@ -488,7 +489,7 @@ export default function CotizacionesClientePage() {
                   required
                   value={newVehicle}
                   onChange={(e) => setNewVehicle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                 />
               </div>
 
@@ -500,7 +501,7 @@ export default function CotizacionesClientePage() {
                   <button
                     type="button"
                     onClick={() => setNewItems([...newItems, { name: '', price: 50, qty: 1 }])}
-                    className="cursor-pointer text-xs font-bold text-purple-600 hover:underline"
+                    className="cursor-pointer text-xs font-bold text-purple-600 hover:underline min-h-[44px] inline-flex items-center"
                   >
                     + Añadir Concepto
                   </button>
@@ -518,7 +519,7 @@ export default function CotizacionesClientePage() {
                           copy[idx].name = e.target.value;
                           setNewItems(copy);
                         }}
-                        className="col-span-6 px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-white"
+                        className="col-span-6 px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-xs min-h-[44px] text-zinc-900 dark:text-white"
                       />
                       <input
                         type="number"
@@ -531,7 +532,7 @@ export default function CotizacionesClientePage() {
                           copy[idx].price = Number(e.target.value);
                           setNewItems(copy);
                         }}
-                        className="col-span-3 px-2.5 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-white"
+                        className="col-span-3 px-2.5 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-xs min-h-[44px] text-zinc-900 dark:text-white"
                       />
                       <input
                         type="number"
@@ -543,13 +544,13 @@ export default function CotizacionesClientePage() {
                           copy[idx].qty = Number(e.target.value);
                           setNewItems(copy);
                         }}
-                        className="col-span-2 px-2 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-white text-center"
+                        className="col-span-2 px-2 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-xs min-h-[44px] text-zinc-900 dark:text-white text-center"
                       />
                       <button
                         type="button"
                         onClick={() => setNewItems(newItems.filter((_, i) => i !== idx))}
                         disabled={newItems.length <= 1}
-                        className="col-span-1 text-rose-500 font-bold text-xs disabled:opacity-30"
+                        className="col-span-1 text-rose-500 font-bold text-sm disabled:opacity-30 min-h-[44px] min-w-[32px] flex items-center justify-center"
                       >
                         ✕
                       </button>
@@ -567,7 +568,7 @@ export default function CotizacionesClientePage() {
                   value={newNotes}
                   onChange={(e) => setNewNotes(e.target.value)}
                   placeholder="Describe el síntoma o requerimiento..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white resize-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm text-zinc-900 dark:text-white resize-none"
                 />
               </div>
 
@@ -575,14 +576,14 @@ export default function CotizacionesClientePage() {
                 <button
                   type="button"
                   onClick={() => setIsNewModalOpen(false)}
-                  className="cursor-pointer flex-1 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-sm"
+                  className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-base sm:text-sm flex items-center justify-center text-zinc-700 dark:text-zinc-300"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="cursor-pointer flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm"
+                  className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-base sm:text-sm flex items-center justify-center"
                 >
                   {isSubmitting ? 'Guardando...' : 'Guardar en Neon DB'}
                 </button>
@@ -598,16 +599,16 @@ export default function CotizacionesClientePage() {
       {isEditModalOpen && activeQuote && (
         <div
           onClick={() => setIsEditModalOpen(false)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl relative"
+            className="bg-white dark:bg-zinc-900 border-t sm:border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200"
           >
             <button
               type="button"
               onClick={() => setIsEditModalOpen(false)}
-              className="cursor-pointer absolute top-5 right-5 w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 flex items-center justify-center font-bold"
+              className="cursor-pointer absolute top-4 right-4 w-11 h-11 sm:w-8 sm:h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 flex items-center justify-center font-bold text-base sm:text-sm"
             >
               ✕
             </button>
@@ -615,7 +616,7 @@ export default function CotizacionesClientePage() {
               Editar Cotización {activeQuote.id}
             </h3>
             <form onSubmit={handleSaveEditQuote} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold uppercase text-zinc-600 dark:text-zinc-400 mb-1">
                     Vehículo
@@ -625,7 +626,7 @@ export default function CotizacionesClientePage() {
                     required
                     value={editVehicle}
                     onChange={(e) => setEditVehicle(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                   />
                 </div>
                 <div>
@@ -635,7 +636,7 @@ export default function CotizacionesClientePage() {
                   <select
                     value={editStatus}
                     onChange={(e) => setEditStatus(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm min-h-[44px] text-zinc-900 dark:text-white"
                   >
                     <option value="Pendiente">Pendiente</option>
                     <option value="Aprobada">Aprobada</option>
@@ -652,7 +653,7 @@ export default function CotizacionesClientePage() {
                   <button
                     type="button"
                     onClick={() => setEditItems([...editItems, { name: '', price: 50, qty: 1 }])}
-                    className="cursor-pointer text-xs font-bold text-purple-600 hover:underline"
+                    className="cursor-pointer text-xs font-bold text-purple-600 hover:underline min-h-[44px] inline-flex items-center"
                   >
                     + Añadir Concepto
                   </button>
@@ -669,7 +670,7 @@ export default function CotizacionesClientePage() {
                           copy[idx].name = e.target.value;
                           setEditItems(copy);
                         }}
-                        className="col-span-6 px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-white"
+                        className="col-span-6 px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-xs min-h-[44px] text-zinc-900 dark:text-white"
                       />
                       <input
                         type="number"
@@ -681,7 +682,7 @@ export default function CotizacionesClientePage() {
                           copy[idx].price = Number(e.target.value);
                           setEditItems(copy);
                         }}
-                        className="col-span-3 px-2.5 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-white"
+                        className="col-span-3 px-2.5 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-xs min-h-[44px] text-zinc-900 dark:text-white"
                       />
                       <input
                         type="number"
@@ -693,13 +694,13 @@ export default function CotizacionesClientePage() {
                           copy[idx].qty = Number(e.target.value);
                           setEditItems(copy);
                         }}
-                        className="col-span-2 px-2 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs text-zinc-900 dark:text-white text-center"
+                        className="col-span-2 px-2 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-xs min-h-[44px] text-zinc-900 dark:text-white text-center"
                       />
                       <button
                         type="button"
                         onClick={() => setEditItems(editItems.filter((_, i) => i !== idx))}
                         disabled={editItems.length <= 1}
-                        className="col-span-1 text-rose-500 font-bold text-xs disabled:opacity-30"
+                        className="col-span-1 text-rose-500 font-bold text-sm disabled:opacity-30 min-h-[44px] min-w-[32px] flex items-center justify-center"
                       >
                         ✕
                       </button>
@@ -716,7 +717,7 @@ export default function CotizacionesClientePage() {
                   rows={3}
                   value={editNotes}
                   onChange={(e) => setEditNotes(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white resize-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm text-zinc-900 dark:text-white resize-none"
                 />
               </div>
 
@@ -724,14 +725,14 @@ export default function CotizacionesClientePage() {
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  className="cursor-pointer flex-1 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-sm"
+                  className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 font-semibold text-base sm:text-sm flex items-center justify-center text-zinc-700 dark:text-zinc-300"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="cursor-pointer flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm"
+                  className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-base sm:text-sm flex items-center justify-center"
                 >
                   {isSubmitting ? 'Guardando...' : 'Actualizar Cotización'}
                 </button>
@@ -740,6 +741,9 @@ export default function CotizacionesClientePage() {
           </div>
         </div>
       )}
+
+      {/* Navegación móvil fija */}
+      <ClienteMobileNav />
     </div>
   );
 }
