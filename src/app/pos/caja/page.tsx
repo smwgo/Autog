@@ -9,17 +9,23 @@ interface CashSession {
   sessionNumber: string;
   status: "ABIERTA" | "CERRADA" | string;
   cashier?: string;
-  initialCash: number;
-  declaredCash?: number | null;
-  expectedCash?: number | null;
-  differenceCash?: number | null;
-  totalSalesCash?: number | null;
-  totalExpenses?: number | null;
+  initialCash: number | string;
+  declaredCash?: number | string | null;
+  expectedCash?: number | string | null;
+  differenceCash?: number | string | null;
+  totalSalesCash?: number | string | null;
+  totalExpenses?: number | string | null;
   notes?: string | null;
   openedAt: string;
   closedAt?: string | null;
   movements?: any[];
 }
+
+const toMonto = (val: any): string => {
+  if (val === null || val === undefined || val === "") return "0.00";
+  const num = typeof val === "number" ? val : parseFloat(val.toString());
+  return isNaN(num) ? "0.00" : num.toFixed(2);
+};
 
 export default function GestionCaja() {
   const [sesiones, setSesiones] = useState<CashSession[]>([]);
@@ -62,6 +68,31 @@ export default function GestionCaja() {
 
   // 4. Detalle / Arqueo de sesión cerrada
   const [sesionDetalle, setSesionDetalle] = useState<CashSession | null>(null);
+
+  // 5. Modal y acción para confirmar eliminación de sesión
+  const [sesionParaEliminar, setSesionParaEliminar] = useState<CashSession | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+
+  const handleConfirmarEliminacion = async () => {
+    if (!sesionParaEliminar) return;
+
+    setEliminando(true);
+    try {
+      const res = await fetch(`/api/caja?id=${encodeURIComponent(sesionParaEliminar.id)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "No se pudo eliminar la sesión");
+      }
+      setSesionParaEliminar(null);
+      await cargarCaja();
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setEliminando(false);
+    }
+  };
 
   // Cargar datos desde Neon
   const cargarCaja = useCallback(async () => {
@@ -504,14 +535,14 @@ export default function GestionCaja() {
                   <div className="grid grid-cols-2 gap-2 text-xs bg-zinc-950/40 p-2.5 rounded-xl border border-zinc-800/60">
                     <div>
                       <span className="text-zinc-500">Fondo: </span>
-                      <span className="font-bold text-white">${s.initialCash.toFixed(2)}</span>
+                      <span className="font-bold text-white">${toMonto(s.initialCash)}</span>
                     </div>
                     <div>
                       <span className="text-zinc-500">
                         {s.status === "ABIERTA" ? "Esperado:" : "Declarado:"}{" "}
                       </span>
                       <span className="font-bold text-emerald-400">
-                        ${((s.status === "ABIERTA" ? s.expectedCash : s.declaredCash) || 0).toFixed(2)}
+                        ${toMonto(s.status === "ABIERTA" ? s.expectedCash : s.declaredCash)}
                       </span>
                     </div>
                   </div>
@@ -523,18 +554,27 @@ export default function GestionCaja() {
                           setSesionParaCerrar(s);
                           setConteoEfectivo("");
                         }}
-                        className="flex-1 py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all text-center"
+                        className="flex-1 py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all text-center cursor-pointer"
                       >
                         Cerrar
                       </button>
                     ) : (
                       <button
                         onClick={() => setSesionDetalle(s)}
-                        className="flex-1 py-2.5 rounded-xl bg-zinc-800/40 hover:bg-zinc-800/70 active:scale-95 text-zinc-300 border border-zinc-700/40 text-xs font-semibold transition-all text-center"
+                        className="flex-1 py-2.5 rounded-xl bg-zinc-800/40 hover:bg-zinc-800/70 active:scale-95 text-zinc-300 border border-zinc-700/40 text-xs font-semibold transition-all text-center cursor-pointer"
                       >
                         Arqueo
                       </button>
                     )}
+                    <button
+                      onClick={() => setSesionParaEliminar(s)}
+                      title="Eliminar sesión"
+                      className="w-10 h-10 rounded-xl bg-red-500/10 hover:bg-red-500/20 active:scale-95 text-red-400 hover:text-red-300 border border-red-500/20 flex items-center justify-center transition-all cursor-pointer shrink-0"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               ))
@@ -617,11 +657,11 @@ export default function GestionCaja() {
                       </td>
 
                       <td className="px-6 py-4 font-semibold text-white">
-                        ${s.initialCash.toFixed(2)}
+                        ${toMonto(s.initialCash)}
                       </td>
 
                       <td className="px-6 py-4 font-bold text-emerald-400">
-                        ${((s.status === "ABIERTA" ? s.expectedCash : s.declaredCash) || 0).toFixed(2)}
+                        ${toMonto(s.status === "ABIERTA" ? s.expectedCash : s.declaredCash)}
                       </td>
 
                       <td className="px-6 py-4 text-xs text-zinc-400">
@@ -633,24 +673,35 @@ export default function GestionCaja() {
                       </td>
 
                       <td className="px-6 py-4 text-right">
-                        {s.status === "ABIERTA" ? (
+                        <div className="flex items-center justify-end gap-2">
+                          {s.status === "ABIERTA" ? (
+                            <button
+                              onClick={() => {
+                                setSesionParaCerrar(s);
+                                setConteoEfectivo("");
+                              }}
+                              className="px-3.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all shadow-[0_0_15px_rgba(16,185,129,0.1)] cursor-pointer"
+                            >
+                              Cerrar
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setSesionDetalle(s)}
+                              className="px-3.5 py-1.5 rounded-xl bg-zinc-800/40 hover:bg-zinc-800/70 active:scale-95 text-zinc-300 border border-zinc-700/40 text-xs font-semibold transition-all cursor-pointer"
+                            >
+                              Arqueo
+                            </button>
+                          )}
                           <button
-                            onClick={() => {
-                              setSesionParaCerrar(s);
-                              setConteoEfectivo("");
-                            }}
-                            className="px-4 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all shadow-[0_0_15px_rgba(16,185,129,0.1)]"
+                            onClick={() => setSesionParaEliminar(s)}
+                            title="Eliminar sesión"
+                            className="w-8 h-8 rounded-xl bg-red-500/10 hover:bg-red-500/20 active:scale-95 text-red-400 hover:text-red-300 border border-red-500/20 flex items-center justify-center transition-all cursor-pointer"
                           >
-                            Cerrar
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
                           </button>
-                        ) : (
-                          <button
-                            onClick={() => setSesionDetalle(s)}
-                            className="px-4 py-2 rounded-xl bg-zinc-800/40 hover:bg-zinc-800/70 active:scale-95 text-zinc-300 border border-zinc-700/40 text-xs font-semibold transition-all"
-                          >
-                            Arqueo
-                          </button>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -930,22 +981,22 @@ export default function GestionCaja() {
               </div>
               <div className="flex justify-between py-1.5 border-b border-zinc-800/60">
                 <span className="text-zinc-400">Fondo:</span>
-                <span className="font-bold text-white">${sesionDetalle.initialCash.toFixed(2)}</span>
+                <span className="font-bold text-white">${toMonto(sesionDetalle.initialCash)}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-zinc-800/60">
                 <span className="text-zinc-400">Declarado:</span>
                 <span className="font-bold text-emerald-400">
-                  ${(sesionDetalle.declaredCash || 0).toFixed(2)}
+                  ${toMonto(sesionDetalle.declaredCash)}
                 </span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-zinc-800/60">
                 <span className="text-zinc-400">Diferencia:</span>
                 <span
                   className={`font-bold ${
-                    (sesionDetalle.differenceCash || 0) < 0 ? "text-rose-400" : "text-emerald-400"
+                    (parseFloat(sesionDetalle.differenceCash?.toString() || "0") || 0) < 0 ? "text-rose-400" : "text-emerald-400"
                   }`}
                 >
-                  ${(sesionDetalle.differenceCash || 0).toFixed(2)}
+                  ${toMonto(sesionDetalle.differenceCash)}
                 </span>
               </div>
               {sesionDetalle.notes && (
@@ -961,6 +1012,67 @@ export default function GestionCaja() {
             >
               Cerrar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 5: CONFIRMACIÓN DE ELIMINACIÓN DE SESIÓN */}
+      {sesionParaEliminar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-sm rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col items-center text-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-400 flex items-center justify-center text-2xl">
+              🗑️
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-bold text-white">¿Eliminar sesión?</h3>
+              <p className="text-sm font-mono font-semibold text-zinc-300 mt-1">
+                {sesionParaEliminar.sessionNumber}
+              </p>
+            </div>
+
+            <div className="w-full p-3.5 rounded-2xl bg-zinc-950/70 border border-zinc-800 text-left text-xs space-y-1.5">
+              <div className="flex justify-between text-zinc-400">
+                <span>Estado:</span>
+                <span className={`font-bold ${sesionParaEliminar.status === "ABIERTA" ? "text-emerald-400" : "text-zinc-300"}`}>
+                  {sesionParaEliminar.status}
+                </span>
+              </div>
+              <div className="flex justify-between text-zinc-400">
+                <span>Fondo:</span>
+                <span className="font-semibold text-white">${toMonto(sesionParaEliminar.initialCash)}</span>
+              </div>
+              <div className="flex justify-between text-zinc-400">
+                <span>Cajero:</span>
+                <span className="font-semibold text-white">{sesionParaEliminar.cashier || "Super Administrador"}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full pt-1">
+              <button
+                type="button"
+                onClick={() => setSesionParaEliminar(null)}
+                disabled={eliminando}
+                className="flex-1 py-3 px-4 rounded-2xl bg-zinc-800/60 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarEliminacion}
+                disabled={eliminando}
+                className="flex-1 py-3 px-4 rounded-2xl bg-red-600 hover:bg-red-500 active:scale-95 text-white font-bold text-xs transition-all shadow-[0_0_20px_rgba(239,68,68,0.25)] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {eliminando ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <span>Eliminar</span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -93,7 +93,31 @@ export default function NuevoClientePage() {
           
           {/* Header Superior */}
           <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
-            <div>
+            <div className="flex items-center gap-3">
+              {paso === 1 ? (
+                <Link
+                  href="/pos/clientes"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-400 hover:text-white bg-zinc-800/50 hover:bg-zinc-800 active:scale-95 transition-all"
+                  title="Volver a Clientes"
+                  aria-label="Volver"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setPaso(1)}
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-400 hover:text-white bg-zinc-800/50 hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer"
+                  title="Volver al paso anterior"
+                  aria-label="Volver al paso anterior"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                </button>
+              )}
               <h1 className="text-base sm:text-xl font-medium text-white tracking-tight">
                 {paso === 1 ? "Registro de Cliente" : "Vehículo Asociado"}
               </h1>

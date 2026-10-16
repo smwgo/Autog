@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Header } from "@/components/Header";
+import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
 import { useEffect, useState } from "react";
 
 export default function ReportesFinancieros() {
@@ -122,77 +123,81 @@ export default function ReportesFinancieros() {
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
-      <main className="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
+      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
         {/* Breadcrumb & Header */}
-        <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-sm text-zinc-500 mb-2">
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-1.5 sm:mb-2">
               <Link href="/gerencia" className="hover:text-blue-600 transition-colors">Gerencia</Link>
               <span>/</span>
               <span className="text-zinc-900 dark:text-zinc-100 font-medium">Reportes Financieros</span>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               Estados Financieros
             </h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="grid grid-cols-2 sm:flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={openNew}
-              className="h-10 px-4 rounded-xl bg-blue-600 text-white font-medium text-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="h-11 sm:h-10 px-3 sm:px-4 rounded-xl bg-blue-600 text-white font-semibold text-xs sm:text-sm hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-sm"
             >
-              + Nueva Transacción
+              <span>+</span>
+              <span>Nueva Transacción</span>
             </button>
             <button
               onClick={handleExport}
-              className="h-10 px-4 rounded-xl bg-emerald-600 text-white font-medium text-sm hover:bg-emerald-700 transition-colors flex items-center gap-2"
+              className="h-11 sm:h-10 px-3 sm:px-4 rounded-xl bg-emerald-600 text-white font-semibold text-xs sm:text-sm hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-sm"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
-              Exportar CSV
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+              <span>Exportar CSV</span>
             </button>
           </div>
         </div>
 
         {/* Resumen Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500 opacity-5 rounded-bl-full -mr-4 -mt-4"></div>
-            <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium mb-1">Total Ingresos</h3>
-            <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">${totalIncome.toFixed(2)}</p>
-            <div className="mt-4 text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 inline-block px-2 py-1 rounded-lg">
-              En tiempo real (Neon DB)
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-6 mb-6 sm:mb-8">
+          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex sm:block items-center justify-between">
+            <div>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">Total Ingresos</h3>
+              <p className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400">${totalIncome.toFixed(2)}</p>
+            </div>
+            <div className="sm:mt-4 text-[11px] sm:text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 inline-block px-2.5 py-1 rounded-lg">
+              En vivo (Neon)
             </div>
           </div>
           
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500 opacity-5 rounded-bl-full -mr-4 -mt-4"></div>
-            <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium mb-1">Total Egresos</h3>
-            <p className="text-3xl font-bold text-rose-600 dark:text-rose-400">${totalExpense.toFixed(2)}</p>
-            <div className="mt-4 text-xs font-medium text-zinc-500 bg-zinc-100 dark:bg-zinc-800 inline-block px-2 py-1 rounded-lg">
-              Compras y Operativos
+          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex sm:block items-center justify-between">
+            <div>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">Total Egresos</h3>
+              <p className="text-2xl sm:text-3xl font-bold text-rose-600 dark:text-rose-400">${totalExpense.toFixed(2)}</p>
+            </div>
+            <div className="sm:mt-4 text-[11px] sm:text-xs font-medium text-zinc-500 bg-zinc-100 dark:bg-zinc-800 inline-block px-2.5 py-1 rounded-lg">
+              Compras / Gastos
             </div>
           </div>
 
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500 opacity-5 rounded-bl-full -mr-4 -mt-4"></div>
-            <h3 className="text-zinc-500 dark:text-zinc-400 text-sm font-medium mb-1">Flujo Neto</h3>
-            <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">${netFlow.toFixed(2)}</p>
-            <div className="mt-4 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-500/10 inline-block px-2 py-1 rounded-lg">
+          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex sm:block items-center justify-between">
+            <div>
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">Flujo Neto</h3>
+              <p className="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">${netFlow.toFixed(2)}</p>
+            </div>
+            <div className="sm:mt-4 text-[11px] sm:text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-500/10 inline-block px-2.5 py-1 rounded-lg">
               {netFlow >= 0 ? "Margen Saludable" : "Déficit"}
             </div>
           </div>
         </div>
 
         {/* Filtros de Tabla */}
-        <div className="bg-white dark:bg-zinc-900 rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-4 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex gap-2 flex-wrap">
+        <div className="bg-white dark:bg-zinc-900 rounded-t-2xl sm:rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-3.5 sm:p-4 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
+          <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
             {["Todos", "Ventas", "Compras", "Operativos", "Impuestos SRI"].map((cat) => (
               <button
                 key={cat}
                 onClick={() => setCatFilter(cat)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
                   catFilter === cat
-                    ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white"
-                    : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                    : "bg-zinc-100/70 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400"
                 }`}
               >
                 {cat}
@@ -205,14 +210,56 @@ export default function ReportesFinancieros() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar transacción..." 
-              className="w-full h-10 pl-10 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-sm outline-none focus:border-blue-500"
+              className="w-full h-11 sm:h-10 pl-10 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500"
             />
-            <svg className="w-4 h-4 absolute left-3 top-3 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <svg className="w-4 h-4 absolute left-3.5 top-3.5 sm:top-3 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
           </div>
         </div>
 
-        {/* Tabla de Movimientos */}
-        <div className="bg-white dark:bg-zinc-900 border-x border-b border-zinc-100 dark:border-zinc-800 rounded-b-3xl overflow-hidden shadow-sm">
+        {/* Vista Móvil (Tarjetas nativas Android / iOS) */}
+        <div className="md:hidden bg-white dark:bg-zinc-900 border-x border-b border-zinc-100 dark:border-zinc-800 rounded-b-2xl divide-y divide-zinc-100 dark:divide-zinc-800">
+          {loading ? (
+            <div className="p-6 text-center text-sm text-zinc-500">Cargando finanzas desde Neon DB...</div>
+          ) : filtered.length === 0 ? (
+            <div className="p-6 text-center text-sm text-zinc-500">No se encontraron transacciones</div>
+          ) : (
+            filtered.map((row) => (
+              <div key={row.id} className="p-4 flex flex-col gap-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 leading-snug">{row.description}</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">{row.dateLabel} • Ref: {row.reference}</p>
+                  </div>
+                  <span className={`text-base font-extrabold whitespace-nowrap ${row.isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                    {row.isIncome ? "+" : "-"} ${Number(row.amount || 0).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-2.5 py-1 rounded-lg text-xs font-medium">
+                    {row.category} ({row.method || "Efectivo"})
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => openEdit(row)}
+                      className="px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-semibold active:scale-95"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => handleDelete(row.id)}
+                      className="px-3 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-semibold active:scale-95"
+                    >
+                      Borrar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Vista Desktop (Tabla de Movimientos) */}
+        <div className="hidden md:block bg-white dark:bg-zinc-900 border-x border-b border-zinc-100 dark:border-zinc-800 rounded-b-3xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400">
@@ -273,9 +320,10 @@ export default function ReportesFinancieros() {
       </main>
 
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-md w-full p-6 border border-zinc-200 dark:border-zinc-800 shadow-2xl">
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 border-t sm:border border-zinc-200 dark:border-zinc-800 shadow-2xl max-h-[90vh] overflow-y-auto pb-8 sm:pb-6">
+            <div className="w-12 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto mb-4 sm:hidden" />
+            <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white mb-4">
               {editingItem ? "Editar Movimiento Financiero" : "Nueva Transacción Financiera"}
             </h2>
             <form onSubmit={handleSave} className="space-y-4">
@@ -285,7 +333,7 @@ export default function ReportesFinancieros() {
                   <select
                     value={form.isIncome ? "INGRESO" : "EGRESO"}
                     onChange={(e) => setForm({ ...form, isIncome: e.target.value === "INGRESO" })}
-                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm"
+                    className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-base sm:text-sm"
                   >
                     <option value="INGRESO">Ingreso (+)</option>
                     <option value="EGRESO">Egreso (-)</option>
@@ -296,7 +344,7 @@ export default function ReportesFinancieros() {
                   <select
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm"
+                    className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-base sm:text-sm"
                   >
                     <option>Ventas</option>
                     <option>Compras</option>
@@ -313,7 +361,7 @@ export default function ReportesFinancieros() {
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder="Ej. Pago Orden de Reparación #1045"
-                  className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                  className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -325,7 +373,7 @@ export default function ReportesFinancieros() {
                     value={form.reference}
                     onChange={(e) => setForm({ ...form, reference: e.target.value })}
                     placeholder="F-001-045"
-                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                    className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                   />
                 </div>
                 <div>
@@ -337,22 +385,22 @@ export default function ReportesFinancieros() {
                     value={form.amount}
                     onChange={(e) => setForm({ ...form, amount: e.target.value })}
                     placeholder="450.00"
-                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
+                    className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                   />
                 </div>
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="grid grid-cols-2 gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm"
+                  className="h-11 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-50"
+                  className="h-11 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-50"
                 >
                   {saving ? "Guardando..." : "Guardar en Neon"}
                 </button>
@@ -361,6 +409,7 @@ export default function ReportesFinancieros() {
           </div>
         </div>
       )}
+      <GerenciaMobileNav />
     </div>
   );
 }

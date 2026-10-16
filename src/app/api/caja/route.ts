@@ -105,7 +105,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // Mapear el cajero en cada sesión si viene de CashRegister
+    // Mapear el cajero en cada sesión y asegurar que los montos sean numéricos
     const sessionsWithCashier = dbSessions.map((s: any) => {
       let cashier = s.cashier || defaultUserName;
       if (s.notes && s.notes.includes("Cajero:")) {
@@ -113,6 +113,10 @@ export async function GET(request: Request) {
       }
       return {
         ...s,
+        initialCash: parseFloat(s.initialCash?.toString() || "0"),
+        declaredCash: s.declaredCash != null ? parseFloat(s.declaredCash?.toString() || "0") : null,
+        expectedCash: s.expectedCash != null ? parseFloat(s.expectedCash?.toString() || "0") : null,
+        differenceCash: s.differenceCash != null ? parseFloat(s.differenceCash?.toString() || "0") : 0,
         cashier,
       };
     });
@@ -265,10 +269,11 @@ export async function PUT(request: Request) {
     const expectedCashNum = parseFloat(expectedCash) || 0;
     const diffCashNum = parseFloat(diffCash) || 0;
 
-    // 1. Actualizar en la tabla CashRegister
     let sesionCerrada: any = null;
-    try {
-      if (sessionId) {
+
+    // 1. Intentar actualizar en CashRegister si existe sessionId
+    if (sessionId) {
+      try {
         sesionCerrada = await prisma.cashRegister.update({
           where: { id: sessionId },
           data: {
@@ -284,14 +289,34 @@ export async function PUT(request: Request) {
             closedAt: new Date(),
           },
         });
-      } else {
-        const abierta = await prisma.cashRegister.findFirst({
+      } catch {}
+
+      // 2. Intentar actualizar en orderRequest (por id directo)
+      try {
+        const updatedLegacy = await (prisma as any).orderRequest.update({
+          where: { id: sessionId },
+          data: {
+            status: "CERRADA",
+            totalEstimated: declaredCashNum,
+            itemsSummary: `Cierre de caja - Efectivo: $${declaredCashNum.toFixed(2)} (Esperado: $${expectedCashNum.toFixed(2)})`,
+            notes: notes.trim(),
+            updatedAt: new Date(),
+          },
+        });
+        if (!sesionCerrada) sesionCerrada = updatedLegacy;
+      } catch {}
+    }
+
+    // 3. Si aún no se cerró ninguna sesión, buscar y cerrar cualquier sesión ABIERTA activa
+    if (!sesionCerrada) {
+      try {
+        const abiertaReg = await prisma.cashRegister.findFirst({
           where: { status: "ABIERTA" },
           orderBy: { openedAt: "desc" },
         });
-        if (abierta) {
+        if (abiertaReg) {
           sesionCerrada = await prisma.cashRegister.update({
-            where: { id: abierta.id },
+            where: { id: abiertaReg.id },
             data: {
               status: "CERRADA",
               declaredCash: declaredCashNum,
@@ -304,41 +329,97 @@ export async function PUT(request: Request) {
             },
           });
         }
-      }
-    } catch (e) {
-      console.warn("CashRegister update warning:", e);
-    }
+      } catch {}
 
-    // 2. Registro complementario de auditoría en orderRequest
-    const cierre = await (prisma as any).orderRequest.create({
-      data: {
-        requestNumber: `CIERRE-${Date.now().toString().slice(-6)}`,
-        type: "CAJA_CIERRE",
-        customerName: "Cierre de Caja Diario",
-        itemsSummary: `Efectivo: $${declaredCashNum.toFixed(2)} (Dif: $${diffCashNum.toFixed(2)})`,
-        itemsJson: JSON.stringify({
-          sessionId,
-          declaredCash: declaredCashNum,
-          declaredCard,
-          declaredTransfer,
-          expectedCash: expectedCashNum,
-          diffCash: diffCashNum,
-        }),
-        totalEstimated: declaredCashNum,
-        notes: notes.trim(),
-        status: "CERRADA",
-      },
-    });
+      try {
+        const abiertasLegacy = await (prisma as any).orderRequest.findMany({
+          where: { type: "CAJA_SESSION", status: "ABIERTA" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        });
+        if (abiertasLegacy.length > 0) {
+          const updated = await (prisma as any).orderRequest.update({
+            where: { id: abiertasLegacy[0].id },
+            data: {
+              status: "CERRADA",
+              totalEstimated: declaredCashNum,
+              itemsSummary: `Cierre de caja - Efectivo: $${declaredCashNum.toFixed(2)} (Esperado: $${expectedCashNum.toFixed(2)})`,
+              notes: notes.trim(),
+              updatedAt: new Date(),
+            },
+          });
+          if (!sesionCerrada) sesionCerrada = updated;
+        }
+      } catch {}
+    }
 
     return NextResponse.json({
       success: true,
-      session: sesionCerrada || cierre,
+      session: sesionCerrada,
       message: "Cierre de caja guardado con éxito en Neon",
     });
   } catch (error: any) {
     console.error("Error al procesar cierre de caja en Neon:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Error al guardar cierre de caja" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE: Eliminar una sesión de caja
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "ID de sesión requerido" },
+        { status: 400 }
+      );
+    }
+
+    // 1. Eliminar movimientos asociados en CashMovement si existen
+    try {
+      await (prisma as any).cashMovement.deleteMany({
+        where: { cashRegisterId: id },
+      });
+    } catch {}
+
+    // 2. Eliminar de CashRegister
+    let deleted = false;
+    try {
+      await prisma.cashRegister.delete({
+        where: { id },
+      });
+      deleted = true;
+    } catch {}
+
+    // 3. Eliminar de orderRequest si está allí
+    try {
+      await (prisma as any).orderRequest.delete({
+        where: { id },
+      });
+      deleted = true;
+    } catch {}
+
+    // 4. Intentar por requestNumber si el ID correspondía al número de sesión
+    try {
+      await (prisma as any).orderRequest.deleteMany({
+        where: { requestNumber: id },
+      });
+      deleted = true;
+    } catch {}
+
+    return NextResponse.json({
+      success: true,
+      message: "Sesión eliminada con éxito",
+    });
+  } catch (error: any) {
+    console.error("Error al eliminar sesión de caja:", error);
+    return NextResponse.json(
+      { success: false, error: error.message || "Error al eliminar sesión" },
       { status: 500 }
     );
   }
