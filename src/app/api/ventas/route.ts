@@ -71,87 +71,87 @@ export async function POST(request: Request) {
       );
     }
 
-    // Calcular montos
-    let subtotalCalc = 0;
-    const saleItemsData = items.map((item: any) => {
-      const price = parseFloat(item.price?.toString() || item.product?.price?.toString() || "0") || 0;
-      const quantity = parseInt((item.qty || item.quantity || 1).toString(), 10) || 1;
-      const itemTotal = price * quantity;
-      subtotalCalc += itemTotal;
+    // 1. Ejecutar verificación de precios, creación de venta, descuento de stock y actualización de caja en una sola transacción atómica
+    const sale = await prisma.$transaction(async (tx) => {
+      let subtotalCalc = 0;
+      const saleItemsData = [];
 
-      return {
-        productId: item.productId || item.product?.id || null,
-        code: item.code || item.product?.code || "S/C",
-        name: item.name || item.product?.name || "Producto General",
-        price,
-        quantity,
-        total: itemTotal,
-      };
-    });
+      for (const item of items) {
+        let price = parseFloat(item.price?.toString() || "0") || 0;
+        const quantity = Math.max(1, parseInt((item.qty || item.quantity || 1).toString(), 10) || 1);
+        let name = item.name || "Producto General";
+        let code = item.code || "S/C";
 
-    const numDiscount = parseFloat(discount.toString()) || 0;
-    const taxCalc = (subtotalCalc - numDiscount) * (parseFloat(taxPercent.toString()) || 0);
-    const totalCalc = subtotalCalc - numDiscount + taxCalc;
-
-    const saleNumber = `VEN-${Date.now().toString().slice(-6)}`;
-
-    // 1. Crear la venta con sus items en Neon
-    const sale = await prisma.sale.create({
-      data: {
-        saleNumber,
-        customerId: customerId || null,
-        customerName: customerName || "Consumidor Final",
-        subtotal: subtotalCalc,
-        tax: taxCalc,
-        discount: numDiscount,
-        total: totalCalc,
-        paymentMethod,
-        status: "Completada",
-        items: {
-          create: saleItemsData.map((item) => ({
-            productId: item.productId,
-            code: item.code,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity,
-            total: item.total,
-          })),
-        },
-      },
-      include: {
-        items: true,
-      },
-    });
-
-    // 2. Descontar stock de los productos vendidos en Neon
-    for (const item of saleItemsData) {
-      if (item.productId) {
-        try {
-          const currentProduct = await prisma.product.findUnique({
+        // Si tiene productId, verificar precio y existencia autorizada en Neon
+        if (item.productId) {
+          const dbProduct = await tx.product.findUnique({
             where: { id: item.productId },
           });
+          if (dbProduct) {
+            price = parseFloat(dbProduct.price.toString());
+            name = dbProduct.name;
+            code = dbProduct.code;
 
-          if (currentProduct) {
-            const newStock = Math.max(0, currentProduct.stock - item.quantity);
-            const newStatus = calcularEstado(newStock, currentProduct.minStock);
-
-            await prisma.product.update({
-              where: { id: item.productId },
+            // Descontar inventario dentro de la transacción
+            const newStock = Math.max(0, dbProduct.stock - quantity);
+            const newStatus = calcularEstado(newStock, dbProduct.minStock);
+            await tx.product.update({
+              where: { id: dbProduct.id },
               data: {
                 stock: newStock,
                 status: newStatus,
               },
             });
           }
-        } catch (pErr) {
-          console.warn(`No se pudo actualizar stock del producto ${item.productId}:`, pErr);
         }
-      }
-    }
 
-    // 3. Sincronizar automáticamente con la sesión de caja abierta en Neon
-    try {
-      const activeSession = await prisma.cashRegister.findFirst({
+        const itemTotal = price * quantity;
+        subtotalCalc += itemTotal;
+
+        saleItemsData.push({
+          productId: item.productId || null,
+          code,
+          name,
+          price,
+          quantity,
+          total: itemTotal,
+        });
+      }
+
+      const numDiscount = Math.max(0, parseFloat(discount.toString()) || 0);
+      const taxCalc = Math.max(0, (subtotalCalc - numDiscount) * (parseFloat(taxPercent.toString()) || 0));
+      const totalCalc = Math.max(0, subtotalCalc - numDiscount + taxCalc);
+      const saleNumber = `VEN-${Date.now().toString().slice(-6)}`;
+
+      const createdSale = await tx.sale.create({
+        data: {
+          saleNumber,
+          customerId: customerId || null,
+          customerName: customerName || "Consumidor Final",
+          subtotal: subtotalCalc,
+          tax: taxCalc,
+          discount: numDiscount,
+          total: totalCalc,
+          paymentMethod,
+          status: "Completada",
+          items: {
+            create: saleItemsData.map((item) => ({
+              productId: item.productId,
+              code: item.code,
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity,
+              total: item.total,
+            })),
+          },
+        },
+        include: {
+          items: true,
+        },
+      });
+
+      // Sincronizar automáticamente con la sesión de caja abierta en Neon
+      const activeSession = await tx.cashRegister.findFirst({
         where: { status: "ABIERTA" },
         orderBy: { openedAt: "desc" },
       });
@@ -168,15 +168,15 @@ export async function POST(request: Request) {
         }
 
         if (Object.keys(updateData).length > 0) {
-          await prisma.cashRegister.update({
+          await tx.cashRegister.update({
             where: { id: activeSession.id },
             data: updateData,
           });
         }
       }
-    } catch (cajaErr) {
-      console.warn("No se pudo actualizar caja activa al cobrar:", cajaErr);
-    }
+
+      return createdSale;
+    });
 
     return NextResponse.json({ success: true, venta: sale }, { status: 201 });
   } catch (error: any) {

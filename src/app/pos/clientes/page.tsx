@@ -45,13 +45,8 @@ export default function GestionClientes() {
     totalNuevos: 0,
   });
 
-  // Modal para ver/editar cliente
-  const [clienteSeleccionado, setClienteSeleccionado] = useState<Customer | null>(null);
-  const [editando, setEditando] = useState(false);
-  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
+  // Eliminación y Toast
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
-
-  // Flotante de confirmación de eliminación y Toast
   const [clienteAEliminar, setClienteAEliminar] = useState<{ id: string; name: string } | null>(null);
   const [toast, setToast] = useState<{ tipo: "exito" | "error"; texto: string } | null>(null);
 
@@ -61,17 +56,6 @@ export default function GestionClientes() {
       setToast(null);
     }, 4000);
   };
-
-  // Form de edición
-  const [editForm, setEditForm] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    address: "",
-    type: "Personal",
-    vip: false,
-    notes: "",
-  });
 
   // Filtrado instantáneo en memoria sin consumir CPU en Neon
   const clientes = todosClientes.filter((c) => {
@@ -147,9 +131,6 @@ export default function GestionClientes() {
 
       // Recargar lista
       await cargarClientes();
-      if (clienteSeleccionado?.id === id) {
-        setClienteSeleccionado(null);
-      }
     } catch (err: any) {
       mostrarToast("Error al eliminar cliente: " + err.message, "error");
     } finally {
@@ -186,51 +167,6 @@ export default function GestionClientes() {
       }
     } catch (err) {
       console.error("Error al alternar estado VIP:", err);
-    }
-  };
-
-  const abrirEdicion = (cliente: Customer) => {
-    setClienteSeleccionado(cliente);
-    setEditForm({
-      name: cliente.name,
-      phone: cliente.phone,
-      email: cliente.email || "",
-      address: cliente.address || "",
-      type: cliente.type,
-      vip: cliente.vip,
-      notes: cliente.notes || "",
-    });
-    setEditando(true);
-  };
-
-  const guardarCambios = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!clienteSeleccionado) return;
-
-    setGuardandoEdicion(true);
-    try {
-      const res = await fetch("/api/clientes", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: clienteSeleccionado.id,
-          ...editForm,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        alert(data.error || "Error al actualizar cliente.");
-        return;
-      }
-
-      setEditando(false);
-      setClienteSeleccionado(null);
-      await cargarClientes();
-    } catch (err: any) {
-      alert("Error al guardar: " + err.message);
-    } finally {
-      setGuardandoEdicion(false);
     }
   };
 
@@ -460,15 +396,15 @@ export default function GestionClientes() {
 
                     {/* Acciones Rápidas (Toque fácil en móvil >= 44px) */}
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        onClick={() => abrirEdicion(row)}
+                      <Link
+                        href={`/pos/clientes/nuevo?id=${row.id}`}
                         className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all"
-                        title="Editar"
+                        title="Editar en Formulario"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                         </svg>
-                      </button>
+                      </Link>
                       <button
                         onClick={() => solicitarEliminar(row.id, row.name)}
                         disabled={eliminandoId === row.id}
@@ -664,16 +600,16 @@ export default function GestionClientes() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* Editar */}
-                          <button 
-                            onClick={() => abrirEdicion(row)}
-                            className="p-2 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors"
+                          {/* Editar en Formulario no flotante */}
+                          <Link 
+                            href={`/pos/clientes/nuevo?id=${row.id}`}
+                            className="p-2 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors inline-flex items-center justify-center"
                             title="Editar Datos"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                             </svg>
-                          </button>
+                          </Link>
 
                           {/* Eliminar */}
                           <button 
@@ -706,125 +642,6 @@ export default function GestionClientes() {
           </div>
         </div>
 
-        {/* Modal de Edición de Cliente (Adaptado como Bottom Sheet en Móvil) */}
-        {editando && clienteSeleccionado && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl w-full max-w-xl p-5 sm:p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-5 pb-3 border-b border-zinc-100 dark:border-zinc-800">
-                <div>
-                  <h3 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white">
-                    Editar Cliente
-                  </h3>
-                  <p className="text-xs text-zinc-500">ID: {clienteSeleccionado.identification}</p>
-                </div>
-                <button
-                  onClick={() => setEditando(false)}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <form onSubmit={guardarCambios} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300 mb-1">Nombres y Apellidos</label>
-                    <input
-                      type="text"
-                      value={editForm.name}
-                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300 mb-1">WhatsApp</label>
-                    <input
-                      type="tel"
-                      inputMode="tel"
-                      value={editForm.phone}
-                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500 font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300 mb-1">Correo Electrónico</label>
-                    <input
-                      type="email"
-                      inputMode="email"
-                      value={editForm.email}
-                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300 mb-1">Tipo de Cliente</label>
-                    <select
-                      value={editForm.type}
-                      onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
-                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm outline-none focus:border-blue-500"
-                    >
-                      <option value="Personal">Personal</option>
-                      <option value="Empresa">Empresa</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300 mb-1">Dirección</label>
-                  <input
-                    type="text"
-                    value={editForm.address}
-                    onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                    className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300 mb-1">Notas / Observaciones</label>
-                  <textarea
-                    rows={2}
-                    value={editForm.notes}
-                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                    className="w-full p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500 resize-none"
-                  ></textarea>
-                </div>
-
-                <div className="flex items-center gap-2 pt-1">
-                  <input
-                    type="checkbox"
-                    id="vip-check"
-                    checked={editForm.vip}
-                    onChange={(e) => setEditForm({ ...editForm, vip: e.target.checked })}
-                    className="w-4 h-4 rounded text-blue-600"
-                  />
-                  <label htmlFor="vip-check" className="text-sm font-medium text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                    Cliente VIP ⭐
-                  </label>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                  <button
-                    type="button"
-                    onClick={() => setEditando(false)}
-                    className="px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={guardandoEdicion}
-                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold shadow-md shadow-blue-500/20 transition-all disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {guardandoEdicion ? "Guardando..." : "Guardar Cambios"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
         {/* Modal Flotante de Confirmación de Eliminación */}
         {clienteAEliminar && (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">

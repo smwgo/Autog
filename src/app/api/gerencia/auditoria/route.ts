@@ -54,6 +54,14 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const clientIp =
+      req.headers.get("cf-connecting-ip") ||
+      req.headers.get("x-client-ip") ||
+      req.headers.get("x-real-ip") ||
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      body.ipAddress ||
+      "127.0.0.1";
+
     const created = await withRetry(async () => {
       await ensureAuditTable();
       const id = `aud_${Date.now()}`;
@@ -64,7 +72,7 @@ export async function POST(req: Request) {
         id,
         body.dateLabel || nowStr,
         body.userName || "Administrador (Gerencia)",
-        body.ipAddress || "192.168.1.10",
+        clientIp,
         body.module || "Sistema",
         body.action || "Registro Manual de Auditoría",
         body.details || "Verificación de control interno",

@@ -7,23 +7,18 @@ import { useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 
-const allServices = [
-  { id: "1", title: "Mantenimiento Preventivo" },
-  { id: "2", title: "Alineación y Balanceo" },
-  { id: "3", title: "Frenos y Suspensión" },
-  { id: "4", title: "Diagnóstico Computarizado" },
-  { id: "mantenimiento-preventivo", title: "Mantenimiento Preventivo" },
-  { id: "alineacion-balanceo", title: "Alineación y Balanceo" },
-  { id: "frenos-suspension", title: "Frenos y Suspensión" },
-  { id: "diagnostico-computarizado", title: "Diagnóstico Computarizado" },
-  { id: "sistema-electrico", title: "Sistema Eléctrico" },
-  { id: "aire-acondicionado", title: "Aire Acondicionado" }
-];
+interface ServiceOption {
+  id: string;
+  code?: string;
+  title: string;
+}
 
 function BookingForm() {
   const searchParams = useSearchParams();
   const serviceParam = searchParams.get("service");
+  const promoParam = searchParams.get("promo");
   
+  const [servicesList, setServicesList] = useState<ServiceOption[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -35,16 +30,33 @@ function BookingForm() {
     serviceId: "",
     date: "",
     time: "",
-    notes: ""
+    notes: promoParam ? `Promoción aplicada: ${promoParam}` : "",
   });
 
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (serviceParam) {
-      setFormData(prev => ({ ...prev, serviceId: serviceParam }));
+    async function fetchServices() {
+      try {
+        const res = await fetch("/api/servicios-taller?activos=true");
+        const data = await res.json();
+        if (res.ok && data.success && Array.isArray(data.servicios)) {
+          const mapped: ServiceOption[] = data.servicios.map((s: any) => ({
+            id: s.id,
+            code: s.code,
+            title: s.name,
+          }));
+          setServicesList(mapped);
+          if (serviceParam && mapped.some((m) => m.id === serviceParam || m.code === serviceParam)) {
+            setFormData((prev) => ({ ...prev, serviceId: serviceParam }));
+          }
+        }
+      } catch (e) {
+        console.error("Error al cargar servicios para agenda:", e);
+      }
     }
+    fetchServices();
   }, [serviceParam]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -57,7 +69,7 @@ function BookingForm() {
     setIsSubmitting(true);
     
     try {
-      const servicioTitulo = allServices.find(s => s.id === formData.serviceId)?.title || "Servicio de Taller";
+      const servicioTitulo = servicesList.find(s => s.id === formData.serviceId || s.code === formData.serviceId)?.title || "Servicio General de Taller";
       const vehicleDesc = [formData.brand, formData.model, formData.year, formData.plate ? `Placa: ${formData.plate}` : ""].filter(Boolean).join(" ");
       const fechaHora = formData.date ? `Fecha: ${formData.date} ${formData.time || ""}` : "";
 
@@ -76,7 +88,7 @@ function BookingForm() {
         }),
       });
     } catch (err) {
-      console.error("Error al registrar solicitud:", err);
+      console.error("Error al registrar solicitud en Neon DB:", err);
     } finally {
       setIsSubmitting(false);
       setIsSubmitted(true);
@@ -157,8 +169,8 @@ function BookingForm() {
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">Servicio Requerido *</label>
             <select required name="serviceId" value={formData.serviceId} onChange={handleChange} className="w-full px-4 h-11 sm:h-12 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-base sm:text-sm text-zinc-900 dark:text-zinc-100">
-              <option value="" disabled>Seleccione un servicio...</option>
-              {allServices.map(s => (
+              <option value="" disabled>Seleccione un servicio de taller...</option>
+              {servicesList.map(s => (
                 <option key={s.id} value={s.id}>{s.title}</option>
               ))}
             </select>
@@ -182,7 +194,7 @@ function BookingForm() {
         <button 
           type="submit" 
           disabled={isSubmitting}
-          className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-10 h-12 rounded-xl sm:rounded-full font-bold shadow-lg shadow-blue-500/30 transition-all transform hover:scale-105 disabled:opacity-70 disabled:hover:scale-100 flex items-center justify-center text-base sm:text-sm"
+          className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-10 h-12 rounded-xl sm:rounded-full font-bold shadow-lg shadow-blue-500/30 transition-all transform hover:scale-105 disabled:opacity-70 disabled:hover:scale-100 flex items-center justify-center text-base sm:text-sm cursor-pointer"
         >
           {isSubmitting ? (
             <>
@@ -221,4 +233,3 @@ export default function AgendarPage() {
     </div>
   );
 }
-

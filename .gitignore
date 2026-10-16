@@ -20,9 +20,13 @@
 # production
 /build
 
-# misc
+# misc & certificates
 .DS_Store
 *.pem
+*.key
+*.p12
+*.pfx
+*.crt
 
 # debug
 npm-debug.log*
@@ -30,10 +34,19 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# environment variables (strict security protection)
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
 .env*
+!.env.example
 
-# vercel
+# vercel & cloud deployments
 .vercel
 
 # typescript

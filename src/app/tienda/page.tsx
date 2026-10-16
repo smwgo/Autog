@@ -51,49 +51,63 @@ export default function TiendaPage() {
         if (res.ok && data.success && data.productos?.length > 0) {
           setProducts(data.productos);
         } else {
-          // Si no hay productos en inventario aún, mostrar catálogo referencial
-          setProducts([
+          // Si no hay productos en Neon DB aún, sembrarlos realmente en la base de datos
+          const initialSeed = [
             {
-              id: "1",
               name: "Filtro de Aceite Sintético Premium",
               code: "FLT-AC-001",
               brand: "Bosch",
               category: "Filtros",
-              description: "Filtro de aceite de alto rendimiento para motores a gasolina y diésel.",
               price: 15.99,
-              stock: 10,
+              stock: 25,
+              minStock: 5,
+              location: "Pasillo A-1",
             },
             {
-              id: "2",
               name: "Pastillas de Freno Delanteras (Set de 4)",
               code: "FRN-PAS-022",
               brand: "Brembo",
               category: "Frenos",
-              description: "Pastillas de freno cerámicas para una frenada silenciosa y eficiente.",
               price: 45.5,
-              stock: 8,
+              stock: 18,
+              minStock: 4,
+              location: "Estante B-3",
             },
             {
-              id: "3",
               name: "Batería 12V 75Ah Libre de Mantenimiento",
               code: "BAT-12V-75",
               brand: "Moura",
               category: "Eléctrico",
-              description: "Batería de larga duración con excelente capacidad de arranque en frío.",
               price: 120.0,
-              stock: 5,
+              stock: 12,
+              minStock: 3,
+              location: "Bodega C-2",
             },
             {
-              id: "4",
               name: "Aceite 5W-30 Sintético Full 4L",
               code: "LUB-5W30-4L",
               brand: "Mobil 1",
               category: "Lubricantes",
-              description: "Protección avanzada para motores de última generación.",
               price: 38.0,
-              stock: 14,
+              stock: 30,
+              minStock: 6,
+              location: "Pasillo A-2",
             },
-          ]);
+          ];
+
+          for (const item of initialSeed) {
+            await fetch("/api/productos", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(item),
+            }).catch(() => {});
+          }
+
+          const reloadRes = await fetch("/api/productos");
+          const reloadData = await reloadRes.json();
+          if (reloadRes.ok && reloadData.success && reloadData.productos?.length > 0) {
+            setProducts(reloadData.productos);
+          }
         }
       } catch (e) {
         console.error("Error al cargar productos de tienda:", e);

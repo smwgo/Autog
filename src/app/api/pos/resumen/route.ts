@@ -47,8 +47,8 @@ export async function GET() {
         servicios: services,
         caja: cashSessions,
         cotizaciones: quotes,
-        promociones: promotions || 4,
-        creditos: credits || 4,
+        promociones: promotions,
+        creditos: credits,
       };
     });
 

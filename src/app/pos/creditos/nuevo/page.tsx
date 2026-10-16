@@ -467,7 +467,7 @@ function NuevoCreditoContent() {
                               </div>
                               <div className="text-xs font-mono text-zinc-400 mt-0.5">
                                 Cédula/RUC: <span className="text-zinc-200">{c.identification}</span>
-                                {c.phone && <span className="ml-2 text-zinc-500">| {c.phone}</span>}
+                                {c.phone && <span className="ml-2 text-zinc-500">| WhatsApp: {c.phone}</span>}
                               </div>
                             </div>
                             <span className="text-xs text-blue-400 group-hover:translate-x-0.5 transition-transform shrink-0 font-medium">
@@ -479,10 +479,10 @@ function NuevoCreditoContent() {
                     )}
                   </div>
 
-                  {/* Teléfono */}
+                  {/* WhatsApp */}
                   <div>
                     <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                      WhatsApp / Teléfono
+                      WhatsApp
                     </label>
                     <input
                       type="tel"
@@ -498,14 +498,9 @@ function NuevoCreditoContent() {
 
                 {/* Nombres y Apellidos con Búsqueda y Selección Interactiva */}
                 <div className="relative" ref={dropdownNombreRef}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-semibold text-zinc-300">
-                      {tipoCliente === "Empresa" ? "Razón Social o Nombre del Taller" : "Nombres y Apellidos"} <span className="text-blue-400">*</span>
-                    </label>
-                    <span className="text-[11px] text-zinc-500">
-                      Puedes buscar y seleccionar de clientes registrados
-                    </span>
-                  </div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                    {tipoCliente === "Empresa" ? "Razón Social o Nombre del Taller" : "Nombres y Apellidos"} <span className="text-blue-400">*</span>
+                  </label>
 
                   <div className="relative">
                     <input
@@ -573,7 +568,7 @@ function NuevoCreditoContent() {
                               </span>
                               {c.phone && (
                                 <span className="font-mono text-zinc-400 flex items-center gap-1">
-                                  <span className="text-zinc-500">Tel:</span> {c.phone}
+                                  <span className="text-zinc-500">WhatsApp:</span> {c.phone}
                                 </span>
                               )}
                             </div>
@@ -595,7 +590,7 @@ function NuevoCreditoContent() {
                       Cupo Límite Autorizado ($) <span className="text-blue-400">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 font-bold">$</span>
+                      <span className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold select-none pointer-events-none text-sm sm:text-base">$</span>
                       <input
                         type="number"
                         min="1"
@@ -604,13 +599,12 @@ function NuevoCreditoContent() {
                         value={creditLimit}
                         onChange={(e) => setCreditLimit(e.target.value)}
                         placeholder="500"
-                        className="w-full h-11 sm:h-12 pl-8 pr-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm text-white font-mono font-bold placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                        className="w-full h-11 sm:h-12 pl-9 sm:pl-10 pr-3.5 sm:pr-4 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm text-white font-mono font-bold placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
                       />
                     </div>
 
                     {/* Chips de sugerencia rápida */}
                     <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                      <span className="text-[11px] text-zinc-500 mr-0.5">Sugerencias:</span>
                       {SUGERENCIAS_CUPO.map((monto) => (
                         <button
                           key={monto}
@@ -633,7 +627,7 @@ function NuevoCreditoContent() {
                       Saldo Deudor Inicial ($)
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 font-bold">$</span>
+                      <span className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold select-none pointer-events-none text-sm sm:text-base">$</span>
                       <input
                         type="number"
                         min="0"
@@ -641,12 +635,9 @@ function NuevoCreditoContent() {
                         value={currentBalance}
                         onChange={(e) => setCurrentBalance(e.target.value)}
                         placeholder="0.00"
-                        className="w-full h-11 sm:h-12 pl-8 pr-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm text-white font-mono font-bold placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                        className="w-full h-11 sm:h-12 pl-9 sm:pl-10 pr-3.5 sm:pr-4 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm text-white font-mono font-bold placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
                       />
                     </div>
-                    <p className="text-[11px] text-zinc-500 mt-2">
-                      Ingresa 0 si no registra facturas pendientes de pago.
-                    </p>
                   </div>
                 </div>
 
@@ -665,31 +656,16 @@ function NuevoCreditoContent() {
 
                   <div>
                     <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                      Estado del Crédito
+                      Observaciones o Notas (Opcional)
                     </label>
-                    <select
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value as any)}
-                      className="w-full h-11 sm:h-12 px-3 sm:px-3.5 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm text-white outline-none focus:border-blue-500 transition-colors cursor-pointer"
-                    >
-                      <option value="AL_DIA">Al Día (Sin atrasos)</option>
-                      <option value="POR_VENCER">Por Vencer (Próximo a plazo)</option>
-                      <option value="VENCIDO">Vencido (Plazo expirado)</option>
-                    </select>
+                    <input
+                      type="text"
+                      placeholder="Ej. Línea aprobada por gerencia, facturación mensual..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                    />
                   </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                    Observaciones o Notas (Opcional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ej. Línea aprobada por gerencia comercial, facturación mensual..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
-                  />
                 </div>
               </div>
 
@@ -703,16 +679,6 @@ function NuevoCreditoContent() {
                 </Link>
 
                 <div className="w-full sm:w-auto flex flex-col sm:flex-row items-center gap-2.5 sm:gap-3">
-                  {!editId && (
-                    <button
-                      type="button"
-                      disabled={guardando}
-                      onClick={() => handleGuardar(true)}
-                      className="w-full sm:w-auto h-11 sm:h-12 px-5 rounded-xl border border-zinc-800 hover:border-zinc-700 bg-zinc-800/50 hover:bg-zinc-800 text-zinc-200 hover:text-white font-medium text-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                    >
-                      + Guardar y Crear Otro
-                    </button>
-                  )}
 
                   <button
                     type="submit"

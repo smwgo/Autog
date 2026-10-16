@@ -222,29 +222,88 @@ export async function DELETE(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, name, type, phone, email, address, vip, notes } = body;
+    const {
+      id,
+      name,
+      type,
+      phone,
+      email,
+      address,
+      vip,
+      notes,
+      identification,
+      placa,
+      marca,
+      modelo,
+      anio,
+      kilometraje,
+      combustible,
+    } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, error: "ID requerido para actualizar" }, { status: 400 });
     }
 
+    const updateData: any = {
+      name,
+      type,
+      phone,
+      email: email || null,
+      address: address || null,
+      vip: typeof vip === "boolean" ? vip : false,
+      notes: notes || null,
+    };
+
+    if (identification) {
+      updateData.identification = identification.trim();
+    }
+
     const clienteActualizado = await prisma.customer.update({
       where: { id },
-      data: {
-        name,
-        type,
-        phone,
-        email,
-        address,
-        vip,
-        notes,
-      },
+      data: updateData,
       include: {
         vehicles: true,
       },
     });
 
-    return NextResponse.json({ success: true, cliente: clienteActualizado });
+    // Actualizar o crear vehículo si se envió placa
+    if (placa && placa.trim().length > 0) {
+      const placaLimpia = placa.trim().toUpperCase();
+      const existingVehicle = clienteActualizado.vehicles[0];
+
+      if (existingVehicle) {
+        await prisma.vehicle.update({
+          where: { id: existingVehicle.id },
+          data: {
+            plate: placaLimpia,
+            brand: marca?.trim() || "Genérico",
+            model: modelo?.trim() || "General",
+            year: anio ? parseInt(String(anio), 10) : undefined,
+            mileage: kilometraje ? parseInt(String(kilometraje).replace(/\D/g, ""), 10) : undefined,
+            fuelType: combustible || "Gasolina",
+          },
+        });
+      } else {
+        await prisma.vehicle.create({
+          data: {
+            customerId: id,
+            plate: placaLimpia,
+            brand: marca?.trim() || "Genérico",
+            model: modelo?.trim() || "General",
+            year: anio ? parseInt(String(anio), 10) : undefined,
+            mileage: kilometraje ? parseInt(String(kilometraje).replace(/\D/g, ""), 10) : undefined,
+            fuelType: combustible || "Gasolina",
+          },
+        });
+      }
+    }
+
+    const clienteFinal = await prisma.customer.findUnique({
+      where: { id },
+      include: { vehicles: true },
+    });
+
+    return NextResponse.json({ success: true, cliente: clienteFinal });
   } catch (error: any) {
     console.error("Error al actualizar cliente en Neon:", error);
     return NextResponse.json(

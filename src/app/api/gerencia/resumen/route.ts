@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const data = await withRetry(async () => {
@@ -19,10 +21,12 @@ export async function GET() {
         );
       `);
 
-      const sales = await prisma.sale.findMany({ orderBy: { createdAt: "desc" }, take: 50 });
-      const orders = await prisma.workshopOrder.findMany({ orderBy: { createdAt: "desc" }, take: 10 });
-      const customersCount = await prisma.customer.count();
-      const productsCount = await prisma.product.count();
+      const [sales, orders, customersCount, productsCount] = await Promise.all([
+        prisma.sale.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
+        prisma.workshopOrder.findMany({ orderBy: { createdAt: "desc" }, take: 10 }),
+        prisma.customer.count(),
+        prisma.product.count(),
+      ]);
 
       const txs: any[] = await prisma.$queryRawUnsafe(`SELECT * FROM "FinancialTransaction"`);
 
@@ -30,27 +34,27 @@ export async function GET() {
       const txIncome = txs.filter(t => t.isIncome).reduce((acc, t) => acc + Number(t.amount || 0), 0);
       const txExpenses = txs.filter(t => !t.isIncome).reduce((acc, t) => acc + Number(t.amount || 0), 0);
 
-      const totalIncome = salesRevenue + txIncome || 2450;
+      const totalIncome = salesRevenue + txIncome;
       const activeOrdersCount = orders.length;
       const avgTicket = activeOrdersCount > 0
-        ? orders.reduce((acc, o) => acc + Number(o.totalCost || 185), 0) / activeOrdersCount
-        : 185.50;
+        ? orders.reduce((acc, o) => acc + Number(o.totalCost || 0), 0) / activeOrdersCount
+        : 0;
 
-      let employeesCount = 5;
+      let employeesCount = 0;
       try {
         const emp: any[] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int as cnt FROM "Employee"`);
-        if (emp[0]?.cnt) employeesCount = emp[0].cnt;
+        if (emp[0]?.cnt != null) employeesCount = emp[0].cnt;
       } catch {}
 
-      let logsCount = 5;
+      let logsCount = 0;
       try {
         const lg: any[] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int as cnt FROM "AuditLog"`);
-        if (lg[0]?.cnt) logsCount = lg[0].cnt;
+        if (lg[0]?.cnt != null) logsCount = lg[0].cnt;
       } catch {}
 
       return {
         ingresosHoy: totalIncome,
-        egresosTotal: txExpenses || 680,
+        egresosTotal: txExpenses,
         ordenesActivas: activeOrdersCount,
         ticketPromedio: avgTicket,
         clientesTotal: customersCount,

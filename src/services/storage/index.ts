@@ -1,44 +1,47 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import "server-only";
+import { uploadToR2, getSignedDownloadUrl, deleteFromR2 } from "@/lib/r2";
 
 /**
- * Capa de abstracción para almacenamiento de archivos grandes (PDF, XML, Imágenes)
+ * Capa de abstracción para almacenamiento de archivos (PDF, XML, Imágenes)
  * Conectado a Cloudflare R2 mediante S3 API.
  * 
- * NUNCA guardar archivos grandes en PostgreSQL (Neon).
+ * NUNCA guardar archivos grandes o binarios en PostgreSQL (Neon).
  */
-
-const s3Client = new S3Client({
-  region: "auto",
-  endpoint: process.env.CLOUDFLARE_R2_ENDPOINT!, // e.g., https://<account_id>.r2.cloudflarestorage.com
-  credentials: {
-    accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY!,
-  },
-});
-
 export class StorageService {
-  
-  static async uploadFile(bucket: string, key: string, body: Buffer | Uint8Array | Blob | string, contentType: string): Promise<string> {
-    const command = new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      Body: body,
-      ContentType: contentType,
+  /**
+   * Sube un archivo a Cloudflare R2 validando tipo y renombrando de forma segura
+   */
+  static async uploadFile(
+    bucket: string,
+    key: string,
+    body: Buffer,
+    contentType: string
+  ): Promise<string> {
+    const result = await uploadToR2({
+      buffer: body,
+      mimeType: contentType,
+      folder: key.includes("/") ? key.split("/")[0] : "general",
+      originalName: key.split("/").pop() || "file",
     });
 
-    await s3Client.send(command);
-    
-    // Return custom domain URL if configured, or public URL
-    return `${process.env.NEXT_PUBLIC_STORAGE_URL}/${key}`;
+    return result.publicUrl || result.key;
   }
 
-  static async getSignedDownloadUrl(bucket: string, key: string, expiresIn: number = 3600): Promise<string> {
-    const command = new GetObjectCommand({
-      Bucket: bucket,
-      Key: key,
-    });
-    
-    return await getSignedUrl(s3Client, command, { expiresIn });
+  /**
+   * Genera una URL firmada de descarga temporal para documentos sensibles (facturas, contratos, etc.)
+   */
+  static async getSignedDownloadUrl(
+    bucket: string,
+    key: string,
+    expiresIn: number = 300
+  ): Promise<string> {
+    return await getSignedDownloadUrl(key, expiresIn);
+  }
+
+  /**
+   * Elimina un archivo de Cloudflare R2
+   */
+  static async deleteFile(bucket: string, key: string): Promise<void> {
+    return await deleteFromR2(key);
   }
 }

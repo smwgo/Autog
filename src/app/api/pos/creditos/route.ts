@@ -58,50 +58,33 @@ const INITIAL_CREDITS = [
   },
 ];
 
+let isTableEnsured = false;
+
 async function ensureCreditsTable() {
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "PosCreditAccount" (
-      "id" TEXT NOT NULL,
-      "customerName" TEXT NOT NULL,
-      "identification" TEXT NOT NULL,
-      "phone" TEXT NOT NULL DEFAULT 'N/A',
-      "creditLimit" DECIMAL(12,2) NOT NULL DEFAULT 500,
-      "currentBalance" DECIMAL(12,2) NOT NULL DEFAULT 0,
-      "dueDate" TEXT NOT NULL,
-      "status" TEXT NOT NULL DEFAULT 'AL_DIA',
-      "lastPaymentDate" TEXT,
-      "lastPaymentAmount" DECIMAL(12,2),
-      "notes" TEXT,
-      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT "PosCreditAccount_pkey" PRIMARY KEY ("id")
-    );
-  `);
+  if (isTableEnsured) return;
 
-  const countRes: any[] = await prisma.$queryRawUnsafe(
-    `SELECT COUNT(*)::int as cnt FROM "PosCreditAccount"`
-  );
-  const count = countRes[0]?.cnt ?? 0;
-
-  if (count === 0) {
-    for (const c of INITIAL_CREDITS) {
-      await prisma.$executeRawUnsafe(
-        `INSERT INTO "PosCreditAccount" ("id", "customerName", "identification", "phone", "creditLimit", "currentBalance", "dueDate", "status", "lastPaymentDate", "lastPaymentAmount", "notes", "createdAt", "updatedAt")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-         ON CONFLICT ("id") DO NOTHING`,
-        c.id,
-        c.customerName,
-        c.identification,
-        c.phone,
-        c.creditLimit,
-        c.currentBalance,
-        c.dueDate,
-        c.status,
-        c.lastPaymentDate,
-        c.lastPaymentAmount,
-        c.notes
+  try {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "PosCreditAccount" (
+        "id" TEXT NOT NULL,
+        "customerName" TEXT NOT NULL,
+        "identification" TEXT NOT NULL,
+        "phone" TEXT NOT NULL DEFAULT 'N/A',
+        "creditLimit" DECIMAL(12,2) NOT NULL DEFAULT 500,
+        "currentBalance" DECIMAL(12,2) NOT NULL DEFAULT 0,
+        "dueDate" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'AL_DIA',
+        "lastPaymentDate" TEXT,
+        "lastPaymentAmount" DECIMAL(12,2),
+        "notes" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "PosCreditAccount_pkey" PRIMARY KEY ("id")
       );
-    }
+    `);
+    isTableEnsured = true;
+  } catch (err) {
+    console.warn("ensureCreditsTable warning:", err);
   }
 }
 
@@ -124,15 +107,22 @@ function mapCreditRow(r: any) {
 
 export async function GET() {
   try {
-    const creditos = await withRetry(async () => {
-      await ensureCreditsTable();
-      const rows: any[] = await prisma.$queryRawUnsafe(
-        `SELECT * FROM "PosCreditAccount" ORDER BY "createdAt" DESC`
-      );
-      return rows.map(mapCreditRow);
-    });
+    await ensureCreditsTable();
+    const rows: any[] = await prisma.$queryRawUnsafe(
+      `SELECT * FROM "PosCreditAccount" ORDER BY "createdAt" DESC`
+    );
+    const creditos = rows.map(mapCreditRow);
 
-    return NextResponse.json({ success: true, creditos });
+    return NextResponse.json(
+      { success: true, creditos },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
   } catch (error: any) {
     console.error("Error GET /api/pos/creditos:", error);
     return NextResponse.json(
@@ -312,12 +302,13 @@ export async function DELETE(req: Request) {
       );
     }
 
-    await withRetry(async () => {
-      await ensureCreditsTable();
-      await prisma.$executeRawUnsafe(`DELETE FROM "PosCreditAccount" WHERE "id" = $1`, id);
-    });
+    await ensureCreditsTable();
+    const count = await prisma.$executeRawUnsafe(
+      `DELETE FROM "PosCreditAccount" WHERE "id" = $1`,
+      id
+    );
 
-    return NextResponse.json({ success: true, deletedId: id });
+    return NextResponse.json({ success: true, deletedId: id, count });
   } catch (error: any) {
     console.error("Error DELETE /api/pos/creditos:", error);
     return NextResponse.json(

@@ -1,3 +1,4 @@
+import "server-only";
 import { SriDocumentPayload, SriResponse, SriConfig } from "./types";
 import { prisma as prismaClient } from "@/lib/prisma";
 

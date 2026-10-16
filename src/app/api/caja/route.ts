@@ -8,6 +8,7 @@ export async function GET(request: Request) {
     let defaultUserName = "Super Administrador";
     try {
       const defaultUser = await prisma.user.findFirst({
+        select: { name: true },
         orderBy: { createdAt: "asc" },
       });
       if (defaultUser?.name) {
@@ -214,6 +215,7 @@ export async function POST(request: Request) {
       let defaultUserName = "Super Administrador";
       try {
         const defaultUser = await prisma.user.findFirst({
+          select: { name: true },
           orderBy: { createdAt: "asc" },
         });
         if (defaultUser?.name) {

@@ -27,20 +27,9 @@ export default function PromocionesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<"TODAS" | "ACTIVAS" | "INACTIVAS">("TODAS");
   const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
-  const [modalAbierto, setModalAbierto] = useState(false);
-  const [promoAEditar, setPromoAEditar] = useState<Promotion | null>(null);
   const [promoAEliminar, setPromoAEliminar] = useState<Promotion | null>(null);
   const [eliminando, setEliminando] = useState(false);
   const [copiadoId, setCopiadoId] = useState<string | null>(null);
-
-  // Formulario Crear / Editar promo
-  const [nuevoCodigo, setNuevoCodigo] = useState("");
-  const [nuevoTitulo, setNuevoTitulo] = useState("");
-  const [nuevoTipo, setNuevoTipo] = useState<"PERCENT" | "FIXED">("PERCENT");
-  const [nuevoValor, setNuevoValor] = useState(10);
-  const [nuevoMinimo, setNuevoMinimo] = useState(0);
-  const [nuevaCategoria, setNuevaCategoria] = useState("General");
-  const [nuevaFecha, setNuevaFecha] = useState("2026-12-31");
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -65,76 +54,6 @@ export default function PromocionesPage() {
   useEffect(() => {
     fetchPromociones();
   }, [fetchPromociones]);
-
-  const abrirModalCrear = () => {
-    setPromoAEditar(null);
-    setNuevoCodigo("");
-    setNuevoTitulo("");
-    setNuevoTipo("PERCENT");
-    setNuevoValor(10);
-    setNuevoMinimo(0);
-    setNuevaCategoria("General");
-    setNuevaFecha("2026-12-31");
-    setModalAbierto(true);
-  };
-
-  const abrirModalEditar = (p: Promotion) => {
-    setPromoAEditar(p);
-    setNuevoCodigo(p.code);
-    setNuevoTitulo(p.title);
-    setNuevoTipo(p.discountType);
-    setNuevoValor(p.discountValue);
-    setNuevoMinimo(p.minPurchase);
-    setNuevaCategoria(p.category);
-    setNuevaFecha(p.validUntil);
-    setModalAbierto(true);
-  };
-
-  // CREAR O ACTUALIZAR PROMOCIÓN EN NEON DB (POST / PUT)
-  const handleGuardar = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nuevoCodigo.trim() || !nuevoTitulo.trim()) {
-      showToast("Por favor completa el código y título de la promoción.");
-      return;
-    }
-
-    setGuardando(true);
-    try {
-      const isEdit = Boolean(promoAEditar);
-      const res = await fetch("/api/pos/promociones", {
-        method: isEdit ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...(isEdit ? { id: promoAEditar!.id } : {}),
-          code: nuevoCodigo.trim().toUpperCase(),
-          title: nuevoTitulo.trim(),
-          discountType: nuevoTipo,
-          discountValue: Number(nuevoValor),
-          minPurchase: Number(nuevoMinimo),
-          category: nuevaCategoria,
-          validUntil: nuevaFecha,
-          active: isEdit ? promoAEditar!.active : true,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Error al guardar promoción en Neon DB");
-      }
-
-      setModalAbierto(false);
-      setPromoAEditar(null);
-      showToast(
-        isEdit
-          ? `Promoción ${nuevoCodigo.toUpperCase()} actualizada en Neon DB.`
-          : `Promoción ${nuevoCodigo.toUpperCase()} creada en Neon DB.`
-      );
-      await fetchPromociones();
-    } catch (err: any) {
-      showToast(`Error: ${err.message}`);
-    } finally {
-      setGuardando(false);
-    }
-  };
 
   // ACTIVAR / DESACTIVAR PROMOCIÓN EN NEON DB (PUT)
   const toggleEstado = async (promo: Promotion) => {
@@ -240,15 +159,15 @@ export default function PromocionesPage() {
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto">
-            <button
-              onClick={abrirModalCrear}
+            <Link
+              href="/pos/promociones/nueva"
               className="h-11 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-all shadow-sm shadow-blue-500/20 active:scale-95 cursor-pointer flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
               </svg>
               <span>Nueva Promoción</span>
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -409,14 +328,13 @@ export default function PromocionesPage() {
                     >
                       {promo.active ? "Activo" : "Inactivo"}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => abrirModalEditar(promo)}
+                    <Link
+                      href={`/pos/promociones/nueva?id=${promo.id}`}
                       className="cursor-pointer w-9 h-9 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-sm hover:bg-zinc-200 flex items-center justify-center active:scale-95"
                       title="Editar promoción"
                     >
                       ✏️
-                    </button>
+                    </Link>
                     <button
                       type="button"
                       onClick={() => setPromoAEliminar(promo)}
@@ -495,140 +413,7 @@ export default function PromocionesPage() {
           </div>
         )}
 
-        {/* Modal Crear / Editar Promoción */}
-        {modalAbierto && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800 mb-5">
-                <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <span>🏷️</span>
-                  <span>{promoAEditar ? `Editar ${promoAEditar.code}` : "Nueva Promoción / Cupón"}</span>
-                </h3>
-                <button
-                  onClick={() => setModalAbierto(false)}
-                  className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 flex items-center justify-center font-bold cursor-pointer"
-                >
-                  ✕
-                </button>
-              </div>
 
-              <form onSubmit={handleGuardar} className="space-y-4 text-sm">
-                <div>
-                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                    Código de Cupón
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={nuevoCodigo}
-                    onChange={(e) => setNuevoCodigo(e.target.value.toUpperCase())}
-                    placeholder="EJ: VERANO20"
-                    className="w-full px-3.5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 font-mono font-bold uppercase focus:ring-2 focus:ring-orange-500 outline-none text-base sm:text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                    Título / Descripción
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={nuevoTitulo}
-                    onChange={(e) => setNuevoTitulo(e.target.value)}
-                    placeholder="20% de descuento en cambio de aceite"
-                    className="w-full px-3.5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-orange-500 outline-none text-base sm:text-sm"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                      Tipo Descuento
-                    </label>
-                    <select
-                      value={nuevoTipo}
-                      onChange={(e) => setNuevoTipo(e.target.value as any)}
-                      className="w-full px-3.5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-orange-500 outline-none text-base sm:text-sm"
-                    >
-                      <option value="PERCENT">Porcentaje (%)</option>
-                      <option value="FIXED">Monto Fijo ($)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                      Valor
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      required
-                      value={nuevoValor}
-                      onChange={(e) => setNuevoValor(Number(e.target.value))}
-                      className="w-full px-3.5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-orange-500 outline-none text-base sm:text-sm"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                      Compra Mínima ($)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={nuevoMinimo}
-                      onChange={(e) => setNuevoMinimo(Number(e.target.value))}
-                      className="w-full px-3.5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-orange-500 outline-none text-base sm:text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                      Categoría
-                    </label>
-                    <input
-                      type="text"
-                      value={nuevaCategoria}
-                      onChange={(e) => setNuevaCategoria(e.target.value)}
-                      placeholder="Servicios / Repuestos"
-                      className="w-full px-3.5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-orange-500 outline-none text-base sm:text-sm"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                    Vigencia hasta
-                  </label>
-                  <input
-                    type="date"
-                    value={nuevaFecha}
-                    onChange={(e) => setNuevaFecha(e.target.value)}
-                    className="w-full px-3.5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-orange-500 outline-none text-base sm:text-sm"
-                  />
-                </div>
-
-                <div className="pt-3 flex items-center gap-3">
-                  <button
-                    type="submit"
-                    disabled={guardando}
-                    className="flex-1 h-11 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm shadow-md shadow-orange-500/20 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center active:scale-98"
-                  >
-                    {guardando ? "Guardando en Neon..." : "Guardar en Neon DB"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setModalAbierto(false)}
-                    className="px-5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 font-semibold text-sm cursor-pointer flex items-center justify-center"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
         {/* Modal Flotante de Confirmación de Eliminación */}
         {promoAEliminar && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">

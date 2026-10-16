@@ -39,12 +39,16 @@ export default function CreditosPage() {
   const [creditoAEliminar, setCreditoAEliminar] = useState<CreditAccount | null>(null);
   const [eliminando, setEliminando] = useState(false);
 
-  const notify = (_msg: string) => {};
-
   const fetchCreditos = useCallback(async () => {
     try {
       setCargando(true);
-      const res = await fetch("/api/pos/creditos", { cache: "no-store" });
+      const res = await fetch(`/api/pos/creditos?t=${Date.now()}`, {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+        },
+      });
       const data = await res.json();
       if (data.success && Array.isArray(data.creditos)) {
         setCreditos(data.creditos);
@@ -87,15 +91,12 @@ export default function CreditosPage() {
         throw new Error(data.error || "Error al aplicar abono en Neon DB");
       }
 
-      notify(
-        `Abono de $${Number(montoAbono).toFixed(2)} registrado en Neon DB para ${cuentaAbono.customerName}.`
-      );
       setCuentaAbono(null);
       setMontoAbono(0);
       setNotaAbono("");
       await fetchCreditos();
     } catch (err: any) {
-      notify(`Error: ${err.message}`);
+      console.error(err);
     } finally {
       setGuardando(false);
     }
@@ -105,21 +106,31 @@ export default function CreditosPage() {
   // CONFIRMAR ELIMINAR CRÉDITO EN NEON DB (DELETE)
   const confirmarEliminarCredito = async () => {
     if (!creditoAEliminar) return;
+    const itemAEliminar = creditoAEliminar;
     setEliminando(true);
+
+    // Actualización optimista inmediata en la UI
+    setCreditos((prev) => prev.filter((c) => c.id !== itemAEliminar.id));
+    setCreditoAEliminar(null);
+
     try {
       const res = await fetch(
-        `/api/pos/creditos?id=${encodeURIComponent(creditoAEliminar.id)}`,
-        { method: "DELETE" }
+        `/api/pos/creditos?id=${encodeURIComponent(itemAEliminar.id)}`,
+        { 
+          method: "DELETE",
+          headers: {
+            "Cache-Control": "no-cache",
+          },
+        }
       );
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Error al eliminar cuenta de crédito");
+        throw new Error(data.error || "Error al eliminar cuenta de crédito en Neon DB");
       }
-      notify(`Cuenta de crédito de ${creditoAEliminar.customerName} eliminada.`);
-      setCreditoAEliminar(null);
       await fetchCreditos();
     } catch (err: any) {
-      notify(`Error: ${err.message}`);
+      console.error("Error al eliminar crédito:", err);
+      await fetchCreditos();
     } finally {
       setEliminando(false);
     }
