@@ -47,10 +47,6 @@ export default function FacturasPosPage() {
   
   // Modales
   const [ventaDetalle, setVentaDetalle] = useState<Sale | null>(null);
-  const [ventaEditar, setVentaEditar] = useState<Sale | null>(null);
-  const [editNombreCliente, setEditNombreCliente] = useState("");
-  const [editMetodoPago, setEditMetodoPago] = useState("");
-  const [editEstado, setEditEstado] = useState("");
 
   const [accionEnCurso, setAccionEnCurso] = useState(false);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
@@ -92,40 +88,7 @@ export default function FacturasPosPage() {
     return () => clearTimeout(timer);
   }, [searchTerm, cargarVentas]);
 
-  // UPDATE: Guardar cambios editados en Neon
-  const handleGuardarEdicion = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ventaEditar) return;
 
-    try {
-      setAccionEnCurso(true);
-      const res = await fetch("/api/ventas", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: ventaEditar.id,
-          customerName: editNombreCliente,
-          paymentMethod: editMetodoPago,
-          status: editEstado,
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setMensajeExito(`Factura ${ventaEditar.saleNumber} actualizada en Neon exitosamente.`);
-        setTimeout(() => setMensajeExito(null), 4000);
-        setVentaEditar(null);
-        await cargarVentas(searchTerm, true);
-      } else {
-        alert(data.error || "No se pudo actualizar la factura.");
-      }
-    } catch (err) {
-      console.error("Error al actualizar factura:", err);
-      alert("Error de conexión al guardar los cambios.");
-    } finally {
-      setAccionEnCurso(false);
-    }
-  };
 
   // UPDATE: Anular venta en Neon y devolver inventario
   const handleAnular = async (v: Sale) => {
@@ -195,12 +158,7 @@ export default function FacturasPosPage() {
     }
   };
 
-  const abrirModalEditar = (v: Sale) => {
-    setVentaEditar(v);
-    setEditNombreCliente(v.customerName || "Consumidor Final");
-    setEditMetodoPago(v.paymentMethod || "Efectivo");
-    setEditEstado(v.status || "Completada");
-  };
+
 
   const handleImprimir = () => {
     window.print();
@@ -252,7 +210,7 @@ export default function FacturasPosPage() {
 
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <Link
-                href="/pos/venta"
+                href="/pos/facturas/nueva"
                 className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-all shadow-sm shadow-blue-500/20 active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -290,7 +248,7 @@ export default function FacturasPosPage() {
 
           {/* KPIs / Resumen */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
-            {/* Total Facturado */}
+            {/* Facturado */}
             <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
               <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/25 text-cyan-400 flex items-center justify-center text-xl shrink-0">
                 💰
@@ -299,7 +257,7 @@ export default function FacturasPosPage() {
                 <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
                   ${totalFacturado.toFixed(2)}
                 </p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Total Facturado</h3>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Facturado</h3>
               </div>
             </div>
 
@@ -481,48 +439,30 @@ export default function FacturasPosPage() {
                         </div>
                       </div>
 
-                      {/* Botones de acción móvil (touch target >= 44px) */}
-                      <div className="grid grid-cols-4 gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800/60">
+                      {/* Botones de acción móvil (Solo iconos) */}
+                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/60">
                         <button
                           onClick={() => setVentaDetalle(v)}
-                          className="min-h-[44px] flex flex-col items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-xs font-semibold active:scale-95 transition-all"
+                          className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center active:scale-95 transition-all"
+                          title="Ver comprobante"
+                          aria-label="Ver comprobante"
                         >
-                          <span className="text-base leading-none">👁️</span>
-                          <span className="text-[10px] mt-0.5">Ver</span>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
                         </button>
 
-                        <button
-                          onClick={() => abrirModalEditar(v)}
-                          disabled={accionEnCurso}
-                          className="min-h-[44px] flex flex-col items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-semibold active:scale-95 transition-all disabled:opacity-50"
+                        <Link
+                          href={`/pos/facturas/editar?id=${v.id}`}
+                          className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center active:scale-95 transition-all"
+                          title="Editar factura"
+                          aria-label="Editar factura"
                         >
-                          <span className="text-base leading-none">✏️</span>
-                          <span className="text-[10px] mt-0.5">Editar</span>
-                        </button>
-
-                        {!esAnulada ? (
-                          <button
-                            onClick={() => handleAnular(v)}
-                            disabled={accionEnCurso}
-                            className="min-h-[44px] flex flex-col items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold active:scale-95 transition-all disabled:opacity-50"
-                          >
-                            <span className="text-base leading-none">⚠️</span>
-                            <span className="text-[10px] mt-0.5">Anular</span>
-                          </button>
-                        ) : (
-                          <div className="min-h-[44px] flex items-center justify-center opacity-20">
-                            -
-                          </div>
-                        )}
-
-                        <button
-                          onClick={() => handleEliminar(v)}
-                          disabled={accionEnCurso}
-                          className="min-h-[44px] flex flex-col items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-semibold active:scale-95 transition-all disabled:opacity-50"
-                        >
-                          <span className="text-base leading-none">🗑️</span>
-                          <span className="text-[10px] mt-0.5">Eliminar</span>
-                        </button>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </Link>
                       </div>
                     </div>
                   );
@@ -593,48 +533,31 @@ export default function FacturasPosPage() {
                             </span>
                           </td>
                           <td className="py-3.5 px-4 text-center">
-                            <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                              {/* Ver / Imprimir */}
+                            <div className="flex items-center justify-center gap-2">
+                              {/* Ver / Imprimir (Solo icono) */}
                               <button
                                 onClick={() => setVentaDetalle(v)}
-                                className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
-                                title="Ver Comprobante"
+                                className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
+                                title="Ver comprobante"
+                                aria-label="Ver comprobante"
                               >
-                                <span>👁️</span>
-                                <span>Ver</span>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
                               </button>
 
-                              {/* Editar */}
-                              <button
-                                onClick={() => abrirModalEditar(v)}
-                                disabled={accionEnCurso}
-                                className="px-2.5 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-semibold transition-colors cursor-pointer"
-                                title="Editar datos de Factura"
+                              {/* Editar (Solo icono, en otra pagina) */}
+                              <Link
+                                href={`/pos/facturas/editar?id=${v.id}`}
+                                className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
+                                title="Editar factura"
+                                aria-label="Editar factura"
                               >
-                                ✏️
-                              </button>
-
-                              {/* Anular */}
-                              {!esAnulada && (
-                                <button
-                                  onClick={() => handleAnular(v)}
-                                  disabled={accionEnCurso}
-                                  className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
-                                  title="Anular Factura y devolver stock"
-                                >
-                                  Anular
-                                </button>
-                              )}
-
-                              {/* Eliminar Definitivamente */}
-                              <button
-                                onClick={() => handleEliminar(v)}
-                                disabled={accionEnCurso}
-                                className="px-2 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
-                                title="Eliminar permanentemente de Neon"
-                              >
-                                🗑️
-                              </button>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </Link>
                             </div>
                           </td>
                         </tr>
@@ -647,102 +570,7 @@ export default function FacturasPosPage() {
           )}
         </div>
 
-        {/* Modal: Editar Factura (UPDATE) */}
-        {ventaEditar && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800 mb-5">
-                <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <span>✏️</span>
-                  <span>Editar Factura #{ventaEditar.saleNumber}</span>
-                </h3>
-                <button
-                  onClick={() => setVentaEditar(null)}
-                  className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 flex items-center justify-center font-bold cursor-pointer"
-                >
-                  ✕
-                </button>
-              </div>
 
-              <form onSubmit={handleGuardarEdicion} className="space-y-4 text-sm">
-                <div>
-                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                    Cliente / Razón Social
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editNombreCliente}
-                    onChange={(e) => setEditNombreCliente(e.target.value)}
-                    className="w-full px-3.5 h-11 text-base sm:text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                    Método de Pago
-                  </label>
-                  <select
-                    value={editMetodoPago}
-                    onChange={(e) => setEditMetodoPago(e.target.value)}
-                    className="w-full px-3.5 h-11 text-base sm:text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="Efectivo">Efectivo</option>
-                    <option value="Tarjeta">Tarjeta Débito/Crédito</option>
-                    <option value="Transferencia">Transferencia Bancaria</option>
-                    <option value="Crédito">Crédito Interno</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                    Estado de Factura
-                  </label>
-                  <select
-                    value={editEstado}
-                    onChange={(e) => setEditEstado(e.target.value)}
-                    className="w-full px-3.5 h-11 text-base sm:text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="Completada">Completada</option>
-                    <option value="Anulada">Anulada</option>
-                  </select>
-                </div>
-
-                <div className="p-3 rounded-xl bg-zinc-100 dark:bg-zinc-800/50 text-xs text-zinc-500 space-y-1">
-                  <div className="flex justify-between">
-                    <span>Monto Total:</span>
-                    <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                      ${Number(ventaEditar.total || 0).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Artículos vendidos:</span>
-                    <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                      {ventaEditar.items?.length || 0}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="pt-3 flex items-center gap-3">
-                  <button
-                    type="submit"
-                    disabled={accionEnCurso}
-                    className="flex-1 h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center"
-                  >
-                    {accionEnCurso ? "Guardando en Neon..." : "Guardar Cambios"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setVentaEditar(null)}
-                    className="px-5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 font-semibold text-xs cursor-pointer flex items-center justify-center"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
 
         {/* Modal de Detalle / Comprobante de Factura (READ & PRINT) */}
         {ventaDetalle && (

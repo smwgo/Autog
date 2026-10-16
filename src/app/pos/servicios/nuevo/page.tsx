@@ -143,15 +143,6 @@ export default function NuevoServicioPage() {
             </Link>
             <button
               type="button"
-              onClick={() => handleGuardar(true)}
-              disabled={guardando}
-              className="px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 active:scale-95 text-zinc-900 dark:text-zinc-100 text-sm font-semibold transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-            >
-              <span>➕</span>
-              <span>Guardar y Crear Otro</span>
-            </button>
-            <button
-              type="button"
               onClick={() => handleGuardar(false)}
               disabled={guardando}
               className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold shadow-md shadow-blue-500/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
@@ -407,15 +398,6 @@ export default function NuevoServicioPage() {
             >
               Cancelar
             </Link>
-            <button
-              type="button"
-              onClick={() => handleGuardar(true)}
-              disabled={guardando}
-              className="px-5 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 active:scale-95 text-zinc-900 dark:text-zinc-100 text-sm font-semibold transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-            >
-              <span>➕</span>
-              <span>Guardar y Crear Otro</span>
-            </button>
             <button
               type="button"
               onClick={() => handleGuardar(false)}

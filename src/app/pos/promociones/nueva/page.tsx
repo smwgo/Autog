@@ -102,7 +102,7 @@ function NuevaPromocionContent() {
     }
   };
 
-  const handleGuardar = async (crearOtra: boolean = false) => {
+  const handleGuardar = async () => {
     setErrorMsg(null);
 
     const codigoLimpio = code.trim().toUpperCase();
@@ -168,25 +168,14 @@ function NuevaPromocionContent() {
       }
 
       setGuardando(false);
-
-      if (crearOtra && !esEdicion) {
-        setMensajeExito(`¡Promoción "${codigoLimpio}" creada con éxito! Puedes registrar la siguiente.`);
-        // Reiniciar formulario para una nueva
-        setTitle("");
-        setDiscountValue(15);
-        setMinPurchase(0);
-        generarCodigoAleatorio();
-        setTimeout(() => setMensajeExito(null), 4000);
-      } else {
-        setMensajeExito(
-          esEdicion
-            ? `¡Promoción "${codigoLimpio}" actualizada exitosamente!`
-            : `¡Promoción "${codigoLimpio}" creada exitosamente!`
-        );
-        setTimeout(() => {
-          router.push("/pos/promociones");
-        }, 1000);
-      }
+      setMensajeExito(
+        esEdicion
+          ? `¡Promoción "${codigoLimpio}" actualizada exitosamente!`
+          : `¡Promoción "${codigoLimpio}" creada exitosamente!`
+      );
+      setTimeout(() => {
+        router.push("/pos/promociones");
+      }, 1000);
     } catch (err: any) {
       setGuardando(false);
       setErrorMsg(err.message || "Ocurrió un error inesperado al guardar.");
@@ -206,36 +195,23 @@ function NuevaPromocionContent() {
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-12">
       <Header />
 
-      <main className="flex-grow p-4 md:p-8 max-w-5xl mx-auto w-full">
-        {/* Breadcrumb de Regreso */}
-        <div className="mb-6">
-          <Link
-            href="/pos/promociones"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors w-fit group"
-          >
-            <span className="w-8 h-8 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-500 group-hover:text-blue-600 group-hover:border-blue-500 shadow-xs transition-all">
-              &larr;
-            </span>
-            <span>Volver a Promociones</span>
-          </Link>
-        </div>
-
+      <main className="flex-grow p-4 md:p-8 pb-24 md:pb-8 max-w-7xl mx-auto w-full">
         {/* Encabezado Principal */}
-        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800/80 pb-6">
-          <div className="flex items-center gap-3.5 sm:gap-4">
-            <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center text-2xl sm:text-3xl shadow-sm border border-blue-500/20 shrink-0">
-              🏷️
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-                {esEdicion ? "Editar Promoción" : "Nueva Promoción"}
-              </h1>
-              <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-                {esEdicion
-                  ? "Modifica las condiciones, valor de descuento o vigencia del cupón."
-                  : "Crea cupones y descuentos para aplicar en caja o ventas del taller."}
-              </p>
-            </div>
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800/80 pb-6">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/pos/promociones"
+              title="Volver a Promociones"
+              aria-label="Volver a Promociones"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white bg-zinc-200/70 dark:bg-zinc-800/60 hover:bg-zinc-300/70 dark:hover:bg-zinc-800 active:scale-95 transition-all shrink-0"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <h1 className="text-base sm:text-xl font-medium text-zinc-900 dark:text-white tracking-tight">
+              {esEdicion ? "Editar Promoción" : "Nueva Promoción"}
+            </h1>
           </div>
 
           {/* Acciones Superiores */}
@@ -247,21 +223,9 @@ function NuevaPromocionContent() {
               Cancelar
             </Link>
 
-            {!esEdicion && (
-              <button
-                type="button"
-                onClick={() => handleGuardar(true)}
-                disabled={guardando || cargandoDatos}
-                className="px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 active:scale-95 text-zinc-900 dark:text-zinc-100 text-sm font-semibold transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-              >
-                <span>➕</span>
-                <span>Guardar y Crear Otra</span>
-              </button>
-            )}
-
             <button
               type="button"
-              onClick={() => handleGuardar(false)}
+              onClick={handleGuardar}
               disabled={guardando || cargandoDatos}
               className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold shadow-md shadow-blue-500/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
             >
@@ -322,15 +286,15 @@ function NuevaPromocionContent() {
               <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 sm:p-7 shadow-sm">
                 <h2 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
                   <span>📌</span>
-                  <span>Identificación del Cupón</span>
+                  <span>Datos del cupón</span>
                 </h2>
 
                 <div className="space-y-4">
                   {/* Código del Cupón */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
-                        Código de Cupón *
+                      <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block">
+                        Código *
                       </label>
                       <button
                         type="button"
@@ -347,41 +311,40 @@ function NuevaPromocionContent() {
                         required
                         value={code}
                         onChange={(e) => setCode(e.target.value.toUpperCase())}
-                        placeholder="EJ: VERANO20"
-                        className="w-full px-4 h-12 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 font-mono font-bold uppercase text-base sm:text-lg text-blue-600 dark:text-blue-400 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all shadow-inner"
+                        placeholder="Ej: VERANO20"
+                        className="w-full px-4 h-12 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm font-medium uppercase focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
                       />
                     </div>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
-                      El código que el cajero o cliente ingresará para aplicar el descuento.
-                    </p>
                   </div>
 
-                  {/* Título o Descripción */}
+                  {/* Título de la Promoción */}
                   <div>
-                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider block mb-1.5">
-                      Título / Descripción *
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                      Título *
                     </label>
                     <input
                       type="text"
                       required
+                      maxLength={60}
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      placeholder="Ej: 20% de descuento en cambio de aceite"
+                      placeholder="Ej: 20% de descuento"
                       className="w-full px-4 h-12 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
                     />
                   </div>
 
                   {/* Categoría y Badges Rápidos */}
                   <div>
-                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider block mb-1.5">
-                      Categoría Aplicable
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                      Categoría
                     </label>
                     <input
                       type="text"
+                      maxLength={40}
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      placeholder="Ej: General, Servicios, Repuestos..."
-                      className="w-full px-4 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                      placeholder="Ej: Servicios"
+                      className="w-full px-4 h-12 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
                     />
 
                     {/* Sugerencias Rápidas */}
@@ -409,14 +372,14 @@ function NuevaPromocionContent() {
               <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 sm:p-7 shadow-sm">
                 <h2 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
                   <span>💰</span>
-                  <span>Monto y Tipo de Descuento</span>
+                  <span>Descuento</span>
                 </h2>
 
                 <div className="space-y-5">
                   {/* Selector visual Tipo de Descuento */}
                   <div>
-                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider block mb-2">
-                      Tipo de Beneficio
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-2">
+                      Tipo
                     </label>
                     <div className="grid grid-cols-2 gap-3">
                       <button
@@ -442,7 +405,7 @@ function NuevaPromocionContent() {
                         }`}
                       >
                         <span className="text-lg">$</span>
-                        <span>Monto Fijo ($)</span>
+                        <span>Monto fijo ($)</span>
                       </button>
                     </div>
                   </div>
@@ -450,11 +413,11 @@ function NuevaPromocionContent() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Valor numérico */}
                     <div>
-                      <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider block mb-1.5">
-                        Valor del Descuento {discountType === "PERCENT" ? "(%)" : "($)"} *
+                      <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                        Valor {discountType === "PERCENT" ? "(%)" : "($)"} *
                       </label>
                       <div className="relative">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-zinc-400 text-base">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-medium text-zinc-400 text-sm">
                           {discountType === "PERCENT" ? "%" : "$"}
                         </span>
                         <input
@@ -465,18 +428,18 @@ function NuevaPromocionContent() {
                           value={discountValue}
                           onChange={(e) => setDiscountValue(e.target.value)}
                           placeholder={discountType === "PERCENT" ? "15" : "20"}
-                          className="w-full pl-9 pr-4 h-12 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 font-bold text-zinc-900 dark:text-white text-base focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                          className="w-full pl-9 pr-4 h-12 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
                         />
                       </div>
                     </div>
 
                     {/* Compra mínima */}
                     <div>
-                      <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider block mb-1.5">
-                        Compra Mínima Requerida ($)
+                      <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                        Compra mínima ($)
                       </label>
                       <div className="relative">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-zinc-400 text-base">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-medium text-zinc-400 text-sm">
                           $
                         </span>
                         <input
@@ -485,12 +448,9 @@ function NuevaPromocionContent() {
                           value={minPurchase}
                           onChange={(e) => setMinPurchase(e.target.value)}
                           placeholder="0"
-                          className="w-full pl-9 pr-4 h-12 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 font-bold text-zinc-900 dark:text-white text-base focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                          className="w-full pl-9 pr-4 h-12 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
                         />
                       </div>
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
-                        0 = Aplica sin importar el monto total.
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -500,13 +460,13 @@ function NuevaPromocionContent() {
               <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 sm:p-7 shadow-sm">
                 <h2 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
                   <span>📅</span>
-                  <span>Vigencia y Estado</span>
+                  <span>Vigencia</span>
                 </h2>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider block mb-1.5">
-                      Fecha Límite de Validez *
+                    <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+                      Fecha límite *
                     </label>
                     <input
                       type="date"
@@ -560,10 +520,7 @@ function NuevaPromocionContent() {
                   {/* Interruptor Estado Activo */}
                   <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-bold text-zinc-900 dark:text-white">Estado Activo</p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                        Si está activa, podrá ser canjeada inmediatamente en el Punto de Venta.
-                      </p>
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-white">Estado activo</p>
                     </div>
                     <button
                       type="button"
@@ -588,8 +545,8 @@ function NuevaPromocionContent() {
               {/* Tarjeta de Vista Previa */}
               <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 sm:p-7 shadow-sm sticky top-6">
                 <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800 mb-5">
-                  <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <span>👁️</span> Vista Previa en Vivo
+                  <h3 className="text-xs font-semibold text-zinc-400 flex items-center gap-1.5">
+                    <span>👁️</span> Vista previa
                   </h3>
                   <span
                     className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -654,20 +611,21 @@ function NuevaPromocionContent() {
                 </div>
 
                 {/* Simulador de Ahorro */}
-                <div className="mt-5 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/80 dark:border-zinc-800">
-                  <h4 className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <span>🧮</span> Ejemplo de aplicación en caja:
+                <div className="mt-5 p-5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/80 dark:border-zinc-800">
+                  <h4 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-3 flex items-center gap-2">
+                    <span>🧮</span>
+                    <span>Ejemplo de aplicación en caja:</span>
                   </h4>
-                  <div className="text-xs text-zinc-600 dark:text-zinc-400 space-y-1.5 font-medium">
+                  <div className="text-sm text-zinc-700 dark:text-zinc-300 space-y-2.5 font-medium">
                     <div className="flex justify-between">
                       <span>Venta ejemplo:</span>
-                      <span>${compraEjemplo}.00</span>
+                      <span className="font-semibold text-zinc-900 dark:text-white">${compraEjemplo}.00</span>
                     </div>
                     <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
                       <span>Ahorro del cliente:</span>
                       <span>-${ahorroEjemplo.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-zinc-900 dark:text-white font-bold pt-1 border-t border-zinc-200 dark:border-zinc-700">
+                    <div className="flex justify-between text-base font-bold text-zinc-900 dark:text-white pt-2.5 border-t border-zinc-200 dark:border-zinc-700">
                       <span>Total final a pagar:</span>
                       <span>${totalEjemplo.toFixed(2)}</span>
                     </div>
@@ -678,7 +636,7 @@ function NuevaPromocionContent() {
                 <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800 lg:hidden">
                   <button
                     type="button"
-                    onClick={() => handleGuardar(false)}
+                    onClick={handleGuardar}
                     disabled={guardando || cargandoDatos}
                     className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/25 flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50"
                   >

@@ -151,12 +151,6 @@ export default function ServiciosPosPage() {
 
           <div className="flex items-center gap-3">
             <Link
-              href="/taller/ordenes"
-              className="h-10 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all flex items-center gap-2 shadow-sm"
-            >
-              <span>🚗</span> Órdenes de Taller
-            </Link>
-            <Link
               href="/pos/servicios/nuevo"
               className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-medium text-sm transition-all shadow-sm shadow-blue-500/20 flex items-center gap-2 cursor-pointer"
             >
@@ -389,13 +383,11 @@ export default function ServiciosPosPage() {
             </button>
           </div>
         ) : serviciosFiltrados.length === 0 ? (
-          <div className="text-center py-20 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">
-            <span className="text-5xl">🛠️</span>
-            <p className="text-lg font-bold mt-3">No se encontraron servicios</p>
-            <p className="text-sm text-zinc-500 mt-1">Prueba con otro término o agrega uno nuevo.</p>
+          <div className="text-center py-20 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center justify-center">
+            <span className="text-5xl mb-4">🛠️</span>
             <Link
               href="/pos/servicios/nuevo"
-              className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium text-xs rounded-xl hover:bg-blue-700 shadow-sm transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-medium text-sm rounded-xl shadow-sm transition-all"
             >
               <span>+</span> Crear Nuevo Servicio
             </Link>
