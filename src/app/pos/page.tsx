@@ -12,11 +12,11 @@ const modules = [
     color: "bg-emerald-500",
   },
   {
-    title: "Pedidos",
-    description: "Pedidos de tienda, repuestos y citas.",
-    icon: "📥",
-    href: "/pos/solicitudes",
-    color: "bg-amber-500",
+    title: "Facturas",
+    description: "Consulta, comprobantes y reimpresión.",
+    icon: "🧾",
+    href: "/pos/facturas",
+    color: "bg-indigo-500",
   },
   {
     title: "Clientes",
@@ -47,25 +47,25 @@ const modules = [
     color: "bg-amber-500",
   },
   {
-    title: "Devoluciones",
-    description: "Notas de crédito y cambios.",
-    icon: "🔄",
-    href: "/pos/devoluciones",
-    color: "bg-rose-500",
-  },
-  {
-    title: "Historial",
-    description: "Facturas emitidas.",
-    icon: "🧾",
-    href: "/pos/historial",
-    color: "bg-indigo-500",
-  },
-  {
     title: "Cotizaciones",
     description: "Proformas rápidas.",
     icon: "📝",
     href: "/pos/cotizaciones",
     color: "bg-purple-500",
+  },
+  {
+    title: "Promociones",
+    description: "Cupones, combos y descuentos.",
+    icon: "🏷️",
+    href: "/pos/promociones",
+    color: "bg-orange-500",
+  },
+  {
+    title: "Créditos",
+    description: "Cuentas por cobrar y abonos.",
+    icon: "💳",
+    href: "/pos/creditos",
+    color: "bg-cyan-500",
   },
 ];
 

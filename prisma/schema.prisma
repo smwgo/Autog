@@ -876,3 +876,84 @@ model WorkshopInspection {
   @@index([plate])
   @@index([status])
 }
+
+model WorkshopTask {
+  id          String   @id @default(cuid())
+  taskNumber  String   @unique
+  title       String
+  vehicle     String
+  plate       String?
+  orderNumber String?
+  mechanic    String   @default("Carlos Rodríguez")
+  status      String   @default("pending")
+  priority    String   @default("Media")
+  timeEst     String   @default("1h 00m")
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([taskNumber])
+  @@index([status])
+  @@index([mechanic])
+}
+
+model WorkshopHistory {
+  id           String   @id @default(cuid())
+  serviceCode  String   @unique
+  date         String
+  vehicle      String
+  plate        String
+  client       String
+  servicesJson String   @default("[]")
+  cost         Decimal  @default(0) @db.Decimal(12, 2)
+  mechanic     String   @default("Carlos Rodríguez")
+  mileage      String?  @default("N/A")
+  notes        String?
+  orderNumber  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([serviceCode])
+  @@index([plate])
+  @@index([client])
+}
+
+model WorkshopPartRequest {
+  id            String   @id @default(cuid())
+  requestNumber String   @unique
+  mechanic      String
+  orderId       String   @default("ORD-GENERAL")
+  vehicle       String
+  itemsJson     String   @default("[]")
+  status        String   @default("Pendiente")
+  urgency       String   @default("Normal")
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([requestNumber])
+  @@index([status])
+  @@index([mechanic])
+}
+
+model WorkshopTimeLog {
+  id              String   @id @default(cuid())
+  logNumber       String   @unique
+  task            String
+  orderId         String
+  vehicle         String?
+  mechanic        String   @default("Carlos Rodríguez")
+  date            String
+  duration        String
+  durationMinutes Int      @default(60)
+  status          String   @default("Finalizado")
+  revenue         Decimal  @default(0) @db.Decimal(12, 2)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([logNumber])
+  @@index([orderId])
+  @@index([mechanic])
+}
+

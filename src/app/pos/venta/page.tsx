@@ -1997,10 +1997,10 @@ export default function NuevaVentaPage() {
                 <span>Imprimir Ticket</span>
               </button>
               <Link
-                href="/pos/historial"
+                href="/pos/facturas"
                 className="px-3 py-3 rounded-lg border border-zinc-200 dark:border-zinc-800 text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               >
-                Historial
+                Facturas
               </Link>
               <button
                 onClick={() => setVentaCompletada(null)}

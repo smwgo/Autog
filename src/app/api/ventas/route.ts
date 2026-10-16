@@ -188,15 +188,15 @@ export async function POST(request: Request) {
   }
 }
 
-// PATCH: Actualizar venta (ej: anular venta y restituir stock en Neon)
+// PATCH: Actualizar venta (ej: editar cliente/método o anular venta y restituir stock en Neon)
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
-    const { id, status } = body;
+    const { id, status, customerName, paymentMethod } = body;
 
-    if (!id || !status) {
+    if (!id) {
       return NextResponse.json(
-        { success: false, error: "ID y nuevo estado son obligatorios." },
+        { success: false, error: "ID de venta es obligatorio." },
         { status: 400 }
       );
     }
@@ -252,9 +252,14 @@ export async function PATCH(request: Request) {
       }
     }
 
+    const updateData: any = {};
+    if (status) updateData.status = status;
+    if (customerName) updateData.customerName = customerName.trim();
+    if (paymentMethod) updateData.paymentMethod = paymentMethod.trim();
+
     const saleUpdated = await prisma.sale.update({
       where: { id },
-      data: { status },
+      data: updateData,
       include: { items: true, customer: true },
     });
 

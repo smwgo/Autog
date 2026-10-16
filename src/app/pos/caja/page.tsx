@@ -265,14 +265,6 @@ export default function GestionCaja() {
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 )}
               </div>
-
-              <Link
-                href="/pos/solicitudes"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800/50 font-semibold text-xs transition-all active:scale-95"
-              >
-                <span className="text-sm">📥</span>
-                <span>Pedidos</span>
-              </Link>
             </div>
           </div>
 

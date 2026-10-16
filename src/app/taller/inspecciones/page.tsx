@@ -34,6 +34,7 @@ export default function InspeccionesPage() {
   const [filterStatus, setFilterStatus] = useState("");
   const [guardandoId, setGuardandoId] = useState<string | null>(null);
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
+  const [detalleInsp, setDetalleInsp] = useState<InspectionItem | null>(null);
 
   const cargarInspecciones = useCallback(async () => {
     try {
@@ -297,10 +298,18 @@ export default function InspeccionesPage() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
+                            type="button"
+                            onClick={() => setDetalleInsp(insp)}
+                            className="px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold hover:bg-amber-100 transition-colors cursor-pointer"
+                          >
+                            Ver Checklist
+                          </button>
+
+                          <button
                             onClick={() => handleEliminar(insp.dbId || insp.id, insp.id)}
                             disabled={eliminandoId === insp.id || eliminandoId === insp.dbId}
                             title="Eliminar inspección"
-                            className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors text-xs"
+                            className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors text-xs cursor-pointer"
                           >
                             ✕
                           </button>
@@ -335,6 +344,87 @@ export default function InspeccionesPage() {
             <div className="px-6 py-3 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs text-zinc-500">
               <span>Mostrando {inspections.length} {inspections.length === 1 ? "inspección" : "inspecciones"}</span>
               <span className="font-semibold text-zinc-700 dark:text-zinc-300">Inspecciones de Taller</span>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Checklist Detalle */}
+        {detalleInsp && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+            <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                <div>
+                  <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">
+                    {detalleInsp.id} • {detalleInsp.plate}
+                  </span>
+                  <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+                    {detalleInsp.vehicle} — Checklist Técnico
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDetalleInsp(null)}
+                  className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs bg-zinc-50 dark:bg-zinc-800/50 p-3.5 rounded-2xl">
+                <div>
+                  <span className="text-zinc-400 block">Cliente:</span>
+                  <strong className="text-zinc-900 dark:text-white">{detalleInsp.client}</strong>
+                </div>
+                <div>
+                  <span className="text-zinc-400 block">Combustible / Km:</span>
+                  <strong className="text-zinc-900 dark:text-white">
+                    ⛽ {detalleInsp.fuelLevel || "N/A"} • {detalleInsp.mileage || "S/N"}
+                  </strong>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase text-zinc-500 mb-2">Puntos Evaluados</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(detalleInsp.checklist || {}).map(([key, val]) => (
+                    <div
+                      key={key}
+                      className="flex items-center justify-between px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800 text-xs"
+                    >
+                      <span className="capitalize font-medium text-zinc-700 dark:text-zinc-300">
+                        {key}
+                      </span>
+                      <span
+                        className={`font-bold px-2 py-0.5 rounded-md ${
+                          val === "OK"
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
+                            : val === "Dañado"
+                            ? "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300"
+                            : "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
+                        }`}
+                      >
+                        {val}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {detalleInsp.notes && (
+                <div className="text-xs text-zinc-600 dark:text-zinc-300 bg-amber-50/60 dark:bg-amber-950/20 p-3 rounded-xl">
+                  <strong>Observaciones:</strong> {detalleInsp.notes}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDetalleInsp(null)}
+                  className="px-5 py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-800 text-white text-xs font-bold cursor-pointer"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
           </div>
         )}

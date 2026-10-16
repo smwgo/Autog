@@ -222,6 +222,30 @@ export async function POST(request: Request) {
 
       const rows: any = await prisma.$queryRawUnsafe('SELECT * FROM "WorkshopOrder" WHERE id = $1', id);
 
+      // Sincronizar tareas automáticamente en WorkshopTask en Neon
+      try {
+        const srvList = Array.isArray(services) && services.length > 0 ? services : ["Revisión General"];
+        for (const srvName of srvList) {
+          const tId = "tsk_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+          const tNum = `TSK-${Math.floor(100 + Math.random() * 900)}`;
+          await prisma.$executeRawUnsafe(
+            `INSERT INTO "WorkshopTask" ("id", "taskNumber", "title", "vehicle", "plate", "orderNumber", "mechanic", "status", "priority", "timeEst", "notes", "createdAt", "updatedAt")
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', 'Media', $8, $9, NOW(), NOW())`,
+            tId,
+            tNum,
+            String(srvName),
+            `${vehicle.trim()} (${plate.trim().toUpperCase()})`,
+            plate.trim().toUpperCase(),
+            orderNumber,
+            mechanic || "Carlos Rodríguez",
+            estimatedOut || "1h 00m",
+            notes ? notes.trim() : null
+          );
+        }
+      } catch (e) {
+        console.warn("Aviso al crear tareas automáticas:", e);
+      }
+
       return NextResponse.json({
         success: true,
         order: rows?.[0],
@@ -265,6 +289,45 @@ export async function PUT(request: Request) {
         mechanic || null,
         notes || null
       );
+
+      // Si pasa a Listo para Entregar, registrar automáticamente en WorkshopHistory si no existe
+      if (status && status.toLowerCase().includes("listo")) {
+        try {
+          const ordRows: any = await prisma.$queryRawUnsafe(
+            'SELECT * FROM "WorkshopOrder" WHERE id = $1 OR "orderNumber" = $1 LIMIT 1',
+            id
+          );
+          const ord = ordRows?.[0];
+          if (ord) {
+            const existingHist: any = await prisma.$queryRawUnsafe(
+              'SELECT "id" FROM "WorkshopHistory" WHERE "orderNumber" = $1 LIMIT 1',
+              ord.orderNumber
+            );
+            if (!existingHist || existingHist.length === 0) {
+              const hId = "hst_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+              const srvCode = `SRV-${Math.floor(1000 + Math.random() * 9000)}`;
+              const todayStr = new Date().toISOString().split("T")[0];
+              await prisma.$executeRawUnsafe(
+                `INSERT INTO "WorkshopHistory" ("id", "serviceCode", "date", "vehicle", "plate", "client", "servicesJson", "cost", "mechanic", "mileage", "notes", "orderNumber", "createdAt", "updatedAt")
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'Reciente', $10, $11, NOW(), NOW())`,
+                hId,
+                srvCode,
+                todayStr,
+                ord.vehicle,
+                ord.plate,
+                ord.client,
+                ord.servicesJson || '["Revisión General"]',
+                Number(ord.totalCost || 0),
+                ord.mechanic || "Carlos Rodríguez",
+                ord.notes || "Orden completada en taller.",
+                ord.orderNumber
+              );
+            }
+          }
+        } catch (e) {
+          console.warn("Aviso al sincronizar orden con historial:", e);
+        }
+      }
 
       return NextResponse.json({
         success: true,
