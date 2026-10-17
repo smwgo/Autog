@@ -30,3 +30,35 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@keyframes cardShineAuto {
+  0% {
+    transform: translateX(-160%);
+  }
+  30% {
+    transform: translateX(180%);
+  }
+  100% {
+    transform: translateX(180%);
+  }
+}
+
+@keyframes cornerGlowAuto {
+  0%, 100% {
+    opacity: 0.05;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.16;
+    transform: scale(1.15);
+  }
+}
+
+@media (max-width: 639px) {
+  .auto-shine-mobile {
+    animation: cardShineAuto 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  .auto-corner-mobile {
+    animation: cornerGlowAuto 5s ease-in-out infinite;
+  }
+}
