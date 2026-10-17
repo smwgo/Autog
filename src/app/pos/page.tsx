@@ -73,7 +73,7 @@ const modules = [
 
 export default function PosPanel() {
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-8 md:pb-0">
       <Header />
       <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
         <div className="mb-4 sm:mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -98,7 +98,7 @@ export default function PosPanel() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
           {modules.map((mod) => (
             <Link 
               key={mod.href} 
@@ -106,15 +106,23 @@ export default function PosPanel() {
               className="group block bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-zinc-200 dark:border-zinc-800 hover:border-emerald-500 dark:hover:border-emerald-500 transition-all hover:shadow-lg active:scale-[0.98] overflow-hidden relative"
             >
               <div className={`absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 ${mod.color} opacity-5 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110`}></div>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4">
-                <div className={`w-11 h-11 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl ${mod.color} bg-opacity-10 dark:bg-opacity-20 flex items-center justify-center text-xl sm:text-2xl flex-shrink-0 group-hover:scale-105 transition-transform`}>
-                  {mod.icon}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
+                  <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl ${mod.color} bg-opacity-10 dark:bg-opacity-20 flex items-center justify-center text-xl sm:text-2xl flex-shrink-0 group-hover:scale-105 transition-transform`}>
+                    {mod.icon}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-base sm:text-xl font-bold text-zinc-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate">
+                      {mod.title}
+                    </h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
+                      {mod.subtitle}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <h3 className="text-base sm:text-xl font-bold text-zinc-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate">
-                    {mod.title}
-                  </h3>
-                </div>
+                <svg className="w-4 h-4 text-zinc-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                </svg>
               </div>
             </Link>
           ))}
