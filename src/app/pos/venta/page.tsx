@@ -81,6 +81,11 @@ export default function NuevaVentaPage() {
   const [descuentoValor, setDescuentoValor] = useState<number>(0);
   const [mostrarModalDescuento, setMostrarModalDescuento] = useState(false);
 
+  // IVA configurable
+  const [ivaPorcentaje, setIvaPorcentaje] = useState<number>(16);
+  const [mostrarModalIva, setMostrarModalIva] = useState(false);
+  const [ivaTempInput, setIvaTempInput] = useState("16");
+
   // 2. Calculadora de Cambio en Efectivo
   const [montoRecibido, setMontoRecibido] = useState<string>("");
 
@@ -769,7 +774,7 @@ export default function NuevaVentaPage() {
       : Math.min(descuentoValor || 0, subtotal);
 
   const subtotalConDescuento = Math.max(0, subtotal - descuentoCalculado);
-  const tax = subtotalConDescuento * 0.16; // 16% IVA
+  const tax = subtotalConDescuento * (ivaPorcentaje / 100);
   const total = subtotalConDescuento + tax;
 
   // Calculadora de cambio
@@ -788,7 +793,7 @@ export default function NuevaVentaPage() {
         customerName: clienteSeleccionado?.name || "Consumidor Final",
         paymentMethod: metodoPago,
         discount: descuentoCalculado,
-        taxPercent: 0.16,
+        taxPercent: ivaPorcentaje / 100,
         items: cart.map((i) => ({
           productId: i.product.id,
           code: i.product.code,
@@ -834,6 +839,7 @@ export default function NuevaVentaPage() {
         subtotal,
         descuentoCalculado,
         tax,
+        ivaPorcentaje,
         montoRecibido: metodoPago === "Efectivo" && montoRecibidoNum > 0 ? montoRecibidoNum : null,
         cambio: metodoPago === "Efectivo" && montoRecibidoNum > 0 ? cambio : null,
         cartSnap: [...cart],
@@ -1121,14 +1127,14 @@ export default function NuevaVentaPage() {
           </div>
         </div>
 
-        {/* Panel Derecho: Carrito / Ticket */}
-        <div className={`${vistaMovil === "catalogo" ? "hidden md:flex" : "flex"} w-full md:w-[420px] lg:w-[460px] flex-shrink-0 flex-col bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden h-full`}>
+        {/* Panel Derecho: Carrito / Ticket - Fijo con la Página y Sin Scroll en Vacío */}
+        <div className={`${vistaMovil === "catalogo" ? "hidden md:flex" : "flex"} w-full md:w-[420px] lg:w-[450px] flex-shrink-0 flex-col bg-zinc-950 p-3 sm:p-3.5 gap-2.5 rounded-xl border border-zinc-800/80 shadow-2xl md:sticky md:top-4 md:self-start md:max-h-[calc(100vh-2rem)] transition-all`}>
           {/* Botón Volver al Catálogo en Móvil */}
-          <div className="md:hidden p-2.5 bg-zinc-100 dark:bg-zinc-800/80 border-b border-zinc-200 dark:border-zinc-700/60 flex items-center justify-between">
+          <div className="md:hidden p-2.5 rounded-lg bg-zinc-900/90 border border-zinc-800/80 flex items-center justify-between">
             <button
               type="button"
               onClick={() => setVistaMovil("catalogo")}
-              className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 active:scale-95 transition-all cursor-pointer"
+              className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 py-1 px-2.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 active:scale-95 transition-all cursor-pointer"
             >
               <span>&larr;</span>
               <span>Seguir agregando productos</span>
@@ -1138,61 +1144,57 @@ export default function NuevaVentaPage() {
             </span>
           </div>
 
-          {/* Cabecera del Cliente - Minimalista */}
-          <div className="px-4 py-3 bg-zinc-900 dark:bg-zinc-950 text-white border-b border-zinc-800 flex justify-between items-center">
+          {/* Cabecera del Cliente - Tarjeta con Filos Suaves y Texto Normal */}
+          <div className="p-3 sm:p-3.5 rounded-xl bg-zinc-900/90 border border-zinc-800/70 shadow-sm flex items-center justify-between">
             <button
               type="button"
               onClick={() => setMostrarModalClientes(true)}
-              className="group flex items-center gap-2.5 text-left p-1 -ml-1 rounded-lg hover:bg-zinc-800/80 transition-all cursor-pointer select-none"
+              className="flex items-center gap-3 text-left group cursor-pointer select-none"
               title="Cambiar o seleccionar cliente"
             >
-              <div className="w-8 h-8 rounded-lg bg-zinc-800 group-hover:bg-emerald-500/20 text-zinc-400 group-hover:text-emerald-400 border border-zinc-700/60 group-hover:border-emerald-500/40 flex items-center justify-center transition-all">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
                 </svg>
               </div>
               <div className="flex flex-col">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 group-hover:text-zinc-300">
+                <span className="text-[11px] font-normal text-zinc-400">
                   Cliente
                 </span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-semibold text-emerald-400 group-hover:text-emerald-300 truncate max-w-[190px]">
-                    {clienteSeleccionado ? clienteSeleccionado.name : "Consumidor Final"}
-                  </span>
-                  <svg className="w-3.5 h-3.5 text-zinc-500 group-hover:text-emerald-400 group-hover:translate-y-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                <span className="text-sm font-normal text-zinc-200 group-hover:text-emerald-400 transition-colors flex items-center gap-1.5 truncate max-w-[190px]">
+                  {clienteSeleccionado ? clienteSeleccionado.name : "Consumidor Final"}
+                  <svg className="w-3.5 h-3.5 text-zinc-500 group-hover:text-emerald-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19 9l-7 7-7-7" />
                   </svg>
-                </div>
+                </span>
               </div>
             </button>
 
-            {/* Acciones de Cabecera: Vaciar */}
-            <div className="flex items-center gap-1">
-              {cart.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    limpiarCarrito();
-                    if (solicitudActiva) {
-                      sessionStorage.removeItem("pos_despacho_solicitud");
-                      setSolicitudActiva(null);
-                    }
-                  }}
-                  className="text-xs text-zinc-400 hover:text-rose-400 px-2 py-1 rounded-md hover:bg-rose-500/10 transition-colors"
-                  title="Vaciar orden"
-                >
-                  Vaciar
-                </button>
-              )}
-            </div>
+            {cart.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  limpiarCarrito();
+                  if (solicitudActiva) {
+                    sessionStorage.removeItem("pos_despacho_solicitud");
+                    setSolicitudActiva(null);
+                  }
+                }}
+                className="text-xs font-normal text-zinc-400 hover:text-rose-400 px-2.5 py-1 rounded-md bg-zinc-800/60 hover:bg-rose-500/10 border border-zinc-700/40 hover:border-rose-500/20 transition-all cursor-pointer"
+                title="Vaciar orden"
+              >
+                Vaciar
+              </button>
+            )}
           </div>
 
           {/* Banner de Pedido en Despacho: Origen Landing, Tienda, Taller */}
           {solicitudActiva && (
-            <div className="bg-zinc-950/70 border-b border-zinc-800 px-4 py-2 flex items-center justify-between text-xs backdrop-blur-sm">
+            <div className="p-2.5 rounded-lg bg-zinc-900/90 border border-zinc-800/70 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 <span className="text-sm">📥</span>
-                <span className="font-mono font-bold text-white text-xs">
+                <span className="font-normal text-white text-xs">
                   {solicitudActiva.requestNumber}
                 </span>
                 {renderOrigenBadge(solicitudActiva.type)}
@@ -1203,134 +1205,186 @@ export default function NuevaVentaPage() {
                   sessionStorage.removeItem("pos_despacho_solicitud");
                   setSolicitudActiva(null);
                 }}
-                className="text-xs text-zinc-400 hover:text-rose-400 px-2 py-0.5 rounded-md hover:bg-rose-500/10 transition-colors cursor-pointer"
+                className="text-xs text-zinc-500 hover:text-rose-400 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
                 title="Desvincular"
               >
-                Cerrar
+                ✕
               </button>
             </div>
           )}
 
-          {/* Lista de Items en Carrito */}
-          <div className="flex-grow overflow-y-auto p-3">
+          {/* Lista de Items en Carrito - Sin Scroll Interno en Vacío */}
+          <div className={`flex-grow space-y-2 min-h-0 ${
+            cart.length === 0
+              ? "overflow-hidden flex flex-col justify-center"
+              : "overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+          }`}>
             {cart.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-zinc-600 p-8 text-center">
-                <span className="text-5xl opacity-30">🛒</span>
-                <p className="text-sm mt-3 text-zinc-500">Ticket vacío</p>
+              <div className="w-full py-8 px-4 flex flex-col items-center justify-center text-center select-none rounded-xl bg-zinc-900/40 border border-dashed border-zinc-800/60">
+                <div className="w-12 h-12 rounded-lg bg-zinc-900 border border-zinc-800/70 flex items-center justify-center text-zinc-500 mb-2.5 shadow-inner">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                </div>
+                <p className="text-xs font-normal text-zinc-400">Ticket sin productos</p>
                 <button
                   type="button"
                   onClick={() => setVistaMovil("catalogo")}
-                  className="mt-3 md:hidden text-xs font-bold text-emerald-600 bg-emerald-500/10 px-3 py-1.5 rounded-lg"
+                  className="mt-3 md:hidden text-xs font-normal text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-3.5 py-1.5 rounded-lg transition-all"
                 >
-                  Agregar productos desde el catálogo
+                  Ir al catálogo
                 </button>
               </div>
             ) : (
-              <ul className="space-y-2">
-                {cart.map((item) => {
-                  const priceNum =
-                    typeof item.product.price === "number"
-                      ? item.product.price
-                      : parseFloat(item.product.price) || 0;
+              cart.map((item) => {
+                const priceNum =
+                  typeof item.product.price === "number"
+                    ? item.product.price
+                    : parseFloat(item.product.price) || 0;
 
-                  return (
-                    <li
-                      key={item.product.id}
-                      className="flex gap-3 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg border border-zinc-100 dark:border-zinc-800 group"
-                    >
-                      <div className="w-12 h-12 bg-white dark:bg-zinc-800 rounded-lg flex items-center justify-center text-2xl flex-shrink-0 border border-zinc-100 dark:border-zinc-700">
-                        {getProductEmoji(item.product.name, item.product.category)}
+                return (
+                  <div
+                    key={item.product.id}
+                    className="flex items-center gap-3 p-3 bg-zinc-900/90 hover:bg-zinc-900 border border-zinc-800/60 hover:border-zinc-700/70 rounded-xl transition-all shadow-sm group"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-zinc-800/80 flex items-center justify-center text-xl shrink-0">
+                      {getProductEmoji(item.product.name, item.product.category)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xs font-normal text-zinc-200 truncate">
+                        {item.product.name}
+                      </h4>
+                      <p className="text-[11px] text-zinc-500 mt-0.5 font-normal">
+                        ${priceNum.toFixed(2)} c/u
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* Stepper Sutil */}
+                      <div className="flex items-center bg-zinc-800/90 rounded-lg p-0.5 border border-zinc-700/40">
+                        <button
+                          type="button"
+                          onClick={() => updateQty(item.product.id, -1)}
+                          className="w-6 h-6 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-700/80 flex items-center justify-center text-xs font-normal active:scale-90 transition-all cursor-pointer"
+                        >
+                          −
+                        </button>
+                        <span className="w-6 text-center text-xs font-normal text-zinc-200">{item.qty}</span>
+                        <button
+                          type="button"
+                          onClick={() => updateQty(item.product.id, 1)}
+                          className="w-6 h-6 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-700/80 flex items-center justify-center text-xs font-normal active:scale-90 transition-all cursor-pointer"
+                        >
+                          +
+                        </button>
                       </div>
-                      <div className="flex-grow">
-                        <div className="flex justify-between items-start mb-1">
-                          <h4 className="font-normal text-xs text-zinc-900 dark:text-zinc-200 leading-snug pr-2">
-                            {item.product.name}
-                          </h4>
-                          <button
-                            onClick={() => removeFromCart(item.product.id)}
-                            className="text-zinc-400 hover:text-rose-500 p-2 sm:p-0.5 active:scale-95 transition-all cursor-pointer text-sm"
-                            title="Eliminar del ticket"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                        <div className="flex justify-between items-end">
-                          <div className="flex items-center gap-2 sm:gap-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-1">
-                            <button
-                              onClick={() => updateQty(item.product.id, -1)}
-                              className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-emerald-500 rounded-lg bg-zinc-100 dark:bg-zinc-800 active:scale-95 cursor-pointer font-black text-base sm:text-sm"
-                              title="Restar cantidad"
-                            >
-                              -
-                            </button>
-                            <span className="text-sm sm:text-xs font-bold w-6 text-center">{item.qty}</span>
-                            <button
-                              onClick={() => updateQty(item.product.id, 1)}
-                              className="w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-emerald-500 rounded-lg bg-zinc-100 dark:bg-zinc-800 active:scale-95 cursor-pointer font-black text-base sm:text-sm"
-                              title="Aumentar cantidad"
-                            >
-                              +
-                            </button>
-                          </div>
-                          <p className="font-bold text-zinc-900 dark:text-white">
-                            ${(priceNum * item.qty).toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+
+                      {/* Subtotal del Item */}
+                      <span className="text-xs font-normal text-zinc-100 w-14 text-right">
+                        ${(priceNum * item.qty).toFixed(2)}
+                      </span>
+
+                      {/* Quitar */}
+                      <button
+                        type="button"
+                        onClick={() => removeFromCart(item.product.id)}
+                        className="text-zinc-600 hover:text-rose-400 p-1 transition-colors cursor-pointer"
+                        title="Eliminar"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
 
-          {/* Resumen y Botón de Cobro */}
-          <div className="p-4 sm:p-5 bg-zinc-50 dark:bg-zinc-900/80 border-t border-zinc-200 dark:border-zinc-800 mt-auto">
-            <div className="space-y-2 mb-4 text-sm">
-              <div className="flex justify-between text-zinc-500 dark:text-zinc-400">
-                <span>Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
+          {/* Resumen y Botón de Cobro - Tarjeta con Filos Suaves y Texto Normal */}
+          <div className="p-4 sm:p-4.5 rounded-xl bg-zinc-900/95 border border-zinc-800/80 shadow-xl flex flex-col gap-3 mt-auto">
+            {/* Desglose */}
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between items-center text-zinc-400">
+                <span className="font-normal">Subtotal</span>
+                <span className="text-zinc-300 font-normal">${subtotal.toFixed(2)}</span>
               </div>
 
-              {/* Botón de Descuento editable */}
-              <div className="flex justify-between items-center text-zinc-600 dark:text-zinc-400">
-                <button
-                  type="button"
-                  onClick={() => setMostrarModalDescuento(true)}
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-semibold"
-                >
-                  <span>🏷️</span>
-                  <span>
-                    Descuento {descuentoValor > 0 ? `(${descuentoTipo === "porcentaje" ? `${descuentoValor}%` : `$${descuentoValor}`})` : ""}
-                  </span>
-                </button>
-                <span className={descuentoCalculado > 0 ? "font-bold text-rose-500" : ""}>
+              {/* Fila Descuento */}
+              <div className="flex justify-between items-center text-zinc-400">
+                <div className="flex items-center gap-2">
+                  <span className="font-normal">Descuento</span>
+                  <button
+                    type="button"
+                    onClick={() => setMostrarModalDescuento(true)}
+                    className="px-2 py-0.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[10px] font-normal transition-colors cursor-pointer"
+                  >
+                    {descuentoValor > 0 ? (descuentoTipo === "porcentaje" ? `${descuentoValor}%` : `$${descuentoValor}`) : "+ Agregar"}
+                  </button>
+                </div>
+                <span className={`font-normal ${descuentoCalculado > 0 ? "text-rose-400" : "text-zinc-500"}`}>
                   -${descuentoCalculado.toFixed(2)}
                 </span>
               </div>
 
-              <div className="flex justify-between text-zinc-500 dark:text-zinc-400">
-                <span>IVA (16%)</span>
-                <span>${tax.toFixed(2)}</span>
-              </div>
-
-              <div className="border-t border-zinc-200 dark:border-zinc-700 pt-3 flex justify-between items-center mt-2">
-                <span className="text-base font-bold text-zinc-900 dark:text-white">Total a Pagar</span>
-                <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
-                  ${total.toFixed(2)}
-                </span>
+              {/* Fila IVA con selector de porcentaje */}
+              <div className="flex justify-between items-center text-zinc-400">
+                <div className="flex items-center gap-2">
+                  <span className="font-normal">IVA</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIvaTempInput(ivaPorcentaje.toString());
+                      setMostrarModalIva(true);
+                    }}
+                    className="px-2 py-0.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-[10px] font-normal transition-colors flex items-center gap-1 cursor-pointer"
+                    title="Cambiar porcentaje de IVA"
+                  >
+                    <span>{ivaPorcentaje}%</span>
+                    <svg className="w-2.5 h-2.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+                <span className="text-zinc-300 font-normal">${tax.toFixed(2)}</span>
               </div>
             </div>
 
+            {/* Separador Sutil */}
+            <div className="h-px bg-zinc-800/70 w-full" />
+
+            {/* Fila Total a Pagar - Texto Normal */}
+            <div className="flex justify-between items-baseline">
+              <div>
+                <span className="text-xs font-normal text-zinc-300">
+                  Total a pagar
+                </span>
+                <p className="text-[10px] text-zinc-500 font-normal">IVA ({ivaPorcentaje}%) incluido</p>
+              </div>
+              <span className="text-2xl sm:text-3xl font-medium text-emerald-400 tracking-tight">
+                ${total.toFixed(2)}
+              </span>
+            </div>
+
+            {/* Botón Cobrar - Texto Normal */}
             <button
+              type="button"
               onClick={() => {
                 setMontoRecibido("");
                 setMostrarModalPago(true);
               }}
               disabled={cart.length === 0}
-              className="w-full h-12 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white text-base font-bold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed shadow-md shadow-emerald-950/20"
+              className={`w-full h-12 rounded-lg font-medium text-sm tracking-normal transition-all flex items-center justify-center gap-2 ${
+                cart.length > 0
+                  ? "bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-md shadow-emerald-500/20 active:scale-[0.98] cursor-pointer"
+                  : "bg-zinc-800/80 text-zinc-500 border border-zinc-700/40 cursor-not-allowed"
+              }`}
             >
-              <span className="text-base">💳</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                <rect x="2" y="5" width="20" height="14" rx="3" />
+                <line x1="2" y1="10" x2="22" y2="10" />
+              </svg>
               <span>Cobrar</span>
             </button>
           </div>
@@ -1662,6 +1716,67 @@ export default function NuevaVentaPage() {
         </div>
       )}
 
+      {/* MODAL: Configurar IVA - Moderno y Minimalista */}
+      {mostrarModalIva && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-md animate-fade-in">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-t-3xl sm:rounded-2xl w-full max-w-sm p-5 shadow-2xl relative backdrop-blur-xl">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-sm font-bold">
+                  %
+                </div>
+                <h3 className="text-base font-bold text-white">Configurar IVA</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMostrarModalIva(false)}
+                className="w-8 h-8 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center text-xs transition-all cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Input de Porcentaje */}
+            <div className="mb-5">
+              <label className="block text-xs font-normal text-zinc-400 mb-1.5">
+                Porcentaje de IVA (%)
+              </label>
+              <div className="relative flex items-center">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="any"
+                  placeholder="16"
+                  value={ivaTempInput}
+                  onChange={(e) => {
+                    setIvaTempInput(e.target.value);
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val) && val >= 0) {
+                      setIvaPorcentaje(val);
+                    }
+                  }}
+                  className="w-full h-11 pl-4 pr-10 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm font-normal text-white placeholder-zinc-500 outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+                  autoFocus
+                />
+                <span className="absolute right-3.5 text-zinc-400 font-normal text-sm">%</span>
+              </div>
+            </div>
+
+            {/* Botones de acción */}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setMostrarModalIva(false)}
+                className="w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white text-xs font-medium transition-all cursor-pointer"
+              >
+                Aplicar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL 3: Ventas en Espera (Pausa) */}
       {mostrarModalEspera && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
@@ -1863,7 +1978,7 @@ export default function NuevaVentaPage() {
             </div>
 
             <div className="mb-4">
-              <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300 mb-2">
+              <label className="block text-xs font-normal text-zinc-600 dark:text-zinc-400 mb-2">
                 Método de Pago
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -1872,7 +1987,7 @@ export default function NuevaVentaPage() {
                     key={m}
                     type="button"
                     onClick={() => setMetodoPago(m)}
-                    className={`h-11 py-2 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    className={`h-11 py-2 px-2 rounded-xl text-xs font-normal border transition-all cursor-pointer ${
                       metodoPago === m
                         ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shadow-sm"
                         : "border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
