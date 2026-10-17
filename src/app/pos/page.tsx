@@ -98,31 +98,28 @@ export default function PosPanel() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {modules.map((mod) => (
             <Link 
               key={mod.href} 
               href={mod.href}
-              className="group block bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-zinc-200 dark:border-zinc-800 hover:border-emerald-500 dark:hover:border-emerald-500 transition-all hover:shadow-lg active:scale-[0.98] overflow-hidden relative"
+              className="group block bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-6 sm:p-7 min-h-[96px] sm:min-h-[110px] border border-zinc-200 dark:border-zinc-800 hover:border-emerald-500 dark:hover:border-emerald-500 transition-all hover:shadow-xl active:scale-[0.98] overflow-hidden relative flex flex-col justify-center"
             >
-              <div className={`absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 ${mod.color} opacity-5 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110`}></div>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
-                  <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl ${mod.color} bg-opacity-10 dark:bg-opacity-20 flex items-center justify-center text-xl sm:text-2xl flex-shrink-0 group-hover:scale-105 transition-transform`}>
+              <div className={`absolute top-0 right-0 w-28 sm:w-36 h-28 sm:h-36 ${mod.color} opacity-5 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110 pointer-events-none`}></div>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4 sm:gap-5 min-w-0">
+                  <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl ${mod.color} flex items-center justify-center text-2xl sm:text-3xl flex-shrink-0 group-hover:scale-110 shadow-sm transition-transform`}>
                     {mod.icon}
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="text-base sm:text-xl font-bold text-zinc-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate">
-                      {mod.title}
-                    </h3>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
-                      {mod.subtitle}
-                    </p>
-                  </div>
+                  <h3 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate">
+                    {mod.title}
+                  </h3>
                 </div>
-                <svg className="w-4 h-4 text-zinc-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                </svg>
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 group-hover:text-emerald-500 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-500/10 transition-colors shrink-0">
+                  <svg className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </div>
             </Link>
           ))}
