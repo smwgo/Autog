@@ -394,7 +394,7 @@ export default function TiendaPage() {
       {/* Botón Flotante del Carrito (Mobile y Desktop) */}
       <button
         onClick={() => setIsCartOpen(true)}
-        className="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-40 bg-zinc-900 dark:bg-blue-600 hover:bg-zinc-800 dark:hover:bg-blue-700 text-white p-3.5 sm:px-5 sm:py-3.5 rounded-full shadow-2xl flex items-center gap-3 transition-transform hover:scale-105 cursor-pointer border border-white/10 min-h-[48px] min-w-[48px]"
+        className="fixed bottom-6 right-4 sm:right-6 z-40 bg-zinc-900 dark:bg-blue-600 hover:bg-zinc-800 dark:hover:bg-blue-700 text-white p-3.5 sm:px-5 sm:py-3.5 rounded-full shadow-2xl flex items-center gap-3 transition-transform hover:scale-105 cursor-pointer border border-white/10 min-h-[48px] min-w-[48px]"
         aria-label="Abrir Carrito de Compras"
       >
         <div className="relative">

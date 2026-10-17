@@ -2574,7 +2574,7 @@ export default function NuevaVentaPage() {
 
       {/* Barra flotante de cobro rápido en móvil */}
       {vistaMovil === "catalogo" && cart.length > 0 && (
-        <div className="md:hidden fixed bottom-16 left-3 right-3 z-30 animate-in slide-in-from-bottom duration-200">
+        <div className="md:hidden fixed bottom-4 left-3 right-3 z-30 animate-in slide-in-from-bottom duration-200">
           <button
             type="button"
             onClick={() => setVistaMovil("carrito")}
