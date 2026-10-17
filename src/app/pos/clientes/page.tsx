@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 
 interface Vehicle {
   id: string;
@@ -207,56 +208,58 @@ export default function GestionClientes() {
           </div>
         </div>
 
-        {/* Resumen Cards (2x2 en móvil para aprovechar la pantalla) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-          <div className="bg-white dark:bg-zinc-900 p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 text-lg sm:text-xl flex-shrink-0">
-              👥
+        {/* Resumen Cards Desplegable en Móvil */}
+        <CollapsibleMetrics title="Métricas de Clientes">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+            <div className="bg-white dark:bg-zinc-900 p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 text-lg sm:text-xl flex-shrink-0">
+                👥
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                  {cargando && stats.totalClientes === 0 ? "..." : stats.totalClientes}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Clientes</h3>
+              </div>
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                {cargando && stats.totalClientes === 0 ? "..." : stats.totalClientes}
-              </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Clientes</h3>
+            
+            <div className="bg-white dark:bg-zinc-900 p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 text-lg sm:text-xl flex-shrink-0">
+                🚗
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                  {cargando && stats.totalVehiculos === 0 ? "..." : stats.totalVehiculos}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Vehículos</h3>
+              </div>
             </div>
-          </div>
-          
-          <div className="bg-white dark:bg-zinc-900 p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 text-lg sm:text-xl flex-shrink-0">
-              🚗
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                {cargando && stats.totalVehiculos === 0 ? "..." : stats.totalVehiculos}
-              </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Vehículos</h3>
-            </div>
-          </div>
 
-          <div className="bg-white dark:bg-zinc-900 p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-full bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 text-lg sm:text-xl flex-shrink-0">
-              ⭐
+            <div className="bg-white dark:bg-zinc-900 p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-full bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 text-lg sm:text-xl flex-shrink-0">
+                ⭐
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                  {cargando && stats.totalVip === 0 ? "..." : stats.totalVip}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">VIP</h3>
+              </div>
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                {cargando && stats.totalVip === 0 ? "..." : stats.totalVip}
-              </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">VIP</h3>
-            </div>
-          </div>
 
-          <div className="bg-white dark:bg-zinc-900 p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-full bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-600 text-lg sm:text-xl flex-shrink-0">
-              📅
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                {cargando && stats.totalNuevos === 0 ? "..." : stats.totalNuevos}
-              </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Nuevos</h3>
+            <div className="bg-white dark:bg-zinc-900 p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-full bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-600 text-lg sm:text-xl flex-shrink-0">
+                📅
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                  {cargando && stats.totalNuevos === 0 ? "..." : stats.totalNuevos}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Nuevos</h3>
+              </div>
             </div>
           </div>
-        </div>
+        </CollapsibleMetrics>
 
         {/* Mensaje de Error si ocurre */}
         {error && (

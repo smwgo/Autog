@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { OficinaMobileNav } from "@/components/OficinaMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { useEffect, useState } from "react";
 
 export default function ComprasProveedores() {
@@ -184,47 +185,52 @@ export default function ComprasProveedores() {
         </div>
 
         {/* Resumen Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 md:mb-8">
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 text-lg sm:text-xl flex-shrink-0">
-              🤝
+        <CollapsibleMetrics
+          title="Resumen de Abastecimiento"
+          subtitle={`${proveedores.length} proveedores • $${totalPayable.toFixed(2)} por pagar`}
+        >
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 md:mb-8">
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 text-lg sm:text-xl flex-shrink-0">
+                🤝
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold text-zinc-900 dark:text-white">{proveedores.length}</p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">Proveedores</h3>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-lg sm:text-2xl font-bold text-zinc-900 dark:text-white">{proveedores.length}</p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">Proveedores</h3>
+            
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-rose-200 dark:border-rose-900/50 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 text-lg sm:text-xl flex-shrink-0">
+                💵
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold text-rose-600 dark:text-rose-400 truncate">${totalPayable.toFixed(2)}</p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">Por Pagar</h3>
+              </div>
             </div>
-          </div>
-          
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-rose-200 dark:border-rose-900/50 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 text-lg sm:text-xl flex-shrink-0">
-              💵
-            </div>
-            <div className="min-w-0">
-              <p className="text-lg sm:text-2xl font-bold text-rose-600 dark:text-rose-400 truncate">${totalPayable.toFixed(2)}</p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">Por Pagar</h3>
-            </div>
-          </div>
 
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-amber-200 dark:border-amber-900/50 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 text-lg sm:text-xl flex-shrink-0">
-              ⏳
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-amber-200 dark:border-amber-900/50 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 text-lg sm:text-xl flex-shrink-0">
+                ⏳
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold text-amber-600 dark:text-amber-400">{transitOrders}</p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">En Tránsito</h3>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-lg sm:text-2xl font-bold text-amber-600 dark:text-amber-400">{transitOrders}</p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">En Tránsito</h3>
-            </div>
-          </div>
 
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 text-lg sm:text-xl flex-shrink-0">
-              📦
-            </div>
-            <div className="min-w-0">
-              <p className="text-lg sm:text-2xl font-bold text-zinc-900 dark:text-white truncate">${totalPurchases.toFixed(2)}</p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">Compras</h3>
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 text-lg sm:text-xl flex-shrink-0">
+                📦
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold text-zinc-900 dark:text-white truncate">${totalPurchases.toFixed(2)}</p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">Compras</h3>
+              </div>
             </div>
           </div>
-        </div>
+        </CollapsibleMetrics>
 
         {/* View Switcher & Filtros */}
         <div className="bg-white dark:bg-zinc-900 rounded-t-2xl sm:rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-3.5 sm:p-4 flex flex-col md:flex-row justify-between items-center gap-3">

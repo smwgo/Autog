@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { useEffect, useState } from "react";
 
 export default function DashboardGeneral() {
@@ -120,24 +121,29 @@ export default function DashboardGeneral() {
         </div>
 
         {/* KPIs Grid: 2x2 on mobile */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-          {kpis.map((kpi, i) => (
-            <div key={i} className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
-              <div className="flex justify-between items-start mb-2.5 sm:mb-4 gap-1">
-                <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-xl ${kpi.color}`}>
-                  {kpi.icon}
+        <CollapsibleMetrics
+          title="Métricas Principales de Gerencia"
+          subtitle={summary ? `${summary.facturacionTotal || "$0.00"} • ${summary.ordenesActivas || 0} órdenes activas` : undefined}
+        >
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+            {kpis.map((kpi, i) => (
+              <div key={i} className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+                <div className="flex justify-between items-start mb-2.5 sm:mb-4 gap-1">
+                  <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-xl ${kpi.color}`}>
+                    {kpi.icon}
+                  </div>
+                  <span className={`text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg ${kpi.isUp ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10' : 'text-red-600 bg-red-50 dark:bg-red-500/10'}`}>
+                    {kpi.trend}
+                  </span>
                 </div>
-                <span className={`text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg ${kpi.isUp ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10' : 'text-red-600 bg-red-50 dark:bg-red-500/10'}`}>
-                  {kpi.trend}
-                </span>
+                <div>
+                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 truncate">{kpi.label}</h3>
+                  <p className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white truncate">{loading ? "..." : kpi.value}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 truncate">{kpi.label}</h3>
-                <p className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white truncate">{loading ? "..." : kpi.value}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </CollapsibleMetrics>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Main Chart */}

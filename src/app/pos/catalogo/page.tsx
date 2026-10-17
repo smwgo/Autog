@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 
 interface Product {
   id: string;
@@ -267,60 +268,62 @@ export default function CatalogoPage() {
           </div>
         </div>
 
-        {/* Resumen Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          {/* Total Productos */}
-          <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-500 flex items-center justify-center text-xl shrink-0">
-              📦
+        {/* Resumen Cards Desplegable en Móvil */}
+        <CollapsibleMetrics title="Métricas de Inventario">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+            {/* Total Productos */}
+            <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-500 flex items-center justify-center text-xl shrink-0">
+                📦
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                  {cargando && productos.length === 0 ? "..." : productos.length}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Productos</h3>
+              </div>
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                {cargando && productos.length === 0 ? "..." : productos.length}
-              </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Productos</h3>
-            </div>
-          </div>
 
-          {/* En Stock */}
-          <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-500 flex items-center justify-center text-xl shrink-0">
-              🟢
+            {/* En Stock */}
+            <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-500 flex items-center justify-center text-xl shrink-0">
+                🟢
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                  {cargando ? "..." : enStockCount}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">En Stock</h3>
+              </div>
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                {cargando ? "..." : enStockCount}
-              </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">En Stock</h3>
-            </div>
-          </div>
 
-          {/* Bajo Stock */}
-          <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-500 flex items-center justify-center text-xl shrink-0">
-              ⚠️
+            {/* Bajo Stock */}
+            <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-500 flex items-center justify-center text-xl shrink-0">
+                ⚠️
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
+                  {cargando ? "..." : bajoStockCount}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Bajo Stock</h3>
+              </div>
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
-                {cargando ? "..." : bajoStockCount}
-              </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Bajo Stock</h3>
-            </div>
-          </div>
 
-          {/* Agotados */}
-          <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-500/15 border border-rose-500/25 text-rose-500 flex items-center justify-center text-xl shrink-0">
-              🛑
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-rose-600 dark:text-rose-400">
-                {cargando ? "..." : agotadosCount}
-              </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Agotados</h3>
+            {/* Agotados */}
+            <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-500/15 border border-rose-500/25 text-rose-500 flex items-center justify-center text-xl shrink-0">
+                🛑
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-rose-600 dark:text-rose-400">
+                  {cargando ? "..." : agotadosCount}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Agotados</h3>
+              </div>
             </div>
           </div>
-        </div>
+        </CollapsibleMetrics>
 
         {/* Mensaje de Error */}
         {error && (

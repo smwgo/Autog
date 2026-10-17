@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 
 interface Promotion {
   id: string;
@@ -171,47 +172,49 @@ export default function PromocionesPage() {
           </div>
         </div>
 
-        {/* Métricas / KPIs */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          {/* Promociones Activas */}
-          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-orange-500/15 border border-orange-500/25 text-orange-400 flex items-center justify-center text-xl shrink-0">
-              🔥
+        {/* Métricas / KPIs Desplegable en Móvil */}
+        <CollapsibleMetrics title="Métricas de Promociones">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+            {/* Promociones Activas */}
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-orange-500/15 border border-orange-500/25 text-orange-400 flex items-center justify-center text-xl shrink-0">
+                🔥
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400">
+                  {activasCount}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Activas</h3>
+              </div>
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400">
-                {activasCount}
-              </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Activas</h3>
-            </div>
-          </div>
 
-          {/* Canjes Realizados */}
-          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-400 flex items-center justify-center text-xl shrink-0">
-              🎟️
+            {/* Canjes Realizados */}
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-400 flex items-center justify-center text-xl shrink-0">
+                🎟️
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                  {totalUsos}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Canjes</h3>
+              </div>
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                {totalUsos}
-              </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Canjes</h3>
-            </div>
-          </div>
 
-          {/* Total Promociones */}
-          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-400 flex items-center justify-center text-xl shrink-0">
-              📊
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                {promociones.length}
-              </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Total Campañas</h3>
+            {/* Total Promociones */}
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-400 flex items-center justify-center text-xl shrink-0">
+                📊
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                  {promociones.length}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Total Campañas</h3>
+              </div>
             </div>
           </div>
-        </div>
+        </CollapsibleMetrics>
 
         {/* Filtros y Buscador */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">

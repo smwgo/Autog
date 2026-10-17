@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { useEffect, useState } from "react";
 
 export default function ReportesFinancieros() {
@@ -155,37 +156,42 @@ export default function ReportesFinancieros() {
         </div>
 
         {/* Resumen Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-6 mb-6 sm:mb-8">
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex sm:block items-center justify-between">
-            <div>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">Total Ingresos</h3>
-              <p className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400">${totalIncome.toFixed(2)}</p>
+        <CollapsibleMetrics
+          title="Resumen de Estados Financieros"
+          subtitle={`+$${totalIncome.toFixed(2)} ingresos • -$${totalExpense.toFixed(2)} egresos`}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-6 mb-6 sm:mb-8">
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex sm:block items-center justify-between">
+              <div>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">Total Ingresos</h3>
+                <p className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400">${totalIncome.toFixed(2)}</p>
+              </div>
+              <div className="sm:mt-4 text-[11px] sm:text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 inline-block px-2.5 py-1 rounded-lg">
+                En vivo (Neon)
+              </div>
             </div>
-            <div className="sm:mt-4 text-[11px] sm:text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 inline-block px-2.5 py-1 rounded-lg">
-              En vivo (Neon)
+            
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex sm:block items-center justify-between">
+              <div>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">Total Egresos</h3>
+                <p className="text-2xl sm:text-3xl font-bold text-rose-600 dark:text-rose-400">${totalExpense.toFixed(2)}</p>
+              </div>
+              <div className="sm:mt-4 text-[11px] sm:text-xs font-medium text-zinc-500 bg-zinc-100 dark:bg-zinc-800 inline-block px-2.5 py-1 rounded-lg">
+                Compras / Gastos
+              </div>
             </div>
-          </div>
-          
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex sm:block items-center justify-between">
-            <div>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">Total Egresos</h3>
-              <p className="text-2xl sm:text-3xl font-bold text-rose-600 dark:text-rose-400">${totalExpense.toFixed(2)}</p>
-            </div>
-            <div className="sm:mt-4 text-[11px] sm:text-xs font-medium text-zinc-500 bg-zinc-100 dark:bg-zinc-800 inline-block px-2.5 py-1 rounded-lg">
-              Compras / Gastos
-            </div>
-          </div>
 
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex sm:block items-center justify-between">
-            <div>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">Flujo Neto</h3>
-              <p className="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">${netFlow.toFixed(2)}</p>
-            </div>
-            <div className="sm:mt-4 text-[11px] sm:text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-500/10 inline-block px-2.5 py-1 rounded-lg">
-              {netFlow >= 0 ? "Margen Saludable" : "Déficit"}
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex sm:block items-center justify-between">
+              <div>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">Flujo Neto</h3>
+                <p className="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">${netFlow.toFixed(2)}</p>
+              </div>
+              <div className="sm:mt-4 text-[11px] sm:text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-500/10 inline-block px-2.5 py-1 rounded-lg">
+                {netFlow >= 0 ? "Margen Saludable" : "Déficit"}
+              </div>
             </div>
           </div>
-        </div>
+        </CollapsibleMetrics>
 
         {/* Filtros de Tabla */}
         <div className="bg-white dark:bg-zinc-900 rounded-t-2xl sm:rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-3.5 sm:p-4 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">

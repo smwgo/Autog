@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 
 interface CashSession {
   id: string;
@@ -294,60 +295,62 @@ export default function GestionCaja() {
           </span>
         </div>
 
-        {/* 4 Tarjetas Métricas Superiores */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-          {/* Abiertas */}
-          <div className="bg-zinc-900/80 border border-zinc-800/80 p-4 sm:p-5 rounded-3xl flex items-center gap-3.5 backdrop-blur-sm">
-            <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center text-xl shrink-0">
-              🟢
+        {/* 4 Tarjetas Métricas Superiores Desplegables en Móvil */}
+        <CollapsibleMetrics title="Métricas de Caja">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            {/* Abiertas */}
+            <div className="bg-zinc-900/80 border border-zinc-800/80 p-4 sm:p-5 rounded-3xl flex items-center gap-3.5 backdrop-blur-sm">
+              <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center text-xl shrink-0">
+                🟢
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-black text-white">
+                  {cargando ? "..." : stats.abiertas}
+                </p>
+                <h3 className="text-zinc-400 text-xs font-semibold">Abiertas</h3>
+              </div>
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-black text-white">
-                {cargando ? "..." : stats.abiertas}
-              </p>
-              <h3 className="text-zinc-400 text-xs font-semibold">Abiertas</h3>
-            </div>
-          </div>
 
-          {/* Fondo */}
-          <div className="bg-zinc-900/80 border border-zinc-800/80 p-4 sm:p-5 rounded-3xl flex items-center gap-3.5 backdrop-blur-sm">
-            <div className="w-11 h-11 rounded-2xl bg-sky-500/15 border border-sky-500/25 text-sky-400 flex items-center justify-center text-xl shrink-0">
-              🪙
+            {/* Fondo */}
+            <div className="bg-zinc-900/80 border border-zinc-800/80 p-4 sm:p-5 rounded-3xl flex items-center gap-3.5 backdrop-blur-sm">
+              <div className="w-11 h-11 rounded-2xl bg-sky-500/15 border border-sky-500/25 text-sky-400 flex items-center justify-center text-xl shrink-0">
+                🪙
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-black text-white">
+                  {cargando ? "..." : `$${stats.fondoTotal.toFixed(2)}`}
+                </p>
+                <h3 className="text-zinc-400 text-xs font-semibold">Fondo</h3>
+              </div>
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-black text-white">
-                {cargando ? "..." : `$${stats.fondoTotal.toFixed(2)}`}
-              </p>
-              <h3 className="text-zinc-400 text-xs font-semibold">Fondo</h3>
-            </div>
-          </div>
 
-          {/* Ventas */}
-          <div className="bg-zinc-900/80 border border-zinc-800/80 p-4 sm:p-5 rounded-3xl flex items-center gap-3.5 backdrop-blur-sm">
-            <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-400 flex items-center justify-center text-xl shrink-0">
-              🛒
+            {/* Ventas */}
+            <div className="bg-zinc-900/80 border border-zinc-800/80 p-4 sm:p-5 rounded-3xl flex items-center gap-3.5 backdrop-blur-sm">
+              <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-400 flex items-center justify-center text-xl shrink-0">
+                🛒
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-black text-white">
+                  {cargando ? "..." : `$${stats.ventasTotal.toFixed(2)}`}
+                </p>
+                <h3 className="text-zinc-400 text-xs font-semibold">Ventas</h3>
+              </div>
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-black text-white">
-                {cargando ? "..." : `$${stats.ventasTotal.toFixed(2)}`}
-              </p>
-              <h3 className="text-zinc-400 text-xs font-semibold">Ventas</h3>
-            </div>
-          </div>
 
-          {/* Cerradas */}
-          <div className="bg-zinc-900/80 border border-zinc-800/80 p-4 sm:p-5 rounded-3xl flex items-center gap-3.5 backdrop-blur-sm">
-            <div className="w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-400 flex items-center justify-center text-xl shrink-0">
-              🔒
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-black text-white">
-                {cargando ? "..." : stats.cerradas}
-              </p>
-              <h3 className="text-zinc-400 text-xs font-semibold">Cerradas</h3>
+            {/* Cerradas */}
+            <div className="bg-zinc-900/80 border border-zinc-800/80 p-4 sm:p-5 rounded-3xl flex items-center gap-3.5 backdrop-blur-sm">
+              <div className="w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-400 flex items-center justify-center text-xl shrink-0">
+                🔒
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-black text-white">
+                  {cargando ? "..." : stats.cerradas}
+                </p>
+                <h3 className="text-zinc-400 text-xs font-semibold">Cerradas</h3>
+              </div>
             </div>
           </div>
-        </div>
+        </CollapsibleMetrics>
 
         {/* Mensaje de Error si ocurre */}
         {error && (

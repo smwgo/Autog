@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { OficinaMobileNav } from "@/components/OficinaMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { useEffect, useState } from "react";
 
 export default function CajaLiquidaciones() {
@@ -149,60 +150,65 @@ export default function CajaLiquidaciones() {
         </div>
 
         {/* Resumen por Método de Pago */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 md:mb-8">
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex flex-col justify-between">
-            <div className="flex justify-between items-start mb-2">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 text-base sm:text-lg flex-shrink-0">
-                💵
+        <CollapsibleMetrics
+          title="Resumen de Caja y Liquidaciones"
+          subtitle={`$${cashBalance.toFixed(2)} efectivo • $${totalIncome.toFixed(2)} total`}
+        >
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 md:mb-8">
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex flex-col justify-between">
+              <div className="flex justify-between items-start mb-2">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 text-base sm:text-lg flex-shrink-0">
+                  💵
+                </div>
+                <span className="text-[11px] font-bold text-zinc-500">Saldo</span>
               </div>
-              <span className="text-[11px] font-bold text-zinc-500">Saldo</span>
-            </div>
-            <div>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 truncate">Efectivo en Caja</h3>
-              <p className="text-xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400 truncate">${cashBalance.toFixed(2)}</p>
-            </div>
-            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500 opacity-5 rounded-bl-full -mr-4 -mt-4"></div>
-          </div>
-          
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex flex-col justify-between">
-            <div className="flex justify-between items-start mb-2">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 text-base sm:text-lg flex-shrink-0">
-                💳
+              <div>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 truncate">Efectivo en Caja</h3>
+                <p className="text-xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400 truncate">${cashBalance.toFixed(2)}</p>
               </div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500 opacity-5 rounded-bl-full -mr-4 -mt-4"></div>
             </div>
-            <div>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 truncate">Tarjetas (POS)</h3>
-              <p className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white truncate">${cardTotal.toFixed(2)}</p>
+            
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex flex-col justify-between">
+              <div className="flex justify-between items-start mb-2">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 text-base sm:text-lg flex-shrink-0">
+                  💳
+                </div>
+              </div>
+              <div>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 truncate">Tarjetas (POS)</h3>
+                <p className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white truncate">${cardTotal.toFixed(2)}</p>
+              </div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500 opacity-5 rounded-bl-full -mr-4 -mt-4"></div>
             </div>
-            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500 opacity-5 rounded-bl-full -mr-4 -mt-4"></div>
-          </div>
 
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex flex-col justify-between">
-            <div className="flex justify-between items-start mb-2">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-600 text-base sm:text-lg flex-shrink-0">
-                🏦
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex flex-col justify-between">
+              <div className="flex justify-between items-start mb-2">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-600 text-base sm:text-lg flex-shrink-0">
+                  🏦
+                </div>
               </div>
+              <div>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 truncate">Transferencias</h3>
+                <p className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white truncate">${transferTotal.toFixed(2)}</p>
+              </div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500 opacity-5 rounded-bl-full -mr-4 -mt-4"></div>
             </div>
-            <div>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 truncate">Transferencias</h3>
-              <p className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white truncate">${transferTotal.toFixed(2)}</p>
-            </div>
-            <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500 opacity-5 rounded-bl-full -mr-4 -mt-4"></div>
-          </div>
 
-          <div className="bg-teal-600 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm relative overflow-hidden flex flex-col justify-between text-white border border-teal-500">
-            <div className="flex justify-between items-start mb-2 relative z-10">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center text-base sm:text-lg flex-shrink-0">
-                📊
+            <div className="bg-teal-600 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm relative overflow-hidden flex flex-col justify-between text-white border border-teal-500">
+              <div className="flex justify-between items-start mb-2 relative z-10">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center text-base sm:text-lg flex-shrink-0">
+                  📊
+                </div>
               </div>
+              <div className="relative z-10">
+                <h3 className="text-teal-100 text-xs sm:text-sm font-medium mb-0.5 truncate">Total Ingresos</h3>
+                <p className="text-xl sm:text-3xl font-bold truncate">${totalIncome.toFixed(2)}</p>
+              </div>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-bl-full -mr-4 -mt-4"></div>
             </div>
-            <div className="relative z-10">
-              <h3 className="text-teal-100 text-xs sm:text-sm font-medium mb-0.5 truncate">Total Ingresos</h3>
-              <p className="text-xl sm:text-3xl font-bold truncate">${totalIncome.toFixed(2)}</p>
-            </div>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-bl-full -mr-4 -mt-4"></div>
           </div>
-        </div>
+        </CollapsibleMetrics>
 
         {/* Filtros de Tabla */}
         <div className="bg-white dark:bg-zinc-900 rounded-t-2xl sm:rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-3.5 sm:p-4 flex flex-col lg:flex-row justify-between items-center gap-3">

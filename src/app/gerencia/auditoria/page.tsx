@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { useEffect, useState } from "react";
 
 export default function AuditoriaSistema() {
@@ -130,47 +131,52 @@ export default function AuditoriaSistema() {
         </div>
 
         {/* Resumen Cards: 2x2 on mobile */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 text-lg sm:text-xl flex-shrink-0">
-              📝
+        <CollapsibleMetrics
+          title="Resumen de Auditoría y Seguridad"
+          subtitle={`${logs.length} eventos • ${warningCount} advertencias • ${criticalCount} críticos`}
+        >
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 text-lg sm:text-xl flex-shrink-0">
+                📝
+              </div>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">{logs.length}</p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">Eventos</h3>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">{logs.length}</p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">Eventos</h3>
+            
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 text-lg sm:text-xl flex-shrink-0">
+                ⚠️
+              </div>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">{warningCount}</p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">Advertencias</h3>
+              </div>
             </div>
-          </div>
-          
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 text-lg sm:text-xl flex-shrink-0">
-              ⚠️
-            </div>
-            <div className="min-w-0">
-              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">{warningCount}</p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">Advertencias</h3>
-            </div>
-          </div>
 
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 text-lg sm:text-xl flex-shrink-0">
-              ⛔
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 text-lg sm:text-xl flex-shrink-0">
+                ⛔
+              </div>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold text-rose-600 dark:text-rose-400">{criticalCount}</p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">Críticos</h3>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-xl sm:text-2xl font-bold text-rose-600 dark:text-rose-400">{criticalCount}</p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">Críticos</h3>
-            </div>
-          </div>
 
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 text-lg sm:text-xl flex-shrink-0">
-              🔐
-            </div>
-            <div className="min-w-0">
-              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">{loginCount}</p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">Sesiones</h3>
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 text-lg sm:text-xl flex-shrink-0">
+                🔐
+              </div>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">{loginCount}</p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">Sesiones</h3>
+              </div>
             </div>
           </div>
-        </div>
+        </CollapsibleMetrics>
 
         {/* Filtros de Tabla */}
         <div className="bg-white dark:bg-zinc-900 rounded-t-2xl sm:rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-3.5 sm:p-4 flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-3">

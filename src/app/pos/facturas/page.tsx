@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 
 interface SaleItem {
   id: string;
@@ -280,47 +281,49 @@ export default function FacturasPosPage() {
             </div>
           )}
 
-          {/* KPIs / Resumen */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
-            {/* Facturado */}
-            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/25 text-cyan-400 flex items-center justify-center text-xl shrink-0">
-                💰
+          {/* KPIs / Resumen Desplegable en Móvil */}
+          <CollapsibleMetrics title="Métricas de Facturación">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+              {/* Facturado */}
+              <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/25 text-cyan-400 flex items-center justify-center text-xl shrink-0">
+                  💰
+                </div>
+                <div>
+                  <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                    ${totalFacturado.toFixed(2)}
+                  </p>
+                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Facturado</h3>
+                </div>
               </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                  ${totalFacturado.toFixed(2)}
-                </p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Facturado</h3>
-              </div>
-            </div>
 
-            {/* Facturas Válidas */}
-            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center text-xl shrink-0">
-                ✅
+              {/* Facturas Válidas */}
+              <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center text-xl shrink-0">
+                  ✅
+                </div>
+                <div>
+                  <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                    {totalCompletadas}
+                  </p>
+                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Completadas</h3>
+                </div>
               </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                  {totalCompletadas}
-                </p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Completadas</h3>
-              </div>
-            </div>
 
-            {/* Anuladas */}
-            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-500/15 border border-rose-500/25 text-rose-400 flex items-center justify-center text-xl shrink-0">
-                ⚠️
-              </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-rose-500 dark:text-rose-400">
-                  {totalAnuladas}
-                </p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Anuladas</h3>
+              {/* Anuladas */}
+              <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-500/15 border border-rose-500/25 text-rose-400 flex items-center justify-center text-xl shrink-0">
+                  ⚠️
+                </div>
+                <div>
+                  <p className="text-xl sm:text-2xl font-bold text-rose-500 dark:text-rose-400">
+                    {totalAnuladas}
+                  </p>
+                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Anuladas</h3>
+                </div>
               </div>
             </div>
-          </div>
+          </CollapsibleMetrics>
 
           {/* Filtros y Buscador */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">

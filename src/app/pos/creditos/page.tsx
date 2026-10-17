@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 
 interface CreditAccount {
   id: string;
@@ -189,47 +190,49 @@ export default function CreditosPage() {
         </div>
 
 
-        {/* KPIs / Resumen de Cartera */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          {/* Cartera por Cobrar */}
-          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/25 text-cyan-400 flex items-center justify-center text-xl shrink-0">
-              💰
+        {/* KPIs / Resumen de Cartera Desplegable en Móvil */}
+        <CollapsibleMetrics title="Métricas de Cartera">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+            {/* Cartera por Cobrar */}
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/25 text-cyan-400 flex items-center justify-center text-xl shrink-0">
+                💰
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                  ${carteraTotal.toFixed(2)}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Por Cobrar</h3>
+              </div>
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                ${carteraTotal.toFixed(2)}
-              </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Por Cobrar</h3>
-            </div>
-          </div>
 
-          {/* Cupo Otorgado */}
-          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center text-xl shrink-0">
-              🛡️
+            {/* Cupo Otorgado */}
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center text-xl shrink-0">
+                🛡️
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                  ${cupoTotalOtorgado.toFixed(2)}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Cupo Otorgado</h3>
+              </div>
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                ${cupoTotalOtorgado.toFixed(2)}
-              </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Cupo Otorgado</h3>
-            </div>
-          </div>
 
-          {/* Cuentas Vencidas */}
-          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-500/15 border border-rose-500/25 text-rose-400 flex items-center justify-center text-xl shrink-0">
-              ⚠️
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-rose-500 dark:text-rose-400">
-                {totalVencidos}
-              </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Cuentas Vencidas</h3>
+            {/* Cuentas Vencidas */}
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-500/15 border border-rose-500/25 text-rose-400 flex items-center justify-center text-xl shrink-0">
+                ⚠️
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-rose-500 dark:text-rose-400">
+                  {totalVencidos}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Cuentas Vencidas</h3>
+              </div>
             </div>
           </div>
-        </div>
+        </CollapsibleMetrics>
 
         {/* Buscador y Filtros */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">

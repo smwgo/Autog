@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 
 interface WorkshopService {
   id: string;
@@ -159,56 +160,58 @@ export default function ServiciosPosPage() {
           </div>
         </div>
 
-        {/* Resumen Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-400 flex items-center justify-center text-xl shrink-0">
-              ⚙️
+        {/* Resumen Cards Desplegable en Móvil */}
+        <CollapsibleMetrics title="Métricas de Servicios">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-400 flex items-center justify-center text-xl shrink-0">
+                ⚙️
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                  {cargando ? "..." : servicios.length}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Totales</h3>
+              </div>
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                {cargando ? "..." : servicios.length}
-              </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Totales</h3>
-            </div>
-          </div>
 
-          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center text-xl shrink-0">
-              ✅
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center text-xl shrink-0">
+                ✅
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                  {cargando ? "..." : totalActivos}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Activos</h3>
+              </div>
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                {cargando ? "..." : totalActivos}
-              </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Activos</h3>
-            </div>
-          </div>
 
-          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-400 flex items-center justify-center text-xl shrink-0">
-              ⏱️
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-400 flex items-center justify-center text-xl shrink-0">
+                ⏱️
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
+                  {cargando ? "..." : `${promedioMinutos} min`}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Promedio</h3>
+              </div>
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
-                {cargando ? "..." : `${promedioMinutos} min`}
-              </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Promedio</h3>
-            </div>
-          </div>
 
-          <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-400 flex items-center justify-center text-xl shrink-0">
-              🚗
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">
-                {cargando ? "..." : bahiaCount}
-              </p>
-              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Bahía</h3>
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-400 flex items-center justify-center text-xl shrink-0">
+                🚗
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">
+                  {cargando ? "..." : bahiaCount}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Bahía</h3>
+              </div>
             </div>
           </div>
-        </div>
+        </CollapsibleMetrics>
 
         {/* Buscador y Filtros */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 mb-6">

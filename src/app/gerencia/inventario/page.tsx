@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { useEffect, useState } from "react";
 
 export default function InventarioGlobal() {
@@ -181,39 +182,44 @@ export default function InventarioGlobal() {
         </div>
 
         {/* Resumen Cards: 2x2 on mobile */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden">
-            <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 truncate">Total Referencias</h3>
-            <p className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white">{products.length}</p>
-            <div className="mt-2 sm:mt-4 flex items-center gap-2 text-[10px] sm:text-xs font-medium text-blue-600">
-              <span className="bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 sm:py-1 rounded-lg">En catálogo Neon</span>
+        <CollapsibleMetrics
+          title="Resumen de Inventario Global"
+          subtitle={`${products.length} referencias • $${totalValue.toFixed(2)} valorizado • ${criticalCount} stock crítico`}
+        >
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden">
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 truncate">Total Referencias</h3>
+              <p className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white">{products.length}</p>
+              <div className="mt-2 sm:mt-4 flex items-center gap-2 text-[10px] sm:text-xs font-medium text-blue-600">
+                <span className="bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 sm:py-1 rounded-lg">En catálogo Neon</span>
+              </div>
             </div>
-          </div>
-          
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden">
-            <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 truncate">Valorización</h3>
-            <p className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white truncate">${totalValue.toFixed(2)}</p>
-            <div className="mt-2 sm:mt-4 flex items-center gap-2 text-[10px] sm:text-xs font-medium text-emerald-600">
-              <span className="bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 sm:py-1 rounded-lg">Valor global</span>
+            
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden">
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 truncate">Valorización</h3>
+              <p className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white truncate">${totalValue.toFixed(2)}</p>
+              <div className="mt-2 sm:mt-4 flex items-center gap-2 text-[10px] sm:text-xs font-medium text-emerald-600">
+                <span className="bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 sm:py-1 rounded-lg">Valor global</span>
+              </div>
             </div>
-          </div>
 
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-rose-200 dark:border-rose-900/50 shadow-sm relative overflow-hidden">
-            <h3 className="text-rose-600 dark:text-rose-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 truncate">Stock Crítico</h3>
-            <p className="text-xl sm:text-3xl font-bold text-rose-600 dark:text-rose-400">{criticalCount}</p>
-            <div className="mt-2 sm:mt-4 flex items-center gap-2 text-[10px] sm:text-xs font-medium text-rose-600">
-              <span className="bg-rose-50 dark:bg-rose-500/10 px-2 py-0.5 sm:py-1 rounded-lg">Reabastecer</span>
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-rose-200 dark:border-rose-900/50 shadow-sm relative overflow-hidden">
+              <h3 className="text-rose-600 dark:text-rose-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 truncate">Stock Crítico</h3>
+              <p className="text-xl sm:text-3xl font-bold text-rose-600 dark:text-rose-400">{criticalCount}</p>
+              <div className="mt-2 sm:mt-4 flex items-center gap-2 text-[10px] sm:text-xs font-medium text-rose-600">
+                <span className="bg-rose-50 dark:bg-rose-500/10 px-2 py-0.5 sm:py-1 rounded-lg">Reabastecer</span>
+              </div>
             </div>
-          </div>
 
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden">
-            <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 truncate">Sucursales</h3>
-            <p className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white">2</p>
-            <div className="mt-2 sm:mt-4 flex items-center gap-2 text-[10px] sm:text-xs font-medium text-purple-600">
-              <span className="bg-purple-50 dark:bg-purple-500/10 px-2 py-0.5 sm:py-1 rounded-lg">Principal + Norte</span>
+            <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden">
+              <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 truncate">Sucursales</h3>
+              <p className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white">2</p>
+              <div className="mt-2 sm:mt-4 flex items-center gap-2 text-[10px] sm:text-xs font-medium text-purple-600">
+                <span className="bg-purple-50 dark:bg-purple-500/10 px-2 py-0.5 sm:py-1 rounded-lg">Principal + Norte</span>
+              </div>
             </div>
           </div>
-        </div>
+        </CollapsibleMetrics>
 
         {/* Filtros de Tabla */}
         <div className="bg-white dark:bg-zinc-900 rounded-t-2xl sm:rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-3.5 sm:p-4 flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-3">
