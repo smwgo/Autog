@@ -1061,7 +1061,7 @@ export default function NuevaVentaPage() {
                   onClick={() => setMostrarModalItemManual(true)}
                   className="mt-2 text-xs font-bold text-blue-600 hover:underline"
                 >
-                  + Cobrar un ítem o servicio personalizado
+                  + Cobrar un producto o servicio personalizado
                 </button>
               </div>
             ) : (
@@ -1139,8 +1139,8 @@ export default function NuevaVentaPage() {
               <span>&larr;</span>
               <span>Seguir agregando productos</span>
             </button>
-            <span className="text-xs font-bold text-zinc-500">
-              {cart.reduce((a, b) => a + b.qty, 0)} ítems
+            <span className="text-xs font-normal text-zinc-400">
+              {cart.reduce((a, b) => a + b.qty, 0)} {cart.reduce((a, b) => a + b.qty, 0) === 1 ? "producto" : "productos"}
             </span>
           </div>
 
@@ -2696,8 +2696,8 @@ export default function NuevaVentaPage() {
             className="w-full bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white p-3.5 rounded-2xl shadow-xl flex items-center justify-between font-bold text-sm transition-transform cursor-pointer"
           >
             <div className="flex items-center gap-2">
-              <span className="bg-emerald-700 px-2.5 py-1 rounded-xl text-xs font-black">
-                {cart.reduce((a, b) => a + b.qty, 0)} {cart.reduce((a, b) => a + b.qty, 0) === 1 ? "ítem" : "ítems"}
+              <span className="bg-emerald-700 px-2.5 py-1 rounded-xl text-xs font-medium">
+                {cart.reduce((a, b) => a + b.qty, 0)} {cart.reduce((a, b) => a + b.qty, 0) === 1 ? "producto" : "productos"}
               </span>
               <span>Ver Ticket / Cobrar</span>
             </div>
