@@ -1054,15 +1054,8 @@ export default function NuevaVentaPage() {
                 <p className="text-sm">Cargando inventario...</p>
               </div>
             ) : filteredProducts.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-zinc-400 p-8 text-center space-y-3">
-                <span className="text-5xl">📦</span>
-                <p className="text-base font-medium">No se encontraron productos en el inventario.</p>
-                <button
-                  onClick={() => setMostrarModalItemManual(true)}
-                  className="mt-2 text-xs font-bold text-blue-600 hover:underline"
-                >
-                  + Cobrar un producto o servicio personalizado
-                </button>
+              <div className="h-full flex flex-col items-center justify-center text-zinc-400 p-8 text-center select-none">
+                <span className="text-4xl opacity-30">📦</span>
               </div>
             ) : (
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
