@@ -12,6 +12,7 @@ interface Product {
   category?: string;
   price: number;
   stock: number;
+  isService?: boolean;
 }
 
 interface Customer {
@@ -43,9 +44,10 @@ export default function CotizacionesPage() {
   const [mostrarModalClientes, setMostrarModalClientes] = useState(false);
   const [busquedaCliente, setBusquedaCliente] = useState("");
 
-  // Catálogo de productos desde la base de datos
+  // Catálogo de productos y servicios desde Neon
   const [productos, setProductos] = useState<Product[]>([]);
   const [cargandoProductos, setCargandoProductos] = useState(true);
+  const [filtroTipo, setFiltroTipo] = useState<"TODOS" | "PRODUCTOS" | "SERVICIOS">("TODOS");
   const [searchTerm, setSearchTerm] = useState("");
 
   // Artículos de la cotización
@@ -58,26 +60,60 @@ export default function CotizacionesPage() {
   const [historialCotizaciones, setHistorialCotizaciones] = useState<any[]>([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
 
-  // 1. Cargar productos desde Neon
+  // Confirmación de eliminación con modal de textos cortos
+  const [cotizacionAEliminar, setCotizacionAEliminar] = useState<{ id: string; folio: string; total: number } | null>(null);
+  const [eliminandoCotizacion, setEliminandoCotizacion] = useState(false);
+
+  // 1. Cargar productos y servicios desde Neon
   const cargarProductos = async () => {
     try {
       setCargandoProductos(true);
-      const res = await fetch("/api/productos");
-      const data = await res.json();
-      if (data.success && Array.isArray(data.productos)) {
-        setProductos(
-          data.productos.map((p: any) => ({
-            id: p.id,
-            code: p.code || "S/C",
-            name: p.name,
-            category: p.category || "General",
-            price: parseFloat(p.price) || 0,
-            stock: p.stock ?? 0,
-          }))
-        );
+      const [resProd, resServ] = await Promise.all([
+        fetch("/api/productos"),
+        fetch("/api/servicios-taller?activos=true"),
+      ]);
+
+      let items: Product[] = [];
+
+      if (resProd.ok) {
+        const dProd = await resProd.json();
+        if (dProd.success && Array.isArray(dProd.productos)) {
+          items = [
+            ...items,
+            ...dProd.productos.map((p: any) => ({
+              id: p.id,
+              code: p.code || "PRD",
+              name: p.name,
+              category: p.category || "Productos",
+              price: parseFloat(p.price) || 0,
+              stock: p.stock ?? 0,
+              isService: false,
+            })),
+          ];
+        }
       }
+
+      if (resServ.ok) {
+        const dServ = await resServ.json();
+        if (dServ.success && Array.isArray(dServ.servicios)) {
+          items = [
+            ...items,
+            ...dServ.servicios.map((s: any) => ({
+              id: s.id,
+              code: s.code || "SRV",
+              name: s.name,
+              category: s.category || "Servicios",
+              price: parseFloat(s.price) || 0,
+              stock: 999,
+              isService: true,
+            })),
+          ];
+        }
+      }
+
+      setProductos(items);
     } catch (e) {
-      console.error("Error al cargar productos:", e);
+      console.error("Error al cargar productos y servicios:", e);
     } finally {
       setCargandoProductos(false);
     }
@@ -143,32 +179,45 @@ export default function CotizacionesPage() {
   };
 
   const productosFiltrados = useMemo(() => {
-    if (!searchTerm.trim()) return productos.slice(0, 10);
+    let lista = productos;
+    if (filtroTipo === "PRODUCTOS") {
+      lista = lista.filter((p) => !p.isService);
+    } else if (filtroTipo === "SERVICIOS") {
+      lista = lista.filter((p) => p.isService);
+    }
+
+    if (!searchTerm.trim()) return lista.slice(0, 15);
     const term = searchTerm.toLowerCase();
-    return productos.filter(
+    return lista.filter(
       (p) =>
         p.name.toLowerCase().includes(term) ||
         p.code.toLowerCase().includes(term) ||
         (p.category && p.category.toLowerCase().includes(term))
     );
-  }, [productos, searchTerm]);
+  }, [productos, filtroTipo, searchTerm]);
 
   const addItem = (product: Product) => {
     setQuoteItems((prev) => {
       const index = prev.findIndex((i) => i.productId === product.id);
       if (index > -1) {
         const copy = [...prev];
-        copy[index] = { ...copy[index], qty: copy[index].qty + 1 };
+        const currentQty = Number(copy[index].qty) || 0;
+        copy[index] = {
+          ...copy[index],
+          qty: currentQty + 1,
+          price: Number(copy[index].price) || Number(product.price) || 0,
+          discount: Number(copy[index].discount) || 0,
+        };
         return copy;
       }
       return [
         ...prev,
         {
-          id: `${product.id}-${Date.now()}`,
+          id: `${product.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           productId: product.id,
-          code: product.code,
-          name: product.name,
-          price: product.price,
+          code: product.code || "PRD",
+          name: product.name || "Artículo",
+          price: Number(product.price) || 0,
           qty: 1,
           discount: 0,
         },
@@ -181,28 +230,38 @@ export default function CotizacionesPage() {
   };
 
   const updateQuantity = (id: string, qty: number) => {
-    if (qty <= 0) {
+    const val = Number(qty);
+    if (isNaN(val) || val <= 0) {
       removeItem(id);
       return;
     }
     setQuoteItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, qty } : i))
+      prev.map((i) => (i.id === id ? { ...i, qty: val } : i))
     );
   };
 
   const updateDiscount = (id: string, discount: number) => {
-    const val = Math.min(100, Math.max(0, discount || 0));
+    const num = Number(discount);
+    const val = isNaN(num) ? 0 : Math.min(100, Math.max(0, num));
     setQuoteItems((prev) =>
       prev.map((i) => (i.id === id ? { ...i, discount: val } : i))
     );
   };
 
-  // Cálculos financieros
-  const subtotal = quoteItems.reduce((acc, i) => acc + i.price * i.qty, 0);
-  const totalDescuento = quoteItems.reduce(
-    (acc, i) => acc + i.price * i.qty * (i.discount / 100),
-    0
-  );
+  // Cálculos financieros protegidos contra NaN
+  const subtotal = quoteItems.reduce((acc, i) => {
+    const p = Number(i.price) || 0;
+    const q = Number(i.qty) || 0;
+    return acc + p * q;
+  }, 0);
+
+  const totalDescuento = quoteItems.reduce((acc, i) => {
+    const p = Number(i.price) || 0;
+    const q = Number(i.qty) || 0;
+    const d = Math.min(100, Math.max(0, Number(i.discount) || 0));
+    return acc + p * q * (d / 100);
+  }, 0);
+
   const subtotalNeto = Math.max(0, subtotal - totalDescuento);
   const iva = subtotalNeto * 0.16;
   const granTotal = subtotalNeto + iva;
@@ -243,18 +302,24 @@ export default function CotizacionesPage() {
     }
   };
 
-  const handleEliminarCotizacion = async (id: string) => {
-    if (!confirm("¿Deseas eliminar esta cotización?")) return;
+  const confirmarEliminarCotizacion = async () => {
+    if (!cotizacionAEliminar) return;
     try {
-      const res = await fetch(`/api/cotizaciones?id=${id}`, {
+      setEliminandoCotizacion(true);
+      const res = await fetch(`/api/cotizaciones?id=${cotizacionAEliminar.id}`, {
         method: "DELETE",
       });
       const data = await res.json();
       if (data.success) {
+        setCotizacionAEliminar(null);
         cargarHistorial();
+      } else {
+        alert(data.error || "Error al eliminar.");
       }
     } catch (e) {
       alert("Error al eliminar.");
+    } finally {
+      setEliminandoCotizacion(false);
     }
   };
 
@@ -262,17 +327,28 @@ export default function CotizacionesPage() {
 
   const handleCargarParaEditar = (item: any) => {
     setEditingQuoteId(item.id);
-    setQuoteNumber(item.requestNumber);
+    setQuoteNumber(item.requestNumber || `COT-${Date.now().toString().slice(-6)}`);
     setClientName(item.customerName || "");
     setClientPhone(item.customerPhone || "");
     setClientEmail(item.customerEmail || "");
     try {
       const parsed = item.itemsJson ? JSON.parse(item.itemsJson) : [];
       if (Array.isArray(parsed) && parsed.length > 0) {
-        setQuoteItems(parsed);
+        const sanitized: QuoteItem[] = parsed.map((it: any, idx: number) => ({
+          id: it.id ? String(it.id) : `item-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 7)}`,
+          productId: it.productId || it.id || `prd-${idx}`,
+          code: it.code || "ART",
+          name: it.name || "Artículo",
+          price: Number(it.price) || 0,
+          qty: Math.max(1, Number(it.qty ?? it.quantity) || 1),
+          discount: Math.min(100, Math.max(0, Number(it.discount ?? it.discountPercent) || 0)),
+        }));
+        setQuoteItems(sanitized);
+      } else {
+        setQuoteItems([]);
       }
     } catch {
-      // ignore parse error
+      setQuoteItems([]);
     }
     setVistaHistorial(false);
   };
@@ -439,18 +515,26 @@ export default function CotizacionesPage() {
                         </p>
                       )}
 
-                      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-zinc-200/60 dark:border-zinc-700/60">
+                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-200/60 dark:border-zinc-700/60">
                         <button
                           onClick={() => handleCargarParaEditar(item)}
-                          className="h-11 flex items-center justify-center gap-1.5 text-xs font-bold text-purple-600 hover:text-purple-700 bg-purple-50 dark:bg-purple-950/40 active:scale-95 border border-purple-200 dark:border-purple-800 rounded-xl cursor-pointer"
+                          className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-500/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer shadow-xs"
+                          title="Editar cotización"
+                          aria-label="Editar cotización"
                         >
-                          ✏️ Editar
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
                         </button>
                         <button
-                          onClick={() => handleEliminarCotizacion(item.id)}
-                          className="h-11 flex items-center justify-center gap-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/40 active:scale-95 border border-rose-200 dark:border-rose-800 rounded-xl cursor-pointer"
+                          onClick={() => setCotizacionAEliminar({ id: item.id, folio: item.requestNumber, total: Number(item.totalEstimated || 0) })}
+                          className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer shadow-xs"
+                          title="Eliminar cotización"
+                          aria-label="Eliminar cotización"
                         >
-                          🗑️ Eliminar
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
                         </button>
                       </div>
                     </div>
@@ -489,18 +573,26 @@ export default function CotizacionesPage() {
                             {new Date(item.createdAt).toLocaleDateString("es-ES")}
                           </td>
                           <td className="py-4 px-4 text-right">
-                            <div className="flex justify-end gap-2">
+                            <div className="flex justify-end items-center gap-2">
                               <button
                                 onClick={() => handleCargarParaEditar(item)}
-                                className="cursor-pointer text-xs font-bold text-purple-600 hover:text-purple-700 bg-purple-50 dark:bg-purple-950/40 px-3 py-1.5 rounded-lg"
+                                className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
+                                title="Editar cotización"
+                                aria-label="Editar cotización"
                               >
-                                ✏️ Editar
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
                               </button>
                               <button
-                                onClick={() => handleEliminarCotizacion(item.id)}
-                                className="cursor-pointer text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/40 px-3 py-1.5 rounded-lg"
+                                onClick={() => setCotizacionAEliminar({ id: item.id, folio: item.requestNumber, total: Number(item.totalEstimated || 0) })}
+                                className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
+                                title="Eliminar cotización"
+                                aria-label="Eliminar cotización"
                               >
-                                Eliminar
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
                               </button>
                             </div>
                           </td>
@@ -552,11 +644,11 @@ export default function CotizacionesPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
-                        Teléfono
+                        WhatsApp
                       </label>
                       <input
                         type="tel"
-                        placeholder="+52 123 456 7890"
+                        placeholder="0991234567"
                         className="w-full px-4 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-purple-500 transition-all"
                         value={clientPhone}
                         onChange={(e) => setClientPhone(e.target.value)}
@@ -578,24 +670,61 @@ export default function CotizacionesPage() {
                 </div>
               </div>
 
-              {/* Card: Catálogo de Productos */}
+              {/* Card: Catálogo de Productos y Servicios */}
               <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-6">
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex justify-between items-center mb-3">
                   <div className="flex items-center gap-2">
                     <span className="text-xl">📦</span>
                     <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
                       Agregar Artículos
                     </h3>
                   </div>
-                  <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                    {productos.length} en almacén
+                  <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 font-mono">
+                    {productos.length} disponibles
                   </span>
+                </div>
+
+                {/* Filtros Tipo: Todos, Productos, Servicios */}
+                <div className="flex items-center gap-1.5 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl mb-3 text-xs font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => setFiltroTipo("TODOS")}
+                    className={`flex-1 py-1.5 px-2 rounded-lg transition-all cursor-pointer ${
+                      filtroTipo === "TODOS"
+                        ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-xs font-bold"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                    }`}
+                  >
+                    Todos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFiltroTipo("PRODUCTOS")}
+                    className={`flex-1 py-1.5 px-2 rounded-lg transition-all cursor-pointer ${
+                      filtroTipo === "PRODUCTOS"
+                        ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-xs font-bold"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                    }`}
+                  >
+                    📦 Productos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFiltroTipo("SERVICIOS")}
+                    className={`flex-1 py-1.5 px-2 rounded-lg transition-all cursor-pointer ${
+                      filtroTipo === "SERVICIOS"
+                        ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-xs font-bold"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                    }`}
+                  >
+                    🔧 Servicios
+                  </button>
                 </div>
 
                 <div className="relative mb-4">
                   <input
                     type="text"
-                    placeholder="Buscar producto por nombre o código..."
+                    placeholder="Buscar producto o servicio por nombre o código..."
                     className="w-full pl-12 pr-4 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-purple-500 transition-all"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -622,11 +751,18 @@ export default function CotizacionesPage() {
                         className="p-3.5 rounded-xl border border-zinc-100 dark:border-zinc-800 hover:border-purple-400 hover:bg-purple-50/20 dark:hover:bg-purple-950/20 flex items-center justify-between cursor-pointer transition-all group"
                       >
                         <div className="min-w-0 pr-3">
-                          <p className="font-bold text-sm text-zinc-900 dark:text-white truncate">
-                            {item.name}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-sm text-zinc-900 dark:text-white truncate">
+                              {item.name}
+                            </p>
+                            {item.isService && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                Servicio
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-                            {item.code} • Stock: {item.stock}
+                            {item.code} {item.isService ? "• Mano de obra / Taller" : `• Stock: ${item.stock}`}
                           </p>
                         </div>
                         <div className="flex items-center gap-3 flex-shrink-0">
@@ -662,99 +798,102 @@ export default function CotizacionesPage() {
 
                 {/* Items Table */}
                 <div className="flex-grow p-6 overflow-y-auto">
-                  {quoteItems.length === 0 ? (
-                    <div className="h-64 flex flex-col items-center justify-center text-zinc-400 text-center space-y-3">
-                      <span className="text-5xl opacity-40">🛒</span>
-                      <p className="text-base font-medium">
-                        Agrega productos desde el buscador para armar la cotización.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="text-xs font-bold text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800 pb-3 uppercase tracking-wider">
-                            <th className="pb-3">Artículo</th>
-                            <th className="pb-3 text-center w-28">Cant.</th>
-                            <th className="pb-3 text-right w-24">Precio</th>
-                            <th className="pb-3 text-center w-24">Desc (%)</th>
-                            <th className="pb-3 text-right w-28">Total</th>
-                            <th className="pb-3 w-8"></th>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="text-xs font-bold text-zinc-500 dark:text-zinc-400 border-b border-zinc-200 dark:border-zinc-800 pb-3 uppercase tracking-wider">
+                          <th className="pb-3">Artículo</th>
+                          <th className="pb-3 text-center w-28">Cant.</th>
+                          <th className="pb-3 text-right w-24">Precio</th>
+                          <th className="pb-3 text-center w-24">Desc (%)</th>
+                          <th className="pb-3 text-right w-28">Total</th>
+                          <th className="pb-3 w-8"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800 text-sm">
+                        {quoteItems.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="py-16 text-center text-zinc-400 dark:text-zinc-600 text-xs">
+                              Sin artículos agregados
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800 text-sm">
-                          {quoteItems.map((item) => (
-                            <tr
-                              key={item.id}
-                              className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 transition-colors"
-                            >
-                              <td className="py-4 pr-3">
-                                <p className="font-bold text-zinc-900 dark:text-white text-sm">
-                                  {item.name}
-                                </p>
-                                <p className="text-xs text-zinc-400 font-mono">
-                                  {item.code}
-                                </p>
-                              </td>
-                              <td className="py-4 text-center">
-                                <div className="inline-flex items-center border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden bg-zinc-50 dark:bg-zinc-800">
+                        ) : (
+                          quoteItems.map((item, idx) => {
+                            const itemPrice = Number(item.price) || 0;
+                            const itemQty = Number(item.qty) || 1;
+                            const itemDiscount = Math.min(100, Math.max(0, Number(item.discount) || 0));
+                            const itemTotal = itemPrice * itemQty * (1 - itemDiscount / 100);
+
+                            return (
+                              <tr
+                                key={item.id ? `${item.id}-${idx}` : `quote-row-${idx}`}
+                                className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 transition-colors"
+                              >
+                                <td className="py-4 pr-3">
+                                  <p className="font-bold text-zinc-900 dark:text-white text-sm">
+                                    {item.name}
+                                  </p>
+                                  <p className="text-xs text-zinc-400 font-mono">
+                                    {item.code}
+                                  </p>
+                                </td>
+                                <td className="py-4 text-center">
+                                  <div className="inline-flex items-center border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden bg-zinc-50 dark:bg-zinc-800">
+                                    <button
+                                      type="button"
+                                      onClick={() => updateQuantity(item.id, itemQty - 1)}
+                                      className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center text-base font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 cursor-pointer"
+                                    >
+                                      -
+                                    </button>
+                                    <span className="px-2 text-sm font-bold min-w-[28px] text-center">
+                                      {itemQty}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => updateQuantity(item.id, itemQty + 1)}
+                                      className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center text-base font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 cursor-pointer"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                </td>
+                                <td className="py-4 text-right text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                                  ${itemPrice.toFixed(2)}
+                                </td>
+                                <td className="py-4 text-center">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    className="w-16 h-9 sm:h-8 text-center rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm font-bold focus:outline-none focus:border-purple-500"
+                                    value={item.discount === 0 ? "0" : (item.discount ?? 0)}
+                                    onChange={(e) => {
+                                      const raw = e.target.value;
+                                      const val = raw === "" ? 0 : parseFloat(raw);
+                                      updateDiscount(item.id, isNaN(val) ? 0 : val);
+                                    }}
+                                  />
+                                </td>
+                                <td className="py-4 text-right font-black text-zinc-900 dark:text-white text-sm">
+                                  ${itemTotal.toFixed(2)}
+                                </td>
+                                <td className="py-4 text-right pl-2">
                                   <button
-                                    type="button"
-                                    onClick={() => updateQuantity(item.id, item.qty - 1)}
-                                    className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center text-base font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 cursor-pointer"
+                                    onClick={() => removeItem(item.id)}
+                                    className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors text-base cursor-pointer"
+                                    title="Quitar"
                                   >
-                                    -
+                                    ✕
                                   </button>
-                                  <span className="px-2 text-sm font-bold min-w-[28px] text-center">
-                                    {item.qty}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => updateQuantity(item.id, item.qty + 1)}
-                                    className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center text-base font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 cursor-pointer"
-                                  >
-                                    +
-                                  </button>
-                                </div>
-                              </td>
-                              <td className="py-4 text-right text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                                ${item.price.toFixed(2)}
-                              </td>
-                              <td className="py-4 text-center">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  className="w-16 h-9 sm:h-8 text-center rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm font-bold focus:outline-none focus:border-purple-500"
-                                  value={item.discount}
-                                  onChange={(e) =>
-                                    updateDiscount(item.id, parseInt(e.target.value) || 0)
-                                  }
-                                />
-                              </td>
-                              <td className="py-4 text-right font-black text-zinc-900 dark:text-white text-sm">
-                                $
-                                {(
-                                  item.price *
-                                  item.qty *
-                                  (1 - item.discount / 100)
-                                ).toFixed(2)}
-                              </td>
-                              <td className="py-4 text-right pl-2">
-                                <button
-                                  onClick={() => removeItem(item.id)}
-                                  className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors text-base cursor-pointer"
-                                  title="Quitar"
-                                >
-                                  ✕
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
                       </table>
                     </div>
-                  )}
                 </div>
 
                 {/* Totales y Botones de Acción */}
@@ -824,7 +963,7 @@ export default function CotizacionesPage() {
             <div className="relative mb-4 shrink-0">
               <input
                 type="text"
-                placeholder="Buscar por nombre, teléfono o identificación..."
+                placeholder="Buscar por nombre, WhatsApp o identificación..."
                 className="w-full pl-10 pr-4 h-11 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base sm:text-sm focus:outline-none focus:border-purple-500 dark:text-white"
                 value={busquedaCliente}
                 onChange={(e) => setBusquedaCliente(e.target.value)}
@@ -859,6 +998,68 @@ export default function CotizacionesPage() {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Eliminación con Textos Cortos */}
+      {cotizacionAEliminar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-2xl space-y-4 animate-in zoom-in-95 duration-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                  ¿Eliminar cotización?
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Esta acción no se puede deshacer.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-2.5 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200/60 dark:border-zinc-800 text-xs flex justify-between items-center">
+              <span className="font-mono text-zinc-600 dark:text-zinc-400 font-bold">{cotizacionAEliminar.folio}</span>
+              <span className="font-bold text-zinc-900 dark:text-white">${cotizacionAEliminar.total.toFixed(2)}</span>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setCotizacionAEliminar(null)}
+                disabled={eliminandoCotizacion}
+                className="px-3.5 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmarEliminarCotizacion}
+                disabled={eliminandoCotizacion}
+                className="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-sm shadow-rose-500/20 active:scale-95"
+              >
+                {eliminandoCotizacion ? (
+                  <>
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span>Eliminar</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

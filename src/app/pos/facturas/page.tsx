@@ -52,7 +52,41 @@ export default function FacturasPosPage() {
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
   const [errorMensaje, setErrorMensaje] = useState<string | null>(null);
 
+  const [negocio, setNegocio] = useState({
+    nombre: "Lubricentro González",
+    razonSocial: "Lubricentro González",
+    ruc: "1792345678001",
+    direccion: "Matriz - Quito, Ecuador",
+    telefono: "0991234567",
+    iva: 15,
+  });
+
   const ticketRef = useRef<HTMLDivElement>(null);
+
+  // Cargar configuración de negocio
+  useEffect(() => {
+    async function cargarConfiguracion() {
+      try {
+        const res = await fetch("/api/gerencia/configuracion");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.config) {
+            setNegocio({
+              nombre: data.config.nombreComercial || data.config.razonSocial || "Lubricentro González",
+              razonSocial: data.config.razonSocial || "Lubricentro González",
+              ruc: data.config.ruc || "1792345678001",
+              direccion: data.config.direccion || "Matriz - Quito, Ecuador",
+              telefono: data.config.telefono || "0991234567",
+              iva: Number(data.config.iva) || 15,
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Error al cargar ajustes de gerencia:", err);
+      }
+    }
+    cargarConfiguracion();
+  }, []);
 
   // Cargar ventas reales desde Neon
   const cargarVentas = useCallback(async (busqueda = "", silencioso = false) => {
@@ -441,18 +475,6 @@ export default function FacturasPosPage() {
 
                       {/* Botones de acción móvil (Solo iconos) */}
                       <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/60">
-                        <button
-                          onClick={() => setVentaDetalle(v)}
-                          className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center active:scale-95 transition-all"
-                          title="Ver comprobante"
-                          aria-label="Ver comprobante"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                        </button>
-
                         <Link
                           href={`/pos/facturas/editar?id=${v.id}`}
                           className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center active:scale-95 transition-all"
@@ -534,19 +556,6 @@ export default function FacturasPosPage() {
                           </td>
                           <td className="py-3.5 px-4 text-center">
                             <div className="flex items-center justify-center gap-2">
-                              {/* Ver / Imprimir (Solo icono) */}
-                              <button
-                                onClick={() => setVentaDetalle(v)}
-                                className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
-                                title="Ver comprobante"
-                                aria-label="Ver comprobante"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
-                              </button>
-
                               {/* Editar (Solo icono, en otra pagina) */}
                               <Link
                                 href={`/pos/facturas/editar?id=${v.id}`}
@@ -572,148 +581,296 @@ export default function FacturasPosPage() {
 
 
 
-        {/* Modal de Detalle / Comprobante de Factura (READ & PRINT) */}
+        {/* Modal de Detalle / Factura Formato A4 (READ & PRINT) */}
         {ventaDetalle && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl relative max-h-[90vh] flex flex-col">
-              {/* Header Modal */}
-              <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800 print:hidden">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">🧾</span>
-                  <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
-                    Factura #{ventaDetalle.saleNumber}
-                  </h3>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in overflow-y-auto print:static print:inset-auto print:p-0 print:bg-transparent print:backdrop-blur-none print:overflow-visible print:block print:w-full">
+            <style dangerouslySetInnerHTML={{ __html: `
+              @media print {
+                @page {
+                  size: A4 portrait;
+                  margin: 10mm 12mm 12mm 12mm;
+                }
+                body {
+                  background: white !important;
+                  color: black !important;
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                }
+                .print\\:hidden {
+                  display: none !important;
+                }
+              }
+            `}} />
+
+            <div className="bg-zinc-100 dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-3 sm:p-5 max-w-4xl w-full shadow-2xl relative my-auto flex flex-col max-h-[94vh] border border-zinc-200 dark:border-zinc-800 print:shadow-none print:border-none print:p-0 print:m-0 print:max-w-none print:w-full print:bg-white print:text-black print:rounded-none print:max-h-none print:overflow-visible">
+              
+              {/* Header Modal (Oculto al imprimir) */}
+              <div className="flex items-center justify-between pb-3 px-2 print:hidden">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-8 h-8 rounded-lg bg-blue-600/15 text-blue-500 flex items-center justify-center text-sm font-bold">
+                    📄
+                  </span>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white leading-tight">
+                      Factura #{ventaDetalle.saleNumber}
+                    </h3>
+                    <p className="text-[11px] text-zinc-500">Vista previa de impresión en formato A4</p>
+                  </div>
                 </div>
                 <button
                   onClick={() => setVentaDetalle(null)}
-                  className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center font-bold cursor-pointer"
+                  className="w-8 h-8 rounded-xl bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center font-bold cursor-pointer transition-colors"
+                  title="Cerrar vista previa"
                 >
                   ✕
                 </button>
               </div>
 
-              {/* Contenido Imprimible / Ticket */}
-              <div
-                ref={ticketRef}
-                className="overflow-y-auto flex-grow my-4 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 font-mono text-xs"
-              >
-                <div className="text-center mb-4 pb-3 border-b border-dashed border-zinc-300 dark:border-zinc-700">
-                  <h4 className="font-bold text-base text-zinc-900 dark:text-white">
-                    TALLER AUTOMOTRIZ & REPUESTOS
-                  </h4>
-                  <p className="text-zinc-500 mt-0.5">COMPROBANTE DE VENTA / FACTURA</p>
-                  <p className="text-zinc-500 font-bold mt-1"># {ventaDetalle.saleNumber}</p>
-                  <p className="text-zinc-400 mt-1">
-                    {new Date(ventaDetalle.createdAt).toLocaleString("es-EC")}
-                  </p>
-                </div>
+              {/* Hoja de Factura A4 Imprimible */}
+              <div className="overflow-y-auto flex-grow rounded-xl bg-white text-zinc-900 shadow-sm print:shadow-none print:overflow-visible print:h-auto">
+                <div
+                  ref={ticketRef}
+                  className="w-full bg-white text-zinc-900 p-6 sm:p-8 font-sans print:p-0 print:m-0 text-xs"
+                >
+                  {/* 1. Encabezado A4 (Emisor + Recuadro Factura) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 pb-6 border-b border-zinc-200">
+                    {/* Emisor */}
+                    <div className="sm:col-span-7 space-y-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-blue-600 text-white font-black text-lg flex items-center justify-center shrink-0">
+                          ⚙️
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-black text-zinc-900 tracking-tight leading-tight uppercase">
+                            {negocio.nombre}
+                          </h2>
+                          <p className="text-xs text-zinc-500 font-medium">{negocio.razonSocial}</p>
+                        </div>
+                      </div>
 
-                <div className="space-y-1 mb-4 pb-3 border-b border-dashed border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400">
-                  <p>
-                    <span className="font-bold text-zinc-800 dark:text-zinc-200">Cliente: </span>
-                    {ventaDetalle.customerName || "Consumidor Final"}
-                  </p>
-                  {ventaDetalle.customer?.identification && (
-                    <p>
-                      <span className="font-bold text-zinc-800 dark:text-zinc-200">RUC/CI: </span>
-                      {ventaDetalle.customer.identification}
-                    </p>
-                  )}
-                  {ventaDetalle.customer?.phone && (
-                    <p>
-                      <span className="font-bold text-zinc-800 dark:text-zinc-200">Teléfono: </span>
-                      {ventaDetalle.customer.phone}
-                    </p>
-                  )}
-                  <p>
-                    <span className="font-bold text-zinc-800 dark:text-zinc-200">Método de Pago: </span>
-                    {ventaDetalle.paymentMethod || "Efectivo"}
-                  </p>
-                  <p>
-                    <span className="font-bold text-zinc-800 dark:text-zinc-200">Estado: </span>
-                    <span
-                      className={`font-bold ${
-                        ventaDetalle.status?.toLowerCase() === "anulada"
-                          ? "text-rose-500"
-                          : "text-emerald-500"
-                      }`}
-                    >
-                      {ventaDetalle.status?.toUpperCase() || "COMPLETADA"}
-                    </span>
-                  </p>
-                </div>
+                      <div className="text-xs text-zinc-600 pt-1 space-y-0.5">
+                        <p>
+                          <span className="font-semibold text-zinc-800">Dirección Matriz:</span> {negocio.direccion}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-zinc-800">Teléfono:</span> {negocio.telefono}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-zinc-800">Obligado a llevar contabilidad:</span> NO
+                        </p>
+                        <p className="text-[11px] text-zinc-500 font-medium">
+                          CONTRIBUYENTE RÉGIMEN GENERAL / RIMPE
+                        </p>
+                      </div>
+                    </div>
 
-                {/* Items */}
-                <div className="mb-4 pb-3 border-b border-dashed border-zinc-300 dark:border-zinc-700">
-                  <div className="grid grid-cols-12 font-bold text-zinc-800 dark:text-zinc-200 mb-2">
-                    <span className="col-span-6">Descripción</span>
-                    <span className="col-span-2 text-center">Cant</span>
-                    <span className="col-span-2 text-right">P.U</span>
-                    <span className="col-span-2 text-right">Total</span>
-                  </div>
-                  <div className="space-y-1.5 text-zinc-600 dark:text-zinc-300">
-                    {ventaDetalle.items?.map((item, idx) => (
-                      <div key={idx} className="grid grid-cols-12 text-[11px]">
-                        <span className="col-span-6 truncate font-medium">{item.name}</span>
-                        <span className="col-span-2 text-center">{item.quantity}</span>
-                        <span className="col-span-2 text-right">
-                          ${Number(item.price || 0).toFixed(2)}
+                    {/* Recuadro Factura SRI / Formal */}
+                    <div className="sm:col-span-5 border border-zinc-300 rounded-xl p-4 bg-zinc-50/60 print:bg-white flex flex-col justify-between space-y-2.5">
+                      <div>
+                        <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider block">
+                          R.U.C.
                         </span>
-                        <span className="col-span-2 text-right font-bold text-zinc-800 dark:text-zinc-100">
-                          ${Number(item.total || 0).toFixed(2)}
+                        <span className="text-sm font-bold font-mono text-zinc-900">
+                          {negocio.ruc}
                         </span>
                       </div>
-                    ))}
-                  </div>
-                </div>
 
-                {/* Totales */}
-                <div className="space-y-1.5 text-right font-bold text-zinc-800 dark:text-zinc-200">
-                  <div className="flex justify-between text-zinc-500">
-                    <span>Subtotal:</span>
-                    <span>${Number(ventaDetalle.subtotal || 0).toFixed(2)}</span>
-                  </div>
-                  {Number(ventaDetalle.discount || 0) > 0 && (
-                    <div className="flex justify-between text-orange-500">
-                      <span>Descuento:</span>
-                      <span>-${Number(ventaDetalle.discount).toFixed(2)}</span>
+                      <div>
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                            FACTURA No.
+                          </span>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              ventaDetalle.status?.toLowerCase() === "anulada"
+                                ? "bg-rose-100 text-rose-700 border border-rose-300"
+                                : "bg-emerald-100 text-emerald-700 border border-emerald-300"
+                            }`}
+                          >
+                            {ventaDetalle.status?.toUpperCase() || "COMPLETADA"}
+                          </span>
+                        </div>
+                        <span className="text-lg font-black font-mono text-blue-600 print:text-zinc-900 block">
+                          #{ventaDetalle.saleNumber}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs pt-1.5 border-t border-zinc-200">
+                        <div>
+                          <span className="text-zinc-500 block text-[10px]">Fecha de Emisión:</span>
+                          <span className="font-medium text-zinc-800 text-[11px]">
+                            {new Date(ventaDetalle.createdAt).toLocaleDateString("es-EC", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            })}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-zinc-500 block text-[10px]">Hora:</span>
+                          <span className="font-medium text-zinc-800 text-[11px]">
+                            {new Date(ventaDetalle.createdAt).toLocaleTimeString("es-EC", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  )}
-                  <div className="flex justify-between text-zinc-500">
-                    <span>IVA:</span>
-                    <span>${Number(ventaDetalle.tax || 0).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-sm text-zinc-900 dark:text-white pt-1 border-t border-zinc-300 dark:border-zinc-700">
-                    <span>TOTAL:</span>
-                    <span className="text-emerald-600 dark:text-emerald-400">
-                      ${Number(ventaDetalle.total || 0).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
 
-                <div className="text-center mt-6 pt-3 border-t border-dashed border-zinc-300 dark:border-zinc-700 text-zinc-400 text-[10px]">
-                  ¡Gracias por su preferencia!
+                  {/* 2. Datos del Cliente (Recuadro formal y limpio) */}
+                  <div className="my-5 p-4 rounded-xl border border-zinc-200 bg-zinc-50/50 print:bg-white grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 text-xs">
+                    <div>
+                      <span className="text-zinc-500 block text-[11px] font-medium">Razón Social / Nombres:</span>
+                      <span className="font-bold text-zinc-900 text-sm">
+                        {ventaDetalle.customerName || "Consumidor Final"}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-zinc-500 block text-[11px] font-medium">Identificación (RUC / C.I.):</span>
+                      <span className="font-semibold text-zinc-800 font-mono">
+                        {ventaDetalle.customer?.identification || "9999999999999"}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-zinc-500 block text-[11px] font-medium">Forma de Pago:</span>
+                      <span className="font-semibold text-zinc-800">
+                        {ventaDetalle.paymentMethod || "Efectivo"}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-zinc-500 block text-[11px] font-medium">Teléfono / WhatsApp:</span>
+                      <span className="text-zinc-800">{ventaDetalle.customer?.phone || "N/A"}</span>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <span className="text-zinc-500 block text-[11px] font-medium">Dirección:</span>
+                      <span className="text-zinc-800">{ventaDetalle.customer?.address || "Quito, Ecuador"}</span>
+                    </div>
+                  </div>
+
+                  {/* 3. Tabla de Productos y Servicios Formato A4 */}
+                  <div className="rounded-xl border border-zinc-200 overflow-hidden mb-6">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-zinc-100 text-zinc-700 font-bold border-b border-zinc-200 uppercase text-[11px]">
+                        <tr>
+                          <th className="py-2.5 px-3 w-12 text-center">Cant.</th>
+                          <th className="py-2.5 px-3 w-28">Código</th>
+                          <th className="py-2.5 px-3">Descripción</th>
+                          <th className="py-2.5 px-3 w-24 text-right">P. Unitario</th>
+                          <th className="py-2.5 px-3 w-20 text-right">Desc.</th>
+                          <th className="py-2.5 px-3 w-24 text-right">Precio Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-200 text-zinc-800">
+                        {ventaDetalle.items?.map((item, idx) => {
+                          const qty = Number(item.quantity || 1);
+                          const price = Number(item.price || 0);
+                          const totalLine = Number(item.total || qty * price);
+                          return (
+                            <tr key={idx} className="hover:bg-zinc-50/60 transition-colors">
+                              <td className="py-2.5 px-3 text-center font-bold">{qty}</td>
+                              <td className="py-2.5 px-3 font-mono text-zinc-600">{item.code || "SRV"}</td>
+                              <td className="py-2.5 px-3 font-medium text-zinc-900">{item.name}</td>
+                              <td className="py-2.5 px-3 text-right font-mono">${price.toFixed(2)}</td>
+                              <td className="py-2.5 px-3 text-right font-mono text-zinc-500">$0.00</td>
+                              <td className="py-2.5 px-3 text-right font-mono font-bold text-zinc-900">
+                                ${totalLine.toFixed(2)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* 4. Pie de Factura y Desglose de Totales A4 */}
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start pt-1">
+                    {/* Información adicional */}
+                    <div className="md:col-span-7 space-y-3">
+                      <div className="p-3.5 rounded-xl border border-zinc-200 bg-zinc-50/40 text-xs text-zinc-600 space-y-1.5">
+                        <p className="font-bold text-zinc-800 text-[11px] uppercase tracking-wider">
+                          Información Adicional
+                        </p>
+                        <p>
+                          <span className="font-semibold text-zinc-700">Forma de Pago:</span>{" "}
+                          {ventaDetalle.paymentMethod || "Efectivo"} - Sin utilización del sistema financiero
+                        </p>
+                        <p>
+                          <span className="font-semibold text-zinc-700">Correo Electrónico:</span>{" "}
+                          {ventaDetalle.customer?.email || "N/A"}
+                        </p>
+                        <p className="text-[11px] text-zinc-500 pt-1">
+                          Comprobante emitido con validez tributaria y contable. Gracias por su preferencia.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Resumen de Valores (Caja derecha de Totales) */}
+                    <div className="md:col-span-5 rounded-xl border border-zinc-200 overflow-hidden divide-y divide-zinc-200 text-xs">
+                      <div className="flex justify-between py-2 px-3.5 bg-zinc-50/50">
+                        <span className="text-zinc-600 font-medium">SUBTOTAL 15%:</span>
+                        <span className="font-mono font-semibold text-zinc-900">
+                          ${Number(ventaDetalle.subtotal || 0).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-2 px-3.5 bg-zinc-50/50">
+                        <span className="text-zinc-600 font-medium">SUBTOTAL 0%:</span>
+                        <span className="font-mono font-semibold text-zinc-900">$0.00</span>
+                      </div>
+                      {Number(ventaDetalle.discount || 0) > 0 && (
+                        <div className="flex justify-between py-2 px-3.5 bg-zinc-50/50 text-emerald-600">
+                          <span className="font-medium">DESCUENTO:</span>
+                          <span className="font-mono font-semibold">
+                            -${Number(ventaDetalle.discount).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between py-2 px-3.5 bg-zinc-50/50">
+                        <span className="text-zinc-600 font-medium">IVA ({negocio.iva}%):</span>
+                        <span className="font-mono font-semibold text-zinc-900">
+                          ${Number(ventaDetalle.tax || 0).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-2.5 px-3.5 bg-zinc-100 font-bold text-sm">
+                        <span className="text-zinc-900">VALOR TOTAL:</span>
+                        <span className="font-mono text-base text-blue-600 print:text-zinc-900">
+                          ${Number(ventaDetalle.total || 0).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 5. Pie de Página A4 */}
+                  <div className="mt-8 pt-3 border-t border-zinc-200 text-center text-[10px] text-zinc-400">
+                    Documento generado electrónicamente • Sistema AutoG POS • Formato A4
+                  </div>
                 </div>
               </div>
 
-              {/* Botones de acción del Modal */}
-              <div className="flex items-center gap-3 pt-3 border-t border-zinc-200 dark:border-zinc-800 print:hidden">
+              {/* Botones de acción del Modal (Ocultos al imprimir) */}
+              <div className="flex items-center gap-3 pt-3 px-1 print:hidden">
                 <button
                   type="button"
                   onClick={handleImprimir}
                   className="flex-1 h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                 >
                   <span>🖨️</span>
-                  <span>Imprimir Comprobante</span>
+                  <span>Imprimir Factura A4</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setVentaDetalle(null)}
-                  className="px-5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 font-semibold text-xs cursor-pointer flex items-center justify-center"
+                  className="px-5 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200/60 dark:hover:bg-zinc-800 font-semibold text-xs cursor-pointer flex items-center justify-center transition-colors"
                 >
                   Cerrar
                 </button>
               </div>
+
             </div>
           </div>
         )}

@@ -15,8 +15,22 @@ function calcularEstado(stock: number, minStock: number = 5): string {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
     const busqueda = searchParams.get("busqueda")?.trim().toLowerCase() || "";
     const categoria = searchParams.get("categoria") || "";
+
+    if (id) {
+      const prod = await prisma.product.findUnique({
+        where: { id },
+      });
+      if (!prod) {
+        return NextResponse.json(
+          { success: false, error: "Producto no encontrado" },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json({ success: true, producto: prod });
+    }
 
     let products = cachedProducts;
     const now = Date.now();

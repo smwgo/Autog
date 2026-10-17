@@ -426,6 +426,29 @@ function NuevaFacturaForm() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [exitoMsg, setExitoMsg] = useState<string | null>(null);
 
+  // Opciones de Impresión (Ticket o A4)
+  const [menuImpresionAbierto, setMenuImpresionAbierto] = useState(false);
+  const [formatoImpresion, setFormatoImpresion] = useState<"TICKET" | "A4">("A4");
+  const menuImpresionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideImpresion = (e: MouseEvent) => {
+      if (menuImpresionRef.current && !menuImpresionRef.current.contains(e.target as Node)) {
+        setMenuImpresionAbierto(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideImpresion);
+    return () => document.removeEventListener("mousedown", handleOutsideImpresion);
+  }, []);
+
+  const dispararImpresion = (formato: "TICKET" | "A4") => {
+    setFormatoImpresion(formato);
+    setMenuImpresionAbierto(false);
+    setTimeout(() => {
+      window.print();
+    }, 100);
+  };
+
   useEffect(() => {
     async function inicializar() {
       setCargandoCatalogos(true);
@@ -741,35 +764,110 @@ function NuevaFacturaForm() {
   });
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 flex flex-col font-sans transition-colors duration-200">
-      <Header />
+    <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 flex flex-col font-sans transition-colors duration-200 print:bg-white print:text-black print:min-h-0 print:p-0">
+      {/* Estilos dinámicos de impresión */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @media print {
+              @page {
+                size: ${formatoImpresion === "TICKET" ? "80mm auto" : "A4 portrait"};
+                margin: ${formatoImpresion === "TICKET" ? "3mm 4mm" : "8mm 10mm"};
+              }
+              body {
+                background: #ffffff !important;
+                color: #000000 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+            }
+          `,
+        }}
+      />
 
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 pt-4 pb-24 md:pb-12 space-y-5">
-        {/* Encabezado Principal */}
-        <div className="flex items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-4">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/pos/facturas"
-              className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-all cursor-pointer"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15 19l-7-7 7-7" />
-              </svg>
-            </Link>
-            <div>
-              <h1 className="text-xl font-bold text-zinc-900 dark:text-white">
-                Nueva Factura
-              </h1>
+      <div className="print:hidden flex flex-col min-h-screen">
+        <Header />
+
+        <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 pt-4 pb-24 md:pb-12 space-y-5">
+          {/* Encabezado Principal */}
+          <div className="flex items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-4">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/pos/facturas"
+                className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-all cursor-pointer"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15 19l-7-7 7-7" />
+                </svg>
+              </Link>
+              <div>
+                <h1 className="text-xl font-bold text-zinc-900 dark:text-white">
+                  Nueva Factura
+                </h1>
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <Link
-              href="/pos/facturas"
-              className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
-            >
-              Cancelar
-            </Link>
+            <div className="flex items-center gap-2">
+              {/* Menú de Impresión Ticket / A4 */}
+              <div className="relative" ref={menuImpresionRef}>
+                <button
+                  type="button"
+                  onClick={() => setMenuImpresionAbierto(!menuImpresionAbierto)}
+                  className="px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+                  title="Opciones de Impresión"
+                >
+                  <svg className="w-4 h-4 text-zinc-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                  </svg>
+                  <span className="hidden sm:inline">Imprimir</span>
+                  <svg className={`w-3.5 h-3.5 text-zinc-400 transition-transform ${menuImpresionAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {menuImpresionAbierto && (
+                  <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+                    <div className="px-3 py-1.5 border-b border-zinc-100 dark:border-zinc-800 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+                      Formato de Impresión
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={() => dispararImpresion("TICKET")}
+                      className="w-full text-left px-3.5 py-2.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800/80 text-zinc-800 dark:text-zinc-200 flex items-center gap-3 transition-colors cursor-pointer group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        🧾
+                      </div>
+                      <div>
+                        <div className="font-semibold text-xs text-zinc-900 dark:text-white">Ticket Térmico</div>
+                        <div className="text-[11px] text-zinc-500">Rollo 80mm para POS</div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => dispararImpresion("A4")}
+                      className="w-full text-left px-3.5 py-2.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800/80 text-zinc-800 dark:text-zinc-200 flex items-center gap-3 transition-colors cursor-pointer group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        📄
+                      </div>
+                      <div>
+                        <div className="font-semibold text-xs text-zinc-900 dark:text-white">Factura A4</div>
+                        <div className="text-[11px] text-zinc-500">Hoja completa estándar</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <Link
+                href="/pos/facturas"
+                className="px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+              >
+                Cancelar
+              </Link>
             <button
               type="button"
               onClick={handleSubmitFactura}
@@ -807,6 +905,11 @@ function NuevaFacturaForm() {
               <div className="text-sm text-zinc-700 dark:text-zinc-300">
                 RUC: {negocio.ruc} • Matriz
               </div>
+              {negocio.direccion && negocio.direccion !== "Matriz" && (
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  {negocio.direccion}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col sm:items-end gap-2.5">
@@ -1374,6 +1477,296 @@ function NuevaFacturaForm() {
       )}
 
       <PosMobileNav />
+      {/* Fin de UI interactiva (oculta al imprimir) */}
+      </div>
+
+      {/* VISTA DE IMPRESIÓN (visible exclusivamente al imprimir) */}
+      <div className="hidden print:block w-full bg-white text-black font-sans">
+        {formatoImpresion === "TICKET" ? (
+          /* ============================================================== */
+          /* FORMATO TICKET TÉRMICO (80mm) */
+          /* ============================================================== */
+          <div className="w-[74mm] max-w-[74mm] mx-auto text-black font-mono text-[11px] leading-tight p-1 bg-white">
+            {/* Encabezado Negocio */}
+            <div className="text-center space-y-0.5 mb-2">
+              <h2 className="text-sm font-bold uppercase tracking-wide">{negocio.nombre}</h2>
+              <p className="text-[10px]">RUC: {negocio.ruc}</p>
+              <p className="text-[10px]">{negocio.direccion}</p>
+              <p className="text-[10px]">Ecuador</p>
+            </div>
+
+            <div className="border-t border-dashed border-black my-2"></div>
+
+            {/* Metadatos Factura */}
+            <div className="space-y-0.5 text-[10px]">
+              <div className="flex justify-between font-bold">
+                <span>FACTURA:</span>
+                <span>#{numeroFactura}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>FECHA:</span>
+                <span>{fechaEmision}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>VENCE:</span>
+                <span>{fechaVencimiento}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>PAGO:</span>
+                <span>{formaPago} ({terminoPago})</span>
+              </div>
+            </div>
+
+            <div className="border-t border-dashed border-black my-2"></div>
+
+            {/* Datos del Cliente */}
+            <div className="space-y-0.5 text-[10px]">
+              <div><span className="font-bold">CLIENTE:</span> {clienteNombre}</div>
+              <div><span className="font-bold">RUC/CI:</span> {clienteIdentificacion}</div>
+              {clienteDireccion && <div><span className="font-bold">DIR:</span> {clienteDireccion}</div>}
+              {clienteTelefono && <div><span className="font-bold">TEL:</span> {clienteTelefono}</div>}
+              {placaVehiculo && <div><span className="font-bold">PLACA:</span> {placaVehiculo}</div>}
+            </div>
+
+            <div className="border-t border-dashed border-black my-2"></div>
+
+            {/* Lista de Items */}
+            <div className="text-[10px]">
+              <div className="flex justify-between font-bold pb-1 border-b border-black">
+                <span className="w-8">CANT</span>
+                <span className="flex-1 px-1">DETALLE</span>
+                <span className="w-14 text-right">TOTAL</span>
+              </div>
+              <div className="divide-y divide-dashed divide-zinc-300 py-1 space-y-1">
+                {items
+                  .filter((i) => i.description.trim())
+                  .map((item, idx) => {
+                    const qty = item.quantity || 1;
+                    const pu = item.unitPrice || 0;
+                    const descPct = (item.discountPercent || 0) / 100;
+                    const totalLinea = qty * pu * (1 - descPct);
+                    return (
+                      <div key={idx} className="pt-1">
+                        <div className="flex justify-between items-start">
+                          <span className="w-8 font-bold">{qty}</span>
+                          <span className="flex-1 px-1">{item.description}</span>
+                          <span className="w-14 text-right font-bold">${totalLinea.toFixed(2)}</span>
+                        </div>
+                        {item.discountPercent > 0 && (
+                          <div className="text-[9px] text-zinc-600 pl-8">
+                            P.U: ${pu.toFixed(2)} | Desc: {item.discountPercent}%
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+
+            <div className="border-t border-dashed border-black my-2"></div>
+
+            {/* Totales */}
+            <div className="space-y-1 text-[10px]">
+              <div className="flex justify-between">
+                <span>SUBTOTAL:</span>
+                <span>${totales.subtotalSinDescuento.toFixed(2)}</span>
+              </div>
+              {totales.totalDescuento > 0 && (
+                <div className="flex justify-between">
+                  <span>DESCUENTO:</span>
+                  <span>-${totales.totalDescuento.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span>BASE IMPONIBLE:</span>
+                <span>${totales.subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>IVA {negocio.iva || 15}%:</span>
+                <span>${totales.iva.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-xs font-bold pt-1 border-t border-black">
+                <span>TOTAL A PAGAR:</span>
+                <span>${totales.total.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="border-t border-dashed border-black my-3"></div>
+
+            {/* Pie del Ticket */}
+            <div className="text-center space-y-1 text-[9px]">
+              <p className="font-bold">¡GRACIAS POR SU PREFERENCIA!</p>
+              <p>Comprobante de venta emitido en sistema POS.</p>
+              <p className="text-[8px] text-zinc-500">AutoG Sistema Automotriz</p>
+            </div>
+          </div>
+        ) : (
+          /* ============================================================== */
+          /* FORMATO FACTURA A4 */
+          /* ============================================================== */
+          <div className="w-full max-w-[210mm] mx-auto text-black font-sans text-xs p-6 bg-white space-y-4">
+            {/* Cabecera SRI Oficial */}
+            <div className="grid grid-cols-12 gap-4 items-start">
+              {/* Información del Emisor */}
+              <div className="col-span-6 space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg">
+                    {negocio.nombre.charAt(0)}
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-zinc-900 leading-tight">{negocio.nombre}</h2>
+                    <p className="text-[11px] text-zinc-600">Servicios Mecánicos y Repuestos Automotrices</p>
+                  </div>
+                </div>
+
+                <div className="border border-zinc-300 rounded-xl p-3 space-y-1 text-[11px] text-zinc-700 bg-zinc-50/50">
+                  <p><span className="font-bold">Dirección Matriz:</span> {negocio.direccion}</p>
+                  <p><span className="font-bold">Dirección Sucursal:</span> {negocio.direccion}</p>
+                  <p><span className="font-bold">Obligado a Llevar Contabilidad:</span> NO</p>
+                  <p><span className="font-bold">Contribuyente Régimen:</span> RIMPE - Negocio Popular</p>
+                </div>
+              </div>
+
+              {/* Caja Fiscal Factura */}
+              <div className="col-span-6 border-2 border-zinc-800 rounded-xl p-3.5 space-y-1.5 bg-zinc-50/30">
+                <div className="flex justify-between items-center border-b border-zinc-200 pb-1">
+                  <span className="text-[11px] font-bold text-zinc-600 uppercase">R.U.C.</span>
+                  <span className="font-mono font-bold text-sm text-zinc-900">{negocio.ruc}</span>
+                </div>
+                <div className="text-base font-black tracking-wider text-zinc-900">
+                  FACTURA
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-zinc-600">No.</span>
+                  <span className="font-mono font-bold text-blue-700">{numeroFactura ? `#${numeroFactura}` : "001-001"}</span>
+                </div>
+                <div className="space-y-0.5 text-[10px] text-zinc-600 pt-1 border-t border-zinc-200">
+                  <p><span className="font-semibold text-zinc-800">FECHA DE EMISIÓN:</span> {fechaEmision}</p>
+                  <p><span className="font-semibold text-zinc-800">FECHA VENCIMIENTO:</span> {fechaVencimiento}</p>
+                  <p><span className="font-semibold text-zinc-800">AMBIENTE:</span> PRODUCCIÓN</p>
+                  <p><span className="font-semibold text-zinc-800">EMISIÓN:</span> NORMAL</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Datos del Cliente */}
+            <div className="border border-zinc-300 rounded-xl p-3 bg-zinc-50/30 grid grid-cols-12 gap-2 text-[11px]">
+              <div className="col-span-8">
+                <span className="font-bold text-zinc-800">Razón Social / Nombres:</span>{" "}
+                <span className="text-zinc-900 uppercase font-semibold">{clienteNombre}</span>
+              </div>
+              <div className="col-span-4">
+                <span className="font-bold text-zinc-800">Identificación:</span>{" "}
+                <span className="font-mono font-semibold text-zinc-900">{clienteIdentificacion}</span>
+              </div>
+              <div className="col-span-8">
+                <span className="font-bold text-zinc-800">Dirección:</span>{" "}
+                <span className="text-zinc-700">{clienteDireccion || "S/N"}</span>
+              </div>
+              <div className="col-span-4">
+                <span className="font-bold text-zinc-800">Teléfono:</span>{" "}
+                <span className="text-zinc-700">{clienteTelefono || "S/N"}</span>
+              </div>
+              {placaVehiculo && (
+                <div className="col-span-4">
+                  <span className="font-bold text-zinc-800">Placa:</span>{" "}
+                  <span className="font-mono font-bold text-blue-700 uppercase bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                    {placaVehiculo}
+                  </span>
+                </div>
+              )}
+              <div className="col-span-8">
+                <span className="font-bold text-zinc-800">Correo:</span>{" "}
+                <span className="text-zinc-700">{clienteEmail || "S/N"}</span>
+              </div>
+            </div>
+
+            {/* Tabla de Productos / Servicios */}
+            <div className="border border-zinc-300 rounded-xl overflow-hidden">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-zinc-100 border-b border-zinc-300 text-zinc-700 font-bold uppercase text-[10px]">
+                  <tr>
+                    <th className="py-2 px-3 text-center w-12 border-r border-zinc-200">Cant.</th>
+                    <th className="py-2 px-3 w-24 border-r border-zinc-200">Código</th>
+                    <th className="py-2 px-3 border-r border-zinc-200">Descripción</th>
+                    <th className="py-2 px-3 w-24 text-right border-r border-zinc-200">P. Unitario</th>
+                    <th className="py-2 px-3 w-20 text-right border-r border-zinc-200">Desc.</th>
+                    <th className="py-2 px-3 w-24 text-right">Precio Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200 text-zinc-800 text-[11px]">
+                  {items
+                    .filter((i) => i.description.trim())
+                    .map((item, idx) => {
+                      const qty = item.quantity || 1;
+                      const pu = item.unitPrice || 0;
+                      const descVal = qty * pu * ((item.discountPercent || 0) / 100);
+                      const totalLinea = qty * pu - descVal;
+                      return (
+                        <tr key={idx}>
+                          <td className="py-2 px-3 text-center font-bold border-r border-zinc-200">{qty}</td>
+                          <td className="py-2 px-3 font-mono text-zinc-600 border-r border-zinc-200">{item.code || "SRV"}</td>
+                          <td className="py-2 px-3 font-medium border-r border-zinc-200">{item.description}</td>
+                          <td className="py-2 px-3 text-right font-mono border-r border-zinc-200">${pu.toFixed(2)}</td>
+                          <td className="py-2 px-3 text-right font-mono text-zinc-500 border-r border-zinc-200">${descVal.toFixed(2)}</td>
+                          <td className="py-2 px-3 text-right font-mono font-bold text-zinc-900">${totalLinea.toFixed(2)}</td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Bloque Inferior: Información Adicional y Totales */}
+            <div className="grid grid-cols-12 gap-4 items-start pt-1">
+              <div className="col-span-7 space-y-2">
+                <div className="border border-zinc-300 rounded-xl p-3 bg-zinc-50/40 text-[11px] space-y-1.5">
+                  <p className="font-bold text-zinc-800 uppercase text-[10px] tracking-wider border-b border-zinc-200 pb-1">
+                    Información Adicional
+                  </p>
+                  <p><span className="font-semibold text-zinc-700">Forma de Pago:</span> {formaPago}</p>
+                  <p><span className="font-semibold text-zinc-700">Término:</span> {terminoPago}</p>
+                  {observaciones && <p><span className="font-semibold text-zinc-700">Observaciones:</span> {observaciones}</p>}
+                  <p className="text-[10px] text-zinc-500 pt-1">
+                    Comprobante emitido con validez tributaria y contable. Gracias por su preferencia.
+                  </p>
+                </div>
+              </div>
+
+              <div className="col-span-5 border border-zinc-300 rounded-xl overflow-hidden divide-y divide-zinc-200 text-xs">
+                <div className="flex justify-between py-1.5 px-3 bg-zinc-50/50">
+                  <span className="text-zinc-600 font-medium">SUBTOTAL {negocio.iva || 15}%:</span>
+                  <span className="font-mono font-semibold">${totales.subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between py-1.5 px-3 bg-zinc-50/50">
+                  <span className="text-zinc-600 font-medium">SUBTOTAL 0%:</span>
+                  <span className="font-mono font-semibold">$0.00</span>
+                </div>
+                <div className="flex justify-between py-1.5 px-3 bg-zinc-50/50">
+                  <span className="text-zinc-600 font-medium">SUBTOTAL NO OBJETO DE IVA:</span>
+                  <span className="font-mono font-semibold">$0.00</span>
+                </div>
+                <div className="flex justify-between py-1.5 px-3 bg-zinc-50/50">
+                  <span className="text-zinc-600 font-medium">SUBTOTAL SIN IMPUESTOS:</span>
+                  <span className="font-mono font-semibold">${totales.subtotalSinDescuento.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between py-1.5 px-3 bg-zinc-50/50">
+                  <span className="text-zinc-600 font-medium">TOTAL DESCUENTO:</span>
+                  <span className="font-mono font-semibold">-${totales.totalDescuento.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between py-1.5 px-3 bg-zinc-50/50">
+                  <span className="text-zinc-600 font-medium">IVA {negocio.iva || 15}%:</span>
+                  <span className="font-mono font-semibold">${totales.iva.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between py-2 px-3 bg-zinc-100 font-bold text-sm">
+                  <span className="text-zinc-900">VALOR TOTAL:</span>
+                  <span className="font-mono text-zinc-900">${totales.total.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

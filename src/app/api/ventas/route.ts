@@ -17,7 +17,11 @@ export async function GET(request: Request) {
         where: { id },
         include: {
           items: true,
-          customer: true,
+          customer: {
+            include: {
+              vehicles: true,
+            },
+          },
         },
       });
       if (!sale) {
@@ -203,11 +207,26 @@ export async function POST(request: Request) {
   }
 }
 
-// PATCH: Actualizar venta (ej: editar cliente/método o anular venta y restituir stock en Neon)
+// PATCH: Actualizar venta (ej: editar cliente/método, items, o anular venta y restituir stock en Neon)
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
-    const { id, status, customerName, paymentMethod } = body;
+    const {
+      id,
+      saleNumber,
+      status,
+      customerName,
+      customerId,
+      customerPhone,
+      customerEmail,
+      customerAddress,
+      paymentMethod,
+      subtotal,
+      tax,
+      discount,
+      total,
+      items,
+    } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -267,15 +286,107 @@ export async function PATCH(request: Request) {
       }
     }
 
+    // Si se reactiva una venta anulada a completada, descontar inventario
+    if (status === "Completada" && saleActual.status === "Anulada") {
+      const itemsToDeduct = Array.isArray(items) && items.length > 0 ? items : saleActual.items;
+      for (const item of itemsToDeduct) {
+        const prodId = item.productId;
+        if (prodId) {
+          try {
+            const dbProduct = await prisma.product.findUnique({ where: { id: prodId } });
+            if (dbProduct) {
+              const qty = Math.max(1, parseInt((item.qty || item.quantity || 1).toString(), 10));
+              const newStock = Math.max(0, dbProduct.stock - qty);
+              await prisma.product.update({
+                where: { id: prodId },
+                data: {
+                  stock: newStock,
+                  status: calcularEstado(newStock, dbProduct.minStock),
+                },
+              });
+            }
+          } catch (e) {
+            console.warn(`Error al descontar stock para producto ${prodId}:`, e);
+          }
+        }
+      }
+    }
+
+    // Opcional: Actualizar datos de cliente si se proveyeron
+    if (customerId) {
+      try {
+        const custData: any = {};
+        if (customerPhone) custData.phone = customerPhone.trim();
+        if (customerEmail) custData.email = customerEmail.trim();
+        if (customerAddress) custData.address = customerAddress.trim();
+        if (Object.keys(custData).length > 0) {
+          await prisma.customer.update({
+            where: { id: customerId },
+            data: custData,
+          });
+        }
+      } catch (cErr) {
+        console.warn("No se pudo actualizar el cliente asociado:", cErr);
+      }
+    }
+
     const updateData: any = {};
+    if (saleNumber) updateData.saleNumber = saleNumber.trim();
     if (status) updateData.status = status;
     if (customerName) updateData.customerName = customerName.trim();
+    if (customerId !== undefined) updateData.customerId = customerId || null;
     if (paymentMethod) updateData.paymentMethod = paymentMethod.trim();
+    if (subtotal !== undefined) updateData.subtotal = Number(subtotal);
+    if (tax !== undefined) updateData.tax = Number(tax);
+    if (discount !== undefined) updateData.discount = Number(discount);
+    if (total !== undefined) updateData.total = Number(total);
 
-    const saleUpdated = await prisma.sale.update({
+    // Si vienen items, actualizar las líneas de detalle
+    if (Array.isArray(items) && items.length > 0) {
+      await prisma.$transaction(async (tx) => {
+        await tx.saleItem.deleteMany({
+          where: { saleId: id },
+        });
+
+        await tx.saleItem.createMany({
+          data: items.map((it: any) => {
+            const p = parseFloat((it.price ?? it.unitPrice ?? 0).toString()) || 0;
+            const q = Math.max(1, parseInt((it.quantity ?? it.qty ?? 1).toString(), 10) || 1);
+            const tot = parseFloat((it.total ?? p * q).toString()) || p * q;
+            return {
+              saleId: id,
+              productId: it.productId || null,
+              code: it.code || "SRV",
+              name: it.name || it.description || "Producto",
+              price: p,
+              quantity: q,
+              total: tot,
+            };
+          }),
+        });
+
+        await tx.sale.update({
+          where: { id },
+          data: updateData,
+        });
+      });
+    } else {
+      await prisma.sale.update({
+        where: { id },
+        data: updateData,
+      });
+    }
+
+    const saleUpdated = await prisma.sale.findUnique({
       where: { id },
-      data: updateData,
-      include: { items: true, customer: true },
+      include: {
+        items: true,
+        customer: {
+          include: {
+            vehicles: true,
+          },
+        },
+      },
     });
 
     return NextResponse.json({ success: true, venta: saleUpdated });
