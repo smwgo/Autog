@@ -661,39 +661,44 @@ enum RouteStopStatus {
 }
 
 model Customer {
-  id             String    @id @default(cuid())
-  identification String    @unique
+  id             String          @id @default(cuid())
+  identification String          @unique
   name           String
-  type           String    @default("Personal")
+  type           String          @default("Personal")
   phone          String
   email          String?
   address        String?
-  vip            Boolean   @default(false)
+  vip            Boolean         @default(false)
   notes          String?
-  lastVisit      DateTime? @default(now())
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  lastVisit      DateTime?       @default(now())
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
   vehicles       Vehicle[]
   sales          Sale[]
+  workshopOrders WorkshopOrder[]
 
   @@index([identification])
   @@index([name])
 }
 
 model Vehicle {
-  id         String   @id @default(cuid())
-  customerId String
-  plate      String   @unique
-  brand      String
-  model      String
-  year       Int?
-  color      String?
-  mileage    Int?
-  vin        String?
-  fuelType   String?  @default("Gasolina")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  id                   String          @id @default(cuid())
+  customerId           String
+  plate                String          @unique
+  vehicleType          String?         @default("Auto")
+  brand                String
+  model                String
+  year                 Int?
+  color                String?
+  mileage              Int?
+  nextOilChangeMileage Int?
+  photosJson           String?         @default("[]")
+  vin                  String?
+  fuelType             String?         @default("Gasolina")
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  customer             Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  workshopOrders       WorkshopOrder[]
 
   @@index([customerId])
   @@index([plate])
@@ -710,6 +715,7 @@ model Product {
   stock     Int        @default(0)
   minStock  Int        @default(5)
   location  String?
+  imageUrl  String?
   status    String     @default("En Stock")
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
@@ -834,26 +840,43 @@ model WorkshopService {
 }
 
 model WorkshopOrder {
-  id           String   @id @default(cuid())
-  orderNumber  String   @unique
-  vehicle      String
-  plate        String
-  client       String
-  clientPhone  String?
-  mechanic     String   @default("Carlos Rodríguez")
-  status       String   @default("En Diagnóstico")
-  progress     Int      @default(25)
-  servicesJson String?
-  notes        String?
-  dateIn       DateTime @default(now())
-  estimatedOut String?  @default("24 Horas")
-  totalCost    Decimal? @db.Decimal(12, 2)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                  String    @id @default(cuid())
+  orderNumber         String    @unique
+  customerId          String?
+  vehicleId           String?
+  vehicle             String
+  plate               String
+  client              String
+  clientPhone         String?
+  clientIdDoc         String?
+  mechanic            String    @default("Carlos Rodríguez")
+  status              String    @default("En Diagnóstico")
+  progress            Int       @default(25)
+  mileage             Int?
+  nextOilChangeKm     Int?
+  servicesJson        String?
+  itemsJson           String?   @default("[]")
+  receptionPhotosJson String?   @default("[]")
+  evidencePhotosJson  String?   @default("[]")
+  notes               String?
+  dateIn              DateTime  @default(now())
+  startedAt           DateTime?
+  completedAt         DateTime?
+  durationMinutes     Int?      @default(0)
+  estimatedOut        String?   @default("24 Horas")
+  totalCost           Decimal?  @db.Decimal(12, 2)
+  posRequestId        String?
+  stockDeducted       Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  customer            Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  vehicleRef          Vehicle?  @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
 
   @@index([orderNumber])
   @@index([plate])
   @@index([status])
+  @@index([customerId])
+  @@index([vehicleId])
 }
 
 model WorkshopInspection {
@@ -898,20 +921,22 @@ model WorkshopTask {
 }
 
 model WorkshopHistory {
-  id           String   @id @default(cuid())
-  serviceCode  String   @unique
-  date         String
-  vehicle      String
-  plate        String
-  client       String
-  servicesJson String   @default("[]")
-  cost         Decimal  @default(0) @db.Decimal(12, 2)
-  mechanic     String   @default("Carlos Rodríguez")
-  mileage      String?  @default("N/A")
-  notes        String?
-  orderNumber  String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(cuid())
+  serviceCode     String   @unique
+  date            String
+  vehicle         String
+  plate           String
+  client          String
+  servicesJson    String   @default("[]")
+  cost            Decimal  @default(0) @db.Decimal(12, 2)
+  mechanic        String   @default("Carlos Rodríguez")
+  mileage         String?  @default("N/A")
+  nextOilChangeKm Int?
+  photosJson      String?  @default("[]")
+  notes           String?
+  orderNumber     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([serviceCode])
   @@index([plate])

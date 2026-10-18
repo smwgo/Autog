@@ -108,18 +108,6 @@ const modules = [
     ),
   },
   {
-    title: "Promociones",
-    href: "/pos/promociones",
-    color: "bg-orange-500",
-    gradient: "from-orange-500 to-rose-500",
-    icon: (
-      <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
-        <circle cx="7" cy="7" r="1.5" fill="currentColor" />
-      </svg>
-    ),
-  },
-  {
     title: "Créditos",
     href: "/pos/creditos",
     color: "bg-cyan-500",
@@ -130,6 +118,20 @@ const modules = [
         <line x1="2" x2="22" y1="10" y2="10" />
         <circle cx="7" cy="15" r="1" fill="currentColor" />
         <line x1="11" x2="16" y1="15" y2="15" />
+      </svg>
+    ),
+  },
+  {
+    title: "Vehículos",
+    href: "/pos/vehiculos",
+    color: "bg-indigo-500",
+    gradient: "from-indigo-500 to-blue-600",
+    icon: (
+      <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+        <circle cx="7" cy="17" r="2" />
+        <path d="M9 17h6" />
+        <circle cx="17" cy="17" r="2" />
       </svg>
     ),
   },

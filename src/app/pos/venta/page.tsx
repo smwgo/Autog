@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
 
@@ -57,7 +58,9 @@ function getProductEmoji(name: string, category: string = ""): string {
 }
 
 export default function NuevaVentaPage() {
+  const router = useRouter();
   const [productos, setProductos] = useState<Product[]>([]);
+  const [cotizando, setCotizando] = useState(false);
   const [cargandoProductos, setCargandoProductos] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroTipo, setFiltroTipo] = useState<"todos" | "productos" | "servicios">("todos");
@@ -942,6 +945,51 @@ export default function NuevaVentaPage() {
     }
   };
 
+  // Cotizar: Registra cotización y navega al listado de cotizaciones
+  const handleCotizar = async () => {
+    if (cart.length === 0) {
+      router.push("/pos/cotizaciones");
+      return;
+    }
+
+    try {
+      setCotizando(true);
+      const res = await fetch("/api/cotizaciones", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: clienteSeleccionado?.name || "Consumidor Final",
+          customerPhone: clienteSeleccionado?.phone || null,
+          customerEmail: (clienteSeleccionado as any)?.email || null,
+          items: cart.map((item, idx) => ({
+            id: `${item.product.id}-${Date.now()}-${idx}`,
+            productId: item.product.id,
+            code: item.product.code || "PRD",
+            name: item.product.name,
+            price: Number(item.product.price) || 0,
+            qty: item.qty,
+            discount: 0,
+          })),
+          total: total,
+          notes: `Cotización generada desde Terminal POS | Subtotal: $${subtotal.toFixed(2)} | IVA: $${tax.toFixed(2)}`,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        limpiarCarrito();
+        router.push("/pos/cotizaciones");
+      } else {
+        alert(data.error || "No se pudo generar la cotización.");
+      }
+    } catch (error) {
+      console.error("Error al cotizar:", error);
+      alert("Error de conexión al generar la cotización.");
+    } finally {
+      setCotizando(false);
+    }
+  };
+
   // Opciones de Impresión (Ticket Térmico o A4)
   const [formatoImpresionVenta, setFormatoImpresionVenta] = useState<"TICKET" | "A4">("TICKET");
   const [menuImpresionVenta, setMenuImpresionVenta] = useState(false);
@@ -1538,6 +1586,16 @@ export default function NuevaVentaPage() {
                 <line x1="2" y1="10" x2="22" y2="10" />
               </svg>
               <span>Cobrar</span>
+            </button>
+
+            {/* Botón Cotizar - Suave y transparente, sin icono, solo una palabra */}
+            <button
+              type="button"
+              onClick={handleCotizar}
+              disabled={cotizando}
+              className="w-full h-11 rounded-xl font-medium text-sm tracking-normal transition-all flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/25 active:scale-[0.98] cursor-pointer backdrop-blur-sm shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span>{cotizando ? "Cotizando..." : "Cotizar"}</span>
             </button>
           </div>
         </div>

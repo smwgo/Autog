@@ -24,7 +24,6 @@ export async function GET() {
         services,
         cashSessions,
         quotes,
-        promotions,
         credits,
         pendingOrders,
       ] = await Promise.all([
@@ -34,7 +33,6 @@ export async function GET() {
         safeCount("WorkshopService"),
         safeCount("CashRegister"),
         safeCount("OrderRequest", `WHERE "type" = 'COTIZACION'`),
-        safeCount("PosPromotion"),
         safeCount("PosCreditAccount"),
         safeCount("OrderRequest", `WHERE "status" = 'PENDIENTE'`),
       ]);
@@ -47,7 +45,6 @@ export async function GET() {
         servicios: services,
         caja: cashSessions,
         cotizaciones: quotes,
-        promociones: promotions,
         creditos: credits,
       };
     });

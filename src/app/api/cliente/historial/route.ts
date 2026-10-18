@@ -72,6 +72,11 @@ export async function GET(request: Request) {
         const isActive = expDate.getTime() >= Date.now() - 365 * 24 * 60 * 60 * 1000 * 2; // Activa en registros recientes
         const expStr = expDate.toISOString().split("T")[0];
 
+        let photos: string[] = [];
+        try {
+          photos = r.photosJson ? JSON.parse(r.photosJson) : [];
+        } catch {}
+
         return {
           id: r.orderNumber || r.serviceCode || r.id,
           dbId: r.id,
@@ -84,6 +89,8 @@ export async function GET(request: Request) {
           plate: r.plate,
           client: r.client,
           mileage: r.mileage || "45,000 km",
+          nextOilChangeKm: r.nextOilChangeKm ? Number(r.nextOilChangeKm) : null,
+          photos,
           type,
           details,
           services,
@@ -94,7 +101,9 @@ export async function GET(request: Request) {
           paymentMethod: "Tarjeta / Transferencia",
           warranty: {
             active: idx < 2 ? true : isActive,
-            expires: `${expStr} o +5,000 km`,
+            expires: r.nextOilChangeKm
+              ? `${expStr} o ${Number(r.nextOilChangeKm).toLocaleString()} km`
+              : `${expStr} o +5,000 km`,
             coverage: `Cubre mano de obra certificada por ${
               r.mechanic || "Taller AutoG"
             } y garantía de ajuste en: ${services.join(", ") || "servicio realizado"}.`,

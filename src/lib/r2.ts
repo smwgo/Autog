@@ -143,6 +143,52 @@ export async function getSignedDownloadUrl(
   return await getSignedUrl(client, command, { expiresIn: expiresInSeconds });
 }
 
+export function isR2Configured(): boolean {
+  return Boolean(
+    process.env.R2_ACCOUNT_ID &&
+    process.env.R2_ACCESS_KEY_ID &&
+    process.env.R2_SECRET_ACCESS_KEY
+  );
+}
+
+/**
+ * Generate a Presigned PUT URL to upload a file directly from the browser to Cloudflare R2
+ */
+export async function getSignedUploadUrl({
+  mimeType,
+  folder = "taller",
+  originalName = "photo.jpg",
+  expiresInSeconds = 600,
+}: {
+  mimeType: string;
+  folder?: string;
+  originalName?: string;
+  expiresInSeconds?: number;
+}): Promise<{ uploadUrl: string; key: string; publicUrl: string }> {
+  if (!ALLOWED_MIME_TYPES.includes(mimeType as AllowedMimeType)) {
+    throw new Error(`Tipo de archivo no permitido: ${mimeType}`);
+  }
+
+  const safeFileName = sanitizeFileName(originalName, mimeType);
+  const cleanFolder = folder.replace(/[^a-zA-Z0-9_-]/g, "");
+  const key = `${cleanFolder}/${safeFileName}`;
+
+  const client = getR2Client();
+  const bucketName = process.env.R2_BUCKET_NAME || "autotech-storage";
+
+  const command = new PutObjectCommand({
+    Bucket: bucketName,
+    Key: key,
+    ContentType: mimeType,
+  });
+
+  const uploadUrl = await getSignedUrl(client, command, { expiresIn: expiresInSeconds });
+  const publicDomain = process.env.R2_PUBLIC_DOMAIN;
+  const publicUrl = publicDomain ? `https://${publicDomain}/${key}` : uploadUrl.split("?")[0];
+
+  return { uploadUrl, key, publicUrl };
+}
+
 /**
  * Delete an object from Cloudflare R2
  */

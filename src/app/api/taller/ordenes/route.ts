@@ -246,6 +246,40 @@ export async function POST(request: Request) {
         console.warn("Aviso al crear tareas automáticas:", e);
       }
 
+      // Sincronizar vehículo automáticamente en la tabla Vehicle
+      try {
+        const cleanPlate = plate.trim().toUpperCase();
+        const existingVehicle = await prisma.vehicle.findUnique({ where: { plate: cleanPlate } });
+        if (!existingVehicle) {
+          let customer = await prisma.customer.findFirst({
+            where: { name: { contains: client.trim(), mode: "insensitive" } },
+          });
+          if (!customer) {
+            customer = await prisma.customer.create({
+              data: {
+                identification: `CLI-${Date.now().toString().slice(-4)}`,
+                name: client.trim(),
+                phone: clientPhone ? clientPhone.trim() : "N/A",
+                type: "Taller",
+              },
+            });
+          }
+          const parts = vehicle.trim().split(" ");
+          const brand = parts[0] || "General";
+          const model = parts.slice(1).join(" ") || "Vehículo";
+          await prisma.vehicle.create({
+            data: {
+              plate: cleanPlate,
+              brand,
+              model,
+              customerId: customer.id,
+            },
+          });
+        }
+      } catch (vehSyncErr) {
+        console.warn("Aviso al sincronizar vehículo con taller:", vehSyncErr);
+      }
+
       return NextResponse.json({
         success: true,
         order: rows?.[0],
