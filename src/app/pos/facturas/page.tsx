@@ -101,11 +101,11 @@ export default function FacturasPosPage() {
       if (res.ok && data.success) {
         setVentas(data.ventas || []);
       } else {
-        setErrorMensaje(data.error || "No se pudieron obtener las ventas de Neon.");
+        setErrorMensaje(data.error || "No se pudieron obtener las facturas.");
       }
     } catch (err: any) {
-      console.error("Error al cargar facturas de Neon:", err);
-      setErrorMensaje("Error de conexión al cargar las facturas de Neon.");
+      console.error("Error al cargar facturas:", err);
+      setErrorMensaje("Error de conexión al cargar las facturas.");
     } finally {
       if (!silencioso) setCargando(false);
     }
@@ -129,7 +129,7 @@ export default function FacturasPosPage() {
   const handleAnular = async (v: Sale) => {
     if (
       !confirm(
-        `¿Seguro de anular la factura ${v.saleNumber}? Se reincorporará el stock de ${v.items?.length || 0} producto(s) a Neon y se ajustará el cuadre de caja si fue en efectivo.`
+        `¿Seguro de anular la factura ${v.saleNumber}? Se reincorporará el stock de ${v.items?.length || 0} producto(s) y se ajustará el cuadre de caja si fue en efectivo.`
       )
     ) {
       return;
@@ -144,7 +144,7 @@ export default function FacturasPosPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setMensajeExito(`Factura ${v.saleNumber} anulada e inventario reabastecido en Neon.`);
+        setMensajeExito(`Factura ${v.saleNumber} anulada e inventario reabastecido.`);
         setTimeout(() => setMensajeExito(null), 4000);
         await cargarVentas(searchTerm, true);
         if (ventaDetalle?.id === v.id) {
@@ -165,7 +165,7 @@ export default function FacturasPosPage() {
   const handleEliminar = async (v: Sale) => {
     if (
       !confirm(
-        `⚠️ ATENCIÓN: ¿Deseas ELIMINAR definitivamente la factura ${v.saleNumber} de la base de datos Neon? Esta acción borrará el registro y sus líneas de detalle de forma permanente.`
+        `⚠️ ATENCIÓN: ¿Deseas ELIMINAR definitivamente la factura ${v.saleNumber}? Esta acción borrará el registro y sus líneas de detalle de forma permanente.`
       )
     ) {
       return;
@@ -178,7 +178,7 @@ export default function FacturasPosPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setMensajeExito(`Factura ${v.saleNumber} eliminada de Neon.`);
+        setMensajeExito(`Factura ${v.saleNumber} eliminada.`);
         setTimeout(() => setMensajeExito(null), 4000);
         if (ventaDetalle?.id === v.id) setVentaDetalle(null);
         await cargarVentas(searchTerm, true);
@@ -412,11 +412,11 @@ export default function FacturasPosPage() {
           {cargando ? (
             <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 text-sm bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
               <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              Consultando facturas en Neon...
+              Cargando facturas...
             </div>
           ) : ventasFiltradas.length === 0 ? (
             <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 text-sm bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-              No se encontraron facturas en Neon con los criterios seleccionados.
+              No se encontraron facturas con los criterios seleccionados.
             </div>
           ) : (
             <>
@@ -473,18 +473,6 @@ export default function FacturasPosPage() {
 
                         {/* Acciones Rápidas (Toque fácil en móvil >= 44px, igual que clientes) */}
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => setVentaDetalle(v)}
-                            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all cursor-pointer"
-                            title="Ver / Imprimir Factura A4"
-                            aria-label="Ver / Imprimir Factura A4"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </button>
                           <Link
                             href={`/pos/facturas/editar?id=${v.id}`}
                             className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all"

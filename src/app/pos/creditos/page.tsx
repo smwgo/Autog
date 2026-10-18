@@ -235,7 +235,7 @@ export default function CreditosPage() {
         </CollapsibleMetrics>
 
         {/* Buscador y Filtros */}
-        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
           <div className="relative w-full flex-1">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
               🔍
@@ -245,7 +245,7 @@ export default function CreditosPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar..."
-              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
+              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
             />
             {searchTerm && (
               <button
@@ -262,7 +262,7 @@ export default function CreditosPage() {
             <button
               type="button"
               onClick={() => setFiltroMenuAbierto(!filtroMenuAbierto)}
-              className="w-full h-11 px-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-sm font-medium flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+              className="w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
             >
               <span>
                 {filtroEstado === "AL_DIA"
@@ -284,7 +284,7 @@ export default function CreditosPage() {
                   className="fixed inset-0 z-40" 
                   onClick={() => setFiltroMenuAbierto(false)} 
                 />
-                <div className="absolute right-0 mt-1.5 w-full bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
                   {[
                     { id: "TODOS", label: "Estado" },
                     { id: "AL_DIA", label: "Al Día" },
@@ -298,10 +298,10 @@ export default function CreditosPage() {
                         setFiltroEstado(opcion.id as any);
                         setFiltroMenuAbierto(false);
                       }}
-                      className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                      className={`w-full px-4 py-2.5 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
                         filtroEstado === opcion.id
-                          ? "bg-blue-600/15 text-blue-400"
-                          : "text-zinc-300 hover:bg-zinc-800/80 hover:text-white"
+                          ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400"
+                          : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-white"
                       }`}
                     >
                       <span>{opcion.label}</span>
@@ -322,7 +322,7 @@ export default function CreditosPage() {
         <div className="order-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
           {cargando ? (
             <div className="p-12 text-center text-zinc-500 text-sm">
-              Cargando cuentas por cobrar desde Neon PostgreSQL...
+              Cargando cuentas por cobrar...
             </div>
           ) : filtrados.length === 0 ? (
             <div className="p-12 text-center text-zinc-500 text-sm">
@@ -673,7 +673,7 @@ export default function CreditosPage() {
                     disabled={guardando}
                     className="flex-1 h-11 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-sm shadow-md shadow-cyan-500/20 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center active:scale-98"
                   >
-                    {guardando ? "Procesando en Neon..." : "Registrar Abono"}
+                    {guardando ? "Procesando..." : "Registrar Abono"}
                   </button>
                   <button
                     type="button"

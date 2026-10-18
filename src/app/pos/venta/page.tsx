@@ -1038,10 +1038,10 @@ export default function NuevaVentaPage() {
 
         {/* Panel Izquierdo: Catálogo y Búsqueda */}
         <div className={`${vistaMovil === "carrito" ? "hidden md:flex" : "flex"} flex-grow flex-col h-full bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden`}>
-          <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex flex-col gap-4">
-            {/* Header */}
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-3">
+          <div className="p-4 sm:p-6 border-b border-zinc-100 dark:border-zinc-800 flex flex-col gap-3 sm:gap-4">
+            {/* Header: Flecha y Venta a la izquierda, Pedidos y Caja a la derecha en la misma línea en móvil */}
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <Link 
                   href="/pos"
                   title="Volver a Panel POS"
@@ -1051,25 +1051,25 @@ export default function NuevaVentaPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                   </svg>
                 </Link>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
                   Venta
                 </h1>
-                <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
+                <span className="inline-flex items-center justify-center px-2 py-0.5 sm:px-2.5 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 shrink-0">
                   {productos.length}
                 </span>
               </div>
 
-              {/* Botones de Acción: Pedidos y Caja */}
-              <div className="flex items-center gap-2">
+              {/* Botones de Acción: Pedidos y Caja a la altura a la derecha */}
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={abrirModalPedidos}
-                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-zinc-700 dark:text-zinc-300 bg-zinc-500/10 hover:bg-zinc-500/20 border border-zinc-300/40 dark:border-zinc-700/40 font-semibold text-xs transition-all active:scale-95 cursor-pointer backdrop-blur-sm"
+                  className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-zinc-700 dark:text-zinc-300 bg-zinc-500/10 hover:bg-zinc-500/20 border border-zinc-300/40 dark:border-zinc-700/40 font-semibold text-xs transition-all active:scale-95 cursor-pointer backdrop-blur-sm whitespace-nowrap"
                 >
                   <span className="text-sm">📥</span>
                   <span>Pedidos</span>
                   {solicitudesPendientesCount > 0 && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/35 font-semibold">
+                    <span className="text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/35 font-semibold">
                       {solicitudesPendientesCount}
                     </span>
                   )}
@@ -1083,7 +1083,7 @@ export default function NuevaVentaPage() {
                       verificarCajaApertura();
                       setMostrarModalCierre(true);
                     }}
-                    className="w-10 h-10 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-rose-300 border border-rose-500/30 flex items-center justify-center text-sm transition-all shadow-[0_0_15px_rgba(244,63,94,0.12)] cursor-pointer"
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-rose-300 border border-rose-500/30 flex items-center justify-center text-sm transition-all shadow-[0_0_15px_rgba(244,63,94,0.12)] cursor-pointer shrink-0"
                     title="Cerrar Caja"
                   >
                     <span>🔒</span>
@@ -1095,7 +1095,7 @@ export default function NuevaVentaPage() {
                       setFondoApertura("");
                       setMostrarModalApertura(true);
                     }}
-                    className="w-10 h-10 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 flex items-center justify-center text-sm transition-all shadow-[0_0_15px_rgba(16,185,129,0.15)] cursor-pointer"
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 flex items-center justify-center text-sm transition-all shadow-[0_0_15px_rgba(16,185,129,0.15)] cursor-pointer shrink-0"
                     title="Abrir Caja (Apertura)"
                   >
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />

@@ -1062,13 +1062,6 @@ function EditarFacturaForm() {
                 </svg>
               </button>
 
-              {/* Botón Cancelar (Desktop) */}
-              <Link
-                href="/pos/facturas"
-                className="hidden sm:flex px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer items-center justify-center shadow-xs active:scale-95"
-              >
-                Cancelar
-              </Link>
 
               {/* Botón Guardar Cambios */}
               <button

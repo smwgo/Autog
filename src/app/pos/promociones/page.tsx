@@ -73,7 +73,7 @@ export default function PromocionesPage() {
         throw new Error(data.error || "Error al actualizar estado en Neon DB");
       }
       showToast(
-        `Promoción ${promo.code} ${!promo.active ? "activada" : "desactivada"} en Neon DB.`
+        `Promoción ${promo.code} ${!promo.active ? "activada" : "desactivada"}.`
       );
       await fetchPromociones();
     } catch (err: any) {
@@ -217,7 +217,7 @@ export default function PromocionesPage() {
         </CollapsibleMetrics>
 
         {/* Filtros y Buscador */}
-        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
           <div className="relative w-full flex-1">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
               🔍
@@ -227,7 +227,7 @@ export default function PromocionesPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar..."
-              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
+              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
             />
             {searchTerm && (
               <button
@@ -244,7 +244,7 @@ export default function PromocionesPage() {
             <button
               type="button"
               onClick={() => setFiltroMenuAbierto(!filtroMenuAbierto)}
-              className="w-full h-11 px-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-sm font-medium flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+              className="w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
             >
               <span>
                 {filtroEstado === "ACTIVAS"
@@ -264,7 +264,7 @@ export default function PromocionesPage() {
                   className="fixed inset-0 z-40" 
                   onClick={() => setFiltroMenuAbierto(false)} 
                 />
-                <div className="absolute right-0 mt-1.5 w-full bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
                   {[
                     { id: "TODAS", label: "Estado" },
                     { id: "ACTIVAS", label: "Activas" },
@@ -277,10 +277,10 @@ export default function PromocionesPage() {
                         setFiltroEstado(opcion.id as any);
                         setFiltroMenuAbierto(false);
                       }}
-                      className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                      className={`w-full px-4 py-2.5 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
                         filtroEstado === opcion.id
-                          ? "bg-blue-600/15 text-blue-400"
-                          : "text-zinc-300 hover:bg-zinc-800/80 hover:text-white"
+                          ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400"
+                          : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-white"
                       }`}
                     >
                       <span>{opcion.label}</span>
@@ -301,7 +301,7 @@ export default function PromocionesPage() {
         <div className="order-4">
         {cargando ? (
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-12 text-center text-zinc-500">
-            Cargando promociones desde Neon PostgreSQL...
+            Cargando promociones...
           </div>
         ) : filtradas.length === 0 ? (
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-12 text-center text-zinc-500">

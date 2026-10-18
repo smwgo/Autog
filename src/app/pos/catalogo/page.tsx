@@ -339,7 +339,7 @@ export default function CatalogoPage() {
         )}
 
         {/* Buscador y Filtros */}
-        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 mb-6">
+        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
           <div className="relative w-full flex-1">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
               🔍
@@ -349,7 +349,7 @@ export default function CatalogoPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar..."
-              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
+              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
             />
             {searchTerm && (
               <button
@@ -362,7 +362,7 @@ export default function CatalogoPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             {/* Filtro Categorías */}
             <div className="relative w-full sm:w-44 shrink-0">
               <button
@@ -371,7 +371,7 @@ export default function CatalogoPage() {
                   setCatMenuAbierto(!catMenuAbierto);
                   setEstadoMenuAbierto(false);
                 }}
-                className="w-full h-11 px-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-sm font-medium flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+                className="w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
               >
                 <span className="truncate">{!selectedCategory ? "Categorías" : selectedCategory}</span>
                 <svg className={`w-4 h-4 text-zinc-400 transition-transform shrink-0 ml-1.5 ${catMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -385,17 +385,17 @@ export default function CatalogoPage() {
                     className="fixed inset-0 z-40" 
                     onClick={() => setCatMenuAbierto(false)} 
                   />
-                  <div className="absolute right-0 mt-1.5 w-full bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-100">
                     <button
                       type="button"
                       onClick={() => {
                         setSelectedCategory("");
                         setCatMenuAbierto(false);
                       }}
-                      className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                      className={`w-full px-4 py-2.5 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
                         !selectedCategory
-                          ? "bg-blue-600/15 text-blue-400"
-                          : "text-zinc-300 hover:bg-zinc-800/80 hover:text-white"
+                          ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400"
+                          : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-white"
                       }`}
                     >
                       <span>Categorías</span>
@@ -413,10 +413,10 @@ export default function CatalogoPage() {
                           setSelectedCategory(cat);
                           setCatMenuAbierto(false);
                         }}
-                        className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                        className={`w-full px-4 py-2.5 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
                           selectedCategory === cat
-                            ? "bg-blue-600/15 text-blue-400"
-                            : "text-zinc-300 hover:bg-zinc-800/80 hover:text-white"
+                            ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400"
+                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-white"
                         }`}
                       >
                         <span className="truncate">{cat}</span>
@@ -440,7 +440,7 @@ export default function CatalogoPage() {
                   setEstadoMenuAbierto(!estadoMenuAbierto);
                   setCatMenuAbierto(false);
                 }}
-                className="w-full h-11 px-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-sm font-medium flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+                className="w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
               >
                 <span>
                   {selectedEstado === "EN_STOCK"
@@ -462,7 +462,7 @@ export default function CatalogoPage() {
                     className="fixed inset-0 z-40" 
                     onClick={() => setEstadoMenuAbierto(false)} 
                   />
-                  <div className="absolute right-0 mt-1.5 w-full bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
                     {[
                       { id: "TODOS", label: "Estado" },
                       { id: "EN_STOCK", label: "En Stock" },
@@ -476,10 +476,10 @@ export default function CatalogoPage() {
                           setSelectedEstado(opcion.id);
                           setEstadoMenuAbierto(false);
                         }}
-                        className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                        className={`w-full px-4 py-2.5 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
                           selectedEstado === opcion.id
-                            ? "bg-blue-600/15 text-blue-400"
-                            : "text-zinc-300 hover:bg-zinc-800/80 hover:text-white"
+                            ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400"
+                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-white"
                         }`}
                       >
                         <span>{opcion.label}</span>

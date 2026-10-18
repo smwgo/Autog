@@ -366,64 +366,51 @@ export default function GestionCaja() {
         )}
 
         {/* Barra de Búsqueda y Filtros */}
-        <div className="order-2 sm:order-3 bg-zinc-900/90 border border-zinc-800 rounded-t-3xl p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-center gap-3">
-          <div className="relative w-full sm:flex-1">
+        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
+          <div className="relative w-full flex-1">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">🔍</span>
             <input
               type="text"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar..."
-              className="w-full h-11 pl-11 pr-10 rounded-2xl border border-zinc-800 bg-zinc-950/60 text-sm text-white placeholder-zinc-500 outline-none focus:border-emerald-500/50 transition-all"
+              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
             />
-            <span className="absolute left-4 top-3 text-zinc-500 text-sm">🔍</span>
             {busqueda && (
               <button
                 onClick={() => setBusqueda("")}
-                className="absolute right-3.5 top-3 text-zinc-500 hover:text-white text-xs"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm cursor-pointer"
+                title="Limpiar búsqueda"
               >
                 ✕
               </button>
             )}
           </div>
 
-          {/* Desplegable Minimalista y Moderno */}
-          <div ref={dropdownRef} className="relative w-full sm:w-auto">
+          {/* Desplegable Filtro Estado */}
+          <div ref={dropdownRef} className="relative w-full sm:w-48 shrink-0">
             <button
               type="button"
               onClick={() => setDropdownFiltroAbierto(!dropdownFiltroAbierto)}
-              className="w-full sm:w-44 h-11 px-4 rounded-2xl border border-zinc-800 bg-zinc-950/60 hover:bg-zinc-900/90 text-xs font-bold text-zinc-200 flex items-center justify-between gap-2.5 transition-all active:scale-[0.98] shadow-sm cursor-pointer focus:outline-none focus:border-emerald-500/50 backdrop-blur-sm"
+              className="w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
             >
-              <div className="flex items-center gap-2">
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    filtro === "abiertas"
-                      ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
-                      : filtro === "cerradas"
-                      ? "bg-purple-400 shadow-[0_0_8px_rgba(192,132,252,0.8)]"
-                      : "bg-zinc-400"
-                  }`}
-                />
-                <span className="capitalize">{filtro}</span>
-              </div>
+              <span className="capitalize">{filtro === "todas" ? "Estado" : filtro}</span>
               <svg
-                className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 ${
-                  dropdownFiltroAbierto ? "rotate-180 text-emerald-400" : ""
-                }`}
+                className={`w-4 h-4 text-zinc-400 transition-transform ${dropdownFiltroAbierto ? "rotate-180" : ""}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
 
-            {/* Menú Desplegable Flotante Traslúcido */}
             {dropdownFiltroAbierto && (
-              <div className="absolute right-0 top-full mt-2 w-full sm:w-44 rounded-2xl bg-zinc-900/95 border border-zinc-800/90 p-1.5 shadow-2xl backdrop-blur-xl z-30 flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-150">
+              <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-30 py-1 animate-in fade-in zoom-in-95 duration-100">
                 {[
-                  { id: "todas", label: "Todas", color: "bg-zinc-400" },
-                  { id: "abiertas", label: "Abiertas", color: "bg-emerald-400" },
-                  { id: "cerradas", label: "Cerradas", color: "bg-purple-400" },
+                  { id: "todas", label: "Estado" },
+                  { id: "abiertas", label: "Abiertas" },
+                  { id: "cerradas", label: "Cerradas" },
                 ].map((opt) => (
                   <button
                     key={opt.id}
@@ -432,17 +419,18 @@ export default function GestionCaja() {
                       setFiltro(opt.id as "todas" | "abiertas" | "cerradas");
                       setDropdownFiltroAbierto(false);
                     }}
-                    className={`w-full px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
+                    className={`w-full px-4 py-2.5 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
                       filtro === opt.id
-                        ? "bg-emerald-500/15 text-emerald-300 font-bold border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.15)]"
-                        : "text-zinc-400 hover:text-white hover:bg-zinc-800/60"
+                        ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400"
+                        : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-white"
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <span className={`w-1.5 h-1.5 rounded-full ${opt.color}`} />
-                      <span>{opt.label}</span>
-                    </div>
-                    {filtro === opt.id && <span className="text-[11px] text-emerald-400">✓</span>}
+                    <span>{opt.label}</span>
+                    {filtro === opt.id && (
+                      <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
                   </button>
                 ))}
               </div>
@@ -451,7 +439,7 @@ export default function GestionCaja() {
         </div>
 
         {/* Tabla Desktop y Tarjetas Móviles */}
-        <div className="order-4 bg-zinc-900/60 border-x border-b border-zinc-800 rounded-b-3xl overflow-hidden shadow-2xl backdrop-blur-sm">
+        <div className="order-4 bg-zinc-900/60 border border-zinc-800 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl backdrop-blur-sm">
           {/* Vista Móvil */}
           <div className="md:hidden divide-y divide-zinc-800/80">
             {cargando && sesiones.length === 0 ? (
