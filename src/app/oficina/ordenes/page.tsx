@@ -114,7 +114,7 @@ export default function OrdenesCotizaciones() {
   };
 
   const handleDelete = async (id: string, docType: "cotizacion" | "orden") => {
-    if (!confirm("¿Seguro que deseas eliminar este documento de Neon DB?")) return;
+    if (!confirm("¿Seguro que deseas eliminar este documento?")) return;
     await fetch(`/api/oficina/ordenes?id=${id}&docType=${docType}`, { method: "DELETE" });
     await loadData();
   };
@@ -238,7 +238,7 @@ export default function OrdenesCotizaciones() {
           <div className="md:hidden space-y-3.5">
             {loading ? (
               <div className="p-8 text-center text-sm text-zinc-500 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-                Cargando desde Neon DB...
+                Cargando...
               </div>
             ) : view === "cotizaciones" ? (
               filteredQuotes.length === 0 ? (
@@ -418,7 +418,7 @@ export default function OrdenesCotizaciones() {
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando desde Neon DB...</td>
+                      <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando...</td>
                     </tr>
                   ) : view === 'cotizaciones' ? (
                     filteredQuotes.map((row) => (
@@ -629,7 +629,7 @@ export default function OrdenesCotizaciones() {
                   disabled={saving}
                   className="h-11 rounded-xl bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 disabled:opacity-50"
                 >
-                  {saving ? "Guardando..." : "Guardar en Neon"}
+                  {saving ? "Guardando..." : "Guardar"}
                 </button>
               </div>
             </form>

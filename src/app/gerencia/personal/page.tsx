@@ -88,7 +88,7 @@ export default function GestionPersonal() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar este empleado de Neon DB?")) return;
+    if (!confirm("¿Eliminar este empleado?")) return;
     await fetch(`/api/gerencia/personal?id=${id}`, { method: "DELETE" });
     await loadData();
   };
@@ -211,7 +211,7 @@ export default function GestionPersonal() {
           <div className="md:hidden space-y-3.5">
           {loading ? (
             <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-8 text-center text-sm text-zinc-500">
-              Cargando personal desde Neon DB...
+              Cargando personal...
             </div>
           ) : filtered.length === 0 ? (
             <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-8 text-center text-sm text-zinc-500">
@@ -303,7 +303,7 @@ export default function GestionPersonal() {
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando personal desde Neon DB...</td>
+                      <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando personal...</td>
                     </tr>
                   ) : filtered.length === 0 ? (
                     <tr>
@@ -362,7 +362,7 @@ export default function GestionPersonal() {
               </table>
             </div>
             <div className="py-3 px-4 border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center text-xs text-zinc-500 dark:text-zinc-400">
-              <span>Mostrando {filtered.length} de {employees.length} empleados en Neon DB</span>
+              <span>Mostrando {filtered.length} de {employees.length} empleados</span>
             </div>
           </div>
         </div>
@@ -463,7 +463,7 @@ export default function GestionPersonal() {
                   disabled={saving}
                   className="h-11 rounded-xl bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 disabled:opacity-50"
                 >
-                  {saving ? "Guardando..." : "Guardar en Neon"}
+                  {saving ? "Guardando..." : "Guardar"}
                 </button>
               </div>
             </form>

@@ -160,7 +160,7 @@ export default function ServiciosPage() {
         {loading ? (
           <div className="py-24 text-center text-zinc-400">
             <div className="inline-block animate-spin text-4xl mb-3">⚙️</div>
-            <p className="text-base font-medium">Cargando servicios en vivo desde Neon DB...</p>
+            <p className="text-base font-medium">Cargando servicios...</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-16 sm:mb-20">

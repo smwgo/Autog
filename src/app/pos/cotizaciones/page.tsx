@@ -377,7 +377,7 @@ export default function CotizacionesPage() {
         alert(data.error || "Error al actualizar cotización.");
       }
     } catch {
-      alert("Error al actualizar en Neon DB.");
+      alert("Error al actualizar la cotización.");
     } finally {
       setGuardando(false);
     }
@@ -445,7 +445,7 @@ export default function CotizacionesPage() {
               <span className="text-2xl">✅</span>
               <div>
                 <h4 className="text-base font-bold text-emerald-900 dark:text-emerald-100">
-                  Cotización guardada exitosamente en Neon DB
+                  Cotización guardada exitosamente
                 </h4>
                 <p className="text-sm text-emerald-700 dark:text-emerald-300">
                   Comprobante: <span className="font-mono font-bold">{guardadoExitoso}</span>
@@ -473,10 +473,10 @@ export default function CotizacionesPage() {
         {vistaHistorial ? (
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm">
             <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-6">
-              Cotizaciones en Neon DB
+              Cotizaciones
             </h3>
             {cargandoHistorial ? (
-              <p className="text-center py-12 text-zinc-500 font-medium">Cargando desde Neon PostgreSQL...</p>
+              <p className="text-center py-12 text-zinc-500 font-medium">Cargando cotizaciones...</p>
             ) : historialCotizaciones.length === 0 ? (
               <p className="text-center py-12 text-zinc-500 font-medium">
                 No hay cotizaciones registradas todavía.
@@ -648,8 +648,7 @@ export default function CotizacionesPage() {
                     </label>
                     <input
                       type="text"
-                      placeholder="Ej. Juan Pérez / Empresa S.A."
-                      className="w-full px-4 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-purple-500 transition-all"
+                      className="w-full px-4 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base text-zinc-900 dark:text-white focus:outline-none focus:border-purple-500 transition-all"
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
                     />
@@ -662,8 +661,7 @@ export default function CotizacionesPage() {
                       </label>
                       <input
                         type="tel"
-                        placeholder="0991234567"
-                        className="w-full px-4 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-purple-500 transition-all"
+                        className="w-full px-4 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base text-zinc-900 dark:text-white focus:outline-none focus:border-purple-500 transition-all"
                         value={clientPhone}
                         onChange={(e) => setClientPhone(e.target.value)}
                       />
@@ -674,8 +672,7 @@ export default function CotizacionesPage() {
                       </label>
                       <input
                         type="email"
-                        placeholder="correo@ejemplo.com"
-                        className="w-full px-4 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-purple-500 transition-all"
+                        className="w-full px-4 py-3.5 rounded-xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-base text-zinc-900 dark:text-white focus:outline-none focus:border-purple-500 transition-all"
                         value={clientEmail}
                         onChange={(e) => setClientEmail(e.target.value)}
                       />

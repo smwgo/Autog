@@ -113,7 +113,7 @@ export default function FacturacionSRI() {
   };
 
   const handleDelete = async (id: string, docType: "factura" | "nota") => {
-    if (!confirm("¿Eliminar este comprobante electrónico de Neon DB?")) return;
+    if (!confirm("¿Eliminar este comprobante electrónico?")) return;
     await fetch(`/api/oficina/facturacion?id=${id}&docType=${docType}`, { method: "DELETE" });
     await loadData();
   };
@@ -241,7 +241,7 @@ export default function FacturacionSRI() {
           <div className="md:hidden space-y-3.5">
             {loading ? (
               <div className="p-8 text-center text-sm text-zinc-500 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-                Cargando documentos desde Neon DB...
+                Cargando documentos...
               </div>
             ) : tab === "facturas" ? (
               filteredFacturas.map((row) => (
@@ -405,7 +405,7 @@ export default function FacturacionSRI() {
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando documentos desde Neon DB...</td>
+                      <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando documentos...</td>
                     </tr>
                   ) : tab === 'facturas' ? (
                     filteredFacturas.map((row) => (
@@ -494,7 +494,7 @@ export default function FacturacionSRI() {
               </table>
             </div>
             <div className="p-3.5 sm:p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs text-zinc-500">
-              <span>Mostrando {tab === 'facturas' ? filteredFacturas.length : filteredNotas.length} documentos en Neon DB</span>
+              <span>Mostrando {tab === 'facturas' ? filteredFacturas.length : filteredNotas.length} documentos</span>
             </div>
           </div>
         </div>
@@ -581,7 +581,7 @@ export default function FacturacionSRI() {
                   disabled={saving}
                   className="h-11 px-5 rounded-xl bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 disabled:opacity-50"
                 >
-                  {saving ? "Guardando..." : "Guardar en Neon"}
+                  {saving ? "Guardando..." : "Guardar"}
                 </button>
               </div>
             </form>

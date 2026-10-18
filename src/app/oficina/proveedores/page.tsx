@@ -130,7 +130,7 @@ export default function ComprasProveedores() {
   };
 
   const handleDelete = async (id: string, docType: "proveedor" | "orden") => {
-    if (!confirm("¿Eliminar este registro de Neon DB?")) return;
+    if (!confirm("¿Eliminar este registro?")) return;
     await fetch(`/api/oficina/proveedores?id=${id}&docType=${docType}`, { method: "DELETE" });
     await loadData();
   };
@@ -264,7 +264,7 @@ export default function ComprasProveedores() {
           <div className="md:hidden space-y-3.5">
             {loading ? (
               <div className="p-8 text-center text-sm text-zinc-500 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-                Cargando desde Neon DB...
+                Cargando...
               </div>
             ) : tab === "proveedores" ? (
               filteredSuppliers.map((row) => {
@@ -467,7 +467,7 @@ export default function ComprasProveedores() {
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando desde Neon DB...</td>
+                      <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando...</td>
                     </tr>
                   ) : tab === 'proveedores' ? (
                     filteredSuppliers.map((row) => {
@@ -590,7 +590,7 @@ export default function ComprasProveedores() {
             </div>
           </div>
           <div className="p-3.5 sm:p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs sm:text-sm text-zinc-500">
-            <span>Mostrando {tab === 'proveedores' ? filteredSuppliers.length : filteredOrders.length} registros en Neon DB</span>
+            <span>Mostrando {tab === 'proveedores' ? filteredSuppliers.length : filteredOrders.length} registros</span>
           </div>
         </div>
       </main>
@@ -738,7 +738,7 @@ export default function ComprasProveedores() {
                   disabled={saving}
                   className="h-11 px-5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 disabled:opacity-50"
                 >
-                  {saving ? "Guardando..." : "Guardar en Neon"}
+                  {saving ? "Guardando..." : "Guardar"}
                 </button>
               </div>
             </form>

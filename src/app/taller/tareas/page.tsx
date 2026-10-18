@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { TallerMobileNav } from "@/components/TallerMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 
 interface TaskItem {
   id: string;
@@ -32,6 +33,7 @@ export default function MisTareasPage() {
   const [cargando, setCargando] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterMechanic, setFilterMechanic] = useState("");
+  const [filtroMecanicoAbierto, setFiltroMecanicoAbierto] = useState(false);
   const [procesandoId, setProcesandoId] = useState<string | null>(null);
 
   // Modal Nueva Tarea
@@ -128,7 +130,7 @@ export default function MisTareasPage() {
       setNotes("");
       await cargarTareas();
     } catch (err: any) {
-      alert(err.message || "Error al guardar tarea en Neon.");
+      alert(err.message || "Error al guardar tarea.");
     } finally {
       setGuardando(false);
     }
@@ -157,7 +159,7 @@ export default function MisTareasPage() {
         prev.map((t) => (t.dbId === id || t.id === id ? { ...t, status: nuevoEstado } : t))
       );
     } catch (err: any) {
-      alert(err.message || "Error al actualizar estado en Neon.");
+      alert(err.message || "Error al actualizar estado.");
     } finally {
       setProcesandoId(null);
     }
@@ -313,15 +315,26 @@ export default function MisTareasPage() {
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
 
-      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
+      <main className="flex-grow p-4 md:p-10 max-w-7xl mx-auto w-full flex flex-col">
         {/* Navigation / Breadcrumb */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <Link
-            href="/taller"
-            className="text-sm font-medium text-emerald-600 hover:text-emerald-500 flex items-center gap-1 w-fit min-h-[44px] sm:min-h-0 items-center"
-          >
-            &larr; Volver al Panel de Taller
-          </Link>
+        <div className="order-1 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/taller"
+              title="Volver al Panel de Taller"
+              className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-500 dark:hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
+            >
+              <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Mis Tareas
+            </h1>
+            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-sm shadow-emerald-500/20">
+              {cargando ? "..." : tasks.length}
+            </span>
+          </div>
 
           <button
             type="button"
@@ -332,54 +345,132 @@ export default function MisTareasPage() {
           </button>
         </div>
 
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6 sm:mb-10">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500 bg-opacity-10 flex items-center justify-center text-2xl shrink-0">
+        {/* Resumen Cards Desplegable en Móvil: debajo de Estado */}
+        <CollapsibleMetrics className="order-3 sm:order-2 mb-6 sm:mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-500 flex items-center justify-center text-xl shrink-0">
                 🔧
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                  Mis Tareas
-                </h1>
-                <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
-                  {tasks.length} tareas registradas en Neon DB
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">{cargando ? "..." : tasks.length}</p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Totales</h3>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-zinc-500/15 border border-zinc-500/25 text-zinc-500 flex items-center justify-center text-xl shrink-0">
+                ⏳
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-700 dark:text-zinc-300">
+                  {cargando ? "..." : pendingTasks.length}
                 </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Por Hacer</h3>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-500 flex items-center justify-center text-xl shrink-0">
+                ⚙️
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {cargando ? "..." : inProgressTasks.length}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">En Progreso</h3>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-500 flex items-center justify-center text-xl shrink-0">
+                ✅
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                  {cargando ? "..." : doneTasks.length}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Completadas</h3>
               </div>
             </div>
           </div>
+        </CollapsibleMetrics>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-            <select
-              value={filterMechanic}
-              onChange={(e) => setFilterMechanic(e.target.value)}
-              className="h-11 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-base sm:text-sm font-medium dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+        {/* Buscador y Filtros */}
+        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
+          <div className="relative w-full flex-1">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">🔍</span>
+            <input
+              type="text"
+              placeholder="Buscar tarea o placa..."
+              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all placeholder:text-zinc-400 shadow-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm cursor-pointer"
+                title="Limpiar búsqueda"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          <div className="relative w-full sm:w-56 shrink-0">
+            <button
+              type="button"
+              onClick={() => setFiltroMecanicoAbierto(!filtroMecanicoAbierto)}
+              className="w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
             >
-              <option value="">Todos los Mecánicos</option>
-              <option value="Carlos Rodríguez">Carlos Rodríguez</option>
-              <option value="Luis Martínez">Luis Martínez</option>
-              <option value="Andrés Castro">Andrés Castro</option>
-              <option value="Ana Torres">Ana Torres</option>
-            </select>
+              <span className="truncate">{filterMechanic ? filterMechanic : "Mecánicos"}</span>
+              <svg className={`w-4 h-4 text-zinc-400 transition-transform shrink-0 ml-1.5 ${filtroMecanicoAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
 
-            <div className="relative flex-grow">
-              <input
-                type="text"
-                placeholder="Buscar tarea o placa..."
-                className="w-full h-11 pl-10 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow dark:text-white text-base sm:text-sm"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <span className="absolute left-3 top-3 text-zinc-400 text-sm">🔍</span>
-            </div>
+            {filtroMecanicoAbierto && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setFiltroMecanicoAbierto(false)} />
+                <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                  {[
+                    { id: "", label: "Mecánicos" },
+                    { id: "Carlos Rodríguez", label: "Carlos Rodríguez" },
+                    { id: "Luis Martínez", label: "Luis Martínez" },
+                    { id: "Andrés Castro", label: "Andrés Castro" },
+                    { id: "Ana Torres", label: "Ana Torres" },
+                  ].map((opcion) => (
+                    <button
+                      key={opcion.id}
+                      type="button"
+                      onClick={() => {
+                        setFilterMechanic(opcion.id);
+                        setFiltroMecanicoAbierto(false);
+                      }}
+                      className={`w-full px-4 py-2.5 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
+                        filterMechanic === opcion.id
+                          ? "bg-emerald-50 dark:bg-emerald-600/15 text-emerald-600 dark:text-emerald-400"
+                          : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-white"
+                      }`}
+                    >
+                      <span className="truncate">{opcion.label}</span>
+                      {filterMechanic === opcion.id && (
+                        <svg className="w-4 h-4 text-emerald-500 shrink-0 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
+        {/* Contenedor de Tareas */}
+        <div className="order-4">
         {cargando ? (
           <div className="text-center py-16">
             <div className="inline-block animate-spin w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full mb-3"></div>
-            <p className="text-sm font-medium text-zinc-500">Cargando tareas desde Neon...</p>
+            <p className="text-sm font-medium text-zinc-500">Cargando tareas...</p>
           </div>
         ) : (
           <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -453,6 +544,7 @@ export default function MisTareasPage() {
             </div>
           </div>
         )}
+        </div>
 
         {/* Modal Nueva Tarea (Bottom-sheet on small screens) */}
         {modalAbierto && (
@@ -460,7 +552,7 @@ export default function MisTareasPage() {
             <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 pb-8 sm:pb-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                  <span>🔧</span> Asignar Nueva Tarea (Neon DB)
+                  <span>🔧</span> Asignar Nueva Tarea
                 </h3>
                 <button
                   type="button"

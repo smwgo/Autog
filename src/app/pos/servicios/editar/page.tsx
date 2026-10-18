@@ -69,7 +69,7 @@ function EditarServicioForm() {
         setActive(Boolean(encontrado.active));
       } catch (err: any) {
         console.error(err);
-        setErrorMsg(err.message || "Error al cargar los datos del servicio desde Neon.");
+        setErrorMsg(err.message || "Error al cargar los datos del servicio.");
       } finally {
         setCargando(false);
       }
@@ -136,7 +136,7 @@ function EditarServicioForm() {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-zinc-600 dark:text-zinc-400 font-medium">Cargando datos del servicio desde Neon...</p>
+        <p className="text-zinc-600 dark:text-zinc-400 font-medium">Cargando datos del servicio...</p>
       </div>
     );
   }
@@ -203,7 +203,7 @@ function EditarServicioForm() {
         <div className="mb-6 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center gap-3 text-emerald-800 dark:text-emerald-300 text-sm animate-in fade-in zoom-in-95 duration-200 shadow-sm">
           <span className="text-2xl">🎉</span>
           <div>
-            <p className="font-bold">¡Servicio actualizado exitosamente en Neon!</p>
+            <p className="font-bold">¡Servicio actualizado exitosamente!</p>
             <p className="text-xs text-emerald-700 dark:text-emerald-400">Redirigiendo a la lista de servicios...</p>
           </div>
         </div>

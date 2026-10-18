@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { TallerMobileNav } from "@/components/TallerMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 
 interface RequestedPartItem {
   name: string;
@@ -49,6 +50,7 @@ export default function SolicitudRepuestosPage() {
   const [cargando, setCargando] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
   const [actualizandoId, setActualizandoId] = useState<string | null>(null);
   const [detalleReq, setDetalleReq] = useState<PartRequestRecord | null>(null);
 
@@ -142,7 +144,7 @@ export default function SolicitudRepuestosPage() {
       }
 
       setMensajeExito(
-        `Petición registrada en Neon y enviada a Bodega/POS: #${data.requestNumber || ""}`
+        `Petición registrada y enviada a Bodega/POS: #${data.requestNumber || ""}`
       );
       setOrderId("");
       setVehiculo("");
@@ -241,33 +243,25 @@ export default function SolicitudRepuestosPage() {
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
 
-      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
+      <main className="flex-grow p-4 md:p-10 max-w-7xl mx-auto w-full flex flex-col">
         {/* Navigation / Breadcrumb */}
-        <div className="mb-6">
-          <Link
-            href="/taller"
-            className="text-sm font-medium text-indigo-600 hover:text-indigo-500 flex items-center gap-1 w-fit min-h-[44px] md:min-h-0 items-center"
-          >
-            &larr; Volver al Panel de Taller
-          </Link>
-        </div>
-
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6 sm:mb-10">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-500 bg-opacity-10 flex items-center justify-center text-2xl shrink-0">
-                🔩
-              </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                  Solicitud de Repuestos
-                </h1>
-                <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
-                  {requests.length} peticiones sincronizadas con Neon DB y Bodega/POS
-                </p>
-              </div>
-            </div>
+        <div className="order-1 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/taller"
+              title="Volver al Panel de Taller"
+              className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-500 dark:hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
+            >
+              <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Solicitud de Repuestos
+            </h1>
+            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-600 text-white shadow-sm shadow-indigo-500/20">
+              {cargando ? "..." : requests.length}
+            </span>
           </div>
 
           <button
@@ -282,37 +276,134 @@ export default function SolicitudRepuestosPage() {
           </button>
         </div>
 
-        {/* Filters / Search */}
-        <div className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm mb-6 sm:mb-8 flex flex-col md:flex-row gap-3 sm:gap-4">
-          <div className="flex-grow relative">
+        {/* Resumen Cards Desplegable en Móvil: debajo de Estado */}
+        <CollapsibleMetrics className="order-3 sm:order-2 mb-6 sm:mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-indigo-500/15 border border-indigo-500/25 text-indigo-500 flex items-center justify-center text-xl shrink-0">
+                🔩
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">{cargando ? "..." : requests.length}</p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Totales</h3>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-500 flex items-center justify-center text-xl shrink-0">
+                ⏳
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
+                  {cargando ? "..." : requests.filter(r => r.status === "Pendiente").length}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Pendientes</h3>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-500 flex items-center justify-center text-xl shrink-0">
+                📦
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {cargando ? "..." : requests.filter(r => r.status === "Aprobado").length}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Aprobadas</h3>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-500 flex items-center justify-center text-xl shrink-0">
+                ✅
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                  {cargando ? "..." : requests.filter(r => r.status === "Entregado").length}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Entregadas</h3>
+              </div>
+            </div>
+          </div>
+        </CollapsibleMetrics>
+
+        {/* Buscador y Filtros */}
+        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
+          <div className="relative w-full flex-1">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">🔍</span>
             <input
               type="text"
               placeholder="Buscar por ID, vehículo, orden o mecánico..."
-              className="w-full h-11 pl-10 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow dark:text-white text-base sm:text-sm"
+              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-zinc-400 shadow-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <span className="absolute left-3 top-3 text-zinc-400">🔍</span>
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm cursor-pointer"
+                title="Limpiar búsqueda"
+              >
+                ✕
+              </button>
+            )}
           </div>
-          <div className="flex gap-2">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full sm:w-auto h-11 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white font-medium cursor-pointer text-base sm:text-sm"
+
+          <div className="relative w-full sm:w-48 shrink-0">
+            <button
+              type="button"
+              onClick={() => setFiltroMenuAbierto(!filtroMenuAbierto)}
+              className="w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
             >
-              <option value="">Todos los Estados</option>
-              <option value="Pendiente">Pendiente</option>
-              <option value="Aprobado">Aprobado</option>
-              <option value="Entregado">Entregado</option>
-              <option value="Rechazado">Rechazado</option>
-            </select>
+              <span>
+                {filterStatus ? filterStatus : "Estado"}
+              </span>
+              <svg className={`w-4 h-4 text-zinc-400 transition-transform ${filtroMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {filtroMenuAbierto && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setFiltroMenuAbierto(false)} />
+                <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                  {[
+                    { id: "", label: "Estado" },
+                    { id: "Pendiente", label: "Pendiente" },
+                    { id: "Aprobado", label: "Aprobado" },
+                    { id: "Entregado", label: "Entregado" },
+                    { id: "Rechazado", label: "Rechazado" },
+                  ].map((opcion) => (
+                    <button
+                      key={opcion.id}
+                      type="button"
+                      onClick={() => {
+                        setFilterStatus(opcion.id);
+                        setFiltroMenuAbierto(false);
+                      }}
+                      className={`w-full px-4 py-2.5 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
+                        filterStatus === opcion.id
+                          ? "bg-indigo-50 dark:bg-indigo-600/15 text-indigo-600 dark:text-indigo-400"
+                          : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-white"
+                      }`}
+                    >
+                      <span>{opcion.label}</span>
+                      {filterStatus === opcion.id && (
+                        <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
+        {/* Contenido de Solicitudes */}
+        <div className="order-4">
         {cargando ? (
           <div className="text-center py-16">
             <div className="inline-block animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full mb-3"></div>
-            <p className="text-sm font-medium text-zinc-500">Cargando solicitudes desde Neon DB...</p>
+            <p className="text-sm font-medium text-zinc-500">Cargando solicitudes...</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
@@ -449,6 +540,7 @@ export default function SolicitudRepuestosPage() {
             )}
           </div>
         )}
+        </div>
 
         {/* Modal Detalles de Petición (Bottom-sheet on small screens) */}
         {detalleReq && (
@@ -493,7 +585,7 @@ export default function SolicitudRepuestosPage() {
 
               <div>
                 <p className="text-xs font-bold uppercase text-zinc-500 mb-2">
-                  Ítems y Disponibilidad en Neon Inventory
+                  Ítems y Disponibilidad en Inventario
                 </p>
                 <ul className="space-y-2">
                   {detalleReq.items.map((it, idx) => (
@@ -565,7 +657,7 @@ export default function SolicitudRepuestosPage() {
                   <div>
                     <h3 className="text-base font-bold text-white">Petición de Repuestos</h3>
                     <span className="text-xs text-indigo-400">
-                      Sincronizado con Neon DB y Mostrador POS
+                      Sincronizado con Inventario y Mostrador POS
                     </span>
                   </div>
                 </div>
@@ -583,7 +675,7 @@ export default function SolicitudRepuestosPage() {
                   <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-3xl border border-emerald-500/30">
                     ✓
                   </div>
-                  <h4 className="text-lg font-bold text-white">¡Petición Registrada en Neon!</h4>
+                  <h4 className="text-lg font-bold text-white">¡Petición Registrada!</h4>
                   <p className="text-xs text-zinc-400 max-w-xs">{mensajeExito}</p>
                   <button
                     type="button"
@@ -665,7 +757,7 @@ export default function SolicitudRepuestosPage() {
                   {products.length > 0 && (
                     <div>
                       <label className="text-xs font-semibold text-zinc-400 block mb-1.5">
-                        Agregar rápido desde Inventario Real (Neon):
+                        Agregar rápido desde Inventario:
                       </label>
                       <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-2 rounded-xl bg-zinc-950 border border-zinc-800">
                         {products.slice(0, 12).map((p) => (

@@ -402,7 +402,7 @@ function FacturasPagosContent() {
         <div className="space-y-4">
           {loading ? (
             <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-12 text-center text-zinc-500">
-              Cargando facturas desde Neon PostgreSQL...
+              Cargando facturas...
             </div>
           ) : filteredInvoices.length === 0 ? (
             <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-12 text-center shadow-sm">

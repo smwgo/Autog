@@ -70,7 +70,7 @@ export default function NotificacionesPage() {
           {loading ? (
             <div className="p-12 text-center text-zinc-400">
               <div className="inline-block animate-spin text-3xl mb-2">⚙️</div>
-              <p className="text-sm">Consultando base de datos Neon...</p>
+              <p className="text-sm">Cargando notificaciones...</p>
             </div>
           ) : notifications.length === 0 ? (
             <div className="p-8 sm:p-12 text-center flex flex-col items-center">

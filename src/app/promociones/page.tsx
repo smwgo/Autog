@@ -87,7 +87,7 @@ export default function PromocionesPage() {
         {loading ? (
           <div className="py-24 text-center text-zinc-400">
             <div className="inline-block animate-spin text-4xl mb-3">⚙️</div>
-            <p className="text-base font-medium">Cargando promociones vigentes desde Neon DB...</p>
+            <p className="text-base font-medium">Cargando promociones...</p>
           </div>
         ) : promociones.length === 0 ? (
           <div className="text-center py-20 bg-white dark:bg-zinc-900 rounded-3xl p-8 border border-zinc-200 dark:border-zinc-800 max-w-md mx-auto">

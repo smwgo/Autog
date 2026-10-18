@@ -233,7 +233,7 @@ function HistorialServiciosContent() {
                   Historial
                 </h1>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                  Trabajos realizados y certificados de garantía en Neon PostgreSQL.
+                  Trabajos realizados y certificados de garantía.
                 </p>
               </div>
             </div>
@@ -338,7 +338,7 @@ function HistorialServiciosContent() {
         <div className="space-y-6">
           {loading ? (
             <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-12 text-center text-zinc-500">
-              Cargando historial de servicios desde Neon PostgreSQL...
+              Cargando historial de servicios...
             </div>
           ) : filteredHistory.length === 0 ? (
             <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-12 text-center shadow-sm">
@@ -669,7 +669,7 @@ function HistorialServiciosContent() {
                   disabled={isSubmitting}
                   className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-base sm:text-sm flex items-center justify-center"
                 >
-                  {isSubmitting ? 'Guardando...' : 'Guardar en Neon DB'}
+                  {isSubmitting ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
             </form>

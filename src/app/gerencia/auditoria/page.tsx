@@ -82,7 +82,7 @@ export default function AuditoriaSistema() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "auditoria-neon-logs.csv";
+    a.download = "auditoria-logs.csv";
     a.click();
   };
 
@@ -201,7 +201,7 @@ export default function AuditoriaSistema() {
           <div className="md:hidden space-y-3.5">
           {loading ? (
             <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-8 text-center text-sm text-zinc-500">
-              Cargando auditoría desde Neon DB...
+              Cargando auditoría...
             </div>
           ) : filtered.length === 0 ? (
             <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-8 text-center text-sm text-zinc-500">
@@ -293,7 +293,7 @@ export default function AuditoriaSistema() {
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-8 text-center text-zinc-500">Cargando auditoría desde Neon DB...</td>
+                      <td colSpan={7} className="px-6 py-8 text-center text-zinc-500">Cargando auditoría...</td>
                     </tr>
                   ) : filtered.length === 0 ? (
                     <tr>
@@ -341,7 +341,7 @@ export default function AuditoriaSistema() {
               </table>
             </div>
             <div className="py-3 px-4 border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center text-xs text-zinc-500 dark:text-zinc-400">
-              <span>Mostrando {filtered.length} eventos en Neon DB</span>
+              <span>Mostrando {filtered.length} eventos</span>
             </div>
           </div>
         </div>
@@ -427,7 +427,7 @@ export default function AuditoriaSistema() {
                   disabled={saving}
                   className="h-11 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 disabled:opacity-50"
                 >
-                  {saving ? "Guardando..." : "Guardar en Neon"}
+                  {saving ? "Guardando..." : "Guardar"}
                 </button>
               </div>
             </form>

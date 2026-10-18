@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { TallerMobileNav } from "@/components/TallerMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 
 interface HistoryRecord {
   id: string;
@@ -104,7 +105,7 @@ export default function HistorialServiciosPage() {
       setNotes("");
       await cargarHistorial();
     } catch (err: any) {
-      alert(err.message || "Error al guardar en Neon.");
+      alert(err.message || "Error al guardar el registro.");
     } finally {
       setGuardando(false);
     }
@@ -159,42 +160,34 @@ export default function HistorialServiciosPage() {
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
 
-      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
-        {/* Navigation / Breadcrumb */}
-        <div className="mb-6">
-          <Link
-            href="/taller"
-            className="text-sm font-medium text-purple-600 hover:text-purple-500 flex items-center gap-1 w-fit min-h-[44px] md:min-h-0 items-center"
-          >
-            &larr; Volver al Panel de Taller
-          </Link>
-        </div>
-
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6 sm:mb-10">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-2xl bg-purple-500 bg-opacity-10 flex items-center justify-center text-2xl shrink-0">
-                📖
-              </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                  Historial de Servicios
-                </h1>
-                <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
-                  {records.length} servicios almacenados en Neon DB
-                </p>
-              </div>
-            </div>
+      <main className="flex-grow p-4 md:p-10 max-w-7xl mx-auto w-full flex flex-col">
+        {/* Navigation / Header */}
+        <div className="order-1 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/taller"
+              title="Volver al Panel de Taller"
+              className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-500 dark:hover:border-purple-500 hover:bg-purple-50/50 dark:hover:bg-purple-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
+            >
+              <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Historial de Servicios
+            </h1>
+            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-600 text-white shadow-sm shadow-purple-500/20">
+              {cargando ? "..." : records.length}
+            </span>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handleExportarCSV}
-              className="h-11 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-purple-500 dark:hover:border-purple-500 text-zinc-700 dark:text-zinc-300 px-5 rounded-xl font-medium text-sm transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+              className="h-11 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-purple-500 dark:hover:border-purple-500 text-zinc-700 dark:text-zinc-300 px-4 rounded-xl font-medium text-sm transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>📥</span> Exportar Reporte
+              <span>📥</span> Exportar
             </button>
 
             <button
@@ -207,24 +200,83 @@ export default function HistorialServiciosPage() {
           </div>
         </div>
 
-        {/* Big Search Bar */}
-        <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm mb-6 sm:mb-8">
-          <div className="relative max-w-3xl mx-auto">
+        {/* Resumen Cards Desplegable en Móvil: debajo de Estado */}
+        <CollapsibleMetrics className="order-3 sm:order-2 mb-6 sm:mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-500 flex items-center justify-center text-xl shrink-0">
+                📖
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">{cargando ? "..." : records.length}</p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Servicios</h3>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-500 flex items-center justify-center text-xl shrink-0">
+                🚗
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {cargando ? "..." : new Set(records.map(r => r.plate).filter(Boolean)).size}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Vehículos</h3>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-500 flex items-center justify-center text-xl shrink-0">
+                👤
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
+                  {cargando ? "..." : new Set(records.map(r => r.client).filter(Boolean)).size}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Clientes</h3>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-500 flex items-center justify-center text-xl shrink-0">
+                💵
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                  {cargando ? "..." : `$${records.reduce((acc, r) => acc + (r.costNumeric || parseFloat(String(r.cost || "").replace(/[^0-9.]/g, '') || "0") || 0), 0).toFixed(2)}`}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Facturado</h3>
+              </div>
+            </div>
+          </div>
+        </CollapsibleMetrics>
+
+        {/* Buscador */}
+        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
+          <div className="relative w-full flex-1">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">🔍</span>
             <input
               type="text"
-              placeholder="Ingresa la placa (Ej: ABC-123), nombre del cliente o ID del servicio..."
-              className="w-full pl-12 sm:pl-14 pr-4 sm:pr-6 py-3.5 sm:py-4 rounded-2xl border-2 border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all dark:text-white text-base sm:text-lg"
+              placeholder="Buscar por placa, cliente o código..."
+              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all placeholder:text-zinc-400 shadow-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <span className="absolute left-4 sm:left-5 top-3.5 sm:top-4 text-zinc-400 text-xl sm:text-2xl">🔍</span>
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm cursor-pointer"
+                title="Limpiar búsqueda"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
 
+        {/* Contenido de Historial */}
+        <div className="order-4">
         {cargando ? (
           <div className="text-center py-16">
             <div className="inline-block animate-spin w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full mb-3"></div>
-            <p className="text-sm font-medium text-zinc-500">Consultando historial en Neon DB...</p>
+            <p className="text-sm font-medium text-zinc-500">Cargando historial...</p>
           </div>
         ) : (
           <div className="space-y-4 sm:space-y-6">
@@ -333,6 +385,7 @@ export default function HistorialServiciosPage() {
             )}
           </div>
         )}
+        </div>
 
         {/* Modal Detalle / Factura (Bottom-sheet on small screens) */}
         {detalleSeleccionado && (
@@ -430,7 +483,7 @@ export default function HistorialServiciosPage() {
             <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 pb-8 sm:pb-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
-                  📖 Registrar Servicio en Historial (Neon DB)
+                  📖 Registrar Servicio en Historial
                 </h3>
                 <button
                   type="button"

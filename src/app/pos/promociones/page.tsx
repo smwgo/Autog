@@ -70,7 +70,7 @@ export default function PromocionesPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Error al actualizar estado en Neon DB");
+        throw new Error(data.error || "Error al actualizar estado de la promoción");
       }
       showToast(
         `Promoción ${promo.code} ${!promo.active ? "activada" : "desactivada"}.`
@@ -94,7 +94,7 @@ export default function PromocionesPage() {
       );
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Error al eliminar promoción de Neon DB");
+        throw new Error(data.error || "Error al eliminar la promoción");
       }
       showToast(`Promoción ${promoAEliminar.code} eliminada.`);
       setPromoAEliminar(null);

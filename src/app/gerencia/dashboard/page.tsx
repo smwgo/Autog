@@ -42,7 +42,7 @@ export default function DashboardGeneral() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "reporte-gerencia-neon.csv";
+    a.download = "reporte-gerencia.csv";
     a.click();
   };
 
@@ -58,7 +58,7 @@ export default function DashboardGeneral() {
     {
       label: "Órdenes en Taller",
       value: summary ? String(summary.ordenesActivas || 0) : "0",
-      trend: "Neon DB",
+      trend: "Activas",
       isUp: true,
       icon: "🔧",
       color: "text-blue-500 bg-blue-50 dark:bg-blue-500/10",
@@ -146,7 +146,7 @@ export default function DashboardGeneral() {
           {/* Main Chart */}
           <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-5 sm:mb-6">
-              <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white">Ingresos vs Gastos (Neon DB)</h3>
+              <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white">Ingresos vs Gastos</h3>
               <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
                 <span className="inline-flex items-center gap-1">
                   <span className="w-2.5 h-2.5 rounded-sm bg-blue-500"></span>
@@ -173,7 +173,7 @@ export default function DashboardGeneral() {
 
           {/* Recent Activity List */}
           <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col">
-            <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white mb-4 sm:mb-6">Últimas Órdenes en Neon</h3>
+            <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white mb-4 sm:mb-6">Últimas Órdenes</h3>
             <div className="space-y-2.5 sm:space-y-4 flex-grow">
               {loading ? (
                 <p className="text-sm text-zinc-500">Cargando órdenes...</p>

@@ -86,11 +86,11 @@ export default function MisVehiculosPage() {
       if (data.success && Array.isArray(data.vehicles)) {
         setVehicles(data.vehicles);
       } else {
-        throw new Error(data.error || 'No se pudieron cargar los vehículos desde Neon');
+        throw new Error(data.error || 'No se pudieron cargar los vehículos');
       }
     } catch (err: any) {
-      console.error('Error fetching vehicles from Neon:', err);
-      setError(err.message || 'Error de conexión con la base de datos Neon');
+      console.error('Error fetching vehicles:', err);
+      setError(err.message || 'Error de conexión');
     } finally {
       setLoading(false);
     }
@@ -169,14 +169,14 @@ export default function MisVehiculosPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Error al guardar vehículo en Neon');
+        throw new Error(data.error || 'Error al guardar vehículo');
       }
 
       showToast(`¡Vehículo ${formBrand} ${formModel} (${data.vehicle.plate}) guardado correctamente!`);
       setIsAddVehicleOpen(false);
       fetchVehicles();
     } catch (err: any) {
-      setFormError(err.message || 'Error al conectar con la base de datos Neon');
+      setFormError(err.message || 'Error de conexión');
     } finally {
       setIsSubmitting(false);
     }
@@ -209,14 +209,14 @@ export default function MisVehiculosPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Error al actualizar vehículo en Neon');
+        throw new Error(data.error || 'Error al actualizar vehículo');
       }
 
       showToast(`¡Vehículo ${data.vehicle.plate} actualizado correctamente!`);
       setEditingVehicle(null);
       fetchVehicles();
     } catch (err: any) {
-      setFormError(err.message || 'Error al actualizar vehículo en Neon');
+      setFormError(err.message || 'Error al actualizar vehículo');
     } finally {
       setIsSubmitting(false);
     }
@@ -235,7 +235,7 @@ export default function MisVehiculosPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Error al eliminar vehículo de Neon');
+        throw new Error(data.error || 'Error al eliminar vehículo');
       }
 
       showToast(`Vehículo ${vehicleToDelete.plate} eliminado correctamente.`);
@@ -279,10 +279,10 @@ export default function MisVehiculosPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'No se pudo guardar la cita en Neon DB');
+        throw new Error(data.error || 'No se pudo guardar la cita');
       }
       setAppointmentSuccess(true);
-      showToast(`Cita ${data.cita?.code || ''} registrada en Neon DB.`);
+      showToast(`Cita ${data.cita?.code || ''} registrada.`);
     } catch (err: any) {
       showToast(`Error: ${err.message}`);
     } finally {
@@ -498,7 +498,7 @@ export default function MisVehiculosPage() {
                         <button
                           type="button"
                           onClick={() => openEditModal(vehicle)}
-                          title="Editar vehículo en Neon"
+                          title="Editar vehículo"
                           className="cursor-pointer p-1.5 rounded-lg bg-zinc-100 hover:bg-blue-50 hover:text-blue-600 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 transition-colors text-xs"
                         >
                           ✏️
@@ -506,7 +506,7 @@ export default function MisVehiculosPage() {
                         <button
                           type="button"
                           onClick={() => setVehicleToDelete(vehicle)}
-                          title="Eliminar vehículo de Neon"
+                          title="Eliminar vehículo"
                           className="cursor-pointer p-1.5 rounded-lg bg-zinc-100 hover:bg-rose-50 hover:text-rose-600 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 transition-colors text-xs"
                         >
                           🗑️

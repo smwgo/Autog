@@ -429,7 +429,7 @@ export default function AgendarCitaPage() {
 
           {loadingAppointments ? (
             <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-8 text-center text-sm text-zinc-500">
-              Cargando tus citas desde Neon PostgreSQL...
+              Cargando citas...
             </div>
           ) : appointments.length === 0 ? (
             <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-8 text-center text-sm text-zinc-500">
@@ -838,7 +838,7 @@ export default function AgendarCitaPage() {
               ¿Eliminar Cita {citaToDelete.code}?
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6">
-              Se eliminará permanentemente de Neon PostgreSQL la cita para <strong>{citaToDelete.vehicleName}</strong>.
+              Se eliminará permanentemente la cita para <strong>{citaToDelete.vehicleName}</strong>.
             </p>
             <div className="flex gap-3">
               <button

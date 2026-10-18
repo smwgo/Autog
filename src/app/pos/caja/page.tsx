@@ -119,7 +119,7 @@ export default function GestionCaja() {
       }
     } catch (err: any) {
       console.error("Error al cargar datos de caja:", err);
-      setError(err.message || "Error al conectar con Neon");
+      setError(err.message || "Error al conectar con el servidor");
     } finally {
       setCargando(false);
     }

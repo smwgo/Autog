@@ -354,7 +354,7 @@ export default function CotizacionesClientePage() {
 
         {loading ? (
           <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-12 text-center text-zinc-500">
-            Cargando presupuestos desde Neon PostgreSQL...
+            Cargando cotizaciones...
           </div>
         ) : quotes.length === 0 ? (
           <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-12 text-center">

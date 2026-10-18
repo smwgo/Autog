@@ -117,7 +117,7 @@ export default function InventarioGlobal() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar este producto del inventario global en Neon DB?")) return;
+    if (!confirm("¿Eliminar este producto del inventario global?")) return;
     await fetch(`/api/gerencia/inventario?id=${id}`, { method: "DELETE" });
     await loadData();
   };
@@ -188,7 +188,7 @@ export default function InventarioGlobal() {
               <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 truncate">Total Referencias</h3>
               <p className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white">{products.length}</p>
               <div className="mt-2 sm:mt-4 flex items-center gap-2 text-[10px] sm:text-xs font-medium text-blue-600">
-                <span className="bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 sm:py-1 rounded-lg">En catálogo Neon</span>
+                <span className="bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 sm:py-1 rounded-lg">En catálogo</span>
               </div>
             </div>
             
@@ -256,7 +256,7 @@ export default function InventarioGlobal() {
           <div className="md:hidden space-y-3.5">
             {loading ? (
               <div className="p-8 text-center text-sm text-zinc-500 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-                Cargando inventario desde Neon DB...
+                Cargando inventario...
               </div>
             ) : filtered.length === 0 ? (
               <div className="p-8 text-center text-sm text-zinc-500 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
@@ -366,7 +366,7 @@ export default function InventarioGlobal() {
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-8 text-center text-zinc-500">Cargando inventario desde Neon DB...</td>
+                      <td colSpan={7} className="px-6 py-8 text-center text-zinc-500">Cargando inventario...</td>
                     </tr>
                   ) : filtered.map((row) => {
                     const s1 = Number(row.stock ?? 0);
@@ -435,7 +435,7 @@ export default function InventarioGlobal() {
               </table>
             </div>
             <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-sm text-zinc-500">
-              <span>Mostrando {filtered.length} de {products.length} productos en Neon DB</span>
+              <span>Mostrando {filtered.length} de {products.length} productos</span>
             </div>
           </div>
         </div>
@@ -532,7 +532,7 @@ export default function InventarioGlobal() {
                   disabled={saving}
                   className="h-11 rounded-xl bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 disabled:opacity-50"
                 >
-                  {saving ? "Guardando..." : "Guardar en Neon"}
+                  {saving ? "Guardando..." : "Guardar"}
                 </button>
               </div>
             </form>

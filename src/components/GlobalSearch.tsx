@@ -93,7 +93,7 @@ export function GlobalSearch() {
               {loading ? (
                 <div className="py-8 text-center text-zinc-400 text-sm">
                   <span className="inline-block animate-spin mr-2">⚙️</span>
-                  Buscando en Neon DB...
+                  Buscando...
                 </div>
               ) : query.length >= 2 ? (
                 results.length > 0 ? (
@@ -128,7 +128,7 @@ export function GlobalSearch() {
                 ) : (
                   <div className="py-12 text-center text-zinc-500 text-sm">
                     <p className="mb-1 text-2xl">🔍</p>
-                    <p>No se encontraron coincidencias para &quot;{query}&quot; en Neon DB.</p>
+                    <p>No se encontraron coincidencias para &quot;{query}&quot;.</p>
                   </div>
                 )
               ) : (

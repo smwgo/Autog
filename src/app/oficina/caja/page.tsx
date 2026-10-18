@@ -62,7 +62,7 @@ export default function CajaLiquidaciones() {
 
   const handleToggleRegister = async () => {
     const isOpen = register?.status === "ABIERTA";
-    if (!confirm(isOpen ? "¿Confirmas el cierre y cuadre de caja en Neon DB?" : "¿Deseas abrir un nuevo turno de caja?")) return;
+    if (!confirm(isOpen ? "¿Confirmas el cierre y cuadre de caja?" : "¿Deseas abrir un nuevo turno de caja?")) return;
     await fetch("/api/oficina/caja", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -127,7 +127,7 @@ export default function CajaLiquidaciones() {
               </span>
             </h1>
             <p className="text-xs sm:text-sm text-zinc-500 mt-1.5">
-              Sesión: {register?.sessionNumber || "CAJ-ACTUAL"} — {register?.notes || "Turno en Neon DB"}
+              Sesión: {register?.sessionNumber || "CAJ-ACTUAL"} — {register?.notes || "Turno actual"}
             </p>
           </div>
           <div className="grid grid-cols-2 sm:flex items-center gap-2.5 w-full sm:w-auto">
@@ -252,7 +252,7 @@ export default function CajaLiquidaciones() {
           {/* Vista Móvil (Tarjetas) */}
           <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
             {loading ? (
-              <div className="p-6 text-center text-sm text-zinc-500">Cargando caja desde Neon DB...</div>
+              <div className="p-6 text-center text-sm text-zinc-500">Cargando caja...</div>
             ) : filtered.map((row) => (
               <div key={row.id} className="p-4 flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-2">
@@ -306,7 +306,7 @@ export default function CajaLiquidaciones() {
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando caja desde Neon DB...</td>
+                    <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando caja...</td>
                   </tr>
                 ) : filtered.map((row) => (
                   <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
@@ -347,7 +347,7 @@ export default function CajaLiquidaciones() {
             </table>
           </div>
           <div className="p-3.5 sm:p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs sm:text-sm text-zinc-500">
-            <span>Mostrando {filtered.length} transacciones en Neon DB</span>
+            <span>Mostrando {filtered.length} transacciones</span>
           </div>
         </div>
       </main>
@@ -433,7 +433,7 @@ export default function CajaLiquidaciones() {
                   disabled={saving}
                   className="h-11 px-5 rounded-xl bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 disabled:opacity-50"
                 >
-                  {saving ? "Guardando..." : "Guardar en Neon"}
+                  {saving ? "Guardando..." : "Guardar"}
                 </button>
               </div>
             </form>

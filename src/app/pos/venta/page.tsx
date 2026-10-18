@@ -376,7 +376,7 @@ export default function NuevaVentaPage() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "No se pudo registrar el cliente en Neon.");
+        throw new Error(data.error || "No se pudo registrar el cliente.");
       }
 
       const creado = data.cliente;

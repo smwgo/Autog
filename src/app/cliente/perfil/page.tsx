@@ -128,7 +128,7 @@ export default function MiPerfilPage() {
       setCurrentPass('');
       setNewPass('');
       setConfirmPass('');
-      showToast('Cambios guardados en Neon PostgreSQL con éxito');
+      showToast('Cambios guardados con éxito');
       await fetchProfiles(selectedProfileId);
     } catch (err: any) {
       showToast(`Error: ${err.message}`);
@@ -163,7 +163,7 @@ export default function MiPerfilPage() {
       setNewEmail('');
       setNewPhone('');
       setNewAddress('');
-      showToast(`Perfil de ${data.perfil.name} creado en Neon DB.`);
+      showToast(`Perfil de ${data.perfil.name} creado.`);
       await fetchProfiles(data.perfil.id);
     } catch (err: any) {
       showToast(`Error: ${err.message}`);
@@ -187,7 +187,7 @@ export default function MiPerfilPage() {
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Error al eliminar perfil');
       }
-      showToast('Perfil eliminado de Neon DB.');
+      showToast('Perfil eliminado.');
       const nextProfile = profiles.find((p) => p.id !== selectedProfileId);
       await fetchProfiles(nextProfile?.id);
     } catch (err: any) {
@@ -209,7 +209,7 @@ export default function MiPerfilPage() {
           </Link>
           <div className="flex items-center gap-2 text-xs font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-700">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Perfiles en Neon DB ({profiles.length})</span>
+            <span>Perfiles ({profiles.length})</span>
           </div>
         </div>
 
@@ -225,7 +225,7 @@ export default function MiPerfilPage() {
               </h1>
             </div>
             <p className="text-base sm:text-lg text-zinc-600 dark:text-zinc-400">
-              Actualiza tus datos de contacto y preferencias directamente en Neon PostgreSQL.
+              Actualiza tus datos de contacto y preferencias.
             </p>
           </div>
 
@@ -258,7 +258,7 @@ export default function MiPerfilPage() {
 
         {loading ? (
           <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-12 text-center text-zinc-500">
-            Cargando perfil desde Neon PostgreSQL...
+            Cargando perfil...
           </div>
         ) : (
           <div className="flex flex-col md:flex-row gap-8">
@@ -305,7 +305,7 @@ export default function MiPerfilPage() {
                         </div>
                         <div>
                           <p className="font-bold text-zinc-900 dark:text-white text-lg">{name || 'Cliente'}</p>
-                          <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400">ID Neon: {selectedProfileId}</p>
+                          <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400">ID: {selectedProfileId}</p>
                         </div>
                       </div>
                       {profiles.length > 1 && (
@@ -375,7 +375,7 @@ export default function MiPerfilPage() {
                         disabled={isSaving}
                         className="cursor-pointer min-h-[44px] h-12 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 px-8 rounded-2xl font-bold transition-colors shadow-lg disabled:opacity-50 text-base sm:text-sm flex items-center justify-center w-full sm:w-auto"
                       >
-                        {isSaving ? 'Guardando en Neon...' : 'Guardar Cambios'}
+                        {isSaving ? 'Guardando...' : 'Guardar Cambios'}
                       </button>
                     </div>
                   </form>
@@ -590,7 +590,7 @@ export default function MiPerfilPage() {
                   disabled={isSaving}
                   className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold text-base sm:text-sm flex items-center justify-center"
                 >
-                  {isSaving ? 'Guardando...' : 'Crear en Neon DB'}
+                  {isSaving ? 'Guardando...' : 'Crear Perfil'}
                 </button>
               </div>
             </form>

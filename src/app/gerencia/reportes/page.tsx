@@ -91,7 +91,7 @@ export default function ReportesFinancieros() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar este movimiento financiero de Neon DB?")) return;
+    if (!confirm("¿Eliminar este movimiento financiero?")) return;
     await fetch(`/api/gerencia/finanzas?id=${id}`, { method: "DELETE" });
     await loadData();
   };
@@ -107,7 +107,7 @@ export default function ReportesFinancieros() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "estados-financieros-neon.csv";
+    a.download = "estados-financieros.csv";
     a.click();
   };
 
@@ -164,7 +164,7 @@ export default function ReportesFinancieros() {
                 <p className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400">${totalIncome.toFixed(2)}</p>
               </div>
               <div className="sm:mt-4 text-[11px] sm:text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 inline-block px-2.5 py-1 rounded-lg">
-                En vivo (Neon)
+                En vivo
               </div>
             </div>
             
@@ -224,7 +224,7 @@ export default function ReportesFinancieros() {
           {/* Vista Móvil (Tarjetas nativas Android / iOS) */}
           <div className="md:hidden bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 sm:border-x sm:border-b rounded-2xl sm:rounded-b-2xl divide-y divide-zinc-100 dark:divide-zinc-800 shadow-sm">
           {loading ? (
-            <div className="p-6 text-center text-sm text-zinc-500">Cargando finanzas desde Neon DB...</div>
+            <div className="p-6 text-center text-sm text-zinc-500">Cargando reportes...</div>
           ) : filtered.length === 0 ? (
             <div className="p-6 text-center text-sm text-zinc-500">No se encontraron transacciones</div>
           ) : (
@@ -280,7 +280,7 @@ export default function ReportesFinancieros() {
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando finanzas desde Neon DB...</td>
+                    <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando reportes...</td>
                   </tr>
                 ) : filtered.map((row) => (
                   <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
@@ -319,7 +319,7 @@ export default function ReportesFinancieros() {
             </table>
           </div>
           <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-sm text-zinc-500">
-            <span>Mostrando {filtered.length} de {transactions.length} transacciones en Neon DB</span>
+            <span>Mostrando {filtered.length} de {transactions.length} transacciones</span>
           </div>
         </div>
         </div>
@@ -408,7 +408,7 @@ export default function ReportesFinancieros() {
                   disabled={saving}
                   className="h-11 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {saving ? "Guardando..." : "Guardar en Neon"}
+                  {saving ? "Guardando..." : "Guardar"}
                 </button>
               </div>
             </form>

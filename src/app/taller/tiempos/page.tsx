@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { TallerMobileNav } from "@/components/TallerMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 
 interface TimeRecord {
   id: string;
@@ -48,6 +49,9 @@ export default function ControlTiemposPage() {
   });
   const [ordenesActivas, setOrdenesActivas] = useState<ActiveOrderItem[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterMechanic, setFilterMechanic] = useState("");
+  const [filtroMecanicoAbierto, setFiltroMecanicoAbierto] = useState(false);
 
   // Cronómetro en vivo
   const [activeTimer, setActiveTimer] = useState(false);
@@ -150,7 +154,7 @@ export default function ControlTiemposPage() {
       setElapsedSeconds(0);
       await cargarTiempos();
     } catch (err: any) {
-      alert(err.message || "No se pudo registrar el tiempo en Neon.");
+      alert(err.message || "No se pudo registrar el tiempo.");
     } finally {
       setGuardandoTimer(false);
     }
@@ -193,7 +197,7 @@ export default function ControlTiemposPage() {
       setManualNotes("");
       await cargarTiempos();
     } catch (err: any) {
-      alert(err.message || "Error al guardar en Neon.");
+      alert(err.message || "Error al guardar el registro.");
     } finally {
       setGuardandoManual(false);
     }
@@ -230,52 +234,180 @@ export default function ControlTiemposPage() {
     }, new Map<string, { mechanic: string; mins: number; rev: number; count: number }>())
   ).map(([, v]) => v);
 
+  // Filtrado de registros en tiempo real
+  const recordsFiltrados = records.filter((r) => {
+    const q = searchTerm.trim().toLowerCase();
+    const matchSearch =
+      !q ||
+      r.task.toLowerCase().includes(q) ||
+      r.orderId.toLowerCase().includes(q) ||
+      r.mechanic.toLowerCase().includes(q) ||
+      (r.vehicle && r.vehicle.toLowerCase().includes(q));
+    const matchMechanic = !filterMechanic || r.mechanic === filterMechanic;
+    return matchSearch && matchMechanic;
+  });
+
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
 
-      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
-        {/* Navigation / Breadcrumb */}
-        <div className="mb-4 sm:mb-6">
-          <Link
-            href="/taller"
-            className="text-sm font-medium text-rose-600 hover:text-rose-500 flex items-center gap-1 w-fit min-h-[44px]"
-          >
-            &larr; Volver al Panel de Taller
-          </Link>
+      <main className="flex-grow p-4 md:p-10 max-w-7xl mx-auto w-full flex flex-col">
+        {/* Navigation / Header */}
+        <div className="order-1 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/taller"
+              title="Volver al Panel de Taller"
+              className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-500 dark:hover:border-rose-500 hover:bg-rose-50/50 dark:hover:bg-rose-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
+            >
+              <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Control de Tiempos
+            </h1>
+            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-600 text-white shadow-sm shadow-rose-500/20">
+              {cargando ? "..." : records.length}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setModalReporte(true)}
+              className="h-11 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-rose-500 text-zinc-700 dark:text-zinc-300 px-4 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer text-sm"
+            >
+              <span>📊</span> Reporte
+            </button>
+            <button
+              type="button"
+              onClick={() => setModalManual(true)}
+              className="h-11 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white px-5 rounded-xl font-bold text-sm transition-all shadow-sm shadow-rose-500/20 flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span>+</span> Registro Manual
+            </button>
+          </div>
         </div>
 
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6 sm:mb-10">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-xl bg-rose-500 bg-opacity-10 flex items-center justify-center text-2xl shrink-0">
+        {/* Resumen Métricas Desplegable en Móvil: debajo de Estado */}
+        <CollapsibleMetrics className="order-3 sm:order-2 mb-6 sm:mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-rose-500/15 border border-rose-500/25 text-rose-500 flex items-center justify-center text-xl shrink-0">
                 ⏱️
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                  Control de Tiempos
-                </h1>
-                <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
-                  Registro de horas trabajadas conectado en tiempo real a Neon DB.
-                </p>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">{stats.totalFormatted}</p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Horas Totales</h3>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-500 flex items-center justify-center text-xl shrink-0">
+                💵
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">${stats.totalRevenue.toFixed(2)}</p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Facturable</h3>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-500 flex items-center justify-center text-xl shrink-0">
+                📊
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.completedCount}</p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Sesiones</h3>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-500 flex items-center justify-center text-xl shrink-0">
+                👨‍🔧
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">{resumenPorMecanico.length}</p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Mecánicos</h3>
               </div>
             </div>
           </div>
+        </CollapsibleMetrics>
 
-          <button
-            type="button"
-            onClick={() => setModalReporte(true)}
-            className="w-full md:w-auto min-h-[44px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-rose-500 text-zinc-700 dark:text-zinc-300 px-6 py-2.5 rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer text-sm"
-          >
-            <span>📊</span> Ver Reporte Mensual
-          </button>
+        {/* Buscador y Filtros */}
+        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
+          <div className="relative w-full flex-1">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">🔍</span>
+            <input
+              type="text"
+              placeholder="Buscar por tarea, orden, vehículo o mecánico..."
+              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all placeholder:text-zinc-400 shadow-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm cursor-pointer"
+                title="Limpiar búsqueda"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          <div className="relative w-full sm:w-56 shrink-0">
+            <button
+              type="button"
+              onClick={() => setFiltroMecanicoAbierto(!filtroMecanicoAbierto)}
+              className="w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+            >
+              <span className="truncate">{filterMechanic ? filterMechanic : "Mecánicos"}</span>
+              <svg className={`w-4 h-4 text-zinc-400 transition-transform shrink-0 ml-1.5 ${filtroMecanicoAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {filtroMecanicoAbierto && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setFiltroMecanicoAbierto(false)} />
+                <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                  {[
+                    { id: "", label: "Mecánicos" },
+                    { id: "Carlos Rodríguez", label: "Carlos Rodríguez" },
+                    { id: "Luis Martínez", label: "Luis Martínez" },
+                    { id: "Andrés Castro", label: "Andrés Castro" },
+                    { id: "Ana Torres", label: "Ana Torres" },
+                  ].map((opcion) => (
+                    <button
+                      key={opcion.id}
+                      type="button"
+                      onClick={() => {
+                        setFilterMechanic(opcion.id);
+                        setFiltroMecanicoAbierto(false);
+                      }}
+                      className={`w-full px-4 py-2.5 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
+                        filterMechanic === opcion.id
+                          ? "bg-rose-50 dark:bg-rose-600/15 text-rose-600 dark:text-rose-400"
+                          : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-white"
+                      }`}
+                    >
+                      <span className="truncate">{opcion.label}</span>
+                      {filterMechanic === opcion.id && (
+                        <svg className="w-4 h-4 text-rose-500 shrink-0 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Top Widgets: Active Timer & Summary */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Active Timer Widget */}
-          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-5 sm:p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between gap-4">
+        {/* Sección Principal de Tiempos y Cronómetro */}
+        <div className="order-4 space-y-6 sm:space-y-8">
+          {/* Cronómetro Activo */}
+          <div className="bg-white dark:bg-zinc-900 p-5 sm:p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between gap-4">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex items-center gap-3 sm:gap-4 w-full md:w-auto">
                 <div className="relative shrink-0">
@@ -358,23 +490,6 @@ export default function ControlTiemposPage() {
             </div>
           </div>
 
-          {/* Quick Stats */}
-          <div className="bg-gradient-to-br from-rose-500 to-rose-600 p-6 rounded-3xl shadow-sm text-white flex flex-col justify-center">
-            <h3 className="text-rose-100 font-medium mb-1">Horas Totales (Neon DB)</h3>
-            <p className="text-4xl font-bold mb-4">{stats.totalFormatted}</p>
-            <div className="flex justify-between items-end border-t border-rose-400/50 pt-4">
-              <div>
-                <p className="text-xs text-rose-200">Facturable Acumulado</p>
-                <p className="font-bold">${stats.totalRevenue.toFixed(2)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-rose-200 text-right">Sesiones registradas</p>
-                <p className="font-bold text-right">{stats.completedCount}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Logged Sessions */}
         <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
           <div className="p-4 sm:p-6 border-b border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -398,13 +513,13 @@ export default function ControlTiemposPage() {
           {cargando ? (
             <div className="text-center py-12">
               <div className="inline-block animate-spin w-8 h-8 border-4 border-rose-600 border-t-transparent rounded-full mb-3"></div>
-              <p className="text-sm font-medium text-zinc-500">Cargando registros desde Neon...</p>
+              <p className="text-sm font-medium text-zinc-500">Cargando registros...</p>
             </div>
           ) : (
             <>
               {/* Mobile View: Cards adaptadas a diseño facturas */}
               <div className="block md:hidden space-y-3.5 p-4">
-                {records.map((record) => (
+                {recordsFiltrados.map((record) => (
                   <div
                     key={record.dbId || record.id}
                     className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
@@ -485,7 +600,7 @@ export default function ControlTiemposPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                    {records.map((record) => (
+                    {recordsFiltrados.map((record) => (
                       <tr
                         key={record.dbId || record.id}
                         className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
@@ -536,10 +651,10 @@ export default function ControlTiemposPage() {
                         </td>
                       </tr>
                     ))}
-                    {records.length === 0 && (
+                    {recordsFiltrados.length === 0 && (
                       <tr>
                         <td colSpan={6} className="px-6 py-12 text-center text-sm text-zinc-500">
-                          No hay registros de tiempo. Inicia el cronómetro o agrega un registro manual.
+                          No hay registros de tiempo que coincidan con la búsqueda.
                         </td>
                       </tr>
                     )}
@@ -549,6 +664,7 @@ export default function ControlTiemposPage() {
             </>
           )}
         </div>
+        </div>
 
         {/* Modal Registro Manual */}
         {modalManual && (
@@ -556,7 +672,7 @@ export default function ControlTiemposPage() {
             <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 pb-8 sm:pb-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
-                  ⏱️ Registrar Tiempo Manualmente (Neon DB)
+                  ⏱️ Registrar Tiempo Manualmente
                 </h3>
                 <button
                   type="button"
@@ -697,7 +813,7 @@ export default function ControlTiemposPage() {
             <div className="w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 pb-8 sm:pb-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
-                  📊 Reporte de Productividad por Mecánico (Neon DB)
+                  📊 Reporte de Productividad por Mecánico
                 </h3>
                 <button
                   type="button"

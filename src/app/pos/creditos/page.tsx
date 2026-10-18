@@ -89,7 +89,7 @@ export default function CreditosPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Error al aplicar abono en Neon DB");
+        throw new Error(data.error || "Error al aplicar abono");
       }
 
       setCuentaAbono(null);
@@ -126,7 +126,7 @@ export default function CreditosPage() {
       );
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Error al eliminar cuenta de crédito en Neon DB");
+        throw new Error(data.error || "Error al eliminar cuenta de crédito");
       }
       await fetchCreditos();
     } catch (err: any) {

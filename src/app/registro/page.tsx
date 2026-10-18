@@ -60,7 +60,7 @@ export default function RegistroPage() {
         // Fallback standard
       }
 
-      alert('¡Cuenta creada exitosamente en Neon DB!');
+      alert('¡Cuenta creada exitosamente!');
       router.push('/cliente');
     } catch (err: any) {
       setErrorMessage(err.message || 'Error de conexión con el servidor.');
@@ -224,7 +224,7 @@ export default function RegistroPage() {
                 disabled={loading}
                 className="w-full flex justify-center py-3.5 sm:py-4 px-4 min-h-[48px] items-center border border-transparent rounded-2xl shadow-lg shadow-blue-500/20 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
-                {loading ? 'Creando cuenta en Neon...' : 'Crear cuenta y Registrarse'}
+                {loading ? 'Creando cuenta...' : 'Crear cuenta y Registrarse'}
               </button>
             </div>
           </form>

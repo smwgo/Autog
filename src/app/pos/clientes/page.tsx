@@ -89,7 +89,7 @@ export default function GestionClientes() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Error al cargar clientes desde Neon");
+        throw new Error(data.error || "Error al cargar clientes");
       }
 
       setTodosClientes(data.clientes || []);

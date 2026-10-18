@@ -220,7 +220,7 @@ export default function CitasAgenda() {
         <div className="md:hidden space-y-3">
           {loading ? (
             <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 text-center text-sm text-zinc-500 border border-zinc-100 dark:border-zinc-800">
-              Cargando agenda desde Neon DB...
+              Cargando agenda...
             </div>
           ) : filtered.length === 0 ? (
             <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 text-center text-sm text-zinc-500 border border-zinc-100 dark:border-zinc-800">
@@ -299,7 +299,7 @@ export default function CitasAgenda() {
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando agenda desde Neon DB...</td>
+                    <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando agenda...</td>
                   </tr>
                 ) : filtered.map((row) => (
                   <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
@@ -493,7 +493,7 @@ export default function CitasAgenda() {
                   disabled={saving}
                   className="h-11 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 disabled:opacity-50"
                 >
-                  {saving ? "Guardando..." : "Guardar en Neon"}
+                  {saving ? "Guardando..." : "Guardar"}
                 </button>
               </div>
             </form>

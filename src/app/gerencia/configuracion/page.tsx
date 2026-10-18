@@ -59,7 +59,7 @@ export default function ConfiguracionSistema() {
         body: JSON.stringify({ type: "config", config }),
       });
       if (res.ok) {
-        setSavedBanner("Ajustes guardados exitosamente en Neon PostgreSQL.");
+        setSavedBanner("Ajustes guardados exitosamente.");
         setTimeout(() => setSavedBanner(""), 4000);
       }
     } finally {
@@ -109,18 +109,18 @@ export default function ConfiguracionSistema() {
   };
 
   const handleDeleteBranch = async (id: string) => {
-    if (!confirm("¿Eliminar esta sucursal de Neon DB?")) return;
+    if (!confirm("¿Eliminar esta sucursal?")) return;
     await fetch(`/api/gerencia/configuracion?id=${id}`, { method: "DELETE" });
     await loadData();
   };
 
   const handleDownloadBackup = () => {
-    const dump = `-- AutoG Neon PostgreSQL Backup\n-- Generated at ${new Date().toISOString()}\n-- Company: ${config.razonSocial} (${config.ruc})\nSELECT * FROM "SystemSetting";\n`;
-    const blob = new Blob([dump], { type: "application/sql" });
+    const dump = `-- AutoG Backup\n-- Generated at ${new Date().toISOString()}\n-- Company: ${config.razonSocial} (${config.ruc})\nSELECT * FROM "SystemSetting";\n`;
+    const blob = new Blob([dump], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "autog-neon-backup.sql";
+    a.download = "autog-backup.txt";
     a.click();
   };
 
@@ -154,7 +154,7 @@ export default function ConfiguracionSistema() {
               disabled={saving}
               className="w-full sm:w-auto h-11 sm:h-10 px-6 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 active:scale-95 transition-all shadow-sm disabled:opacity-50"
             >
-              {saving ? "Guardando en Neon..." : "Guardar Cambios"}
+              {saving ? "Guardando..." : "Guardar Cambios"}
             </button>
           </div>
         </div>
@@ -250,7 +250,7 @@ export default function ConfiguracionSistema() {
               {activeTab === 'sucursales' && (
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="flex justify-between items-center mb-5 sm:mb-6 border-b border-zinc-100 dark:border-zinc-800 pb-3 sm:pb-4 gap-2">
-                    <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white">Sucursales en Neon</h2>
+                    <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white">Sucursales</h2>
                     <button
                       onClick={openNewBranch}
                       className="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400 active:scale-95"
@@ -395,19 +395,19 @@ export default function ConfiguracionSistema() {
                   </h2>
                   <div className="space-y-4 sm:space-y-6">
                     <div className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-700">
-                      <h3 className="font-bold text-sm sm:text-base text-zinc-900 dark:text-white mb-1">Backups Automáticos en Neon</h3>
-                      <p className="text-xs sm:text-sm text-zinc-500 mb-4">La base de datos PostgreSQL se respalda de manera segura en Neon Cloud.</p>
+                      <h3 className="font-bold text-sm sm:text-base text-zinc-900 dark:text-white mb-1">Backups Automáticos</h3>
+                      <p className="text-xs sm:text-sm text-zinc-500 mb-4">La base de datos se respalda de manera segura en la nube.</p>
                       <button
                         onClick={handleDownloadBackup}
                         className="w-full sm:w-auto text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 px-4 py-2.5 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
                       >
-                        Descargar último Backup (.sql)
+                        Descargar último Backup
                       </button>
                     </div>
                     
                     <div className="p-4 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-500/5">
                       <h3 className="font-bold text-sm sm:text-base text-rose-700 dark:text-rose-400 mb-1">Auditoría de Seguridad</h3>
-                      <p className="text-xs sm:text-sm text-rose-600/70 dark:text-rose-400/70 mb-4">Registrar evento de cierre global de sesiones en el log de auditoría de Neon DB.</p>
+                      <p className="text-xs sm:text-sm text-rose-600/70 dark:text-rose-400/70 mb-4">Registrar evento de cierre global de sesiones en el log de auditoría.</p>
                       <button
                         onClick={async () => {
                           await fetch("/api/gerencia/auditoria", {
@@ -421,7 +421,7 @@ export default function ConfiguracionSistema() {
                               level: "CRÍTICO",
                             }),
                           });
-                          setSavedBanner("Evento de seguridad registrado en Auditoría Neon DB.");
+                          setSavedBanner("Evento de seguridad registrado en Auditoría.");
                         }}
                         className="w-full sm:w-auto text-xs sm:text-sm font-bold text-white bg-rose-600 px-4 py-2.5 rounded-xl hover:bg-rose-700 transition-colors"
                       >
@@ -499,7 +499,7 @@ export default function ConfiguracionSistema() {
                   disabled={saving}
                   className="h-11 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {saving ? "Guardando..." : "Guardar en Neon"}
+                  {saving ? "Guardando..." : "Guardar"}
                 </button>
               </div>
             </form>
