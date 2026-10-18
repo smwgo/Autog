@@ -25,11 +25,11 @@ export function CollapsibleMetrics({
   return (
     <div className={className}>
       {/* Botón desplegable visible ÚNICAMENTE en móvil: sin íconos, una sola palabra ("Métricas"), sin la palabra "Mostrar" */}
-      <div className="sm:hidden mb-4">
+      <div className="sm:hidden mb-2">
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
-          className="w-full min-h-[44px] flex items-center justify-between px-4 py-2.5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-200 shadow-sm active:scale-[0.99] transition-all cursor-pointer"
+          className="w-full h-11 flex items-center justify-between px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-sm font-normal text-zinc-800 dark:text-zinc-200 shadow-sm active:scale-[0.99] transition-all cursor-pointer"
         >
           <span>Métricas</span>
           <svg
@@ -38,13 +38,13 @@ export function CollapsibleMetrics({
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M19 9l-7 7-7-7" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
           </svg>
         </button>
       </div>
 
       {/* Contenedor de métricas: En móvil se despliega u oculta con isOpen; en escritorio (sm:) SIEMPRE visible */}
-      <div className={`${isOpen ? "block animate-in fade-in duration-200" : "hidden"} sm:block`}>
+      <div className={`${isOpen ? "block animate-in fade-in duration-200 mb-3" : "hidden"} sm:block`}>
         {children}
       </div>
     </div>

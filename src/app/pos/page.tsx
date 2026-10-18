@@ -349,23 +349,23 @@ export default function PosPanel() {
 
       {/* Modal: Apertura de Caja */}
       {mostrarModalApertura && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-zinc-900/95 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-5 text-center backdrop-blur-xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-white dark:bg-zinc-900/95 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl flex flex-col gap-5 text-center backdrop-blur-xl">
             <div className="flex flex-col items-center gap-3">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-2xl shadow-[0_0_25px_rgba(16,185,129,0.15)]">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-2xl shadow-sm">
                 💵
               </div>
               <div>
-                <h3 className="text-xl font-bold tracking-tight text-white">Apertura</h3>
-                <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
+                <h3 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">Apertura</h3>
+                <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
                   Fondo
                 </span>
               </div>
             </div>
 
             <form onSubmit={handleGuardarApertura} className="flex flex-col gap-4">
-              <div className="relative flex items-center justify-center bg-zinc-950/70 border border-zinc-800 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20 rounded-2xl px-4 py-3 transition-all">
-                <span className="text-2xl font-bold text-zinc-500 mr-2">$</span>
+              <div className="relative flex items-center justify-center bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-zinc-800 focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20 rounded-2xl px-4 py-3 transition-all">
+                <span className="text-2xl font-bold text-zinc-400 dark:text-zinc-500 mr-2">$</span>
                 <input
                   type="number"
                   step="any"
@@ -374,7 +374,7 @@ export default function PosPanel() {
                   placeholder="0.00"
                   value={fondoApertura}
                   onChange={(e) => setFondoApertura(e.target.value)}
-                  className="w-full text-3xl font-extrabold text-white text-center bg-transparent focus:outline-none tracking-tight"
+                  className="w-full text-3xl font-extrabold text-zinc-900 dark:text-white text-center bg-transparent focus:outline-none tracking-tight"
                 />
               </div>
 
@@ -384,7 +384,7 @@ export default function PosPanel() {
                     key={val}
                     type="button"
                     onClick={() => sumarFondoApertura(val)}
-                    className="h-10 px-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 active:scale-95 text-xs font-semibold text-zinc-300 border border-zinc-700/40 transition-all cursor-pointer"
+                    className="h-10 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 active:scale-95 text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/40 transition-all cursor-pointer"
                   >
                     +${val}
                   </button>
@@ -393,7 +393,7 @@ export default function PosPanel() {
                   <button
                     type="button"
                     onClick={() => setFondoApertura("")}
-                    className="h-10 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-xs font-semibold text-rose-300 border border-rose-500/30 transition-all cursor-pointer"
+                    className="h-10 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/15 dark:hover:bg-rose-500/25 active:scale-95 text-xs font-semibold text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 transition-all cursor-pointer"
                   >
                     Limpiar
                   </button>
@@ -404,14 +404,14 @@ export default function PosPanel() {
                 <button
                   type="button"
                   onClick={() => setMostrarModalApertura(false)}
-                  className="flex-1 h-11 px-4 rounded-2xl bg-zinc-800/40 hover:bg-zinc-800/70 active:scale-[0.98] text-zinc-400 hover:text-zinc-200 border border-zinc-700/40 text-xs font-semibold transition-all text-center cursor-pointer"
+                  className="flex-1 h-11 px-4 rounded-2xl bg-zinc-500/10 hover:bg-zinc-500/20 active:scale-[0.98] text-zinc-700 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 border border-zinc-300/40 dark:border-zinc-700/40 text-xs font-semibold transition-all text-center cursor-pointer"
                 >
                   Omitir
                 </button>
                 <button
                   type="submit"
                   disabled={guardandoApertura}
-                  className="flex-1 h-11 px-4 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-[0.98] text-emerald-300 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="flex-1 h-11 px-4 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-[0.98] text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   {guardandoApertura ? "Guardando..." : "Abrir"}
                 </button>
@@ -423,40 +423,40 @@ export default function PosPanel() {
 
       {/* Modal: Cierre de Caja */}
       {mostrarModalCierre && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-800">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/25 text-rose-400 flex items-center justify-center text-base shadow-[0_0_15px_rgba(244,63,94,0.12)]">
+                <div className="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-500/25 text-rose-600 dark:text-rose-400 flex items-center justify-center text-base">
                   🔒
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">Cierre</h3>
+                  <h3 className="text-base font-bold text-zinc-900 dark:text-white">Cierre</h3>
                 </div>
               </div>
               <button
                 onClick={() => setMostrarModalCierre(false)}
-                className="w-8 h-8 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center text-xs"
+                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center text-xs"
               >
                 ✕
               </button>
             </div>
 
-            <div className="bg-zinc-950/70 border border-zinc-800/80 p-3.5 rounded-2xl flex justify-between items-center">
+            <div className="bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-zinc-800/80 p-3.5 rounded-2xl flex justify-between items-center">
               <div>
-                <span className="text-xs text-zinc-400 font-medium">Esperado</span>
-                <p className="text-xl font-black text-emerald-400">
+                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Esperado</span>
+                <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">
                   ${(parseFloat(cajaInfo?.expectedCash?.toString() || "0") || 0).toFixed(2)}
                 </p>
               </div>
               <div className="text-right">
-                <span className="text-xs text-zinc-400 font-medium">Diferencia</span>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Diferencia</span>
                 <p
                   className={`text-base font-bold ${
                     conteoCierre !== "" &&
                     parseFloat(conteoCierre) - (parseFloat(cajaInfo?.expectedCash?.toString() || "0") || 0) < 0
-                      ? "text-rose-400"
-                      : "text-emerald-400"
+                      ? "text-rose-600 dark:text-rose-400"
+                      : "text-emerald-600 dark:text-emerald-400"
                   }`}
                 >
                   {conteoCierre === ""
@@ -468,11 +468,11 @@ export default function PosPanel() {
 
             <form onSubmit={handleConfirmarCierre} className="flex flex-col gap-3.5">
               <div>
-                <label className="block text-xs font-bold text-zinc-400 mb-1.5">
+                <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-400 mb-1.5">
                   Contado
                 </label>
-                <div className="relative flex items-center bg-zinc-950/70 border border-zinc-800 focus-within:border-rose-500/50 rounded-2xl px-4 py-2.5">
-                  <span className="text-2xl font-bold text-zinc-500 mr-2">$</span>
+                <div className="relative flex items-center bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-zinc-800 focus-within:border-rose-500/50 rounded-2xl px-4 py-2.5">
+                  <span className="text-2xl font-bold text-zinc-400 dark:text-zinc-500 mr-2">$</span>
                   <input
                     type="number"
                     step="any"
@@ -481,7 +481,7 @@ export default function PosPanel() {
                     placeholder="0.00"
                     value={conteoCierre}
                     onChange={(e) => setConteoCierre(e.target.value)}
-                    className="w-full text-2xl font-black text-white bg-transparent focus:outline-none"
+                    className="w-full text-2xl font-black text-zinc-900 dark:text-white bg-transparent focus:outline-none"
                   />
                 </div>
               </div>
@@ -492,7 +492,7 @@ export default function PosPanel() {
                     key={val}
                     type="button"
                     onClick={() => sumarConteoCierre(val)}
-                    className="h-10 px-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 active:scale-95 text-xs font-semibold text-zinc-300 border border-zinc-700/40 transition-all cursor-pointer"
+                    className="h-10 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 active:scale-95 text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/40 transition-all cursor-pointer"
                   >
                     +${val}
                   </button>
@@ -501,7 +501,7 @@ export default function PosPanel() {
                   <button
                     type="button"
                     onClick={() => setConteoCierre("")}
-                    className="h-10 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-xs font-semibold text-rose-300 border border-rose-500/30 transition-all cursor-pointer"
+                    className="h-10 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/15 dark:hover:bg-rose-500/25 active:scale-95 text-xs font-semibold text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 transition-all cursor-pointer"
                   >
                     Limpiar
                   </button>
@@ -509,7 +509,7 @@ export default function PosPanel() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-zinc-400 mb-1">
+                <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-400 mb-1">
                   Observaciones
                 </label>
                 <input
@@ -517,14 +517,14 @@ export default function PosPanel() {
                   placeholder="Opcional..."
                   value={notasCierre}
                   onChange={(e) => setNotasCierre(e.target.value)}
-                  className="w-full h-11 px-3.5 py-2.5 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-xs text-white focus:outline-none focus:border-zinc-700"
+                  className="w-full h-11 px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/60 text-base sm:text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-700"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={cerrandoCaja}
-                className="w-full h-11 mt-2 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-[0.98] text-rose-300 border border-rose-500/30 text-xs font-bold transition-all shadow-[0_0_20px_rgba(244,63,94,0.15)] flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full h-11 mt-2 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-[0.98] text-rose-700 dark:text-rose-300 border border-rose-500/30 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 {cerrandoCaja ? "Cerrando..." : "Confirmar y Cerrar Caja"}
               </button>

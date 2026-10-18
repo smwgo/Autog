@@ -224,7 +224,7 @@ export default function FacturasPosPage() {
         {/* Cabecera / Navegación */}
         <div className="print:hidden flex flex-col">
           {/* Header */}
-          <div className="order-1 mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="order-1 mb-3 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-3">
               <Link 
                 href="/pos"
@@ -246,7 +246,7 @@ export default function FacturasPosPage() {
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <Link
                 href="/pos/facturas/nueva"
-                className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-all shadow-sm shadow-blue-500/20 active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
+                className="h-10 px-4 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20 font-medium text-sm transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
@@ -282,8 +282,8 @@ export default function FacturasPosPage() {
           )}
 
           {/* KPIs / Resumen Desplegable en Móvil */}
-          <CollapsibleMetrics className="order-3 sm:order-2 mb-6 sm:mb-8">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <CollapsibleMetrics className="order-3 sm:order-2 mb-2 sm:mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-3 sm:mb-8">
               {/* Facturado */}
               <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
                 <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-cyan-500/15 border border-cyan-500/25 text-cyan-400 flex items-center justify-center text-xl shrink-0">
@@ -326,7 +326,7 @@ export default function FacturasPosPage() {
           </CollapsibleMetrics>
 
           {/* Filtros y Buscador */}
-          <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+          <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
             <div className="relative w-full flex-1">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
                 🔍
@@ -336,7 +336,7 @@ export default function FacturasPosPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar..."
-                className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
+                className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
               />
               {searchTerm && (
                 <button
@@ -353,7 +353,7 @@ export default function FacturasPosPage() {
               <button
                 type="button"
                 onClick={() => setFiltroMenuAbierto(!filtroMenuAbierto)}
-                className="w-full h-11 px-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-200 text-sm font-medium flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+                className="w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
               >
                 <span>
                   {filtroEstado === "COMPLETADA"
@@ -373,7 +373,7 @@ export default function FacturasPosPage() {
                     className="fixed inset-0 z-40" 
                     onClick={() => setFiltroMenuAbierto(false)} 
                   />
-                  <div className="absolute right-0 mt-1.5 w-full bg-zinc-900 border border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
                     {[
                       { id: "TODAS", label: "Estado" },
                       { id: "COMPLETADA", label: "Completadas" },
@@ -386,10 +386,10 @@ export default function FacturasPosPage() {
                           setFiltroEstado(opcion.id as any);
                           setFiltroMenuAbierto(false);
                         }}
-                        className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                        className={`w-full px-4 py-2.5 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
                           filtroEstado === opcion.id
-                            ? "bg-blue-600/15 text-blue-400"
-                            : "text-zinc-300 hover:bg-zinc-800/80 hover:text-white"
+                            ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400 font-normal"
+                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-white"
                         }`}
                       >
                         <span>{opcion.label}</span>
@@ -407,87 +407,110 @@ export default function FacturasPosPage() {
           </div>
         </div>
 
-        {/* Tabla de Facturas */}
-        <div className="order-4 print:hidden bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+        {/* Lista / Tabla de Facturas */}
+        <div className="order-4 print:hidden">
           {cargando ? (
-            <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 text-sm">
+            <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 text-sm bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
               <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
               Consultando facturas en Neon...
             </div>
           ) : ventasFiltradas.length === 0 ? (
-            <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 text-sm">
+            <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 text-sm bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
               No se encontraron facturas en Neon con los criterios seleccionados.
             </div>
           ) : (
             <>
-              {/* Vista Móvil (Cards) */}
-              <div className="md:hidden divide-y divide-zinc-200 dark:divide-zinc-800">
+              {/* Vista Móvil (Tarjetas adaptadas con orden idéntico a Clientes) */}
+              <div className="md:hidden space-y-3.5">
                 {ventasFiltradas.map((v) => {
                   const esAnulada = v.status?.toLowerCase() === "anulada";
-                  const fecha = new Date(v.createdAt).toLocaleString("es-EC", {
-                    day: "2-digit",
+                  const fecha = new Date(v.createdAt).toLocaleDateString("es-EC", {
+                    day: "numeric",
                     month: "short",
                     year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
                   });
 
                   return (
-                    <div key={v.id} className="p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-base text-zinc-900 dark:text-zinc-100">
-                            #{v.saleNumber}
-                          </span>
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                    <div
+                      key={v.id}
+                      className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {/* Icono de factura estilo cliente */}
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border ${
                               esAnulada
-                                ? "bg-rose-500/10 text-rose-500 border border-rose-500/20"
-                                : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                ? "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border-rose-200 dark:border-rose-500/30"
+                                : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30"
                             }`}
                           >
-                            {esAnulada ? "Anulada" : "Completada"}
-                          </span>
-                        </div>
-                        <span className="text-xs text-zinc-400">{fecha}</span>
-                      </div>
-
-                      <div className="flex justify-between items-start gap-2">
-                        <div>
-                          <div className="font-semibold text-sm text-zinc-800 dark:text-zinc-200">
-                            {v.customerName || "Consumidor Final"}
+                            🧾
                           </div>
-                          {v.customer?.identification && (
-                            <div className="text-xs text-zinc-400 font-mono">
-                              CI: {v.customer.identification}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                                {v.customerName || "Consumidor Final"}
+                              </p>
+                              <span
+                                className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider border ${
+                                  esAnulada
+                                    ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                                    : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                }`}
+                              >
+                                {esAnulada ? "Anulada" : "Completada"}
+                              </span>
                             </div>
-                          )}
-                          <div className="mt-1">
-                            <span className="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-medium">
-                              {v.paymentMethod || "Efectivo"}
-                            </span>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
+                              <span className="font-semibold text-blue-600 dark:text-blue-400">#{v.saleNumber}</span>
+                              {v.customer?.identification && !v.customer.identification.startsWith("CLI-") && (
+                                <span> • CI: {v.customer.identification}</span>
+                              )}
+                            </p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <span className="text-xs text-zinc-400 block">Total</span>
-                          <span className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-                            ${Number(v.total || 0).toFixed(2)}
-                          </span>
+
+                        {/* Acciones Rápidas (Toque fácil en móvil >= 44px, igual que clientes) */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setVentaDetalle(v)}
+                            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all cursor-pointer"
+                            title="Ver / Imprimir Factura A4"
+                            aria-label="Ver / Imprimir Factura A4"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </button>
+                          <Link
+                            href={`/pos/facturas/editar?id=${v.id}`}
+                            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all"
+                            title="Editar factura"
+                            aria-label="Editar factura"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                          </Link>
                         </div>
                       </div>
 
-                      {/* Botones de acción móvil (Solo iconos) */}
-                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/60">
-                        <Link
-                          href={`/pos/facturas/editar?id=${v.id}`}
-                          className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center active:scale-95 transition-all"
-                          title="Editar factura"
-                          aria-label="Editar factura"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </Link>
+                      {/* Datos secundarios (Total, Método de pago, Fecha) */}
+                      <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-sky-400 border border-blue-200 dark:border-blue-500/20 font-bold font-mono text-xs">
+                          💰 ${Number(v.total || 0).toFixed(2)}
+                        </span>
+
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 text-xs font-medium">
+                          {v.paymentMethod?.toLowerCase().includes("tarjeta") ? "💳" : v.paymentMethod?.toLowerCase().includes("transf") ? "🏦" : "💵"} {v.paymentMethod || "Efectivo"}
+                        </span>
+
+                        <span className="text-zinc-400 ml-auto text-[11px] whitespace-nowrap">
+                          {fecha}
+                        </span>
                       </div>
                     </div>
                   );
@@ -495,88 +518,90 @@ export default function FacturasPosPage() {
               </div>
 
               {/* Vista Desktop (Tabla) */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider font-semibold">
-                    <tr>
-                      <th className="py-3.5 px-4"># Factura</th>
-                      <th className="py-3.5 px-4">Fecha y Hora</th>
-                      <th className="py-3.5 px-4">Cliente</th>
-                      <th className="py-3.5 px-4">Método</th>
-                      <th className="py-3.5 px-4 text-right">Total</th>
-                      <th className="py-3.5 px-4 text-center">Estado</th>
-                      <th className="py-3.5 px-4 text-center">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                    {ventasFiltradas.map((v) => {
-                      const esAnulada = v.status?.toLowerCase() === "anulada";
-                      const fecha = new Date(v.createdAt).toLocaleString("es-EC", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      });
+              <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider font-semibold">
+                      <tr>
+                        <th className="py-3.5 px-4"># Factura</th>
+                        <th className="py-3.5 px-4">Fecha y Hora</th>
+                        <th className="py-3.5 px-4">Cliente</th>
+                        <th className="py-3.5 px-4">Método</th>
+                        <th className="py-3.5 px-4 text-right">Total</th>
+                        <th className="py-3.5 px-4 text-center">Estado</th>
+                        <th className="py-3.5 px-4 text-center">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                      {ventasFiltradas.map((v) => {
+                        const esAnulada = v.status?.toLowerCase() === "anulada";
+                        const fecha = new Date(v.createdAt).toLocaleString("es-EC", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        });
 
-                      return (
-                        <tr
-                          key={v.id}
-                          className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
-                        >
-                          <td className="py-3.5 px-4 font-mono font-bold text-zinc-900 dark:text-zinc-100">
-                            {v.saleNumber}
-                          </td>
-                          <td className="py-3.5 px-4 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
-                            {fecha}
-                          </td>
-                          <td className="py-3.5 px-4 font-medium text-zinc-800 dark:text-zinc-200">
-                            <div>{v.customerName || "Consumidor Final"}</div>
-                            {v.customer?.identification && (
-                              <span className="text-[11px] text-zinc-400 font-mono">
-                                CI: {v.customer.identification}
+                        return (
+                          <tr
+                            key={v.id}
+                            className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
+                          >
+                            <td className="py-3.5 px-4 font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                              {v.saleNumber}
+                            </td>
+                            <td className="py-3.5 px-4 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                              {fecha}
+                            </td>
+                            <td className="py-3.5 px-4 font-medium text-zinc-800 dark:text-zinc-200">
+                              <div>{v.customerName || "Consumidor Final"}</div>
+                              {v.customer?.identification && (
+                                <span className="text-[11px] text-zinc-400 font-mono">
+                                  CI: {v.customer.identification}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-medium">
+                                {v.paymentMethod || "Efectivo"}
                               </span>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <span className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-medium">
-                              {v.paymentMethod || "Efectivo"}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-4 text-right font-bold text-zinc-900 dark:text-zinc-100">
-                            ${Number(v.total || 0).toFixed(2)}
-                          </td>
-                          <td className="py-3.5 px-4 text-center">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                                esAnulada
-                                  ? "bg-rose-500/10 text-rose-500 border border-rose-500/20"
-                                  : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                              }`}
-                            >
-                              {esAnulada ? "Anulada" : "Completada"}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-4 text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              {/* Editar (Solo icono, en otra pagina) */}
-                              <Link
-                                href={`/pos/facturas/editar?id=${v.id}`}
-                                className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
-                                title="Editar factura"
-                                aria-label="Editar factura"
+                            </td>
+                            <td className="py-3.5 px-4 text-right font-bold text-zinc-900 dark:text-zinc-100">
+                              ${Number(v.total || 0).toFixed(2)}
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                                  esAnulada
+                                    ? "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                                    : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                }`}
                               >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                              </Link>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                                {esAnulada ? "Anulada" : "Completada"}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                {/* Editar (Solo icono, en otra pagina) */}
+                                <Link
+                                  href={`/pos/facturas/editar?id=${v.id}`}
+                                  className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
+                                  title="Editar factura"
+                                  aria-label="Editar factura"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                </Link>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </>
           )}

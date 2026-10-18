@@ -1166,7 +1166,7 @@ function NuevaFacturaForm() {
             </div>
 
             {/* Vista Móvil (Tarjetas táctiles adaptadas a Android e iOS) */}
-            <div className="sm:hidden space-y-3">
+            <div className="sm:hidden space-y-4">
               {items.length === 0 ? (
                 <div className="p-6 text-center text-xs text-zinc-400 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
                   No hay ítems agregados. Pulsa "+ Agregar línea" para añadir uno.
@@ -1182,7 +1182,7 @@ function NuevaFacturaForm() {
                   return (
                     <div
                       key={linea.tempId}
-                      className="bg-zinc-50/70 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 space-y-3 shadow-xs"
+                      className="bg-zinc-50/70 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 space-y-3.5 shadow-xs"
                     >
                       {/* Cabecera de la tarjeta: #, Código y Eliminar */}
                       <div className="flex items-center justify-between gap-2">

@@ -62,3 +62,238 @@ body {
     animation: cornerGlowAuto 5s ease-in-out infinite;
   }
 }
+
+/* ========================================================
+   ESTILOS GLOBALES: BOTONES SUAVES Y TRANSPARENTES
+   ======================================================== */
+
+button,
+[role="button"] {
+  transition-property: color, background-color, border-color, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Botones Esmeralda / Verdes */
+button.bg-emerald-500,
+button.bg-emerald-600,
+button.bg-emerald-700,
+a.bg-emerald-500,
+a.bg-emerald-600,
+a.bg-emerald-700 {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+  color: #047857 !important;
+  backdrop-filter: blur(8px);
+}
+:is(.dark) button.bg-emerald-500,
+:is(.dark) button.bg-emerald-600,
+:is(.dark) button.bg-emerald-700,
+:is(.dark) a.bg-emerald-500,
+:is(.dark) a.bg-emerald-600,
+:is(.dark) a.bg-emerald-700 {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  color: #6ee7b7 !important;
+}
+button.bg-emerald-500:hover,
+button.bg-emerald-600:hover,
+button.bg-emerald-700:hover,
+a.bg-emerald-500:hover,
+a.bg-emerald-600:hover,
+a.bg-emerald-700:hover {
+  background-color: rgba(16, 185, 129, 0.25) !important;
+}
+
+/* Botones Azules */
+button.bg-blue-500,
+button.bg-blue-600,
+button.bg-blue-700,
+a.bg-blue-500,
+a.bg-blue-600,
+a.bg-blue-700 {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  border: 1px solid rgba(59, 130, 246, 0.35) !important;
+  color: #1d4ed8 !important;
+  backdrop-filter: blur(8px);
+}
+:is(.dark) button.bg-blue-500,
+:is(.dark) button.bg-blue-600,
+:is(.dark) button.bg-blue-700,
+:is(.dark) a.bg-blue-500,
+:is(.dark) a.bg-blue-600,
+:is(.dark) a.bg-blue-700 {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  color: #93c5fd !important;
+}
+button.bg-blue-500:hover,
+button.bg-blue-600:hover,
+button.bg-blue-700:hover,
+a.bg-blue-500:hover,
+a.bg-blue-600:hover,
+a.bg-blue-700:hover {
+  background-color: rgba(59, 130, 246, 0.25) !important;
+}
+
+/* Botones Rojos / Rosa */
+button.bg-rose-500,
+button.bg-rose-600,
+button.bg-rose-700,
+button.bg-red-500,
+button.bg-red-600,
+button.bg-red-700,
+a.bg-rose-500,
+a.bg-rose-600,
+a.bg-rose-700,
+a.bg-red-500,
+a.bg-red-600,
+a.bg-red-700 {
+  background-color: rgba(244, 63, 94, 0.15) !important;
+  border: 1px solid rgba(244, 63, 94, 0.35) !important;
+  color: #be123c !important;
+  backdrop-filter: blur(8px);
+}
+:is(.dark) button.bg-rose-500,
+:is(.dark) button.bg-rose-600,
+:is(.dark) button.bg-rose-700,
+:is(.dark) button.bg-red-500,
+:is(.dark) button.bg-red-600,
+:is(.dark) button.bg-red-700,
+:is(.dark) a.bg-rose-500,
+:is(.dark) a.bg-rose-600,
+:is(.dark) a.bg-rose-700,
+:is(.dark) a.bg-red-500,
+:is(.dark) a.bg-red-600,
+:is(.dark) a.bg-red-700 {
+  background-color: rgba(244, 63, 94, 0.15) !important;
+  border: 1px solid rgba(244, 63, 94, 0.3) !important;
+  color: #fda4af !important;
+}
+button.bg-rose-500:hover,
+button.bg-rose-600:hover,
+button.bg-rose-700:hover,
+button.bg-red-500:hover,
+button.bg-red-600:hover,
+button.bg-red-700:hover,
+a.bg-rose-500:hover,
+a.bg-rose-600:hover,
+a.bg-rose-700:hover,
+a.bg-red-500:hover,
+a.bg-red-600:hover,
+a.bg-red-700:hover {
+  background-color: rgba(244, 63, 94, 0.25) !important;
+}
+
+/* Botones Ámbar / Naranja */
+button.bg-amber-500,
+button.bg-amber-600,
+button.bg-orange-500,
+button.bg-orange-600,
+a.bg-amber-500,
+a.bg-amber-600,
+a.bg-orange-500,
+a.bg-orange-600 {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+  color: #b45309 !important;
+  backdrop-filter: blur(8px);
+}
+:is(.dark) button.bg-amber-500,
+:is(.dark) button.bg-amber-600,
+:is(.dark) button.bg-orange-500,
+:is(.dark) button.bg-orange-600,
+:is(.dark) a.bg-amber-500,
+:is(.dark) a.bg-amber-600,
+:is(.dark) a.bg-orange-500,
+:is(.dark) a.bg-orange-600 {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+  color: #fcd34d !important;
+}
+button.bg-amber-500:hover,
+button.bg-amber-600:hover,
+button.bg-orange-500:hover,
+button.bg-orange-600:hover,
+a.bg-amber-500:hover,
+a.bg-amber-600:hover,
+a.bg-orange-500:hover,
+a.bg-orange-600:hover {
+  background-color: rgba(245, 158, 11, 0.25) !important;
+}
+
+/* Botones Índigo / Violeta / Púrpura */
+button.bg-indigo-500,
+button.bg-indigo-600,
+button.bg-purple-500,
+button.bg-purple-600,
+a.bg-indigo-500,
+a.bg-indigo-600,
+a.bg-purple-500,
+a.bg-purple-600 {
+  background-color: rgba(99, 102, 241, 0.15) !important;
+  border: 1px solid rgba(99, 102, 241, 0.35) !important;
+  color: #4338ca !important;
+  backdrop-filter: blur(8px);
+}
+:is(.dark) button.bg-indigo-500,
+:is(.dark) button.bg-indigo-600,
+:is(.dark) button.bg-purple-500,
+:is(.dark) button.bg-purple-600,
+:is(.dark) a.bg-indigo-500,
+:is(.dark) a.bg-indigo-600,
+:is(.dark) a.bg-purple-500,
+:is(.dark) a.bg-purple-600 {
+  background-color: rgba(99, 102, 241, 0.15) !important;
+  border: 1px solid rgba(99, 102, 241, 0.3) !important;
+  color: #a5b4fc !important;
+}
+button.bg-indigo-500:hover,
+button.bg-indigo-600:hover,
+button.bg-purple-500:hover,
+button.bg-purple-600:hover,
+a.bg-indigo-500:hover,
+a.bg-indigo-600:hover,
+a.bg-purple-500:hover,
+a.bg-purple-600:hover {
+  background-color: rgba(99, 102, 241, 0.25) !important;
+}
+
+/* Botones Neutros Sólidos */
+button.bg-zinc-900,
+button.bg-zinc-800,
+button.bg-black,
+a.bg-zinc-900,
+a.bg-zinc-800,
+a.bg-black {
+  background-color: rgba(24, 24, 27, 0.08) !important;
+  border: 1px solid rgba(24, 24, 27, 0.18) !important;
+  color: #18181b !important;
+  backdrop-filter: blur(8px);
+}
+:is(.dark) button.bg-zinc-900,
+:is(.dark) button.bg-zinc-800,
+:is(.dark) button.bg-black,
+:is(.dark) a.bg-zinc-900,
+:is(.dark) a.bg-zinc-800,
+:is(.dark) a.bg-black {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  color: #f4f4f5 !important;
+}
+button.bg-zinc-900:hover,
+button.bg-zinc-800:hover,
+button.bg-black:hover,
+a.bg-zinc-900:hover,
+a.bg-zinc-800:hover,
+a.bg-black:hover {
+  background-color: rgba(24, 24, 27, 0.15) !important;
+}
+:is(.dark) button.bg-zinc-900:hover,
+:is(.dark) button.bg-zinc-800:hover,
+:is(.dark) button.bg-black:hover,
+:is(.dark) a.bg-zinc-900:hover,
+:is(.dark) a.bg-zinc-800:hover,
+:is(.dark) a.bg-black:hover {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+}
