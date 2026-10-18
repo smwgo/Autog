@@ -14,6 +14,11 @@ export const ALLOWED_MIME_TYPES = [
   "image/png",
   "image/webp",
   "image/gif",
+  "audio/webm",
+  "audio/mp4",
+  "audio/ogg",
+  "audio/mpeg",
+  "audio/wav",
   "application/pdf",
   "text/xml",
   "application/xml",
@@ -29,6 +34,11 @@ const MIME_TO_EXT: Record<string, string> = {
   "image/png": "png",
   "image/webp": "webp",
   "image/gif": "gif",
+  "audio/webm": "webm",
+  "audio/mp4": "m4a",
+  "audio/ogg": "ogg",
+  "audio/mpeg": "mp3",
+  "audio/wav": "wav",
   "application/pdf": "pdf",
   "text/xml": "xml",
   "application/xml": "xml",
@@ -57,7 +67,8 @@ function getR2Client(): S3Client {
 
 export function sanitizeFileName(originalName: string, mimeType: string): string {
   // Prevent any path traversal characters like ../ or \
-  const ext = MIME_TO_EXT[mimeType] || "bin";
+  const cleanMime = mimeType.split(";")[0].trim();
+  const ext = MIME_TO_EXT[cleanMime] || "bin";
   const uniqueId = crypto.randomUUID();
   return `${uniqueId}.${ext}`;
 }
@@ -70,10 +81,11 @@ export function validateFileMetadata(size: number, mimeType: string): { valid: b
     };
   }
 
-  if (!ALLOWED_MIME_TYPES.includes(mimeType as AllowedMimeType)) {
+  const cleanMime = mimeType.split(";")[0].trim();
+  if (!ALLOWED_MIME_TYPES.includes(cleanMime as AllowedMimeType)) {
     return {
       valid: false,
-      error: `Tipo de archivo no permitido: ${mimeType}. Tipos permitidos: imágenes (JPG, PNG, WEBP), PDF y XML.`,
+      error: `Tipo de archivo no permitido: ${mimeType}. Tipos permitidos: imágenes (JPG, PNG, WEBP), audio (Notas de voz), PDF y XML.`,
     };
   }
 

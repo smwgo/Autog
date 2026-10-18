@@ -108,6 +108,19 @@ const modules = [
     ),
   },
   {
+    title: "Órdenes",
+    href: "/pos/ordenes",
+    color: "bg-amber-500",
+    gradient: "from-amber-500 via-orange-500 to-amber-600",
+    icon: (
+      <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+        <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+        <path d="m9 14 2 2 4-4" />
+      </svg>
+    ),
+  },
+  {
     title: "Créditos",
     href: "/pos/creditos",
     color: "bg-cyan-500",
@@ -161,11 +174,13 @@ export default function PosPanel() {
         const active = json.activeSession || null;
         setCajaActiva(active);
         if (active) {
+          if (typeof window !== "undefined") localStorage.setItem("pos_caja_activa", "ABIERTA");
           setCajaInfo({
             initialCash: parseFloat(active.initialCash?.toString() || "0"),
             expectedCash: parseFloat(json.data?.expectedCash?.toString() || active.initialCash?.toString() || "0"),
           });
         } else {
+          if (typeof window !== "undefined") localStorage.setItem("pos_caja_activa", "CERRADA");
           setCajaInfo(null);
         }
       }

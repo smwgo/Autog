@@ -253,16 +253,15 @@ export default function PosVehiculosPage() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              <button
-                type="button"
-                onClick={abrirModalNuevo}
+              <Link
+                href="/pos/vehiculos/nuevo"
                 className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-indigo-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
                 </svg>
                 <span>Nuevo Vehículo</span>
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -514,14 +513,13 @@ export default function PosVehiculosPage() {
                         >
                           👁️
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => abrirModalEditar(v)}
+                        <Link
+                          href={`/pos/vehiculos/nuevo?id=${encodeURIComponent(v.id)}`}
                           className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 flex items-center justify-center active:scale-95 transition-all"
                           title="Editar Vehículo"
                         >
                           ✏️
-                        </button>
+                        </Link>
                         <button
                           type="button"
                           onClick={() => setVehiculoAEliminar(v)}
@@ -630,13 +628,13 @@ export default function PosVehiculosPage() {
                               </button>
 
                               {/* Editar */}
-                              <button
-                                onClick={() => abrirModalEditar(v)}
+                              <Link
+                                href={`/pos/vehiculos/nuevo?id=${encodeURIComponent(v.id)}`}
                                 className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
                                 title="Editar vehículo"
                               >
                                 ✏️
-                              </button>
+                              </Link>
 
                               {/* Eliminar */}
                               <button

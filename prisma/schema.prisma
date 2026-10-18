@@ -852,23 +852,53 @@ model WorkshopOrder {
   mechanic            String    @default("Carlos Rodríguez")
   status              String    @default("En Diagnóstico")
   progress            Int       @default(25)
-  mileage             Int?
-  nextOilChangeKm     Int?
-  servicesJson        String?
-  itemsJson           String?   @default("[]")
-  receptionPhotosJson String?   @default("[]")
-  evidencePhotosJson  String?   @default("[]")
-  notes               String?
+  mileage                Int?
+  nextOilChangeKm        Int?
+  fuelLevel              String?   @default("1/2")
+  generalCondition       String?   @default("Bueno")
+  receptionInventoryJson String?   @default("[]")
+  inspectionFindingsJson String?   @default("[]")
+  servicesJson           String?
+  itemsJson              String?   @default("[]")
+  receptionPhotosJson    String?   @default("[]")
+  evidencePhotosJson     String?   @default("[]")
+  notes                  String?
   dateIn              DateTime  @default(now())
   startedAt           DateTime?
   completedAt         DateTime?
   durationMinutes     Int?      @default(0)
   estimatedOut        String?   @default("24 Horas")
   totalCost           Decimal?  @db.Decimal(12, 2)
-  posRequestId        String?
-  stockDeducted       Boolean   @default(false)
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  quoteNumber         String?
+  quoteStatus         String?   @default("Borrador")
+  quoteToken          String?
+  quoteTaxRate        Decimal?  @default(15) @db.Decimal(5, 2)
+  quoteDiscount       Decimal?  @default(0) @db.Decimal(12, 2)
+  quoteDiscountType       String?   @default("PERCENT")
+  quoteApprovedAt         DateTime?
+  assignedTechniciansJson String?   @default("[]")
+  internalChatJson        String?   @default("[]")
+  technicianHoursJson     String?   @default("[]")
+  clientEmail             String?
+  statusColor             String?   @default("amber")
+  trackingPin             String?   @default("1234")
+  customStatusesJson      String?   @default("[]")
+  statusHistoryJson       String?   @default("[]")
+  lastNotifiedAt          DateTime?
+  lastNotifiedChannel     String?
+  deliveryChecklistJson   String?   @default("{}")
+  technicalReportText     String?
+  technicalReportUrl      String?
+  deliverySignatureUrl    String?
+  deliverySignedBy        String?
+  deliverySignedAt        DateTime?
+  deliveryStatus          String?   @default("Pendiente de Firma")
+  paymentsJson            String?   @default("[]")
+  paymentGatewayUrl       String?
+  posRequestId            String?
+  stockDeducted           Boolean   @default(false)
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
   customer            Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
   vehicleRef          Vehicle?  @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
 

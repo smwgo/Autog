@@ -66,6 +66,7 @@ export default function NuevaVentaPage() {
   const [filtroTipo, setFiltroTipo] = useState<"todos" | "productos" | "servicios">("todos");
   const [filtroCategoria, setFiltroCategoria] = useState<string>("todos");
   const [vistaMovil, setVistaMovil] = useState<"catalogo" | "carrito">("catalogo");
+  const [vistaCatalogo, setVistaCatalogo] = useState<"grid" | "list">("grid");
   const [detalleProductoModal, setDetalleProductoModal] = useState<Product | null>(null);
 
   const categoriasProductos = [
@@ -195,6 +196,42 @@ export default function NuevaVentaPage() {
   const [conteoCierre, setConteoCierre] = useState("");
   const [notasCierre, setNotasCierre] = useState("");
   const [cerrandoCaja, setCerrandoCaja] = useState(false);
+
+  // Barra Superior POS Ventas
+  const [vendedor, setVendedor] = useState<string>("Gonzalo Rojas");
+  const [modalCambiarVendedor, setModalCambiarVendedor] = useState(false);
+  const [nuevoVendedorTemp, setNuevoVendedorTemp] = useState("");
+  const [modalNotasVenta, setModalNotasVenta] = useState(false);
+  const [notasVenta, setNotasVenta] = useState("");
+  const [esPantallaCompleta, setEsPantallaCompleta] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("pos_vendedor_nombre");
+      if (saved) setVendedor(saved);
+      const savedVista = localStorage.getItem("pos_vista_catalogo");
+      if (savedVista === "list" || savedVista === "grid") setVistaCatalogo(savedVista);
+    }
+  }, []);
+
+  const cambiarVistaCatalogo = (modo: "grid" | "list") => {
+    setVistaCatalogo(modo);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("pos_vista_catalogo", modo);
+    }
+  };
+
+  const togglePantallaCompleta = () => {
+    if (typeof document !== "undefined") {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+        setEsPantallaCompleta(true);
+      } else {
+        document.exitFullscreen().catch(() => {});
+        setEsPantallaCompleta(false);
+      }
+    }
+  };
 
   // Flotante: Pedidos (3 Orígenes: Landing, Tienda, Taller)
   const [mostrarModalPedidos, setMostrarModalPedidos] = useState(false);
@@ -431,8 +468,11 @@ export default function NuevaVentaPage() {
     };
   }, [cargarProductos, cargarClientes, cargarConteoWeb]);
 
+  // Ref para verificar apertura automática sólo al ingresar a Ventas
+  const aperturaCheckedRef = useRef(false);
+
   // Verificar apertura de caja al entrar a Venta
-  const verificarCajaApertura = useCallback(async () => {
+  const verificarCajaApertura = useCallback(async (autoOpenOnMissing: boolean = false) => {
     try {
       const res = await fetch("/api/caja");
       const json = await res.json();
@@ -440,12 +480,23 @@ export default function NuevaVentaPage() {
         const active = json.activeSession || null;
         setCajaActiva(active);
         if (active) {
+          if (typeof window !== "undefined") {
+            localStorage.setItem("pos_caja_activa", "ABIERTA");
+            sessionStorage.removeItem("pos_caja_omitida");
+          }
           setCajaInfo({
             initialCash: parseFloat(active.initialCash?.toString() || "0"),
             expectedCash: parseFloat(json.data?.expectedCash?.toString() || active.initialCash?.toString() || "0"),
           });
+          setMostrarModalApertura(false);
         } else {
+          if (typeof window !== "undefined") localStorage.setItem("pos_caja_activa", "CERRADA");
           setCajaInfo(null);
+          const omitida = typeof window !== "undefined" && sessionStorage.getItem("pos_caja_omitida") === "true";
+          if (autoOpenOnMissing && !omitida) {
+            setFondoApertura("");
+            setMostrarModalApertura(true);
+          }
         }
       }
     } catch (e) {
@@ -454,7 +505,19 @@ export default function NuevaVentaPage() {
   }, []);
 
   useEffect(() => {
-    verificarCajaApertura();
+    // ⚡ Salida instantánea ("de una") al ingresar a Ventas solo si no se ha omitido
+    if (typeof window !== "undefined") {
+      const estadoCaja = localStorage.getItem("pos_caja_activa");
+      const omitida = sessionStorage.getItem("pos_caja_omitida") === "true";
+      if (estadoCaja !== "ABIERTA" && !omitida) {
+        setMostrarModalApertura(true);
+      }
+    }
+
+    if (!aperturaCheckedRef.current) {
+      aperturaCheckedRef.current = true;
+      verificarCajaApertura(true);
+    }
   }, [verificarCajaApertura]);
 
   const handleGuardarApertura = async (e?: React.FormEvent) => {
@@ -481,6 +544,10 @@ export default function NuevaVentaPage() {
       }
 
       setMostrarModalApertura(false);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("pos_caja_activa", "ABIERTA");
+        sessionStorage.removeItem("pos_caja_omitida");
+      }
       await verificarCajaApertura();
     } catch (err: any) {
       alert("Error: " + err.message);
@@ -491,6 +558,9 @@ export default function NuevaVentaPage() {
 
   const handleOmitirApertura = () => {
     setMostrarModalApertura(false);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("pos_caja_omitida", "true");
+    }
   };
 
   const sumarFondoApertura = (monto: number) => {
@@ -530,6 +600,10 @@ export default function NuevaVentaPage() {
       setCajaActiva(null);
       setCajaInfo(null);
       setMostrarModalCierre(false);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("pos_caja_activa", "CERRADA");
+        sessionStorage.removeItem("pos_caja_omitida");
+      }
       setConteoCierre("");
       setNotasCierre("");
       await verificarCajaApertura();
@@ -709,6 +783,24 @@ export default function NuevaVentaPage() {
 
   // Filtrado de productos y servicios
   const filteredProducts = productos.filter((item) => {
+    // Búsqueda por producto, servicio, SKU o código de barras
+    if (searchTerm && searchTerm.trim()) {
+      const term = searchTerm.trim().toLowerCase();
+      const coincide =
+        (item.name && item.name.toLowerCase().includes(term)) ||
+        (item.code && item.code.toLowerCase().includes(term)) ||
+        (item.brand && item.brand.toLowerCase().includes(term)) ||
+        (item.category && item.category.toLowerCase().includes(term));
+
+      if (!coincide) return false;
+
+      // Si hay filtro por tipo, respetarlo salvo coincidencia exacta por código
+      if (filtroTipo === "productos" && item.isService && item.code.toLowerCase() !== term) return false;
+      if (filtroTipo === "servicios" && !item.isService && item.code.toLowerCase() !== term) return false;
+
+      return true;
+    }
+
     // Filtro por tipo: Productos o Servicios
     if (filtroTipo === "productos" && item.isService) return false;
     if (filtroTipo === "servicios" && !item.isService) return false;
@@ -726,14 +818,7 @@ export default function NuevaVentaPage() {
       if (!coincide) return false;
     }
 
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      item.name.toLowerCase().includes(term) ||
-      item.code.toLowerCase().includes(term) ||
-      (item.brand && item.brand.toLowerCase().includes(term)) ||
-      item.category.toLowerCase().includes(term)
-    );
+    return true;
   });
 
   // Operaciones de Carrito
@@ -1050,6 +1135,110 @@ export default function NuevaVentaPage() {
       />
       <Header />
 
+      {/* Barra Superior Ventas */}
+      <nav className="w-full bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-3 sm:px-6 py-2 shadow-xs sticky top-0 z-30">
+        <div className="max-w-[1700px] mx-auto flex items-center justify-between gap-2.5 sm:gap-4 overflow-x-auto scrollbar-none">
+          {/* Lado Izquierdo: [←] Venta (productos.length) */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
+            <Link
+              href="/pos"
+              title="Volver a POS"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
+            >
+              <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white truncate">
+              Venta
+            </h1>
+            <span className="inline-flex items-center justify-center px-2 py-0.5 sm:px-2.5 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 shrink-0">
+              {productos.length}
+            </span>
+          </div>
+
+          {/* Lado Derecho: 4 botones de acción cuadrados de solo icono (Historial, Notas, Pausar, Anular) */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Historial (Solo icono) */}
+            <Link
+              href="/pos/facturas"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
+              title="Historial de facturas y ventas"
+            >
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                <line x1="8" y1="6" x2="21" y2="6" strokeLinecap="round" />
+                <line x1="8" y1="12" x2="21" y2="12" strokeLinecap="round" />
+                <line x1="8" y1="18" x2="21" y2="18" strokeLinecap="round" />
+                <line x1="3" y1="6" x2="3.01" y2="6" strokeLinecap="round" />
+                <line x1="3" y1="12" x2="3.01" y2="12" strokeLinecap="round" />
+                <line x1="3" y1="18" x2="3.01" y2="18" strokeLinecap="round" />
+              </svg>
+            </Link>
+
+            {/* Notas (Solo icono) */}
+            <button
+              type="button"
+              onClick={() => setModalNotasVenta(true)}
+              className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
+              title="Agregar notas a la venta"
+            >
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {notasVenta && (
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 absolute -top-1 -right-1 border-2 border-white dark:border-zinc-900 shadow-xs" />
+              )}
+            </button>
+
+            {/* Pausar (Solo icono) */}
+            <button
+              type="button"
+              onClick={() => {
+                if (cart.length > 0) {
+                  ponerEnEspera();
+                } else {
+                  setMostrarModalEspera(true);
+                }
+              }}
+              className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
+              title={ventasEnEspera.length > 0 ? `${ventasEnEspera.length} venta(s) pausada(s)` : "Pausar venta actual"}
+            >
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {ventasEnEspera.length > 0 && (
+                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center absolute -top-1.5 -right-1.5 border-2 border-white dark:border-zinc-900 shadow-xs">
+                  {ventasEnEspera.length}
+                </span>
+              )}
+            </button>
+
+            {/* Anular (Solo icono) */}
+            <button
+              type="button"
+              onClick={() => {
+                if (cart.length === 0) return;
+                if (window.confirm("¿Estás seguro de anular la venta actual? Se vaciará el carrito.")) {
+                  limpiarCarrito();
+                  if (solicitudActiva) {
+                    sessionStorage.removeItem("pos_despacho_solicitud");
+                    setSolicitudActiva(null);
+                  }
+                }
+              }}
+              disabled={cart.length === 0}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:border-rose-300 dark:hover:border-rose-900/50 hover:text-rose-600 dark:hover:text-rose-400 text-zinc-600 dark:text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
+              title="Anular venta y vaciar carrito"
+            >
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                <circle cx="12" cy="12" r="9" />
+                <line x1="5.7" y1="5.7" x2="18.3" y2="18.3" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </nav>
+
       <main className="flex-grow flex flex-col md:flex-row p-3 sm:p-4 md:p-6 gap-4 md:gap-6 w-full max-w-[1600px] mx-auto min-h-[calc(100vh-80px)] md:h-[calc(100vh-80px)]">
         {/* Selector de Vista en Móvil (Android / iOS) */}
         <div className="flex md:hidden items-center bg-zinc-200 dark:bg-zinc-800 p-1 rounded-2xl gap-1 shrink-0">
@@ -1087,103 +1276,86 @@ export default function NuevaVentaPage() {
         {/* Panel Izquierdo: Catálogo y Búsqueda */}
         <div className={`${vistaMovil === "carrito" ? "hidden md:flex" : "flex"} flex-grow flex-col h-full bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden`}>
           <div className="p-4 sm:p-6 border-b border-zinc-100 dark:border-zinc-800 flex flex-col gap-3 sm:gap-4">
-            {/* Header: Flecha y Venta a la izquierda, Pedidos y Caja a la derecha en la misma línea en móvil */}
-            <div className="flex items-center justify-between gap-2 sm:gap-3">
-              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                <Link 
-                  href="/pos"
-                  title="Volver a Panel POS"
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
-                >
-                  <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                  </svg>
-                </Link>
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
-                  Venta
-                </h1>
-                <span className="inline-flex items-center justify-center px-2 py-0.5 sm:px-2.5 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 shrink-0">
-                  {productos.length}
-                </span>
-              </div>
 
-              {/* Botones de Acción: Pedidos y Caja a la altura a la derecha */}
-              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={abrirModalPedidos}
-                  className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-zinc-700 dark:text-zinc-300 bg-zinc-500/10 hover:bg-zinc-500/20 border border-zinc-300/40 dark:border-zinc-700/40 font-semibold text-xs transition-all active:scale-95 cursor-pointer backdrop-blur-sm whitespace-nowrap"
-                >
-                  <span className="text-sm">📥</span>
-                  <span>Pedidos</span>
-                  {solicitudesPendientesCount > 0 && (
-                    <span className="text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/35 font-semibold">
-                      {solicitudesPendientesCount}
-                    </span>
-                  )}
-                </button>
-
-                {/* Botón de Caja: Verde si está para abrir, Rojo (🔒) si está abierta para cerrar */}
-                {cajaActiva ? (
+            <div className="flex items-center gap-2 sm:gap-2.5 w-full">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Buscar..."
+                  className="w-full pl-12 pr-10 py-3.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/60 focus:outline-none focus:border-emerald-500/50 transition-all dark:text-white text-sm font-medium placeholder-zinc-500"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && searchTerm.trim()) {
+                      e.preventDefault();
+                      const term = searchTerm.trim().toLowerCase();
+                      const match =
+                        productos.find(
+                          (p) =>
+                            p.code.toLowerCase() === term ||
+                            p.name.toLowerCase() === term
+                        ) || filteredProducts[0];
+                      if (match) {
+                        addToCart(match);
+                        setSearchTerm("");
+                      }
+                    }
+                  }}
+                  autoFocus
+                />
+                <span className="absolute left-4 top-3.5 text-zinc-400 text-xl">🔍</span>
+                {searchTerm && (
                   <button
-                    type="button"
-                    onClick={() => {
-                      verificarCajaApertura();
-                      setMostrarModalCierre(true);
-                    }}
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-rose-300 border border-rose-500/30 flex items-center justify-center text-sm transition-all shadow-[0_0_15px_rgba(244,63,94,0.12)] cursor-pointer shrink-0"
-                    title="Cerrar Caja"
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-4 top-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm"
                   >
-                    <span>🔒</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFondoApertura("");
-                      setMostrarModalApertura(true);
-                    }}
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 flex items-center justify-center text-sm transition-all shadow-[0_0_15px_rgba(16,185,129,0.15)] cursor-pointer shrink-0"
-                    title="Abrir Caja (Apertura)"
-                  >
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
+                    ✕
                   </button>
                 )}
               </div>
-            </div>
 
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Buscar..."
-                className="w-full pl-12 pr-10 py-3.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/60 focus:outline-none focus:border-emerald-500/50 transition-all dark:text-white text-sm font-medium placeholder-zinc-500"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && searchTerm.trim()) {
-                    e.preventDefault();
-                    const term = searchTerm.trim().toLowerCase();
-                    const match =
-                      productos.find(
-                        (p) =>
-                          p.code.toLowerCase() === term ||
-                          p.name.toLowerCase() === term
-                      ) || filteredProducts[0];
-                    if (match) {
-                      addToCart(match);
-                      setSearchTerm("");
-                    }
-                  }
-                }}
-                autoFocus
-              />
-              <span className="absolute left-4 top-3.5 text-zinc-400 text-xl">🔍</span>
-              {searchTerm && (
+              {/* Botón de Pedidos al lado del buscador (solo icono + contador visible) */}
+              <button
+                type="button"
+                onClick={abrirModalPedidos}
+                className="relative w-12 h-12 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800/80 text-zinc-700 dark:text-zinc-200 flex items-center justify-center text-xl transition-all active:scale-95 cursor-pointer shadow-xs shrink-0"
+                title="Pedidos pendientes"
+              >
+                <span>📥</span>
+                {solicitudesPendientesCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500 text-white text-[11px] font-black flex items-center justify-center shadow-md animate-pulse border-2 border-white dark:border-zinc-900 leading-none">
+                    {solicitudesPendientesCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Botón de Caja al lado del buscador */}
+              {cajaActiva ? (
                 <button
-                  onClick={() => setSearchTerm("")}
-                  className="absolute right-4 top-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm"
+                  type="button"
+                  onClick={() => {
+                    verificarCajaApertura();
+                    setMostrarModalCierre(true);
+                  }}
+                  className="w-12 h-12 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-rose-300 border border-rose-500/30 flex items-center justify-center text-base transition-all shadow-[0_0_15px_rgba(244,63,94,0.12)] cursor-pointer shrink-0"
+                  title="Cerrar Caja"
                 >
-                  ✕
+                  <span>🔒</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== "undefined") {
+                      sessionStorage.removeItem("pos_caja_omitida");
+                    }
+                    setFondoApertura("");
+                    setMostrarModalApertura(true);
+                  }}
+                  className="w-12 h-12 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 flex items-center justify-center text-base transition-all shadow-[0_0_15px_rgba(16,185,129,0.15)] cursor-pointer shrink-0"
+                  title="Abrir Caja (Apertura)"
+                >
+                  <span className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_#34d399]" />
                 </button>
               )}
             </div>
@@ -1217,26 +1389,68 @@ export default function NuevaVentaPage() {
               </button>
             </div>
 
-            {/* Barra de Categorías Dinámica según Productos o Servicios */}
-            <div className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-1 shadow-xs overflow-hidden">
-              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth">
-                {categoriasVisibles.map((cat) => {
-                  const activa = filtroCategoria === cat.id;
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setFiltroCategoria(cat.id)}
-                      className={`px-4 py-2 rounded-lg text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer shrink-0 active:scale-95 ${
-                        activa
-                          ? "bg-blue-600 text-white font-medium shadow-xs"
-                          : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/60 font-normal"
-                      }`}
-                    >
-                      {cat.label}
-                    </button>
-                  );
-                })}
+            {/* Barra de Categorías Dinámica según Productos o Servicios + Selector de Vista Cuadrícula / Lista */}
+            <div className="flex items-center gap-2 w-full">
+              <div className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-1 shadow-xs overflow-hidden min-w-0">
+                <div className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scroll-smooth">
+                  {categoriasVisibles.map((cat) => {
+                    const activa = filtroCategoria === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setFiltroCategoria(cat.id)}
+                        className={`px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer shrink-0 active:scale-95 ${
+                          activa
+                            ? "bg-blue-600 text-white font-medium shadow-xs"
+                            : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/60 font-normal"
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Botones de Vista: Cuadrícula (así como está) vs Lista */}
+              <div className="flex items-center bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-xl border border-zinc-200 dark:border-zinc-700/60 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => cambiarVistaCatalogo("grid")}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                    vistaCatalogo === "grid"
+                      ? "bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 shadow-xs"
+                      : "text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                  }`}
+                  title="Vista de cuadrícula (Tarjetas)"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                    <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                    <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                    <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                    <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cambiarVistaCatalogo("list")}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                    vistaCatalogo === "list"
+                      ? "bg-white dark:bg-zinc-900 text-blue-600 dark:text-blue-400 shadow-xs"
+                      : "text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                  }`}
+                  title="Vista de lista"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                    <line x1="8" y1="6" x2="21" y2="6" strokeLinecap="round" />
+                    <line x1="8" y1="12" x2="21" y2="12" strokeLinecap="round" />
+                    <line x1="8" y1="18" x2="21" y2="18" strokeLinecap="round" />
+                    <line x1="3" y1="6" x2="3.01" y2="6" strokeLinecap="round" />
+                    <line x1="3" y1="12" x2="3.01" y2="12" strokeLinecap="round" />
+                    <line x1="3" y1="18" x2="3.01" y2="18" strokeLinecap="round" />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
@@ -1252,7 +1466,95 @@ export default function NuevaVentaPage() {
               <div className="h-full flex flex-col items-center justify-center text-zinc-400 p-8 text-center select-none">
                 <span className="text-4xl opacity-30">📦</span>
               </div>
+            ) : vistaCatalogo === "list" ? (
+              /* Vista en Lista */
+              <div className="flex flex-col gap-2">
+                {filteredProducts.map((item) => {
+                  const priceNum =
+                    typeof item.price === "number" ? item.price : parseFloat(item.price) || 0;
+                  const isAgotado = item.stock <= 0;
+
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => addToCart(item)}
+                      className={`group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50 dark:hover:border-blue-500/50 rounded-xl p-2.5 sm:p-3 flex items-center justify-between gap-3 transition-all select-none cursor-pointer hover:shadow-xs active:scale-[0.99] ${
+                        isAgotado ? "opacity-60" : ""
+                      }`}
+                    >
+                      {/* Miniatura / Emoji */}
+                      <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200/50 dark:border-zinc-700/40 flex items-center justify-center shrink-0 text-xl sm:text-2xl overflow-hidden">
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain p-1" />
+                        ) : (
+                          getProductEmoji(item.name, item.category)
+                        )}
+                      </div>
+
+                      {/* Info: Nombre, SKU/Código y Categoría */}
+                      <div className="flex-1 min-w-0 flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-zinc-900 dark:text-zinc-100 font-semibold text-xs sm:text-sm truncate" title={item.name}>
+                            {item.name}
+                          </h4>
+                          {item.isService && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0">
+                              Servicio
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
+                          <span>{item.code}</span>
+                          {item.brand && <span>• {item.brand}</span>}
+                          {item.category && <span className="text-zinc-400 dark:text-zinc-500">• {item.category}</span>}
+                        </div>
+                      </div>
+
+                      {/* Stock Badge */}
+                      <div className="shrink-0 flex items-center">
+                        <span
+                          className={`text-[11px] sm:text-xs font-bold px-2 py-0.5 rounded-full text-center shadow-xs text-white ${
+                            isAgotado ? "bg-[#ff3b30]" : "bg-[#00cba0]"
+                          }`}
+                        >
+                          {item.stock} disp.
+                        </span>
+                      </div>
+
+                      {/* Precio */}
+                      <div className="shrink-0 text-right min-w-[70px]">
+                        <span className="text-zinc-900 dark:text-white font-extrabold text-xs sm:text-sm tracking-tight">
+                          ${Math.round(priceNum).toLocaleString("es-CL")}
+                        </span>
+                      </div>
+
+                      {/* Acciones: Botón Detalles e Ícono Agregar */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDetalleProductoModal(item);
+                          }}
+                          className="w-7 h-7 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-300 text-xs font-bold flex items-center justify-center transition-colors cursor-pointer"
+                          title="Detalles"
+                        >
+                          i
+                        </button>
+                        <button
+                          type="button"
+                          className="h-7 px-2.5 rounded-lg bg-blue-50 dark:bg-blue-500/15 group-hover:bg-blue-600 group-hover:text-white text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center justify-center transition-colors cursor-pointer"
+                          title="Añadir al carrito"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
+              /* Vista en Cuadrícula (así como está) */
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3">
                 {filteredProducts.map((item) => {
                   const priceNum =
@@ -2005,8 +2307,7 @@ export default function NuevaVentaPage() {
 
             {ventasEnEspera.length === 0 ? (
               <div className="py-8 text-center text-zinc-400 text-sm">
-                <p>No hay ventas guardadas en espera.</p>
-                <p className="text-xs text-zinc-500 mt-1">Usa el botón "Espera" en el carrito para pausar una venta.</p>
+                <p>Sin ventas en espera</p>
               </div>
             ) : (
               <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -3139,6 +3440,125 @@ export default function NuevaVentaPage() {
             </div>
             <span className="text-base font-black">${total.toFixed(2)} &rarr;</span>
           </button>
+        </div>
+      )}
+
+      {/* Modal Cambiar Vendedor */}
+      {modalCambiarVendedor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm">
+                  👤
+                </span>
+                <h3 className="font-bold text-base text-zinc-900 dark:text-white">Cambiar Vendedor</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalCambiarVendedor(false)}
+                className="w-7 h-7 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:hover:text-white flex items-center justify-center text-xs"
+              >
+                ✕
+              </button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const nom = nuevoVendedorTemp.trim() || "Gonzalo Rojas";
+                setVendedor(nom);
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("pos_vendedor_nombre", nom);
+                }
+                setModalCambiarVendedor(false);
+              }}
+              className="flex flex-col gap-3"
+            >
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 mb-1">Nombre del Vendedor / Cajero</label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={nuevoVendedorTemp}
+                  onChange={(e) => setNuevoVendedorTemp(e.target.value)}
+                  placeholder="Ej. Gonzalo Rojas"
+                  className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setModalCambiarVendedor(false)}
+                  className="flex-1 h-10 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm"
+                >
+                  Guardar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Notas de Venta */}
+      {modalNotasVenta && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">
+                  📄
+                </span>
+                <h3 className="font-bold text-base text-zinc-900 dark:text-white">Notas de la Venta</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalNotasVenta(false)}
+                className="w-7 h-7 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:hover:text-white flex items-center justify-center text-xs"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex flex-col gap-3">
+              <p className="text-xs text-zinc-500">
+                Estas observaciones o instrucciones se imprimirán en el ticket y quedarán registradas con la venta.
+              </p>
+              <textarea
+                rows={4}
+                autoFocus
+                value={notasVenta}
+                onChange={(e) => setNotasVenta(e.target.value)}
+                placeholder="Escribe aquí observaciones, entrega diferida, condición de entrega..."
+                className="w-full p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500 resize-none"
+              />
+              <div className="flex gap-2 pt-2">
+                {notasVenta && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNotasVenta("");
+                      setModalNotasVenta(false);
+                    }}
+                    className="px-3 h-10 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 text-rose-600 text-xs font-semibold"
+                  >
+                    Limpiar
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setModalNotasVenta(false)}
+                  className="flex-1 h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm"
+                >
+                  Guardar Nota
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
