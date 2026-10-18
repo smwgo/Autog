@@ -223,9 +223,9 @@ export default function FacturasPosPage() {
       <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full print:p-0 print:m-0">
         {/* Cabecera / Navegación */}
         <div className="print:hidden flex flex-col">
-          {/* Header */}
-          <div className="order-1 mb-3 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-            <div className="flex items-center gap-3">
+          {/* Header - Idéntico al estilo Venta (Móvil y Escritorio en una sola fila) */}
+          <div className="order-1 mb-4 sm:mb-8 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
               <Link 
                 href="/pos"
                 title="Volver a Panel POS"
@@ -235,18 +235,18 @@ export default function FacturasPosPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
               </Link>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
                 Facturas
               </h1>
-              <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20 shrink-0">
                 {ventas.length}
               </span>
             </div>
 
-            <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <Link
                 href="/pos/facturas/nueva"
-                className="h-10 px-4 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20 font-medium text-sm transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto cursor-pointer"
+                className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />

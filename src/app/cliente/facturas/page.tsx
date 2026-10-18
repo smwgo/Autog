@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Header } from "@/components/Header";
 import { ClienteMobileNav } from "@/components/ClienteMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 
 interface InvoiceItem {
   dbId?: string;
@@ -313,38 +314,87 @@ function FacturasPagosContent() {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white dark:bg-zinc-900 p-4 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm mb-8 flex flex-col md:flex-row gap-4">
-          <div className="flex-grow relative">
+        {/* KPIs / Resumen Desplegable en Móvil */}
+        <CollapsibleMetrics className="order-3 sm:order-2 mb-2 sm:mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-3 sm:mb-8">
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-indigo-500/15 border border-indigo-500/25 text-indigo-500 dark:text-indigo-400 flex items-center justify-center text-xl shrink-0">
+                💰
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                  ${invoices.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0).toFixed(2)}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Total Facturado</h3>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-500 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0">
+                ✅
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                  {invoices.filter((i) => i.status === 'Pagada').length}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Pagadas</h3>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-500 dark:text-amber-400 flex items-center justify-center text-xl shrink-0">
+                ⏳
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
+                  {invoices.filter((i) => i.status === 'Pendiente').length}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">Pendientes</h3>
+              </div>
+            </div>
+          </div>
+        </CollapsibleMetrics>
+
+        {/* Filtros y Buscador */}
+        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
+          <div className="relative w-full flex-1">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
+              🔍
+            </span>
             <input 
               type="text" 
-              placeholder="Buscar por número de factura (ej. F-2023-0899) o concepto..." 
-              className="w-full pl-12 pr-12 py-3.5 min-h-[44px] rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all dark:text-white font-medium text-base sm:text-sm"
+              placeholder="Buscar..." 
+              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-zinc-400 shadow-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <span className="absolute left-4 top-3.5 text-zinc-400 text-lg">🔍</span>
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                className="cursor-pointer absolute right-2 top-2 w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 font-bold"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm cursor-pointer"
+                title="Limpiar búsqueda"
               >
                 ✕
               </button>
             )}
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar shrink-0">
-            {['Todas', 'Pagada', 'Pendiente'].map(status => (
-              <button 
-                key={status}
-                type="button"
-                onClick={() => setStatusFilter(status)}
-                className={`cursor-pointer min-h-[44px] px-5 py-2.5 rounded-2xl font-bold whitespace-nowrap transition-colors text-base sm:text-sm flex items-center justify-center ${statusFilter === status ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
-              >
-                {status}
-              </button>
-            ))}
+
+          <div className="relative w-full sm:w-48 shrink-0">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal transition-all cursor-pointer shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="Todas">Estado</option>
+              <option value="Pagada">Pagadas</option>
+              <option value="Pendiente">Pendientes</option>
+            </select>
+            <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-zinc-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
           </div>
         </div>
 

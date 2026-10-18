@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
@@ -17,6 +17,7 @@ interface Product {
   status: string;
   isService?: boolean;
   estimatedMinutes?: number;
+  imageUrl?: string | null;
 }
 
 interface Customer {
@@ -60,7 +61,76 @@ export default function NuevaVentaPage() {
   const [cargandoProductos, setCargandoProductos] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroTipo, setFiltroTipo] = useState<"todos" | "productos" | "servicios">("todos");
+  const [filtroCategoria, setFiltroCategoria] = useState<string>("todos");
   const [vistaMovil, setVistaMovil] = useState<"catalogo" | "carrito">("catalogo");
+  const [detalleProductoModal, setDetalleProductoModal] = useState<Product | null>(null);
+
+  const categoriasProductos = [
+    { id: "todos", label: "Todos" },
+    { id: "aceite", label: "Aceite", match: ["aceite", "lubricante", "10w", "5w", "20w", "motor", "valvulina"] },
+    { id: "repuesto", label: "Repuesto", match: ["repuesto", "freno", "pastilla", "bujia", "bujía", "disco", "amortiguador", "embrague"] },
+    { id: "accesorios", label: "Accesorios", match: ["accesorio", "plumilla", "ambientador", "limpiaparabrisas", "tapa"] },
+    { id: "refrigerantes", label: "Refrigerantes", match: ["refrigerante", "coolant", "anticongelante", "fluido", "líquido", "liquido"] },
+    { id: "filtros", label: "Filtros", match: ["filtro"] },
+  ];
+
+  const categoriasServicios = [
+    { id: "todos", label: "Todos" },
+    { id: "mantenimiento", label: "Mantenimiento", match: ["mantenimiento", "preventivo", "afinamiento", "revision", "revisión", "inspeccion", "inspección", "servicio"] },
+    { id: "frenos", label: "Frenos", match: ["freno", "frenos", "pastilla", "disco", "balata"] },
+    { id: "diagnostico", label: "Diagnóstico", match: ["diagnostico", "diagnóstico", "escaner", "escáner", "scanner", "obd", "revision", "chequeo", "electrico", "eléctrico", "electricidad", "bateria", "batería"] },
+    { id: "lavado", label: "Lavado", match: ["lavado", "limpieza", "estetica", "estética", "chasis", "pulido", "detallado"] },
+    { id: "alineacion", label: "Alineación", match: ["alineacion", "alineación", "balanceo", "tramado", "suspension", "suspensión"] },
+    { id: "motor", label: "Motor", match: ["motor", "culata", "correa", "distribucion", "distribución", "valvula", "válvula", "arranque", "alternador"] },
+  ];
+
+  const handleCambiarFiltroTipo = (tipo: "todos" | "productos" | "servicios") => {
+    setFiltroTipo((prev) => (prev === tipo ? "todos" : tipo));
+    setFiltroCategoria("todos");
+  };
+
+  // Categorías mostradas dinámicamente según si se seleccionó Productos o Servicios
+  const categoriasVisibles = useMemo(() => {
+    if (filtroTipo === "servicios") {
+      const base = [...categoriasServicios];
+      const catsSet = new Set<string>();
+      productos.forEach((p) => {
+        if (p.isService && p.category && p.category.trim()) {
+          catsSet.add(p.category.trim());
+        }
+      });
+      catsSet.forEach((catName) => {
+        const lower = catName.toLowerCase();
+        if (lower.includes("favorito") || lower.includes("ampollet") || lower === "general" || lower === "todos") return;
+        const existe = base.some(
+          (b) => b.id === lower || b.label.toLowerCase() === lower || b.match?.includes(lower)
+        );
+        if (!existe) {
+          base.push({ id: lower, label: catName, match: [lower] });
+        }
+      });
+      return base;
+    }
+
+    const base = [...categoriasProductos];
+    const catsSet = new Set<string>();
+    productos.forEach((p) => {
+      if (!p.isService && p.category && p.category.trim()) {
+        catsSet.add(p.category.trim());
+      }
+    });
+    catsSet.forEach((catName) => {
+      const lower = catName.toLowerCase();
+      if (lower.includes("ampollet") || lower.includes("favorito") || lower === "general" || lower === "todos") return;
+      const existe = base.some(
+        (b) => b.id === lower || b.label.toLowerCase() === lower || b.match?.includes(lower)
+      );
+      if (!existe) {
+        base.push({ id: lower, label: catName, match: [lower] });
+      }
+    });
+    return base;
+  }, [filtroTipo, productos]);
 
   // Clientes
   const [clientes, setClientes] = useState<Customer[]>([]);
@@ -640,6 +710,19 @@ export default function NuevaVentaPage() {
     if (filtroTipo === "productos" && item.isService) return false;
     if (filtroTipo === "servicios" && !item.isService) return false;
 
+    // Filtro por categoría (Todos muestra todo del tipo seleccionado)
+    if (filtroCategoria && filtroCategoria !== "todos") {
+      const catObj = categoriasVisibles.find((c) => c.id === filtroCategoria);
+      const itemCat = (item.category || "").toLowerCase();
+      const itemName = (item.name || "").toLowerCase();
+
+      const coincide = catObj?.match
+        ? catObj.match.some((m) => itemCat.includes(m.toLowerCase()) || itemName.includes(m.toLowerCase())) || itemCat.includes(filtroCategoria.toLowerCase())
+        : itemCat.includes(filtroCategoria.toLowerCase()) || itemName.includes(filtroCategoria.toLowerCase());
+
+      if (!coincide) return false;
+    }
+
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     return (
@@ -859,9 +942,31 @@ export default function NuevaVentaPage() {
     }
   };
 
-  // Función 1: Imprimir Ticket Térmico
-  const imprimirTicket = () => {
-    window.print();
+  // Opciones de Impresión (Ticket Térmico o A4)
+  const [formatoImpresionVenta, setFormatoImpresionVenta] = useState<"TICKET" | "A4">("TICKET");
+  const [menuImpresionVenta, setMenuImpresionVenta] = useState(false);
+  const menuImpresionVentaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutside = (e: MouseEvent | TouchEvent) => {
+      if (menuImpresionVentaRef.current && !menuImpresionVentaRef.current.contains(e.target as Node)) {
+        setMenuImpresionVenta(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, []);
+
+  const dispararImpresionVenta = (formato: "TICKET" | "A4") => {
+    setFormatoImpresionVenta(formato);
+    setMenuImpresionVenta(false);
+    setTimeout(() => {
+      window.print();
+    }, 120);
   };
 
   const clientesFiltrados = clientes.filter((c) => {
@@ -876,6 +981,25 @@ export default function NuevaVentaPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
+      {/* Estilos dinámicos de impresión para POS Venta */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @media print {
+              @page {
+                size: ${formatoImpresionVenta === "TICKET" ? "80mm auto" : "A4 portrait"};
+                margin: ${formatoImpresionVenta === "TICKET" ? "2mm 3mm" : "8mm 10mm"};
+              }
+              body {
+                background: #ffffff !important;
+                color: #000000 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+            }
+          `,
+        }}
+      />
       <Header />
 
       <main className="flex-grow flex flex-col md:flex-row p-3 sm:p-4 md:p-6 gap-4 md:gap-6 w-full max-w-[1600px] mx-auto min-h-[calc(100vh-80px)] md:h-[calc(100vh-80px)]">
@@ -1020,7 +1144,7 @@ export default function NuevaVentaPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setFiltroTipo(filtroTipo === "productos" ? "todos" : "productos")}
+                onClick={() => handleCambiarFiltroTipo("productos")}
                 className={`flex-1 py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
                   filtroTipo === "productos"
                     ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.15)]"
@@ -1033,7 +1157,7 @@ export default function NuevaVentaPage() {
 
               <button
                 type="button"
-                onClick={() => setFiltroTipo(filtroTipo === "servicios" ? "todos" : "servicios")}
+                onClick={() => handleCambiarFiltroTipo("servicios")}
                 className={`flex-1 py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
                   filtroTipo === "servicios"
                     ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.15)]"
@@ -1043,6 +1167,29 @@ export default function NuevaVentaPage() {
                 <span>⚙️</span>
                 <span>Servicios</span>
               </button>
+            </div>
+
+            {/* Barra de Categorías Dinámica según Productos o Servicios */}
+            <div className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-1 shadow-xs overflow-hidden">
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth">
+                {categoriasVisibles.map((cat) => {
+                  const activa = filtroCategoria === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setFiltroCategoria(cat.id)}
+                      className={`px-4 py-2 rounded-lg text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer shrink-0 active:scale-95 ${
+                        activa
+                          ? "bg-blue-600 text-white font-medium shadow-xs"
+                          : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/60 font-normal"
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -1058,61 +1205,73 @@ export default function NuevaVentaPage() {
                 <span className="text-4xl opacity-30">📦</span>
               </div>
             ) : (
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3">
                 {filteredProducts.map((item) => {
                   const priceNum =
                     typeof item.price === "number" ? item.price : parseFloat(item.price) || 0;
                   const isAgotado = item.stock <= 0;
 
                   return (
-                    <button
+                    <div
                       key={item.id}
                       onClick={() => addToCart(item)}
-                      disabled={isAgotado}
-                      className={`bg-white dark:bg-zinc-800 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 transition-all text-left flex flex-col h-full group ${
+                      className={`relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg sm:rounded-xl p-2.5 sm:p-3 flex flex-col justify-between transition-all select-none group ${
                         isAgotado
-                          ? "opacity-50 cursor-not-allowed"
-                          : "hover:border-emerald-500 hover:shadow-md cursor-pointer"
+                          ? "opacity-60 cursor-pointer"
+                          : "hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-xs active:scale-[0.98] cursor-pointer"
                       }`}
                     >
-                      <div className="flex justify-between items-start w-full mb-3">
-                        <span className="text-3xl">
-                          {getProductEmoji(item.name, item.category)}
-                        </span>
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-md font-semibold ${
-                            isAgotado
-                              ? "bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400"
-                              : item.stock <= item.minStock
-                              ? "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400"
-                              : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
-                          }`}
-                        >
-                          {isAgotado ? "Agotado" : `${item.stock} en stock`}
-                        </span>
+                      {/* Badge de Stock en la esquina superior derecha */}
+                      <span
+                        className={`absolute top-2 right-2 z-10 text-[11px] sm:text-xs font-bold px-2 sm:px-2.5 py-0.5 rounded-full min-w-[20px] text-center shadow-xs text-white ${
+                          isAgotado ? "bg-[#ff3b30]" : "bg-[#00cba0]"
+                        }`}
+                      >
+                        {item.stock}
+                      </span>
+
+                      {/* Imagen / Visual del Producto */}
+                      <div className="w-full h-24 sm:h-28 flex items-center justify-center p-1 relative my-1">
+                        {item.imageUrl ? (
+                          <img
+                            src={item.imageUrl}
+                            alt={item.name}
+                            className="max-h-full max-w-full object-contain drop-shadow-xs"
+                          />
+                        ) : (
+                          <div className="w-16 h-20 sm:w-20 sm:h-24 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 flex items-center justify-center text-3xl sm:text-4xl shadow-2xs group-hover:scale-105 transition-transform">
+                            {getProductEmoji(item.name, item.category)}
+                          </div>
+                        )}
                       </div>
-                      <h4 className="font-normal text-xs text-zinc-900 dark:text-zinc-200 line-clamp-2 leading-snug mb-1">
+
+                      {/* Nombre del Producto */}
+                      <h4
+                        className="text-zinc-600 dark:text-zinc-300 font-semibold text-xs leading-snug line-clamp-2 text-left w-full mt-1 mb-1.5"
+                        title={item.name}
+                      >
                         {item.name}
                       </h4>
-                      <p className="text-xs text-zinc-400 mb-3 mt-auto">
-                        {item.brand ? `${item.brand} • ` : ""}
-                        {item.code}
-                      </p>
-                      <div className="flex justify-between items-end w-full">
-                        <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">
-                          ${priceNum.toFixed(2)}
+
+                      {/* Fila Inferior: Precio a la izquierda e Ícono de Información a la derecha */}
+                      <div className="flex items-center justify-between w-full mt-auto pt-1">
+                        <span className="text-zinc-900 dark:text-white font-extrabold text-xs sm:text-sm tracking-tight">
+                          ${Math.round(priceNum).toLocaleString("es-CL")}
                         </span>
-                        <span
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold transition-colors ${
-                            isAgotado
-                              ? "bg-zinc-100 text-zinc-300"
-                              : "bg-zinc-100 dark:bg-zinc-700 text-zinc-500 group-hover:bg-emerald-500 group-hover:text-white"
-                          }`}
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDetalleProductoModal(item);
+                          }}
+                          className="w-4 h-4 sm:w-4.5 sm:h-4.5 rounded-full bg-zinc-200/80 dark:bg-zinc-700/80 text-zinc-500 dark:text-zinc-300 text-[10px] sm:text-[11px] font-bold flex items-center justify-center shrink-0 hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors cursor-pointer"
+                          title="Detalles"
                         >
-                          +
-                        </span>
+                          i
+                        </button>
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
@@ -2078,108 +2237,261 @@ export default function NuevaVentaPage() {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in print:p-0 print:bg-white">
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-2xl w-full max-w-md p-5 sm:p-6 shadow-2xl relative text-center print:border-none print:shadow-none print:p-0 print:max-w-none max-h-[92vh] overflow-y-auto">
             {/* Header del modal (no imprimible) */}
-            <div className="print:hidden">
-              <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center text-3xl mx-auto mb-3">
+            <div className="print:hidden mb-3">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center text-2xl mx-auto">
                 ✅
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white mb-1">
-                ¡Venta Registrada!
-              </h3>
-              <p className="text-xs text-zinc-500 mb-4">Venta procesada y stock actualizado correctamente</p>
             </div>
 
-            {/* Ticket Térmico Imprimible */}
+            {/* TICKET DE VENTA (ESTILO SUPERMERCADO - TEXTO NORMAL) */}
             <div
               ref={ticketRef}
-              className="p-5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 text-left text-xs font-mono space-y-2 mb-6 print:border-none print:p-2 print:text-black print:bg-white"
+              className={`p-5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/80 text-left text-xs font-sans space-y-2.5 mb-5 shadow-inner print:border-none print:p-2 print:text-black print:bg-white ${
+                formatoImpresionVenta === "A4" ? "print:hidden" : "print:block"
+              }`}
             >
-              <div className="text-center pb-2 border-b border-dashed border-zinc-300 dark:border-zinc-700">
-                <h4 className="font-bold text-base text-zinc-900 dark:text-white print:text-black">AUTO / G</h4>
-                <p className="text-[11px] text-zinc-500">Taller y Repuestos Automotrices</p>
-                <p className="text-[11px] text-zinc-500 font-bold mt-1">N° Venta: {ventaCompletada.saleNumber}</p>
+              {/* Encabezado Supermercado */}
+              <div className="text-center pb-2.5 border-b border-dashed border-zinc-300 dark:border-zinc-600">
+                <h4 className="font-extrabold text-base tracking-wide text-zinc-900 dark:text-white print:text-black">AUTO / G</h4>
+                <p className="text-[11px] text-zinc-500 font-medium">Taller y Repuestos Automotrices</p>
+                <p className="text-[10px] text-zinc-400">R.U.C.: 1792273235001 • Matriz Central</p>
+                <div className="mt-2 pt-1 border-t border-dotted border-zinc-200 dark:border-zinc-700/60 flex justify-between text-[11px] text-zinc-600 dark:text-zinc-300 print:text-black">
+                  <span className="font-bold">N° Venta: {ventaCompletada.saleNumber}</span>
+                  <span>{new Date().toLocaleDateString("es-CL")}</span>
+                </div>
               </div>
 
-              <div className="flex justify-between text-[11px]">
-                <span className="text-zinc-500">Cliente:</span>
-                <span className="font-bold text-zinc-900 dark:text-white print:text-black">{ventaCompletada.customerName}</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-zinc-500">Método de Pago:</span>
-                <span className="font-bold text-zinc-900 dark:text-white print:text-black">{ventaCompletada.paymentMethod}</span>
+              {/* Datos Cliente y Pago */}
+              <div className="space-y-1 text-[11px] text-zinc-600 dark:text-zinc-300 print:text-black pb-2 border-b border-dashed border-zinc-300 dark:border-zinc-600">
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Cliente:</span>
+                  <span className="font-semibold text-zinc-900 dark:text-white print:text-black">{ventaCompletada.customerName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Método de Pago:</span>
+                  <span className="font-semibold text-zinc-900 dark:text-white print:text-black">{ventaCompletada.paymentMethod}</span>
+                </div>
               </div>
 
-              {/* Items */}
-              <div className="py-2 border-y border-dashed border-zinc-300 dark:border-zinc-700 my-2 space-y-1">
+              {/* Cabecera de Items */}
+              <div className="flex justify-between text-[10px] font-bold text-zinc-400 uppercase tracking-wider pt-0.5">
+                <span>Cant. Descripción</span>
+                <span>Total</span>
+              </div>
+
+              {/* Lista de Items */}
+              <div className="space-y-1.5 py-1">
                 {ventaCompletada.cartSnap && ventaCompletada.cartSnap.map((it: any, idx: number) => {
                   const pNum = typeof it.product.price === "number" ? it.product.price : parseFloat(it.product.price) || 0;
                   return (
-                    <div key={idx} className="flex justify-between text-[11px]">
-                      <span className="truncate max-w-[200px]">
-                        {it.qty}x {it.product.name}
+                    <div key={idx} className="flex justify-between items-start text-xs">
+                      <div className="flex items-start gap-1.5 max-w-[72%]">
+                        <span className="font-bold text-zinc-700 dark:text-zinc-300 print:text-black shrink-0">{it.qty}x</span>
+                        <span className="font-normal text-zinc-900 dark:text-zinc-100 print:text-black leading-snug">{it.product.name}</span>
+                      </div>
+                      <span className="font-semibold text-zinc-900 dark:text-zinc-100 print:text-black shrink-0">
+                        ${(pNum * it.qty).toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
-                      <span className="font-semibold">${(pNum * it.qty).toFixed(2)}</span>
                     </div>
                   );
                 })}
               </div>
 
-              {/* Totales */}
-              {ventaCompletada.descuentoCalculado > 0 && (
-                <div className="flex justify-between text-rose-500">
-                  <span>Descuento:</span>
-                  <span>-${ventaCompletada.descuentoCalculado.toFixed(2)}</span>
+              {/* Totales y Desglose */}
+              <div className="pt-2 border-t border-dashed border-zinc-300 dark:border-zinc-600 space-y-1 text-xs">
+                {ventaCompletada.descuentoCalculado > 0 && (
+                  <div className="flex justify-between text-rose-500 font-medium">
+                    <span>Descuento aplicado:</span>
+                    <span>-${ventaCompletada.descuentoCalculado.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-zinc-500 print:text-black">
+                  <span>Subtotal:</span>
+                  <span>${(parseFloat(ventaCompletada.total) - (ventaCompletada.tax || 0) + (ventaCompletada.descuentoCalculado || 0)).toFixed(2)}</span>
                 </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-zinc-500">IVA (16%):</span>
-                <span>${ventaCompletada.tax?.toFixed(2) || "0.00"}</span>
-              </div>
-              <div className="flex justify-between border-t border-zinc-300 dark:border-zinc-700 pt-1.5 text-sm font-black">
-                <span>TOTAL:</span>
-                <span className="text-emerald-600 dark:text-emerald-400 print:text-black">
-                  ${parseFloat(ventaCompletada.total).toFixed(2)}
-                </span>
+                <div className="flex justify-between text-zinc-500 print:text-black">
+                  <span>IVA ({ivaPorcentaje}%):</span>
+                  <span>${ventaCompletada.tax?.toFixed(2) || "0.00"}</span>
+                </div>
+                <div className="flex justify-between border-t border-zinc-300 dark:border-zinc-600 pt-1.5 text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white print:text-black">
+                  <span>TOTAL A PAGAR:</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 print:text-black">
+                    ${parseFloat(ventaCompletada.total).toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                {ventaCompletada.montoRecibido && (
+                  <div className="pt-1.5 mt-1 border-t border-dotted border-zinc-200 dark:border-zinc-700 space-y-0.5 text-[11px] text-zinc-600 dark:text-zinc-300 print:text-black">
+                    <div className="flex justify-between">
+                      <span>Efectivo Recibido:</span>
+                      <span>${ventaCompletada.montoRecibido.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-emerald-600 dark:text-emerald-400 print:text-black">
+                      <span>Cambio / Vuelto:</span>
+                      <span>${(ventaCompletada.cambio || 0).toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {ventaCompletada.montoRecibido && (
-                <div className="pt-1 text-[11px] space-y-0.5 border-t border-dashed border-zinc-300">
-                  <div className="flex justify-between">
-                    <span>Recibido:</span>
-                    <span>${ventaCompletada.montoRecibido.toFixed(2)}</span>
+              {/* Pie del Ticket */}
+              <div className="text-center text-[11px] text-zinc-400 print:text-zinc-600 pt-2 border-t border-dashed border-zinc-300 dark:border-zinc-600">
+                <p className="font-semibold text-zinc-700 dark:text-zinc-300 print:text-black">¡Gracias por su compra!</p>
+              </div>
+            </div>
+
+            {/* FORMATO FACTURA A4 (SÓLO IMPRESIÓN) */}
+            <div
+              className={`hidden ${
+                formatoImpresionVenta === "A4" ? "print:block" : "print:hidden"
+              } w-full max-w-[210mm] mx-auto text-black font-sans text-xs p-6 bg-white space-y-4`}
+            >
+              {/* Encabezado A4 */}
+              <div className="flex justify-between items-start border-b-2 border-zinc-800 pb-4">
+                <div>
+                  <h1 className="text-2xl font-black tracking-wide text-zinc-900">AUTO / G</h1>
+                  <p className="text-xs font-semibold text-zinc-600">Taller Mecánico & Repuestos Automotrices</p>
+                  <p className="text-[11px] text-zinc-500 mt-1">R.U.C.: 1792273235001</p>
+                  <p className="text-[11px] text-zinc-500">Dirección: Av. Principal y Taller Central • Tel: +56 9 1234 5678</p>
+                </div>
+                <div className="border-2 border-zinc-800 rounded-xl p-3 text-right min-w-[200px]">
+                  <p className="text-xs font-bold text-zinc-500">COMPROBANTE DE VENTA</p>
+                  <p className="text-lg font-black text-blue-700">N° {ventaCompletada.saleNumber}</p>
+                  <p className="text-[11px] text-zinc-600 mt-1">Fecha: {new Date().toLocaleDateString("es-CL")}</p>
+                </div>
+              </div>
+
+              {/* Datos Cliente */}
+              <div className="border border-zinc-300 rounded-xl p-3 bg-zinc-50/50 grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="font-bold text-zinc-600">Cliente:</span>{" "}
+                  <span className="font-semibold text-zinc-900">{ventaCompletada.customerName}</span>
+                </div>
+                <div>
+                  <span className="font-bold text-zinc-600">Método de Pago:</span>{" "}
+                  <span className="font-semibold text-zinc-900">{ventaCompletada.paymentMethod}</span>
+                </div>
+              </div>
+
+              {/* Tabla de Productos / Servicios */}
+              <table className="w-full text-left text-xs border border-zinc-200">
+                <thead className="bg-zinc-100 text-zinc-700 uppercase font-bold text-[11px]">
+                  <tr className="border-b border-zinc-200">
+                    <th className="p-2 w-12 text-center">Cant.</th>
+                    <th className="p-2">Descripción</th>
+                    <th className="p-2 w-28 text-right">Precio Unit.</th>
+                    <th className="p-2 w-28 text-right">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200">
+                  {ventaCompletada.cartSnap && ventaCompletada.cartSnap.map((it: any, idx: number) => {
+                    const pNum = typeof it.product.price === "number" ? it.product.price : parseFloat(it.product.price) || 0;
+                    return (
+                      <tr key={idx}>
+                        <td className="p-2 text-center font-bold">{it.qty}</td>
+                        <td className="p-2 font-medium">{it.product.name}</td>
+                        <td className="p-2 text-right">${pNum.toFixed(2)}</td>
+                        <td className="p-2 text-right font-semibold">${(pNum * it.qty).toFixed(2)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {/* Totales A4 */}
+              <div className="flex justify-end pt-2">
+                <div className="w-64 space-y-1 text-xs border-t border-zinc-300 pt-2">
+                  <div className="flex justify-between text-zinc-600">
+                    <span>Subtotal:</span>
+                    <span>${(parseFloat(ventaCompletada.total) - (ventaCompletada.tax || 0) + (ventaCompletada.descuentoCalculado || 0)).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between font-bold text-emerald-600">
-                    <span>Cambio:</span>
-                    <span>${(ventaCompletada.cambio || 0).toFixed(2)}</span>
+                  {ventaCompletada.descuentoCalculado > 0 && (
+                    <div className="flex justify-between text-rose-600">
+                      <span>Descuento:</span>
+                      <span>-${ventaCompletada.descuentoCalculado.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-zinc-600">
+                    <span>IVA ({ivaPorcentaje}%):</span>
+                    <span>${ventaCompletada.tax?.toFixed(2) || "0.00"}</span>
+                  </div>
+                  <div className="flex justify-between font-black text-base border-t-2 border-zinc-800 pt-1 text-zinc-900">
+                    <span>TOTAL:</span>
+                    <span>${parseFloat(ventaCompletada.total).toFixed(2)}</span>
                   </div>
                 </div>
-              )}
+              </div>
 
-              <p className="text-center text-[10px] text-zinc-400 pt-2">
-                ¡Gracias por su compra!
-              </p>
+              {/* Pie de Página A4 */}
+              <div className="text-center text-[10px] text-zinc-400 pt-6 border-t border-zinc-200">
+                <p>Documento generado electrónicamente por Sistema AutoG POS • Formato A4</p>
+                <p>Gracias por su preferencia</p>
+              </div>
             </div>
 
             {/* Botones de Acción (no imprimibles) */}
-            <div className="flex items-center gap-2 print:hidden flex-wrap sm:flex-nowrap">
+            <div className="flex items-center gap-2 print:hidden relative">
+              {/* Dropdown de Impresión: Ticket o A4 */}
+              <div className="relative flex-1" ref={menuImpresionVentaRef}>
+                <button
+                  type="button"
+                  onClick={() => setMenuImpresionVenta(!menuImpresionVenta)}
+                  className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm shadow-blue-600/20"
+                >
+                  <span className="text-sm">🖨️</span>
+                  <span>Imprimir</span>
+                  <svg
+                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                      menuImpresionVenta ? "rotate-180" : ""
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* Menú Desplegable con opciones Ticket o A4 */}
+                {menuImpresionVenta && (
+                  <div className="absolute left-0 bottom-full mb-2 w-60 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 text-left">
+                    <div className="px-3 py-1.5 border-b border-zinc-100 dark:border-zinc-800 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                      Seleccionar Formato
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => dispararImpresionVenta("TICKET")}
+                      className="w-full text-left px-3.5 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 flex items-center gap-3 transition-colors cursor-pointer"
+                    >
+                      <span className="text-xl">🧾</span>
+                      <div>
+                        <div className="font-bold text-xs text-zinc-900 dark:text-white">Ticket Térmico</div>
+                        <div className="text-[11px] text-zinc-500">Rollo POS supermercado (80mm)</div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => dispararImpresionVenta("A4")}
+                      className="w-full text-left px-3.5 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 flex items-center gap-3 transition-colors cursor-pointer"
+                    >
+                      <span className="text-xl">📄</span>
+                      <div>
+                        <div className="font-bold text-xs text-zinc-900 dark:text-white">Imprimir A4</div>
+                        <div className="text-[11px] text-zinc-500">Hoja completa estándar</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Botón Nueva Venta */}
               <button
                 type="button"
-                onClick={imprimirTicket}
-                className="flex-1 h-11 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <span>🖨️</span>
-                <span>Imprimir Ticket</span>
-              </button>
-              <Link
-                href="/pos/facturas"
-                className="h-11 px-4 rounded-xl bg-zinc-500/10 hover:bg-zinc-500/20 border border-zinc-300/40 dark:border-zinc-700/40 text-xs font-medium text-zinc-700 dark:text-zinc-300 transition-all flex items-center justify-center"
-              >
-                Facturas
-              </Link>
-              <button
                 onClick={() => setVentaCompletada(null)}
-                className="flex-1 h-11 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-medium transition-all cursor-pointer flex items-center justify-center"
+                className="flex-1 h-11 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
-                Nueva Venta
+                <span>✨</span>
+                <span>Nueva Venta</span>
               </button>
             </div>
           </div>
@@ -2676,6 +2988,79 @@ export default function NuevaVentaPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Detalle de Producto al pulsar (i) */}
+      {detalleProductoModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl relative animate-in fade-in zoom-in-95 duration-150">
+            <button
+              onClick={() => setDetalleProductoModal(null)}
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-lg w-7 h-7 rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 cursor-pointer"
+            >
+              ✕
+            </button>
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl p-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800">
+                {getProductEmoji(detalleProductoModal.name, detalleProductoModal.category)}
+              </span>
+              <div>
+                <h3 className="font-bold text-sm text-zinc-900 dark:text-white">
+                  {detalleProductoModal.name}
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  Código: <span className="font-medium text-zinc-600 dark:text-zinc-300">{detalleProductoModal.code}</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2.5 py-3 border-y border-zinc-100 dark:border-zinc-800 text-xs">
+              <div className="flex justify-between">
+                <span className="text-zinc-400">Categoría:</span>
+                <span className="font-medium text-zinc-700 dark:text-zinc-300">{detalleProductoModal.category || "General"}</span>
+              </div>
+              {detalleProductoModal.brand && (
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Marca:</span>
+                  <span className="font-medium text-zinc-700 dark:text-zinc-300">{detalleProductoModal.brand}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-zinc-400">Stock disponible:</span>
+                <span className={`font-bold ${detalleProductoModal.stock > 0 ? "text-emerald-500" : "text-rose-500"}`}>
+                  {detalleProductoModal.stock} unidades
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-400">Precio unitario:</span>
+                <span className="font-bold text-sm text-zinc-900 dark:text-white">
+                  ${Math.round(typeof detalleProductoModal.price === "number" ? detalleProductoModal.price : parseFloat(detalleProductoModal.price) || 0).toLocaleString("es-CL")}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setDetalleProductoModal(null)}
+                className="flex-1 py-2 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  addToCart(detalleProductoModal);
+                  setDetalleProductoModal(null);
+                }}
+                disabled={detalleProductoModal.stock <= 0}
+                className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold transition-colors shadow-sm cursor-pointer"
+              >
+                Agregar al Ticket
+              </button>
+            </div>
           </div>
         </div>
       )}

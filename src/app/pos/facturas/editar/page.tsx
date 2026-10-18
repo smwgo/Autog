@@ -960,107 +960,53 @@ function EditarFacturaForm() {
         <Header />
 
         <main className="flex-1 w-full max-w-6xl mx-auto px-3 sm:px-6 pt-3 sm:pt-4 pb-28 sm:pb-12 space-y-4 sm:space-y-5">
-          {/* Encabezado Principal - Adaptado a Móvil y Escritorio */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-200 dark:border-zinc-800 pb-3 sm:pb-4">
-            <div className="flex items-center justify-between w-full sm:w-auto">
-              <div className="flex items-center gap-2.5">
-                <Link
-                  href="/pos/facturas"
-                  className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center transition-all cursor-pointer shrink-0"
-                  title="Volver a Facturas"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15 19l-7-7 7-7" />
-                  </svg>
-                </Link>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-sm sm:text-xl font-normal sm:font-bold text-zinc-900 dark:text-white leading-tight">
-                    Editar Factura {numeroFactura ? `#${numeroFactura}` : ""}
-                  </h1>
-                  <span
-                    className={`text-[10px] sm:text-[11px] font-medium sm:font-semibold px-2 py-0.5 rounded-full border ${
-                      status.toLowerCase() === "anulada"
-                        ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
-                        : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                    }`}
-                  >
-                    {status}
-                  </span>
-                </div>
-              </div>
-
-              {/* Botones de Acción Rápida en Móvil (Imprimir y Eliminar) */}
-              <div className="flex sm:hidden items-center gap-1.5">
-                <div className="relative" ref={menuImpresionRef}>
-                  <button
-                    type="button"
-                    onClick={() => setMenuImpresionAbierto(!menuImpresionAbierto)}
-                    className="w-10 h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center justify-center cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all"
-                    title="Opciones de Impresión"
-                  >
-                    <svg className="w-4 h-4 text-zinc-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                    </svg>
-                  </button>
-
-                  {menuImpresionAbierto && (
-                    <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
-                      <div className="px-3 py-1.5 border-b border-zinc-100 dark:border-zinc-800 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
-                        Formato de Impresión
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => dispararImpresion("TICKET")}
-                        className="w-full text-left px-3.5 py-2.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800/80 text-zinc-800 dark:text-zinc-200 flex items-center gap-3 transition-colors cursor-pointer"
-                      >
-                        <span className="text-base">🧾</span>
-                        <div>
-                          <div className="font-semibold text-xs text-zinc-900 dark:text-white">Ticket Térmico</div>
-                          <div className="text-[11px] text-zinc-500">Rollo 80mm para POS</div>
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => dispararImpresion("A4")}
-                        className="w-full text-left px-3.5 py-2.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800/80 text-zinc-800 dark:text-zinc-200 flex items-center gap-3 transition-colors cursor-pointer"
-                      >
-                        <span className="text-base">📄</span>
-                        <div>
-                          <div className="font-semibold text-xs text-zinc-900 dark:text-white">Factura A4</div>
-                          <div className="text-[11px] text-zinc-500">Hoja completa estándar</div>
-                        </div>
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setMostrarModalEliminar(true)}
-                  className="w-10 h-10 rounded-xl border border-rose-200 dark:border-rose-900/40 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center cursor-pointer shadow-xs active:scale-95 transition-all"
-                  title="Eliminar factura"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
-              </div>
+          {/* Encabezado Principal - Idéntico al estilo Venta (Móvil y Escritorio) */}
+          <div className="flex items-center justify-between gap-2.5 sm:gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-3 sm:pb-4 mb-4 sm:mb-6">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <Link
+                href="/pos/facturas"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
+                title="Volver a Facturas"
+              >
+                <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </Link>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
+                <span className="sm:hidden">Factura</span>
+                <span className="hidden sm:inline">Editar Factura</span>
+              </h1>
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20 shrink-0">
+                {items.length}
+              </span>
+              {numeroFactura && (
+                <span className="hidden md:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                  #{numeroFactura}
+                </span>
+              )}
+              <span
+                className={`hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                  status.toLowerCase() === "anulada"
+                    ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                    : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                }`}
+              >
+                {status}
+              </span>
             </div>
 
-            {/* Acciones principales adaptadas */}
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              {/* Menú de Impresión Desktop */}
-              <div className="hidden sm:block relative" ref={menuImpresionRef}>
+            {/* Acciones principales en una sola fila (Imprimir, Eliminar, Guardar) */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {/* Menú de Impresión (Pill button) */}
+              <div className="relative" ref={menuImpresionRef}>
                 <button
                   type="button"
                   onClick={() => setMenuImpresionAbierto(!menuImpresionAbierto)}
-                  className="px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-zinc-700 dark:text-zinc-300 bg-zinc-500/10 hover:bg-zinc-500/20 border border-zinc-300/40 dark:border-zinc-700/40 font-semibold text-xs transition-all active:scale-95 cursor-pointer backdrop-blur-sm"
                   title="Opciones de Impresión"
                 >
-                  <svg className="w-4 h-4 text-zinc-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                  </svg>
-                  <span>Imprimir</span>
+                  <span className="text-sm">🖨️</span>
+                  <span className="hidden sm:inline">Imprimir</span>
                   <svg className={`w-3.5 h-3.5 text-zinc-400 transition-transform ${menuImpresionAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                   </svg>
@@ -1103,11 +1049,11 @@ function EditarFacturaForm() {
                 )}
               </div>
 
-              {/* Botón Eliminar Desktop */}
+              {/* Botón Eliminar */}
               <button
                 type="button"
                 onClick={() => setMostrarModalEliminar(true)}
-                className="hidden sm:flex w-10 h-10 rounded-xl border border-rose-200 dark:border-rose-900/40 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:border-rose-300 dark:hover:border-rose-800 transition-all items-center justify-center cursor-pointer shadow-xs active:scale-95"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center text-sm transition-all active:scale-95 cursor-pointer shrink-0"
                 title="Eliminar factura"
                 aria-label="Eliminar factura"
               >
@@ -1116,32 +1062,35 @@ function EditarFacturaForm() {
                 </svg>
               </button>
 
+              {/* Botón Cancelar (Desktop) */}
               <Link
                 href="/pos/facturas"
-                className="flex-1 sm:flex-initial text-center px-4 py-2.5 sm:py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                className="hidden sm:flex px-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all cursor-pointer items-center justify-center shadow-xs active:scale-95"
               >
                 Cancelar
               </Link>
+
+              {/* Botón Guardar Cambios */}
               <button
                 type="button"
                 onClick={handleGuardarCambios}
                 disabled={guardando}
-                className="flex-1 sm:flex-initial text-center px-5 py-2.5 sm:py-2 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-sm font-semibold transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm shadow-blue-500/20"
+                className="h-9 sm:h-10 px-3.5 sm:px-5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm shadow-blue-500/20 shrink-0"
               >
                 {guardando ? (
                   <>
-                    <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
                     </svg>
-                    <span>Guardando...</span>
+                    <span className="hidden sm:inline">Guardando...</span>
                   </>
                 ) : (
                   <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                     </svg>
-                    <span>Guardar Cambios</span>
+                    <span>Guardar</span>
                   </>
                 )}
               </button>
