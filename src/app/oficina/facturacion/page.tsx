@@ -135,9 +135,9 @@ export default function FacturacionSRI() {
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
-      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
+      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full flex flex-col">
         {/* Breadcrumb & Header */}
-        <div className="mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="order-1 mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-1.5">
               <Link href="/oficina" className="hover:text-blue-600 transition-colors">Oficina</Link>
@@ -160,11 +160,8 @@ export default function FacturacionSRI() {
         </div>
 
         {/* Resumen Cards */}
-        <CollapsibleMetrics
-          title="Resumen de Facturación SRI"
-          subtitle={`$${totalFacturado.toFixed(2)} autorizados • ${pendientesCount} pendientes`}
-        >
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 md:mb-8">
+        <CollapsibleMetrics className="order-3 sm:order-2 mb-6 md:mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
             <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex items-center gap-3 sm:gap-4">
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 text-lg sm:text-xl flex-shrink-0">
                 💵
@@ -208,7 +205,7 @@ export default function FacturacionSRI() {
         </CollapsibleMetrics>
 
         {/* View Switcher & Filtros */}
-        <div className="bg-white dark:bg-zinc-900 rounded-t-2xl sm:rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-3.5 sm:p-4 flex flex-col md:flex-row justify-between items-center gap-3">
+        <div className="order-2 sm:order-3 bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-3.5 sm:p-4 flex flex-col md:flex-row justify-between items-center gap-3 mb-4 sm:mb-0 shadow-sm">
           <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl w-full md:w-auto">
             <button 
               onClick={() => setTab("facturas")}
@@ -239,7 +236,7 @@ export default function FacturacionSRI() {
         </div>
 
         {/* Contenedor de Documentos */}
-        <div className="bg-white dark:bg-zinc-900 border-x border-b border-zinc-100 dark:border-zinc-800 rounded-b-2xl sm:rounded-b-3xl overflow-hidden shadow-sm">
+        <div className="order-4 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 sm:border-x sm:border-b sm:border-t-0 rounded-2xl sm:rounded-b-3xl sm:rounded-t-none overflow-hidden shadow-sm">
           {/* Vista Móvil (Tarjetas) */}
           <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
             {loading ? (

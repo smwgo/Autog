@@ -143,9 +143,9 @@ export default function InventarioGlobal() {
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
-      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
+      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full flex flex-col">
         {/* Breadcrumb & Header */}
-        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="order-1 mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-1.5 sm:mb-2">
               <Link href="/gerencia" className="hover:text-blue-600 transition-colors">Gerencia</Link>
@@ -182,11 +182,8 @@ export default function InventarioGlobal() {
         </div>
 
         {/* Resumen Cards: 2x2 on mobile */}
-        <CollapsibleMetrics
-          title="Resumen de Inventario Global"
-          subtitle={`${products.length} referencias • $${totalValue.toFixed(2)} valorizado • ${criticalCount} stock crítico`}
-        >
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+        <CollapsibleMetrics className="order-3 sm:order-2 mb-6 sm:mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
             <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden">
               <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 truncate">Total Referencias</h3>
               <p className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white">{products.length}</p>
@@ -222,7 +219,7 @@ export default function InventarioGlobal() {
         </CollapsibleMetrics>
 
         {/* Filtros de Tabla */}
-        <div className="bg-white dark:bg-zinc-900 rounded-t-2xl sm:rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-3.5 sm:p-4 flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-3">
+        <div className="order-2 sm:order-3 bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-3.5 sm:p-4 flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-3 mb-4 sm:mb-0 shadow-sm">
           <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 lg:pb-0 no-scrollbar">
             {["Todos", "Lubricantes", "Filtros", "Frenos", "Eléctrico", "Stock Bajo"].map((tab) => (
               <button
@@ -253,8 +250,10 @@ export default function InventarioGlobal() {
           </div>
         </div>
 
-        {/* Vista Móvil (Tarjetas de Inventario para Android / iOS) */}
-        <div className="md:hidden bg-white dark:bg-zinc-900 border-x border-b border-zinc-100 dark:border-zinc-800 rounded-b-2xl divide-y divide-zinc-100 dark:divide-zinc-800">
+        {/* Tablas / Listados */}
+        <div className="order-4">
+          {/* Vista Móvil (Tarjetas de Inventario para Android / iOS) */}
+          <div className="md:hidden bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 sm:border-x sm:border-b rounded-2xl sm:rounded-b-2xl divide-y divide-zinc-100 dark:divide-zinc-800 shadow-sm">
           {loading ? (
             <div className="p-6 text-center text-sm text-zinc-500">Cargando inventario desde Neon DB...</div>
           ) : filtered.length === 0 ? (
@@ -408,6 +407,7 @@ export default function InventarioGlobal() {
           <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-sm text-zinc-500">
             <span>Mostrando {filtered.length} de {products.length} productos en Neon DB</span>
           </div>
+        </div>
         </div>
       </main>
 

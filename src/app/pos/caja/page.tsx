@@ -277,7 +277,7 @@ export default function GestionCaja() {
 
       <main className="flex-grow p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full flex flex-col gap-6">
         {/* Header */}
-        <div className="flex items-center gap-3">
+        <div className="order-1 flex items-center gap-3">
           <Link 
             href="/pos"
             title="Volver a Panel POS"
@@ -295,8 +295,8 @@ export default function GestionCaja() {
           </span>
         </div>
 
-        {/* 4 Tarjetas Métricas Superiores Desplegables en Móvil */}
-        <CollapsibleMetrics title="Métricas de Caja">
+        {/* 4 Tarjetas Métricas Superiores Desplegables en Móvil: debajo de Estado */}
+        <CollapsibleMetrics className="order-3 sm:order-2">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             {/* Abiertas */}
             <div className="bg-zinc-900/80 border border-zinc-800/80 p-4 sm:p-5 rounded-3xl flex items-center gap-3.5 backdrop-blur-sm">
@@ -366,7 +366,7 @@ export default function GestionCaja() {
         )}
 
         {/* Barra de Búsqueda y Filtros */}
-        <div className="bg-zinc-900/90 border border-zinc-800 rounded-t-3xl p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <div className="order-2 sm:order-3 bg-zinc-900/90 border border-zinc-800 rounded-t-3xl p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-center gap-3">
           <div className="relative w-full sm:flex-1">
             <input
               type="text"
@@ -451,7 +451,7 @@ export default function GestionCaja() {
         </div>
 
         {/* Tabla Desktop y Tarjetas Móviles */}
-        <div className="bg-zinc-900/60 border-x border-b border-zinc-800 rounded-b-3xl overflow-hidden shadow-2xl backdrop-blur-sm">
+        <div className="order-4 bg-zinc-900/60 border-x border-b border-zinc-800 rounded-b-3xl overflow-hidden shadow-2xl backdrop-blur-sm">
           {/* Vista Móvil */}
           <div className="md:hidden divide-y divide-zinc-800/80">
             {cargando && sesiones.length === 0 ? (

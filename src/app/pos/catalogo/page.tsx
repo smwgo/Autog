@@ -234,9 +234,9 @@ export default function CatalogoPage() {
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
 
-      <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full">
+      <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full flex flex-col">
         {/* Header */}
-        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="order-1 mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link 
               href="/pos"
@@ -268,8 +268,8 @@ export default function CatalogoPage() {
           </div>
         </div>
 
-        {/* Resumen Cards Desplegable en Móvil */}
-        <CollapsibleMetrics title="Métricas de Inventario">
+        {/* Resumen Cards Desplegable en Móvil: debajo de Estado */}
+        <CollapsibleMetrics className="order-3 sm:order-2 mb-6 sm:mb-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
             {/* Total Productos */}
             <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
@@ -339,7 +339,7 @@ export default function CatalogoPage() {
         )}
 
         {/* Buscador y Filtros */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 mb-6">
+        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 mb-6">
           <div className="relative w-full flex-1">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
               🔍
@@ -498,7 +498,7 @@ export default function CatalogoPage() {
         </div>
 
         {/* Products List / Table */}
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
+        <div className="order-4 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
           {cargando && productos.length === 0 ? (
             <div className="p-12 text-center text-zinc-500 dark:text-zinc-400">
               <div className="w-7 h-7 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>

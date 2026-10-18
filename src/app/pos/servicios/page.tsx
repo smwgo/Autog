@@ -127,9 +127,9 @@ export default function ServiciosPosPage() {
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 pb-24 md:pb-0">
       <Header />
 
-      <main className="flex-grow p-4 md:p-10 max-w-7xl mx-auto w-full">
+      <main className="flex-grow p-4 md:p-10 max-w-7xl mx-auto w-full flex flex-col">
         {/* Header */}
-        <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="order-1 mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
               <Link 
@@ -160,8 +160,8 @@ export default function ServiciosPosPage() {
           </div>
         </div>
 
-        {/* Resumen Cards Desplegable en Móvil */}
-        <CollapsibleMetrics title="Métricas de Servicios">
+        {/* Resumen Cards Desplegable en Móvil: debajo de Estado */}
+        <CollapsibleMetrics className="order-3 sm:order-2 mb-6 sm:mb-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
             <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
               <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-400 flex items-center justify-center text-xl shrink-0">
@@ -214,7 +214,7 @@ export default function ServiciosPosPage() {
         </CollapsibleMetrics>
 
         {/* Buscador y Filtros */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 mb-6">
+        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 mb-6">
           <div className="relative w-full flex-1">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
               🔍
@@ -370,6 +370,7 @@ export default function ServiciosPosPage() {
         </div>
 
         {/* Lista de Servicios en Grid */}
+        <div className="order-4">
         {cargando ? (
           <div className="text-center py-20 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">
             <div className="animate-spin text-4xl mb-3">⚙️</div>
@@ -588,6 +589,7 @@ export default function ServiciosPosPage() {
             </div>
           </div>
         )}
+        </div>
       </main>
 
       {/* Modal Flotante de Confirmación de Eliminación */}

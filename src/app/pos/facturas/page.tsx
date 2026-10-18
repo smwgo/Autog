@@ -222,9 +222,9 @@ export default function FacturasPosPage() {
 
       <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full print:p-0 print:m-0">
         {/* Cabecera / Navegación */}
-        <div className="print:hidden">
+        <div className="print:hidden flex flex-col">
           {/* Header */}
-          <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="order-1 mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <Link 
                 href="/pos"
@@ -282,7 +282,7 @@ export default function FacturasPosPage() {
           )}
 
           {/* KPIs / Resumen Desplegable en Móvil */}
-          <CollapsibleMetrics title="Métricas de Facturación">
+          <CollapsibleMetrics className="order-3 sm:order-2 mb-6 sm:mb-8">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
               {/* Facturado */}
               <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
@@ -326,7 +326,7 @@ export default function FacturasPosPage() {
           </CollapsibleMetrics>
 
           {/* Filtros y Buscador */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+          <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
             <div className="relative w-full flex-1">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
                 🔍
@@ -408,7 +408,7 @@ export default function FacturasPosPage() {
         </div>
 
         {/* Tabla de Facturas */}
-        <div className="print:hidden bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+        <div className="order-4 print:hidden bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
           {cargando ? (
             <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 text-sm">
               <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />

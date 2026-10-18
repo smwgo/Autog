@@ -138,9 +138,9 @@ export default function PromocionesPage() {
         </div>
       )}
 
-      <main className="flex-grow p-4 md:p-8 pb-24 md:pb-8 max-w-7xl mx-auto w-full">
+      <main className="flex-grow p-4 md:p-8 pb-24 md:pb-8 max-w-7xl mx-auto w-full flex flex-col">
         {/* Header */}
-        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="order-1 mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link 
               href="/pos"
@@ -172,8 +172,8 @@ export default function PromocionesPage() {
           </div>
         </div>
 
-        {/* Métricas / KPIs Desplegable en Móvil */}
-        <CollapsibleMetrics title="Métricas de Promociones">
+        {/* Métricas / KPIs Desplegable en Móvil: debajo de Estado */}
+        <CollapsibleMetrics className="order-3 sm:order-2 mb-6 sm:mb-8">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
             {/* Promociones Activas */}
             <div className="bg-white dark:bg-zinc-900/80 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3.5 sm:gap-4 backdrop-blur-sm">
@@ -217,7 +217,7 @@ export default function PromocionesPage() {
         </CollapsibleMetrics>
 
         {/* Filtros y Buscador */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
           <div className="relative w-full flex-1">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
               🔍
@@ -298,6 +298,7 @@ export default function PromocionesPage() {
         </div>
 
         {/* Lista de Promociones en Grid */}
+        <div className="order-4">
         {cargando ? (
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-12 text-center text-zinc-500">
             Cargando promociones desde Neon PostgreSQL...
@@ -415,6 +416,7 @@ export default function PromocionesPage() {
             ))}
           </div>
         )}
+        </div>
 
 
         {/* Modal Flotante de Confirmación de Eliminación */}

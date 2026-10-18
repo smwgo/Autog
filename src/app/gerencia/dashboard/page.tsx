@@ -121,11 +121,8 @@ export default function DashboardGeneral() {
         </div>
 
         {/* KPIs Grid: 2x2 on mobile */}
-        <CollapsibleMetrics
-          title="Métricas Principales de Gerencia"
-          subtitle={summary ? `${summary.facturacionTotal || "$0.00"} • ${summary.ordenesActivas || 0} órdenes activas` : undefined}
-        >
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+        <CollapsibleMetrics className="mb-6 sm:mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             {kpis.map((kpi, i) => (
               <div key={i} className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
                 <div className="flex justify-between items-start mb-2.5 sm:mb-4 gap-1">
