@@ -236,96 +236,152 @@ export default function FacturacionSRI() {
         </div>
 
         {/* Contenedor de Documentos */}
-        <div className="order-4 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 sm:border-x sm:border-b sm:border-t-0 rounded-2xl sm:rounded-b-3xl sm:rounded-t-none overflow-hidden shadow-sm">
-          {/* Vista Móvil (Tarjetas) */}
-          <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+        <div className="order-4">
+          {/* Vista Móvil (Tarjetas adaptadas a facturas) */}
+          <div className="md:hidden space-y-3.5">
             {loading ? (
-              <div className="p-6 text-center text-sm text-zinc-500">Cargando documentos desde Neon DB...</div>
+              <div className="p-8 text-center text-sm text-zinc-500 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                Cargando documentos desde Neon DB...
+              </div>
             ) : tab === "facturas" ? (
               filteredFacturas.map((row) => (
-                <div key={row.id} className="p-4 flex flex-col gap-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold font-mono text-xs text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
-                        {row.invoiceNumber}
-                      </span>
-                      <span className="text-xs text-zinc-400">{row.date}</span>
+                <div
+                  key={row.id}
+                  className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30">
+                        🧾
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                            {row.clientName}
+                          </p>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider border ${
+                            row.status === 'Pendiente' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                            row.status === 'Autorizado' || row.status === 'Pagada' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
+                            'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                          }`}>
+                            {row.status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
+                          <span className="font-semibold text-blue-600 dark:text-blue-400">#{row.invoiceNumber}</span>
+                          <span> • {row.clientRfc}</span>
+                        </p>
+                      </div>
                     </div>
-                    <span className={`px-2 py-0.5 rounded-lg text-[11px] font-bold ${
-                      row.status === 'Pendiente' ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' :
-                      row.status === 'Autorizado' || row.status === 'Pagada' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' :
-                      'bg-rose-50 text-rose-600 dark:bg-rose-500/10'
-                    }`}>
-                      {row.status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 truncate">{row.clientName}</p>
-                      <p className="text-xs text-zinc-500 truncate">{row.clientRfc} — {row.concept}</p>
-                    </div>
-                    <p className="font-bold text-base text-zinc-900 dark:text-zinc-100 shrink-0">
-                      ${Number(row.amount || 0).toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800/70">
-                    <span className="text-[11px] font-mono text-zinc-400 truncate max-w-[160px]">{row.uuid}</span>
-                    <div className="flex items-center gap-2">
+
+                    {/* Acciones Rápidas (Toque táctil >= 44px) */}
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <button
+                        type="button"
                         onClick={() => openEdit(row, "factura")}
-                        className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold active:scale-95 transition-transform"
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all cursor-pointer"
+                        title="Editar / SRI"
+                        aria-label="Editar / SRI"
                       >
-                        Editar / SRI
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleDelete(row.id, "factura")}
-                        className="px-2.5 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 text-xs font-semibold active:scale-95 transition-transform"
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-rose-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95 transition-all cursor-pointer"
+                        title="Eliminar Factura"
+                        aria-label="Eliminar Factura"
                       >
-                        ✕
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
                       </button>
                     </div>
+                  </div>
+
+                  {row.concept && (
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-1 bg-zinc-50 dark:bg-zinc-800/60 p-2 rounded-lg border border-zinc-100 dark:border-zinc-800">
+                      {row.concept}
+                    </p>
+                  )}
+
+                  {/* Datos secundarios (Total y Fecha) */}
+                  <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-sky-400 border border-blue-200 dark:border-blue-500/20 font-bold font-mono text-xs">
+                      💰 ${Number(row.amount || 0).toFixed(2)}
+                    </span>
+
+                    <span className="text-zinc-400 ml-auto text-[11px] whitespace-nowrap">
+                      {row.date}
+                    </span>
                   </div>
                 </div>
               ))
             ) : (
               filteredNotas.map((row) => (
-                <div key={row.id} className="p-4 flex flex-col gap-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold font-mono text-xs text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
-                        {row.noteNumber}
-                      </span>
-                      <span className="text-xs text-zinc-400">{row.date}</span>
+                <div
+                  key={row.id}
+                  className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border-rose-200 dark:border-rose-500/30">
+                        📄
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                            {row.clientName}
+                          </p>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
+                            {row.status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
+                          <span className="font-semibold text-rose-600 dark:text-rose-400">#{row.noteNumber}</span>
+                          <span> • Ref: {row.invoiceRef}</span>
+                        </p>
+                      </div>
                     </div>
-                    <span className="px-2 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10">
-                      {row.status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 truncate">{row.clientName}</p>
-                      <p className="text-xs text-zinc-500 truncate">{row.invoiceRef}</p>
-                    </div>
-                    <p className="font-bold text-base text-rose-600 dark:text-rose-400 shrink-0">
-                      - ${Number(row.total || 0).toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800/70">
-                    <span className="text-[11px] font-mono text-zinc-400 truncate max-w-[160px]">{row.accessKey}</span>
-                    <div className="flex items-center gap-2">
+
+                    {/* Acciones Rápidas (Toque táctil >= 44px) */}
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <button
+                        type="button"
                         onClick={() => openEdit(row, "nota")}
-                        className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold active:scale-95 transition-transform"
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all cursor-pointer"
+                        title="Editar Nota"
+                        aria-label="Editar Nota"
                       >
-                        Editar
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleDelete(row.id, "nota")}
-                        className="px-2.5 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 text-xs font-semibold active:scale-95 transition-transform"
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-rose-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95 transition-all cursor-pointer"
+                        title="Eliminar Nota"
+                        aria-label="Eliminar Nota"
                       >
-                        ✕
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
                       </button>
                     </div>
+                  </div>
+
+                  {/* Datos secundarios (Total y Fecha) */}
+                  <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 font-bold font-mono text-xs">
+                      - ${Number(row.total || 0).toFixed(2)}
+                    </span>
+
+                    <span className="text-zinc-400 ml-auto text-[11px] whitespace-nowrap">
+                      {row.date}
+                    </span>
                   </div>
                 </div>
               ))
@@ -333,113 +389,113 @@ export default function FacturacionSRI() {
           </div>
 
           {/* Vista Desktop (Tabla) */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400">
-                <tr>
-                  <th className="px-6 py-4 font-medium"># Documento</th>
-                  <th className="px-6 py-4 font-medium">Fecha</th>
-                  <th className="px-6 py-4 font-medium">Cliente</th>
-                  <th className="px-6 py-4 font-medium text-right">Total</th>
-                  <th className="px-6 py-4 font-medium text-center">Estado SRI</th>
-                  <th className="px-6 py-4 font-medium text-right">Clave / Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {loading ? (
+          <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider font-semibold">
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando documentos desde Neon DB...</td>
+                    <th className="py-3.5 px-4"># Documento</th>
+                    <th className="py-3.5 px-4">Fecha</th>
+                    <th className="py-3.5 px-4">Cliente</th>
+                    <th className="py-3.5 px-4 text-right">Total</th>
+                    <th className="py-3.5 px-4 text-center">Estado SRI</th>
+                    <th className="py-3.5 px-4 text-center">Acciones</th>
                   </tr>
-                ) : tab === 'facturas' ? (
-                  filteredFacturas.map((row) => (
-                    <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
-                      <td className="px-6 py-4">
-                        <span className="font-bold text-zinc-900 dark:text-zinc-100 font-mono text-xs">{row.invoiceNumber}</span>
-                      </td>
-                      <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{row.date}</td>
-                      <td className="px-6 py-4">
-                        <p className="font-medium text-zinc-900 dark:text-zinc-100">{row.clientName}</p>
-                        <p className="text-xs text-zinc-500">{row.clientRfc} — {row.concept}</p>
-                      </td>
-                      <td className="px-6 py-4 text-right font-bold text-zinc-900 dark:text-zinc-100">
-                        ${Number(row.amount || 0).toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                          row.status === 'Pendiente' ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' :
-                          row.status === 'Autorizado' || row.status === 'Pagada' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' :
-                          'bg-rose-50 text-rose-600 dark:bg-rose-500/10'
-                        }`}>
-                          {row.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="text-xs font-mono text-zinc-400">{row.uuid}</span>
-                          <button
-                            onClick={() => openEdit(row, "factura")}
-                            className="p-1.5 text-zinc-400 hover:text-purple-600 transition-colors"
-                            title="Editar / Autorizar SRI"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(row.id, "factura")}
-                            className="p-1.5 text-zinc-400 hover:text-rose-600 transition-colors"
-                            title="Eliminar Factura"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                          </button>
-                        </div>
-                      </td>
+                </thead>
+                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando documentos desde Neon DB...</td>
                     </tr>
-                  ))
-                ) : (
-                  filteredNotas.map((row) => (
-                    <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
-                      <td className="px-6 py-4">
-                        <span className="font-bold text-zinc-900 dark:text-zinc-100 font-mono text-xs">{row.noteNumber}</span>
-                      </td>
-                      <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{row.date}</td>
-                      <td className="px-6 py-4">
-                        <p className="font-medium text-zinc-900 dark:text-zinc-100">{row.clientName}</p>
-                        <p className="text-xs text-zinc-500">{row.invoiceRef}</p>
-                      </td>
-                      <td className="px-6 py-4 text-right font-bold text-rose-600 dark:text-rose-400">
-                        - ${Number(row.total || 0).toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="px-2 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10">
-                          {row.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="text-xs font-mono text-zinc-400">{row.accessKey}</span>
-                          <button
-                            onClick={() => openEdit(row, "nota")}
-                            className="p-1.5 text-zinc-400 hover:text-purple-600 transition-colors"
-                            title="Editar Nota de Crédito"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(row.id, "nota")}
-                            className="p-1.5 text-zinc-400 hover:text-rose-600 transition-colors"
-                            title="Eliminar Nota de Crédito"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="p-3.5 sm:p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs sm:text-sm text-zinc-500">
-            <span>Mostrando {tab === 'facturas' ? filteredFacturas.length : filteredNotas.length} documentos en Neon DB</span>
+                  ) : tab === 'facturas' ? (
+                    filteredFacturas.map((row) => (
+                      <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <span className="font-bold text-blue-600 dark:text-blue-400 font-mono text-xs">#{row.invoiceNumber}</span>
+                        </td>
+                        <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-400 text-xs whitespace-nowrap">{row.date}</td>
+                        <td className="py-3.5 px-4">
+                          <p className="font-semibold text-zinc-900 dark:text-zinc-100">{row.clientName}</p>
+                          <p className="text-xs text-zinc-500">{row.clientRfc} — {row.concept}</p>
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-black text-zinc-900 dark:text-zinc-100">
+                          ${Number(row.amount || 0).toFixed(2)}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                            row.status === 'Pendiente' ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' :
+                            row.status === 'Autorizado' || row.status === 'Pagada' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' :
+                            'bg-rose-50 text-rose-600 dark:bg-rose-500/10'
+                          }`}>
+                            {row.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => openEdit(row, "factura")}
+                              className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-all active:scale-95 flex items-center justify-center shadow-xs"
+                              title="Editar / Autorizar SRI"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(row.id, "factura")}
+                              className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
+                              title="Eliminar Factura"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    filteredNotas.map((row) => (
+                      <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <span className="font-bold text-rose-600 dark:text-rose-400 font-mono text-xs">#{row.noteNumber}</span>
+                        </td>
+                        <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-400 text-xs whitespace-nowrap">{row.date}</td>
+                        <td className="py-3.5 px-4">
+                          <p className="font-semibold text-zinc-900 dark:text-zinc-100">{row.clientName}</p>
+                          <p className="text-xs text-zinc-500">{row.invoiceRef}</p>
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-black text-rose-600 dark:text-rose-400">
+                          - ${Number(row.total || 0).toFixed(2)}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10">
+                            {row.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => openEdit(row, "nota")}
+                              className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-all active:scale-95 flex items-center justify-center shadow-xs"
+                              title="Editar Nota de Crédito"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(row.id, "nota")}
+                              className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
+                              title="Eliminar Nota de Crédito"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-3.5 sm:p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs text-zinc-500">
+              <span>Mostrando {tab === 'facturas' ? filteredFacturas.length : filteredNotas.length} documentos en Neon DB</span>
+            </div>
           </div>
         </div>
       </main>

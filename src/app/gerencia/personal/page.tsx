@@ -207,127 +207,164 @@ export default function GestionPersonal() {
 
         {/* Tablas / Listados */}
         <div className="order-4">
-          {/* Vista Móvil (Tarjetas de Empleados para Android / iOS) */}
-          <div className="md:hidden bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 sm:border-x sm:border-b rounded-2xl sm:rounded-b-2xl divide-y divide-zinc-100 dark:divide-zinc-800 shadow-sm">
+          {/* Vista Móvil (Tarjetas de Empleados) */}
+          <div className="md:hidden space-y-3.5">
           {loading ? (
-            <div className="p-6 text-center text-sm text-zinc-500">Cargando personal desde Neon DB...</div>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-8 text-center text-sm text-zinc-500">
+              Cargando personal desde Neon DB...
+            </div>
           ) : filtered.length === 0 ? (
-            <div className="p-6 text-center text-sm text-zinc-500">No se encontraron empleados</div>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-8 text-center text-sm text-zinc-500">
+              No se encontraron empleados
+            </div>
           ) : (
             filtered.map((row) => (
-              <div key={row.id} className="p-4 flex flex-col gap-3">
-                <div className="flex items-center justify-between gap-2">
+              <div 
+                key={row.id} 
+                className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+              >
+                {/* Fila Superior: Avatar + Info Principal + Acciones 44px */}
+                <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center font-bold text-purple-600 dark:text-purple-300 flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/40 flex items-center justify-center font-bold text-base text-purple-600 dark:text-purple-400 shrink-0">
                       {(row.name || "E").charAt(0)}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">{row.name}</p>
-                      <p className="text-xs text-zinc-500 truncate">{row.email}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                          {row.name}
+                        </h4>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider border ${
+                          row.status === 'Activo'
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/40'
+                            : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border-amber-200 dark:border-amber-800/40'
+                        }`}>
+                          {row.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
+                        {row.email}
+                      </p>
                     </div>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex-shrink-0 ${row.status === 'Activo' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' : 'bg-amber-50 text-amber-600 dark:bg-amber-500/10'}`}>
-                    {row.status}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-zinc-500 pt-1">
-                  <div>
-                    <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-1 rounded-md font-medium mr-2">
-                      {row.role}
-                    </span>
-                    <span>📍 {row.location}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
+
+                  {/* Acciones Móvil 44px */}
+                  <div className="flex items-center gap-1 shrink-0">
                     <button
                       onClick={() => openEdit(row)}
-                      className="px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 font-semibold active:scale-95"
+                      aria-label="Editar Empleado"
+                      className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 active:scale-95 transition-all"
                     >
-                      Editar
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                     </button>
                     <button
                       onClick={() => handleDelete(row.id)}
-                      className="px-3 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold active:scale-95"
+                      aria-label="Eliminar Empleado"
+                      className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 active:scale-95 transition-all"
                     >
-                      Borrar
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
+                  </div>
+                </div>
+
+                {/* Fila Inferior: Rol y Ubicación + Último Acceso */}
+                <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800/60 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium">
+                      {row.role}
+                    </span>
+                    <span className="text-zinc-500 dark:text-zinc-400">
+                      📍 {row.location}
+                    </span>
+                  </div>
+                  <div className="text-zinc-400 dark:text-zinc-500 text-[11px] font-mono whitespace-nowrap ml-auto">
+                    {row.lastLogin}
                   </div>
                 </div>
               </div>
             ))
           )}
-        </div>
+          </div>
 
-        {/* Vista Desktop (Tabla de Personal) */}
-        <div className="hidden md:block bg-white dark:bg-zinc-900 border-x border-b border-zinc-100 dark:border-zinc-800 rounded-b-3xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400">
-                <tr>
-                  <th className="px-6 py-4 font-medium">Empleado</th>
-                  <th className="px-6 py-4 font-medium">Rol</th>
-                  <th className="px-6 py-4 font-medium">Ubicación</th>
-                  <th className="px-6 py-4 font-medium">Último Acceso</th>
-                  <th className="px-6 py-4 font-medium">Estado</th>
-                  <th className="px-6 py-4 font-medium text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {loading ? (
+          {/* Vista Desktop (Tabla de Personal) */}
+          <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider font-semibold">
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando personal desde Neon DB...</td>
+                    <th className="py-3.5 px-4 font-semibold">Empleado</th>
+                    <th className="py-3.5 px-4 font-semibold">Rol</th>
+                    <th className="py-3.5 px-4 font-semibold">Ubicación</th>
+                    <th className="py-3.5 px-4 font-semibold">Último Acceso</th>
+                    <th className="py-3.5 px-4 font-semibold">Estado</th>
+                    <th className="py-3.5 px-4 font-semibold text-right">Acciones</th>
                   </tr>
-                ) : filtered.map((row) => (
-                  <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center font-bold text-zinc-500">
-                          {(row.name || "E").charAt(0)}
+                </thead>
+                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando personal desde Neon DB...</td>
+                    </tr>
+                  ) : filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">No se encontraron empleados</td>
+                    </tr>
+                  ) : filtered.map((row) => (
+                    <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/40 flex items-center justify-center font-bold text-sm text-purple-600 dark:text-purple-400 shrink-0">
+                            {(row.name || "E").charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-zinc-900 dark:text-zinc-100">{row.name}</p>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">{row.email}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-zinc-900 dark:text-zinc-100">{row.name}</p>
-                          <p className="text-xs text-zinc-500">{row.email}</p>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-1 rounded-lg text-xs font-medium">
+                          {row.role}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-zinc-600 dark:text-zinc-400">{row.location}</td>
+                      <td className="py-3 px-4 text-zinc-500 dark:text-zinc-400 font-mono text-xs">{row.lastLogin}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wider border ${
+                          row.status === 'Activo'
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/40'
+                            : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border-amber-200 dark:border-amber-800/40'
+                        }`}>
+                          {row.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => openEdit(row)}
+                            className="w-8 h-8 rounded-xl flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                            title="Editar Empleado"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(row.id)}
+                            className="w-8 h-8 rounded-xl flex items-center justify-center bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors"
+                            title="Eliminar Empleado"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                          </button>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-1 rounded-lg text-xs font-medium">
-                        {row.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{row.location}</td>
-                    <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400">{row.lastLogin}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-lg text-xs font-medium ${row.status === 'Activo' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' : 'bg-amber-50 text-amber-600 dark:bg-amber-500/10'}`}>
-                        {row.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => openEdit(row)}
-                          className="p-2 text-zinc-400 hover:text-purple-600 transition-colors"
-                          title="Editar Empleado"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                        </button>
-                        <button
-                          onClick={() => handleDelete(row.id)}
-                          className="p-2 text-zinc-400 hover:text-rose-600 transition-colors"
-                          title="Eliminar Empleado"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="py-3 px-4 border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center text-xs text-zinc-500 dark:text-zinc-400">
+              <span>Mostrando {filtered.length} de {employees.length} empleados en Neon DB</span>
+            </div>
           </div>
-          <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-sm text-zinc-500">
-            <span>Mostrando {filtered.length} de {employees.length} empleados en Neon DB</span>
-          </div>
-        </div>
         </div>
       </main>
 

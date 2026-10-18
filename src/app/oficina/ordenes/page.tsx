@@ -234,226 +234,295 @@ export default function OrdenesCotizaciones() {
 
         {/* Tablas / Listados */}
         <div className="order-4">
-          {/* Vista Móvil (Tarjetas nativas Android / iOS) */}
-          <div className="md:hidden bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 sm:border-x sm:border-b rounded-2xl sm:rounded-b-2xl divide-y divide-zinc-100 dark:divide-zinc-800 shadow-sm">
-          {loading ? (
-            <div className="p-6 text-center text-sm text-zinc-500">Cargando desde Neon DB...</div>
-          ) : view === "cotizaciones" ? (
-            filteredQuotes.length === 0 ? (
-              <div className="p-6 text-center text-sm text-zinc-500">No hay cotizaciones registradas</div>
-            ) : (
-              filteredQuotes.map((row) => (
-                <div key={row.id} className="p-4 flex flex-col gap-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400">{row.quoteNumber}</span>
-                      <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">{row.clientName}</p>
-                      <p className="text-xs text-zinc-500 truncate">{row.vehicle} {row.plate ? `(${row.plate})` : ""}</p>
-                    </div>
-                    <span className="text-base font-extrabold text-zinc-900 dark:text-white whitespace-nowrap">
-                      ${Number(row.total || 0).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between pt-1 gap-2 flex-wrap">
-                    <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
-                      row.status.includes('Pendiente') ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' :
-                      row.status === 'Aprobada' ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10' :
-                      row.status === 'Facturada' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' :
-                      'bg-rose-50 text-rose-600 dark:bg-rose-500/10'
-                    }`}>
-                      {row.status}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      {row.status.includes('Pendiente') && (
+          {/* Vista Móvil (Tarjetas adaptadas a facturas) */}
+          <div className="md:hidden space-y-3.5">
+            {loading ? (
+              <div className="p-8 text-center text-sm text-zinc-500 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                Cargando desde Neon DB...
+              </div>
+            ) : view === "cotizaciones" ? (
+              filteredQuotes.length === 0 ? (
+                <div className="p-8 text-center text-sm text-zinc-500 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                  No hay cotizaciones registradas
+                </div>
+              ) : (
+                filteredQuotes.map((row) => (
+                  <div
+                    key={row.id}
+                    className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30">
+                          📋
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                              {row.clientName}
+                            </p>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider border ${
+                              row.status.includes('Pendiente') ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                              row.status === 'Aprobada' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' :
+                              row.status === 'Facturada' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
+                              'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                            }`}>
+                              {row.status}
+                            </span>
+                          </div>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
+                            <span className="font-semibold text-amber-600 dark:text-amber-400">#{row.quoteNumber}</span>
+                            <span> • {row.vehicle} {row.plate ? `(${row.plate})` : ""}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Acciones Rápidas (Toque táctil >= 44px) */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {row.status.includes('Pendiente') && (
+                          <button
+                            type="button"
+                            onClick={() => handleApproveQuote(row)}
+                            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 active:scale-95 transition-all cursor-pointer font-bold text-sm"
+                            title="Aprobar Cotización"
+                            aria-label="Aprobar Cotización"
+                          >
+                            ✓
+                          </button>
+                        )}
                         <button
-                          onClick={() => handleApproveQuote(row)}
-                          className="px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold active:scale-95"
+                          type="button"
+                          onClick={() => openEditModal(row, "cotizacion")}
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all cursor-pointer"
+                          title="Editar Cotización"
+                          aria-label="Editar Cotización"
                         >
-                          ✓ Aprobar
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
                         </button>
-                      )}
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(row.id, "cotizacion")}
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-rose-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95 transition-all cursor-pointer"
+                          title="Borrar Cotización"
+                          aria-label="Borrar Cotización"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Datos secundarios (Total y Fecha) */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 font-bold font-mono text-xs">
+                        💰 ${Number(row.total || 0).toFixed(2)}
+                      </span>
+
+                      <span className="text-zinc-400 ml-auto text-[11px] whitespace-nowrap">
+                        {row.date}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )
+            ) : filteredOrders.length === 0 ? (
+              <div className="p-8 text-center text-sm text-zinc-500 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                No hay órdenes de trabajo registradas
+              </div>
+            ) : (
+              filteredOrders.map((row) => (
+                <div
+                  key={row.id}
+                  className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30">
+                        🚗
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                            {row.client}
+                          </p>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider border ${
+                            row.status.includes('Esperando') ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                            row.status === 'Terminado' || row.status === 'Entregado' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
+                            'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                          }`}>
+                            {row.status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
+                          <span className="font-semibold text-blue-600 dark:text-blue-400">#{row.orderNumber}</span>
+                          <span> • {row.vehicle} ({row.plate})</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Acciones Rápidas (Toque táctil >= 44px) */}
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <button
-                        onClick={() => openEditModal(row, "cotizacion")}
-                        className="px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-semibold active:scale-95"
+                        type="button"
+                        onClick={() => openEditModal(row, "orden")}
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all cursor-pointer"
+                        title="Editar Orden"
+                        aria-label="Editar Orden"
                       >
-                        Editar
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
                       </button>
                       <button
-                        onClick={() => handleDelete(row.id, "cotizacion")}
-                        className="px-2.5 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-semibold active:scale-95"
+                        type="button"
+                        onClick={() => handleDelete(row.id, "orden")}
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-rose-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95 transition-all cursor-pointer"
+                        title="Borrar Orden"
+                        aria-label="Borrar Orden"
                       >
-                        Borrar
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
                       </button>
                     </div>
+                  </div>
+
+                  {/* Datos secundarios (Total) */}
+                  <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-sky-400 border border-blue-200 dark:border-blue-500/20 font-bold font-mono text-xs">
+                      💰 ${Number(row.totalCost || 0).toFixed(2)}
+                    </span>
                   </div>
                 </div>
               ))
-            )
-          ) : filteredOrders.length === 0 ? (
-            <div className="p-6 text-center text-sm text-zinc-500">No hay órdenes de trabajo registradas</div>
-          ) : (
-            filteredOrders.map((row) => (
-              <div key={row.id} className="p-4 flex flex-col gap-2.5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">{row.orderNumber}</span>
-                    <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">{row.client}</p>
-                    <p className="text-xs text-zinc-500 truncate">{row.vehicle} ({row.plate})</p>
-                  </div>
-                  <span className="text-base font-extrabold text-zinc-900 dark:text-white whitespace-nowrap">
-                    ${Number(row.totalCost || 0).toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between pt-1">
-                  <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
-                    row.status.includes('Esperando') ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' :
-                    row.status === 'Terminado' || row.status === 'Entregado' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' :
-                    'bg-blue-50 text-blue-600 dark:bg-blue-500/10'
-                  }`}>
-                    {row.status}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => openEditModal(row, "orden")}
-                      className="px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-semibold active:scale-95"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(row.id, "orden")}
-                      className="px-3 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-semibold active:scale-95"
-                    >
-                      Borrar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Vista Desktop (Tabla Dinámica) */}
-        <div className="hidden md:block bg-white dark:bg-zinc-900 border-x border-b border-zinc-100 dark:border-zinc-800 rounded-b-3xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400">
-                <tr>
-                  <th className="px-6 py-4 font-medium">Documento</th>
-                  <th className="px-6 py-4 font-medium">Cliente / Vehículo</th>
-                  <th className="px-6 py-4 font-medium">Creado</th>
-                  <th className="px-6 py-4 font-medium">Estado</th>
-                  <th className="px-6 py-4 font-medium text-right">Total</th>
-                  <th className="px-6 py-4 font-medium text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando desde Neon DB...</td>
-                  </tr>
-                ) : view === 'cotizaciones' ? (
-                  filteredQuotes.map((row) => (
-                    <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
-                      <td className="px-6 py-4">
-                        <span className="font-bold text-zinc-900 dark:text-zinc-100">{row.quoteNumber}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="font-medium text-zinc-900 dark:text-zinc-100">{row.clientName}</p>
-                        <p className="text-xs text-zinc-500">{row.vehicle} {row.plate ? `(${row.plate})` : ""}</p>
-                      </td>
-                      <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{row.date}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                          row.status.includes('Pendiente') ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' :
-                          row.status === 'Aprobada' ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10' :
-                          row.status === 'Facturada' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' :
-                          'bg-rose-50 text-rose-600 dark:bg-rose-500/10'
-                        }`}>
-                          {row.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right font-bold text-zinc-900 dark:text-zinc-100">
-                        ${Number(row.total || 0).toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {row.status.includes('Pendiente') && (
-                            <button
-                              onClick={() => handleApproveQuote(row)}
-                              className="p-1.5 text-zinc-400 hover:text-emerald-600 transition-colors"
-                              title="Aprobar Cotización y Crear Orden en Taller"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-                            </button>
-                          )}
-                          <button
-                            onClick={() => openEditModal(row, "cotizacion")}
-                            className="p-1.5 text-zinc-400 hover:text-blue-600 transition-colors"
-                            title="Editar Cotización"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(row.id, "cotizacion")}
-                            className="p-1.5 text-zinc-400 hover:text-rose-600 transition-colors"
-                            title="Eliminar"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  filteredOrders.map((row) => (
-                    <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
-                      <td className="px-6 py-4">
-                        <span className="font-bold text-zinc-900 dark:text-zinc-100">{row.orderNumber}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="font-medium text-zinc-900 dark:text-zinc-100">{row.client}</p>
-                        <p className="text-xs text-zinc-500">{row.vehicle} ({row.plate})</p>
-                      </td>
-                      <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">
-                        {new Date(row.createdAt).toLocaleDateString("es-EC")}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                          row.status.includes('Esperando') ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' :
-                          row.status === 'Terminado' || row.status === 'Entregado' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' :
-                          'bg-blue-50 text-blue-600 dark:bg-blue-500/10'
-                        }`}>
-                          {row.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right font-bold text-zinc-900 dark:text-zinc-100">
-                        ${Number(row.totalCost || 0).toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => openEditModal(row, "orden")}
-                            className="p-1.5 text-zinc-400 hover:text-blue-600 transition-colors"
-                            title="Editar Orden"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(row.id, "orden")}
-                            className="p-1.5 text-zinc-400 hover:text-rose-600 transition-colors"
-                            title="Eliminar Orden"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            )}
           </div>
-        </div>
+
+          {/* Vista Desktop (Tabla Dinámica) */}
+          <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider font-semibold">
+                  <tr>
+                    <th className="py-3.5 px-4">Documento</th>
+                    <th className="py-3.5 px-4">Cliente / Vehículo</th>
+                    <th className="py-3.5 px-4">Creado</th>
+                    <th className="py-3.5 px-4">Estado</th>
+                    <th className="py-3.5 px-4 text-right">Total</th>
+                    <th className="py-3.5 px-4 text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando desde Neon DB...</td>
+                    </tr>
+                  ) : view === 'cotizaciones' ? (
+                    filteredQuotes.map((row) => (
+                      <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <span className="font-bold text-amber-600 dark:text-amber-400 font-mono text-xs">#{row.quoteNumber}</span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <p className="font-semibold text-zinc-900 dark:text-zinc-100">{row.clientName}</p>
+                          <p className="text-xs text-zinc-500">{row.vehicle} {row.plate ? `(${row.plate})` : ""}</p>
+                        </td>
+                        <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-400 text-xs whitespace-nowrap">{row.date}</td>
+                        <td className="py-3.5 px-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                            row.status.includes('Pendiente') ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' :
+                            row.status === 'Aprobada' ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10' :
+                            row.status === 'Facturada' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' :
+                            'bg-rose-50 text-rose-600 dark:bg-rose-500/10'
+                          }`}>
+                            {row.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-black text-zinc-900 dark:text-zinc-100">
+                          ${Number(row.total || 0).toFixed(2)}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {row.status.includes('Pendiente') && (
+                              <button
+                                onClick={() => handleApproveQuote(row)}
+                                className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 transition-all active:scale-95 flex items-center justify-center shadow-xs"
+                                title="Aprobar Cotización y Crear Orden en Taller"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                              </button>
+                            )}
+                            <button
+                              onClick={() => openEditModal(row, "cotizacion")}
+                              className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-all active:scale-95 flex items-center justify-center shadow-xs"
+                              title="Editar Cotización"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(row.id, "cotizacion")}
+                              className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
+                              title="Eliminar"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    filteredOrders.map((row) => (
+                      <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <span className="font-bold text-blue-600 dark:text-blue-400 font-mono text-xs">#{row.orderNumber}</span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <p className="font-semibold text-zinc-900 dark:text-zinc-100">{row.client}</p>
+                          <p className="text-xs text-zinc-500">{row.vehicle} ({row.plate})</p>
+                        </td>
+                        <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-400 text-xs whitespace-nowrap">
+                          {new Date(row.createdAt).toLocaleDateString("es-EC")}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                            row.status.includes('Esperando') ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' :
+                            row.status === 'Terminado' || row.status === 'Entregado' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' :
+                            'bg-blue-50 text-blue-600 dark:bg-blue-500/10'
+                          }`}>
+                            {row.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-black text-zinc-900 dark:text-zinc-100">
+                          ${Number(row.totalCost || 0).toFixed(2)}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => openEditModal(row, "orden")}
+                              className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-all active:scale-95 flex items-center justify-center shadow-xs"
+                              title="Editar Orden"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(row.id, "orden")}
+                              className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
+                              title="Eliminar Orden"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </main>
 

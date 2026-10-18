@@ -498,14 +498,14 @@ export default function CatalogoPage() {
         </div>
 
         {/* Products List / Table */}
-        <div className="order-4 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
+        <div className="order-4">
           {cargando && productos.length === 0 ? (
-            <div className="p-12 text-center text-zinc-500 dark:text-zinc-400">
+            <div className="p-12 text-center text-zinc-500 dark:text-zinc-400 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
               <div className="w-7 h-7 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
               <p className="text-sm">Cargando catálogo...</p>
             </div>
           ) : productosFiltrados.length === 0 ? (
-            <div className="p-12 text-center">
+            <div className="p-12 text-center bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
               <div className="flex flex-col items-center justify-center gap-3 max-w-sm mx-auto">
                 <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-3xl text-blue-600">
                   📦
@@ -523,186 +523,179 @@ export default function CatalogoPage() {
             </div>
           ) : (
             <>
-              {/* Mobile Cards (md:hidden) */}
-              <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+              {/* Mobile Cards (md:hidden) adaptadas con orden idéntico a facturas */}
+              <div className="md:hidden space-y-3.5">
                 {productosFiltrados.map((item) => (
-                  <div key={item.id} className="p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <div className="font-bold text-zinc-900 dark:text-white text-base leading-snug">
-                          {item.name}
+                  <div
+                    key={item.id}
+                    className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {/* Icono de producto estilo factura */}
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30">
+                          📦
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs font-mono bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
-                            {item.code}
-                          </span>
-                          {item.brand && (
-                            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                              {item.brand}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                              {item.name}
+                            </p>
+                            <span
+                              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${getStatusColor(
+                                item.status
+                              )}`}
+                            >
+                              {item.status} ({item.stock} uds)
                             </span>
-                          )}
+                          </div>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
+                            <span className="font-semibold text-blue-600 dark:text-blue-400">#{item.code}</span>
+                            {item.brand && <span> • {item.brand}</span>}
+                          </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-xl font-black text-zinc-900 dark:text-white block">
-                          ${Number(item.price).toFixed(2)}
-                        </span>
-                        <span className="text-[10px] text-zinc-400">P.V.P</span>
+
+                      {/* Acciones Rápidas (Toque táctil >= 44px) */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Link
+                          href={`/pos/catalogo/editar?id=${item.id}`}
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all"
+                          title="Editar producto"
+                          aria-label="Editar producto"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </Link>
+                        <button
+                          onClick={() => setProductoAEliminar(item)}
+                          disabled={eliminandoId === item.id}
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-rose-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+                          title="Eliminar producto"
+                          aria-label="Eliminar producto"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
-                          {item.category}
-                        </span>
-                        <span
-                          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${getStatusColor(
-                            item.status
-                          )}`}
-                        >
-                          {item.status} ({item.stock} uds)
-                        </span>
-                      </div>
+                    {/* Datos secundarios (Precio, Categoría, Ubicación) */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-sky-400 border border-blue-200 dark:border-blue-500/20 font-bold font-mono text-xs">
+                        💰 ${Number(item.price).toFixed(2)}
+                      </span>
+
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 text-xs font-medium">
+                        {item.category}
+                      </span>
+
                       {item.location && (
-                        <span className="text-zinc-400 text-xs flex items-center gap-1">
+                        <span className="text-zinc-400 ml-auto text-[11px] whitespace-nowrap flex items-center gap-1">
                           <span>📍</span> {item.location}
                         </span>
                       )}
-                    </div>
-
-                    {/* Action buttons (Touch target >= 44px) */}
-                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/60">
-                      <Link
-                        href={`/pos/catalogo/editar?id=${item.id}`}
-                        className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 active:scale-95 transition-all flex items-center justify-center cursor-pointer shadow-xs"
-                        title="Editar producto"
-                        aria-label="Editar producto"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </Link>
-                      <button
-                        onClick={() => setProductoAEliminar(item)}
-                        disabled={eliminandoId === item.id}
-                        className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-all flex items-center justify-center active:scale-95 disabled:opacity-50 cursor-pointer shadow-xs"
-                        title="Eliminar producto"
-                        aria-label="Eliminar producto"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
                     </div>
                   </div>
                 ))}
               </div>
 
               {/* Desktop Table (hidden md:block) */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[800px]">
-                  <thead>
-                    <tr className="bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800">
-                      <th className="px-6 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                        Producto
-                      </th>
-                      <th className="px-6 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                        Categoría
-                      </th>
-                      <th className="px-6 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                        Precio
-                      </th>
-                      <th className="px-6 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                        Stock
-                      </th>
-                      <th className="px-6 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                        Ubicación
-                      </th>
-                      <th className="px-6 py-5 text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                    {productosFiltrados.map((item) => (
-                      <tr
-                        key={item.id}
-                        className="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors group"
-                      >
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-zinc-900 dark:text-white mb-1">{item.name}</div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-mono bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
-                              {item.code}
-                            </span>
-                            {item.brand && (
-                              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                                {item.brand}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
-                            {item.category}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 font-black text-zinc-900 dark:text-white">
-                          ${Number(item.price).toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col gap-1.5 items-start">
-                            <span className="font-bold text-zinc-900 dark:text-white">
-                              {item.stock} <span className="text-sm font-normal text-zinc-500">uds.</span>
-                            </span>
-                            <span
-                              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${getStatusColor(
-                                item.status
-                              )}`}
-                            >
-                              {item.status}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400 font-medium">
-                          {item.location ? (
-                            <span className="flex items-center gap-1.5">
-                              <span className="text-zinc-400">📍</span> {item.location}
-                            </span>
-                          ) : (
-                            <span className="text-zinc-400 text-xs italic">Sin ubicación</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Link
-                              href={`/pos/catalogo/editar?id=${item.id}`}
-                              className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
-                              title="Editar producto"
-                              aria-label="Editar producto"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
-                            </Link>
-                            <button
-                              onClick={() => setProductoAEliminar(item)}
-                              disabled={eliminandoId === item.id}
-                              className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs disabled:opacity-50"
-                              title="Eliminar Producto"
-                              aria-label="Eliminar producto"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          </div>
-                        </td>
+              <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider font-semibold">
+                      <tr>
+                        <th className="py-3.5 px-4">Producto</th>
+                        <th className="py-3.5 px-4">Categoría</th>
+                        <th className="py-3.5 px-4 text-right">Precio</th>
+                        <th className="py-3.5 px-4">Stock</th>
+                        <th className="py-3.5 px-4">Ubicación</th>
+                        <th className="py-3.5 px-4 text-center">Acciones</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                      {productosFiltrados.map((item) => (
+                        <tr
+                          key={item.id}
+                          className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
+                        >
+                          <td className="py-3.5 px-4">
+                            <div className="font-bold text-zinc-900 dark:text-white mb-0.5">{item.name}</div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-mono bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                                {item.code}
+                              </span>
+                              {item.brand && (
+                                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                                  {item.brand}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                              {item.category}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-black text-zinc-900 dark:text-white">
+                            ${Number(item.price).toFixed(2)}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="flex flex-col gap-1 items-start">
+                              <span className="font-bold text-zinc-900 dark:text-white">
+                                {item.stock} <span className="text-xs font-normal text-zinc-500">uds.</span>
+                              </span>
+                              <span
+                                className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${getStatusColor(
+                                  item.status
+                                )}`}
+                              >
+                                {item.status}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-sm text-zinc-600 dark:text-zinc-400 font-medium">
+                            {item.location ? (
+                              <span className="flex items-center gap-1.5">
+                                <span className="text-zinc-400">📍</span> {item.location}
+                              </span>
+                            ) : (
+                              <span className="text-zinc-400 text-xs italic">Sin ubicación</span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <Link
+                                href={`/pos/catalogo/editar?id=${item.id}`}
+                                className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
+                                title="Editar producto"
+                                aria-label="Editar producto"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                              </Link>
+                              <button
+                                onClick={() => setProductoAEliminar(item)}
+                                disabled={eliminandoId === item.id}
+                                className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs disabled:opacity-50"
+                                title="Eliminar Producto"
+                                aria-label="Eliminar producto"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </>
           )}

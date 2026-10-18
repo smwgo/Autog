@@ -252,162 +252,192 @@ export default function InventarioGlobal() {
 
         {/* Tablas / Listados */}
         <div className="order-4">
-          {/* Vista Móvil (Tarjetas de Inventario para Android / iOS) */}
-          <div className="md:hidden bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 sm:border-x sm:border-b rounded-2xl sm:rounded-b-2xl divide-y divide-zinc-100 dark:divide-zinc-800 shadow-sm">
-          {loading ? (
-            <div className="p-6 text-center text-sm text-zinc-500">Cargando inventario desde Neon DB...</div>
-          ) : filtered.length === 0 ? (
-            <div className="p-6 text-center text-sm text-zinc-500">No se encontraron productos</div>
-          ) : (
-            filtered.map((row) => {
-              const s1 = Number(row.stock ?? 0);
-              const s2 = Number(row.stockNorte ?? 10);
-              const min = Number(row.minStock ?? 5);
-              const alert = s1 <= min || s2 <= min;
-              return (
-                <div key={row.id} className="p-4 flex flex-col gap-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 leading-snug">{row.name}</p>
-                      <p className="text-xs text-zinc-500 font-mono mt-0.5">{row.code} • {row.category}</p>
-                    </div>
-                    <span className="text-base font-extrabold text-zinc-900 dark:text-white whitespace-nowrap">
-                      ${Number(row.price || 0).toFixed(2)}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-2.5 rounded-xl text-xs">
-                    <div className="flex justify-between items-center">
-                      <span className="text-zinc-500">Sede Principal:</span>
-                      <span className={`font-bold ${s1 <= min ? "text-rose-600 dark:text-rose-400" : "text-zinc-900 dark:text-white"}`}>{s1} u.</span>
-                    </div>
-                    <div className="flex justify-between items-center border-l border-zinc-200 dark:border-zinc-700 pl-2">
-                      <span className="text-zinc-500">Suc. Norte:</span>
-                      <span className={`font-bold ${s2 <= min ? "text-rose-600 dark:text-rose-400" : "text-zinc-900 dark:text-white"}`}>{s2} u.</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-0.5">
-                    {alert ? (
-                      <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 px-2.5 py-1 rounded-lg text-xs font-semibold">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span> Reabastecer
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 px-2.5 py-1 rounded-lg text-xs font-semibold">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Óptimo
-                      </span>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => openEdit(row)}
-                        className="px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold active:scale-95"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => handleDelete(row.id)}
-                        className="px-3 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-semibold active:scale-95"
-                      >
-                        Borrar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Vista Desktop (Tabla de Inventario) */}
-        <div className="hidden md:block bg-white dark:bg-zinc-900 border-x border-b border-zinc-100 dark:border-zinc-800 rounded-b-3xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400">
-                <tr>
-                  <th className="px-6 py-4 font-medium">Código / Producto</th>
-                  <th className="px-6 py-4 font-medium">Categoría</th>
-                  <th className="px-6 py-4 font-medium text-right">Precio Venta</th>
-                  <th className="px-6 py-4 font-medium text-center">Stock Principal</th>
-                  <th className="px-6 py-4 font-medium text-center">Stock Norte</th>
-                  <th className="px-6 py-4 font-medium text-center">Estado</th>
-                  <th className="px-6 py-4 font-medium text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {loading ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-zinc-500">Cargando inventario desde Neon DB...</td>
-                  </tr>
-                ) : filtered.map((row) => {
-                  const s1 = Number(row.stock ?? 0);
-                  const s2 = Number(row.stockNorte ?? 10);
-                  const min = Number(row.minStock ?? 5);
-                  const alert = s1 <= min || s2 <= min;
-                  return (
-                    <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
-                      <td className="px-6 py-4">
-                        <p className="font-bold text-zinc-900 dark:text-zinc-100">{row.name}</p>
-                        <p className="text-xs text-zinc-500 font-mono mt-0.5">{row.code}</p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-2 py-1 rounded-lg text-xs font-medium">
-                          {row.category}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right font-medium text-zinc-900 dark:text-zinc-100">
-                        ${Number(row.price || 0).toFixed(2)}
-                      </td>
-                      
-                      <td className="px-6 py-4 text-center">
-                        <span className={`font-bold ${s1 <= min ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-700 dark:text-zinc-300'}`}>
-                          {s1}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`font-bold ${s2 <= min ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-700 dark:text-zinc-300'}`}>
-                          {s2}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4 text-center">
-                        {alert ? (
-                          <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 px-2 py-1 rounded-lg text-xs font-medium">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span> Reabastecer
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 px-2 py-1 rounded-lg text-xs font-medium">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Óptimo
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => openEdit(row)}
-                            className="p-2 text-zinc-400 hover:text-amber-500 transition-colors"
-                            title="Editar Producto"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(row.id)}
-                            className="p-2 text-zinc-400 hover:text-rose-600 transition-colors"
-                            title="Eliminar Producto"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                          </button>
+          {/* Vista Móvil (Tarjetas adaptadas a facturas) */}
+          <div className="md:hidden space-y-3.5">
+            {loading ? (
+              <div className="p-8 text-center text-sm text-zinc-500 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                Cargando inventario desde Neon DB...
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="p-8 text-center text-sm text-zinc-500 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                No se encontraron productos
+              </div>
+            ) : (
+              filtered.map((row) => {
+                const s1 = Number(row.stock ?? 0);
+                const s2 = Number(row.stockNorte ?? 10);
+                const min = Number(row.minStock ?? 5);
+                const alert = s1 <= min || s2 <= min;
+                return (
+                  <div
+                    key={row.id}
+                    className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30">
+                          📦
                         </div>
-                      </td>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                              {row.name}
+                            </p>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider border ${
+                              alert
+                                ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                            }`}>
+                              {alert ? "Reabastecer" : "Óptimo"}
+                            </span>
+                          </div>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
+                            <span className="font-semibold text-amber-600 dark:text-amber-400">#{row.code}</span>
+                            <span> • {row.category}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Acciones Rápidas (Toque táctil >= 44px) */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(row)}
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-amber-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-amber-50 dark:hover:bg-amber-500/10 active:scale-95 transition-all cursor-pointer"
+                          title="Editar Producto"
+                          aria-label="Editar Producto"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(row.id)}
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-rose-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95 transition-all cursor-pointer"
+                          title="Eliminar Producto"
+                          aria-label="Eliminar Producto"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-2.5 rounded-xl text-xs">
+                      <div className="flex justify-between items-center">
+                        <span className="text-zinc-500">Sede Principal:</span>
+                        <span className={`font-bold ${s1 <= min ? "text-rose-600 dark:text-rose-400" : "text-zinc-900 dark:text-white"}`}>{s1} u.</span>
+                      </div>
+                      <div className="flex justify-between items-center border-l border-zinc-200 dark:border-zinc-700 pl-2">
+                        <span className="text-zinc-500">Suc. Norte:</span>
+                        <span className={`font-bold ${s2 <= min ? "text-rose-600 dark:text-rose-400" : "text-zinc-900 dark:text-white"}`}>{s2} u.</span>
+                      </div>
+                    </div>
+
+                    {/* Datos secundarios (Precio) */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 font-bold font-mono text-xs">
+                        💰 ${Number(row.price || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Vista Desktop (Tabla de Inventario) */}
+          <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider font-semibold">
+                  <tr>
+                    <th className="py-3.5 px-4">Código / Producto</th>
+                    <th className="py-3.5 px-4">Categoría</th>
+                    <th className="py-3.5 px-4 text-right">Precio Venta</th>
+                    <th className="py-3.5 px-4 text-center">Stock Principal</th>
+                    <th className="py-3.5 px-4 text-center">Stock Norte</th>
+                    <th className="py-3.5 px-4 text-center">Estado</th>
+                    <th className="py-3.5 px-4 text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-8 text-center text-zinc-500">Cargando inventario desde Neon DB...</td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  ) : filtered.map((row) => {
+                    const s1 = Number(row.stock ?? 0);
+                    const s2 = Number(row.stockNorte ?? 10);
+                    const min = Number(row.minStock ?? 5);
+                    const alert = s1 <= min || s2 <= min;
+                    return (
+                      <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <p className="font-semibold text-zinc-900 dark:text-zinc-100">{row.name}</p>
+                          <p className="text-xs text-zinc-500 font-mono mt-0.5">#{row.code}</p>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-2 py-0.5 rounded-lg text-xs font-medium border border-zinc-200 dark:border-zinc-700">
+                            {row.category}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-black text-zinc-900 dark:text-zinc-100">
+                          ${Number(row.price || 0).toFixed(2)}
+                        </td>
+                        
+                        <td className="py-3.5 px-4 text-center">
+                          <span className={`font-bold ${s1 <= min ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-700 dark:text-zinc-300'}`}>
+                            {s1}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className={`font-bold ${s2 <= min ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-700 dark:text-zinc-300'}`}>
+                            {s2}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-4 text-center">
+                          {alert ? (
+                            <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 px-2.5 py-1 rounded-full text-xs font-semibold border border-rose-200 dark:border-rose-500/20">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span> Reabastecer
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 px-2.5 py-1 rounded-full text-xs font-semibold border border-emerald-200 dark:border-emerald-500/20">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Óptimo
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => openEdit(row)}
+                              className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 transition-all active:scale-95 flex items-center justify-center shadow-xs"
+                              title="Editar Producto"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(row.id)}
+                              className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
+                              title="Eliminar Producto"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-sm text-zinc-500">
+              <span>Mostrando {filtered.length} de {products.length} productos en Neon DB</span>
+            </div>
           </div>
-          <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-sm text-zinc-500">
-            <span>Mostrando {filtered.length} de {products.length} productos en Neon DB</span>
-          </div>
-        </div>
         </div>
       </main>
 

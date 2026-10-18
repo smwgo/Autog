@@ -397,195 +397,191 @@ export default function ServiciosPosPage() {
             </Link>
           </div>
         ) : (
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
-            {/* Mobile Cards (md:hidden) */}
-            <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+          <div>
+            {/* Mobile Cards (md:hidden) adaptadas con orden idéntico a facturas */}
+            <div className="md:hidden space-y-3.5">
               {serviciosFiltrados.map((s) => (
                 <div
                   key={s.id}
-                  className={`p-4 space-y-3 ${
+                  className={`bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors ${
                     !s.active ? "opacity-60 bg-zinc-50/50 dark:bg-zinc-950/50" : ""
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-mono text-xs font-bold px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded border border-zinc-200 dark:border-zinc-700">
-                          {s.code}
-                        </span>
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            s.active
-                              ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-                              : "bg-zinc-200 dark:bg-zinc-800 text-zinc-500"
-                          }`}
-                        >
-                          {s.active ? "Activo" : "Pausado"}
-                        </span>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Icono de servicio estilo factura */}
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-400 border-teal-200 dark:border-teal-500/30">
+                        🔧
                       </div>
-                      <div className="font-bold text-zinc-900 dark:text-white text-base">
-                        {s.name}
-                      </div>
-                      {s.description && (
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 mt-1">
-                          {s.description}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                            {s.name}
+                          </p>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider border ${
+                              s.active
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                : "bg-zinc-500/10 text-zinc-500 border-zinc-500/20"
+                            }`}
+                          >
+                            {s.active ? "Activo" : "Pausado"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
+                          <span className="font-semibold text-teal-600 dark:text-teal-400">#{s.code}</span>
+                          <span> • {s.category}</span>
                         </p>
-                      )}
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-xl font-black text-zinc-900 dark:text-white block">
-                        ${Number(s.price).toFixed(2)}
-                      </span>
-                      <span className="text-[10px] text-zinc-400">Tarifa</span>
+
+                    {/* Acciones Rápidas (Toque táctil >= 44px) */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Link
+                        href={`/pos/servicios/editar?id=${s.id}`}
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all"
+                        title="Editar servicio"
+                        aria-label="Editar servicio"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => setServicioAEliminar(s)}
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-rose-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95 transition-all cursor-pointer"
+                        title="Eliminar servicio"
+                        aria-label="Eliminar servicio"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-800/40">
-                      {s.category}
+                  {s.description && (
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 bg-zinc-50 dark:bg-zinc-800/60 p-2.5 rounded-xl border border-zinc-100 dark:border-zinc-800">
+                      {s.description}
+                    </p>
+                  )}
+
+                  {/* Datos secundarios (Tarifa, Tiempo, Bahía) */}
+                  <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-500/20 font-bold font-mono text-xs">
+                      💰 ${Number(s.price).toFixed(2)}
                     </span>
-                    <div className="flex items-center gap-2 text-zinc-500 text-xs">
-                      <span>⏱️ {s.estimatedMinutes} min</span>
-                      <span>•</span>
-                      <span>{s.requiresBay ? "🚗 Bahía" : "🧰 Mano de Obra"}</span>
-                    </div>
-                  </div>
 
-                  {/* Botones de acción móvil (Touch target >= 44px) */}
-                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-800/60">
-                    <Link
-                      href={`/pos/servicios/editar?id=${s.id}`}
-                      className="h-11 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 text-blue-600 dark:text-blue-400 text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 shadow-sm"
-                    >
-                      <span>✏️</span> Editar
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => setServicioAEliminar(s)}
-                      className="h-11 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-sm"
-                    >
-                      <span>🗑️</span> Eliminar
-                    </button>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 text-xs font-medium">
+                      ⏱️ {s.estimatedMinutes} min
+                    </span>
+
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 text-xs font-medium">
+                      {s.requiresBay ? "🚗 Bahía" : "🧰 Mano de Obra"}
+                    </span>
                   </div>
                 </div>
               ))}
             </div>
 
             {/* Desktop Table (hidden md:block) */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[850px]">
-                <thead>
-                  <tr className="bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800">
-                    <th className="px-6 py-4 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                      Servicio
-                    </th>
-                    <th className="px-6 py-4 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                      Categoría
-                    </th>
-                    <th className="px-6 py-4 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                      Tiempo / Bahía
-                    </th>
-                    <th className="px-6 py-4 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                      Tarifa
-                    </th>
-                    <th className="px-6 py-4 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                      Estado
-                    </th>
-                    <th className="px-6 py-4 text-xs font-medium text-zinc-600 dark:text-zinc-400 text-right">
-                      Acciones
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                  {serviciosFiltrados.map((s) => (
-                    <tr
-                      key={s.id}
-                      className={`hover:bg-teal-50/40 dark:hover:bg-teal-900/10 transition-colors group ${
-                        !s.active ? "opacity-60 bg-zinc-50/50 dark:bg-zinc-950/50" : ""
-                      }`}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-mono text-xs font-bold px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded border border-zinc-200 dark:border-zinc-700">
-                            {s.code}
-                          </span>
-                          <span className="font-bold text-zinc-900 dark:text-white">
-                            {s.name}
-                          </span>
-                        </div>
-                        {s.description && (
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1 max-w-md">
-                            {s.description}
-                          </p>
-                        )}
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-800/40">
-                          {s.category}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4 text-xs text-zinc-500">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="flex items-center gap-1 font-medium text-zinc-700 dark:text-zinc-300">
-                            ⏱️ {s.estimatedMinutes} min
-                          </span>
-                          <span className="text-[11px] text-zinc-400">
-                            {s.requiresBay ? "🚗 Elevador/Bahía" : "🧰 Mano de Obra"}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <span className="text-lg font-black text-zinc-900 dark:text-white">
-                          ${Number(s.price).toFixed(2)}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                            s.active
-                              ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-                              : "bg-zinc-200 dark:bg-zinc-800 text-zinc-500"
-                          }`}
-                        >
-                          {s.active ? "Activo" : "Pausado"}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link
-                            href={`/pos/servicios/editar?id=${s.id}`}
-                            className="px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-800/60 bg-blue-50/80 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-medium text-xs transition-all active:scale-95 inline-flex items-center gap-1.5 shadow-sm"
-                            title="Editar servicio"
-                          >
-                            <span>✏️</span>
-                            <span>Editar</span>
-                          </Link>
-
-                          <button
-                            type="button"
-                            onClick={() => setServicioAEliminar(s)}
-                            className="px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/80 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 font-medium text-xs transition-all active:scale-95 inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
-                            title="Eliminar servicio"
-                          >
-                            <span>🗑️</span>
-                            <span>Eliminar</span>
-                          </button>
-                        </div>
-                      </td>
+            <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider font-semibold">
+                    <tr>
+                      <th className="py-3.5 px-4">Código</th>
+                      <th className="py-3.5 px-4">Servicio</th>
+                      <th className="py-3.5 px-4">Categoría</th>
+                      <th className="py-3.5 px-4">Tiempo / Bahía</th>
+                      <th className="py-3.5 px-4 text-right">Tarifa</th>
+                      <th className="py-3.5 px-4 text-center">Estado</th>
+                      <th className="py-3.5 px-4 text-center">Acciones</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="px-6 py-3 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs text-zinc-500">
-              <span>Mostrando {servicios.length} {servicios.length === 1 ? "servicio" : "servicios"}</span>
-              <span className="font-semibold text-zinc-700 dark:text-zinc-300">Catálogo de Servicios de Taller</span>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                    {serviciosFiltrados.map((s) => (
+                      <tr
+                        key={s.id}
+                        className={`hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors ${
+                          !s.active ? "opacity-60 bg-zinc-50/50 dark:bg-zinc-950/50" : ""
+                        }`}
+                      >
+                        <td className="py-3.5 px-4 font-mono font-bold text-teal-600 dark:text-teal-400">
+                          {s.code}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="font-semibold text-zinc-900 dark:text-white">
+                            {s.name}
+                          </div>
+                          {s.description && (
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1 max-w-xs mt-0.5">
+                              {s.description}
+                            </p>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800/40">
+                            {s.category}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-xs text-zinc-500">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                              ⏱️ {s.estimatedMinutes} min
+                            </span>
+                            <span className="text-[11px] text-zinc-400">
+                              {s.requiresBay ? "🚗 Elevador/Bahía" : "🧰 Mano de Obra"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-black text-zinc-900 dark:text-white">
+                          ${Number(s.price).toFixed(2)}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                              s.active
+                                ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                                : "bg-zinc-200 dark:bg-zinc-800 text-zinc-500"
+                            }`}
+                          >
+                            {s.active ? "Activo" : "Pausado"}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <Link
+                              href={`/pos/servicios/editar?id=${s.id}`}
+                              className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-all active:scale-95 flex items-center justify-center shadow-xs"
+                              title="Editar servicio"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              </svg>
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => setServicioAEliminar(s)}
+                              className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
+                              title="Eliminar servicio"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="px-6 py-3 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs text-zinc-500">
+                <span>Mostrando {servicios.length} {servicios.length === 1 ? "servicio" : "servicios"}</span>
+                <span className="font-semibold text-zinc-700 dark:text-zinc-300">Catálogo de Servicios de Taller</span>
+              </div>
             </div>
           </div>
         )}

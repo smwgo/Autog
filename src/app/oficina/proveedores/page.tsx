@@ -259,11 +259,13 @@ export default function ComprasProveedores() {
         </div>
 
         {/* Contenedor Principal */}
-        <div className="order-4 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 sm:border-x sm:border-b sm:border-t-0 rounded-2xl sm:rounded-b-3xl sm:rounded-t-none overflow-hidden shadow-sm">
-          {/* Vista Móvil (Tarjetas) */}
-          <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800">
+        <div className="order-4">
+          {/* Vista Móvil (Tarjetas adaptadas a facturas) */}
+          <div className="md:hidden space-y-3.5">
             {loading ? (
-              <div className="p-6 text-center text-sm text-zinc-500">Cargando desde Neon DB...</div>
+              <div className="p-8 text-center text-sm text-zinc-500 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                Cargando desde Neon DB...
+              </div>
             ) : tab === "proveedores" ? (
               filteredSuppliers.map((row) => {
                 let cats: string[] = [];
@@ -274,103 +276,164 @@ export default function ComprasProveedores() {
                 }
                 const bal = Number(row.balance || 0);
                 return (
-                  <div key={row.id} className="p-4 flex flex-col gap-2.5">
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="min-w-0">
-                        <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">{row.name}</p>
-                        <p className="text-xs font-mono text-zinc-500">{row.ruc}</p>
+                  <div
+                    key={row.id}
+                    className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30">
+                          🏢
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                            {row.name}
+                          </p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
+                            <span>RUC: {row.ruc}</span>
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-[11px] text-zinc-400 block">Saldo</span>
-                        <span className={`font-bold text-sm ${bal === 0 ? 'text-zinc-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                          ${bal.toFixed(2)}
-                        </span>
+
+                      {/* Acciones Rápidas (Toque táctil >= 44px) */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {bal > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handlePayBalance(row)}
+                            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 active:scale-95 transition-all cursor-pointer font-bold text-xs"
+                            title="Pagar Saldo"
+                            aria-label="Pagar Saldo"
+                          >
+                            💰
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => openEdit(row, "proveedor")}
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-indigo-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 active:scale-95 transition-all cursor-pointer"
+                          title="Editar Proveedor"
+                          aria-label="Editar Proveedor"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(row.id, "proveedor")}
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-rose-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95 transition-all cursor-pointer"
+                          title="Eliminar Proveedor"
+                          aria-label="Eliminar Proveedor"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
+
                     <div className="text-xs text-zinc-600 dark:text-zinc-400 flex items-center justify-between">
                       <span>👤 {row.contact}</span>
                       <span className="truncate max-w-[160px] text-zinc-400">{row.email}</span>
                     </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800/70 gap-2">
+
+                    {/* Datos secundarios (Categorías y Saldo) */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
                       <div className="flex gap-1 flex-wrap">
                         {cats.slice(0, 2).map((c, idx) => (
-                          <span key={idx} className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-2 py-0.5 rounded-md text-[11px] font-medium">
+                          <span key={idx} className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-2 py-0.5 rounded-md text-[11px] font-medium border border-zinc-200 dark:border-zinc-700">
                             {c}
                           </span>
                         ))}
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {bal > 0 && (
-                          <button
-                            onClick={() => handlePayBalance(row)}
-                            className="px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 text-xs font-bold active:scale-95 transition-transform"
-                          >
-                            Pagar
-                          </button>
-                        )}
-                        <button
-                          onClick={() => openEdit(row, "proveedor")}
-                          className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold active:scale-95 transition-transform"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleDelete(row.id, "proveedor")}
-                          className="px-2.5 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 text-xs font-semibold active:scale-95 transition-transform"
-                        >
-                          ✕
-                        </button>
-                      </div>
+
+                      <span className={`ml-auto font-mono text-xs font-bold px-2.5 py-1 rounded-lg border ${
+                        bal === 0
+                          ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 border-zinc-200 dark:border-zinc-700'
+                          : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-500/20'
+                      }`}>
+                        Saldo: ${bal.toFixed(2)}
+                      </span>
                     </div>
                   </div>
                 );
               })
             ) : (
               filteredOrders.map((row) => (
-                <div key={row.id} className="p-4 flex flex-col gap-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-bold font-mono text-xs text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
-                      {row.orderNumber}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-lg text-[11px] font-bold ${
-                      row.status === 'Borrador' ? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800' :
-                      row.status === 'Solicitado' ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10' :
-                      row.status === 'En Tránsito' ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' :
-                      'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10'
-                    }`}>
-                      {row.status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 truncate">{row.supplierName}</p>
-                      <p className="text-xs text-zinc-500">Entrega: {row.expectedDate}</p>
+                <div
+                  key={row.id}
+                  className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30">
+                        📦
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                            {row.supplierName}
+                          </p>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider border ${
+                            row.status === 'Borrador' ? 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20' :
+                            row.status === 'Solicitado' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20' :
+                            row.status === 'En Tránsito' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                            'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                          }`}>
+                            {row.status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
+                          <span className="font-semibold text-indigo-600 dark:text-indigo-400">#{row.orderNumber}</span>
+                          <span> • Entrega: {row.expectedDate}</span>
+                        </p>
+                      </div>
                     </div>
-                    <p className="font-bold text-base text-zinc-900 dark:text-zinc-100 shrink-0">
-                      ${Number(row.total || 0).toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/70">
-                    {row.status !== 'Recibido' && (
+
+                    {/* Acciones Rápidas (Toque táctil >= 44px) */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {row.status !== 'Recibido' && (
+                        <button
+                          type="button"
+                          onClick={() => handleMarkReceived(row)}
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 active:scale-95 transition-all cursor-pointer font-bold text-xs"
+                          title="Marcar como Recibido"
+                          aria-label="Marcar como Recibido"
+                        >
+                          ✓
+                        </button>
+                      )}
                       <button
-                        onClick={() => handleMarkReceived(row)}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 text-xs font-bold active:scale-95 transition-transform"
+                        type="button"
+                        onClick={() => openEdit(row, "orden")}
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-indigo-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 active:scale-95 transition-all cursor-pointer"
+                        title="Editar Orden"
+                        aria-label="Editar Orden"
                       >
-                        ✓ Recibir
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
                       </button>
-                    )}
-                    <button
-                      onClick={() => openEdit(row, "orden")}
-                      className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold active:scale-95 transition-transform"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(row.id, "orden")}
-                      className="px-2.5 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 text-xs font-semibold active:scale-95 transition-transform"
-                    >
-                      ✕
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(row.id, "orden")}
+                        className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-rose-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95 transition-all cursor-pointer"
+                        title="Eliminar Orden"
+                        aria-label="Eliminar Orden"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Datos secundarios (Total) */}
+                  <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-bold font-mono text-xs">
+                      💰 ${Number(row.total || 0).toFixed(2)}
+                    </span>
                   </div>
                 </div>
               ))
@@ -378,151 +441,153 @@ export default function ComprasProveedores() {
           </div>
 
           {/* Vista Desktop (Tabla) */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400">
-                {tab === 'proveedores' ? (
-                  <tr>
-                    <th className="px-6 py-4 font-medium">Proveedor / RUC</th>
-                    <th className="px-6 py-4 font-medium">Contacto</th>
-                    <th className="px-6 py-4 font-medium">Categorías</th>
-                    <th className="px-6 py-4 font-medium text-right">Saldo por Pagar</th>
-                    <th className="px-6 py-4 font-medium text-right">Acciones</th>
-                  </tr>
-                ) : (
-                  <tr>
-                    <th className="px-6 py-4 font-medium"># Orden</th>
-                    <th className="px-6 py-4 font-medium">Proveedor</th>
-                    <th className="px-6 py-4 font-medium">Fecha Esperada</th>
-                    <th className="px-6 py-4 font-medium text-right">Total</th>
-                    <th className="px-6 py-4 font-medium text-center">Estado</th>
-                    <th className="px-6 py-4 font-medium text-right">Acciones</th>
-                  </tr>
-                )}
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando desde Neon DB...</td>
-                  </tr>
-                ) : tab === 'proveedores' ? (
-                  filteredSuppliers.map((row) => {
-                    let cats: string[] = [];
-                    try {
-                      cats = JSON.parse(row.categories || "[]");
-                    } catch {
-                      cats = [row.categories || "General"];
-                    }
-                    const bal = Number(row.balance || 0);
-                    return (
-                      <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
-                        <td className="px-6 py-4">
-                          <p className="font-bold text-zinc-900 dark:text-zinc-100">{row.name}</p>
-                          <p className="text-xs text-zinc-500 font-mono mt-0.5">{row.ruc}</p>
+          <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider font-semibold">
+                  {tab === 'proveedores' ? (
+                    <tr>
+                      <th className="py-3.5 px-4">Proveedor / RUC</th>
+                      <th className="py-3.5 px-4">Contacto</th>
+                      <th className="py-3.5 px-4">Categorías</th>
+                      <th className="py-3.5 px-4 text-right">Saldo por Pagar</th>
+                      <th className="py-3.5 px-4 text-center">Acciones</th>
+                    </tr>
+                  ) : (
+                    <tr>
+                      <th className="py-3.5 px-4"># Orden</th>
+                      <th className="py-3.5 px-4">Proveedor</th>
+                      <th className="py-3.5 px-4">Fecha Esperada</th>
+                      <th className="py-3.5 px-4 text-right">Total</th>
+                      <th className="py-3.5 px-4 text-center">Estado</th>
+                      <th className="py-3.5 px-4 text-center">Acciones</th>
+                    </tr>
+                  )}
+                </thead>
+                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">Cargando desde Neon DB...</td>
+                    </tr>
+                  ) : tab === 'proveedores' ? (
+                    filteredSuppliers.map((row) => {
+                      let cats: string[] = [];
+                      try {
+                        cats = JSON.parse(row.categories || "[]");
+                      } catch {
+                        cats = [row.categories || "General"];
+                      }
+                      const bal = Number(row.balance || 0);
+                      return (
+                        <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <p className="font-semibold text-zinc-900 dark:text-zinc-100">{row.name}</p>
+                            <p className="text-xs text-zinc-500 font-mono mt-0.5">{row.ruc}</p>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <p className="text-zinc-900 dark:text-zinc-300 font-medium">{row.contact}</p>
+                            <p className="text-xs text-zinc-500">{row.email}</p>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="flex gap-1 flex-wrap">
+                              {cats.map((c, idx) => (
+                                <span key={idx} className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-2 py-0.5 rounded-lg text-xs font-medium border border-zinc-200 dark:border-zinc-700">
+                                  {c}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-black">
+                            <span className={bal === 0 ? 'text-zinc-400' : 'text-rose-600 dark:text-rose-400'}>
+                              ${bal.toFixed(2)}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              {bal > 0 && (
+                                <button
+                                  onClick={() => handlePayBalance(row)}
+                                  className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 transition-all active:scale-95 flex items-center justify-center shadow-xs"
+                                  title="Liquidar Saldo (Marcar Pagado)"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                </button>
+                              )}
+                              <button
+                                onClick={() => openEdit(row, "proveedor")}
+                                className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 transition-all active:scale-95 flex items-center justify-center shadow-xs"
+                                title="Editar Proveedor"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                              </button>
+                              <button
+                                onClick={() => handleDelete(row.id, "proveedor")}
+                                className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
+                                title="Eliminar Proveedor"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    filteredOrders.map((row) => (
+                      <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <span className="font-bold text-indigo-600 dark:text-indigo-400 font-mono text-xs">#{row.orderNumber}</span>
                         </td>
-                        <td className="px-6 py-4">
-                          <p className="text-zinc-900 dark:text-zinc-300 font-medium">{row.contact}</p>
-                          <p className="text-xs text-zinc-500">{row.email}</p>
+                        <td className="py-3.5 px-4">
+                          <p className="font-semibold text-zinc-900 dark:text-zinc-100">{row.supplierName}</p>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex gap-1 flex-wrap">
-                            {cats.map((c, idx) => (
-                              <span key={idx} className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-2 py-1 rounded-lg text-xs font-medium">
-                                {c}
-                              </span>
-                            ))}
-                          </div>
+                        <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-400 text-xs whitespace-nowrap">{row.expectedDate}</td>
+                        <td className="py-3.5 px-4 text-right font-black text-zinc-900 dark:text-zinc-100">
+                          ${Number(row.total || 0).toFixed(2)}
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <span className={`font-bold ${bal === 0 ? 'text-zinc-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                            ${bal.toFixed(2)}
+                        <td className="py-3.5 px-4 text-center">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                            row.status === 'Borrador' ? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800' :
+                            row.status === 'Solicitado' ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10' :
+                            row.status === 'En Tránsito' ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' :
+                            'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10'
+                          }`}>
+                            {row.status}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {bal > 0 && (
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {row.status !== 'Recibido' && (
                               <button
-                                onClick={() => handlePayBalance(row)}
-                                className="p-1.5 text-zinc-400 hover:text-emerald-600 transition-colors"
-                                title="Liquidar Saldo (Marcar Pagado)"
+                                onClick={() => handleMarkReceived(row)}
+                                className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 transition-all active:scale-95 flex items-center justify-center shadow-xs"
+                                title="Marcar como Recibido"
                               >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
                               </button>
                             )}
                             <button
-                              onClick={() => openEdit(row, "proveedor")}
-                              className="p-1.5 text-zinc-400 hover:text-indigo-600 transition-colors"
-                              title="Editar Proveedor"
+                              onClick={() => openEdit(row, "orden")}
+                              className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 transition-all active:scale-95 flex items-center justify-center shadow-xs"
+                              title="Editar Orden de Compra"
                             >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                             </button>
                             <button
-                              onClick={() => handleDelete(row.id, "proveedor")}
-                              className="p-1.5 text-zinc-400 hover:text-rose-600 transition-colors"
-                              title="Eliminar Proveedor"
+                              onClick={() => handleDelete(row.id, "orden")}
+                              className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
+                              title="Eliminar Orden"
                             >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                             </button>
                           </div>
                         </td>
                       </tr>
-                    );
-                  })
-                ) : (
-                  filteredOrders.map((row) => (
-                    <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
-                      <td className="px-6 py-4">
-                        <span className="font-bold text-zinc-900 dark:text-zinc-100 font-mono text-xs">{row.orderNumber}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="font-medium text-zinc-900 dark:text-zinc-100">{row.supplierName}</p>
-                      </td>
-                      <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{row.expectedDate}</td>
-                      <td className="px-6 py-4 text-right font-bold text-zinc-900 dark:text-zinc-100">
-                        ${Number(row.total || 0).toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                          row.status === 'Borrador' ? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800' :
-                          row.status === 'Solicitado' ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10' :
-                          row.status === 'En Tránsito' ? 'bg-amber-50 text-amber-600 dark:bg-amber-500/10' :
-                          'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10'
-                        }`}>
-                          {row.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {row.status !== 'Recibido' && (
-                            <button
-                              onClick={() => handleMarkReceived(row)}
-                              className="p-1.5 text-zinc-400 hover:text-emerald-600 transition-colors"
-                              title="Marcar como Recibido"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-                            </button>
-                          )}
-                          <button
-                            onClick={() => openEdit(row, "orden")}
-                            className="p-1.5 text-zinc-400 hover:text-blue-600 transition-colors"
-                            title="Editar Orden de Compra"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(row.id, "orden")}
-                            className="p-1.5 text-zinc-400 hover:text-rose-600 transition-colors"
-                            title="Eliminar Orden"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
           <div className="p-3.5 sm:p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs sm:text-sm text-zinc-500">
             <span>Mostrando {tab === 'proveedores' ? filteredSuppliers.length : filteredOrders.length} registros en Neon DB</span>

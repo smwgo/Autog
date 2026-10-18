@@ -974,11 +974,11 @@ function EditarFacturaForm() {
                   </svg>
                 </Link>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white leading-tight">
+                  <h1 className="text-sm sm:text-xl font-normal sm:font-bold text-zinc-900 dark:text-white leading-tight">
                     Editar Factura {numeroFactura ? `#${numeroFactura}` : ""}
                   </h1>
                   <span
-                    className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+                    className={`text-[10px] sm:text-[11px] font-medium sm:font-semibold px-2 py-0.5 rounded-full border ${
                       status.toLowerCase() === "anulada"
                         ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
                         : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"

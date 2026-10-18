@@ -402,50 +402,64 @@ export default function ControlTiemposPage() {
             </div>
           ) : (
             <>
-              {/* Mobile View: Cards */}
-              <div className="block md:hidden divide-y divide-zinc-100 dark:divide-zinc-800 p-4 space-y-3">
+              {/* Mobile View: Cards adaptadas a diseño facturas */}
+              <div className="block md:hidden space-y-3.5 p-4">
                 {records.map((record) => (
                   <div
                     key={record.dbId || record.id}
-                    className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 flex flex-col gap-3"
+                    className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <span className="text-xs font-mono text-zinc-400">{record.id}</span>
-                        <h4 className="font-bold text-zinc-900 dark:text-white text-base">
-                          {record.task}
-                        </h4>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                          👨‍🔧 {record.mechanic} • {record.date}
-                        </p>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border-rose-200 dark:border-rose-500/30">
+                          ⏱️
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                            {record.task}
+                          </p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
+                            <span className="font-semibold text-rose-600 dark:text-rose-400">#{record.id}</span>
+                            <span> • {record.orderId}</span>
+                            <span> • {record.mechanic}</span>
+                          </p>
+                        </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleEliminar(record)}
-                        title="Eliminar registro"
-                        className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-400 hover:text-rose-600 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer text-sm"
-                      >
-                        ✕
-                      </button>
+
+                      {/* Botón táctil eliminar (>= 44px) */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleEliminar(record)}
+                          title="Eliminar registro"
+                          aria-label="Eliminar registro"
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center text-zinc-500 hover:text-rose-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all active:scale-95 cursor-pointer"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span className="font-mono bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 rounded-lg text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
-                        {record.orderId}
-                      </span>
-                      {record.vehicle && (
-                        <span className="text-zinc-500 dark:text-zinc-400">
-                          {record.vehicle}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-zinc-200/50 dark:border-zinc-800">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                    {/* Datos secundarios (Tiempo, Facturable, Vehículo, Fecha) */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 font-mono">
                         ⏱️ {record.duration}
                       </span>
-                      <span className="text-sm font-black text-zinc-900 dark:text-white font-mono">
-                        {record.revenue}
+
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 font-bold font-mono text-xs">
+                        💰 {record.revenue}
+                      </span>
+
+                      {record.vehicle && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 font-medium text-xs">
+                          🚗 {record.vehicle}
+                        </span>
+                      )}
+
+                      <span className="text-zinc-400 ml-auto text-[11px] whitespace-nowrap">
+                        {record.date}
                       </span>
                     </div>
                   </div>
@@ -459,38 +473,26 @@ export default function ControlTiemposPage() {
 
               {/* Desktop View: Table */}
               <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800">
-                      <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                        ID / Tarea
-                      </th>
-                      <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                        Orden / Vehículo
-                      </th>
-                      <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                        Fecha
-                      </th>
-                      <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                        Tiempo Invertido
-                      </th>
-                      <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right">
-                        Facturable
-                      </th>
-                      <th className="px-6 py-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right">
-                        Acción
-                      </th>
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider font-semibold">
+                    <tr>
+                      <th className="py-3.5 px-4">ID / Tarea</th>
+                      <th className="py-3.5 px-4">Orden / Vehículo</th>
+                      <th className="py-3.5 px-4">Fecha</th>
+                      <th className="py-3.5 px-4">Tiempo Invertido</th>
+                      <th className="py-3.5 px-4 text-right">Facturable</th>
+                      <th className="py-3.5 px-4 text-center">Acción</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                  <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                     {records.map((record) => (
                       <tr
                         key={record.dbId || record.id}
-                        className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                        className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
                       >
-                        <td className="px-6 py-4">
+                        <td className="py-3.5 px-4">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-mono text-zinc-400">{record.id}</span>
+                            <span className="text-xs font-mono font-bold text-rose-600 dark:text-rose-400">#{record.id}</span>
                             <span className="font-bold text-zinc-900 dark:text-white">
                               {record.task}
                             </span>
@@ -499,35 +501,37 @@ export default function ControlTiemposPage() {
                             👨‍🔧 {record.mechanic}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className="text-xs font-mono bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 inline-block">
+                        <td className="py-3.5 px-4">
+                          <span className="text-xs font-mono bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 inline-block font-semibold">
                             {record.orderId}
                           </span>
                           {record.vehicle && (
                             <div className="text-xs text-zinc-500 mt-1">{record.vehicle}</div>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-sm text-zinc-600 dark:text-zinc-300">
+                        <td className="py-3.5 px-4 text-xs text-zinc-500 whitespace-nowrap">
                           {record.date}
                         </td>
-                        <td className="px-6 py-4">
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-bold bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                        <td className="py-3.5 px-4">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 font-mono">
                             ⏱️ {record.duration}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <span className="text-sm font-bold text-zinc-900 dark:text-white">
+                        <td className="py-3.5 px-4 text-right">
+                          <span className="text-sm font-black text-zinc-900 dark:text-white font-mono">
                             {record.revenue}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="py-3.5 px-4 text-center">
                           <button
                             type="button"
                             onClick={() => handleEliminar(record)}
                             title="Eliminar registro"
-                            className="text-zinc-400 hover:text-rose-600 p-1.5 rounded-lg transition-colors text-xs cursor-pointer"
+                            className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-all flex items-center justify-center text-xs active:scale-95 cursor-pointer shadow-xs mx-auto"
                           >
-                            ✕
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
                           </button>
                         </td>
                       </tr>

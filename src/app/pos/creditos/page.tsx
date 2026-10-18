@@ -331,101 +331,126 @@ export default function CreditosPage() {
           ) : (
             <>
               {/* Mobile Card List (md:hidden) */}
-              <div className="divide-y divide-zinc-200 dark:divide-zinc-800 md:hidden">
+              <div className="space-y-3.5 p-3 sm:p-4 md:hidden">
                 {filtrados.map((cuenta) => {
                   const porcentajeUso = Math.min(
                     100,
                     Math.round((cuenta.currentBalance / Math.max(1, cuenta.creditLimit)) * 100)
                   );
+                  const esVencido = cuenta.status === "VENCIDO";
 
                   return (
-                    <div key={cuenta.id} className="p-4 space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h4 className="font-bold text-base text-zinc-900 dark:text-white">
-                            {cuenta.customerName}
-                          </h4>
-                          <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400 mt-0.5">
-                            ID: {cuenta.identification} • 📞 {cuenta.phone}
-                          </p>
+                    <div
+                      key={cuenta.id}
+                      className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border ${
+                              esVencido
+                                ? "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border-rose-200 dark:border-rose-500/30"
+                                : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30"
+                            }`}
+                          >
+                            💳
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                                {cuenta.customerName}
+                              </p>
+                              <span
+                                className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider border ${
+                                  cuenta.status === "AL_DIA"
+                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                    : cuenta.status === "POR_VENCER"
+                                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                                    : "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                                }`}
+                              >
+                                {cuenta.status === "AL_DIA"
+                                  ? "Al Día"
+                                  : cuenta.status === "POR_VENCER"
+                                  ? "Por Vencer"
+                                  : "Vencido"}
+                              </span>
+                            </div>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
+                              <span className="font-semibold text-blue-600 dark:text-blue-400">ID: {cuenta.identification}</span>
+                              {cuenta.phone && <span> • 📞 {cuenta.phone}</span>}
+                            </p>
+                          </div>
                         </div>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold shrink-0 ${
-                            cuenta.status === "AL_DIA"
-                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                              : cuenta.status === "POR_VENCER"
-                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                              : "bg-rose-500/10 text-rose-500 border border-rose-500/20"
-                          }`}
-                        >
-                          {cuenta.status === "AL_DIA"
-                            ? "Al Día"
-                            : cuenta.status === "POR_VENCER"
-                            ? "Por Vencer"
-                            : "Vencido"}
+
+                        {/* Acciones Rápidas (Toque táctil >= 44px) */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCuentaAbono(cuenta);
+                              setMontoAbono(cuenta.currentBalance);
+                            }}
+                            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 hover:bg-cyan-100 dark:hover:bg-cyan-500/20 active:scale-95 transition-all cursor-pointer border border-cyan-200 dark:border-cyan-500/30"
+                            title="Abonar a la cuenta"
+                            aria-label="Abonar a la cuenta"
+                          >
+                            💵
+                          </button>
+                          <Link
+                            href={`/pos/creditos/nuevo?id=${cuenta.id}`}
+                            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all"
+                            title="Editar línea de crédito"
+                            aria-label="Editar crédito"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                          </Link>
+                          <button
+                            type="button"
+                            disabled={guardando || eliminando}
+                            onClick={() => setCreditoAEliminar(cuenta)}
+                            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-rose-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95 transition-all disabled:opacity-50"
+                            title="Eliminar crédito"
+                            aria-label="Eliminar crédito"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Barra de Uso de Cupo */}
+                      <div className="w-full bg-zinc-100 dark:bg-zinc-800/80 rounded-lg p-2.5 border border-zinc-100 dark:border-zinc-800">
+                        <div className="flex items-center justify-between text-xs mb-1.5">
+                          <span className="text-zinc-500 dark:text-zinc-400 font-medium">Uso: {porcentajeUso}%</span>
+                          <span className="text-zinc-400 font-mono">Cupo: ${cuenta.creditLimit.toFixed(2)}</span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${
+                              porcentajeUso > 90
+                                ? "bg-rose-500"
+                                : porcentajeUso > 70
+                                ? "bg-amber-500"
+                                : "bg-cyan-500"
+                            }`}
+                            style={{ width: `${porcentajeUso}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Datos secundarios (Total Deuda, Cupo, Vencimiento) */}
+                      <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-sky-400 border border-blue-200 dark:border-blue-500/20 font-bold font-mono text-xs">
+                          💰 Debe: ${cuenta.currentBalance.toFixed(2)}
                         </span>
-                      </div>
 
-                      <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-zinc-500">Saldo Deudor:</span>
-                          <span className="text-lg font-black text-zinc-900 dark:text-white">
-                            ${cuenta.currentBalance.toFixed(2)}
-                          </span>
-                        </div>
-                        <div>
-                          <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-zinc-500">Uso: {porcentajeUso}%</span>
-                            <span className="text-zinc-400">Cupo: ${cuenta.creditLimit}</span>
-                          </div>
-                          <div className="w-full h-2 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${
-                                porcentajeUso > 90
-                                  ? "bg-rose-500"
-                                  : porcentajeUso > 70
-                                  ? "bg-amber-500"
-                                  : "bg-cyan-500"
-                              }`}
-                              style={{ width: `${porcentajeUso}%` }}
-                            />
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between text-xs text-zinc-500 pt-1">
-                          <span>Vence:</span>
-                          <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                            {cuenta.dueDate}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCuentaAbono(cuenta);
-                            setMontoAbono(cuenta.currentBalance);
-                          }}
-                          className="h-11 flex items-center justify-center rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
-                        >
-                          Abonar
-                        </button>
-                        <Link
-                          href={`/pos/creditos/nuevo?id=${cuenta.id}`}
-                          className="h-11 flex items-center justify-center gap-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer active:scale-95"
-                          title="Editar línea de crédito"
-                        >
-                          ✏️ Editar
-                        </Link>
-                        <button
-                          type="button"
-                          disabled={guardando || eliminando}
-                          onClick={() => setCreditoAEliminar(cuenta)}
-                          className="h-11 flex items-center justify-center gap-1 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-xs font-bold cursor-pointer active:scale-95"
-                          title="Eliminar crédito"
-                        >
-                          🗑️ Eliminar
-                        </button>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 text-xs font-medium">
+                          📅 Vence: {cuenta.dueDate}
+                        </span>
                       </div>
                     </div>
                   );
