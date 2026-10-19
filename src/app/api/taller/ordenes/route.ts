@@ -28,12 +28,18 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const estado = searchParams.get("estado");
     const busqueda = searchParams.get("busqueda");
+    const idParam = searchParams.get("id") || searchParams.get("orderNumber");
 
     return await withRetry(async () => {
-
       let query = 'SELECT * FROM "WorkshopOrder" WHERE 1=1';
       const params: any[] = [];
       let pIdx = 1;
+
+      if (idParam) {
+        query += ` AND ("id" = $${pIdx} OR "orderNumber" = $${pIdx})`;
+        params.push(idParam);
+        pIdx++;
+      }
 
       if (estado && estado !== "TODOS") {
         query += ` AND "status" ILIKE $${pIdx++}`;
@@ -50,6 +56,21 @@ export async function GET(request: Request) {
 
       const rows: any = await prisma.$queryRawUnsafe(query, ...params);
 
+      // Consultar facturas para verificar estado de facturación de cada orden
+      let invoiceByOrder = new Map<string, any>();
+      try {
+        const invoices = await prisma.clientInvoice.findMany({
+          select: { id: true, invoiceNumber: true, orderId: true, status: true, amount: true, date: true, paymentMethod: true },
+        });
+        invoices.forEach((inv) => {
+          if (inv.orderId) {
+            invoiceByOrder.set(inv.orderId, inv);
+          }
+        });
+      } catch (invErr) {
+        console.warn("Aviso al consultar facturas de clientes:", invErr);
+      }
+
       // Mapear campos para la UI
       const orders = rows.map((r: any) => {
         let services: string[] = [];
@@ -57,8 +78,46 @@ export async function GET(request: Request) {
           services = r.servicesJson ? JSON.parse(r.servicesJson) : [];
         } catch {}
 
-        let color = "bg-blue-500";
+        let items: any[] = [];
+        try {
+          items = r.itemsJson ? JSON.parse(r.itemsJson) : [];
+        } catch {}
+
+        let inspectionFindings: any[] = [];
+        try {
+          inspectionFindings = r.inspectionFindingsJson ? JSON.parse(r.inspectionFindingsJson) : [];
+        } catch {}
+
+        let receptionInventory: any[] = [];
+        try {
+          receptionInventory = r.receptionInventoryJson ? JSON.parse(r.receptionInventoryJson) : [];
+        } catch {}
+
+        let receptionPhotos: string[] = [];
+        try {
+          receptionPhotos = r.receptionPhotosJson ? JSON.parse(r.receptionPhotosJson) : [];
+        } catch {}
+
+        let payments: any[] = [];
+        try {
+          payments = r.paymentsJson ? JSON.parse(r.paymentsJson) : [];
+        } catch {}
+
+        const linkedInvoice = invoiceByOrder.get(r.orderNumber) || invoiceByOrder.get(r.id);
         const st = (r.status || "").toLowerCase();
+        const deliv = (r.deliveryStatus || "").toLowerCase();
+
+        const isBilled =
+          st.includes("factur") ||
+          deliv.includes("factur") ||
+          deliv.includes("pagad") ||
+          (Boolean(linkedInvoice) && linkedInvoice.status?.toLowerCase() !== "anulada") ||
+          (Array.isArray(payments) && payments.length > 0) ||
+          Boolean(r.notes && (r.notes.includes("[Facturada]") || r.notes.includes("Facturada")));
+
+        const billingStatus = isBilled ? "Facturada" : "En Proceso";
+
+        let color = "bg-blue-500";
         if (st.includes("diagnóstico") || st.includes("espera")) color = "bg-amber-500";
         if (st.includes("reparando")) color = "bg-blue-500";
         if (st.includes("repuestos")) color = "bg-rose-500";
@@ -67,24 +126,51 @@ export async function GET(request: Request) {
         return {
           id: r.orderNumber || r.id,
           dbId: r.id,
+          orderNumber: r.orderNumber,
           vehicle: r.vehicle,
           plate: r.plate,
           client: r.client,
           clientPhone: r.clientPhone,
+          clientIdDoc: r.clientIdDoc,
+          clientEmail: r.clientEmail,
           mechanic: r.mechanic,
           status: r.status,
           progress: r.progress || 0,
           dateIn: r.dateIn ? new Date(r.dateIn).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+          createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
           estimatedOut: r.estimatedOut || "En Evaluación",
           color,
           services,
+          items,
+          inspectionFindings,
+          receptionInventory,
+          receptionPhotos,
+          payments,
+          mileage: r.mileage,
+          fuelLevel: r.fuelLevel,
+          generalCondition: r.generalCondition,
+          deliveryStatus: r.deliveryStatus,
+          quoteNumber: r.quoteNumber,
+          quoteStatus: r.quoteStatus,
           notes: r.notes,
           totalCost: r.totalCost ? Number(r.totalCost) : 0,
+          isBilled,
+          billingStatus,
+          invoiceInfo: linkedInvoice
+            ? {
+                invoiceNumber: linkedInvoice.invoiceNumber,
+                amount: Number(linkedInvoice.amount || 0),
+                status: linkedInvoice.status,
+                date: linkedInvoice.date,
+                paymentMethod: linkedInvoice.paymentMethod,
+              }
+            : null,
         };
       });
 
       return NextResponse.json({
         success: true,
+        order: orders.length > 0 ? orders[0] : null,
         orders,
         total: orders.length,
       });
@@ -213,7 +299,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, status, progress, mechanic, notes } = body;
+    const { id, status, progress, mechanic, notes, billingStatus, isBilled } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -223,19 +309,28 @@ export async function PUT(request: Request) {
     }
 
     return await withRetry(async () => {
+      let deliveryStatusVal: string | null = null;
+      if (billingStatus === "Facturada" || isBilled === true) {
+        deliveryStatusVal = "Facturado";
+      } else if (billingStatus === "En Proceso" || isBilled === false) {
+        deliveryStatusVal = "Pendiente";
+      }
+
       await prisma.$executeRawUnsafe(
         `UPDATE "WorkshopOrder"
          SET "status" = COALESCE($2, "status"),
              "progress" = COALESCE($3, "progress"),
              "mechanic" = COALESCE($4, "mechanic"),
              "notes" = COALESCE($5, "notes"),
+             "deliveryStatus" = COALESCE($6, "deliveryStatus"),
              "updatedAt" = NOW()
          WHERE id = $1 OR "orderNumber" = $1`,
         id,
         status || null,
         progress !== undefined ? parseInt(progress) : null,
         mechanic || null,
-        notes || null
+        notes || null,
+        deliveryStatusVal
       );
 
       // Si pasa a Listo para Entregar, registrar automáticamente en WorkshopHistory si no existe

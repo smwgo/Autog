@@ -158,7 +158,7 @@ export interface TechnicianHourEntry {
 
 export interface InspectionFinding {
   id: string;
-  vista: "frontal" | "trasera" | "lateral_izq" | "lateral_der" | "superior";
+  vista: "frontal" | "trasera" | "lateral_izq" | "lateral_der" | "superior" | "motor" | "frenos" | "suspension" | "electrico" | string;
   vistaLabel: string;
   x: number;
   y: number;

@@ -131,6 +131,15 @@ const CHIPS_HALLAZGO = [
   { id: "Fisura", label: "Fisura", color: "bg-purple-500/20 text-purple-300 border-purple-500/40" },
 ];
 
+const CHIPS_HALLAZGO_MECANICO = [
+  { id: "Fuga", label: "Fuga", color: "bg-rose-500/20 text-rose-300 border-rose-500/40" },
+  { id: "Roto", label: "Roto", color: "bg-red-500/20 text-red-300 border-red-500/40" },
+  { id: "Desgaste", label: "Desgaste", color: "bg-amber-500/20 text-amber-300 border-amber-500/40" },
+  { id: "Ruido", label: "Ruido", color: "bg-orange-500/20 text-orange-300 border-orange-500/40" },
+  { id: "Suelto", label: "Suelto", color: "bg-yellow-500/20 text-yellow-300 border-yellow-500/40" },
+  { id: "Sensor/Falla", label: "Sensor/Falla", color: "bg-purple-500/20 text-purple-300 border-purple-500/40" },
+];
+
 export default function InspeccionVehiculo({
   ordenActiva,
   onUpdateOrden,
@@ -144,6 +153,9 @@ export default function InspeccionVehiculo({
     ordenActiva?.inspectionFindings || []
   );
   const [pinSeleccionadoId, setPinSeleccionadoId] = useState<string | null>(null);
+
+  // Modo visual del lienzo: 3D Holográfico (Rayos X) vs Esquema CAD 2D
+  const [modoVisual, setModoVisual] = useState<"3d" | "2d">("3d");
 
   // Estados para popover del pin activo
   const [popoverAbierto, setPopoverAbierto] = useState(false);
@@ -223,11 +235,10 @@ export default function InspeccionVehiculo({
     const maxNum = hallazgos.reduce((max, h) => Math.max(max, h.pinNumber || 0), 0);
     const nuevoPinNumero = maxNum + 1;
 
-    const nuevoHallazgo: InspectionFinding = {
-      id: `pin-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      vista: vistaActiva,
-      vistaLabel:
-        vistaActiva === "frontal"
+    const esCarroceria = seccionActiva === "carroceria";
+    const vistaDestino = esCarroceria ? vistaActiva : (seccionActiva as any);
+    const vistaLabel = esCarroceria
+      ? (vistaActiva === "frontal"
           ? "Frontal"
           : vistaActiva === "trasera"
           ? "Trasera"
@@ -235,24 +246,38 @@ export default function InspeccionVehiculo({
           ? "Lateral Izq"
           : vistaActiva === "lateral_der"
           ? "Lateral Der"
-          : "Superior",
+          : "Superior")
+      : (seccionActiva === "motor"
+          ? "Motor"
+          : seccionActiva === "frenos"
+          ? "Frenos"
+          : seccionActiva === "suspension"
+          ? "Suspensión"
+          : "Eléctrico");
+
+    const tipoDefault = esCarroceria ? "Rayón" : (seccionActiva === "motor" ? "Fuga" : "Desgaste");
+
+    const nuevoHallazgo: InspectionFinding = {
+      id: `pin-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      vista: vistaDestino,
+      vistaLabel: vistaLabel,
       x: xPct,
       y: yPct,
-      zona: `Vista ${vistaActiva}`,
-      tipo: "Rayón",
-      descripcion: `Rayón en ${vistaActiva} #${nuevoPinNumero}`,
+      zona: `${vistaLabel}`,
+      tipo: tipoDefault,
+      descripcion: `${tipoDefault} en ${vistaLabel} #${nuevoPinNumero}`,
       pinNumber: nuevoPinNumero,
     };
 
     const actualizados = [...hallazgos, nuevoHallazgo];
     setHallazgos(actualizados);
     setPinSeleccionadoId(nuevoHallazgo.id);
-    setTipoSeleccionado("Rayón");
+    setTipoSeleccionado(tipoDefault);
     setObservacionTexto("");
     setPopoverAbierto(true);
 
     sincronizarHallazgosNeon(actualizados);
-    mostrarToast(`Pin #${nuevoPinNumero} colocado. Selecciona el tipo de daño.`);
+    mostrarToast(`Pin #${nuevoPinNumero} marcado en ${vistaLabel}. Elige el detalle.`);
   };
 
   const pinActual = hallazgos.find((h) => h.id === pinSeleccionadoId) || null;
@@ -437,20 +462,25 @@ ${urlSeguimiento}`;
             const active = seccionActiva === sis.id;
             let badge = null;
             if (sis.id === "carroceria") {
-              if (hallazgos.length > 0) {
+              const cantCarroceria = hallazgos.filter((h) =>
+                ["frontal", "trasera", "lateral_izq", "lateral_der", "superior"].includes(h.vista)
+              ).length;
+              if (cantCarroceria > 0) {
                 badge = (
                   <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">
-                    {hallazgos.length}
+                    {cantCarroceria}
                   </span>
                 );
               }
             } else if (sis.items) {
+              const cantPinesSis = hallazgos.filter((h) => h.vista === sis.id).length;
               const resp = sis.items.filter((it) => evaluacionesPlantilla[it.id] !== undefined).length;
               const malos = sis.items.filter((it) => evaluacionesPlantilla[it.id] === "MALO").length;
-              if (malos > 0) {
+              if (cantPinesSis > 0 || malos > 0) {
                 badge = (
-                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">
-                    ! {malos}
+                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center gap-1">
+                    {cantPinesSis > 0 && <span>📍{cantPinesSis}</span>}
+                    {malos > 0 && <span>!{malos}</span>}
                   </span>
                 );
               } else if (resp > 0) {
@@ -589,14 +619,69 @@ ${urlSeguimiento}`;
         })}
       </div>
 
-      {/* LIENZO/SVG LIMPIO DEL VEHÍCULO CON PINES NUMERADOS */}
-      <div className="relative rounded-2xl bg-[#09090b] border border-white/10 p-3 sm:p-6 overflow-hidden select-none">
+      {/* LIENZO DEL VEHÍCULO CON PINES NUMERADOS */}
+      <div className="relative rounded-2xl bg-[#09090b] border border-white/10 p-3 sm:p-5 overflow-hidden select-none">
+        {/* Cabecera del Lienzo con Switch 3D Holograma vs CAD 2D */}
+        <div className="flex items-center justify-between gap-2 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
+            <span className="text-xs font-bold text-white uppercase tracking-wider">
+              {modoVisual === "3d" ? "Auto Holográfico 3D (Rayos X)" : "Esquema Vectorial CAD 2D"}
+            </span>
+            <span className="text-[11px] text-zinc-500 hidden sm:inline">• Toca sobre el vehículo para marcar</span>
+          </div>
+
+          <div className="flex items-center bg-black/70 p-1 rounded-xl border border-white/10 gap-1">
+            <button
+              type="button"
+              onClick={() => setModoVisual("3d")}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                modoVisual === "3d"
+                  ? "bg-cyan-500/25 text-cyan-300 border border-cyan-500/50 shadow-md shadow-cyan-500/20"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              <span>✨ 3D Holograma</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setModoVisual("2d")}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                modoVisual === "2d"
+                  ? "bg-purple-500/25 text-purple-300 border border-purple-500/50 shadow-md shadow-purple-500/20"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
+            >
+              <span>📐 CAD 2D</span>
+            </button>
+          </div>
+        </div>
+
         <div
           onClick={handleTocarLienzo}
-          className="relative w-full h-64 sm:h-80 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-center cursor-crosshair overflow-hidden group transition-all"
+          className={`relative w-full h-72 sm:h-96 rounded-xl flex items-center justify-center cursor-crosshair overflow-hidden group transition-all ${
+            modoVisual === "3d"
+              ? "bg-black border border-cyan-500/30 shadow-[0_0_35px_rgba(6,182,212,0.12)]"
+              : "bg-white/[0.02] border border-white/5"
+          }`}
         >
-          {/* Planos Vectoriales SVG Limpios */}
-          <div className="w-full h-full flex items-center justify-center pointer-events-none p-4">
+          {modoVisual === "3d" ? (
+            <div className="relative w-full h-full flex items-center justify-center pointer-events-none p-2 sm:p-4">
+              <img
+                src={
+                  vistaActiva === "trasera" || vistaActiva === "lateral_der"
+                    ? "/images/inspeccion/auto_3d_trasera.jpg"
+                    : vistaActiva === "superior"
+                    ? "/images/inspeccion/auto_3d_superior.jpg"
+                    : "/images/inspeccion/auto_3d_frontal.jpg"
+                }
+                alt={`Vehículo 3D ${vistaActiva}`}
+                className="w-full h-full object-contain filter drop-shadow-[0_0_25px_rgba(6,182,212,0.35)] select-none"
+              />
+            </div>
+          ) : (
+            /* Planos Vectoriales SVG Limpios */
+            <div className="w-full h-full flex items-center justify-center pointer-events-none p-4">
             {/* 1. VISTA FRONTAL: Sedán deportivo moderno de alta gama */}
             {vistaActiva === "frontal" && (
               <svg className="w-full h-full max-h-72 text-zinc-400 group-hover:text-cyan-400 transition-colors" viewBox="0 0 600 320" fill="none" stroke="currentColor" strokeWidth={1.8}>
@@ -658,67 +743,103 @@ ${urlSeguimiento}`;
               </svg>
             )}
 
-            {/* 2. VISTA TRASERA: Blueprint automotriz moderno y proporcionado */}
+            {/* 2. VISTA TRASERA: Inconfundiblemente la parte posterior del vehículo */}
             {vistaActiva === "trasera" && (
               <svg className="w-full h-full max-h-72 text-zinc-400 group-hover:text-cyan-400 transition-colors" viewBox="0 0 600 320" fill="none" stroke="currentColor" strokeWidth={1.8}>
-                {/* Neumáticos y línea de suelo */}
-                <path strokeLinecap="round" strokeLinejoin="round" d="M 118 226 L 118 265 L 144 265 L 144 238" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M 482 226 L 482 265 L 456 265 L 456 238" />
+                {/* Neumáticos traseros con banda de rodadura vista desde atrás */}
+                <rect x="114" y="226" width="30" height="39" rx="3" strokeWidth={1.8} />
+                <line x1="124" y1="232" x2="124" y2="265" strokeWidth={1} opacity={0.4} />
+                <line x1="134" y1="232" x2="134" y2="265" strokeWidth={1} opacity={0.4} />
+
+                <rect x="456" y="226" width="30" height="39" rx="3" strokeWidth={1.8} />
+                <line x1="466" y1="232" x2="466" y2="265" strokeWidth={1} opacity={0.4} />
+                <line x1="476" y1="232" x2="476" y2="265" strokeWidth={1} opacity={0.4} />
+
+                {/* Línea de suelo */}
                 <line x1="70" y1="265" x2="530" y2="265" strokeWidth={1} strokeDasharray="6 4" opacity={0.3} />
 
-                {/* Espejos retrovisores visibles en perspectiva */}
-                <path strokeLinecap="round" strokeLinejoin="round" d="M 155 142 C 138 140, 118 144, 114 150 C 118 156, 140 156, 156 150 Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M 445 142 C 462 140, 482 144, 486 150 C 482 156, 460 156, 444 150 Z" />
+                {/* Silueta exterior carrocería trasera */}
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M 215 70 Q 300 64 385 70 C 412 100, 436 130, 450 150 C 468 156, 482 174, 485 202 C 486 224, 480 242, 470 254 C 415 262, 185 262, 130 254 C 120 242, 114 224, 115 202 C 118 174, 132 156, 150 150 C 164 130, 188 100, 215 70 Z" />
 
-                {/* Silueta exterior del vehículo (Chasis y carrocería) */}
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M 200 75 Q 300 68 400 75 C 418 100, 436 130, 446 148 C 464 155, 478 170, 482 192 C 484 216, 480 238, 470 252 C 415 260, 185 260, 130 252 C 120 238, 116 216, 118 192 C 122 170, 136 155, 154 148 C 164 130, 182 100, 200 75 Z" />
+                {/* Alerón de techo con tercera luz de freno en gris plomo */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 205 68 C 260 62, 340 62, 395 68 L 390 76 C 340 72, 260 72, 210 76 Z" stroke="currentColor" fill="currentColor" fillOpacity="0.08" strokeWidth={1.6} />
+                <rect x="260" y="70" width="80" height="4" rx="2" fill="currentColor" fillOpacity="0.4" stroke="currentColor" strokeWidth={1.2} />
 
-                {/* Luneta trasera (Parabrisas posterior con tercera luz de freno y desempañador) */}
-                <path strokeLinecap="round" strokeLinejoin="round" d="M 210 82 Q 300 76 390 82 L 426 145 Q 300 150 174 145 Z" />
-                <rect x="270" y="84" width="60" height="4" rx="2" strokeWidth={1.5} opacity={0.9} />
-                <line x1="196" y1="105" x2="404" y2="105" strokeWidth={0.8} opacity={0.3} />
-                <line x1="186" y1="122" x2="414" y2="122" strokeWidth={0.8} opacity={0.3} />
-                <line x1="178" y1="138" x2="422" y2="138" strokeWidth={0.8} opacity={0.3} />
+                {/* Luneta trasera (Vidrio posterior con curvatura) */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 220 78 Q 300 72 380 78 L 432 144 Q 300 150 168 144 Z" />
+                <line x1="195" y1="104" x2="405" y2="104" strokeWidth={0.7} opacity={0.25} />
+                <line x1="184" y1="120" x2="416" y2="120" strokeWidth={0.7} opacity={0.25} />
+                <line x1="176" y1="134" x2="424" y2="134" strokeWidth={0.7} opacity={0.25} />
 
-                {/* Tapa del maletero / Compuerta posterior (Líneas de corte) */}
-                <path strokeLinecap="round" strokeLinejoin="round" d="M 174 152 Q 300 156 426 152" />
-                <ellipse cx="300" cy="166" rx="12" ry="8" strokeWidth={1.4} />
+                {/* Apoyacabezas de los asientos delanteros vistos por detrás */}
+                <rect x="228" y="94" width="38" height="24" rx="7" strokeWidth={1.2} opacity={0.4} />
+                <line x1="240" y1="118" x2="240" y2="126" strokeWidth={1.2} opacity={0.3} />
+                <line x1="254" y1="118" x2="254" y2="126" strokeWidth={1.2} opacity={0.3} />
 
-                {/* Faro trasero izquierdo (Óptica moderna LED) */}
-                <path strokeLinecap="round" strokeLinejoin="round" d="M 126 172 L 230 174 L 226 196 L 132 192 C 126 186, 124 178, 126 172 Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M 134 178 L 224 180 L 222 188 L 138 186 Z" strokeWidth={1.4} opacity={0.8} />
+                <rect x="334" y="94" width="38" height="24" rx="7" strokeWidth={1.2} opacity={0.4} />
+                <line x1="346" y1="118" x2="346" y2="126" strokeWidth={1.2} opacity={0.3} />
+                <line x1="360" y1="118" x2="360" y2="126" strokeWidth={1.2} opacity={0.3} />
 
-                {/* Faro trasero derecho (Óptica moderna LED) */}
-                <path strokeLinecap="round" strokeLinejoin="round" d="M 474 172 L 370 174 L 374 196 L 468 192 C 474 186, 476 178, 474 172 Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M 466 178 L 376 180 L 378 188 L 462 186 Z" strokeWidth={1.4} opacity={0.8} />
+                {/* LIMPIAPARABRISAS TRASERO (Elemento universal e inconfundible de la parte trasera) */}
+                <circle cx="300" cy="142" r="3.5" fill="currentColor" />
+                <line x1="300" y1="142" x2="365" y2="134" strokeWidth={2.4} strokeLinecap="round" />
+                <line x1="345" y1="136" x2="385" y2="131" strokeWidth={1.8} strokeLinecap="round" />
 
-                {/* Moldura central de unión entre faros */}
-                <line x1="230" y1="184" x2="370" y2="184" strokeWidth={1.6} opacity={0.6} />
+                {/* Tapa del Baúl / Maletera con cámara de retroceso y emblema */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 152 148 Q 300 154 448 148" />
+                <circle cx="300" cy="158" r="9" strokeWidth={1.4} />
+                <circle cx="300" cy="170" r="2.5" fill="currentColor" opacity={0.7} /> {/* Lente cámara reversa */}
 
-                {/* Línea de corte de la maletera hacia el paragolpes */}
-                <path strokeLinecap="round" strokeLinejoin="round" d="M 226 196 L 224 236 Q 300 240 376 236 L 374 196" opacity={0.7} />
+                {/* FAROS TRASEROS EN GRIS PLOMO CAD (Ópticas traseras elegantes) */}
+                {/* Faro Izquierdo */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 118 162 L 225 168 L 220 196 L 128 190 C 120 184, 118 174, 118 162 Z" stroke="currentColor" fill="currentColor" fillOpacity="0.08" strokeWidth={2} />
+                <line x1="126" y1="170" x2="218" y2="174" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" />
+                <rect x="135" y="178" width="38" height="8" rx="2" stroke="currentColor" opacity={0.6} strokeWidth={1} />
+                <rect x="178" y="179" width="36" height="8" rx="2" stroke="currentColor" opacity={0.4} strokeWidth={1} />
 
-                {/* Espacio para la placa patente (Recuadro empotrado y marco) */}
-                <rect x="236" y="202" width="128" height="30" rx="4" strokeWidth={1.2} opacity={0.6} />
-                <rect x="246" y="206" width="108" height="22" rx="3" strokeWidth={1.5} />
-                <line x1="262" y1="217" x2="338" y2="217" strokeWidth={1.5} strokeDasharray="14 5 14 5" opacity={0.4} />
+                {/* Faro Derecho */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 482 162 L 375 168 L 380 196 L 472 190 C 480 184, 482 174, 482 162 Z" stroke="currentColor" fill="currentColor" fillOpacity="0.08" strokeWidth={2} />
+                <line x1="474" y1="170" x2="382" y2="174" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" />
+                <rect x="427" y="178" width="38" height="8" rx="2" stroke="currentColor" opacity={0.6} strokeWidth={1} />
+                <rect x="386" y="179" width="36" height="8" rx="2" stroke="currentColor" opacity={0.4} strokeWidth={1} />
 
-                {/* Paragolpes trasero: Línea de tensión, catadióptricos y sensores */}
-                <path strokeLinecap="round" strokeLinejoin="round" d="M 120 216 Q 300 224 480 216" opacity={0.5} />
-                <rect x="136" y="222" width="28" height="5" rx="2.5" strokeWidth={1.2} opacity={0.8} />
-                <rect x="436" y="222" width="28" height="5" rx="2.5" strokeWidth={1.2} opacity={0.8} />
+                {/* Tira continua entre faros */}
+                <line x1="225" y1="170" x2="375" y2="170" stroke="currentColor" strokeWidth={1.8} opacity={0.6} />
 
-                <circle cx="178" cy="225" r="2" opacity={0.6} />
-                <circle cx="218" cy="225" r="2" opacity={0.6} />
-                <circle cx="382" cy="225" r="2" opacity={0.6} />
-                <circle cx="422" cy="225" r="2" opacity={0.6} />
+                {/* Línea de corte inferior de la compuerta de maletera */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 180 198 Q 300 203 420 198" opacity={0.6} />
 
-                {/* Faldón inferior / Difusor */}
-                <path strokeLinecap="round" strokeLinejoin="round" d="M 185 248 Q 300 252 415 248 L 405 260 Q 300 263 195 260 Z" opacity={0.7} />
+                {/* Parachoques trasero con luz de patente y PLACA */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 116 210 Q 300 216 484 210" opacity={0.4} />
+                {/* Luces de patente */}
+                <rect x="265" y="206" width="14" height="3" rx="1" opacity={0.6} />
+                <rect x="321" y="206" width="14" height="3" rx="1" opacity={0.6} />
+                {/* Placa Patente */}
+                <rect x="238" y="210" width="124" height="26" rx="3" strokeWidth={1.5} />
+                <text x="300" y="227" textAnchor="middle" fill="currentColor" fontSize="11" fontFamily="monospace" fontWeight="bold" opacity={0.8} letterSpacing="3">PLACA</text>
 
-                {/* Salidas de escape dobles cromadas */}
-                <rect x="146" y="246" width="26" height="11" rx="4" strokeWidth={1.4} />
-                <rect x="428" y="246" width="26" height="11" rx="4" strokeWidth={1.4} />
+                {/* Reflectores inferiores y sensores de retroceso */}
+                <rect x="135" y="226" width="30" height="6" rx="3" stroke="currentColor" opacity={0.7} strokeWidth={1.4} />
+                <rect x="435" y="226" width="30" height="6" rx="3" stroke="currentColor" opacity={0.7} strokeWidth={1.4} />
+                <circle cx="180" cy="227" r="2" opacity={0.6} />
+                <circle cx="218" cy="227" r="2" opacity={0.6} />
+                <circle cx="382" cy="227" r="2" opacity={0.6} />
+                <circle cx="420" cy="227" r="2" opacity={0.6} />
+
+                {/* Silenciador de escape visible debajo del chasis */}
+                <rect x="220" y="248" width="160" height="12" rx="4" strokeWidth={1} opacity={0.25} />
+
+                {/* Difusor aerodinámico */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 180 248 Q 300 252 420 248 L 410 262 Q 300 265 190 262 Z" opacity={0.5} />
+                <line x1="270" y1="250" x2="270" y2="261" opacity={0.4} />
+                <line x1="300" y1="251" x2="300" y2="262" opacity={0.4} />
+                <line x1="330" y1="250" x2="330" y2="261" opacity={0.4} />
+
+                {/* Tubos de escape dobles cromados (2 a la izquierda, 2 a la derecha) */}
+                <circle cx="148" cy="252" r="7" strokeWidth={1.8} />
+                <circle cx="166" cy="252" r="7" strokeWidth={1.8} />
+                <circle cx="434" cy="252" r="7" strokeWidth={1.8} />
+                <circle cx="452" cy="252" r="7" strokeWidth={1.8} />
               </svg>
             )}
 
@@ -884,6 +1005,7 @@ ${urlSeguimiento}`;
               </svg>
             )}
           </div>
+          )}
 
           {/* PINES CIRCULARES ROJOS NUMERADOS */}
           {hallazgos
@@ -1055,7 +1177,6 @@ ${urlSeguimiento}`;
                     </span>
                   )}
                 </h3>
-                <p className="text-xs text-zinc-400 mt-0.5">{sistemaActual.description}</p>
               </div>
 
               <div className="flex items-center gap-3">
@@ -1080,243 +1201,456 @@ ${urlSeguimiento}`;
               </div>
             </div>
 
-            {/* LIENZO VECTORIAL TÉCNICO DEL SISTEMA (Motor, Frenos, Suspensión, Eléctrico) */}
-            <div className="relative w-full h-52 sm:h-64 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-center overflow-hidden group transition-all">
-              <div className="w-full h-full flex items-center justify-center p-3 pointer-events-none">
-                {/* 1. PLANO VANO MOTOR Y COMPONENTES */}
+            {/* Cabecera del Lienzo Mecánico con Switch 3D Holograma vs CAD 2D */}
+            <div className="flex items-center justify-between gap-2 pt-1 pb-1">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
+                <span className="text-xs font-bold text-white uppercase tracking-wider">
+                  {modoVisual === "3d" ? `${sistemaActual.name} 3D Holográfico` : "Plano Vectorial CAD 2D"}
+                </span>
+                <span className="text-[11px] text-zinc-500 hidden sm:inline">• Toca para marcar hallazgo</span>
+              </div>
+
+              <div className="flex items-center bg-black/70 p-1 rounded-xl border border-white/10 gap-1">
+                <button
+                  type="button"
+                  onClick={() => setModoVisual("3d")}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    modoVisual === "3d"
+                      ? "bg-cyan-500/25 text-cyan-300 border border-cyan-500/50 shadow-md shadow-cyan-500/20"
+                      : "text-zinc-400 hover:text-zinc-200"
+                  }`}
+                >
+                  <span>✨ 3D Holograma</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModoVisual("2d")}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    modoVisual === "2d"
+                      ? "bg-purple-500/25 text-purple-300 border border-purple-500/50 shadow-md shadow-purple-500/20"
+                      : "text-zinc-400 hover:text-zinc-200"
+                  }`}
+                >
+                  <span>📐 CAD 2D</span>
+                </button>
+              </div>
+            </div>
+
+            {/* LIENZO VECTORIAL / 3D INTERACTIVO DEL SISTEMA (Tocar para marcar pines) */}
+            <div
+              onClick={handleTocarLienzo}
+              className={`relative w-full h-72 sm:h-96 rounded-xl flex items-center justify-center cursor-crosshair overflow-hidden group transition-all ${
+                modoVisual === "3d"
+                  ? "bg-black border border-cyan-500/30 shadow-[0_0_35px_rgba(6,182,212,0.12)]"
+                  : "bg-white/[0.02] border border-white/5"
+              }`}
+            >
+              {modoVisual === "3d" ? (
+                <div className="relative w-full h-full flex items-center justify-center pointer-events-none p-2 sm:p-4">
+                  <img
+                    src={
+                      seccionActiva === "frenos"
+                        ? "/images/inspeccion/auto_3d_frenos.jpg"
+                        : seccionActiva === "suspension"
+                        ? "/images/inspeccion/auto_3d_suspension.jpg"
+                        : seccionActiva === "electrico"
+                        ? "/images/inspeccion/auto_3d_electrico.jpg"
+                        : "/images/inspeccion/auto_3d_motor.jpg"
+                    }
+                    alt={`${sistemaActual.name} 3D`}
+                    className="w-full h-full object-contain filter drop-shadow-[0_0_25px_rgba(6,182,212,0.35)] select-none"
+                  />
+                </div>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center p-3 pointer-events-none">
+                {/* 1. PLANO VANO MOTOR Y COMPONENTES (CAD Blueprint Hiperdetallado en Gris/Plomo) */}
                 {seccionActiva === "motor" && (
-                  <svg className="w-full h-full max-h-60 text-zinc-400 group-hover:text-cyan-400 transition-colors" viewBox="0 0 600 240" fill="none" stroke="currentColor" strokeWidth={1.6}>
-                    {/* Contorno del vano motor y cortafuegos */}
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M 60 25 L 540 25 L 525 220 L 75 220 Z" opacity={0.4} />
+                  <svg className="w-full h-full max-h-72 text-zinc-400 group-hover:text-cyan-400 transition-colors" viewBox="0 0 600 280" fill="none" stroke="currentColor" strokeWidth={1.7}>
+                    {/* Estructura del vano motor y cortafuegos perimetral */}
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M 45 20 L 555 20 L 535 265 L 65 265 Z" opacity={0.35} />
 
-                    {/* Radiador frontal y electroventiladores */}
-                    <rect x="150" y="32" width="300" height="22" rx="4" strokeWidth={1.5} />
-                    <line x1="170" y1="36" x2="430" y2="36" strokeWidth={1} strokeDasharray="4 3" opacity={0.6} />
-                    <line x1="170" y1="44" x2="430" y2="44" strokeWidth={1} strokeDasharray="4 3" opacity={0.6} />
-                    <circle cx="240" cy="43" r="8" strokeWidth={1.2} />
-                    <circle cx="360" cy="43" r="8" strokeWidth={1.2} />
-                    <circle cx="160" cy="32" r="5" strokeWidth={1.4} /> {/* Tapón radiador */}
+                    {/* Cerradura frontal del capó */}
+                    <rect x="288" y="16" width="24" height="12" rx="3" strokeWidth={1.4} opacity={0.7} />
+                    <circle cx="300" cy="22" r="2.5" fill="currentColor" opacity={0.8} />
 
-                    {/* Manguera superior de refrigerante */}
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M 210 54 C 210 75, 230 85, 255 92" strokeWidth={2.4} opacity={0.8} />
+                    {/* Torretas de amortiguación (Copelas con 3 pernos y vástago central) */}
+                    <circle cx="95" cy="125" r="30" strokeWidth={1.8} opacity={0.6} />
+                    <circle cx="95" cy="125" r="16" strokeWidth={1.3} opacity={0.5} />
+                    <circle cx="95" cy="125" r="5" fill="currentColor" opacity={0.7} />
+                    <circle cx="95" cy="100" r="3.2" fill="currentColor" opacity={0.85} />
+                    <circle cx="75" cy="138" r="3.2" fill="currentColor" opacity={0.85} />
+                    <circle cx="115" cy="138" r="3.2" fill="currentColor" opacity={0.85} />
+                    {/* Nervios estructurales de aleta izquierda */}
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 55 50 L 78 78 M 55 180 L 78 160" strokeWidth={1.2} opacity={0.4} />
 
-                    {/* Bloque motor central / Tapa de balancines */}
-                    <rect x="220" y="92" width="160" height="95" rx="10" strokeWidth={2} />
-                    {/* Tapón de aceite */}
-                    <circle cx="250" cy="112" r="9" strokeWidth={1.6} />
-                    <path strokeLinecap="round" d="M 245 112 L 255 112" strokeWidth={1.5} />
-                    {/* 4 Bobinas / Bujías de encendido */}
-                    <rect x="245" y="130" width="16" height="20" rx="3" strokeWidth={1.2} />
-                    <rect x="280" y="130" width="16" height="20" rx="3" strokeWidth={1.2} />
-                    <rect x="315" y="130" width="16" height="20" rx="3" strokeWidth={1.2} />
-                    <rect x="350" y="130" width="16" height="20" rx="3" strokeWidth={1.2} />
-                    <line x1="240" y1="160" x2="370" y2="160" strokeWidth={1.2} opacity={0.6} />
+                    <circle cx="505" cy="125" r="30" strokeWidth={1.8} opacity={0.6} />
+                    <circle cx="505" cy="125" r="16" strokeWidth={1.3} opacity={0.5} />
+                    <circle cx="505" cy="125" r="5" fill="currentColor" opacity={0.7} />
+                    <circle cx="505" cy="100" r="3.2" fill="currentColor" opacity={0.85} />
+                    <circle cx="485" cy="138" r="3.2" fill="currentColor" opacity={0.85} />
+                    <circle cx="525" cy="138" r="3.2" fill="currentColor" opacity={0.85} />
+                    {/* Nervios estructurales de aleta derecha */}
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 545 50 L 522 78 M 545 180 L 522 160" strokeWidth={1.2} opacity={0.4} />
 
-                    {/* Varilla medidora de aceite */}
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M 390 105 C 400 98, 410 102, 408 112 L 380 140" strokeWidth={1.6} />
-                    <circle cx="405" cy="102" r="5" strokeWidth={1.4} />
+                    {/* Depósito limpiaparabrisas con tapón */}
+                    <rect x="70" y="32" width="34" height="28" rx="6" strokeWidth={1.4} opacity={0.7} />
+                    <circle cx="87" cy="32" r="5" strokeWidth={1.2} />
 
-                    {/* Filtro de aire y caja de admisión (Izquierda) */}
-                    <rect x="85" y="105" width="85" height="60" rx="8" strokeWidth={1.6} />
-                    <line x1="95" y1="115" x2="160" y2="115" strokeWidth={1} opacity={0.5} />
-                    <line x1="95" y1="125" x2="160" y2="125" strokeWidth={1} opacity={0.5} />
-                    <line x1="95" y1="135" x2="160" y2="135" strokeWidth={1} opacity={0.5} />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M 170 135 C 195 135, 205 120, 220 115" strokeWidth={2.4} />
+                    {/* Barra frontal y Radiador de aluminio con panel de celdas */}
+                    <rect x="135" y="26" width="330" height="10" rx="3" strokeWidth={1.4} opacity={0.5} />
+                    <rect x="145" y="36" width="310" height="28" rx="4" strokeWidth={2} />
+                    <line x1="160" y1="42" x2="440" y2="42" strokeWidth={0.9} strokeDasharray="4 2" opacity="0.45" />
+                    <line x1="160" y1="50" x2="440" y2="50" strokeWidth={0.9} strokeDasharray="4 2" opacity="0.45" />
+                    <line x1="160" y1="58" x2="440" y2="58" strokeWidth={0.9} strokeDasharray="4 2" opacity="0.45" />
 
-                    {/* Alternador y correa de accesorios (Derecha) */}
-                    <circle cx="415" cy="155" r="18" strokeWidth={1.8} />
-                    <circle cx="415" cy="155" r="7" strokeWidth={1.4} />
-                    {/* Polea del cigüeñal y correa tensora */}
-                    <circle cx="395" cy="195" r="14" strokeWidth={1.6} />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M 380 160 L 405 140 C 430 145, 435 170, 420 185 L 405 205 C 385 205, 385 185, 380 160 Z" strokeWidth={1.6} strokeDasharray="3 2" opacity={0.8} />
+                    {/* Tapón presurizado de radiador con aletas laterales */}
+                    <circle cx="168" cy="36" r="6" strokeWidth={1.6} />
+                    <path strokeLinecap="round" d="M 160 36 L 176 36" strokeWidth={1.4} />
 
-                    {/* Batería 12V (Superior derecha) */}
-                    <rect x="445" y="50" width="75" height="50" rx="6" strokeWidth={1.6} />
-                    <rect x="455" y="42" width="14" height="8" rx="2" strokeWidth={1.2} />
-                    <rect x="495" y="42" width="14" height="8" rx="2" strokeWidth={1.2} />
-                    <line x1="462" y1="62" x2="462" y2="70" strokeWidth={1.5} />
-                    <line x1="458" y1="66" x2="466" y2="66" strokeWidth={1.5} />
-                    <line x1="498" y1="66" x2="506" y2="66" strokeWidth={1.5} />
+                    {/* Doble electroventilador con aspas aerodinámicas y motores */}
+                    <circle cx="230" cy="48" r="12" strokeWidth={1.4} />
+                    <circle cx="230" cy="48" r="4" fill="currentColor" opacity={0.6} />
+                    <path strokeLinecap="round" strokeWidth={1} d="M 230 38 L 230 58 M 221 43 L 239 53 M 221 53 L 239 43" opacity={0.7} />
+
+                    <circle cx="370" cy="48" r="12" strokeWidth={1.4} />
+                    <circle cx="370" cy="48" r="4" fill="currentColor" opacity={0.6} />
+                    <path strokeLinecap="round" strokeWidth={1} d="M 370 38 L 370 58 M 361 43 L 379 53 M 361 53 L 379 43" opacity={0.7} />
+
+                    {/* Manguera superior de refrigerante con abrazaderas metálicas */}
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 205 64 C 205 84, 226 90, 246 98" strokeWidth={3} opacity={0.85} />
+                    <rect x="201" y="66" width="8" height="4" rx="1" opacity={0.7} />
+                    <rect x="241" y="94" width="8" height="4" rx="1" opacity={0.7} />
+
+                    {/* BLOQUE MOTOR DOHC 16V (Tapa de válvulas nervada en plomo/gris) */}
+                    <rect x="195" y="98" width="210" height="118" rx="14" strokeWidth={2.4} />
+                    {/* Pernos de apriete perimetral de culata */}
+                    <circle cx="206" cy="108" r="2.5" fill="currentColor" opacity={0.6} />
+                    <circle cx="300" cy="105" r="2.5" fill="currentColor" opacity={0.6} />
+                    <circle cx="394" cy="108" r="2.5" fill="currentColor" opacity={0.6} />
+                    <circle cx="206" cy="206" r="2.5" fill="currentColor" opacity={0.6} />
+                    <circle cx="300" cy="209" r="2.5" fill="currentColor" opacity={0.6} />
+                    <circle cx="394" cy="206" r="2.5" fill="currentColor" opacity={0.6} />
+
+                    {/* Franja central de bujías / bobinas */}
+                    <rect x="216" y="134" width="168" height="46" rx="6" strokeWidth={1.3} opacity={0.6} />
+
+                    {/* 4 Bobinas de encendido directas (Coil-on-Plug) con arnés */}
+                    <rect x="228" y="140" width="24" height="32" rx="4" strokeWidth={1.5} />
+                    <circle cx="240" cy="156" r="3" fill="currentColor" opacity={0.7} />
+                    <rect x="272" y="140" width="24" height="32" rx="4" strokeWidth={1.5} />
+                    <circle cx="284" cy="156" r="3" fill="currentColor" opacity={0.7} />
+                    <rect x="316" y="140" width="24" height="32" rx="4" strokeWidth={1.5} />
+                    <circle cx="328" cy="156" r="3" fill="currentColor" opacity={0.7} />
+                    <rect x="360" y="140" width="24" height="32" rx="4" strokeWidth={1.5} />
+                    <circle cx="372" cy="156" r="3" fill="currentColor" opacity={0.7} />
+                    {/* Arnés conductor de cables de encendido */}
+                    <line x1="222" y1="174" x2="388" y2="174" strokeWidth={2.4} strokeLinecap="round" opacity={0.8} />
+
+                    {/* Tapón de llenado de aceite grabado */}
+                    <circle cx="240" cy="118" r="10" strokeWidth={1.8} />
+                    <path strokeLinecap="round" d="M 235 118 L 245 118 M 240 113 L 240 123" strokeWidth={1.6} />
+
+                    {/* Varilla medidora de nivel de aceite con tirador circular */}
+                    <circle cx="418" cy="110" r="7" strokeWidth={1.8} />
+                    <circle cx="418" cy="110" r="3.5" strokeWidth={1.2} />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 414 116 L 398 144" strokeWidth={2.2} />
+
+                    {/* Riel de inyectores de combustible */}
+                    <line x1="220" y1="123" x2="380" y2="123" strokeWidth={1.8} opacity={0.65} />
+                    <rect x="236" y="120" width="8" height="6" rx="1" opacity={0.8} />
+                    <rect x="280" y="120" width="8" height="6" rx="1" opacity={0.8} />
+                    <rect x="324" y="120" width="8" height="6" rx="1" opacity={0.8} />
+                    <rect x="368" y="120" width="8" height="6" rx="1" opacity={0.8} />
+
+                    {/* Múltiple de admisión de 4 colectores afinados */}
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 235 98 C 235 78, 248 74, 255 98" strokeWidth={2} opacity={0.85} />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 275 98 C 275 78, 288 74, 295 98" strokeWidth={2} opacity={0.85} />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 315 98 C 315 78, 328 74, 335 98" strokeWidth={2} opacity={0.85} />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 355 98 C 355 78, 368 74, 375 98" strokeWidth={2} opacity={0.85} />
+
+                    {/* Filtro de aire sellado y tobera de admisión (Izquierda) */}
+                    <rect x="70" y="100" width="95" height="68" rx="8" strokeWidth={1.8} />
+                    {/* Pliegues del panel filtrante */}
+                    <line x1="80" y1="112" x2="155" y2="112" strokeWidth={1} opacity={0.35} />
+                    <line x1="80" y1="124" x2="155" y2="124" strokeWidth={1} opacity={0.35} />
+                    <line x1="80" y1="136" x2="155" y2="136" strokeWidth={1} opacity={0.35} />
+                    <line x1="80" y1="148" x2="155" y2="148" strokeWidth={1} opacity={0.35} />
+                    <line x1="80" y1="160" x2="155" y2="160" strokeWidth={1} opacity={0.35} />
+                    {/* Presillas de apertura rápida */}
+                    <rect x="67" y="112" width="4" height="8" rx="1" opacity={0.8} />
+                    <rect x="67" y="148" width="4" height="8" rx="1" opacity={0.8} />
+                    <rect x="164" y="112" width="4" height="8" rx="1" opacity={0.8} />
+                    <rect x="164" y="148" width="4" height="8" rx="1" opacity={0.8} />
+                    {/* Ducto de entrada frontal */}
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 90 100 L 90 70 L 115 70 L 115 100" strokeWidth={1.4} opacity={0.7} />
+                    {/* Sensor MAF y manguito flexible hacia acelerador */}
+                    <rect x="160" y="127" width="12" height="18" rx="2" strokeWidth={1.2} />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 165 136 C 185 136, 192 112, 202 104" strokeWidth={3.2} />
+                    <line x1="174" y1="129" x2="174" y2="141" strokeWidth={1.2} opacity={0.5} />
+                    <line x1="182" y1="124" x2="182" y2="136" strokeWidth={1.2} opacity={0.5} />
+
+                    {/* Alternador y correa serpentina de accesorios (Derecha) */}
+                    <circle cx="430" cy="166" r="22" strokeWidth={2} />
+                    <circle cx="430" cy="166" r="9" strokeWidth={1.5} />
+                    {/* Ranuras de ventilación del alternador */}
+                    <line x1="430" y1="148" x2="430" y2="153" strokeWidth={1.2} opacity={0.6} />
+                    <line x1="430" y1="179" x2="430" y2="184" strokeWidth={1.2} opacity={0.6} />
+                    <line x1="412" y1="166" x2="417" y2="166" strokeWidth={1.2} opacity={0.6} />
+                    <line x1="443" y1="166" x2="448" y2="166" strokeWidth={1.2} opacity={0.6} />
+                    {/* Polea tensora */}
+                    <circle cx="410" cy="214" r="16" strokeWidth={1.8} />
+                    {/* Correa serpentina acanalada */}
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 395 166 L 426 142 C 452 145, 458 178, 438 196 L 420 228 C 395 228, 395 196, 395 166 Z" strokeWidth={2} strokeDasharray="5 2" opacity="0.85" />
+
+                    {/* Batería principal de 12V con terminales (+ / -) */}
+                    <rect x="455" y="38" width="85" height="58" rx="6" strokeWidth={1.8} />
+                    {/* Soporte transversal de fijación de batería */}
+                    <line x1="452" y1="67" x2="543" y2="67" strokeWidth={2} opacity={0.7} />
+                    <circle cx="497" cy="67" r="3" fill="currentColor" opacity={0.8} />
+                    {/* Borne Positivo (+) */}
+                    <rect x="466" y="44" width="16" height="12" rx="2" strokeWidth={1.3} />
+                    <line x1="474" y1="47" x2="474" y2="53" strokeWidth={1.5} />
+                    <line x1="471" y1="50" x2="477" y2="50" strokeWidth={1.5} />
+                    {/* Borne Negativo (-) */}
+                    <rect x="515" y="44" width="16" height="12" rx="2" strokeWidth={1.3} />
+                    <line x1="520" y1="50" x2="526" y2="50" strokeWidth={1.5} />
 
                     {/* Depósito de expansión de refrigerante */}
-                    <rect x="450" y="120" width="55" height="42" rx="7" strokeWidth={1.6} />
-                    <line x1="460" y1="135" x2="495" y2="135" strokeWidth={1} strokeDasharray="4 2" opacity={0.6} />
-                    <line x1="460" y1="145" x2="495" y2="145" strokeWidth={1} strokeDasharray="4 2" opacity={0.6} />
+                    <rect x="455" y="115" width="55" height="45" rx="8" strokeWidth={1.6} />
+                    <circle cx="482" cy="115" r="6" strokeWidth={1.4} />
+                    <line x1="465" y1="135" x2="500" y2="135" strokeWidth={1.2} strokeDasharray="3 2" opacity="0.5" />
+                    <line x1="465" y1="145" x2="500" y2="145" strokeWidth={1.2} strokeDasharray="3 2" opacity="0.5" />
 
-                    {/* Soportes de motor (Patas) */}
-                    <rect x="185" y="130" width="25" height="20" rx="4" strokeWidth={1.4} opacity={0.7} />
-                    <rect x="390" y="105" width="22" height="18" rx="4" strokeWidth={1.4} opacity={0.7} />
+                    {/* Caja de fusibles y relés del compartimiento motor */}
+                    <rect x="458" y="172" width="68" height="52" rx="7" strokeWidth={1.8} />
+                    <rect x="486" y="167" width="12" height="6" rx="1.5" opacity={0.8} />
+                    <rect x="468" y="180" width="10" height="14" rx="2" strokeWidth={1} opacity={0.5} />
+                    <rect x="484" y="180" width="10" height="14" rx="2" strokeWidth={1} opacity={0.5} />
+                    <rect x="500" y="180" width="16" height="16" rx="2" strokeWidth={1} opacity={0.6} />
 
-                    {/* Indicadores / Etiquetas técnicas */}
-                    <text x="300" y="210" textAnchor="middle" fill="currentColor" fontSize="11" fontFamily="monospace" opacity={0.7}>[VANO MOTOR • REFRIGERACIÓN • ENCENDIDO • CORREAS]</text>
+                    {/* Servofreno circular y bomba de freno con depósito */}
+                    <circle cx="118" cy="192" r="22" strokeWidth={1.8} opacity={0.8} />
+                    <rect x="134" y="184" width="38" height="16" rx="3" strokeWidth={1.5} />
+                    <circle cx="145" cy="184" r="4" strokeWidth={1.2} />
+                    <circle cx="162" cy="184" r="4" strokeWidth={1.2} />
+
+                    {/* Soportes de motor (Patas de apoyo hidráulico con tornillo pasante) */}
+                    <rect x="170" y="150" width="24" height="24" rx="5" strokeWidth={1.6} opacity={0.7} />
+                    <circle cx="182" cy="162" r="4" fill="currentColor" opacity={0.6} />
+                    <rect x="405" y="130" width="22" height="22" rx="5" strokeWidth={1.6} opacity={0.7} />
+                    <circle cx="416" cy="141" r="4" fill="currentColor" opacity={0.6} />
+
+                    {/* Rejilla vierteaguas en cortafuegos */}
+                    <line x1="80" y1="245" x2="520" y2="245" strokeWidth={1.5} opacity={0.4} />
+                    <line x1="160" y1="255" x2="440" y2="255" strokeWidth={1.2} strokeDasharray="5 4" opacity={0.3} />
                   </svg>
                 )}
 
                 {/* 2. PLANO SISTEMA DE FRENOS */}
                 {seccionActiva === "frenos" && (
                   <svg className="w-full h-full max-h-60 text-zinc-400 group-hover:text-cyan-400 transition-colors" viewBox="0 0 600 240" fill="none" stroke="currentColor" strokeWidth={1.6}>
-                    {/* Disco de freno ventilado de alto rendimiento */}
                     <circle cx="250" cy="120" r="95" strokeWidth={2} />
                     <circle cx="250" cy="120" r="82" strokeWidth={1.2} opacity={0.6} />
                     <circle cx="250" cy="120" r="44" strokeWidth={1.6} />
                     <circle cx="250" cy="120" r="18" strokeWidth={1.4} />
-
-                    {/* 5 Pernos / Espárragos de rueda */}
                     <circle cx="250" cy="90" r="5" strokeWidth={1.4} />
                     <circle cx="278" cy="105" r="5" strokeWidth={1.4} />
                     <circle cx="268" cy="138" r="5" strokeWidth={1.4} />
                     <circle cx="232" cy="138" r="5" strokeWidth={1.4} />
                     <circle cx="222" cy="105" r="5" strokeWidth={1.4} />
-
-                    {/* Perforaciones radiales de ventilación */}
-                    <circle cx="205" cy="80" r="2.5" opacity={0.5} />
-                    <circle cx="215" cy="70" r="2.5" opacity={0.5} />
-                    <circle cx="295" cy="80" r="2.5" opacity={0.5} />
-                    <circle cx="305" cy="70" r="2.5" opacity={0.5} />
-                    <circle cx="205" cy="160" r="2.5" opacity={0.5} />
-                    <circle cx="215" cy="170" r="2.5" opacity={0.5} />
-                    <circle cx="295" cy="160" r="2.5" opacity={0.5} />
-                    <circle cx="305" cy="170" r="2.5" opacity={0.5} />
-
-                    {/* Cáliper de freno deportivo (Pinza de 4 pistones) */}
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M 160 55 C 190 40, 260 40, 305 52 C 320 58, 322 72, 315 85 C 305 105, 275 118, 240 120 C 200 120, 175 105, 162 90 C 152 76, 150 62, 160 55 Z" />
-                    {/* Pastilla de freno visible */}
                     <rect x="195" y="65" width="65" height="16" rx="3" strokeWidth={1.4} />
-                    {/* Pistones hidráulicos duales */}
                     <circle cx="215" cy="73" r="8" strokeWidth={1.2} />
                     <circle cx="245" cy="73" r="8" strokeWidth={1.2} />
-                    {/* Purgador de líquido */}
-                    <rect x="175" y="48" width="5" height="10" rx="1.5" strokeWidth={1.2} />
-
-                    {/* Latiguillo / Línea hidráulica trenzada */}
                     <path strokeLinecap="round" strokeLinejoin="round" d="M 178 55 C 150 50, 120 70, 95 105 C 75 130, 60 160, 45 180" strokeWidth={2.4} opacity={0.8} />
-
-                    {/* Servofreno (Bomba de vacío y cilindro maestro en esquema) */}
                     <circle cx="465" cy="90" r="32" strokeWidth={1.8} />
                     <rect x="395" y="82" width="45" height="16" rx="3" strokeWidth={1.5} />
-                    <rect x="405" y="58" width="30" height="24" rx="4" strokeWidth={1.5} /> {/* Depósito líquido */}
-                    <line x1="410" y1="70" x2="430" y2="70" strokeWidth={1} strokeDasharray="3 2" opacity={0.6} />
-                    <line x1="440" y1="90" x2="395" y2="90" strokeWidth={2} />
-
-                    {/* Pedal de freno y tubería hidráulica hacia el caliper */}
+                    <rect x="405" y="58" width="30" height="24" rx="4" strokeWidth={1.5} />
                     <path strokeLinecap="round" strokeLinejoin="round" d="M 497 90 L 530 90 L 530 165 L 518 165" strokeWidth={2} />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M 395 90 C 350 90, 310 70, 270 55" strokeWidth={1.8} strokeDasharray="5 3" opacity={0.7} />
-
-                    {/* Indicadores / Etiquetas técnicas */}
-                    <text x="300" y="225" textAnchor="middle" fill="currentColor" fontSize="11" fontFamily="monospace" opacity={0.7}>[DISCO VENTILADO • CÁLIPER • PASTILLAS • LÍNEA HIDRÁULICA • BOMBA]</text>
                   </svg>
                 )}
 
                 {/* 3. PLANO SUSPENSIÓN Y DIRECCIÓN */}
                 {seccionActiva === "suspension" && (
                   <svg className="w-full h-full max-h-60 text-zinc-400 group-hover:text-cyan-400 transition-colors" viewBox="0 0 600 240" fill="none" stroke="currentColor" strokeWidth={1.6}>
-                    {/* Columna de Suspensión MacPherson (Izquierda) */}
-                    {/* Copela superior con rodamiento */}
                     <rect x="155" y="28" width="50" height="14" rx="4" strokeWidth={1.8} />
-                    <line x1="180" y1="20" x2="180" y2="28" strokeWidth={2} />
-                    {/* Vástago del amortiguador */}
                     <rect x="175" y="42" width="10" height="35" strokeWidth={1.2} />
-                    {/* Guardapolvo fuelle */}
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M 168 50 L 192 50 L 168 58 L 192 58 L 168 66 L 192 66" strokeWidth={1.4} opacity={0.8} />
-
-                    {/* Resorte helicoidal / Espiral */}
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M 155 78 C 210 68, 210 90, 155 96 C 210 88, 210 110, 155 116 C 210 108, 210 130, 155 136 C 210 128, 210 150, 155 156 L 205 156" />
-
-                    {/* Cuerpo cilíndrico del amortiguador */}
                     <rect x="170" y="156" width="20" height="52" rx="3" strokeWidth={1.8} />
-
-                    {/* Mangueta y cubo de rueda */}
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M 165 190 L 130 195 L 120 220 L 175 222 Z" />
-
-                    {/* Brazo de suspensión inferior / Trapecio / Parrilla */}
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M 175 222 L 250 228 L 250 236 L 165 230 Z" />
-                    <circle cx="170" cy="226" r="6" strokeWidth={1.4} /> {/* Rótula inferior */}
-                    <circle cx="250" cy="232" r="7" strokeWidth={1.4} /> {/* Buje */}
-
-                    {/* Cremallera de dirección central */}
+                    <circle cx="170" cy="226" r="6" strokeWidth={1.4} />
+                    <circle cx="250" cy="232" r="7" strokeWidth={1.4} />
                     <rect x="260" y="130" width="190" height="18" rx="4" strokeWidth={1.8} />
-                    {/* Fuelle de cremallera */}
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M 260 126 L 235 130 L 235 148 L 260 152 Z" opacity={0.8} />
-                    {/* Terminal y axial de dirección hacia la mangueta */}
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M 235 139 L 155 165 L 150 185" />
-                    <circle cx="150" cy="185" r="5" strokeWidth={1.4} /> {/* Terminal de dirección */}
-
-                    {/* Barra estabilizadora y bieleta de acoplamiento */}
-                    <line x1="200" y1="140" x2="220" y2="195" strokeWidth={2.4} /> {/* Bieleta */}
-                    <circle cx="200" cy="140" r="4" strokeWidth={1.4} />
-                    <circle cx="220" cy="195" r="4" strokeWidth={1.4} />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M 220 195 C 260 200, 310 200, 350 200" opacity={0.7} />
-
-                    {/* Columna de dirección / Volante en esquema */}
+                    <line x1="200" y1="140" x2="220" y2="195" strokeWidth={2.4} />
                     <rect x="350" y="90" width="12" height="40" rx="3" strokeWidth={1.4} />
                     <circle cx="356" cy="70" r="16" strokeWidth={1.6} />
-
-                    {/* Indicadores / Etiquetas técnicas */}
-                    <text x="300" y="228" textAnchor="middle" fill="currentColor" fontSize="11" fontFamily="monospace" opacity={0.7}>[AMORTIGUADOR • ESPIRAL • CREMALLERA • RÓTULAS • BIELETA]</text>
                   </svg>
                 )}
 
                 {/* 4. PLANO SISTEMA ELÉCTRICO */}
                 {seccionActiva === "electrico" && (
                   <svg className="w-full h-full max-h-60 text-zinc-400 group-hover:text-cyan-400 transition-colors" viewBox="0 0 600 240" fill="none" stroke="currentColor" strokeWidth={1.6}>
-                    {/* Batería principal de 12V con voltímetro integrado */}
                     <rect x="70" y="65" width="130" height="95" rx="8" strokeWidth={2} />
-                    {/* Bornes Positivo y Negativo */}
                     <rect x="88" y="50" width="22" height="15" rx="3" strokeWidth={1.4} />
                     <rect x="160" y="50" width="22" height="15" rx="3" strokeWidth={1.4} />
-                    <line x1="99" y1="55" x2="99" y2="61" strokeWidth={1.8} />
-                    <line x1="96" y1="58" x2="102" y2="58" strokeWidth={1.8} />
-                    <line x1="168" y1="58" x2="174" y2="58" strokeWidth={1.8} />
-
-                    {/* Display de estado de carga / voltímetro */}
                     <rect x="95" y="95" width="80" height="30" rx="4" strokeWidth={1.4} />
                     <text x="135" y="115" textAnchor="middle" fill="currentColor" fontSize="12" fontFamily="monospace" fontWeight="bold">12.6V</text>
-                    <text x="135" y="145" textAnchor="middle" fill="currentColor" fontSize="9" fontFamily="monospace" opacity={0.6}>BATERÍA 12V</text>
-
-                    {/* Cable de masa / Tierra al chasis */}
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M 171 50 C 171 35, 171 30, 205 30" strokeWidth={2.4} />
-                    <line x1="205" y1="24" x2="205" y2="36" strokeWidth={2} />
-                    <line x1="210" y1="26" x2="210" y2="34" strokeWidth={1.6} />
-                    <line x1="215" y1="28" x2="215" y2="32" strokeWidth={1.2} />
-
-                    {/* Cable principal positivo al alternador y arranque */}
                     <path strokeLinecap="round" strokeLinejoin="round" d="M 99 50 C 99 35, 230 35, 270 65 L 270 120" strokeWidth={3} opacity={0.9} />
-
-                    {/* Alternador con polea y regulador de voltaje */}
                     <circle cx="270" cy="155" r="38" strokeWidth={2} />
                     <circle cx="270" cy="155" r="16" strokeWidth={1.6} />
-                    <circle cx="270" cy="155" r="6" strokeWidth={1.2} />
-                    <line x1="250" y1="135" x2="290" y2="175" opacity={0.4} />
-                    <line x1="290" y1="135" x2="250" y2="175" opacity={0.4} />
-                    <text x="270" y="208" textAnchor="middle" fill="currentColor" fontSize="9" fontFamily="monospace" opacity={0.6}>ALTERNADOR</text>
-
-                    {/* Motor de arranque / Solenoide (Bendix) */}
                     <rect x="350" y="130" width="75" height="42" rx="8" strokeWidth={1.8} />
-                    <rect x="360" y="108" width="48" height="22" rx="5" strokeWidth={1.6} /> {/* Solenoide */}
-                    <circle cx="360" cy="151" r="9" strokeWidth={1.4} />
-                    <text x="388" y="188" textAnchor="middle" fill="currentColor" fontSize="9" fontFamily="monospace" opacity={0.6}>ARRANQUE</text>
-
-                    {/* Fusilera principal y relés (Vano motor) */}
                     <rect x="350" y="35" width="115" height="60" rx="8" strokeWidth={1.8} />
-                    <rect x="360" y="45" width="18" height="18" rx="3" strokeWidth={1.2} /> {/* Relé 1 */}
-                    <rect x="385" y="45" width="18" height="18" rx="3" strokeWidth={1.2} /> {/* Relé 2 */}
-                    <rect x="410" y="45" width="18" height="18" rx="3" strokeWidth={1.2} /> {/* Relé 3 */}
-                    <rect x="435" y="45" width="18" height="18" rx="3" strokeWidth={1.2} /> {/* Relé 4 */}
-                    <line x1="360" y1="75" x2="455" y2="75" strokeWidth={1} strokeDasharray="4 2" opacity={0.6} />
-                    <text x="408" y="88" textAnchor="middle" fill="currentColor" fontSize="8" fontFamily="monospace" opacity={0.6}>FUSIBLES / RELÉS</text>
-
-                    {/* Módulo Electrónico ECU / Computadora */}
                     <rect x="490" y="55" width="75" height="90" rx="7" strokeWidth={1.8} />
-                    <rect x="480" y="75" width="10" height="50" rx="2" strokeWidth={1.4} /> {/* Conector mazo */}
-                    <path d="M 505 80 L 550 80 M 505 95 L 550 95 M 505 110 L 550 110" strokeWidth={1} opacity={0.4} />
-                    <text x="528" y="135" textAnchor="middle" fill="currentColor" fontSize="9" fontFamily="monospace" opacity={0.6}>ECU / MÓDULO</text>
-
-                    {/* Indicadores / Etiquetas técnicas */}
-                    <text x="300" y="228" textAnchor="middle" fill="currentColor" fontSize="11" fontFamily="monospace" opacity={0.7}>[BATERÍA 12V • ALTERNADOR • MOTOR DE ARRANQUE • FUSIBLERA • ECU]</text>
                   </svg>
                 )}
               </div>
+              )}
+
+              {/* PINES CIRCULARES NUMERADOS EN EL SISTEMA MECÁNICO */}
+              {hallazgos
+                .filter((h) => h.vista === seccionActiva)
+                .map((h) => {
+                  const esActivo = h.id === pinSeleccionadoId;
+                  return (
+                    <div
+                      key={h.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPinSeleccionadoId(h.id);
+                        setTipoSeleccionado(h.tipo || "Fuga");
+                        setObservacionTexto(h.descripcion || "");
+                        setPopoverAbierto(true);
+                      }}
+                      style={{ left: `${h.x}%`, top: `${h.y}%` }}
+                      className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center font-mono text-xs font-bold text-white shadow-xl border-2 transition-all cursor-pointer z-20 ${
+                        esActivo
+                          ? "bg-rose-500 border-white ring-4 ring-rose-500/50 scale-125 animate-pulse"
+                          : "bg-rose-600 hover:bg-rose-500 border-white/90 ring-2 ring-rose-500/30 hover:scale-110"
+                      }`}
+                      title={`Pin #${h.pinNumber || 1}: ${h.tipo}`}
+                    >
+                      {h.pinNumber || "!"}
+                    </div>
+                  );
+                })}
             </div>
+
+            {/* POPOVER PARA PINES DEL SISTEMA MECÁNICO */}
+            {popoverAbierto && pinActual && pinActual.vista === seccionActiva && (
+              <div className="p-4 rounded-xl bg-white/[0.04] backdrop-blur-xl border border-white/10 shadow-2xl space-y-3 animate-fade-in">
+                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-rose-500 text-white font-mono text-[11px] font-bold flex items-center justify-center">
+                      {pinActual.pinNumber || 1}
+                    </span>
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">
+                      Detalle del Hallazgo en {sistemaActual.name} (Pin #{pinActual.pinNumber || 1})
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => handleEliminarPin(pinActual.id, e)}
+                      className="px-2 py-0.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-medium cursor-pointer"
+                    >
+                      Eliminar Pin ✕
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPopoverAbierto(false)}
+                      className="text-zinc-400 hover:text-white text-xs px-2 py-0.5 rounded bg-white/5"
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                </div>
+
+                {/* Chips de 1 toque */}
+                <div className="space-y-1.5">
+                  <span className="text-[11px] text-zinc-400 font-medium block">
+                    Tipo de hallazgo / anomalía (1 toque):
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                    {CHIPS_HALLAZGO_MECANICO.map((chip) => {
+                      const sel = (pinActual.tipo || tipoSeleccionado) === chip.id;
+                      return (
+                        <button
+                          key={chip.id}
+                          type="button"
+                          onClick={() => {
+                            setTipoSeleccionado(chip.id);
+                            handleGuardarDetallePin(chip.id);
+                          }}
+                          className={`h-9 rounded-xl border text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 ${
+                            sel
+                              ? `${chip.color} ring-1 ring-white/30 font-bold shadow-md`
+                              : "bg-white/[0.02] hover:bg-white/[0.06] border-white/5 text-zinc-400 hover:text-zinc-200"
+                          }`}
+                        >
+                          <span>{chip.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Observación + Foto R2 */}
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center pt-1">
+                  <div className="sm:col-span-8">
+                    <input
+                      type="text"
+                      value={observacionTexto || pinActual.descripcion || ""}
+                      onChange={(e) => {
+                        setObservacionTexto(e.target.value);
+                        handleGuardarDetallePin(pinActual.tipo, e.target.value);
+                      }}
+                      placeholder="Observación técnica (ej: fuga activa por junta de tapa o manguera rota)..."
+                      className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500/50"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-4 flex items-center gap-2">
+                    <label className="flex-1 h-10 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-zinc-200 text-xs font-medium flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 shadow-sm">
+                      <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                      </svg>
+                      <span>{subiendoFotoPin ? "Subiendo..." : "Foto R2"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={(e) => handleSubirFotoPinR2(e, pinActual.id)}
+                        className="hidden"
+                      />
+                    </label>
+
+                    {pinActual.photoUrl && (
+                      <a
+                        href={pinActual.photoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="h-10 w-10 rounded-xl overflow-hidden border border-white/20 shrink-0 relative"
+                        title={`Capturado: ${pinActual.capturedAt || "Ahora"}`}
+                      >
+                        <img src={pinActual.photoUrl} alt="Evidencia R2" className="w-full h-full object-cover" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {pinActual.capturedAt && (
+                  <div className="text-[10px] text-cyan-300 font-mono flex items-center gap-1.5 pt-0.5">
+                    <span>⏱ Foto R2 con fecha y hora:</span>
+                    <strong>{pinActual.capturedAt}</strong>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Lista de Ítems del Sistema */}
             <div className="divide-y divide-white/5">

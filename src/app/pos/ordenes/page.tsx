@@ -22,6 +22,24 @@ interface OrderItem {
   services: string[];
   notes?: string;
   totalCost?: number;
+  isBilled?: boolean;
+  billingStatus?: string;
+}
+
+function getBillingBadge(billingStatus?: string, isBilled?: boolean) {
+  const billed = isBilled || billingStatus?.toLowerCase() === "facturada";
+  if (billed) {
+    return {
+      label: "Facturada",
+      badge: "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10",
+      dot: "bg-emerald-500",
+    };
+  }
+  return {
+    label: "En Proceso",
+    badge: "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10",
+    dot: "bg-amber-500",
+  };
 }
 
 function getStatusBadge(status: string) {
@@ -460,25 +478,46 @@ export default function PosOrdenesPage() {
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-2">
-                      {(() => {
-                        const badgeCfg = getStatusBadge(ord.status);
-                        return (
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${badgeCfg.badge}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${badgeCfg.dot}`} />
-                            {badgeCfg.label}
-                          </span>
-                        );
-                      })()}
+                    <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {(() => {
+                          const badgeCfg = getStatusBadge(ord.status);
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold border ${badgeCfg.badge}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${badgeCfg.dot}`} />
+                              {badgeCfg.label}
+                            </span>
+                          );
+                        })()}
 
-                      <button
-                        type="button"
-                        onClick={() => setOrdenSeleccionada(ord)}
-                        className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center text-xs font-bold transition-all shrink-0 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
-                        title="Ver Detalles"
-                      >
-                        👁️
-                      </button>
+                        {(() => {
+                          const billingCfg = getBillingBadge(ord.billingStatus, ord.isBilled);
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold border ${billingCfg.badge}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${billingCfg.dot}`} />
+                              {billingCfg.label}
+                            </span>
+                          );
+                        })()}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                        <button
+                          type="button"
+                          onClick={() => setOrdenSeleccionada(ord)}
+                          className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center text-xs font-bold transition-all shrink-0 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+                          title="Vista Rápida"
+                        >
+                          👁️
+                        </button>
+                        <Link
+                          href={`/pos/ordenes/detalle?id=${encodeURIComponent(ord.orderNumber || ord.id || ord.dbId || "")}`}
+                          className="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center text-xs font-bold transition-all shrink-0 active:scale-95 shadow-xs cursor-pointer"
+                          title="Ver Orden Completa"
+                        >
+                          📋
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 );
@@ -496,12 +535,14 @@ export default function PosOrdenesPage() {
                       <th className="py-2.5 px-4">Cliente</th>
                       <th className="py-2.5 px-4">Total</th>
                       <th className="py-2.5 px-4">Estado de Proceso</th>
+                      <th className="py-2.5 px-4">Facturación</th>
                       <th className="py-2.5 px-4 text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                     {ordenesFiltradas.map((ord) => {
                       const badgeCfg = getStatusBadge(ord.status);
+                      const billingCfg = getBillingBadge(ord.billingStatus, ord.isBilled);
 
                       return (
                         <tr
@@ -570,17 +611,32 @@ export default function PosOrdenesPage() {
                             </span>
                           </td>
 
-                          {/* Acciones: solo ver detalle */}
+                          {/* Estado de Facturación (Facturada / En Proceso) */}
+                          <td className="py-2.5 px-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${billingCfg.badge}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${billingCfg.dot}`} />
+                              {billingCfg.label}
+                            </span>
+                          </td>
+
+                          {/* Acciones: vista rápida y ver orden completa */}
                           <td className="py-2.5 px-4 text-right whitespace-nowrap">
-                            <div className="flex items-center justify-end">
+                            <div className="flex items-center justify-end gap-1.5">
                               <button
                                 type="button"
                                 onClick={() => setOrdenSeleccionada(ord)}
                                 className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center text-xs font-bold transition-all shrink-0 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
-                                title="Ver Detalles Completos"
+                                title="Vista Rápida"
                               >
                                 👁️
                               </button>
+                              <Link
+                                href={`/pos/ordenes/detalle?id=${encodeURIComponent(ord.orderNumber || ord.id || ord.dbId || "")}`}
+                                className="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center text-xs font-bold transition-all shrink-0 active:scale-95 shadow-xs cursor-pointer"
+                                title="Ver Orden Completa"
+                              >
+                                📋
+                              </Link>
                             </div>
                           </td>
                         </tr>
@@ -593,7 +649,7 @@ export default function PosOrdenesPage() {
           </div>
         )}
 
-        {/* Modal de Detalle de Orden */}
+        {/* Modal de Detalle Rápido de Orden */}
         {ordenSeleccionada && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
             <div className="relative w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl flex flex-col gap-5">
@@ -672,10 +728,17 @@ export default function PosOrdenesPage() {
                 <button
                   type="button"
                   onClick={() => setOrdenSeleccionada(null)}
-                  className="w-full h-11 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold cursor-pointer transition-colors"
+                  className="flex-1 h-11 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold cursor-pointer transition-colors"
                 >
                   Cerrar
                 </button>
+                <Link
+                  href={`/pos/ordenes/detalle?id=${encodeURIComponent(ordenSeleccionada.orderNumber || ordenSeleccionada.id || ordenSeleccionada.dbId || "")}`}
+                  className="flex-1 h-11 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                >
+                  <span>Ver Orden Completa</span>
+                  <span>↗</span>
+                </Link>
               </div>
             </div>
           </div>
