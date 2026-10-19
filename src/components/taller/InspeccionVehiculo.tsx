@@ -159,6 +159,8 @@ export default function InspeccionVehiculo({
   const [tipoSeleccionado, setTipoSeleccionado] = useState("Rayón");
   const [observacionTexto, setObservacionTexto] = useState("");
   const [subiendoFotoPin, setSubiendoFotoPin] = useState(false);
+  const [escuchandoVoz, setEscuchandoVoz] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   // Estados para Sistemas de Inspección Total del Vehículo
   const [seccionActiva, setSeccionActiva] = useState<SeccionInspeccionId>("carroceria");
@@ -307,26 +309,44 @@ export default function InspeccionVehiculo({
     mostrarToast("Pin eliminado de la inspección.");
   };
 
-  // 2. FOTOS COMO EVIDENCIA EN CLOUDFLARE R2 CON FECHA Y HORA AUTOMÁTICA
-  const handleSubirFotoPinR2 = async (e: React.ChangeEvent<HTMLInputElement>, targetPinId: string) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // 2. FOTOS COMO EVIDENCIA EN CLOUDFLARE R2 (HASTA 3 FOTOS POR PIN)
+  const handleSubirFotosPinR2 = async (e: React.ChangeEvent<HTMLInputElement>, targetPinId: string) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const pinExistente = hallazgos.find((h) => h.id === targetPinId);
+    const fotosActuales = pinExistente?.photoUrls || (pinExistente?.photoUrl ? [pinExistente.photoUrl] : []);
+
+    if (fotosActuales.length >= 3) {
+      mostrarToast("Ya alcanzaste el límite de 3 fotos para este hallazgo.", "err");
+      e.target.value = "";
+      return;
+    }
+
+    const archivosSubir = files.slice(0, 3 - fotosActuales.length);
 
     try {
       setSubiendoFotoPin(true);
-      mostrarToast("Subiendo evidencia a Cloudflare R2 en segundo plano...", "ok");
+      mostrarToast(`Subiendo ${archivosSubir.length} ${archivosSubir.length === 1 ? "foto" : "fotos"} a R2...`, "ok");
 
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", "taller_inspeccion_evidencia");
+      const nuevasUrls: string[] = [];
 
-      const res = await fetch("/api/storage/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
+      for (const file of archivosSubir) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("folder", "taller_inspeccion_evidencia");
 
-      if (data.success && data.url) {
+        const res = await fetch("/api/storage/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.success && data.url) {
+          nuevasUrls.push(data.url);
+        }
+      }
+
+      if (nuevasUrls.length > 0) {
         const ahora = new Date();
         const timestampExacto = ahora.toLocaleString("es-EC", {
           year: "numeric",
@@ -337,11 +357,14 @@ export default function InspeccionVehiculo({
           second: "2-digit",
         });
 
+        const fotosFinales = [...fotosActuales, ...nuevasUrls].slice(0, 3);
+
         const actualizados = hallazgos.map((h) => {
           if (h.id === targetPinId) {
             return {
               ...h,
-              photoUrl: data.url,
+              photoUrl: fotosFinales[0],
+              photoUrls: fotosFinales,
               capturedAt: timestampExacto,
             };
           }
@@ -350,15 +373,139 @@ export default function InspeccionVehiculo({
 
         setHallazgos(actualizados);
         sincronizarHallazgosNeon(actualizados);
-        mostrarToast(`✓ Evidencia guardada en R2 con fecha: ${timestampExacto}`);
+        mostrarToast(`✓ ${nuevasUrls.length} ${nuevasUrls.length === 1 ? "foto agregada" : "fotos agregadas"} (${fotosFinales.length}/3)`);
       } else {
-        mostrarToast(data.error || "No se pudo subir la foto a R2", "err");
+        mostrarToast("No se pudo subir la foto a R2", "err");
       }
     } catch {
-      mostrarToast("Error de conexión al subir foto a R2", "err");
+      mostrarToast("Error de conexión al subir fotos a R2", "err");
     } finally {
       setSubiendoFotoPin(false);
+      e.target.value = "";
     }
+  };
+
+  const handleEliminarFotoPin = (targetPinId: string, indexAEliminar: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const actualizados = hallazgos.map((h) => {
+      if (h.id === targetPinId) {
+        const fotosActuales = h.photoUrls || (h.photoUrl ? [h.photoUrl] : []);
+        const nuevasFotos = fotosActuales.filter((_, idx) => idx !== indexAEliminar);
+        return {
+          ...h,
+          photoUrl: nuevasFotos[0] || undefined,
+          photoUrls: nuevasFotos,
+        };
+      }
+      return h;
+    });
+    setHallazgos(actualizados);
+    sincronizarHallazgosNeon(actualizados);
+    mostrarToast("Foto eliminada.");
+  };
+
+  // DICTADO POR VOZ (AUDIO A TEXTO) DIRECTO EN LA OBSERVACIÓN
+  const handleToggleVozPin = (targetPinId: string) => {
+    if (escuchandoVoz && recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+      setEscuchandoVoz(false);
+      return;
+    }
+
+    const SpeechRecognition =
+      typeof window !== "undefined" &&
+      ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+    if (!SpeechRecognition) {
+      mostrarToast("Tu navegador no soporta reconocimiento de voz. Escribe la observación en el texto.", "err");
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = "es-EC";
+      recognition.continuous = false;
+      recognition.interimResults = true;
+
+      recognition.onstart = () => {
+        setEscuchandoVoz(true);
+        mostrarToast("🎙 Escuchando... habla para describir el problema.");
+      };
+
+      recognition.onresult = (event: any) => {
+        let transcript = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          transcript += event.results[i][0].transcript;
+        }
+        if (transcript) {
+          setObservacionTexto((prev) => {
+            const base = prev.trim();
+            const nuevo = base ? `${base} ${transcript}`.trim() : transcript.trim();
+            const pinActual = hallazgos.find((h) => h.id === targetPinId);
+            handleGuardarDetallePin(pinActual?.tipo || tipoSeleccionado, nuevo);
+            return nuevo;
+          });
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        setEscuchandoVoz(false);
+        if (event.error !== "no-speech") {
+          mostrarToast(`Micrófono: ${event.error}`, "err");
+        }
+      };
+
+      recognition.onend = () => {
+        setEscuchandoVoz(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      setEscuchandoVoz(false);
+      mostrarToast("No se pudo iniciar el micrófono.", "err");
+    }
+  };
+
+  // COMBINAR O CAMBIAR MÚLTIPLES TIPOS DE PROBLEMA EN EL MISMO PIN
+  const handleToggleTipoPin = (targetPinId: string, tipoId: string) => {
+    const pin = hallazgos.find((h) => h.id === targetPinId);
+    if (!pin) return;
+    const tipos = (pin.tipo || "").split(", ").map((t) => t.trim()).filter(Boolean);
+    let nuevosTipos: string[];
+    if (tipos.includes(tipoId)) {
+      nuevosTipos = tipos.filter((t) => t !== tipoId);
+      if (nuevosTipos.length === 0) nuevosTipos = [tipoId]; // mínimo 1
+    } else {
+      nuevosTipos = [...tipos, tipoId];
+    }
+    const nuevoTipoStr = nuevosTipos.join(", ");
+    setTipoSeleccionado(nuevoTipoStr);
+    handleGuardarDetallePin(nuevoTipoStr, observacionTexto !== "" ? observacionTexto : pin.descripcion);
+  };
+
+  // GENERAR OTRO HALLAZGO / PROBLEMA EN EL MISMO PUNTO
+  const handleDuplicarPin = (pinOriginal: InspectionFinding) => {
+    const nuevoPinNumero = hallazgos.length + 1;
+    const nuevoHallazgo: InspectionFinding = {
+      ...pinOriginal,
+      id: `pin_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      pinNumber: nuevoPinNumero,
+      x: Math.min(94, Math.max(6, pinOriginal.x + (Math.random() * 4 - 2))),
+      y: Math.min(94, Math.max(6, pinOriginal.y + (Math.random() * 4 - 2))),
+      descripcion: "",
+      photoUrl: undefined,
+      photoUrls: [],
+    };
+    const actualizados = [...hallazgos, nuevoHallazgo];
+    setHallazgos(actualizados);
+    setPinSeleccionadoId(nuevoHallazgo.id);
+    setTipoSeleccionado(nuevoHallazgo.tipo);
+    setObservacionTexto("");
+    sincronizarHallazgosNeon(actualizados);
+    mostrarToast(`✓ Nuevo hallazgo #${nuevoPinNumero} generado en esta misma zona.`);
   };
 
   // 3. SELECCIÓN DE SISTEMAS Y EVALUACIÓN
@@ -469,21 +616,12 @@ ${urlSeguimiento}`;
                   </span>
                 );
               }
-            } else if (sis.items) {
+            } else {
               const cantPinesSis = hallazgos.filter((h) => h.vista === sis.id).length;
-              const resp = sis.items.filter((it) => evaluacionesPlantilla[it.id] !== undefined).length;
-              const malos = sis.items.filter((it) => evaluacionesPlantilla[it.id] === "MALO").length;
-              if (cantPinesSis > 0 || malos > 0) {
+              if (cantPinesSis > 0) {
                 badge = (
-                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center gap-1">
-                    {cantPinesSis > 0 && <span>📍{cantPinesSis}</span>}
-                    {malos > 0 && <span>!{malos}</span>}
-                  </span>
-                );
-              } else if (resp > 0) {
-                badge = (
-                  <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono">
-                    {resp}/{sis.items.length}
+                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">
+                    {cantPinesSis}
                   </span>
                 );
               }
@@ -683,6 +821,14 @@ ${urlSeguimiento}`;
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  onClick={() => handleDuplicarPin(pinActual)}
+                  className="px-2 py-0.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-medium cursor-pointer"
+                  title="Generar otro hallazgo en este mismo punto"
+                >
+                  + Otro hallazgo
+                </button>
+                <button
+                  type="button"
                   onClick={(e) => handleEliminarPin(pinActual.id, e)}
                   className="px-2 py-0.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-medium cursor-pointer"
                 >
@@ -691,35 +837,34 @@ ${urlSeguimiento}`;
                 <button
                   type="button"
                   onClick={() => setPopoverAbierto(false)}
-                  className="text-zinc-400 hover:text-white text-xs px-2 py-0.5 rounded bg-white/5"
+                  className="text-zinc-400 hover:text-white text-xs px-2 py-0.5 rounded bg-white/5 cursor-pointer"
                 >
                   Cerrar
                 </button>
               </div>
             </div>
 
-            {/* Chips de 1 toque */}
+            {/* Chips de tipo de daño (soporta combinar varios o 1 toque) */}
             <div className="space-y-1.5">
               <span className="text-[11px] text-zinc-400 font-medium block">
-                Tipo de daño (1 toque):
+                Tipo de daño (toca para seleccionar o combinar):
               </span>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {CHIPS_HALLAZGO.map((chip) => {
-                  const sel = (pinActual.tipo || tipoSeleccionado) === chip.id;
+                  const tipos = (pinActual.tipo || tipoSeleccionado || "").split(", ").map((t) => t.trim());
+                  const sel = tipos.includes(chip.id);
                   return (
                     <button
                       key={chip.id}
                       type="button"
-                      onClick={() => {
-                        setTipoSeleccionado(chip.id);
-                        handleGuardarDetallePin(chip.id);
-                      }}
+                      onClick={() => handleToggleTipoPin(pinActual.id, chip.id)}
                       className={`h-9 rounded-xl border text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 ${
                         sel
                           ? `${chip.color} ring-1 ring-white/30 font-bold shadow-md`
                           : "bg-white/[0.02] hover:bg-white/[0.06] border-white/5 text-zinc-400 hover:text-zinc-200"
                       }`}
                     >
+                      {sel && <span>✓</span>}
                       <span>{chip.label}</span>
                     </button>
                   );
@@ -727,49 +872,112 @@ ${urlSeguimiento}`;
               </div>
             </div>
 
-            {/* Observación + Foto R2 */}
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center pt-1">
-              <div className="sm:col-span-8">
-                <input
-                  type="text"
-                  value={observacionTexto || pinActual.descripcion || ""}
-                  onChange={(e) => {
-                    setObservacionTexto(e.target.value);
-                    handleGuardarDetallePin(pinActual.tipo, e.target.value);
-                  }}
-                  placeholder="Observación opcional (ej: 5 cm aprox)..."
-                  className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500/50"
-                />
-              </div>
-
-              <div className="sm:col-span-4 flex items-center gap-2">
-                <label className="flex-1 h-10 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-zinc-200 text-xs font-medium flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 shadow-sm">
-                  <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
-                  </svg>
-                  <span>{subiendoFotoPin ? "Subiendo..." : "Foto R2"}</span>
+            {/* Observación con Micrófono (Voz a Texto) + Icono Cámara (Hasta 3 fotos) */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center gap-2">
+                {/* Input de texto para escribir el problema */}
+                <div className="relative flex-1">
                   <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={(e) => handleSubirFotoPinR2(e, pinActual.id)}
-                    className="hidden"
+                    type="text"
+                    value={observacionTexto !== "" ? observacionTexto : (pinActual.descripcion || "")}
+                    onChange={(e) => {
+                      setObservacionTexto(e.target.value);
+                      handleGuardarDetallePin(pinActual.tipo, e.target.value);
+                    }}
+                    placeholder={
+                      escuchandoVoz
+                        ? "🎙 Escuchando... habla para describir el problema..."
+                        : "Describe el problema o usa el micrófono al lado..."
+                    }
+                    className={`w-full h-10 pl-3 pr-10 rounded-xl bg-black/60 border text-white text-xs transition-all focus:outline-none ${
+                      escuchandoVoz
+                        ? "border-rose-500 ring-2 ring-rose-500/40 placeholder:text-rose-400"
+                        : "border-white/10 focus:border-purple-500/50"
+                    }`}
                   />
-                </label>
-
-                {pinActual.photoUrl && (
-                  <a
-                    href={pinActual.photoUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="h-10 w-10 rounded-xl overflow-hidden border border-white/20 shrink-0 relative"
-                    title={`Capturado: ${pinActual.capturedAt || "Ahora"}`}
+                  {/* Icono de Micrófono para Grabar Audio -> Texto */}
+                  <button
+                    type="button"
+                    onClick={() => handleToggleVozPin(pinActual.id)}
+                    className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                      escuchandoVoz
+                        ? "bg-rose-500 text-white animate-pulse shadow-md shadow-rose-500/50"
+                        : "text-zinc-400 hover:text-white hover:bg-white/10"
+                    }`}
+                    title={escuchandoVoz ? "Detener dictado por voz" : "Dictar audio (se convierte en texto)"}
                   >
-                    <img src={pinActual.photoUrl} alt="Evidencia R2" className="w-full h-full object-cover" />
-                  </a>
-                )}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v7.5a3 3 0 0 1-3 3Z" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Icono Cámara para subir hasta 3 fotos */}
+                {(() => {
+                  const fotos = pinActual.photoUrls || (pinActual.photoUrl ? [pinActual.photoUrl] : []);
+                  const maxAlcanzado = fotos.length >= 3;
+                  return (
+                    <label
+                      className={`h-10 px-3 rounded-xl border flex items-center gap-1.5 transition-all shrink-0 cursor-pointer ${
+                        maxAlcanzado
+                          ? "bg-white/[0.02] border-white/5 text-zinc-500 cursor-not-allowed"
+                          : "bg-cyan-500/15 hover:bg-cyan-500/25 border-cyan-500/30 text-cyan-300 active:scale-95 shadow-sm"
+                      }`}
+                      title={maxAlcanzado ? "Máximo 3 fotos subidas" : "Subir foto de evidencia (hasta 3 fotos)"}
+                    >
+                      <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                      </svg>
+                      <span className="text-xs font-semibold">
+                        {subiendoFotoPin ? "..." : `${fotos.length}/3`}
+                      </span>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        capture="environment"
+                        disabled={maxAlcanzado || subiendoFotoPin}
+                        onChange={(e) => handleSubirFotosPinR2(e, pinActual.id)}
+                        className="hidden"
+                      />
+                    </label>
+                  );
+                })()}
               </div>
+
+              {/* Galería de hasta 3 fotos con miniatura y botón eliminar ✕ */}
+              {(() => {
+                const fotos = pinActual.photoUrls || (pinActual.photoUrl ? [pinActual.photoUrl] : []);
+                if (fotos.length === 0) return null;
+                return (
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <span className="text-[11px] text-zinc-400 font-medium">Fotos ({fotos.length}/3):</span>
+                    {fotos.map((url, idx) => (
+                      <div key={idx} className="relative group w-12 h-12 rounded-xl overflow-hidden border border-white/20 shrink-0 bg-black shadow-sm">
+                        <img src={url} alt={`Evidencia #${idx + 1}`} className="w-full h-full object-cover" />
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                          title="Ver en tamaño completo"
+                        >
+                          <span className="text-[10px] text-white">🔍</span>
+                        </a>
+                        <button
+                          type="button"
+                          onClick={(e) => handleEliminarFotoPin(pinActual.id, idx, e)}
+                          className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white text-[9px] font-bold flex items-center justify-center cursor-pointer shadow"
+                          title="Eliminar foto"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
 
             {pinActual.capturedAt && (
@@ -787,12 +995,9 @@ ${urlSeguimiento}`;
     <div className="p-4 sm:p-5 rounded-2xl bg-[#09090b] border border-white/10 space-y-4 animate-fade-in">
       {(() => {
         const sistemaActual = SISTEMAS_INSPECCION.find((s) => s.id === seccionActiva);
-        if (!sistemaActual || !sistemaActual.items) return null;
+        if (!sistemaActual) return null;
 
-        const total = sistemaActual.items.length;
-        const evaluados = sistemaActual.items.filter((it) => evaluacionesPlantilla[it.id] !== undefined).length;
-        const pct = total > 0 ? Math.round((evaluados / total) * 100) : 0;
-        const malosCount = sistemaActual.items.filter((it) => evaluacionesPlantilla[it.id] === "MALO").length;
+        const cantPinesSis = hallazgos.filter((h) => h.vista === seccionActiva).length;
 
         return (
           <>
@@ -802,33 +1007,21 @@ ${urlSeguimiento}`;
                 <h3 className="text-sm font-semibold text-white flex items-center gap-2">
                   <span className="text-base">{sistemaActual.icon}</span>
                   <span>{sistemaActual.name}</span>
-                  {malosCount > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[11px] font-bold">
-                      {malosCount} {malosCount === 1 ? "falla detectada" : "fallas detectadas"}
-                    </span>
-                  )}
                 </h3>
+                <p className="text-xs text-zinc-400 mt-0.5">{sistemaActual.description}</p>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-xs">
-                  <div className="w-28 sm:w-36 h-2 rounded-full bg-white/5 overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-purple-500 via-blue-500 to-emerald-400 transition-all duration-300"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <span className="font-mono text-zinc-300 text-xs">{evaluados}/{total} ({pct}%)</span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleMarcarTodosBueno(sistemaActual.items!)}
-                  className="h-8 px-3 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-medium transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
-                >
-                  <span>✓</span>
-                  <span>Todo Bueno</span>
-                </button>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
+                  <span className="hidden sm:inline">Toca la imagen para marcar un hallazgo</span>
+                </span>
+                {cantPinesSis > 0 && (
+                  <span className="px-2.5 py-1 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-bold flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-rose-500" />
+                    {cantPinesSis} {cantPinesSis === 1 ? "hallazgo" : "hallazgos"}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -898,6 +1091,14 @@ ${urlSeguimiento}`;
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
+                      onClick={() => handleDuplicarPin(pinActual)}
+                      className="px-2 py-0.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-medium cursor-pointer"
+                      title="Generar otro hallazgo en este mismo punto"
+                    >
+                      + Otro hallazgo
+                    </button>
+                    <button
+                      type="button"
                       onClick={(e) => handleEliminarPin(pinActual.id, e)}
                       className="px-2 py-0.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-medium cursor-pointer"
                     >
@@ -906,35 +1107,34 @@ ${urlSeguimiento}`;
                     <button
                       type="button"
                       onClick={() => setPopoverAbierto(false)}
-                      className="text-zinc-400 hover:text-white text-xs px-2 py-0.5 rounded bg-white/5"
+                      className="text-zinc-400 hover:text-white text-xs px-2 py-0.5 rounded bg-white/5 cursor-pointer"
                     >
                       Cerrar
                     </button>
                   </div>
                 </div>
 
-                {/* Chips de 1 toque */}
+                {/* Chips de tipo de hallazgo (soporta combinar varios o 1 toque) */}
                 <div className="space-y-1.5">
                   <span className="text-[11px] text-zinc-400 font-medium block">
-                    Tipo de hallazgo / anomalía (1 toque):
+                    Tipo de hallazgo / anomalía (toca para seleccionar o combinar):
                   </span>
                   <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
                     {CHIPS_HALLAZGO_MECANICO.map((chip) => {
-                      const sel = (pinActual.tipo || tipoSeleccionado) === chip.id;
+                      const tipos = (pinActual.tipo || tipoSeleccionado || "").split(", ").map((t) => t.trim());
+                      const sel = tipos.includes(chip.id);
                       return (
                         <button
                           key={chip.id}
                           type="button"
-                          onClick={() => {
-                            setTipoSeleccionado(chip.id);
-                            handleGuardarDetallePin(chip.id);
-                          }}
+                          onClick={() => handleToggleTipoPin(pinActual.id, chip.id)}
                           className={`h-9 rounded-xl border text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 ${
                             sel
                               ? `${chip.color} ring-1 ring-white/30 font-bold shadow-md`
                               : "bg-white/[0.02] hover:bg-white/[0.06] border-white/5 text-zinc-400 hover:text-zinc-200"
                           }`}
                         >
+                          {sel && <span>✓</span>}
                           <span>{chip.label}</span>
                         </button>
                       );
@@ -942,49 +1142,112 @@ ${urlSeguimiento}`;
                   </div>
                 </div>
 
-                {/* Observación + Foto R2 */}
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center pt-1">
-                  <div className="sm:col-span-8">
-                    <input
-                      type="text"
-                      value={observacionTexto || pinActual.descripcion || ""}
-                      onChange={(e) => {
-                        setObservacionTexto(e.target.value);
-                        handleGuardarDetallePin(pinActual.tipo, e.target.value);
-                      }}
-                      placeholder="Observación técnica (ej: fuga activa por junta de tapa o manguera rota)..."
-                      className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none focus:border-purple-500/50"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-4 flex items-center gap-2">
-                    <label className="flex-1 h-10 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-zinc-200 text-xs font-medium flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 shadow-sm">
-                      <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
-                      </svg>
-                      <span>{subiendoFotoPin ? "Subiendo..." : "Foto R2"}</span>
+                {/* Observación con Micrófono (Voz a Texto) + Icono Cámara (Hasta 3 fotos) */}
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center gap-2">
+                    {/* Input de texto para escribir el problema */}
+                    <div className="relative flex-1">
                       <input
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        onChange={(e) => handleSubirFotoPinR2(e, pinActual.id)}
-                        className="hidden"
+                        type="text"
+                        value={observacionTexto !== "" ? observacionTexto : (pinActual.descripcion || "")}
+                        onChange={(e) => {
+                          setObservacionTexto(e.target.value);
+                          handleGuardarDetallePin(pinActual.tipo, e.target.value);
+                        }}
+                        placeholder={
+                          escuchandoVoz
+                            ? "🎙 Escuchando... habla para describir el problema..."
+                            : "Describe el problema o usa el micrófono al lado..."
+                        }
+                        className={`w-full h-10 pl-3 pr-10 rounded-xl bg-black/60 border text-white text-xs transition-all focus:outline-none ${
+                          escuchandoVoz
+                            ? "border-rose-500 ring-2 ring-rose-500/40 placeholder:text-rose-400"
+                            : "border-white/10 focus:border-purple-500/50"
+                        }`}
                       />
-                    </label>
-
-                    {pinActual.photoUrl && (
-                      <a
-                        href={pinActual.photoUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="h-10 w-10 rounded-xl overflow-hidden border border-white/20 shrink-0 relative"
-                        title={`Capturado: ${pinActual.capturedAt || "Ahora"}`}
+                      {/* Icono de Micrófono para Grabar Audio -> Texto */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleVozPin(pinActual.id)}
+                        className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                          escuchandoVoz
+                            ? "bg-rose-500 text-white animate-pulse shadow-md shadow-rose-500/50"
+                            : "text-zinc-400 hover:text-white hover:bg-white/10"
+                        }`}
+                        title={escuchandoVoz ? "Detener dictado por voz" : "Dictar audio (se convierte en texto)"}
                       >
-                        <img src={pinActual.photoUrl} alt="Evidencia R2" className="w-full h-full object-cover" />
-                      </a>
-                    )}
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v7.5a3 3 0 0 1-3 3Z" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* Icono Cámara para subir hasta 3 fotos */}
+                    {(() => {
+                      const fotos = pinActual.photoUrls || (pinActual.photoUrl ? [pinActual.photoUrl] : []);
+                      const maxAlcanzado = fotos.length >= 3;
+                      return (
+                        <label
+                          className={`h-10 px-3 rounded-xl border flex items-center gap-1.5 transition-all shrink-0 cursor-pointer ${
+                            maxAlcanzado
+                              ? "bg-white/[0.02] border-white/5 text-zinc-500 cursor-not-allowed"
+                              : "bg-cyan-500/15 hover:bg-cyan-500/25 border-cyan-500/30 text-cyan-300 active:scale-95 shadow-sm"
+                          }`}
+                          title={maxAlcanzado ? "Máximo 3 fotos subidas" : "Subir foto de evidencia (hasta 3 fotos)"}
+                        >
+                          <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                          </svg>
+                          <span className="text-xs font-semibold">
+                            {subiendoFotoPin ? "..." : `${fotos.length}/3`}
+                          </span>
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            capture="environment"
+                            disabled={maxAlcanzado || subiendoFotoPin}
+                            onChange={(e) => handleSubirFotosPinR2(e, pinActual.id)}
+                            className="hidden"
+                          />
+                        </label>
+                      );
+                    })()}
                   </div>
+
+                  {/* Galería de hasta 3 fotos con miniatura y botón eliminar ✕ */}
+                  {(() => {
+                    const fotos = pinActual.photoUrls || (pinActual.photoUrl ? [pinActual.photoUrl] : []);
+                    if (fotos.length === 0) return null;
+                    return (
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <span className="text-[11px] text-zinc-400 font-medium">Fotos ({fotos.length}/3):</span>
+                        {fotos.map((url, idx) => (
+                          <div key={idx} className="relative group w-12 h-12 rounded-xl overflow-hidden border border-white/20 shrink-0 bg-black shadow-sm">
+                            <img src={url} alt={`Evidencia #${idx + 1}`} className="w-full h-full object-cover" />
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                              title="Ver en tamaño completo"
+                            >
+                              <span className="text-[10px] text-white">🔍</span>
+                            </a>
+                            <button
+                              type="button"
+                              onClick={(e) => handleEliminarFotoPin(pinActual.id, idx, e)}
+                              className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white text-[9px] font-bold flex items-center justify-center cursor-pointer shadow"
+                              title="Eliminar foto"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {pinActual.capturedAt && (
@@ -996,66 +1259,7 @@ ${urlSeguimiento}`;
               </div>
             )}
 
-            {/* Lista de Ítems del Sistema */}
-            <div className="divide-y divide-white/5">
-              {sistemaActual.items.map((item) => {
-                const val = evaluacionesPlantilla[item.id];
-                const notaKey = `${item.id}_nota`;
-                const notaVal = evaluacionesPlantilla[notaKey] || "";
 
-                return (
-                  <div key={item.id} className="py-3.5 space-y-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                      <span className="text-xs font-medium text-zinc-200">{item.label}</span>
-
-                      {/* 1-touch Semáforo: BUENO, REGULAR, MALO */}
-                      <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/5 shrink-0 self-start sm:self-center">
-                        {[
-                          { id: "BUENO", label: "Bueno", color: "bg-emerald-500/25 border-emerald-500/50 text-emerald-300" },
-                          { id: "REGULAR", label: "Regular", color: "bg-amber-500/25 border-amber-500/50 text-amber-300" },
-                          { id: "MALO", label: "Malo", color: "bg-rose-500/25 border-rose-500/50 text-rose-300" },
-                        ].map((opt) => (
-                          <button
-                            key={opt.id}
-                            type="button"
-                            onClick={() => handleEvaluarItem(item.id, opt.id)}
-                            className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
-                              val === opt.id
-                                ? `${opt.color} shadow-sm font-semibold scale-105`
-                                : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-white/5"
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Si es Regular o Malo, campo de detalle/observación */}
-                    {(val === "REGULAR" || val === "MALO" || notaVal) && (
-                      <div className="pl-1 flex items-center gap-2">
-                        <span className="text-[11px] text-zinc-500">Detalle:</span>
-                        <input
-                          type="text"
-                          value={notaVal}
-                          onChange={(e) => {
-                            const nuevo = { ...evaluacionesPlantilla, [notaKey]: e.target.value };
-                            setEvaluacionesPlantilla(nuevo);
-                            sincronizarHallazgosNeon(hallazgos, firmaRecepcionUrl, nuevo, seccionActiva);
-                          }}
-                          placeholder={
-                            val === "MALO"
-                              ? "Describir falla detectada (ej: requiere cambio urgente)..."
-                              : "Observación preventiva (ej: desgaste moderado)..."
-                          }
-                          className="flex-1 h-8 px-2.5 rounded-lg bg-black/40 border border-white/10 text-white text-xs placeholder:text-zinc-600 focus:outline-none focus:border-purple-500/50"
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
           </>
         );
       })()}
@@ -1153,18 +1357,27 @@ ${urlSeguimiento}`;
                           </div>
                         </div>
 
-                        {h.photoUrl && (
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-[10px] font-mono text-zinc-500">
-                              ⏱ {h.capturedAt || "Capturado"}
-                            </span>
-                            <img
-                              src={h.photoUrl}
-                              alt="Evidencia R2"
-                              className="w-12 h-12 object-cover rounded border border-zinc-300"
-                            />
-                          </div>
-                        )}
+                        {(() => {
+                          const fotos = h.photoUrls || (h.photoUrl ? [h.photoUrl] : []);
+                          if (fotos.length === 0) return null;
+                          return (
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {h.capturedAt && (
+                                <span className="text-[10px] font-mono text-zinc-500 mr-1 hidden sm:inline">
+                                  ⏱ {h.capturedAt}
+                                </span>
+                              )}
+                              {fotos.map((fUrl, fIdx) => (
+                                <img
+                                  key={fIdx}
+                                  src={fUrl}
+                                  alt={`Evidencia #${fIdx + 1}`}
+                                  className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded border border-zinc-300 shadow-sm"
+                                />
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </div>
                     ))}
                   </div>
@@ -1172,59 +1385,62 @@ ${urlSeguimiento}`;
               </div>
 
               {/* Resultados de la Inspección de Sistemas (Motor, Frenos, Suspensión, Eléctrico) */}
-              <div>
-                <div className="flex items-center justify-between mb-2 border-b pb-1">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-zinc-900">
-                    Inspección de Sistemas Mecánicos y Eléctricos
-                  </h4>
-                  <span className="text-xs font-mono font-bold text-zinc-700">
-                    Diagnóstico Total
-                  </span>
-                </div>
+              {/* Resultados de la Inspección de Sistemas Mecánicos y Eléctricos (si hay evaluaciones) */}
+              {Object.keys(evaluacionesPlantilla).length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2 border-b pb-1">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-zinc-900">
+                      Inspección de Sistemas Mecánicos y Eléctricos
+                    </h4>
+                    <span className="text-xs font-mono font-bold text-zinc-700">
+                      Diagnóstico Total
+                    </span>
+                  </div>
 
-                <div className="space-y-3">
-                  {SISTEMAS_INSPECCION.filter((s) => s.items && s.items.length > 0).map((sis) => {
-                    const evals = sis.items!.filter((it) => evaluacionesPlantilla[it.id] !== undefined);
-                    if (evals.length === 0) return null;
+                  <div className="space-y-3">
+                    {SISTEMAS_INSPECCION.filter((s) => s.items && s.items.length > 0).map((sis) => {
+                      const evals = sis.items!.filter((it) => evaluacionesPlantilla[it.id] !== undefined);
+                      if (evals.length === 0) return null;
 
-                    return (
-                      <div key={sis.id} className="space-y-1">
-                        <span className="text-[11px] font-bold text-zinc-800 uppercase flex items-center gap-1.5">
-                          <span>{sis.icon}</span> {sis.name}
-                        </span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
-                          {sis.items!.map((it) => {
-                            const res = evaluacionesPlantilla[it.id];
-                            const nota = evaluacionesPlantilla[`${it.id}_nota`];
-                            if (!res) return null;
+                      return (
+                        <div key={sis.id} className="space-y-1">
+                          <span className="text-[11px] font-bold text-zinc-800 uppercase flex items-center gap-1.5">
+                            <span>{sis.icon}</span> {sis.name}
+                          </span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
+                            {sis.items!.map((it) => {
+                              const res = evaluacionesPlantilla[it.id];
+                              const nota = evaluacionesPlantilla[`${it.id}_nota`];
+                              if (!res) return null;
 
-                            return (
-                              <div
-                                key={it.id}
-                                className={`p-2 rounded border flex items-center justify-between ${
-                                  res === "MALO"
-                                    ? "bg-rose-50 border-rose-300 text-rose-900"
-                                    : res === "REGULAR"
-                                    ? "bg-amber-50 border-amber-300 text-amber-900"
-                                    : "bg-zinc-50 border-zinc-200 text-zinc-700"
-                                }`}
-                              >
-                                <div className="truncate pr-2">
-                                  <span className="block truncate">{it.label}</span>
-                                  {nota && <span className="block text-[10px] text-zinc-500 italic truncate">Nota: {nota}</span>}
+                              return (
+                                <div
+                                  key={it.id}
+                                  className={`p-2 rounded border flex items-center justify-between ${
+                                    res === "MALO"
+                                      ? "bg-rose-50 border-rose-300 text-rose-900"
+                                      : res === "REGULAR"
+                                      ? "bg-amber-50 border-amber-300 text-amber-900"
+                                      : "bg-zinc-50 border-zinc-200 text-zinc-700"
+                                  }`}
+                                >
+                                  <div className="truncate pr-2">
+                                    <span className="block truncate">{it.label}</span>
+                                    {nota && <span className="block text-[10px] text-zinc-500 italic truncate">Nota: {nota}</span>}
+                                  </div>
+                                  <span className="font-bold shrink-0 font-mono text-[11px]">
+                                    {res}
+                                  </span>
                                 </div>
-                                <span className="font-bold shrink-0 font-mono text-[11px]">
-                                  {res}
-                                </span>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Conformidad y Firma del Cliente */}
               <div className="pt-4 border-t-2 border-zinc-900 flex items-end justify-between">

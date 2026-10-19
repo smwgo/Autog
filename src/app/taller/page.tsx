@@ -167,6 +167,7 @@ export interface InspectionFinding {
   descripcion: string;
   pinNumber?: number;
   photoUrl?: string;
+  photoUrls?: string[];
   capturedAt?: string;
   severidad?: "LEVE" | "MODERADO" | "GRAVE" | string;
 }
@@ -849,7 +850,7 @@ export default function TallerPanel() {
   // (Múltiples técnicos con aviso, Fotos del avance, Notas de voz y chat interno, Horas por técnico)
   // ==========================================================================
   const [mostrarFlotanteEtapa5, _setMostrarFlotanteEtapa5] = useState(false);
-  const setMostrarFlotanteEtapa5 = (val: boolean) => { _setMostrarFlotanteEtapa5(val); if (val) setEtapaActiva(4); };
+  const setMostrarFlotanteEtapa5 = (val: boolean) => { _setMostrarFlotanteEtapa5(val); if (val) setEtapaActiva(5); };
   const [etapa5TecnicosAsignados, setEtapa5TecnicosAsignados] = useState<AssignedTechnician[]>([
     { name: "Hernan Marquez", notified: true, notifiedAt: new Date().toISOString() },
   ]);
@@ -965,7 +966,7 @@ export default function TallerPanel() {
   const setPasoDeslizable = (p: 0 | 1 | 2) => {
     if (p === 0) setEtapaActiva(1);
     else if (p === 1) setEtapaActiva(3);
-    else setEtapaActiva(4);
+    else setEtapaActiva(5);
   };
 
   // Cronómetro en vivo de horas por técnico
@@ -4309,10 +4310,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             <>
 
           {/* ===================================================================
-              STEPPER DE 7 ICONOS TRANSPARENTES (GLASSMORPHISM)
+              STEPPER DE 6 ICONOS TRANSPARENTES (GLASSMORPHISM)
               =================================================================== */}
-          <div className="bg-white/[0.02] backdrop-blur-md border border-white/[0.08] p-2 rounded-2xl overflow-x-auto">
-            <div className="grid grid-cols-4 lg:grid-cols-7 gap-2 min-w-[620px] lg:min-w-0">
+          <div className="bg-white/[0.02] backdrop-blur-md border border-white/[0.08] p-2 rounded-2xl overflow-x-auto no-scrollbar [WebkitOverflowScrolling:touch]">
+            <div className="flex sm:grid sm:grid-cols-6 gap-2 min-w-max sm:min-w-0">
               {[
                 {
                   id: 1,
@@ -4342,17 +4343,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   ),
                 },
                 {
-                  id: 4,
-                  label: "4. Taller",
-                  icon: (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.016a4.5 4.5 0 0 0 5.093-5.093c-.172-.58-.148-1.193.016-1.743l-3.07 3.07a1.5 1.5 0 0 1-2.122-2.122l3.07-3.07c-.55.164-1.163.188-1.743.016a4.5 4.5 0 0 0-5.093 5.093c.172.58.148 1.193-.016 1.743l-3.07-3.07a1.5 1.5 0 0 0-2.122 2.122l3.07 3.07Z" />
-                    </svg>
-                  ),
-                },
-                {
                   id: 5,
-                  label: "5. Aviso",
+                  label: "4. Aviso",
                   icon: (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
@@ -4361,7 +4353,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 },
                 {
                   id: 6,
-                  label: "6. Firma",
+                  label: "5. Firma",
                   icon: (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
@@ -4370,7 +4362,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 },
                 {
                   id: 7,
-                  label: "7. Cobro/Doc",
+                  label: "6. Cobro/Doc",
                   icon: (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v-.75A.75.75 0 0 1 3 4.5h.75m0 0a9.006 9.006 0 0 1 16.5 0m0 0h.75a.75.75 0 0 1 .75.75V6m0 0h-.75a.75.75 0 0 1-.75-.75V4.5m0 10.5v.75c0 .414.336.75.75.75h.75m0 0v-.75a.75.75 0 0 0-.75-.75h-.75m-15 0H3a.75.75 0 0 0-.75.75v.75m0 0h.75a.75.75 0 0 0 .75-.75v-.75" />
@@ -4384,7 +4376,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     key={step.id}
                     type="button"
                     onClick={() => setEtapaActiva(step.id)}
-                    className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all cursor-pointer active:scale-95 ${
+                    className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all cursor-pointer active:scale-95 shrink-0 min-w-[82px] sm:min-w-0 min-h-[44px] ${
                       active
                         ? "bg-blue-500/15 border-blue-500/40 text-blue-300 shadow-md shadow-blue-500/10"
                         : "bg-white/[0.02] hover:bg-white/[0.06] border-white/5 text-zinc-400 hover:text-zinc-200"
@@ -4841,260 +4833,15 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   </button>
                   <button
                     type="button"
-                    onClick={() => setEtapaActiva(4)}
+                    onClick={() => setEtapaActiva(5)}
                     className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-semibold cursor-pointer"
                   >
-                    Continuar a Taller / Reparación (Paso 4) →
+                    Continuar a Aviso y Estado (Paso 4) →
                   </button>
                 </div>
               </div>
             )}
 
-            {/* ETAPA 4: TALLER / REPARACIÓN (TIEMPOS, VOZ Y CHAT) */}
-            {etapaActiva === 4 && (
-              <div className="w-full space-y-4 animate-fade-in">
-                {/* 3 Botones Transparentes de Acción Rápida */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {/* Botón 1: Cronómetro Tiempos */}
-                  <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between gap-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                        <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                        </svg>
-                        Cronómetro
-                      </span>
-                      <span className="text-xs font-mono font-bold text-emerald-400">
-                        {formatCronometro(cronometroTecnicoSegundos)}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleToggleCronometroTecnico}
-                      className={`h-10 w-full rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                        cronometroTecnicoActivo
-                          ? "bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300"
-                          : "bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-300"
-                      }`}
-                    >
-                      <span>{cronometroTecnicoActivo ? "⏸ Pausar Tarea" : "▶ Iniciar Tarea"}</span>
-                    </button>
-                  </div>
-
-                  {/* Botón 2: Grabadora Voz R2 */}
-                  <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between gap-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                        <svg className="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v7.5a3 3 0 0 1-3 3Z" />
-                        </svg>
-                        Nota de Voz (R2)
-                      </span>
-                      {subiendoAudioEtapa5 && (
-                        <span className="text-[10px] text-blue-400 animate-pulse">Subiendo...</span>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleToggleGrabacionNotaVozEtapa5}
-                      className={`h-10 w-full rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                        grabandoAudioEtapa5
-                          ? "bg-rose-500/20 border border-rose-500/50 text-rose-300 animate-pulse"
-                          : "bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-zinc-200"
-                      }`}
-                    >
-                      <span>{grabandoAudioEtapa5 ? "⏹ Detener y Subir" : "🎙 Grabar Audio"}</span>
-                    </button>
-                  </div>
-
-                  {/* Botón 3: Fotos de Avance R2 */}
-                  <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between gap-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                        <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                        </svg>
-                        Fotos de Avance (R2)
-                      </span>
-                    </div>
-                    <label className="h-10 w-full rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-zinc-200 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all">
-                      <span>📷 Tomar / Subir Foto</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        onChange={handleSubirFotoAvanceEtapa5}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                {/* Checklist de Trabajos Sincronizado en Vivo con Seguimiento */}
-                <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">
-                        ✓
-                      </div>
-                      <span className="text-xs font-semibold text-white">
-                        Checklist de Trabajos ({ordenActiva?.items.filter((i) => i.status === "Listo" || i.completed).length || 0}/{ordenActiva?.items.length || 0})
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-zinc-400">
-                      Toca para marcar completado (sincroniza en vivo)
-                    </span>
-                  </div>
-
-                  {!ordenActiva || ordenActiva.items.length === 0 ? (
-                    <div className="py-4 text-center text-xs text-zinc-500 italic">
-                      No hay tareas registradas en esta orden.
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {ordenActiva.items.map((it) => {
-                        const completado = it.status === "Listo" || it.completed;
-                        return (
-                          <div
-                            key={it.id}
-                            onClick={() => handleToggleCompletarItem(it.id)}
-                            className={`p-3 rounded-xl border flex items-center justify-between gap-3 text-xs transition-all cursor-pointer active:scale-98 ${
-                              completado
-                                ? "bg-emerald-500/[0.04] border-emerald-500/20 text-zinc-300"
-                                : "bg-white/[0.02] hover:bg-white/[0.05] border-white/5 text-white"
-                            }`}
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div
-                                className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all ${
-                                  completado
-                                    ? "bg-emerald-500 text-black font-bold text-xs"
-                                    : "border border-white/20 bg-white/5"
-                                }`}
-                              >
-                                {completado && "✓"}
-                              </div>
-                              <div className="min-w-0">
-                                <span
-                                  className={`block truncate font-medium ${
-                                    completado ? "line-through text-zinc-400" : "text-white"
-                                  }`}
-                                >
-                                  {it.name}
-                                </span>
-                                <span className="text-[10px] text-zinc-500 block truncate">
-                                  Asignado: {it.empleado_nombre || "Taller"}
-                                </span>
-                              </div>
-                            </div>
-
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-mono shrink-0 ${
-                                completado
-                                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold"
-                                  : it.status === "En Proceso"
-                                  ? "bg-sky-500/15 text-sky-300 border border-sky-500/30"
-                                  : "bg-white/5 text-zinc-400 border border-white/10"
-                              }`}
-                            >
-                              {completado ? "Listo" : it.status || "Pendiente"}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Chat Interno y Horas de la Orden */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* Chat Interno */}
-                  <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
-                    <span className="text-xs font-semibold text-zinc-300 block">💬 Chat Interno de la Orden</span>
-                    <div className="h-44 overflow-y-auto space-y-2 p-2 rounded-xl bg-black/30 border border-white/5">
-                      {etapa5ChatMensajes.length === 0 ? (
-                        <div className="text-center py-8 text-xs text-zinc-500 italic">
-                          No hay comentarios en esta orden. Escribe una nota para el equipo.
-                        </div>
-                      ) : (
-                        etapa5ChatMensajes.map((msg) => (
-                          <div key={msg.id} className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5 text-xs space-y-1">
-                            <div className="flex items-center justify-between text-[10px] text-zinc-400">
-                              <strong className="text-zinc-200">{msg.author}</strong>
-                              <span>{msg.createdAt}</span>
-                            </div>
-                            <div className="text-zinc-300">{msg.text}</div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={etapa5ChatTexto}
-                        onChange={(e) => setEtapa5ChatTexto(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            handleEnviarMensajeChatEtapa5();
-                          }
-                        }}
-                        placeholder="Escribe un mensaje para el equipo..."
-                        className="flex-1 h-9 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleEnviarMensajeChatEtapa5}
-                        className="h-9 px-3 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-semibold cursor-pointer"
-                      >
-                        Enviar
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Registro de Horas por Técnicos */}
-                  <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
-                    <span className="text-xs font-semibold text-zinc-300 block">⏱ Horas Registradas por Técnicos</span>
-                    <div className="h-44 overflow-y-auto space-y-1.5 p-2 rounded-xl bg-black/30 border border-white/5 text-xs">
-                      {etapa5HorasRegistros.length === 0 ? (
-                        <div className="text-center py-8 text-zinc-500 italic">
-                          No hay registros de horas. Inicia el cronómetro arriba o añade un intervalo manual.
-                        </div>
-                      ) : (
-                        etapa5HorasRegistros.map((reg) => (
-                          <div key={reg.id} className="p-2 rounded-lg bg-white/[0.03] border border-white/5 flex items-center justify-between">
-                            <div>
-                              <strong className="text-white">{reg.technician}</strong>: {reg.taskDescription}
-                            </div>
-                            <span className="font-mono text-emerald-400 font-bold">
-                              {reg.hours}h {reg.minutes}m
-                            </span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setEtapaActiva(3)}
-                    className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
-                  >
-                    ← Anterior (Catálogo)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEtapaActiva(5)}
-                    className="px-4 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs font-semibold cursor-pointer"
-                  >
-                    Continuar a Aviso y Estado (Paso 5) →
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* ETAPA 5: ESTADO, AVISO AUTOMÁTICO Y PIN DE SEGUIMIENTO */}
             {etapaActiva === 5 && (
@@ -5235,10 +4982,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 <div className="flex items-center justify-between pt-2">
                   <button
                     type="button"
-                    onClick={() => setEtapaActiva(4)}
+                    onClick={() => setEtapaActiva(3)}
                     className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
                   >
-                    ← Anterior (Taller)
+                    ← Anterior (Presupuesto)
                   </button>
                   <button
                     type="button"
