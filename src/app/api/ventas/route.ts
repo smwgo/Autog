@@ -230,6 +230,21 @@ export async function POST(request: Request) {
           updateData.totalSalesCard = { increment: totalCalc };
         } else if (paymentMethod === "Transferencia") {
           updateData.totalSalesTransfer = { increment: totalCalc };
+        } else if (paymentMethod === "Mixto" && body.paymentBreakdown) {
+          const pb = body.paymentBreakdown;
+          const cashVal = parseFloat(pb.cash) || 0;
+          const cardVal = parseFloat(pb.card) || 0;
+          const transVal = parseFloat(pb.transfer) || 0;
+          if (cashVal > 0) {
+            updateData.totalSalesCash = { increment: cashVal };
+            updateData.expectedCash = { increment: cashVal };
+          }
+          if (cardVal > 0) {
+            updateData.totalSalesCard = { increment: cardVal };
+          }
+          if (transVal > 0) {
+            updateData.totalSalesTransfer = { increment: transVal };
+          }
         }
 
         if (Object.keys(updateData).length > 0) {

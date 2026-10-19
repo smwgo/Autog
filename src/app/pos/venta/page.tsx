@@ -261,7 +261,7 @@ export default function NuevaVentaPage() {
 
   // Checkout modal
   const [mostrarModalPago, setMostrarModalPago] = useState(false);
-  const [metodoPago, setMetodoPago] = useState<"Efectivo" | "Tarjeta" | "Transferencia" | "Crédito">("Efectivo");
+  const [metodoPago, setMetodoPago] = useState<"Efectivo" | "Tarjeta" | "Transferencia" | "Crédito" | "Mixto">("Efectivo");
   const [diasCredito, setDiasCredito] = useState<number>(30);
   const [fechaVencimientoCredito, setFechaVencimientoCredito] = useState<string>(() => {
     const d = new Date();
@@ -272,6 +272,13 @@ export default function NuevaVentaPage() {
   const [nombreCreditoManual, setNombreCreditoManual] = useState("");
   const [procesandoVenta, setProcesandoVenta] = useState(false);
   const [ventaCompletada, setVentaCompletada] = useState<any | null>(null);
+
+  // Cobro Mixto (Efectivo, Tarjeta, Transferencia, Crédito)
+  const [montoMixtoEfectivo, setMontoMixtoEfectivo] = useState("");
+  const [montoMixtoTarjeta, setMontoMixtoTarjeta] = useState("");
+  const [montoMixtoTransferencia, setMontoMixtoTransferencia] = useState("");
+  const [montoMixtoCredito, setMontoMixtoCredito] = useState("");
+  const [efectivoEntregadoMixto, setEfectivoEntregadoMixto] = useState("");
 
   // Solicitudes Web
   const [solicitudActiva, setSolicitudActiva] = useState<any | null>(null);
@@ -1160,6 +1167,18 @@ export default function NuevaVentaPage() {
   const cambio = Math.max(0, montoRecibidoNum - total);
   const faltante = Math.max(0, total - montoRecibidoNum);
 
+  // Cálculos de Cobro Mixto
+  const mixtoEfectivoNum = parseFloat(montoMixtoEfectivo) || 0;
+  const mixtoTarjetaNum = parseFloat(montoMixtoTarjeta) || 0;
+  const mixtoTransferenciaNum = parseFloat(montoMixtoTransferencia) || 0;
+  const mixtoCreditoNum = parseFloat(montoMixtoCredito) || 0;
+
+  const totalMixtoAsignado = Number((mixtoEfectivoNum + mixtoTarjetaNum + mixtoTransferenciaNum + mixtoCreditoNum).toFixed(2));
+  const saldoRestanteMixto = Number((total - totalMixtoAsignado).toFixed(2));
+
+  const efectivoEntregadoNum = parseFloat(efectivoEntregadoMixto) || 0;
+  const cambioMixtoEfectivo = efectivoEntregadoNum > mixtoEfectivoNum ? Number((efectivoEntregadoNum - mixtoEfectivoNum).toFixed(2)) : 0;
+
   const cambiarDiasCredito = (dias: number) => {
     setDiasCredito(dias);
     const d = new Date();
@@ -1171,6 +1190,21 @@ export default function NuevaVentaPage() {
   const handleConfirmarCobro = async () => {
     if (cart.length === 0) return;
 
+    if (metodoPago === "Mixto") {
+      if (totalMixtoAsignado <= 0) {
+        alert("Debes ingresar los montos en los métodos de pago para el cobro mixto.");
+        return;
+      }
+      if (Math.abs(saldoRestanteMixto) > 0.01) {
+        if (saldoRestanteMixto > 0) {
+          alert(`Falta asignar $${saldoRestanteMixto.toFixed(2)} para completar el total de $${total.toFixed(2)}.`);
+        } else {
+          alert(`El total asignado ($${totalMixtoAsignado.toFixed(2)}) excede el monto total ($${total.toFixed(2)}). Ajusta los valores.`);
+        }
+        return;
+      }
+    }
+
     const custName = clienteSeleccionado?.name || "Consumidor Final";
     const custIdent = clienteSeleccionado?.identification || "9999999999";
     const custPhone = clienteSeleccionado?.phone || "N/A";
@@ -1178,17 +1212,41 @@ export default function NuevaVentaPage() {
     setProcesandoVenta(true);
 
     try {
+      const resumenMixtoTexto = metodoPago === "Mixto"
+        ? [
+            mixtoEfectivoNum > 0 ? `Efectivo: $${mixtoEfectivoNum.toFixed(2)}` : null,
+            mixtoTarjetaNum > 0 ? `Tarjeta: $${mixtoTarjetaNum.toFixed(2)}` : null,
+            mixtoTransferenciaNum > 0 ? `Transferencia: $${mixtoTransferenciaNum.toFixed(2)}` : null,
+            mixtoCreditoNum > 0 ? `Crédito: $${mixtoCreditoNum.toFixed(2)} (${diasCredito}d)` : null,
+          ].filter(Boolean).join(" | ")
+        : "";
+
+      const notasFinales = metodoPago === "Mixto"
+        ? `Cobro Mixto: ${resumenMixtoTexto}${notasVenta ? ` • ${notasVenta}` : ""}`
+        : metodoPago === "Crédito"
+        ? `Crédito ${diasCredito} días (Vence: ${formatFechaVencimientoLarga(fechaVencimientoCredito)})${notasVenta ? ` • ${notasVenta}` : ""}`
+        : (notasVenta || undefined);
+
       const payload = {
         customerId: clienteSeleccionado?.id || null,
         customerName: custName,
         vehiclePlate: vehiculoSeleccionado?.plate || null,
         vehicleModel: vehiculoSeleccionado ? `${vehiculoSeleccionado.brand} ${vehiculoSeleccionado.model}` : null,
         paymentMethod: metodoPago,
+        paymentBreakdown: metodoPago === "Mixto" ? {
+          cash: mixtoEfectivoNum,
+          card: mixtoTarjetaNum,
+          transfer: mixtoTransferenciaNum,
+          credit: mixtoCreditoNum,
+        } : {
+          cash: metodoPago === "Efectivo" ? total : 0,
+          card: metodoPago === "Tarjeta" ? total : 0,
+          transfer: metodoPago === "Transferencia" ? total : 0,
+          credit: metodoPago === "Crédito" ? total : 0,
+        },
         discount: descuentoCalculado,
         taxPercent: ivaPorcentaje / 100,
-        notes: metodoPago === "Crédito"
-          ? `Crédito ${diasCredito} días (Vence: ${formatFechaVencimientoLarga(fechaVencimientoCredito)})${notasVenta ? ` • ${notasVenta}` : ""}`
-          : (notasVenta || undefined),
+        notes: notasFinales,
         items: cart.map((i) => ({
           productId: i.product.id,
           code: i.product.code,
@@ -1210,8 +1268,9 @@ export default function NuevaVentaPage() {
         throw new Error(data.error || "No se pudo registrar la venta.");
       }
 
-      // Si es a Crédito, registrar automáticamente en el módulo de créditos
-      if (metodoPago === "Crédito") {
+      // Si hay saldo a Crédito (por venta Crédito total o por Cobro Mixto), registrar en módulo de créditos
+      const montoParaCredito = metodoPago === "Crédito" ? total : (metodoPago === "Mixto" ? mixtoCreditoNum : 0);
+      if (montoParaCredito > 0) {
         try {
           await fetch("/api/pos/creditos", {
             method: "POST",
@@ -1220,11 +1279,11 @@ export default function NuevaVentaPage() {
               customerName: custName,
               identification: custIdent,
               phone: custPhone,
-              currentBalance: total,
-              creditLimit: Math.max(500, total + 200),
+              currentBalance: montoParaCredito,
+              creditLimit: Math.max(500, montoParaCredito + 200),
               dueDate: fechaVencimientoCredito,
               status: "AL_DIA",
-              notes: `Venta POS #${data.venta?.saleNumber || ""} • $${total.toFixed(2)} (${diasCredito} días - Vence: ${formatFechaVencimientoLarga(fechaVencimientoCredito)})`,
+              notes: `Venta POS #${data.venta?.saleNumber || ""} ${metodoPago === "Mixto" ? "(Parte Crédito Mixto)" : ""} • $${montoParaCredito.toFixed(2)} (${diasCredito} días - Vence: ${formatFechaVencimientoLarga(fechaVencimientoCredito)})`,
             }),
           });
         } catch (errCred) {
@@ -1257,14 +1316,30 @@ export default function NuevaVentaPage() {
         descuentoCalculado,
         tax,
         ivaPorcentaje,
-        montoRecibido: metodoPago === "Efectivo" && montoRecibidoNum > 0 ? montoRecibidoNum : null,
-        cambio: metodoPago === "Efectivo" && montoRecibidoNum > 0 ? cambio : null,
+        paymentMethod: metodoPago,
+        paymentBreakdown: metodoPago === "Mixto" ? {
+          cash: mixtoEfectivoNum,
+          card: mixtoTarjetaNum,
+          transfer: mixtoTransferenciaNum,
+          credit: mixtoCreditoNum,
+        } : undefined,
+        montoRecibido: metodoPago === "Efectivo" && montoRecibidoNum > 0
+          ? montoRecibidoNum
+          : metodoPago === "Mixto" && efectivoEntregadoNum > 0
+            ? efectivoEntregadoNum
+            : null,
+        cambio: metodoPago === "Efectivo" && montoRecibidoNum > 0
+          ? cambio
+          : metodoPago === "Mixto" && efectivoEntregadoNum > mixtoEfectivoNum
+            ? cambioMixtoEfectivo
+            : null,
         cartSnap: [...cart],
         vendedorNombre: vendedor,
         customerPhone: custPhone || clienteSeleccionado?.phone || null,
         customerIdentification: custIdent || clienteSeleccionado?.identification || null,
         customerEmail: (clienteSeleccionado as any)?.email || null,
         vehiculoSnap: vehiculoSeleccionado ? { ...vehiculoSeleccionado } : null,
+        notes: notasFinales,
       });
       setMostrarModalPago(false);
       setCart([]);
@@ -1274,6 +1349,11 @@ export default function NuevaVentaPage() {
       setMontoRecibido("");
       setIdentificacionCreditoManual("");
       setNombreCreditoManual("");
+      setMontoMixtoEfectivo("");
+      setMontoMixtoTarjeta("");
+      setMontoMixtoTransferencia("");
+      setMontoMixtoCredito("");
+      setEfectivoEntregadoMixto("");
 
       await cargarProductos();
     } catch (err: any) {
@@ -3116,29 +3196,308 @@ export default function NuevaVentaPage() {
               <label className="block text-xs font-normal text-zinc-600 dark:text-zinc-400 mb-2">
                 Método de Pago
               </label>
-              <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
-                {(["Efectivo", "Tarjeta", "Transferencia", "Crédito"] as const).map((m) => (
+              <div className="grid grid-cols-5 gap-1 sm:gap-2">
+                {(["Efectivo", "Tarjeta", "Transferencia", "Crédito", "Mixto"] as const).map((m) => (
                   <button
                     key={m}
                     type="button"
                     onClick={() => setMetodoPago(m)}
-                    className={`h-11 py-2 px-1 sm:px-2 rounded-xl text-xs font-normal border transition-all cursor-pointer ${
+                    className={`h-11 py-2 px-1 sm:px-2 rounded-xl text-[11px] sm:text-xs font-medium border transition-all cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-1 ${
                       metodoPago === m
                         ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shadow-sm"
                         : "border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
                     }`}
                   >
-                    {m === "Efectivo" && "💵 "}
-                    {m === "Tarjeta" && "💳 "}
-                    {m === "Transferencia" && "🏦 "}
-                    {m === "Crédito" && "📋 "}
-                    {m}
+                    <span>
+                      {m === "Efectivo" && "💵"}
+                      {m === "Tarjeta" && "💳"}
+                      {m === "Transferencia" && "🏦"}
+                      {m === "Crédito" && "📋"}
+                      {m === "Mixto" && "🔀"}
+                    </span>
+                    <span className="truncate">{m}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Panel de Venta a Crédito */}
+            {/* Panel de Cobro Mixto / Combinado */}
+            {metodoPago === "Mixto" && (
+              <div className="mb-5 p-3.5 sm:p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/60 space-y-3.5">
+                {/* Cabecera del Panel Mixto */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">🔀</span>
+                    <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                      Distribución del Cobro
+                    </span>
+                  </div>
+                  {saldoRestanteMixto === 0 ? (
+                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700/50">
+                      ✓ Completo
+                    </span>
+                  ) : saldoRestanteMixto > 0 ? (
+                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700/50">
+                      Falta: ${saldoRestanteMixto.toFixed(2)}
+                    </span>
+                  ) : (
+                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-700/50">
+                      Exceso: +${Math.abs(saldoRestanteMixto).toFixed(2)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Accesos rápidos de división (50/50 o limpiar) */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const mitad1 = +(total / 2).toFixed(2);
+                      const mitad2 = +(total - mitad1).toFixed(2);
+                      setMontoMixtoEfectivo(mitad1.toString());
+                      setMontoMixtoTarjeta(mitad2.toString());
+                      setMontoMixtoTransferencia("");
+                      setMontoMixtoCredito("");
+                    }}
+                    className="text-[10px] px-2 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:border-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all font-medium"
+                  >
+                    ⚡ 50% Efectivo / 50% Tarjeta
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const mitad1 = +(total / 2).toFixed(2);
+                      const mitad2 = +(total - mitad1).toFixed(2);
+                      setMontoMixtoEfectivo(mitad1.toString());
+                      setMontoMixtoTransferencia(mitad2.toString());
+                      setMontoMixtoTarjeta("");
+                      setMontoMixtoCredito("");
+                    }}
+                    className="text-[10px] px-2 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:border-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all font-medium"
+                  >
+                    ⚡ 50% Efectivo / 50% Transf.
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMontoMixtoEfectivo("");
+                      setMontoMixtoTarjeta("");
+                      setMontoMixtoTransferencia("");
+                      setMontoMixtoCredito("");
+                      setEfectivoEntregadoMixto("");
+                    }}
+                    className="text-[10px] px-2 py-1 rounded-lg bg-zinc-200/60 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-rose-500 transition-all ml-auto font-medium"
+                  >
+                    Limpiar
+                  </button>
+                </div>
+
+                {/* Fila 1: Efectivo */}
+                <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700/80 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                      <span>💵</span> Efectivo
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">$</span>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          placeholder="0.00"
+                          value={montoMixtoEfectivo}
+                          onChange={(e) => setMontoMixtoEfectivo(e.target.value)}
+                          className="w-24 sm:w-28 h-8 pl-6 pr-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-right text-xs font-black text-zinc-900 dark:text-white outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const saldoActual = +(total - mixtoTarjetaNum - mixtoTransferenciaNum - mixtoCreditoNum).toFixed(2);
+                          setMontoMixtoEfectivo(Math.max(0, saldoActual).toFixed(2));
+                        }}
+                        className="h-8 px-2 rounded-lg text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100"
+                        title="Asignar el saldo restante a Efectivo"
+                      >
+                        + Saldo
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Si asignó monto en efectivo, permitir ingresar billete con el que paga para dar vuelto */}
+                  {mixtoEfectivoNum > 0 && (
+                    <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between text-[11px]">
+                      <span className="text-zinc-500 dark:text-zinc-400">Paga con billete de:</span>
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-400">$</span>
+                          <input
+                            type="number"
+                            step="any"
+                            min="0"
+                            placeholder={mixtoEfectivoNum.toFixed(2)}
+                            value={efectivoEntregadoMixto}
+                            onChange={(e) => setEfectivoEntregadoMixto(e.target.value)}
+                            className="w-20 h-7 pl-4 pr-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-right text-[11px] font-bold text-zinc-900 dark:text-white outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                        {cambioMixtoEfectivo > 0 && (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-extrabold text-[11px]">
+                            Vuelto: ${cambioMixtoEfectivo.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Fila 2: Tarjeta */}
+                <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700/80 flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                    <span>💳</span> Tarjeta
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <div className="relative">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">$</span>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        placeholder="0.00"
+                        value={montoMixtoTarjeta}
+                        onChange={(e) => setMontoMixtoTarjeta(e.target.value)}
+                        className="w-24 sm:w-28 h-8 pl-6 pr-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-right text-xs font-black text-zinc-900 dark:text-white outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const saldoActual = +(total - mixtoEfectivoNum - mixtoTransferenciaNum - mixtoCreditoNum).toFixed(2);
+                        setMontoMixtoTarjeta(Math.max(0, saldoActual).toFixed(2));
+                      }}
+                      className="h-8 px-2 rounded-lg text-[10px] font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100"
+                      title="Asignar el saldo restante a Tarjeta"
+                    >
+                      + Saldo
+                    </button>
+                  </div>
+                </div>
+
+                {/* Fila 3: Transferencia */}
+                <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700/80 flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                    <span>🏦</span> Transferencia
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <div className="relative">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">$</span>
+                      <input
+                        type="number"
+                        step="any"
+                        min="0"
+                        placeholder="0.00"
+                        value={montoMixtoTransferencia}
+                        onChange={(e) => setMontoMixtoTransferencia(e.target.value)}
+                        className="w-24 sm:w-28 h-8 pl-6 pr-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-right text-xs font-black text-zinc-900 dark:text-white outline-none focus:border-purple-500"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const saldoActual = +(total - mixtoEfectivoNum - mixtoTarjetaNum - mixtoCreditoNum).toFixed(2);
+                        setMontoMixtoTransferencia(Math.max(0, saldoActual).toFixed(2));
+                      }}
+                      className="h-8 px-2 rounded-lg text-[10px] font-bold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-800/50 hover:bg-purple-100"
+                      title="Asignar el saldo restante a Transferencia"
+                    >
+                      + Saldo
+                    </button>
+                  </div>
+                </div>
+
+                {/* Fila 4: Crédito */}
+                <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700/80 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                      <span>📋</span> Crédito
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">$</span>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          placeholder="0.00"
+                          value={montoMixtoCredito}
+                          onChange={(e) => setMontoMixtoCredito(e.target.value)}
+                          className="w-24 sm:w-28 h-8 pl-6 pr-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-right text-xs font-black text-zinc-900 dark:text-white outline-none focus:border-cyan-500"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const saldoActual = +(total - mixtoEfectivoNum - mixtoTarjetaNum - mixtoTransferenciaNum).toFixed(2);
+                          setMontoMixtoCredito(Math.max(0, saldoActual).toFixed(2));
+                        }}
+                        className="h-8 px-2 rounded-lg text-[10px] font-bold bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800/50 hover:bg-cyan-100"
+                        title="Asignar el saldo restante a Crédito"
+                      >
+                        + Saldo
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Condiciones del Crédito si hay monto asignado */}
+                  {mixtoCreditoNum > 0 && (
+                    <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 space-y-2">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-zinc-500 font-medium">Plazo de crédito:</span>
+                        <div className="flex items-center gap-1">
+                          {[15, 30, 45, 60].map((dias) => (
+                            <button
+                              key={dias}
+                              type="button"
+                              onClick={() => cambiarDiasCredito(dias)}
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                diasCredito === dias
+                                  ? "bg-cyan-600 text-white"
+                                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                              }`}
+                            >
+                              {dias}d
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center text-[11px] text-zinc-500">
+                        <span>Vencimiento:</span>
+                        <span className="font-bold text-cyan-600 dark:text-cyan-400 capitalize">
+                          {formatFechaVencimientoLarga(fechaVencimientoCredito)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Resumen del Balance */}
+                <div className="pt-1 flex items-center justify-between text-xs font-semibold px-1">
+                  <span className="text-zinc-500 dark:text-zinc-400">Total Asignado:</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-black ${
+                      Math.abs(saldoRestanteMixto) < 0.01
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-amber-600 dark:text-amber-400"
+                    }`}>
+                      ${totalMixtoAsignado.toFixed(2)} / ${total.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Panel de Venta a Crédito Puro */}
             {metodoPago === "Crédito" && (
               <div className="mb-5 p-4 rounded-2xl bg-cyan-50/70 dark:bg-cyan-950/25 border border-cyan-200 dark:border-cyan-800/40 space-y-3.5 text-left">
                 <div className="flex justify-between items-center">
@@ -3222,7 +3581,7 @@ export default function NuevaVentaPage() {
               </div>
             )}
 
-            {/* Calculadora de Cambio para Efectivo */}
+            {/* Calculadora de Cambio para Efectivo Puro */}
             {metodoPago === "Efectivo" && (
               <div className="mb-5 p-3.5 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 space-y-3">
                 <div className="flex justify-between items-center">
@@ -3290,10 +3649,19 @@ export default function NuevaVentaPage() {
               </button>
               <button
                 onClick={handleConfirmarCobro}
-                disabled={procesandoVenta}
+                disabled={
+                  procesandoVenta ||
+                  (metodoPago === "Mixto" && (totalMixtoAsignado <= 0 || Math.abs(saldoRestanteMixto) > 0.01))
+                }
                 className="flex-1 h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 active:scale-[0.99] border border-transparent dark:border-emerald-500/35 hover:dark:border-emerald-500/50 dark:text-emerald-300 text-xs font-medium shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
-                {procesandoVenta ? "Procesando..." : "Confirmar"}
+                {procesandoVenta
+                  ? "Procesando..."
+                  : metodoPago === "Mixto" && saldoRestanteMixto > 0.01
+                  ? `Falta $${saldoRestanteMixto.toFixed(2)}`
+                  : metodoPago === "Mixto" && saldoRestanteMixto < -0.01
+                  ? "Exceso en montos"
+                  : "Confirmar"}
               </button>
             </div>
           </div>
@@ -3331,6 +3699,30 @@ export default function NuevaVentaPage() {
                 <p className="text-base font-normal text-zinc-700 dark:text-zinc-300 mt-1.5 tracking-tight">
                   {ventaCompletada.paymentMethod || "Efectivo"} • {ventaCompletada.customerName || "Consumidor Final"}
                 </p>
+                {ventaCompletada.paymentMethod === "Mixto" && ventaCompletada.paymentBreakdown ? (
+                  <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2 text-xs">
+                    {ventaCompletada.paymentBreakdown.cash > 0 && (
+                      <span className="px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 text-emerald-700 dark:text-emerald-300 font-semibold">
+                        💵 ${ventaCompletada.paymentBreakdown.cash.toFixed(2)}
+                      </span>
+                    )}
+                    {ventaCompletada.paymentBreakdown.card > 0 && (
+                      <span className="px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/40 text-blue-700 dark:text-blue-300 font-semibold">
+                        💳 ${ventaCompletada.paymentBreakdown.card.toFixed(2)}
+                      </span>
+                    )}
+                    {ventaCompletada.paymentBreakdown.transfer > 0 && (
+                      <span className="px-2 py-0.5 rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/40 text-purple-700 dark:text-purple-300 font-semibold">
+                        🏦 ${ventaCompletada.paymentBreakdown.transfer.toFixed(2)}
+                      </span>
+                    )}
+                    {ventaCompletada.paymentBreakdown.credit > 0 && (
+                      <span className="px-2 py-0.5 rounded-lg bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-800/40 text-cyan-700 dark:text-cyan-300 font-semibold">
+                        📋 Crédito: ${ventaCompletada.paymentBreakdown.credit.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                ) : null}
               </div>
 
               {/* Opciones de Impresión: Ticket y Carta NADA MÁS */}
@@ -3480,7 +3872,40 @@ export default function NuevaVentaPage() {
                   <span>Pago:</span>
                   <span className="font-semibold">{ventaCompletada.paymentMethod || "Efectivo"}</span>
                 </div>
-                {ventaCompletada.paymentMethod === "Crédito" ? (
+                {ventaCompletada.paymentMethod === "Mixto" && ventaCompletada.paymentBreakdown ? (
+                  <div className="space-y-0.5 pt-0.5 border-t border-dotted border-black">
+                    {ventaCompletada.paymentBreakdown.cash > 0 && (
+                      <div className="flex justify-between text-[11px]">
+                        <span>• Efectivo:</span>
+                        <span>{formatMoneda(ventaCompletada.paymentBreakdown.cash)}</span>
+                      </div>
+                    )}
+                    {ventaCompletada.paymentBreakdown.card > 0 && (
+                      <div className="flex justify-between text-[11px]">
+                        <span>• Tarjeta:</span>
+                        <span>{formatMoneda(ventaCompletada.paymentBreakdown.card)}</span>
+                      </div>
+                    )}
+                    {ventaCompletada.paymentBreakdown.transfer > 0 && (
+                      <div className="flex justify-between text-[11px]">
+                        <span>• Transferencia:</span>
+                        <span>{formatMoneda(ventaCompletada.paymentBreakdown.transfer)}</span>
+                      </div>
+                    )}
+                    {ventaCompletada.paymentBreakdown.credit > 0 && (
+                      <div className="flex justify-between text-[11px] font-bold">
+                        <span>• A Crédito:</span>
+                        <span>{formatMoneda(ventaCompletada.paymentBreakdown.credit)}</span>
+                      </div>
+                    )}
+                    {ventaCompletada.cambio && ventaCompletada.cambio > 0 ? (
+                      <div className="flex justify-between text-[11px] font-black pt-0.5">
+                        <span>Vuelto Efectivo:</span>
+                        <span>{formatMoneda(ventaCompletada.cambio)}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : ventaCompletada.paymentMethod === "Crédito" ? (
                   <>
                     <div className="flex justify-between font-bold text-black">
                       <span>Saldo a Crédito:</span>
@@ -3711,7 +4136,47 @@ export default function NuevaVentaPage() {
                           <span className="text-base font-black">Total:</span>
                           <span className="text-xl font-black">{formatMoneda(parseFloat(ventaCompletada.total))}</span>
                         </div>
-                        {ventaCompletada.paymentMethod === "Crédito" ? (
+                        {ventaCompletada.paymentMethod === "Mixto" && ventaCompletada.paymentBreakdown ? (
+                          <div className="space-y-1 pt-1 border-t border-zinc-200 text-xs">
+                            <div className="flex justify-between font-semibold text-zinc-700">
+                              <span>Forma de Pago:</span>
+                              <span className="font-bold text-zinc-900">Cobro Mixto</span>
+                            </div>
+                            {ventaCompletada.paymentBreakdown.cash > 0 && (
+                              <div className="flex justify-between text-zinc-600 pl-2">
+                                <span>• Efectivo:</span>
+                                <span>{formatMoneda(ventaCompletada.paymentBreakdown.cash)}</span>
+                              </div>
+                            )}
+                            {ventaCompletada.paymentBreakdown.card > 0 && (
+                              <div className="flex justify-between text-zinc-600 pl-2">
+                                <span>• Tarjeta:</span>
+                                <span>{formatMoneda(ventaCompletada.paymentBreakdown.card)}</span>
+                              </div>
+                            )}
+                            {ventaCompletada.paymentBreakdown.transfer > 0 && (
+                              <div className="flex justify-between text-zinc-600 pl-2">
+                                <span>• Transferencia:</span>
+                                <span>{formatMoneda(ventaCompletada.paymentBreakdown.transfer)}</span>
+                              </div>
+                            )}
+                            {ventaCompletada.paymentBreakdown.credit > 0 && (
+                              <div className="flex justify-between text-cyan-800 font-bold pl-2">
+                                <span>• A Crédito:</span>
+                                <span>{formatMoneda(ventaCompletada.paymentBreakdown.credit)}</span>
+                              </div>
+                            )}
+                            {ventaCompletada.cambio && ventaCompletada.cambio > 0 ? (
+                              <div className="flex justify-between text-emerald-700 font-bold pt-0.5">
+                                <span>Vuelto Efectivo:</span>
+                                <span>{formatMoneda(ventaCompletada.cambio)}</span>
+                              </div>
+                            ) : null}
+                            {ventaCompletada.notes && (
+                              <p className="text-[11px] text-zinc-500 italic pt-0.5">{ventaCompletada.notes}</p>
+                            )}
+                          </div>
+                        ) : ventaCompletada.paymentMethod === "Crédito" ? (
                           <>
                             <div className="flex justify-between text-xs pt-1">
                               <span className="font-semibold text-zinc-600">Forma de Pago:</span>
@@ -3736,7 +4201,7 @@ export default function NuevaVentaPage() {
                             {ventaCompletada.cambio && ventaCompletada.cambio > 0 ? (
                               <div className="flex justify-between text-xs">
                                 <span className="font-semibold text-zinc-600">Vuelto:</span>
-                                <span className="font-bold text-emerald-600">{formatMoneda(ventaCompletada.cambio)}</span>
+                                <span>{formatMoneda(ventaCompletada.cambio)}</span>
                               </div>
                             ) : null}
                           </>

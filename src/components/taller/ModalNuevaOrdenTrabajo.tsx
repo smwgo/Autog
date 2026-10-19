@@ -68,12 +68,15 @@ export default function ModalNuevaOrdenTrabajo({
   ]);
   const [mostrarFlotanteAsignar, setMostrarFlotanteAsignar] = useState(false);
   const [flotanteTecnicoSeleccionado, setFlotanteTecnicoSeleccionado] = useState("");
+  const [busquedaTecnico, setBusquedaTecnico] = useState("");
   const [flotanteTarea, setFlotanteTarea] = useState("");
   const [emailContacto, setEmailContacto] = useState("");
   const [motivoIngreso, setMotivoIngreso] = useState("");
   const [creando, setCreando] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const dropdownTecnicoRef = useRef<HTMLDivElement | null>(null);
+  const [mostrarDropdownTecnicos, setMostrarDropdownTecnicos] = useState(false);
 
   // Sincronizar el usuario logueado
   useEffect(() => {
@@ -106,11 +109,21 @@ export default function ModalNuevaOrdenTrabajo({
     );
   }, [empleadoLogueado?.nombre, mecanicos, asignacionesTecnicos]);
 
-  // Cerrar dropdown de clientes al hacer clic fuera
+  // Técnicos filtrados por término de búsqueda
+  const mecanicosFiltrados = useMemo(() => {
+    const q = busquedaTecnico.trim().toLowerCase();
+    if (!q) return listaMecanicosUnica;
+    return listaMecanicosUnica.filter((m) => m.toLowerCase().includes(q));
+  }, [listaMecanicosUnica, busquedaTecnico]);
+
+  // Cerrar dropdown de clientes y técnicos al hacer clic fuera
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setMostrarDropdownClientes(false);
+      }
+      if (dropdownTecnicoRef.current && !dropdownTecnicoRef.current.contains(event.target as Node)) {
+        setMostrarDropdownTecnicos(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -726,8 +739,8 @@ export default function ModalNuevaOrdenTrabajo({
                     <span className="w-2 h-2 rounded-full bg-emerald-400" />
                     Vehículo
                   </h3>
-                  <p className="text-xs text-zinc-400">
-                    Cliente: <strong className="text-zinc-200">{clienteSeleccionado?.name || nuevoClienteNombre}</strong>
+                  <p className="text-xs text-zinc-400 font-normal">
+                    Cliente: <span className="text-zinc-200">{clienteSeleccionado?.name || nuevoClienteNombre}</span>
                   </p>
                 </div>
 
@@ -748,8 +761,11 @@ export default function ModalNuevaOrdenTrabajo({
                       aria-label="Registrar otro vehículo"
                       className="w-8 h-8 rounded-xl bg-white/5 hover:bg-emerald-500/15 border border-white/10 hover:border-emerald-500/40 text-zinc-400 hover:text-emerald-400 flex items-center justify-center transition-all cursor-pointer shadow-xs"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                        <circle cx="7" cy="17" r="2" />
+                        <path d="M9 17h6" />
+                        <circle cx="17" cy="17" r="2" />
                       </svg>
                     </button>
                   )}
@@ -801,15 +817,16 @@ export default function ModalNuevaOrdenTrabajo({
                           }`}
                         >
                           <div className="space-y-1">
-                            <span className="px-2.5 py-1 rounded-lg bg-black/60 border border-white/10 font-mono text-sm font-bold text-white inline-block">
-                              {v.plate}
-                            </span>
-                            <p className="text-xs font-semibold text-zinc-200">
-                              {v.brand} {v.model} {v.year ? `(${v.year})` : ""}
+                            <p className="text-sm font-normal text-zinc-100 leading-tight">
+                              {[v.brand, v.model].filter(Boolean).join(" ")
+                                ? `${[v.brand, v.model].filter(Boolean).join(" ")} ${v.year ? `(${v.year})` : ""}`.trim()
+                                : v.plate}
                             </p>
-                            <p className="text-[11px] text-zinc-400 font-mono">
-                              Odómetro: {v.mileage ? `${Number(v.mileage).toLocaleString()} km` : "Sin registro"}
-                            </p>
+                            <div>
+                              <span className="px-2 py-0.5 rounded-lg bg-black/60 border border-white/10 font-mono text-xs font-bold text-zinc-200 inline-block">
+                                {v.plate}
+                              </span>
+                            </div>
                           </div>
 
                           <div className="shrink-0 text-right">
@@ -970,11 +987,11 @@ export default function ModalNuevaOrdenTrabajo({
                     🚗
                   </div>
                   <div className="min-w-0">
-                    <strong className="text-white block text-sm truncate">
+                    <span className="text-zinc-100 font-normal block text-sm truncate">
                       {vehiculoMarca || "Vehículo"} {vehiculoModelo} {vehiculoPlaca ? `(${vehiculoPlaca})` : ""}
-                    </strong>
-                    <span className="text-zinc-400 block truncate">
-                      Cliente: <strong className="text-zinc-200">{clienteSeleccionado?.name || nuevoClienteNombre}</strong>
+                    </span>
+                    <span className="text-zinc-400 font-normal block truncate">
+                      Cliente: <span className="text-zinc-200">{clienteSeleccionado?.name || nuevoClienteNombre}</span>
                     </span>
                   </div>
                 </div>
@@ -982,17 +999,28 @@ export default function ModalNuevaOrdenTrabajo({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setPasoActivo(1)}
-                    className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs cursor-pointer"
+                    onClick={() => setPasoActivo(2)}
+                    title="Cambiar auto"
+                    aria-label="Cambiar auto"
+                    className="w-8 h-8 rounded-xl bg-white/5 hover:bg-emerald-500/15 border border-white/10 hover:border-emerald-500/40 text-zinc-400 hover:text-emerald-400 flex items-center justify-center transition-all cursor-pointer shadow-xs"
                   >
-                    Cambiar Cliente
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                      <circle cx="7" cy="17" r="2" />
+                      <path d="M9 17h6" />
+                      <circle cx="17" cy="17" r="2" />
+                    </svg>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPasoActivo(2)}
-                    className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs cursor-pointer"
+                    onClick={() => setPasoActivo(1)}
+                    title="Cambiar cliente"
+                    aria-label="Cambiar cliente"
+                    className="w-8 h-8 rounded-xl bg-white/5 hover:bg-blue-500/15 border border-white/10 hover:border-blue-500/40 text-zinc-400 hover:text-blue-400 flex items-center justify-center transition-all cursor-pointer shadow-xs"
                   >
-                    Cambiar Auto
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
                   </button>
                 </div>
               </div>
@@ -1001,7 +1029,7 @@ export default function ModalNuevaOrdenTrabajo({
               <div className="space-y-2 text-xs">
                 <div className="flex items-center justify-between">
                   <label className="block text-zinc-300 font-semibold text-xs flex items-center gap-2">
-                    <span>Técnico(s) asignado(s)</span>
+                    <span>Técnico</span>
                     {asignacionesTecnicos.length > 0 && (
                       <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-bold border border-blue-500/30">
                         {asignacionesTecnicos.length}
@@ -1012,12 +1040,14 @@ export default function ModalNuevaOrdenTrabajo({
                   <button
                     type="button"
                     onClick={() => {
-                      setFlotanteTecnicoSeleccionado(listaMecanicosUnica[0] || empleadoLogueado.nombre || "");
+                      setFlotanteTecnicoSeleccionado("");
+                      setBusquedaTecnico("");
                       setFlotanteTarea(
                         tipoIngreso === "Lubricentro"
                           ? "Cambio de aceite y filtros"
                           : "Diagnóstico y reparación"
                       );
+                      setMostrarDropdownTecnicos(true);
                       setMostrarFlotanteAsignar(true);
                     }}
                     className="h-8 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-md shadow-blue-600/20 active:scale-95"
@@ -1092,7 +1122,6 @@ export default function ModalNuevaOrdenTrabajo({
                         </span>
                         <div>
                           <h4 className="text-sm font-bold text-white">Asignar Técnico</h4>
-                          <p className="text-[11px] text-zinc-400">Elige el empleado y qué labor va a realizar</p>
                         </div>
                       </div>
                       <button
@@ -1104,43 +1133,134 @@ export default function ModalNuevaOrdenTrabajo({
                       </button>
                     </div>
 
-                    {/* Seleccionar Empleado */}
-                    <div className="space-y-1.5">
+                    {/* Seleccionar Empleado con Buscador Dropdown */}
+                    <div className="space-y-1.5 relative" ref={dropdownTecnicoRef}>
                       <label className="block text-zinc-300 font-semibold text-xs">
-                        Empleado / Técnico:
+                        Técnico:
                       </label>
-                      <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto p-1">
-                        {listaMecanicosUnica.map((m) => {
-                          const seleccionado = flotanteTecnicoSeleccionado === m;
-                          return (
+
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={busquedaTecnico}
+                          onChange={(e) => {
+                            setBusquedaTecnico(e.target.value);
+                            setMostrarDropdownTecnicos(true);
+                          }}
+                          onFocus={() => {
+                            setMostrarDropdownTecnicos(true);
+                          }}
+                          placeholder="Buscar..."
+                          className="w-full h-11 pl-10 pr-16 rounded-xl bg-black/40 border border-white/15 focus:border-blue-500 text-white text-xs sm:text-sm placeholder:text-zinc-500 focus:outline-none transition-all cursor-text"
+                        />
+                        <svg
+                          className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                          />
+                        </svg>
+
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                          {busquedaTecnico && (
                             <button
-                              key={m}
                               type="button"
-                              onClick={() => setFlotanteTecnicoSeleccionado(m)}
-                              className={`p-2.5 rounded-xl border text-left text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
-                                seleccionado
-                                  ? "bg-blue-600 border-blue-400 text-white shadow-md shadow-blue-600/30"
-                                  : "bg-white/[0.03] border-white/10 text-zinc-300 hover:bg-white/[0.07]"
-                              }`}
+                              onClick={() => {
+                                setBusquedaTecnico("");
+                                setFlotanteTecnicoSeleccionado("");
+                                setMostrarDropdownTecnicos(true);
+                              }}
+                              className="text-zinc-400 hover:text-white cursor-pointer p-1 text-xs"
+                              title="Borrar nombre"
                             >
-                              <span className="w-2 h-2 rounded-full bg-current" />
-                              <span className="truncate">{m}</span>
+                              ✕
                             </button>
-                          );
-                        })}
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setMostrarDropdownTecnicos((prev) => !prev)}
+                            className="text-zinc-400 hover:text-white cursor-pointer p-1"
+                          >
+                            <svg
+                              className={`w-4 h-4 transition-transform ${mostrarDropdownTecnicos ? "rotate-180" : ""}`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
+
+                      {/* Dropdown flotante con los técnicos */}
+                      {mostrarDropdownTecnicos && (
+                        <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#16161b] border border-white/15 rounded-2xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto">
+                          {mecanicosFiltrados.length > 0 ? (
+                            <div className="p-1 space-y-0.5">
+                              {mecanicosFiltrados.map((m) => {
+                                const seleccionado = flotanteTecnicoSeleccionado.trim().toLowerCase() === m.trim().toLowerCase();
+                                return (
+                                  <div
+                                    key={m}
+                                    onClick={() => {
+                                      setFlotanteTecnicoSeleccionado(m);
+                                      setBusquedaTecnico(m);
+                                      setMostrarDropdownTecnicos(false);
+                                    }}
+                                    className={`px-3 py-2.5 rounded-xl text-xs font-medium cursor-pointer flex items-center justify-between transition-colors ${
+                                      seleccionado
+                                        ? "bg-blue-600 text-white font-semibold"
+                                        : "text-zinc-200 hover:bg-white/[0.08]"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2 truncate">
+                                      <span className={`w-2 h-2 rounded-full shrink-0 ${seleccionado ? "bg-white" : "bg-emerald-400"}`} />
+                                      <span className="truncate">{m}</span>
+                                    </div>
+                                    {seleccionado && <span className="text-xs">✓</span>}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="p-4 text-center space-y-2">
+                              <p className="text-xs text-zinc-400">No se encontró "{busquedaTecnico}"</p>
+                              {busquedaTecnico.trim() && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFlotanteTecnicoSeleccionado(busquedaTecnico.trim());
+                                    setBusquedaTecnico(busquedaTecnico.trim());
+                                    setMostrarDropdownTecnicos(false);
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold cursor-pointer"
+                                >
+                                  Usar "{busquedaTecnico.trim()}"
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Qué va a hacer */}
                     <div className="space-y-1.5">
                       <label className="block text-zinc-300 font-semibold text-xs">
-                        ¿Qué va a hacer en este auto?
+                        Labor:
                       </label>
                       <input
                         type="text"
                         value={flotanteTarea}
                         onChange={(e) => setFlotanteTarea(e.target.value)}
-                        placeholder="Ej: Cambio de aceite, revisión de frenos..."
+                        placeholder="Labor..."
                         className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-blue-500 text-white text-xs sm:text-sm focus:outline-none"
                         autoFocus
                       />
@@ -1149,26 +1269,29 @@ export default function ModalNuevaOrdenTrabajo({
                       <div className="flex flex-wrap gap-1.5 pt-1">
                         {(tipoIngreso === "Lubricentro"
                           ? [
-                              "Cambio de aceite y filtro",
-                              "Filtro de aire y cabina",
-                              "Engrase general",
-                              "Revisión de fluidos",
+                              { nombre: "Aceite", color: "bg-blue-500/10 border-blue-500/20 text-blue-300 hover:bg-blue-500/20" },
+                              { nombre: "Filtros", color: "bg-emerald-500/10 border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20" },
+                              { nombre: "Fluidos", color: "bg-cyan-500/10 border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/20" },
+                              { nombre: "Frenos", color: "bg-rose-500/10 border-rose-500/20 text-rose-300 hover:bg-rose-500/20" },
+                              { nombre: "Batería", color: "bg-amber-500/10 border-amber-500/20 text-amber-300 hover:bg-amber-500/20" },
+                              { nombre: "Engrase", color: "bg-purple-500/10 border-purple-500/20 text-purple-300 hover:bg-purple-500/20" },
                             ]
                           : [
-                              "Diagnóstico general",
-                              "Frenos delanteros/traseros",
-                              "Suspensión y dirección",
-                              "Mantenimiento preventivo",
-                              "Sistema eléctrico",
+                              { nombre: "Diagnóstico", color: "bg-blue-500/10 border-blue-500/20 text-blue-300 hover:bg-blue-500/20" },
+                              { nombre: "Mantenimiento", color: "bg-emerald-500/10 border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20" },
+                              { nombre: "Frenos", color: "bg-rose-500/10 border-rose-500/20 text-rose-300 hover:bg-rose-500/20" },
+                              { nombre: "Motor", color: "bg-amber-500/10 border-amber-500/20 text-amber-300 hover:bg-amber-500/20" },
+                              { nombre: "Suspensión", color: "bg-purple-500/10 border-purple-500/20 text-purple-300 hover:bg-purple-500/20" },
+                              { nombre: "Eléctrico", color: "bg-cyan-500/10 border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/20" },
                             ]
                         ).map((sug) => (
                           <button
-                            key={sug}
+                            key={sug.nombre}
                             type="button"
-                            onClick={() => setFlotanteTarea(sug)}
-                            className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                            onClick={() => setFlotanteTarea(sug.nombre)}
+                            className={`px-2.5 py-1 rounded-xl border text-xs font-normal transition-all cursor-pointer ${sug.color}`}
                           >
-                            + {sug}
+                            {sug.nombre}
                           </button>
                         ))}
                       </div>
@@ -1185,12 +1308,13 @@ export default function ModalNuevaOrdenTrabajo({
                       </button>
                       <button
                         type="button"
-                        disabled={!flotanteTecnicoSeleccionado}
+                        disabled={!flotanteTecnicoSeleccionado.trim() && !busquedaTecnico.trim()}
                         onClick={() => {
-                          if (!flotanteTecnicoSeleccionado) return;
+                          const tecnicoFinal = flotanteTecnicoSeleccionado.trim() || busquedaTecnico.trim();
+                          if (!tecnicoFinal) return;
                           const nuevaAsig = {
                             id: `asig-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-                            nombre: flotanteTecnicoSeleccionado,
+                            nombre: tecnicoFinal,
                             tarea:
                               flotanteTarea.trim() ||
                               (tipoIngreso === "Lubricentro"
@@ -1198,7 +1322,7 @@ export default function ModalNuevaOrdenTrabajo({
                                 : "Diagnóstico y reparación"),
                           };
                           setAsignacionesTecnicos((prev) => [
-                            ...prev.filter((a) => a.nombre !== flotanteTecnicoSeleccionado),
+                            ...prev.filter((a) => a.nombre !== tecnicoFinal),
                             nuevaAsig,
                           ]);
                           setMostrarFlotanteAsignar(false);
@@ -1213,15 +1337,12 @@ export default function ModalNuevaOrdenTrabajo({
               )}
 
                 {/* Motivo de ingreso */}
-                <div className="space-y-1">
-                  <label className="block text-zinc-300 font-semibold">
-                    Motivo de ingreso
-                  </label>
+                <div>
                   <textarea
                     rows={3}
                     value={motivoIngreso}
                     onChange={(e) => setMotivoIngreso(e.target.value)}
-                    placeholder="Describe brevemente el motivo de la orden o requerimiento del cliente..."
+                    placeholder="Motivo de ingreso..."
                     className="w-full p-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-blue-500 text-white text-xs sm:text-sm focus:outline-none resize-none"
                   />
                 </div>
@@ -1241,17 +1362,6 @@ export default function ModalNuevaOrdenTrabajo({
           </button>
 
           <div className="flex items-center gap-3">
-            {pasoActivo > 1 && (
-              <button
-                type="button"
-                onClick={() => setPasoActivo((prev) => (prev > 1 ? ((prev - 1) as 1 | 2) : 1))}
-                disabled={creando}
-                className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
-              >
-                ← Anterior
-              </button>
-            )}
-
             {pasoActivo < 3 ? (
               <button
                 type="button"

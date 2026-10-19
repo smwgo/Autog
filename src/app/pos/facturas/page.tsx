@@ -493,7 +493,16 @@ export default function FacturasPosPage() {
                         </span>
 
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 text-xs font-medium">
-                          {v.paymentMethod?.toLowerCase().includes("tarjeta") ? "💳" : v.paymentMethod?.toLowerCase().includes("transf") ? "🏦" : "💵"} {v.paymentMethod || "Efectivo"}
+                          {v.paymentMethod?.toLowerCase().includes("mixto")
+                            ? "🔀"
+                            : v.paymentMethod?.toLowerCase().includes("crédito") || v.paymentMethod?.toLowerCase().includes("credito")
+                            ? "📋"
+                            : v.paymentMethod?.toLowerCase().includes("tarjeta")
+                            ? "💳"
+                            : v.paymentMethod?.toLowerCase().includes("transf")
+                            ? "🏦"
+                            : "💵"}{" "}
+                          {v.paymentMethod || "Efectivo"}
                         </span>
 
                         <span className="text-zinc-400 ml-auto text-[11px] whitespace-nowrap">
