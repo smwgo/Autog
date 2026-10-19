@@ -46,24 +46,73 @@ export async function GET(request: Request) {
       take: 200,
     });
 
-    // Estadísticas rápidas con índices de PostgreSQL
-    const haceUnMes = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const [totalClientes, totalVehiculos, totalVip, totalNuevos] = await Promise.all([
-      prisma.customer.count(),
-      prisma.vehicle.count(),
-      prisma.customer.count({ where: { vip: true } }),
-      prisma.customer.count({ where: { createdAt: { gte: haceUnMes } } }),
-    ]);
+    // Calcular visitas al taller por placa para cada vehículo
+    const allPlates = customers.flatMap((c) => c.vehicles.map((v) => v.plate.trim())).filter(Boolean);
+    const platesSet = Array.from(new Set(allPlates.flatMap((p) => [p, p.toUpperCase()])));
+    const visitsMap: Record<string, number> = {};
+
+    if (platesSet.length > 0) {
+      try {
+        const [orderCounts, historyCounts] = await Promise.all([
+          prisma.workshopOrder.groupBy({
+            by: ["plate"],
+            where: {
+              plate: { in: platesSet },
+            },
+            _count: { id: true },
+          }),
+          prisma.workshopHistory.groupBy({
+            by: ["plate"],
+            where: {
+              plate: { in: platesSet },
+            },
+            _count: { id: true },
+          }),
+        ]);
+
+        for (const item of orderCounts) {
+          const p = (item.plate || "").trim().toUpperCase();
+          visitsMap[p] = (visitsMap[p] || 0) + item._count.id;
+        }
+        for (const item of historyCounts) {
+          const p = (item.plate || "").trim().toUpperCase();
+          visitsMap[p] = (visitsMap[p] || 0) + item._count.id;
+        }
+      } catch (visitErr) {
+        console.warn("No se pudieron calcular las visitas de vehículos:", visitErr);
+      }
+    }
+
+    const customersWithVisits = customers.map((c) => ({
+      ...c,
+      vehicles: c.vehicles.map((v) => {
+        const cleanPlate = (v.plate || "").trim().toUpperCase();
+        return {
+          ...v,
+          tallerVisits: visitsMap[cleanPlate] || 0,
+        };
+      }),
+    }));
+
+    let stats = null;
+    const esPos = searchParams.get("pos") === "true" || searchParams.get("rapido") === "true";
+
+    if (!esPos) {
+      // Estadísticas con índices de PostgreSQL para la página de gestión de clientes
+      const haceUnMes = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const [totalClientes, totalVehiculos, totalVip, totalNuevos] = await Promise.all([
+        prisma.customer.count(),
+        prisma.vehicle.count(),
+        prisma.customer.count({ where: { vip: true } }),
+        prisma.customer.count({ where: { createdAt: { gte: haceUnMes } } }),
+      ]);
+      stats = { totalClientes, totalVehiculos, totalVip, totalNuevos };
+    }
 
     return NextResponse.json({
       success: true,
-      clientes: customers,
-      stats: {
-        totalClientes,
-        totalVehiculos,
-        totalVip,
-        totalNuevos,
-      },
+      clientes: customersWithVisits,
+      stats,
     });
   } catch (error: any) {
     console.error("Error al obtener clientes de Neon:", error);

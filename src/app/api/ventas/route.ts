@@ -81,6 +81,8 @@ export async function POST(request: Request) {
       paymentMethod = "Efectivo",
       discount = 0,
       taxPercent = 0.16,
+      vehiclePlate = null,
+      vehicleModel = null,
     } = body;
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -168,6 +170,30 @@ export async function POST(request: Request) {
           items: true,
         },
       });
+      if (vehiclePlate) {
+        try {
+          const histId = "hst_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+          const serviceNames = items.map((it: any) => `${it.quantity || it.qty || 1}x ${it.name || "Ítem"}`);
+          await tx.$executeRawUnsafe(
+            `INSERT INTO "WorkshopHistory" ("id", "serviceCode", "date", "vehicle", "plate", "client", "servicesJson", "cost", "mechanic", "mileage", "notes", "orderNumber", "createdAt", "updatedAt")
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())`,
+            histId,
+            `POS-${createdSale.saleNumber}`,
+            new Date().toISOString().split("T")[0],
+            vehicleModel || "Vehículo",
+            vehiclePlate.toString().trim().toUpperCase(),
+            customerName || "Consumidor Final",
+            JSON.stringify(serviceNames),
+            totalCalc,
+            "Caja Mostrador",
+            "N/A",
+            body.notes || "Venta de mostrador POS",
+            createdSale.saleNumber
+          );
+        } catch (histErr) {
+          console.warn("WorkshopHistory opcional no registrado:", histErr);
+        }
+      }
 
       // Sincronizar automáticamente con la sesión de caja abierta en Neon
       const activeSession = await tx.cashRegister.findFirst({

@@ -2332,7 +2332,8 @@ export async function POST(request: Request) {
       }
 
       // =========================================================================
-      // ACCIÓN 3: ACTUALIZAR ORDEN UNIFICADA (Servicios, Repuestos, Fotos, Notas, Km)
+      // =========================================================================
+      // ACCIÓN 3: ACTUALIZAR ORDEN UNIFICADA (Servicios, Repuestos, Fotos, Notas, Km, Combustible, Cronómetro)
       // =========================================================================
       if (action === "ACTUALIZAR_ORDEN") {
         const {
@@ -2345,6 +2346,9 @@ export async function POST(request: Request) {
           receptionPhotos,
           evidencePhotos,
           status,
+          fuelLevel,
+          generalCondition,
+          startTimer,
         } = body;
 
         if (!orderId) {
@@ -2418,7 +2422,9 @@ export async function POST(request: Request) {
           finalStatus = "Listo para Entregar";
           progress = 100;
         } else if (
-          finalItems.some((i: any) => i.status === "En Proceso" || i.status === "Listo") &&
+          (startTimer ||
+            finalItems.some((i: any) => i.status === "En Proceso" || i.status === "Listo") ||
+            finalItems.length > 0) &&
           finalStatus === "En Pista"
         ) {
           finalStatus = "En Proceso";
@@ -2437,6 +2443,9 @@ export async function POST(request: Request) {
                "receptionPhotosJson" = $10,
                "evidencePhotosJson" = $11,
                "status" = $12,
+               "fuelLevel" = COALESCE($13, "fuelLevel"),
+               "generalCondition" = COALESCE($14, "generalCondition"),
+               "startedAt" = CASE WHEN $15 = TRUE THEN COALESCE("startedAt", NOW()) ELSE "startedAt" END,
                "updatedAt" = NOW()
            WHERE "id" = $1`,
           current.id,
@@ -2450,7 +2459,10 @@ export async function POST(request: Request) {
           notes !== undefined ? notes : null,
           JSON.stringify(finalReceptionPhotos),
           JSON.stringify(finalEvidencePhotos),
-          finalStatus
+          finalStatus,
+          fuelLevel || null,
+          generalCondition || null,
+          Boolean(startTimer)
         );
 
         // Sincronizar kilometraje y fotos con el expediente del vehículo (Oficina / Clientes)
@@ -2545,17 +2557,73 @@ export async function POST(request: Request) {
           return NextResponse.json(
             {
               success: false,
-              error: "Agrega al menos un servicio o repuesto antes de enviar a Caja / POS.",
+              error: "Agrega al menos un servicio o repuesto antes de enviar a Oficina / Caja.",
             },
             { status: 400 }
           );
         }
 
-        // Marcar todos los ítems como "Listo"
-        const completedItems = order.items.map((it: any) => ({
-          ...it,
-          status: "Listo",
-        }));
+        // Consultar catálogo de servicios y productos para garantizar precios base reales en Oficina POS
+        const [catalogServices, catalogProducts] = (await Promise.all([
+          prisma.$queryRawUnsafe(`SELECT "code", "name", "price" FROM "WorkshopService"`).catch(() => []),
+          prisma.product.findMany({ select: { id: true, code: true, name: true, price: true } }).catch(() => []),
+        ])) as [any[], any[]];
+
+        const basePriceByCodeOrName = new Map<string, number>();
+        catalogServices.forEach((s: any) => {
+          const p = Number(s.price || 0);
+          if (p > 0) {
+            if (s.code) basePriceByCodeOrName.set(String(s.code).toUpperCase(), p);
+            if (s.name) basePriceByCodeOrName.set(String(s.name).toLowerCase(), p);
+          }
+        });
+        catalogProducts.forEach((prod: any) => {
+          const p = Number(prod.price || 0);
+          if (p > 0) {
+            if (prod.id) basePriceByCodeOrName.set(String(prod.id), p);
+            if (prod.code) basePriceByCodeOrName.set(String(prod.code).toUpperCase(), p);
+            if (prod.name) basePriceByCodeOrName.set(String(prod.name).toLowerCase(), p);
+          }
+        });
+
+        // Marcar todas las tareas/ítems como "Listo" y asegurar precio base > 0 para Oficina POS
+        const completedItems = order.items.map((it: any) => {
+          let basePrice = Number(it.price) || 0;
+          if (basePrice <= 0) {
+            basePrice =
+              (it.productId && basePriceByCodeOrName.get(String(it.productId))) ||
+              (it.code && basePriceByCodeOrName.get(String(it.code).toUpperCase())) ||
+              (it.name && basePriceByCodeOrName.get(String(it.name).toLowerCase())) ||
+              15.0;
+          }
+          return {
+            ...it,
+            price: Number(basePrice.toFixed(2)),
+            status: "Listo" as const,
+            empleado_nombre: it.empleado_nombre || order.mechanic || "Taller",
+          };
+        });
+
+        // Empleados que intervinieron en la orden
+        const empleadosSet = new Set<string>();
+        completedItems.forEach((it: any) => {
+          if (it.empleado_nombre) empleadosSet.add(String(it.empleado_nombre).trim());
+        });
+        if (order.mechanic) {
+          String(order.mechanic)
+            .split(",")
+            .map((m) => m.trim())
+            .filter(Boolean)
+            .forEach((m) => empleadosSet.add(m));
+        }
+        const empleadosIntervinieron = Array.from(empleadosSet);
+        const empleadosTexto = empleadosIntervinieron.join(", ") || "Taller";
+
+        const totalCalculated = Number(
+          completedItems
+            .reduce((acc: number, it: any) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1), 0)
+            .toFixed(2)
+        );
 
         const now = new Date();
         const startMs = order.startedAt
@@ -2596,7 +2664,7 @@ export async function POST(request: Request) {
           }
         }
 
-        // 2. POS (CAJA): Crear/actualizar OrderRequest para facturar sin volver a digitar
+        // 2. POS DE OFICINA (/pos/venta): Enviar servicios realizados, repuestos utilizados, precios base y empleados que intervinieron
         const itemsSummary = completedItems
           .map((i: any) => `${i.qty || 1}x ${i.name}`)
           .join(", ");
@@ -2605,10 +2673,13 @@ export async function POST(request: Request) {
           id: i.productId || i.id,
           code: i.code || "TAL",
           name: i.name,
-          brand: order.plate,
-          category: i.category || "Taller",
-          price: Number(i.price) || 0,
+          brand: i.empleado_nombre ? `👤 ${i.empleado_nombre} • ${order.plate}` : order.plate,
+          category: i.category || (i.type === "PART" ? "Repuestos" : "Servicio Taller"),
+          price: Number(i.price) || 15,
           qty: Number(i.qty) || 1,
+          isService: i.type !== "PART",
+          empleado_id: i.empleado_id || null,
+          empleado_nombre: i.empleado_nombre || order.mechanic || "Taller",
         }));
 
         const requestNumber = order.orderNumber.startsWith("OT-")
@@ -2618,6 +2689,8 @@ export async function POST(request: Request) {
         const existingReq = await prisma.orderRequest
           .findUnique({ where: { requestNumber } })
           .catch(() => null);
+
+        const posNotes = `Orden Taller #${order.orderNumber} | Estado: EN_CAJA | Empleados: ${empleadosTexto} | Placa: ${order.plate} | Km: ${order.mileage || "N/A"}`;
 
         let posRequest: any;
         if (existingReq) {
@@ -2629,8 +2702,8 @@ export async function POST(request: Request) {
               vehicleInfo: `${order.vehicle} [${order.plate}]`,
               itemsSummary,
               itemsJson: JSON.stringify(posItemsPayload),
-              totalEstimated: order.totalCost,
-              notes: `Orden Taller ${order.orderNumber} | Mecánico: ${order.mechanic} | Km: ${order.mileage || "N/A"}`,
+              totalEstimated: totalCalculated,
+              notes: posNotes,
               status: "PENDIENTE",
             },
           });
@@ -2644,8 +2717,8 @@ export async function POST(request: Request) {
               vehicleInfo: `${order.vehicle} [${order.plate}]`,
               itemsSummary,
               itemsJson: JSON.stringify(posItemsPayload),
-              totalEstimated: order.totalCost,
-              notes: `Orden Taller ${order.orderNumber} | Mecánico: ${order.mechanic} | Km: ${order.mileage || "N/A"}`,
+              totalEstimated: totalCalculated,
+              notes: posNotes,
               status: "PENDIENTE",
             },
           });
@@ -2668,10 +2741,10 @@ export async function POST(request: Request) {
              WHERE "id" = $1`,
             existingLog[0].id,
             itemsSummary.slice(0, 140),
-            order.mechanic,
+            empleadosTexto,
             durationStr,
             elapsedMinutes,
-            order.totalCost
+            totalCalculated
           );
         } else {
           const tlogId = "tlog_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
@@ -2683,12 +2756,12 @@ export async function POST(request: Request) {
             itemsSummary.slice(0, 140),
             order.orderNumber,
             `${order.vehicle} (${order.plate})`,
-            order.mechanic,
+            empleadosTexto,
             dateStr,
             durationStr,
             elapsedMinutes,
-            order.totalCost,
-            `Ejecución real: ${durationStr} | Técnico: ${order.mechanic}`
+            totalCalculated,
+            `Ejecución real: ${durationStr} | Empleados: ${empleadosTexto}`
           );
         }
 
@@ -2701,6 +2774,7 @@ export async function POST(request: Request) {
 
         const historyNotes = [
           order.notes,
+          `Empleados: ${empleadosTexto}`,
           order.nextOilChangeKm
             ? `Próximo cambio de aceite sugerido: ${order.nextOilChangeKm.toLocaleString()} km.`
             : null,
@@ -2715,8 +2789,8 @@ export async function POST(request: Request) {
              WHERE "id" = $1`,
             existingHist[0].id,
             JSON.stringify(completedItems.map((i: any) => i.name)),
-            order.totalCost,
-            order.mechanic,
+            totalCalculated,
+            empleadosTexto,
             order.mileage ? `${order.mileage.toLocaleString()} km` : "N/A",
             order.nextOilChangeKm,
             JSON.stringify(allPhotos),
@@ -2742,8 +2816,8 @@ export async function POST(request: Request) {
             order.plate.toUpperCase(),
             order.client,
             JSON.stringify(completedItems.map((i: any) => i.name)),
-            order.totalCost,
-            order.mechanic,
+            totalCalculated,
+            empleadosTexto,
             order.mileage ? `${order.mileage.toLocaleString()} km` : "N/A",
             order.nextOilChangeKm,
             JSON.stringify(allPhotos),
@@ -2752,20 +2826,25 @@ export async function POST(request: Request) {
           );
         }
 
-        // 5. Actualizar estado final de la Orden de Taller a LISTO_PARA_COBRO
+        // 5. Detener cronómetro (completedAt = NOW()) y cambiar estado en Neon a EN_CAJA
         await prisma.$executeRawUnsafe(
           `UPDATE "WorkshopOrder"
-           SET "status" = 'LISTO_PARA_COBRO',
+           SET "status" = 'EN_CAJA',
+               "statusColor" = 'emerald',
                "progress" = 100,
-               "itemsJson" = $2,
-               "servicesJson" = $3,
+               "mechanic" = $2,
+               "totalCost" = $3,
+               "itemsJson" = $4,
+               "servicesJson" = $5,
                "completedAt" = NOW(),
-               "durationMinutes" = $4,
-               "posRequestId" = $5,
+               "durationMinutes" = $6,
+               "posRequestId" = $7,
                "stockDeducted" = true,
                "updatedAt" = NOW()
            WHERE "id" = $1`,
           order.id,
+          empleadosTexto,
+          totalCalculated,
           JSON.stringify(completedItems),
           JSON.stringify(completedItems.map((i: any) => i.name)),
           elapsedMinutes,
@@ -2781,7 +2860,8 @@ export async function POST(request: Request) {
           success: true,
           activeOrder: mapOrderRow(updatedRows[0]),
           posRequest,
-          message: `Orden ${order.orderNumber} enviada a POS / Caja (${itemsSummary}). Stock, tiempos e historial actualizados.`,
+          empleadosIntervinieron,
+          message: `Orden ${order.orderNumber} enviada a Oficina / Caja (Estado: EN_CAJA). Cronómetro detenido.`,
         });
       }
 

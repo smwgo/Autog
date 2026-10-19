@@ -19,6 +19,21 @@ interface Product {
   isService?: boolean;
   estimatedMinutes?: number;
   imageUrl?: string | null;
+  empleado_id?: string | null;
+  empleado_nombre?: string | null;
+}
+
+export interface VehicleItem {
+  id: string;
+  plate: string;
+  brand: string;
+  model: string;
+  year?: number | null;
+  color?: string | null;
+  mileage?: number | null;
+  fuelType?: string | null;
+  vehicleType?: string | null;
+  tallerVisits?: number;
 }
 
 interface Customer {
@@ -27,6 +42,7 @@ interface Customer {
   name: string;
   phone: string;
   type: string;
+  vehicles?: VehicleItem[];
 }
 
 interface VentaEnEspera {
@@ -34,6 +50,7 @@ interface VentaEnEspera {
   nombre: string;
   cart: { product: Product; qty: number }[];
   clienteSeleccionado: Customer | null;
+  vehiculoSeleccionado?: VehicleItem | null;
   descuentoTipo: "monto" | "porcentaje";
   descuentoValor: number;
   solicitudActiva: any | null;
@@ -55,6 +72,18 @@ function getProductEmoji(name: string, category: string = ""): string {
   if (text.includes("llanta") || text.includes("neumatico")) return "🛞";
   if (text.includes("limpiaparabrisas")) return "💧";
   return "📦";
+}
+
+function formatMoneda(val: number | string | undefined | null): string {
+  if (val === undefined || val === null || val === "") return "$0";
+  const num = typeof val === "number" ? val : parseFloat(String(val)) || 0;
+  return (
+    "$" +
+    num.toLocaleString("es-CL", {
+      minimumFractionDigits: Number.isInteger(num) ? 0 : 2,
+      maximumFractionDigits: 2,
+    })
+  );
 }
 
 export default function NuevaVentaPage() {
@@ -137,15 +166,39 @@ export default function NuevaVentaPage() {
   }, [filtroTipo, productos]);
 
   // Clientes
-  const [clientes, setClientes] = useState<Customer[]>([]);
+  const [clientes, setClientes] = useState<Customer[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("pos_clientes_cache");
+        if (cached) return JSON.parse(cached);
+      } catch {}
+    }
+    return [];
+  });
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Customer | null>(null);
   const [mostrarModalClientes, setMostrarModalClientes] = useState(false);
   const [busquedaCliente, setBusquedaCliente] = useState("");
   const [creandoClienteInline, setCreandoClienteInline] = useState(false);
+  const [nuevoClienteTipo, setNuevoClienteTipo] = useState<"Personal" | "Empresa">("Personal");
   const [nuevoClienteNombre, setNuevoClienteNombre] = useState("");
   const [nuevoClienteIdent, setNuevoClienteIdent] = useState("");
   const [nuevoClienteTelefono, setNuevoClienteTelefono] = useState("");
+  const [nuevoClienteEmail, setNuevoClienteEmail] = useState("");
+  const [nuevoClienteDireccion, setNuevoClienteDireccion] = useState("");
   const [guardandoClienteInline, setGuardandoClienteInline] = useState(false);
+
+  // Vehículo Asociado al Cliente (Historial)
+  const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<VehicleItem | null>(null);
+  const [mostrarModalVehiculos, setMostrarModalVehiculos] = useState(false);
+  const [creandoVehiculoInline, setCreandoVehiculoInline] = useState(false);
+  const [nuevoVehiculoPlaca, setNuevoVehiculoPlaca] = useState("");
+  const [nuevoVehiculoMarca, setNuevoVehiculoMarca] = useState("");
+  const [nuevoVehiculoModelo, setNuevoVehiculoModelo] = useState("");
+  const [nuevoVehiculoAnio, setNuevoVehiculoAnio] = useState("");
+  const [nuevoVehiculoCombustible, setNuevoVehiculoCombustible] = useState("Gasolina");
+  const [nuevoVehiculoKilometraje, setNuevoVehiculoKilometraje] = useState("");
+  const [nuevoVehiculoColor, setNuevoVehiculoColor] = useState("");
+  const [guardandoVehiculoInline, setGuardandoVehiculoInline] = useState(false);
 
   // Carrito
   const [cart, setCart] = useState<{ product: Product; qty: number }[]>([]);
@@ -203,6 +256,7 @@ export default function NuevaVentaPage() {
   const [nuevoVendedorTemp, setNuevoVendedorTemp] = useState("");
   const [modalNotasVenta, setModalNotasVenta] = useState(false);
   const [notasVenta, setNotasVenta] = useState("");
+  const [mostrarModalAnular, setMostrarModalAnular] = useState(false);
   const [esPantallaCompleta, setEsPantallaCompleta] = useState(false);
 
   useEffect(() => {
@@ -380,13 +434,18 @@ export default function NuevaVentaPage() {
     }
   }, []);
 
-  // 2. Cargar clientes
+  // 2. Cargar clientes (optimizado con pos=true y cache local)
   const cargarClientes = useCallback(async () => {
     try {
-      const res = await fetch("/api/clientes");
+      const res = await fetch("/api/clientes?pos=true");
       const data = await res.json();
-      if (res.ok && data.success) {
-        setClientes(data.clientes || []);
+      if (res.ok && data.success && Array.isArray(data.clientes)) {
+        setClientes(data.clientes);
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem("pos_clientes_cache", JSON.stringify(data.clientes));
+          } catch {}
+        }
       }
     } catch (err) {
       console.error("Error al cargar clientes:", err);
@@ -410,7 +469,9 @@ export default function NuevaVentaPage() {
           nombre: nuevoClienteNombre.trim(),
           identificacion: nuevoClienteIdent.trim() || undefined,
           telefono: nuevoClienteTelefono.trim() || undefined,
-          tipoCliente: "Personal",
+          email: nuevoClienteEmail.trim() || undefined,
+          direccion: nuevoClienteDireccion.trim() || undefined,
+          tipoCliente: nuevoClienteTipo,
         }),
       });
 
@@ -425,12 +486,77 @@ export default function NuevaVentaPage() {
       setNuevoClienteNombre("");
       setNuevoClienteIdent("");
       setNuevoClienteTelefono("");
+      setNuevoClienteEmail("");
+      setNuevoClienteDireccion("");
+      setNuevoClienteTipo("Personal");
       setCreandoClienteInline(false);
       setMostrarModalClientes(false);
     } catch (err: any) {
       alert(err.message || "Error al registrar cliente.");
     } finally {
       setGuardandoClienteInline(false);
+    }
+  };
+
+  // Registrar vehículo rápido para el cliente seleccionado directamente en Neon
+  const handleGuardarVehiculoInline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clienteSeleccionado) {
+      alert("Selecciona un cliente primero.");
+      return;
+    }
+    if (!nuevoVehiculoPlaca.trim() || !nuevoVehiculoMarca.trim() || !nuevoVehiculoModelo.trim()) {
+      alert("Placa, marca y modelo son obligatorios.");
+      return;
+    }
+
+    setGuardandoVehiculoInline(true);
+    try {
+      const res = await fetch("/api/vehiculos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plate: nuevoVehiculoPlaca.trim().toUpperCase(),
+          brand: nuevoVehiculoMarca.trim(),
+          model: nuevoVehiculoModelo.trim(),
+          year: nuevoVehiculoAnio ? parseInt(nuevoVehiculoAnio, 10) : undefined,
+          fuelType: nuevoVehiculoCombustible || "Gasolina",
+          mileage: nuevoVehiculoKilometraje ? parseInt(nuevoVehiculoKilometraje.replace(/\D/g, ""), 10) : undefined,
+          color: nuevoVehiculoColor.trim() || undefined,
+          customerId: clienteSeleccionado.id,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "No se pudo registrar el vehículo.");
+      }
+
+      const creado: VehicleItem = {
+        ...data.vehicle,
+        tallerVisits: 0,
+      };
+      const updatedVehicles = [...(clienteSeleccionado.vehicles || []), creado];
+      const updatedCliente = { ...clienteSeleccionado, vehicles: updatedVehicles };
+      setClienteSeleccionado(updatedCliente);
+      setVehiculoSeleccionado(creado);
+      setClientes((prev) =>
+        prev.map((c) => (c.id === clienteSeleccionado.id ? updatedCliente : c))
+      );
+
+      setNuevoVehiculoPlaca("");
+      setNuevoVehiculoMarca("");
+      setNuevoVehiculoModelo("");
+      setNuevoVehiculoAnio("");
+      setNuevoVehiculoCombustible("Gasolina");
+      setNuevoVehiculoKilometraje("");
+      setNuevoVehiculoColor("");
+      setCreandoVehiculoInline(false);
+      setMostrarModalVehiculos(false);
+    } catch (err: any) {
+      alert(err.message || "Error al registrar vehículo.");
+    } finally {
+      setGuardandoVehiculoInline(false);
     }
   };
 
@@ -668,20 +794,39 @@ export default function NuevaVentaPage() {
       try {
         const parsed = typeof item.itemsJson === "string" ? JSON.parse(item.itemsJson) : item.itemsJson;
         if (Array.isArray(parsed) && parsed.length > 0) {
-          loadedItems = parsed.map((p: any, idx: number) => ({
-            product: {
-              id: p.id || `web-item-${idx}`,
-              code: p.code || `WEB-${idx + 1}`,
-              name: p.name || item.itemsSummary || "Solicitud de Cliente",
-              brand: p.brand || null,
-              category: item.type || "General",
-              price: p.price || item.totalEstimated || 0,
-              stock: 999,
-              minStock: 1,
-              status: "ACTIVO",
-            },
-            qty: p.qty || p.quantity || 1,
-          }));
+          loadedItems = parsed.map((p: any, idx: number) => {
+            const catItem = productos.find(
+              (prod) =>
+                (p.code && prod.code.toLowerCase() === String(p.code).toLowerCase()) ||
+                (p.name && prod.name.toLowerCase() === String(p.name).toLowerCase())
+            );
+            const resolvedBasePrice =
+              Number(p.price) > 0
+                ? Number(p.price)
+                : catItem && Number(catItem.price) > 0
+                ? Number(catItem.price)
+                : Number(item.totalEstimated) > 0 && parsed.length === 1
+                ? Number(item.totalEstimated)
+                : 15.0;
+
+            return {
+              product: {
+                id: p.id || `web-item-${idx}`,
+                code: p.code || `WEB-${idx + 1}`,
+                name: p.name || item.itemsSummary || "Solicitud de Cliente",
+                brand: p.brand || null,
+                category: p.category || item.type || "General",
+                price: resolvedBasePrice,
+                stock: 999,
+                minStock: 1,
+                status: "ACTIVO",
+                isService: Boolean(p.isService ?? item.type === "TALLER"),
+                empleado_id: p.empleado_id || null,
+                empleado_nombre: p.empleado_nombre || null,
+              },
+              qty: p.qty || p.quantity || 1,
+            };
+          });
         }
       } catch {
         // fallback
@@ -697,10 +842,11 @@ export default function NuevaVentaPage() {
             name: item.itemsSummary || `${item.type}: Solicitud Cliente`,
             brand: item.vehicleInfo || null,
             category: item.type || "General",
-            price: item.totalEstimated || 0,
+            price: Number(item.totalEstimated) || 15.0,
             stock: 999,
             minStock: 1,
             status: "ACTIVO",
+            isService: item.type === "TALLER",
           },
           qty: 1,
         },
@@ -712,7 +858,7 @@ export default function NuevaVentaPage() {
     setPedidoParaVer(null);
   };
 
-  // 4. Detectar si viene una solicitud web para despachar
+  // 4. Detectar si viene una solicitud web o de Taller para despachar en Caja de Oficina
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem("pos_despacho_solicitud");
@@ -735,20 +881,32 @@ export default function NuevaVentaPage() {
           try {
             const parsed = typeof item.itemsJson === "string" ? JSON.parse(item.itemsJson) : item.itemsJson;
             if (Array.isArray(parsed) && parsed.length > 0) {
-              loadedItems = parsed.map((p: any, idx: number) => ({
-                product: {
-                  id: p.id || `web-item-${idx}`,
-                  code: p.code || `WEB-${idx + 1}`,
-                  name: p.name || item.itemsSummary || "Solicitud de Cliente",
-                  brand: p.brand || null,
-                  category: item.type,
-                  price: p.price || item.totalEstimated || 0,
-                  stock: 999,
-                  minStock: 1,
-                  status: "ACTIVO",
-                },
-                qty: p.qty || p.quantity || 1,
-              }));
+              loadedItems = parsed.map((p: any, idx: number) => {
+                const resolvedBasePrice =
+                  Number(p.price) > 0
+                    ? Number(p.price)
+                    : Number(item.totalEstimated) > 0 && parsed.length === 1
+                    ? Number(item.totalEstimated)
+                    : 15.0;
+
+                return {
+                  product: {
+                    id: p.id || `web-item-${idx}`,
+                    code: p.code || `WEB-${idx + 1}`,
+                    name: p.name || item.itemsSummary || "Solicitud de Cliente",
+                    brand: p.brand || null,
+                    category: p.category || item.type || "General",
+                    price: resolvedBasePrice,
+                    stock: 999,
+                    minStock: 1,
+                    status: "ACTIVO",
+                    isService: Boolean(p.isService ?? item.type === "TALLER"),
+                    empleado_id: p.empleado_id || null,
+                    empleado_nombre: p.empleado_nombre || null,
+                  },
+                  qty: p.qty || p.quantity || 1,
+                };
+              });
             }
           } catch {
             // fallback
@@ -764,10 +922,11 @@ export default function NuevaVentaPage() {
                 name: item.itemsSummary || `${item.type}: Solicitud Cliente`,
                 brand: item.vehicleInfo || null,
                 category: item.type,
-                price: item.totalEstimated || 0,
+                price: Number(item.totalEstimated) || 15.0,
                 stock: 999,
                 minStock: 1,
                 status: "ACTIVO",
+                isService: item.type === "TALLER",
               },
               qty: 1,
             },
@@ -861,6 +1020,23 @@ export default function NuevaVentaPage() {
     );
   };
 
+  // Permitir al cajero en Oficina ajustar el precio final de cada servicio o ítem antes de cobrar
+  const updatePrice = (id: string, newPrice: string | number) => {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.product.id === id
+          ? {
+              ...item,
+              product: {
+                ...item.product,
+                price: newPrice,
+              },
+            }
+          : item
+      )
+    );
+  };
+
   const removeFromCart = (id: string) => {
     setCart((prev) => prev.filter((item) => item.product.id !== id));
   };
@@ -868,6 +1044,7 @@ export default function NuevaVentaPage() {
   const limpiarCarrito = () => {
     setCart([]);
     setClienteSeleccionado(null);
+    setVehiculoSeleccionado(null);
     setDescuentoValor(0);
     setMontoRecibido("");
   };
@@ -909,6 +1086,7 @@ export default function NuevaVentaPage() {
       nombre: nombreRef,
       cart,
       clienteSeleccionado,
+      vehiculoSeleccionado,
       descuentoTipo,
       descuentoValor,
       solicitudActiva,
@@ -922,6 +1100,7 @@ export default function NuevaVentaPage() {
   const recuperarVentaEnEspera = (venta: VentaEnEspera) => {
     setCart(venta.cart);
     setClienteSeleccionado(venta.clienteSeleccionado);
+    setVehiculoSeleccionado(venta.vehiculoSeleccionado || null);
     setDescuentoTipo(venta.descuentoTipo);
     setDescuentoValor(venta.descuentoValor);
     setSolicitudActiva(venta.solicitudActiva);
@@ -962,9 +1141,12 @@ export default function NuevaVentaPage() {
       const payload = {
         customerId: clienteSeleccionado?.id || null,
         customerName: clienteSeleccionado?.name || "Consumidor Final",
+        vehiclePlate: vehiculoSeleccionado?.plate || null,
+        vehicleModel: vehiculoSeleccionado ? `${vehiculoSeleccionado.brand} ${vehiculoSeleccionado.model}` : null,
         paymentMethod: metodoPago,
         discount: descuentoCalculado,
         taxPercent: ivaPorcentaje / 100,
+        notes: notasVenta || undefined,
         items: cart.map((i) => ({
           productId: i.product.id,
           code: i.product.code,
@@ -1014,10 +1196,16 @@ export default function NuevaVentaPage() {
         montoRecibido: metodoPago === "Efectivo" && montoRecibidoNum > 0 ? montoRecibidoNum : null,
         cambio: metodoPago === "Efectivo" && montoRecibidoNum > 0 ? cambio : null,
         cartSnap: [...cart],
+        vendedorNombre: vendedor,
+        customerPhone: clienteSeleccionado?.phone || null,
+        customerIdentification: clienteSeleccionado?.identification || null,
+        customerEmail: (clienteSeleccionado as any)?.email || null,
+        vehiculoSnap: vehiculoSeleccionado ? { ...vehiculoSeleccionado } : null,
       });
       setMostrarModalPago(false);
       setCart([]);
       setClienteSeleccionado(null);
+      setVehiculoSeleccionado(null);
       setDescuentoValor(0);
       setMontoRecibido("");
 
@@ -1216,19 +1404,9 @@ export default function NuevaVentaPage() {
             {/* Anular (Solo icono) */}
             <button
               type="button"
-              onClick={() => {
-                if (cart.length === 0) return;
-                if (window.confirm("¿Estás seguro de anular la venta actual? Se vaciará el carrito.")) {
-                  limpiarCarrito();
-                  if (solicitudActiva) {
-                    sessionStorage.removeItem("pos_despacho_solicitud");
-                    setSolicitudActiva(null);
-                  }
-                }
-              }}
-              disabled={cart.length === 0}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:border-rose-300 dark:hover:border-rose-900/50 hover:text-rose-600 dark:hover:text-rose-400 text-zinc-600 dark:text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
-              title="Anular venta y vaciar carrito"
+              onClick={() => setMostrarModalAnular(true)}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-rose-50 dark:hover:bg-rose-950/25 hover:border-rose-300 dark:hover:border-rose-800 hover:text-rose-600 dark:hover:text-rose-400 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
+              title="Anular / Cancelar venta actual"
             >
               <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                 <circle cx="12" cy="12" r="9" />
@@ -1646,72 +1824,140 @@ export default function NuevaVentaPage() {
             </span>
           </div>
 
-          {/* Cabecera del Cliente - Tarjeta con Filos Suaves y Texto Normal */}
-          <div className="p-3 sm:p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800/70 shadow-sm flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setMostrarModalClientes(true)}
-              className="flex items-center gap-3 text-left group cursor-pointer select-none"
-              title="Cambiar o seleccionar cliente"
-            >
-              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
-                  Cliente
-                </span>
-                <span className="text-sm font-normal text-zinc-900 dark:text-zinc-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors flex items-center gap-1.5 truncate max-w-[190px]">
-                  {clienteSeleccionado ? clienteSeleccionado.name : "Consumidor Final"}
-                  <svg className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </span>
-              </div>
-            </button>
-
-            {cart.length > 0 && (
+          {/* Cabecera del Cliente y Vehículo Asociado para Historial */}
+          <div className="p-3 sm:p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800/70 shadow-sm flex flex-col gap-2.5">
+            <div className="flex items-center justify-between">
               <button
                 type="button"
-                onClick={() => {
-                  limpiarCarrito();
-                  if (solicitudActiva) {
-                    sessionStorage.removeItem("pos_despacho_solicitud");
-                    setSolicitudActiva(null);
-                  }
-                }}
-                className="text-xs font-normal text-zinc-500 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 px-2.5 py-1 rounded-md bg-zinc-100 hover:bg-rose-50 dark:bg-zinc-800/60 dark:hover:bg-rose-500/10 border border-zinc-200 hover:border-rose-200 dark:border-zinc-700/40 dark:hover:border-rose-500/20 transition-all cursor-pointer"
-                title="Vaciar orden"
+                onClick={() => setMostrarModalClientes(true)}
+                className="flex items-center gap-3 text-left group cursor-pointer select-none min-w-0"
+                title="Cambiar o seleccionar cliente"
               >
-                Vaciar
+                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
+                    Cliente
+                  </span>
+                  <span className="text-sm font-normal text-zinc-900 dark:text-zinc-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors flex items-center gap-1.5 truncate max-w-[210px]">
+                    {clienteSeleccionado ? clienteSeleccionado.name : "Consumidor Final"}
+                    <svg className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </span>
+                </div>
               </button>
+
+              {cart.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    limpiarCarrito();
+                    if (solicitudActiva) {
+                      sessionStorage.removeItem("pos_despacho_solicitud");
+                      setSolicitudActiva(null);
+                    }
+                  }}
+                  className="text-xs font-normal text-zinc-500 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 px-2.5 py-1 rounded-md bg-zinc-100 hover:bg-rose-50 dark:bg-zinc-800/60 dark:hover:bg-rose-500/10 border border-zinc-200 hover:border-rose-200 dark:border-zinc-700/40 dark:hover:border-rose-500/20 transition-all cursor-pointer shrink-0"
+                  title="Vaciar orden"
+                >
+                  Vaciar
+                </button>
+              )}
+            </div>
+
+            {/* Fila del Vehículo Asociado para Historial de Vehículos */}
+            {clienteSeleccionado && (
+              <div className="pt-2 border-t border-zinc-200/70 dark:border-zinc-800/70 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMostrarModalVehiculos(true)}
+                  className="flex items-center gap-2 text-left group cursor-pointer select-none min-w-0 flex-1"
+                  title="Asociar o cambiar vehículo para historial"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center shrink-0 text-xs group-hover:scale-105 transition-transform">
+                    🚗
+                  </div>
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+                        Vehículo
+                      </span>
+                      {clienteSeleccionado.vehicles && clienteSeleccionado.vehicles.length > 1 && (
+                        <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0">
+                          {clienteSeleccionado.vehicles.length} autos
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs font-normal text-zinc-900 dark:text-zinc-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1.5 truncate">
+                      {vehiculoSeleccionado ? (
+                        <>
+                          <span className="font-mono font-bold text-blue-600 dark:text-blue-400 uppercase text-[11px] bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20 shrink-0">
+                            {vehiculoSeleccionado.plate}
+                          </span>
+                          <span className="truncate text-blue-600 dark:text-blue-400 font-semibold">
+                            {vehiculoSeleccionado.brand} {vehiculoSeleccionado.model}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-zinc-400 dark:text-zinc-500 italic">
+                          Sin vehículo
+                        </span>
+                      )}
+                      <svg className="w-3 h-3 text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreandoVehiculoInline(true);
+                    setMostrarModalVehiculos(true);
+                  }}
+                  className="text-[11px] px-2.5 py-1 rounded-lg text-blue-600 dark:text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 font-medium transition-all shrink-0 cursor-pointer"
+                  title="Registrar nuevo vehículo para este cliente"
+                >
+                  ＋ Auto
+                </button>
+              </div>
             )}
           </div>
 
           {/* Banner de Pedido en Despacho: Origen Landing, Tienda, Taller */}
           {solicitudActiva && (
-            <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800/70 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">📥</span>
-                <span className="font-normal text-zinc-900 dark:text-white text-xs">
-                  {solicitudActiva.requestNumber}
-                </span>
-                {renderOrigenBadge(solicitudActiva.type)}
+            <div className="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800/70 space-y-1 text-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm">📥</span>
+                  <span className="font-normal text-zinc-900 dark:text-white text-xs truncate">
+                    {solicitudActiva.requestNumber}
+                  </span>
+                  {renderOrigenBadge(solicitudActiva.type)}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    sessionStorage.removeItem("pos_despacho_solicitud");
+                    setSolicitudActiva(null);
+                  }}
+                  className="text-xs text-zinc-400 dark:text-zinc-500 hover:text-rose-600 dark:hover:text-rose-400 px-2 py-0.5 rounded-md transition-colors cursor-pointer shrink-0"
+                  title="Desvincular"
+                >
+                  ✕
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  sessionStorage.removeItem("pos_despacho_solicitud");
-                  setSolicitudActiva(null);
-                }}
-                className="text-xs text-zinc-400 dark:text-zinc-500 hover:text-rose-600 dark:hover:text-rose-400 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
-                title="Desvincular"
-              >
-                ✕
-              </button>
+              {solicitudActiva.vehicleInfo && (
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                  {solicitudActiva.vehicleInfo}
+                </p>
+              )}
             </div>
           )}
 
@@ -1747,21 +1993,43 @@ export default function NuevaVentaPage() {
                 return (
                   <div
                     key={item.product.id}
-                    className="flex items-center gap-3 p-3 bg-zinc-50 dark:bg-zinc-900/90 hover:bg-zinc-100/90 dark:hover:bg-zinc-900 border border-zinc-200 dark:border-zinc-800/60 hover:border-zinc-300 dark:hover:border-zinc-700/70 rounded-xl transition-all shadow-sm group"
+                    className="flex items-center gap-2.5 p-2.5 bg-zinc-50 dark:bg-zinc-900/90 hover:bg-zinc-100/90 dark:hover:bg-zinc-900 border border-zinc-200 dark:border-zinc-800/60 hover:border-zinc-300 dark:hover:border-zinc-700/70 rounded-xl transition-all shadow-sm group"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800/80 flex items-center justify-center text-xl shrink-0">
+                    <div className="w-9 h-9 rounded-lg bg-zinc-100 dark:bg-zinc-800/80 flex items-center justify-center text-lg shrink-0">
                       {getProductEmoji(item.product.name, item.product.category)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="text-xs font-normal text-zinc-900 dark:text-zinc-200 truncate">
                         {item.product.name}
                       </h4>
-                      <p className="text-[11px] text-zinc-500 mt-0.5 font-normal">
-                        ${priceNum.toFixed(2)} c/u
-                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        {item.product.empleado_nombre && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] font-medium text-blue-600 dark:text-blue-400">
+                            👤 {item.product.empleado_nombre}
+                          </span>
+                        )}
+                        {/* Input editable de Precio Unitario para el cajero en Oficina */}
+                        <div
+                          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 focus-within:border-emerald-500 transition-colors"
+                          title="Editar valor unitario del servicio / ítem"
+                        >
+                          <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
+                            $
+                          </span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.product.price}
+                            onChange={(e) => updatePrice(item.product.id, e.target.value)}
+                            className="w-16 bg-transparent text-[11px] font-mono font-medium text-zinc-900 dark:text-zinc-100 focus:outline-none"
+                          />
+                          <span className="text-[9px] text-zinc-400">c/u</span>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       {/* Stepper Sutil */}
                       <div className="flex items-center bg-zinc-100 dark:bg-zinc-800/90 rounded-lg p-0.5 border border-zinc-200 dark:border-zinc-700/40">
                         <button
@@ -1771,7 +2039,7 @@ export default function NuevaVentaPage() {
                         >
                           −
                         </button>
-                        <span className="w-6 text-center text-xs font-normal text-zinc-900 dark:text-zinc-200">{item.qty}</span>
+                        <span className="w-5 text-center text-xs font-normal text-zinc-900 dark:text-zinc-200">{item.qty}</span>
                         <button
                           type="button"
                           onClick={() => updateQty(item.product.id, 1)}
@@ -1782,7 +2050,7 @@ export default function NuevaVentaPage() {
                       </div>
 
                       {/* Subtotal del Item */}
-                      <span className="text-xs font-medium text-zinc-900 dark:text-zinc-100 w-14 text-right">
+                      <span className="text-xs font-medium text-zinc-900 dark:text-zinc-100 w-14 text-right font-mono">
                         ${(priceNum * item.qty).toFixed(2)}
                       </span>
 
@@ -1943,6 +2211,7 @@ export default function NuevaVentaPage() {
               <button
                 onClick={() => {
                   setClienteSeleccionado(null);
+                  setVehiculoSeleccionado(null);
                   setMostrarModalClientes(false);
                 }}
                 className={`w-full p-2.5 rounded-xl border text-left flex items-center justify-between transition-all duration-150 group ${
@@ -1966,7 +2235,7 @@ export default function NuevaVentaPage() {
                       Consumidor Final
                     </p>
                     <p className="text-[11px] text-zinc-500 mt-0.5">
-                      Venta rápida
+                      Venta rápida (Sin vehículo)
                     </p>
                   </div>
                 </div>
@@ -1986,6 +2255,14 @@ export default function NuevaVentaPage() {
                     key={cli.id}
                     onClick={() => {
                       setClienteSeleccionado(cli);
+                      if (cli.vehicles && cli.vehicles.length > 0) {
+                        setVehiculoSeleccionado(cli.vehicles[0]);
+                        if (cli.vehicles.length > 1) {
+                          setMostrarModalVehiculos(true);
+                        }
+                      } else {
+                        setVehiculoSeleccionado(null);
+                      }
                       setMostrarModalClientes(false);
                     }}
                     className={`w-full p-2.5 rounded-xl border text-left flex items-center justify-between transition-all duration-150 group ${
@@ -2008,9 +2285,13 @@ export default function NuevaVentaPage() {
                         <p className="text-sm font-medium text-zinc-900 dark:text-zinc-200 group-hover:text-emerald-600 dark:group-hover:text-white leading-tight">
                           {cli.name}
                         </p>
-                        <p className="text-[11px] text-zinc-500 mt-0.5">
-                          {cli.identification || "Sin CI"} {cli.phone ? `• ${cli.phone}` : ""}
-                        </p>
+                        {cli.vehicles && cli.vehicles.length > 0 && (
+                          <div className="mt-0.5">
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-semibold border border-blue-500/20">
+                              🚗 {cli.vehicles.length} {cli.vehicles.length === 1 ? "auto" : "autos"}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                     {isSelected && (
@@ -2048,8 +2329,8 @@ export default function NuevaVentaPage() {
       {/* MODAL 1.1: Crear Cliente Rápido en Neon */}
       {creandoClienteInline && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-          <div className="bg-white dark:bg-zinc-900/95 border border-zinc-200 dark:border-zinc-800/80 rounded-t-3xl sm:rounded-2xl w-full max-w-sm p-5 shadow-2xl relative backdrop-blur-xl">
-            <div className="flex justify-between items-center mb-4 pb-2.5 border-b border-zinc-200 dark:border-zinc-800/80">
+          <div className="bg-white dark:bg-zinc-900/95 border border-zinc-200 dark:border-zinc-800/80 rounded-t-3xl sm:rounded-2xl w-full max-w-md p-5 shadow-2xl relative backdrop-blur-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-3 pb-2.5 border-b border-zinc-200 dark:border-zinc-800/80">
               <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-200 flex items-center gap-2">
                 <span className="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 flex items-center justify-center text-xs">👤</span>
                 <span>Cliente</span>
@@ -2065,14 +2346,45 @@ export default function NuevaVentaPage() {
             </div>
 
             <form onSubmit={handleGuardarClienteInline} className="space-y-3">
+              {/* Selector Persona / Empresa */}
               <div>
                 <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-400 mb-1">
-                  Nombre completo *
+                  Tipo
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNuevoClienteTipo("Personal")}
+                    className={`h-9 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      nuevoClienteTipo === "Personal"
+                        ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40"
+                        : "bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700/50"
+                    }`}
+                  >
+                    <span>👤</span> Persona
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNuevoClienteTipo("Empresa")}
+                    className={`h-9 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      nuevoClienteTipo === "Empresa"
+                        ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40"
+                        : "bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700/50"
+                    }`}
+                  >
+                    <span>🏢</span> Empresa
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-400 mb-1">
+                  {nuevoClienteTipo === "Empresa" ? "Razón Social *" : "Nombre completo *"}
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Ej. Juan Pérez"
+                  placeholder={nuevoClienteTipo === "Empresa" ? "Transportes Andinos S.A." : "Juan Carlos Pérez"}
                   value={nuevoClienteNombre}
                   onChange={(e) => setNuevoClienteNombre(e.target.value)}
                   className="w-full h-11 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/60 text-base sm:text-xs text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-emerald-500/50 transition-all"
@@ -2080,30 +2392,60 @@ export default function NuevaVentaPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-400 mb-1">
-                  Cédula / RUC
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej. 0928374651"
-                  value={nuevoClienteIdent}
-                  onChange={(e) => setNuevoClienteIdent(e.target.value)}
-                  className="w-full h-11 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/60 text-base sm:text-xs text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-emerald-500/50 transition-all"
-                />
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-400 mb-1">
+                    {nuevoClienteTipo === "Empresa" ? "RUC" : "Cédula"}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={nuevoClienteTipo === "Empresa" ? "1790012345001" : "0912345678"}
+                    value={nuevoClienteIdent}
+                    onChange={(e) => setNuevoClienteIdent(e.target.value)}
+                    className="w-full h-11 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/60 text-base sm:text-xs text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-emerald-500/50 font-mono transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-400 mb-1">
+                    Teléfono / WhatsApp
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="0991234567"
+                    value={nuevoClienteTelefono}
+                    onChange={(e) => setNuevoClienteTelefono(e.target.value)}
+                    className="w-full h-11 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/60 text-base sm:text-xs text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-emerald-500/50 font-mono transition-all"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-400 mb-1">
-                  Teléfono / WhatsApp
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej. 0987654321"
-                  value={nuevoClienteTelefono}
-                  onChange={(e) => setNuevoClienteTelefono(e.target.value)}
-                  className="w-full h-11 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/60 text-base sm:text-xs text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-emerald-500/50 transition-all"
-                />
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-400 mb-1">
+                    Correo
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="cliente@ejemplo.com"
+                    value={nuevoClienteEmail}
+                    onChange={(e) => setNuevoClienteEmail(e.target.value)}
+                    className="w-full h-11 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/60 text-base sm:text-xs text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-emerald-500/50 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-400 mb-1">
+                    Dirección
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Av. Principal y Secundaria"
+                    value={nuevoClienteDireccion}
+                    onChange={(e) => setNuevoClienteDireccion(e.target.value)}
+                    className="w-full h-11 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/60 text-base sm:text-xs text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-emerald-500/50 transition-all"
+                  />
+                </div>
               </div>
 
               <div className="flex gap-2 pt-2">
@@ -2123,6 +2465,222 @@ export default function NuevaVentaPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 1.2: Seleccionar o Agregar Vehículo del Cliente para Historial */}
+      {mostrarModalVehiculos && clienteSeleccionado && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900/95 border border-zinc-200 dark:border-zinc-800/80 rounded-t-3xl sm:rounded-2xl w-full max-w-md p-5 shadow-2xl relative backdrop-blur-xl max-h-[85vh] flex flex-col">
+            <div className="flex justify-between items-center mb-3 pb-2.5 border-b border-zinc-200 dark:border-zinc-800/80">
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center text-xs">
+                  🚗
+                </span>
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white leading-tight">
+                    {creandoVehiculoInline ? "Nuevo Vehículo" : "Vehículo"}
+                  </h3>
+                  <p className="text-[11px] text-zinc-500">
+                    <strong className="text-zinc-700 dark:text-zinc-300">{clienteSeleccionado.name}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setMostrarModalVehiculos(false);
+                  setCreandoVehiculoInline(false);
+                }}
+                className="w-7 h-7 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                title="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+
+            {creandoVehiculoInline ? (
+              <form onSubmit={handleGuardarVehiculoInline} className="space-y-3">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="col-span-2">
+                    <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-400 mb-1">
+                      Placa *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ej. ABC-1234"
+                      value={nuevoVehiculoPlaca}
+                      onChange={(e) => setNuevoVehiculoPlaca(e.target.value.toUpperCase())}
+                      className="w-full h-11 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 font-mono font-bold uppercase text-sm text-zinc-900 dark:text-white outline-none focus:border-blue-500 transition-all"
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-400 mb-1">
+                      Marca *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ej. Toyota"
+                      value={nuevoVehiculoMarca}
+                      onChange={(e) => setNuevoVehiculoMarca(e.target.value)}
+                      className="w-full h-11 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-900 dark:text-white outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-400 mb-1">
+                      Modelo *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ej. Hilux"
+                      value={nuevoVehiculoModelo}
+                      onChange={(e) => setNuevoVehiculoModelo(e.target.value)}
+                      className="w-full h-11 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-900 dark:text-white outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-400 mb-1">
+                      Año
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="2024"
+                      value={nuevoVehiculoAnio}
+                      onChange={(e) => setNuevoVehiculoAnio(e.target.value)}
+                      className="w-full h-11 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-900 dark:text-white outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-400 mb-1">
+                      Combustible
+                    </label>
+                    <select
+                      value={nuevoVehiculoCombustible}
+                      onChange={(e) => setNuevoVehiculoCombustible(e.target.value)}
+                      className="w-full h-11 px-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-900 dark:text-white outline-none focus:border-blue-500 cursor-pointer"
+                    >
+                      <option value="Gasolina">Gasolina</option>
+                      <option value="Diésel">Diésel</option>
+                      <option value="Híbrido">Híbrido</option>
+                      <option value="Eléctrico">Eléctrico</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-400 mb-1">
+                      Kilometraje
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="Ej. 45000"
+                      value={nuevoVehiculoKilometraje}
+                      onChange={(e) => setNuevoVehiculoKilometraje(e.target.value)}
+                      className="w-full h-11 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-900 dark:text-white outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-400 mb-1">
+                      Color
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Blanco"
+                      value={nuevoVehiculoColor}
+                      onChange={(e) => setNuevoVehiculoColor(e.target.value)}
+                      className="w-full h-11 px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-900 dark:text-white outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setCreandoVehiculoInline(false)}
+                    className="flex-1 h-11 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold cursor-pointer"
+                  >
+                    Volver
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={guardandoVehiculoInline}
+                    className="flex-1 h-11 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                  >
+                    {guardandoVehiculoInline ? "Guardando..." : "Guardar"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                {/* Lista de vehículos del cliente */}
+                <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
+                  {/* Vehículos registrados del cliente */}
+                  {(clienteSeleccionado.vehicles || []).map((veh) => {
+                    const isSelected = vehiculoSeleccionado?.id === veh.id || vehiculoSeleccionado?.plate === veh.plate;
+                    return (
+                      <button
+                        key={veh.id || veh.plate}
+                        type="button"
+                        onClick={() => {
+                          setVehiculoSeleccionado(veh);
+                          setMostrarModalVehiculos(false);
+                        }}
+                        className={`w-full p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                          isSelected
+                            ? "border-blue-500/50 bg-blue-50/50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 shadow-sm ring-1 ring-blue-500/30"
+                            : "border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-950/40 hover:bg-zinc-100 dark:hover:bg-zinc-800/40 hover:border-zinc-300 dark:hover:border-zinc-700"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center text-sm shrink-0">
+                            🚗
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-xs px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 tracking-wider shrink-0">
+                                {veh.plate}
+                              </span>
+                              <span className="text-xs font-bold text-blue-600 dark:text-blue-400 truncate">
+                                {veh.brand} {veh.model}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
+                              {veh.year ? `Año ${veh.year} • ` : ""}{veh.tallerVisits && veh.tallerVisits > 0 ? `${veh.tallerVisits} ${veh.tallerVisits === 1 ? "visita" : "visitas"}` : "0 visitas"}
+                            </p>
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs font-bold border border-blue-500/30 shrink-0">
+                            ✓
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-2 pt-2.5 border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setCreandoVehiculoInline(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/15 dark:hover:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 font-medium transition-all cursor-pointer"
+                  >
+                    <span>＋</span>
+                    <span>Nuevo Auto</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMostrarModalVehiculos(false)}
+                    className="px-3.5 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-medium cursor-pointer"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -2591,267 +3149,444 @@ export default function NuevaVentaPage() {
         </div>
       )}
 
-      {/* MODAL 6: Venta Exitosa con Impresión de Ticket Térmico */}
+      {/* MODAL 6: Venta Exitosa con Impresión de Ticket Térmico / Tamaño Carta */}
       {ventaCompletada && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in print:p-0 print:bg-white">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-2xl w-full max-w-md p-5 sm:p-6 shadow-2xl relative text-center print:border-none print:shadow-none print:p-0 print:max-w-none max-h-[92vh] overflow-y-auto">
-            {/* Header del modal (no imprimible) */}
-            <div className="print:hidden mb-3">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center text-2xl mx-auto">
-                ✅
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-2xl w-full max-w-sm p-5 sm:p-6 shadow-2xl relative text-center print:border-none print:shadow-none print:p-0 print:max-w-none max-h-[92vh] overflow-y-auto">
+            {/* VISTA EN PANTALLA: MODAL VENTA COMPLETADA (NO IMPRIMIBLE) */}
+            <div className="print:hidden flex flex-col items-center gap-4 text-center">
+              {/* Badge Icono Verde */}
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center text-2xl shadow-sm">
+                💵
+              </div>
+
+              {/* Título y N° Venta */}
+              <div>
+                <h3 className="text-base font-bold text-zinc-900 dark:text-white">
+                  Venta Completada
+                </h3>
+                <span className="text-xs text-zinc-400 dark:text-zinc-500 font-mono mt-0.5 block">
+                  N° {ventaCompletada.saleNumber}
+                </span>
+              </div>
+
+              {/* Monto Total y Vuelto */}
+              <div className="my-1">
+                <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                  {formatMoneda(ventaCompletada.total)}
+                </p>
+                {ventaCompletada.cambio && ventaCompletada.cambio > 0 ? (
+                  <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mt-1">
+                    Vuelto: {formatMoneda(ventaCompletada.cambio)}
+                  </p>
+                ) : (
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+                    {ventaCompletada.paymentMethod} • {ventaCompletada.customerName || "Consumidor Final"}
+                  </p>
+                )}
+              </div>
+
+              {/* Opciones de Impresión: Sólo Títulos y Texto Corto */}
+              <div className="w-full space-y-2.5 pt-1">
+                {/* Opción 1: Ticket */}
+                <button
+                  type="button"
+                  onClick={() => dispararImpresionVenta("TICKET")}
+                  className="w-full h-12 px-4 rounded-2xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 flex items-center gap-3 text-left transition-all active:scale-[0.99] cursor-pointer group"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center text-base shrink-0 shadow-sm shadow-blue-600/30">
+                    🧾
+                  </div>
+                  <span className="font-bold text-sm text-zinc-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    Ticket
+                  </span>
+                </button>
+
+                {/* Opción 2: Tamaño Carta */}
+                <button
+                  type="button"
+                  onClick={() => dispararImpresionVenta("A4")}
+                  className="w-full h-12 px-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/60 flex items-center gap-3 text-left transition-all active:scale-[0.99] cursor-pointer group"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25 flex items-center justify-center text-base shrink-0">
+                    📄
+                  </div>
+                  <span className="font-bold text-sm text-zinc-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                    Tamaño Carta
+                  </span>
+                </button>
+              </div>
+
+              {/* Botón Aceptar */}
+              <div className="w-full pt-1">
+                <button
+                  type="button"
+                  onClick={() => setVentaCompletada(null)}
+                  className="w-full h-11 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold text-sm shadow-md shadow-blue-600/25 transition-all cursor-pointer flex items-center justify-center"
+                >
+                  Aceptar
+                </button>
               </div>
             </div>
 
-            {/* TICKET DE VENTA (ESTILO SUPERMERCADO - TEXTO NORMAL) */}
+            {/* FORMATO TICKET TÉRMICO (SÓLO IMPRESIÓN - BASADO EN DISEÑO EXACTO) */}
             <div
               ref={ticketRef}
-              className={`p-5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/80 text-left text-xs font-sans space-y-2.5 mb-5 shadow-inner print:border-none print:p-2 print:text-black print:bg-white ${
-                formatoImpresionVenta === "A4" ? "print:hidden" : "print:block"
-              }`}
+              className={`hidden ${
+                formatoImpresionVenta === "TICKET" ? "print:block" : "print:hidden"
+              } p-4 text-left text-xs font-sans text-black bg-white max-w-[80mm] mx-auto space-y-2`}
             >
-              {/* Encabezado Supermercado */}
-              <div className="text-center pb-2.5 border-b border-dashed border-zinc-300 dark:border-zinc-600">
-                <h4 className="font-extrabold text-base tracking-wide text-zinc-900 dark:text-white print:text-black">AUTO / G</h4>
-                <p className="text-[11px] text-zinc-500 font-medium">Taller y Repuestos Automotrices</p>
-                <p className="text-[10px] text-zinc-400">R.U.C.: 1792273235001 • Matriz Central</p>
-                <div className="mt-2 pt-1 border-t border-dotted border-zinc-200 dark:border-zinc-700/60 flex justify-between text-[11px] text-zinc-600 dark:text-zinc-300 print:text-black">
-                  <span className="font-bold">N° Venta: {ventaCompletada.saleNumber}</span>
-                  <span>{new Date().toLocaleDateString("es-CL")}</span>
-                </div>
+              {/* Encabezado Taller */}
+              <div className="text-center pb-2 border-b border-dashed border-black">
+                <h3 className="font-black text-sm uppercase tracking-wide text-black">
+                  TALLER DE EJEMPLO
+                </h3>
+                <p className="text-[11px] text-black">RUT: 76.000.000-0</p>
+                <p className="text-[11px] text-black">Av. Ejemplo 1234, Santiago</p>
+                <p className="text-[11px] text-black">Tel: +56 2 2000 0000</p>
+                <p className="text-[11px] text-black">contacto@taller-ejemplo.cl</p>
               </div>
 
-              {/* Datos Cliente y Pago */}
-              <div className="space-y-1 text-[11px] text-zinc-600 dark:text-zinc-300 print:text-black pb-2 border-b border-dashed border-zinc-300 dark:border-zinc-600">
-                <div className="flex justify-between">
-                  <span className="text-zinc-400">Cliente:</span>
-                  <span className="font-semibold text-zinc-900 dark:text-white print:text-black">{ventaCompletada.customerName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-zinc-400">Método de Pago:</span>
-                  <span className="font-semibold text-zinc-900 dark:text-white print:text-black">{ventaCompletada.paymentMethod}</span>
-                </div>
+              {/* Comprobante y N° */}
+              <div className="text-center py-2 border-b border-dashed border-black">
+                <h4 className="font-black text-xs uppercase tracking-wide text-black">
+                  COMPROBANTE DE VENTA
+                </h4>
+                <p className="text-base font-black text-black my-0.5">
+                  N° {ventaCompletada.saleNumber}
+                </p>
+                <p className="text-xs text-black">
+                  {new Date().toLocaleDateString("es-CL", { day: "numeric", month: "short", year: "numeric" })}  {new Date().toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                </p>
+                <p className="text-[11px] text-black font-semibold mt-0.5">
+                  Atendido por: {ventaCompletada.vendedorNombre || "Diego Muñoz"}
+                </p>
               </div>
 
-              {/* Cabecera de Items */}
-              <div className="flex justify-between text-[10px] font-bold text-zinc-400 uppercase tracking-wider pt-0.5">
-                <span>Cant. Descripción</span>
-                <span>Total</span>
+              {/* Cliente y Vehículo */}
+              <div className="py-2 border-b border-dashed border-black text-left text-[11px] leading-tight space-y-0.5">
+                <p className="font-black uppercase text-black text-xs">CLIENTE</p>
+                <p className="text-black font-medium">{ventaCompletada.customerName || "Consumidor Final"}</p>
+                {ventaCompletada.customerIdentification && (
+                  <p className="text-black">RUT: {ventaCompletada.customerIdentification}</p>
+                )}
+                {ventaCompletada.customerPhone && (
+                  <p className="text-black">Tel: {ventaCompletada.customerPhone}</p>
+                )}
+                {ventaCompletada.vehiculoSnap && (
+                  <p className="text-black font-semibold">
+                    Vehículo: {((ventaCompletada.vehiculoSnap.brand || "") + " " + (ventaCompletada.vehiculoSnap.model || "")).trim().toUpperCase()}
+                    {ventaCompletada.vehiculoSnap.plate ? ` - ${ventaCompletada.vehiculoSnap.plate.toUpperCase()}` : ""}
+                  </p>
+                )}
               </div>
 
-              {/* Lista de Items */}
-              <div className="space-y-1.5 py-1">
-                {ventaCompletada.cartSnap && ventaCompletada.cartSnap.map((it: any, idx: number) => {
-                  const pNum = typeof it.product.price === "number" ? it.product.price : parseFloat(it.product.price) || 0;
-                  return (
-                    <div key={idx} className="flex justify-between items-start text-xs">
-                      <div className="flex items-start gap-1.5 max-w-[72%]">
-                        <span className="font-bold text-zinc-700 dark:text-zinc-300 print:text-black shrink-0">{it.qty}x</span>
-                        <span className="font-normal text-zinc-900 dark:text-zinc-100 print:text-black leading-snug">{it.product.name}</span>
+              {/* Detalle */}
+              <div className="py-2 border-b border-dashed border-black text-left text-xs">
+                <p className="font-black uppercase text-black text-xs pb-1">DETALLE</p>
+                <div className="flex justify-between items-center font-bold text-[11px] text-black pb-1 border-b border-black">
+                  <span>Descripción</span>
+                  <span>Total</span>
+                </div>
+
+                <div className="space-y-2 py-1.5">
+                  {ventaCompletada.cartSnap && ventaCompletada.cartSnap.map((it: any, idx: number) => {
+                    const pNum = typeof it.product.price === "number" ? it.product.price : parseFloat(it.product.price) || 0;
+                    const itemTot = pNum * it.qty;
+                    return (
+                      <div key={idx} className="text-xs">
+                        <div className="flex justify-between items-start font-medium text-black">
+                          <span className="leading-snug pr-2">{it.product.name}</span>
+                          <span className="font-bold shrink-0">{formatMoneda(itemTot)}</span>
+                        </div>
+                        <div className="text-[10px] text-zinc-600 font-mono">
+                          {it.product.code || `PRD-${String(idx + 1).padStart(4, "0")}`}
+                        </div>
+                        <div className="text-[10px] text-zinc-800">
+                          {it.qty} x {formatMoneda(pNum)}
+                        </div>
                       </div>
-                      <span className="font-semibold text-zinc-900 dark:text-zinc-100 print:text-black shrink-0">
-                        ${(pNum * it.qty).toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Totales y Desglose */}
-              <div className="pt-2 border-t border-dashed border-zinc-300 dark:border-zinc-600 space-y-1 text-xs">
-                {ventaCompletada.descuentoCalculado > 0 && (
-                  <div className="flex justify-between text-rose-500 font-medium">
-                    <span>Descuento aplicado:</span>
-                    <span>-${ventaCompletada.descuentoCalculado.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-zinc-500 print:text-black">
-                  <span>Subtotal:</span>
-                  <span>${(parseFloat(ventaCompletada.total) - (ventaCompletada.tax || 0) + (ventaCompletada.descuentoCalculado || 0)).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-zinc-500 print:text-black">
-                  <span>IVA ({ivaPorcentaje}%):</span>
-                  <span>${ventaCompletada.tax?.toFixed(2) || "0.00"}</span>
-                </div>
-                <div className="flex justify-between border-t border-zinc-300 dark:border-zinc-600 pt-1.5 text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white print:text-black">
-                  <span>TOTAL A PAGAR:</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 print:text-black">
-                    ${parseFloat(ventaCompletada.total).toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <div className="py-2 border-b border-dashed border-black text-xs space-y-1">
+                <div className="flex justify-between text-black">
+                  <span>Ítems</span>
+                  <span>
+                    {ventaCompletada.cartSnap?.length || 0} ({ventaCompletada.cartSnap?.reduce((acc: number, it: any) => acc + (it.qty || 1), 0) || 0} u.)
                   </span>
                 </div>
-
-                {ventaCompletada.montoRecibido && (
-                  <div className="pt-1.5 mt-1 border-t border-dotted border-zinc-200 dark:border-zinc-700 space-y-0.5 text-[11px] text-zinc-600 dark:text-zinc-300 print:text-black">
-                    <div className="flex justify-between">
-                      <span>Efectivo Recibido:</span>
-                      <span>${ventaCompletada.montoRecibido.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-emerald-600 dark:text-emerald-400 print:text-black">
-                      <span>Cambio / Vuelto:</span>
-                      <span>${(ventaCompletada.cambio || 0).toFixed(2)}</span>
-                    </div>
-                  </div>
-                )}
+                <div className="flex justify-between text-black">
+                  <span>Subtotal</span>
+                  <span>{formatMoneda(parseFloat(ventaCompletada.total) - (ventaCompletada.tax || 0) + (ventaCompletada.descuentoCalculado || 0))}</span>
+                </div>
+                <div className="flex justify-between text-black">
+                  <span>IVA ({ivaPorcentaje}%)</span>
+                  <span>{formatMoneda(ventaCompletada.tax || 0)}</span>
+                </div>
               </div>
 
-              {/* Pie del Ticket */}
-              <div className="text-center text-[11px] text-zinc-400 print:text-zinc-600 pt-2 border-t border-dashed border-zinc-300 dark:border-zinc-600">
-                <p className="font-semibold text-zinc-700 dark:text-zinc-300 print:text-black">¡Gracias por su compra!</p>
+              {/* TOTAL con borde doble / grueso */}
+              <div className="border-y-2 border-black py-1.5 my-1 flex justify-between items-center text-black">
+                <span className="font-black text-sm uppercase">TOTAL</span>
+                <span className="font-black text-base">{formatMoneda(parseFloat(ventaCompletada.total))}</span>
+              </div>
+
+              {/* Desglose Pago */}
+              <div className="py-1.5 border-b border-dashed border-black text-xs space-y-1 text-black">
+                <div className="flex justify-between">
+                  <span>Pago:</span>
+                  <span className="font-medium">{ventaCompletada.paymentMethod || "Efectivo"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Pagado</span>
+                  <span>{formatMoneda(ventaCompletada.montoRecibido || parseFloat(ventaCompletada.total))}</span>
+                </div>
+                <div className="flex justify-between font-black">
+                  <span>Vuelto</span>
+                  <span>{formatMoneda(ventaCompletada.cambio || 0)}</span>
+                </div>
+              </div>
+
+              {/* Pie de Página Ticket */}
+              <div className="text-center pt-2.5 text-xs font-semibold text-black">
+                <p>¡Gracias por su compra!</p>
               </div>
             </div>
 
-            {/* FORMATO FACTURA A4 (SÓLO IMPRESIÓN) */}
+            {/* FORMATO FACTURA / ORDEN TAMAÑO CARTA (SÓLO IMPRESIÓN - BASADO EN DISEÑO EXACTO) */}
             <div
               className={`hidden ${
                 formatoImpresionVenta === "A4" ? "print:block" : "print:hidden"
-              } w-full max-w-[210mm] mx-auto text-black font-sans text-xs p-6 bg-white space-y-4`}
+              } w-full max-w-[210mm] mx-auto text-black font-sans text-xs p-8 bg-white space-y-4`}
             >
-              {/* Encabezado A4 */}
-              <div className="flex justify-between items-start border-b-2 border-zinc-800 pb-4">
+              {/* Encabezado Superior */}
+              <div className="flex justify-between items-start pb-3 border-b border-zinc-300">
                 <div>
-                  <h1 className="text-2xl font-black tracking-wide text-zinc-900">AUTO / G</h1>
-                  <p className="text-xs font-semibold text-zinc-600">Taller Mecánico & Repuestos Automotrices</p>
-                  <p className="text-[11px] text-zinc-500 mt-1">R.U.C.: 1792273235001</p>
-                  <p className="text-[11px] text-zinc-500">Dirección: Av. Principal y Taller Central • Tel: +56 9 1234 5678</p>
+                  <h1 className="text-2xl font-black uppercase tracking-tight text-zinc-900">
+                    COMPROBANTE DE VENTA
+                  </h1>
+                  <p className="text-xs font-bold text-zinc-500 mt-0.5">#{ventaCompletada.saleNumber}</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    {new Date().toLocaleDateString("es-CL", { day: "numeric", month: "short", year: "numeric" })}
+                  </p>
                 </div>
-                <div className="border-2 border-zinc-800 rounded-xl p-3 text-right min-w-[200px]">
-                  <p className="text-xs font-bold text-zinc-500">COMPROBANTE DE VENTA</p>
-                  <p className="text-lg font-black text-blue-700">N° {ventaCompletada.saleNumber}</p>
-                  <p className="text-[11px] text-zinc-600 mt-1">Fecha: {new Date().toLocaleDateString("es-CL")}</p>
+                <div className="text-right text-xs">
+                  <p className="font-bold text-zinc-900 text-sm">Taller de ejemplo</p>
+                  <p className="text-zinc-600">RUT: 76.000.000-0</p>
+                  <p className="text-zinc-600">+56 2 2000 0000</p>
+                  <p className="text-zinc-600">contacto@taller-ejemplo.cl</p>
+                  <p className="text-zinc-600">Av. Ejemplo 1234, Santiago</p>
                 </div>
               </div>
 
-              {/* Datos Cliente */}
-              <div className="border border-zinc-300 rounded-xl p-3 bg-zinc-50/50 grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span className="font-bold text-zinc-600">Cliente:</span>{" "}
-                  <span className="font-semibold text-zinc-900">{ventaCompletada.customerName}</span>
-                </div>
-                <div>
-                  <span className="font-bold text-zinc-600">Método de Pago:</span>{" "}
-                  <span className="font-semibold text-zinc-900">{ventaCompletada.paymentMethod}</span>
-                </div>
-              </div>
-
-              {/* Tabla de Productos / Servicios */}
-              <table className="w-full text-left text-xs border border-zinc-200">
-                <thead className="bg-zinc-100 text-zinc-700 uppercase font-bold text-[11px]">
-                  <tr className="border-b border-zinc-200">
-                    <th className="p-2 w-12 text-center">Cant.</th>
-                    <th className="p-2">Descripción</th>
-                    <th className="p-2 w-28 text-right">Precio Unit.</th>
-                    <th className="p-2 w-28 text-right">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-200">
-                  {ventaCompletada.cartSnap && ventaCompletada.cartSnap.map((it: any, idx: number) => {
-                    const pNum = typeof it.product.price === "number" ? it.product.price : parseFloat(it.product.price) || 0;
-                    return (
-                      <tr key={idx}>
-                        <td className="p-2 text-center font-bold">{it.qty}</td>
-                        <td className="p-2 font-medium">{it.product.name}</td>
-                        <td className="p-2 text-right">${pNum.toFixed(2)}</td>
-                        <td className="p-2 text-right font-semibold">${(pNum * it.qty).toFixed(2)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-
-              {/* Totales A4 */}
-              <div className="flex justify-end pt-2">
-                <div className="w-64 space-y-1 text-xs border-t border-zinc-300 pt-2">
-                  <div className="flex justify-between text-zinc-600">
-                    <span>Subtotal:</span>
-                    <span>${(parseFloat(ventaCompletada.total) - (ventaCompletada.tax || 0) + (ventaCompletada.descuentoCalculado || 0)).toFixed(2)}</span>
-                  </div>
-                  {ventaCompletada.descuentoCalculado > 0 && (
-                    <div className="flex justify-between text-rose-600">
-                      <span>Descuento:</span>
-                      <span>-${ventaCompletada.descuentoCalculado.toFixed(2)}</span>
-                    </div>
+              {/* Dos Columnas: CLIENTE y VEHÍCULO */}
+              <div className="grid grid-cols-2 gap-8 py-2 text-xs">
+                {/* Columna Cliente */}
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">CLIENTE</p>
+                  <p className="text-sm font-extrabold text-zinc-900">{ventaCompletada.customerName || "Consumidor Final"}</p>
+                  {ventaCompletada.customerIdentification && (
+                    <p className="text-zinc-700">RUT: {ventaCompletada.customerIdentification}</p>
                   )}
-                  <div className="flex justify-between text-zinc-600">
-                    <span>IVA ({ivaPorcentaje}%):</span>
-                    <span>${ventaCompletada.tax?.toFixed(2) || "0.00"}</span>
-                  </div>
-                  <div className="flex justify-between font-black text-base border-t-2 border-zinc-800 pt-1 text-zinc-900">
-                    <span>TOTAL:</span>
-                    <span>${parseFloat(ventaCompletada.total).toFixed(2)}</span>
-                  </div>
+                  {ventaCompletada.customerPhone && (
+                    <p className="text-zinc-700">Tel: {ventaCompletada.customerPhone}</p>
+                  )}
+                  {ventaCompletada.customerEmail && (
+                    <p className="text-zinc-700">{ventaCompletada.customerEmail}</p>
+                  )}
+                  <p className="text-zinc-500 text-[11px] pt-1">
+                    Atendido por: {ventaCompletada.vendedorNombre || "Diego Muñoz"}
+                  </p>
+                </div>
+
+                {/* Columna Vehículo */}
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">VEHÍCULO</p>
+                  {ventaCompletada.vehiculoSnap ? (
+                    <>
+                      <p className="text-sm font-extrabold text-zinc-900">
+                        {ventaCompletada.vehiculoSnap.brand} {ventaCompletada.vehiculoSnap.model} {ventaCompletada.vehiculoSnap.year || ""}
+                      </p>
+                      {ventaCompletada.vehiculoSnap.plate && (
+                        <div className="my-1">
+                          <span className="inline-block px-2 py-0.5 rounded bg-zinc-200 text-zinc-900 font-black text-xs tracking-wider border border-zinc-300">
+                            {ventaCompletada.vehiculoSnap.plate.toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      {ventaCompletada.vehiculoSnap.color && (
+                        <p className="text-zinc-700">Color: {ventaCompletada.vehiculoSnap.color}</p>
+                      )}
+                      {ventaCompletada.vehiculoSnap.mileage ? (
+                        <p className="text-zinc-700">Km: {ventaCompletada.vehiculoSnap.mileage.toLocaleString("es-CL")}</p>
+                      ) : null}
+                      {ventaCompletada.vehiculoSnap.fuelType && (
+                        <p className="text-zinc-700">Combustible: {ventaCompletada.vehiculoSnap.fuelType}</p>
+                      )}
+                      <p className="text-zinc-500 text-[11px]">Inventario: Documentos, Gata, Llave de rueda, Rueda de repuesto</p>
+                      <p className="text-zinc-500 text-[11px]">Falla: Mantención y revisión general</p>
+                    </>
+                  ) : (
+                    <p className="text-zinc-500 italic">Sin vehículo registrado en esta venta</p>
+                  )}
                 </div>
               </div>
 
-              {/* Pie de Página A4 */}
-              <div className="text-center text-[10px] text-zinc-400 pt-6 border-t border-zinc-200">
-                <p>Documento generado electrónicamente por Sistema AutoG POS • Formato A4</p>
-                <p>Gracias por su preferencia</p>
-              </div>
-            </div>
+              {/* Tablas de Items: Mano de Obra y Repuestos */}
+              {(() => {
+                const servicios = (ventaCompletada.cartSnap || []).filter((it: any) =>
+                  Boolean(it.product.isService || it.product.category?.toLowerCase().includes("servicio") || it.product.category?.toLowerCase().includes("taller"))
+                );
+                const repuestos = (ventaCompletada.cartSnap || []).filter((it: any) =>
+                  !Boolean(it.product.isService || it.product.category?.toLowerCase().includes("servicio") || it.product.category?.toLowerCase().includes("taller"))
+                );
 
-            {/* Botones de Acción (no imprimibles) */}
-            <div className="flex items-center gap-2 print:hidden relative">
-              {/* Dropdown de Impresión: Ticket o A4 */}
-              <div className="relative flex-1" ref={menuImpresionVentaRef}>
-                <button
-                  type="button"
-                  onClick={() => setMenuImpresionVenta(!menuImpresionVenta)}
-                  className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm shadow-blue-600/20"
-                >
-                  <span className="text-sm">🖨️</span>
-                  <span>Imprimir</span>
-                  <svg
-                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                      menuImpresionVenta ? "rotate-180" : ""
-                    }`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+                const subtotalServicios = servicios.reduce((acc: number, it: any) => {
+                  const pNum = typeof it.product.price === "number" ? it.product.price : parseFloat(it.product.price) || 0;
+                  return acc + pNum * it.qty;
+                }, 0);
 
-                {/* Menú Desplegable con opciones Ticket o A4 */}
-                {menuImpresionVenta && (
-                  <div className="absolute left-0 bottom-full mb-2 w-60 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100 text-left">
-                    <div className="px-3 py-1.5 border-b border-zinc-100 dark:border-zinc-800 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                      Seleccionar Formato
+                const subtotalRepuestos = repuestos.reduce((acc: number, it: any) => {
+                  const pNum = typeof it.product.price === "number" ? it.product.price : parseFloat(it.product.price) || 0;
+                  return acc + pNum * it.qty;
+                }, 0);
+
+                return (
+                  <div className="space-y-4 pt-2">
+                    {/* Tabla Mano de Obra (si existen servicios) */}
+                    {servicios.length > 0 && (
+                      <div>
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="border-b border-zinc-300 text-[11px] font-bold text-zinc-600">
+                              <th className="py-1.5 w-auto">Mano de Obra</th>
+                              <th className="py-1.5 w-24 text-center">SKU</th>
+                              <th className="py-1.5 w-24 text-right">Precio</th>
+                              <th className="py-1.5 w-16 text-center">Cant</th>
+                              <th className="py-1.5 w-28 text-right">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-zinc-200">
+                            {servicios.map((it: any, idx: number) => {
+                              const pNum = typeof it.product.price === "number" ? it.product.price : parseFloat(it.product.price) || 0;
+                              return (
+                                <tr key={idx} className="py-1">
+                                  <td className="py-1.5 font-bold text-zinc-900">{it.product.name}</td>
+                                  <td className="py-1.5 text-center font-mono text-zinc-500">{it.product.code || "-"}</td>
+                                  <td className="py-1.5 text-right text-zinc-800">{formatMoneda(pNum)}</td>
+                                  <td className="py-1.5 text-center text-zinc-800">{it.qty}</td>
+                                  <td className="py-1.5 text-right font-bold text-zinc-900">{formatMoneda(pNum * it.qty)}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                        <div className="flex justify-between items-center py-1.5 border-t border-zinc-300 text-xs font-bold text-zinc-900">
+                          <span>Subtotal Mano de Obra</span>
+                          <span>{formatMoneda(subtotalServicios)}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Tabla Repuestos (si existen productos o si no hay servicios) */}
+                    {(repuestos.length > 0 || servicios.length === 0) && (
+                      <div>
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="border-b border-zinc-300 text-[11px] font-bold text-zinc-600">
+                              <th className="py-1.5 w-auto">Repuestos</th>
+                              <th className="py-1.5 w-24 text-center">SKU</th>
+                              <th className="py-1.5 w-24 text-right">Precio</th>
+                              <th className="py-1.5 w-16 text-center">Cant</th>
+                              <th className="py-1.5 w-28 text-right">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-zinc-200">
+                            {repuestos.map((it: any, idx: number) => {
+                              const pNum = typeof it.product.price === "number" ? it.product.price : parseFloat(it.product.price) || 0;
+                              return (
+                                <tr key={idx} className="py-1">
+                                  <td className="py-1.5 font-bold text-zinc-900">{it.product.name}</td>
+                                  <td className="py-1.5 text-center font-mono text-zinc-500">{it.product.code || `PRD-${String(idx + 1).padStart(4, "0")}`}</td>
+                                  <td className="py-1.5 text-right text-zinc-800">{formatMoneda(pNum)}</td>
+                                  <td className="py-1.5 text-center text-zinc-800">{it.qty}</td>
+                                  <td className="py-1.5 text-right font-bold text-zinc-900">{formatMoneda(pNum * it.qty)}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                        <div className="flex justify-between items-center py-1.5 border-t border-zinc-300 text-xs font-bold text-zinc-900">
+                          <span>Subtotal Repuestos</span>
+                          <span>{formatMoneda(subtotalRepuestos)}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Totales Desglose A4 */}
+                    <div className="flex justify-end pt-2 border-t border-zinc-300">
+                      <div className="w-72 space-y-1 text-xs">
+                        {servicios.length > 0 && (
+                          <div className="flex justify-between text-zinc-600">
+                            <span>Mano de obra:</span>
+                            <span className="font-medium text-zinc-900">{formatMoneda(subtotalServicios)}</span>
+                          </div>
+                        )}
+                        {repuestos.length > 0 && (
+                          <div className="flex justify-between text-zinc-600">
+                            <span>Repuestos:</span>
+                            <span className="font-medium text-zinc-900">{formatMoneda(subtotalRepuestos)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-zinc-600">
+                          <span>Subtotal:</span>
+                          <span className="font-medium text-zinc-900">
+                            {formatMoneda(parseFloat(ventaCompletada.total) - (ventaCompletada.tax || 0) + (ventaCompletada.descuentoCalculado || 0))}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-zinc-600">
+                          <span>IVA ({ivaPorcentaje}%):</span>
+                          <span className="font-medium text-zinc-900">{formatMoneda(ventaCompletada.tax || 0)}</span>
+                        </div>
+                        <div className="flex justify-between items-center border-t-2 border-zinc-800 pt-2 pb-1 text-zinc-900">
+                          <span className="text-base font-black">Total:</span>
+                          <span className="text-xl font-black">{formatMoneda(parseFloat(ventaCompletada.total))}</span>
+                        </div>
+                        <div className="flex justify-between text-xs pt-1">
+                          <span className="font-semibold text-zinc-600">Pagado:</span>
+                          <span className="font-bold text-emerald-600">
+                            {formatMoneda(ventaCompletada.montoRecibido || parseFloat(ventaCompletada.total))}
+                          </span>
+                        </div>
+                        {ventaCompletada.cambio && ventaCompletada.cambio > 0 ? (
+                          <div className="flex justify-between text-xs">
+                            <span className="font-semibold text-zinc-600">Vuelto:</span>
+                            <span className="font-bold text-emerald-600">{formatMoneda(ventaCompletada.cambio)}</span>
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => dispararImpresionVenta("TICKET")}
-                      className="w-full text-left px-3.5 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 flex items-center gap-3 transition-colors cursor-pointer"
-                    >
-                      <span className="text-xl">🧾</span>
-                      <div>
-                        <div className="font-bold text-xs text-zinc-900 dark:text-white">Ticket Térmico</div>
-                        <div className="text-[11px] text-zinc-500">Rollo POS supermercado (80mm)</div>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => dispararImpresionVenta("A4")}
-                      className="w-full text-left px-3.5 py-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 flex items-center gap-3 transition-colors cursor-pointer"
-                    >
-                      <span className="text-xl">📄</span>
-                      <div>
-                        <div className="font-bold text-xs text-zinc-900 dark:text-white">Imprimir A4</div>
-                        <div className="text-[11px] text-zinc-500">Hoja completa estándar</div>
-                      </div>
-                    </button>
                   </div>
-                )}
-              </div>
+                );
+              })()}
 
-              {/* Botón Nueva Venta */}
-              <button
-                type="button"
-                onClick={() => setVentaCompletada(null)}
-                className="flex-1 h-11 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                <span>✨</span>
-                <span>Nueva Venta</span>
-              </button>
+              {/* Pie de Página y Condiciones */}
+              <div className="pt-6 border-t border-zinc-200 text-left space-y-2">
+                <p className="text-xs text-zinc-700">
+                  <span className="font-semibold">Entrega estimada:</span>{" "}
+                  {new Date().toLocaleDateString("es-CL", { day: "numeric", month: "short", year: "numeric" })}
+                </p>
+                <div>
+                  <p className="text-[10px] font-bold uppercase text-zinc-500 tracking-wider">CONDICIONES</p>
+                  <p className="text-[10px] text-zinc-500 leading-relaxed">
+                    El taller no se responsabiliza por objetos de valor dejados en el vehículo. Los repuestos reemplazados quedan a disposición del cliente por 30 días.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -3525,15 +4260,12 @@ export default function NuevaVentaPage() {
               </button>
             </div>
             <div className="flex flex-col gap-3">
-              <p className="text-xs text-zinc-500">
-                Estas observaciones o instrucciones se imprimirán en el ticket y quedarán registradas con la venta.
-              </p>
               <textarea
                 rows={4}
                 autoFocus
                 value={notasVenta}
                 onChange={(e) => setNotasVenta(e.target.value)}
-                placeholder="Escribe aquí observaciones, entrega diferida, condición de entrega..."
+                placeholder="Escribe una nota..."
                 className="w-full p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-blue-500 resize-none"
               />
               <div className="flex gap-2 pt-2">
@@ -3558,6 +4290,66 @@ export default function NuevaVentaPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmar Anular Venta */}
+      {mostrarModalAnular && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl flex flex-col gap-4 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center text-xl mx-auto">
+              🚫
+            </div>
+            {cart.length > 0 || clienteSeleccionado || notasVenta ? (
+              <>
+                <div>
+                  <h3 className="font-bold text-base text-zinc-900 dark:text-white">¿Anular venta actual?</h3>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setMostrarModalAnular(false)}
+                    className="flex-1 h-11 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold cursor-pointer transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      limpiarCarrito();
+                      setNotasVenta("");
+                      if (solicitudActiva) {
+                        sessionStorage.removeItem("pos_despacho_solicitud");
+                        setSolicitudActiva(null);
+                      }
+                      setMostrarModalAnular(false);
+                    }}
+                    className="flex-1 h-11 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold cursor-pointer transition-all shadow-sm"
+                  >
+                    Sí, anular
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <h3 className="font-bold text-base text-zinc-900 dark:text-white">Carrito vacío</h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
+                    No hay ningún producto ni datos en la venta actual para anular.
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setMostrarModalAnular(false)}
+                    className="w-full h-11 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold cursor-pointer transition-all"
+                  >
+                    Entendido
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

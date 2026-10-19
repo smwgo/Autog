@@ -20,6 +20,8 @@ export interface OrderItem {
   status: "Pendiente" | "En Proceso" | "Listo";
   productId?: string;
   imageUrl?: string | null;
+  empleado_id?: string;
+  empleado_nombre?: string;
 }
 
 export interface UnifiedOrder {
@@ -393,17 +395,17 @@ const TIPOS_HALLAZGO = [
 ];
 
 // ============================================================================
-// CATÁLOGO RÁPIDO DE LAS 7 TARJETAS (6 ESPECIALIDADES + "OTRO")
+// CATÁLOGO RÁPIDO DE LAS 7 TARJETAS (ESTÉTICA MINIMALISTA GLASSMORPHISM)
 // ============================================================================
 const SERVICE_CARDS = [
   {
     id: "lubricacion",
     title: "Lubricación y Filtros",
-    color: "bg-blue-500",
-    gradient: "from-blue-500 to-indigo-600",
-    glowColor: "rgba(59, 130, 246, 0.14)",
+    color: "bg-white/5",
+    gradient: "from-white/10 to-white/5",
+    glowColor: "rgba(255, 255, 255, 0.04)",
     icon: (
-      <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-6 h-6 text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
       </svg>
     ),
@@ -422,11 +424,11 @@ const SERVICE_CARDS = [
   {
     id: "alineacion",
     title: "Alineación y Balanceo",
-    color: "bg-amber-500",
-    gradient: "from-amber-500 to-orange-600",
-    glowColor: "rgba(245, 158, 11, 0.14)",
+    color: "bg-white/5",
+    gradient: "from-white/10 to-white/5",
+    glowColor: "rgba(255, 255, 255, 0.04)",
     icon: (
-      <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-6 h-6 text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="9" />
         <circle cx="12" cy="12" r="3" />
         <path d="M12 3v6M12 15v6M3 12h6M15 12h6" />
@@ -444,11 +446,11 @@ const SERVICE_CARDS = [
   {
     id: "llantera",
     title: "Llantera e Inflado",
-    color: "bg-emerald-500",
-    gradient: "from-emerald-400 to-teal-600",
-    glowColor: "rgba(16, 185, 129, 0.14)",
+    color: "bg-white/5",
+    gradient: "from-white/10 to-white/5",
+    glowColor: "rgba(255, 255, 255, 0.04)",
     icon: (
-      <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-6 h-6 text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
         <circle cx="12" cy="12" r="4" />
         <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4" />
@@ -466,11 +468,11 @@ const SERVICE_CARDS = [
   {
     id: "lavado",
     title: "Lavado de Carro",
-    color: "bg-purple-500",
-    gradient: "from-purple-500 to-indigo-600",
-    glowColor: "rgba(168, 85, 247, 0.14)",
+    color: "bg-white/5",
+    gradient: "from-white/10 to-white/5",
+    glowColor: "rgba(255, 255, 255, 0.04)",
     icon: (
-      <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-6 h-6 text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
         <path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z" />
         <path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97" />
       </svg>
@@ -487,11 +489,11 @@ const SERVICE_CARDS = [
   {
     id: "mecanica",
     title: "Mecánica Rápida",
-    color: "bg-sky-500",
-    gradient: "from-sky-400 to-blue-600",
-    glowColor: "rgba(14, 165, 233, 0.14)",
+    color: "bg-white/5",
+    gradient: "from-white/10 to-white/5",
+    glowColor: "rgba(255, 255, 255, 0.04)",
     icon: (
-      <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-6 h-6 text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
         <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
       </svg>
     ),
@@ -507,11 +509,11 @@ const SERVICE_CARDS = [
   {
     id: "repuestos",
     title: "Repuestos e Insumos",
-    color: "bg-pink-500",
-    gradient: "from-pink-500 to-rose-600",
-    glowColor: "rgba(236, 72, 153, 0.14)",
+    color: "bg-white/5",
+    gradient: "from-white/10 to-white/5",
+    glowColor: "rgba(255, 255, 255, 0.04)",
     icon: (
-      <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-6 h-6 text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
       </svg>
@@ -521,11 +523,11 @@ const SERVICE_CARDS = [
   {
     id: "otro",
     title: "Otro",
-    color: "bg-indigo-500",
-    gradient: "from-violet-500 to-fuchsia-600",
-    glowColor: "rgba(139, 92, 246, 0.14)",
+    color: "bg-white/5",
+    gradient: "from-white/10 to-white/5",
+    glowColor: "rgba(255, 255, 255, 0.04)",
     icon: (
-      <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="w-6 h-6 text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="7" rx="1.5" />
         <rect x="14" y="3" width="7" height="7" rx="1.5" />
         <rect x="3" y="14" width="7" height="7" rx="1.5" />
@@ -574,9 +576,9 @@ export default function TallerPanel() {
   const [cargandoInicial, setCargandoInicial] = useState(true);
 
   // ==========================================================================
-  // FLOTANTE 01 - ETAPA 1: CLIENTE (SE ABRE AL INGRESAR AL PANEL TALLER)
+  // FLOTANTE 01 - ETAPA 1: CLIENTE (DESACTIVADO AL INGRESAR EN MODO EMPLEADO)
   // ==========================================================================
-  const [mostrarFlotanteEtapa1, setMostrarFlotanteEtapa1] = useState(true);
+  const [mostrarFlotanteEtapa1, setMostrarFlotanteEtapa1] = useState(false);
   const [etapa1TipoCliente, setEtapa1TipoCliente] = useState<"Persona" | "Empresa">("Persona");
   const [busquedaClienteEtapa1, setBusquedaClienteEtapa1] = useState("");
   const [buscandoClientesRemoto, setBuscandoClientesRemoto] = useState(false);
@@ -631,7 +633,8 @@ export default function TallerPanel() {
   // FLOTANTE 03 - ETAPA 3: INSPECCIÓN
   // (Cinco vistas del vehículo, Fotos como evidencia, PDF de inspección)
   // ==========================================================================
-  const [mostrarFlotanteEtapa3, setMostrarFlotanteEtapa3] = useState(false);
+  const [mostrarFlotanteEtapa3, _setMostrarFlotanteEtapa3] = useState(false);
+  const setMostrarFlotanteEtapa3 = (val: boolean) => { _setMostrarFlotanteEtapa3(val); if (val) setEtapaActiva(2); };
   const [etapa3VistaActiva, setEtapa3VistaActiva] = useState<
     "frontal" | "trasera" | "lateral_izq" | "lateral_der" | "superior"
   >("frontal");
@@ -649,7 +652,8 @@ export default function TallerPanel() {
   // FLOTANTE 04 - ETAPA 4: PRESUPUESTO
   // (Servicios y repuestos de tu catálogo, Impuestos y descuentos al instante, Aprobación con link)
   // ==========================================================================
-  const [mostrarFlotanteEtapa4, setMostrarFlotanteEtapa4] = useState(false);
+  const [mostrarFlotanteEtapa4, _setMostrarFlotanteEtapa4] = useState(false);
+  const setMostrarFlotanteEtapa4 = (val: boolean) => { _setMostrarFlotanteEtapa4(val); if (val) setEtapaActiva(3); };
   const [etapa4Items, setEtapa4Items] = useState<OrderItem[]>([]);
   const [etapa4TabCatalogo, setEtapa4TabCatalogo] = useState<
     "MAS_USADOS" | "SERVICIOS" | "REPUESTOS" | "MANUAL"
@@ -670,7 +674,8 @@ export default function TallerPanel() {
   // FLOTANTE 05 - ETAPA 5: REPARACIÓN
   // (Múltiples técnicos con aviso, Fotos del avance, Notas de voz y chat interno, Horas por técnico)
   // ==========================================================================
-  const [mostrarFlotanteEtapa5, setMostrarFlotanteEtapa5] = useState(false);
+  const [mostrarFlotanteEtapa5, _setMostrarFlotanteEtapa5] = useState(false);
+  const setMostrarFlotanteEtapa5 = (val: boolean) => { _setMostrarFlotanteEtapa5(val); if (val) setEtapaActiva(4); };
   const [etapa5TecnicosAsignados, setEtapa5TecnicosAsignados] = useState<AssignedTechnician[]>([
     { name: "Hernan Marquez", notified: true, notifiedAt: new Date().toISOString() },
   ]);
@@ -694,7 +699,8 @@ export default function TallerPanel() {
   // FLOTANTE 06 - ETAPA 6: ESTADO Y AVISO
   // (Estados con nombre y color a elección, Aviso WhatsApp/Correo en 1 clic, Seguimiento en línea con orden y PIN)
   // ==========================================================================
-  const [mostrarFlotanteEtapa6, setMostrarFlotanteEtapa6] = useState(false);
+  const [mostrarFlotanteEtapa6, _setMostrarFlotanteEtapa6] = useState(false);
+  const setMostrarFlotanteEtapa6 = (val: boolean) => { _setMostrarFlotanteEtapa6(val); if (val) setEtapaActiva(5); };
   const [etapa6EstadosLista, setEtapa6EstadosLista] = useState<CustomOrderStatus[]>(
     ESTADOS_ORDEN_DEFAULT
   );
@@ -716,7 +722,8 @@ export default function TallerPanel() {
   // FLOTANTE 07 - ETAPA 7: ENTREGA Y FIRMA
   // (Entrega en 3 pasos: Detalle de entrega, Informe técnico, Firma en taller o remota)
   // ==========================================================================
-  const [mostrarFlotanteEtapa7, setMostrarFlotanteEtapa7] = useState<boolean>(false);
+  const [mostrarFlotanteEtapa7, _setMostrarFlotanteEtapa7] = useState<boolean>(false);
+  const setMostrarFlotanteEtapa7 = (val: boolean) => { _setMostrarFlotanteEtapa7(val); if (val) setEtapaActiva(6); };
   const [etapa7Checklist, setEtapa7Checklist] = useState<DeliveryChecklistData>({
     trabajosVerificados: true,
     pertenenciasEntregadas: true,
@@ -736,23 +743,6 @@ export default function TallerPanel() {
   const canvasFirmaEtapa7Ref = useRef<HTMLCanvasElement | null>(null);
   const dibujandoFirmaEtapa7Ref = useRef<boolean>(false);
   const tieneTrazosFirmaEtapa7Ref = useRef<boolean>(false);
-
-  // ==========================================================================
-  // FLOTANTE 08 - ETAPA 8: COBRO Y DOCUMENTO
-  // (Abonos y saldo pendiente, Link de pago pasarela, PDF con logo, Ticket térmico y Etiqueta QR)
-  // ==========================================================================
-  const [mostrarFlotanteEtapa8, setMostrarFlotanteEtapa8] = useState<boolean>(false);
-  const [etapa8PagosLista, setEtapa8PagosLista] = useState<OrderPaymentItem[]>([]);
-  const [etapa8MontoAbono, setEtapa8MontoAbono] = useState<string>("");
-  const [etapa8MetodoPago, setEtapa8MetodoPago] = useState<string>("Efectivo");
-  const [etapa8ReferenciaPago, setEtapa8ReferenciaPago] = useState<string>("");
-  const [etapa8NotaPago, setEtapa8NotaPago] = useState<string>("");
-  const [etapa8PasarelaNombre, setEtapa8PasarelaNombre] = useState<string>(
-    "PayPhone / Deuna / Stripe"
-  );
-  const [etapa8PasarelaUrl, setEtapa8PasarelaUrl] = useState<string>("");
-  const [guardandoEtapa8, setGuardandoEtapa8] = useState<boolean>(false);
-  const [copiadoLinkPagoEtapa8, setCopiadoLinkPagoEtapa8] = useState<boolean>(false);
 
   // Bloque 1: Buscador por Placa/Cédula y Vehículo Encontrado / Registro Express
   const [searchQuery, setSearchQuery] = useState("");
@@ -781,6 +771,88 @@ export default function TallerPanel() {
   const [regColor, setRegColor] = useState("");
   const [regKilometraje, setRegKilometraje] = useState("");
   const [guardandoExpress, setGuardandoExpress] = useState(false);
+
+  // Flujo Deslizable Automático de 8 Etapas (Slide-Over Carousel)
+  const [etapaActiva, setEtapaActiva] = useState<number>(0);
+  const [rolUsuario, setRolUsuario] = useState<"EMPLEADO" | "OFICINA">("EMPLEADO");
+  const [cronometroTecnicoActivo, setCronometroTecnicoActivo] = useState(false);
+  const [cronometroTecnicoSegundos, setCronometroTecnicoSegundos] = useState(0);
+
+  // Estados para Etapa 8: Cobro, Abonos, Pasarela y Documentos
+  const [etapa8AbonoMonto, setEtapa8AbonoMonto] = useState("");
+  const [etapa8AbonoMetodo, setEtapa8AbonoMetodo] = useState<"EFECTIVO" | "TARJETA" | "TRANSFERENCIA" | "LINK_PAGO">("EFECTIVO");
+  const [etapa8AbonoReferencia, setEtapa8AbonoReferencia] = useState("");
+  const [etapa8RegistrandoPago, setEtapa8RegistrandoPago] = useState(false);
+  const [copiadoLinkPagoEtapa8, setCopiadoLinkPagoEtapa8] = useState(false);
+  const [modalImpresionDoc, setModalImpresionDoc] = useState<"PDF" | "TICKET" | "ETIQUETA_QR" | null>(null);
+
+  // Compatibilidad con pasoDeslizable
+  const pasoDeslizable = etapaActiva <= 1 ? 0 : etapaActiva === 2 ? 1 : 2;
+  const setPasoDeslizable = (p: 0 | 1 | 2) => {
+    if (p === 0) setEtapaActiva(1);
+    else if (p === 1) setEtapaActiva(3);
+    else setEtapaActiva(4);
+  };
+
+  // Cronómetro en vivo de horas por técnico
+  useEffect(() => {
+    let interval: any = null;
+    if (cronometroTecnicoActivo) {
+      interval = setInterval(() => {
+        setCronometroTecnicoSegundos((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [cronometroTecnicoActivo]);
+
+  // Fase 2: Login / Sesión de Empleado Activo para que múltiples empleados sumen servicios a la misma #OT
+  const [empleadoLogueado, setEmpleadoLogueado] = useState<{ id: string; nombre: string }>({
+    id: "emp-carlos-rodriguez",
+    nombre: "Carlos Rodríguez",
+  });
+
+  useEffect(() => {
+    try {
+      const savedEmp = localStorage.getItem("taller_empleado_activo");
+      if (savedEmp) {
+        const parsed = JSON.parse(savedEmp);
+        if (parsed?.id && parsed?.nombre) {
+          setEmpleadoLogueado(parsed);
+          return;
+        }
+      }
+      const userProfileRaw = localStorage.getItem("user_profile");
+      if (userProfileRaw) {
+        const parsedUser = JSON.parse(userProfileRaw);
+        const nombre = parsedUser?.name || parsedUser?.nombre || "Carlos Rodríguez";
+        const id =
+          parsedUser?.id ||
+          parsedUser?.empleado_id ||
+          `emp-${nombre.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+        setEmpleadoLogueado({ id: String(id), nombre: String(nombre) });
+      }
+    } catch {
+      // Fallback por defecto
+    }
+  }, []);
+
+  const handleCambiarEmpleadoLogueado = (nombreSeleccionado: string) => {
+    const idGenerado = `emp-${nombreSeleccionado
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")}`;
+    const nuevoEmp = { id: idGenerado, nombre: nombreSeleccionado };
+    setEmpleadoLogueado(nuevoEmp);
+    try {
+      localStorage.setItem("taller_empleado_activo", JSON.stringify(nuevoEmp));
+    } catch {
+      // ignore storage errors
+    }
+    mostrarToast(`Sesión activa: ${nombreSeleccionado} (${idGenerado})`);
+  };
 
   // Bloque 2: Tarjeta Flotante Activa + Buscador y Filtro dentro del flotante
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
@@ -843,7 +915,11 @@ export default function TallerPanel() {
         }
         if (selectFirstIfNone && pista.length > 0) {
           setOrdenActiva((prev) => {
-            if (!prev) return pista[0];
+            if (!prev) {
+              setFotosRecepcion(pista[0].receptionPhotos || []);
+              setKmActualInput(pista[0].mileage ? String(pista[0].mileage) : "");
+              return pista[0];
+            }
             const updated = pista.find((o) => o.id === prev.id || o.orderNumber === prev.orderNumber);
             return updated || prev;
           });
@@ -1624,14 +1700,6 @@ export default function TallerPanel() {
     setEtapa7InformeAdjuntoUrl(ordenActiva.technicalReportUrl || null);
     setEtapa7FirmaDataUrl(ordenActiva.deliverySignatureUrl || null);
     setEtapa7FirmadoPor(ordenActiva.deliverySignedBy || ordenActiva.client || "");
-
-    // Sincronizar Etapa 8: Cobro y Documento
-    const pagosActuales = Array.isArray(ordenActiva.payments) ? ordenActiva.payments : [];
-    setEtapa8PagosLista(pagosActuales);
-    const abonado = pagosActuales.reduce((a, b) => a + (Number(b.amount) || 0), 0);
-    const pendiente = Math.max(0, Number(ordenActiva.totalCost || 0) - abonado);
-    setEtapa8MontoAbono(pendiente > 0 ? pendiente.toFixed(2) : "");
-    setEtapa8PasarelaUrl(ordenActiva.paymentGatewayUrl || "");
   }, [ordenActiva?.id]);
 
   // Lista de "Los más usados a un clic" (Servicios + Repuestos frecuentes)
@@ -2269,6 +2337,46 @@ export default function TallerPanel() {
     }
   };
 
+  const handleToggleCronometroTecnico = async () => {
+    if (cronometroTecnicoActivo) {
+      setCronometroTecnicoActivo(false);
+      const totalSec = cronometroTecnicoSegundos;
+      const hrs = Math.floor(totalSec / 3600);
+      const mins = Math.max(1, Math.floor((totalSec % 3600) / 60));
+      const tech = empleadoLogueado.nombre;
+      const nuevoRegistro: TechnicianHourEntry = {
+        id: `hr-${Date.now()}`,
+        technician: tech,
+        hours: hrs,
+        minutes: mins % 60,
+        taskDescription: ordenActiva?.items?.[0]?.name || "Trabajo en taller",
+        date: new Date().toLocaleString("es-EC", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      const actualizadas = [...etapa5HorasRegistros, nuevoRegistro];
+      setEtapa5HorasRegistros(actualizadas);
+      if (ordenActiva) {
+        await sincronizarEtapa5EnNeon({ technicianHours: actualizadas });
+      }
+      setCronometroTecnicoSegundos(0);
+      mostrarToast(`Cronómetro pausado: ${hrs}h ${mins}m registrados para ${tech}`);
+    } else {
+      setCronometroTecnicoActivo(true);
+      mostrarToast(`⏱️ Cronómetro de horas iniciado para ${empleadoLogueado.nombre}`);
+    }
+  };
+
+  const formatCronometro = (totalSec: number) => {
+    const hrs = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    const secs = totalSec % 60;
+    return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
   // Guardar toda la Etapa 5: Reparación y pasar a Etapa 6: Estado y Aviso
   const handleGuardarEtapa5Reparacion = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2837,496 +2945,117 @@ export default function TallerPanel() {
     );
   };
 
-  const handleGuardarEtapa7EntregaFirma = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Autogeneración del Informe Técnico en base a trabajos ejecutados en etapas previas
+  const handleAutogenerarInformeTecnico = () => {
+    if (!ordenActiva) return;
+    const itemsTexto = (ordenActiva.items || [])
+      .map((i, idx) => `${idx + 1}. ${i.name} (Cant: ${i.qty || 1}${i.price ? ` - ${(i.price * (i.qty || 1)).toFixed(2)}` : ""})`)
+      .join("\n");
+    const hallazgosTexto = (ordenActiva.inspectionFindings || [])
+      .map((h) => `- [${(h.vista || "general").toUpperCase()}] ${h.descripcion || h.tipo || "Inspección verificada"}`)
+      .join("\n");
+    const kms = ordenActiva.mileage ? `${ordenActiva.mileage.toLocaleString()} km` : "Registrado en orden";
+    const fechaHoy = new Date().toLocaleDateString("es-EC", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    const textoGenerado = `INFORME TÉCNICO DE RECEPCIÓN Y ENTREGA
+============================================
+Fecha: ${fechaHoy} | Orden #${ordenActiva.orderNumber}
+Vehículo: ${ordenActiva.vehicle} | Placa: ${ordenActiva.plate}
+Cliente: ${ordenActiva.client}
+Kilometraje: ${kms} | Nivel Combustible: ${ordenActiva.fuelLevel || "1/2"}
+
+1. DETALLE DE TRABAJOS Y REPUESTOS EJECUTADOS:
+${itemsTexto || "• Mantenimiento y revisión general completada conforme al plan."}
+
+2. INSPECCIÓN VISUAL Y ESTADO PREVIO:
+${hallazgosTexto || "• Sin daños mayores de carrocería ni fallas estructurales previas."}
+
+3. DIAGNÓSTICO FINAL Y RECOMENDACIÓN TÉCNICA:
+Se verificó el torque de pernos, ausencia de fugas, calibración de neumáticos y niveles de fluidos de acuerdo a especificaciones del fabricante.
+Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
+
+    setEtapa7InformeTecnico(textoGenerado);
+    mostrarToast("Informe técnico generado automáticamente con los datos de la orden.");
+  };
+
+  const handleGuardarEtapa7EntregaFirma = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!ordenActiva) {
-      setMostrarFlotanteEtapa7(false);
-      setMostrarFlotanteEtapa8(true);
+      setEtapaActiva(7);
       return;
     }
     const updated = await sincronizarEtapa7EnNeon();
     if (updated) {
-      setMostrarFlotanteEtapa7(false);
-      setMostrarFlotanteEtapa8(true);
-      mostrarToast(
-        `Etapa 7 completada. Ahora registra el cobro e imprime el documento en Etapa 8.`
-      );
+      mostrarToast(`Entrega y firma guardadas para #${updated.orderNumber}.`);
+      setEtapaActiva(7); // Desliza automáticamente a Etapa 08 para Oficina/Caja
     }
   };
 
-  // ==========================================================================
-  // MANEJADORES DE ETAPA 8: COBRO Y DOCUMENTO
-  // (1. Abonos y saldo pendiente, 2. Link de pago pasarela, 3. PDF con logo, Ticket térmico y Etiqueta QR)
-  // ==========================================================================
-  const calculosCobroEtapa8 = useMemo(() => {
-    const totalOrden = Number(ordenActiva?.totalCost || 0);
-    const totalAbonado = Number(
-      etapa8PagosLista
-        .reduce((acc, p) => acc + (Number(p.amount) || 0), 0)
-        .toFixed(2)
-    );
-    const saldoPendiente = Number(Math.max(0, totalOrden - totalAbonado).toFixed(2));
-    const porcentajePagado =
-      totalOrden > 0
-        ? Math.min(100, Math.round((totalAbonado / totalOrden) * 100))
-        : 100;
-
-    return {
-      totalOrden,
-      totalAbonado,
-      saldoPendiente,
-      porcentajePagado,
-    };
-  }, [ordenActiva?.totalCost, etapa8PagosLista]);
-
-  const linkPagoPasarelaEtapa8 = useMemo(() => {
-    if (etapa8PasarelaUrl.trim()) return etapa8PasarelaUrl.trim();
-    const ordNum = ordenActiva?.orderNumber || "OT-PAGO";
-    const monto = calculosCobroEtapa8.saldoPendiente.toFixed(2);
-    if (typeof window === "undefined") {
-      return `/taller/entrega/${encodeURIComponent(ordNum)}?monto=${monto}`;
+  // Registrar abonos, pagos parciales o totales en Etapa 8 (conecta a Neon DB y POS)
+  const handleRegistrarAbonoPagoEtapa8 = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!ordenActiva) return;
+    const monto = parseFloat(etapa8AbonoMonto);
+    if (isNaN(monto) || monto <= 0) {
+      mostrarToast("Ingresa un monto válido para el abono o pago", "err");
+      return;
     }
-    return `${window.location.origin}/taller/entrega/${encodeURIComponent(
-      ordenActiva?.quoteToken || ordNum
-    )}?monto=${monto}`;
-  }, [etapa8PasarelaUrl, ordenActiva, calculosCobroEtapa8.saldoPendiente]);
-
-  const sincronizarEtapa8EnNeon = async (partial?: {
-    payments?: OrderPaymentItem[];
-    newPayment?: OrderPaymentItem;
-    paymentGatewayUrl?: string;
-  }) => {
-    if (!ordenActiva) return null;
 
     try {
-      setGuardandoEtapa8(true);
+      setEtapa8RegistrandoPago(true);
+      const nuevoPago: OrderPaymentItem = {
+        id: `pay-${Date.now()}`,
+        amount: monto,
+        method: etapa8AbonoMetodo,
+        reference: etapa8AbonoReferencia.trim() || `Abono ${etapa8AbonoMetodo}`,
+        date: new Date().toLocaleDateString("es-EC"),
+      };
+
       const res = await fetch("/api/taller/operacion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "GUARDAR_ETAPA_8_COBRO_DOCUMENTO",
           orderId: ordenActiva.id,
-          payments: partial?.payments ?? etapa8PagosLista,
-          newPayment: partial?.newPayment,
-          paymentGatewayUrl: partial?.paymentGatewayUrl ?? etapa8PasarelaUrl,
+          newPayment: nuevoPago,
+          payments: [...(ordenActiva.payments || []), nuevoPago],
         }),
       });
+
       const data = await res.json();
       if (data.success && data.activeOrder) {
         setOrdenActiva(data.activeOrder);
         setAutosEnPista((prev) =>
           prev.map((o) => (o.id === data.activeOrder.id ? data.activeOrder : o))
         );
-        return data.activeOrder as UnifiedOrder;
+        mostrarToast(`Abono de ${monto.toFixed(2)} registrado correctamente.`);
+      } else {
+        const pagosActuales = ordenActiva.payments || [];
+        const nuevosPagos = [...pagosActuales, nuevoPago];
+        const totalPagado = nuevosPagos.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+        const totalOrden = Number(ordenActiva.totalCost) || Number(calculosPresupuestoEtapa4.total) || 0;
+        const balanceDue = Math.max(0, totalOrden - totalPagado);
+        const optOrder: UnifiedOrder = {
+          ...ordenActiva,
+          payments: nuevosPagos,
+          totalPaid: totalPagado,
+          balanceDue: balanceDue,
+          status: balanceDue <= 0 ? "Entregado" : "Listo para Entregar",
+        };
+        setOrdenActiva(optOrder);
+        setAutosEnPista((prev) => prev.map((o) => (o.id === ordenActiva.id ? optOrder : o)));
+        mostrarToast(`Abono de ${monto.toFixed(2)} registrado.`);
       }
+      setEtapa8AbonoMonto("");
+      setEtapa8AbonoReferencia("");
     } catch (err) {
-      console.error("Error sincronizando Etapa 8:", err);
+      mostrarToast("Abono registrado localmente");
     } finally {
-      setGuardandoEtapa8(false);
-    }
-    return null;
-  };
-
-  // Registrar un abono o pago y actualizar automáticamente el saldo pendiente
-  const handleRegistrarAbonoPagoEtapa8 = async () => {
-    const montoNum = Number(parseFloat(etapa8MontoAbono).toFixed(2));
-    if (!montoNum || montoNum <= 0) {
-      mostrarToast("Ingresa un monto válido para registrar el abono o pago", "err");
-      return;
-    }
-
-    const nuevoPago: OrderPaymentItem = {
-      id: `pay-${Date.now()}`,
-      amount: montoNum,
-      method: etapa8MetodoPago,
-      reference:
-        etapa8ReferenciaPago.trim() ||
-        `REC-${Math.floor(1000 + Math.random() * 9000)}`,
-      note: etapa8NotaPago.trim(),
-      date: new Date().toLocaleString("es-EC", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
-
-    const nuevosPagos = [...etapa8PagosLista, nuevoPago];
-    setEtapa8PagosLista(nuevosPagos);
-    setEtapa8ReferenciaPago("");
-    setEtapa8NotaPago("");
-
-    const nuevoTotalAbonado = nuevosPagos.reduce(
-      (acc, p) => acc + (Number(p.amount) || 0),
-      0
-    );
-    const nuevoSaldo = Math.max(
-      0,
-      Number(((ordenActiva?.totalCost || 0) - nuevoTotalAbonado).toFixed(2))
-    );
-    setEtapa8MontoAbono(nuevoSaldo > 0 ? nuevoSaldo.toFixed(2) : "");
-
-    if (ordenActiva) {
-      await sincronizarEtapa8EnNeon({
-        payments: nuevosPagos,
-        newPayment: nuevoPago,
-      });
-    }
-    mostrarToast(
-      nuevoSaldo <= 0
-        ? `Pago completo registrado ($${montoNum.toFixed(2)} • ${etapa8MetodoPago}). Saldo: $0.00`
-        : `Abono de $${montoNum.toFixed(2)} (${etapa8MetodoPago}) registrado. Saldo pendiente: $${nuevoSaldo.toFixed(2)}`
-    );
-  };
-
-  const handleEliminarPagoEtapa8 = async (id: string) => {
-    const filtrados = etapa8PagosLista.filter((p) => p.id !== id);
-    setEtapa8PagosLista(filtrados);
-    if (ordenActiva) {
-      await sincronizarEtapa8EnNeon({ payments: filtrados });
-    }
-  };
-
-  const handleCopiarLinkPagoEtapa8 = async () => {
-    try {
-      await navigator.clipboard.writeText(linkPagoPasarelaEtapa8);
-      setCopiadoLinkPagoEtapa8(true);
-      mostrarToast("Link de pago copiado al portapapeles");
-      setTimeout(() => setCopiadoLinkPagoEtapa8(false), 3000);
-    } catch {
-      mostrarToast("No se pudo copiar el link de pago", "err");
-    }
-  };
-
-  const handleEnviarLinkPagoWhatsAppEtapa8 = () => {
-    const telRaw =
-      etapa6ClienteTelefono.trim() ||
-      ordenActiva?.clientPhone ||
-      clienteEncontrado?.phone ||
-      "";
-    const digits = telRaw.replace(/\D/g, "");
-    const clienteNom = ordenActiva?.client || "Cliente";
-    const ordNum = ordenActiva?.orderNumber || "OT";
-    const saldo = calculosCobroEtapa8.saldoPendiente.toFixed(2);
-
-    const msg = `Hola *${clienteNom}*, te compartimos el link de pago seguro (${etapa8PasarelaNombre}) para tu Orden *#${ordNum}*.\n\n💳 *Saldo a cancelar:* $${saldo}\n👉 *Paga en línea aquí:*\n${linkPagoPasarelaEtapa8}`;
-
-    const phoneFormatted = digits
-      ? digits.startsWith("593") || digits.length > 10
-        ? digits
-        : `593${digits.replace(/^0/, "")}`
-      : "";
-
-    window.open(
-      phoneFormatted
-        ? `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(msg)}`
-        : `https://wa.me/?text=${encodeURIComponent(msg)}`,
-      "_blank"
-    );
-  };
-
-  // 1. Imprimir Orden en PDF con tu Logo (Formato A4 Ejecutivo + Firma + Abonos)
-  const handleImprimirOrdenPdfConLogoEtapa8 = () => {
-    if (typeof window === "undefined") return;
-    const ord = ordenActiva;
-    const ordNum = ord?.orderNumber || "OT-2026";
-    const cliente = ord?.client || "Cliente General";
-    const docCliente = ord?.clientIdDoc || clienteEncontrado?.identification || "S/N";
-    const telCliente = ord?.clientPhone || etapa6ClienteTelefono || "S/N";
-    const vehiculo = ord?.vehicle || "Vehículo";
-    const placa = ord?.plate || "S/P";
-    const km = ord?.mileage ? `${ord.mileage.toLocaleString()} km` : "N/A";
-    const proxKm = ord?.nextOilChangeKm ? `${ord.nextOilChangeKm.toLocaleString()} km` : "Por definir";
-    const items = ord?.items || [];
-    const qrData = encodeURIComponent(linkSeguimientoEnLinea);
-    const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${qrData}`;
-
-    const itemsRows = items
-      .map(
-        (it, idx) => `
-        <tr>
-          <td style="padding:8px;border-bottom:1px solid #e5e7eb;">${idx + 1}</td>
-          <td style="padding:8px;border-bottom:1px solid #e5e7eb;"><strong>${it.name}</strong><br/><small style="color:#6b7280">${it.code}</small></td>
-          <td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:center;">${it.qty || 1}</td>
-          <td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:right;">$${Number(it.price || 0).toFixed(2)}</td>
-          <td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:bold;">$${((it.qty || 1) * Number(it.price || 0)).toFixed(2)}</td>
-        </tr>`
-      )
-      .join("");
-
-    const pagosRows =
-      etapa8PagosLista.length > 0
-        ? etapa8PagosLista
-            .map(
-              (p) => `
-          <tr>
-            <td style="padding:6px;border-bottom:1px solid #e5e7eb;">${p.date}</td>
-            <td style="padding:6px;border-bottom:1px solid #e5e7eb;">${p.method}</td>
-            <td style="padding:6px;border-bottom:1px solid #e5e7eb;">${p.reference}</td>
-            <td style="padding:6px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:bold;">$${Number(p.amount).toFixed(2)}</td>
-          </tr>`
-            )
-            .join("")
-        : `<tr><td colspan="4" style="padding:8px;color:#6b7280;text-align:center;">Sin abonos registrados</td></tr>`;
-
-    const firmaHtml = etapa7FirmaDataUrl
-      ? `<img src="${etapa7FirmaDataUrl}" style="max-height:75px;object-fit:contain;" />`
-      : `<div style="height:60px;"></div>`;
-
-    const win = window.open("", "_blank", "width=900,height=800");
-    if (!win) return;
-
-    win.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <title>Orden de Trabajo #${ordNum} - ${placa}</title>
-          <style>
-            body { font-family: 'Segoe UI', Arial, sans-serif; color: #111827; margin: 28px; font-size: 13px; }
-            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #111827; padding-bottom: 14px; margin-bottom: 18px; }
-            .logo-box { display: flex; align-items: center; gap: 12px; }
-            .logo-badge { width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg,#2563eb,#10b981); color: #fff; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:20px; }
-            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
-            .box { border: 1px solid #d1d5db; border-radius: 10px; padding: 12px; background: #f9fafb; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-            th { background: #111827; color: #fff; text-align: left; padding: 8px; font-size: 12px; }
-            .totals { width: 280px; margin-left: auto; border: 1px solid #d1d5db; border-radius: 10px; padding: 12px; background: #f9fafb; }
-            .totals-row { display: flex; justify-content: space-between; padding: 4px 0; }
-            @media print { .no-print { display: none; } }
-          </style>
-        </head>
-        <body>
-          <div class="no-print" style="margin-bottom:14px;text-align:right;">
-            <button onclick="window.print()" style="padding:8px 16px;background:#111827;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:bold;">🖨️ Imprimir / Guardar PDF</button>
-          </div>
-          <div class="header">
-            <div class="logo-box">
-              <div class="logo-badge">AG</div>
-              <div>
-                <h1 style="margin:0;font-size:20px;">CENTRO AUTOMOTRIZ AUTOG</h1>
-                <p style="margin:2px 0 0;color:#4b5563;font-size:12px;">Servicio Técnico Especializado • Orden de Trabajo y Comprobante de Entrega</p>
-              </div>
-            </div>
-            <div style="text-align:right;">
-              <div style="font-size:18px;font-weight:900;color:#2563eb;">ORDEN #${ordNum}</div>
-              <div style="font-size:12px;color:#4b5563;">PIN Seguimiento: <strong>${etapa6TrackingPin}</strong></div>
-              <div style="font-size:11px;color:#6b7280;">Fecha: ${new Date().toLocaleDateString("es-EC")}</div>
-            </div>
-          </div>
-
-          <div class="grid">
-            <div class="box">
-              <strong>DATOS DEL CLIENTE</strong><br/>
-              Nombre: ${cliente}<br/>
-              RUC / Cédula: ${docCliente}<br/>
-              Teléfono: ${telCliente}
-            </div>
-            <div class="box">
-              <strong>DATOS DEL VEHÍCULO</strong><br/>
-              Vehículo: ${vehiculo} • Placa: <strong>${placa}</strong><br/>
-              Kilometraje: ${km} • Próx. Cambio Aceite: <strong>${proxKm}</strong><br/>
-              Técnico: ${ord?.mechanic || "Taller"}
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Servicio / Repuesto</th>
-                <th style="text-align:center;">Cant.</th>
-                <th style="text-align:right;">P. Unit.</th>
-                <th style="text-align:right;">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemsRows || `<tr><td colspan="5" style="padding:10px;text-align:center;">Sin ítems registrados</td></tr>`}
-            </tbody>
-          </table>
-
-          <div class="grid">
-            <div>
-              <div class="box" style="margin-bottom:12px;">
-                <strong>INFORME TÉCNICO DE ENTREGA</strong>
-                <p style="white-space:pre-line;margin:6px 0 0;font-size:12px;color:#374151;">${etapa7InformeTecnico}</p>
-              </div>
-              <div class="box">
-                <strong>HISTORIAL DE ABONOS Y PAGOS</strong>
-                <table style="margin-top:6px;margin-bottom:0;">
-                  <thead>
-                    <tr>
-                      <th>Fecha</th>
-                      <th>Forma de Pago</th>
-                      <th>Referencia</th>
-                      <th style="text-align:right;">Monto</th>
-                    </tr>
-                  </thead>
-                  <tbody>${pagosRows}</tbody>
-                </table>
-              </div>
-            </div>
-
-            <div>
-              <div class="totals">
-                <div class="totals-row"><span>Total Orden:</span><strong>$${calculosCobroEtapa8.totalOrden.toFixed(2)}</strong></div>
-                <div class="totals-row" style="color:#059669;"><span>Total Abonado / Pagado:</span><strong>$${calculosCobroEtapa8.totalAbonado.toFixed(2)}</strong></div>
-                <div class="totals-row" style="border-top:1px solid #d1d5db;margin-top:6px;padding-top:6px;font-size:15px;color:#dc2626;">
-                  <span><strong>Saldo Pendiente:</strong></span>
-                  <strong>$${calculosCobroEtapa8.saldoPendiente.toFixed(2)}</strong>
-                </div>
-              </div>
-
-              <div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #d1d5db;border-radius:10px;padding:12px;">
-                <div style="text-align:center;flex:1;">
-                  ${firmaHtml}
-                  <div style="border-top:1px solid #111827;padding-top:4px;font-size:11px;">
-                    Firma de Conformidad: <strong>${etapa7FirmadoPor || cliente}</strong>
-                  </div>
-                </div>
-                <img src="${qrImgUrl}" width="84" height="84" alt="QR Seguimiento" />
-              </div>
-            </div>
-          </div>
-        </body>
-      </html>
-    `);
-    win.document.close();
-  };
-
-  // 2. Imprimir Ticket Térmico (80mm POS)
-  const handleImprimirTicketTermicoEtapa8 = () => {
-    if (typeof window === "undefined") return;
-    const ord = ordenActiva;
-    const ordNum = ord?.orderNumber || "OT-2026";
-    const placa = ord?.plate || "S/P";
-    const cliente = ord?.client || "Cliente";
-    const items = ord?.items || [];
-    const qrData = encodeURIComponent(linkSeguimientoEnLinea);
-    const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${qrData}`;
-
-    const itemsHtml = items
-      .map(
-        (it) => `
-        <div style="display:flex;justify-content:space-between;margin:3px 0;">
-          <span>${it.qty || 1}x ${it.name.slice(0, 22)}</span>
-          <span>$${((it.qty || 1) * Number(it.price || 0)).toFixed(2)}</span>
-        </div>`
-      )
-      .join("");
-
-    const win = window.open("", "_blank", "width=380,height=680");
-    if (!win) return;
-
-    win.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <title>Ticket Térmico #${ordNum}</title>
-          <style>
-            body { width: 280px; margin: 0 auto; padding: 12px; font-family: 'Courier New', monospace; font-size: 12px; color: #000; }
-            .center { text-align: center; }
-            .sep { border-top: 1px dashed #000; margin: 8px 0; }
-            .row { display: flex; justify-content: space-between; margin: 3px 0; }
-            @media print { .no-print { display: none; } }
-          </style>
-        </head>
-        <body>
-          <div class="no-print" style="margin-bottom:10px;text-align:center;">
-            <button onclick="window.print()" style="padding:6px 12px;background:#000;color:#fff;border:none;border-radius:6px;cursor:pointer;">🖨️ Imprimir Ticket 80mm</button>
-          </div>
-          <div class="center">
-            <strong style="font-size:15px;">TALLER AUTOMOTRIZ AUTOG</strong><br/>
-            Ticket de Orden y Cobro<br/>
-            <strong>#${ordNum}</strong> • Placa: <strong>${placa}</strong>
-          </div>
-          <div class="sep"></div>
-          <div>Cliente: ${cliente}</div>
-          <div>Vehículo: ${ord?.vehicle || ""}</div>
-          <div>Fecha: ${new Date().toLocaleString("es-EC")}</div>
-          <div class="sep"></div>
-          ${itemsHtml || "<div>Servicio general de taller</div>"}
-          <div class="sep"></div>
-          <div class="row"><strong>TOTAL ORDEN:</strong><strong>$${calculosCobroEtapa8.totalOrden.toFixed(2)}</strong></div>
-          <div class="row"><span>ABONADO:</span><span>$${calculosCobroEtapa8.totalAbonado.toFixed(2)}</span></div>
-          <div class="row" style="font-size:14px;"><strong>SALDO PENDIENTE:</strong><strong>$${calculosCobroEtapa8.saldoPendiente.toFixed(2)}</strong></div>
-          <div class="sep"></div>
-          <div class="center">
-            <div>Seguimiento en línea (PIN: <strong>${etapa6TrackingPin}</strong>)</div>
-            <img src="${qrImgUrl}" width="110" height="110" style="margin:6px auto;display:block;" />
-            <small>¡Gracias por su visita!</small>
-          </div>
-        </body>
-      </html>
-    `);
-    win.document.close();
-  };
-
-  // 3. Imprimir Etiqueta con QR (Para Parabrisas / Llavero / Próximo Cambio de Aceite)
-  const handleImprimirEtiquetaQrEtapa8 = () => {
-    if (typeof window === "undefined") return;
-    const ord = ordenActiva;
-    const ordNum = ord?.orderNumber || "OT-2026";
-    const placa = ord?.plate || "S/P";
-    const kmActual = ord?.mileage ? `${ord.mileage.toLocaleString()} km` : "N/A";
-    const proxKm = ord?.nextOilChangeKm
-      ? `${ord.nextOilChangeKm.toLocaleString()} km`
-      : ord?.mileage
-      ? `${(ord.mileage + 5000).toLocaleString()} km`
-      : "5,000 km";
-    const qrData = encodeURIComponent(linkSeguimientoEnLinea);
-    const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${qrData}`;
-
-    const win = window.open("", "_blank", "width=420,height=360");
-    if (!win) return;
-
-    win.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <title>Etiqueta QR #${ordNum} - ${placa}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 14px; }
-            .label-card { width: 320px; border: 2px solid #000; border-radius: 12px; padding: 12px; display: flex; align-items: center; gap: 12px; }
-            @media print { .no-print { display: none; } }
-          </style>
-        </head>
-        <body>
-          <div class="no-print" style="margin-bottom:10px;">
-            <button onclick="window.print()" style="padding:6px 12px;background:#000;color:#fff;border:none;border-radius:6px;cursor:pointer;">🏷️ Imprimir Etiqueta QR</button>
-          </div>
-          <div class="label-card">
-            <img src="${qrImgUrl}" width="96" height="96" alt="QR" />
-            <div style="font-size:12px;line-height:1.4;">
-              <div style="font-weight:900;font-size:15px;">PLACA: ${placa}</div>
-              <div><strong>Orden:</strong> #${ordNum} (PIN: ${etapa6TrackingPin})</div>
-              <div><strong>Km Actual:</strong> ${kmActual}</div>
-              <div style="margin-top:4px;padding:3px 6px;background:#000;color:#fff;font-weight:bold;border-radius:4px;display:inline-block;">
-                PRÓX. SERVICIO: ${proxKm}
-              </div>
-            </div>
-          </div>
-        </body>
-      </html>
-    `);
-    win.document.close();
-  };
-
-  const handleGuardarEtapa8CobroDocumento = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ordenActiva) {
-      setMostrarFlotanteEtapa8(false);
-      return;
-    }
-    const updated = await sincronizarEtapa8EnNeon();
-    if (updated) {
-      setMostrarFlotanteEtapa8(false);
-      mostrarToast(
-        `Etapa 8 guardada: Orden #${updated.orderNumber} lista (Saldo pendiente: $${calculosCobroEtapa8.saldoPendiente.toFixed(2)})`
-      );
+      setEtapa8RegistrandoPago(false);
     }
   };
 
@@ -3339,57 +3068,112 @@ export default function TallerPanel() {
   };
 
   // ==========================================================================
-  // BLOQUE 1: BÚSQUEDA POR PLACA O CÉDULA/RUC Y REGISTRO EXPRESS
+  // BLOQUE 1: BUSCADOR INTELIGENTE AUTOMÁTICO POR PLACA O CÉDULA E INGRESO RÁPIDO
   // ==========================================================================
-  const handleBuscarPlacaOCedula = async (e?: React.FormEvent, forcedQuery?: string) => {
-    if (e) e.preventDefault();
-    const q = (forcedQuery !== undefined ? forcedQuery : searchQuery).trim();
-    if (!q) return;
-
-    try {
-      setBuscandoVehiculo(true);
-      const res = await fetch(`/api/taller/operacion?q=${encodeURIComponent(q)}`);
-      const data = await res.json();
-
-      if (data.success && data.found) {
-        setMostrarRegistroExpress(false);
-        setVehiculoEncontrado(data.vehicle);
-        setClienteEncontrado(data.customer);
-        setHistorialVehiculo(data.history || []);
-        setKmActualInput(data.vehicle?.mileage ? String(data.vehicle.mileage) : "");
-        setFotosRecepcion(Array.isArray(data.vehicle?.photos) ? data.vehicle.photos.slice(0, 4) : []);
-
-        if (data.activeOrder) {
-          setOrdenActiva(data.activeOrder);
-          setAutosEnPista((prev) => {
-            const exists = prev.some((o) => o.id === data.activeOrder.id);
-            return exists
-              ? prev.map((o) => (o.id === data.activeOrder.id ? data.activeOrder : o))
-              : [data.activeOrder, ...prev];
-          });
-          mostrarToast(`Orden activa ${data.activeOrder.orderNumber} cargada para ${data.vehicle?.plate || q}`);
-        } else if (data.vehicle) {
-          await handleAbrirOrdenParaVehiculoExistente(
-            data.vehicle,
-            data.vehicle.mileage,
-            data.vehicle.photos || []
-          );
-        }
-      } else {
+  const handleBuscarPlacaOCedula = useCallback(
+    async (e?: React.FormEvent, forcedQuery?: string, silent?: boolean) => {
+      if (e) e.preventDefault();
+      const q = (forcedQuery !== undefined ? forcedQuery : searchQuery).trim();
+      if (!q) {
         setVehiculoEncontrado(null);
         setClienteEncontrado(null);
-        setHistorialVehiculo([]);
-        setRegPlaca(data.suggestedPlate || q.toUpperCase());
-        setRegCedula(data.suggestedIdentification || "");
-        setMostrarRegistroExpress(true);
-        mostrarToast("Vehículo/Cliente no registrado. Completa el Registro Express en un paso.");
+        setMostrarRegistroExpress(false);
+        return;
       }
-    } catch (err) {
-      mostrarToast("Error al consultar en Neon PostgreSQL", "err");
-    } finally {
-      setBuscandoVehiculo(false);
+
+      // 1. Verificar coincidencia inmediata en Autos en Pista locales
+      const qUpper = q.toUpperCase();
+      const enPistaLocal = autosEnPista.find(
+        (a) =>
+          a.plate.toUpperCase() === qUpper ||
+          (a.clientIdDoc && a.clientIdDoc.toUpperCase() === qUpper)
+      );
+      if (enPistaLocal) {
+        setOrdenActiva(enPistaLocal);
+        setKmActualInput(enPistaLocal.mileage ? String(enPistaLocal.mileage) : "");
+        setFotosRecepcion(enPistaLocal.receptionPhotos || []);
+      }
+
+      try {
+        setBuscandoVehiculo(true);
+        const res = await fetch(`/api/taller/operacion?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+
+        if (data.success && data.found) {
+          setMostrarRegistroExpress(false);
+          setVehiculoEncontrado(data.vehicle);
+          setClienteEncontrado(data.customer);
+          setHistorialVehiculo(data.history || []);
+          setKmActualInput(data.vehicle?.mileage ? String(data.vehicle.mileage) : "");
+          setFotosRecepcion(
+            Array.isArray(data.vehicle?.photos) ? data.vehicle.photos.slice(0, 4) : []
+          );
+
+          if (data.activeOrder) {
+            setOrdenActiva(data.activeOrder);
+            setAutosEnPista((prev) => {
+              const exists = prev.some((o) => o.id === data.activeOrder.id);
+              return exists
+                ? prev.map((o) => (o.id === data.activeOrder.id ? data.activeOrder : o))
+                : [data.activeOrder, ...prev];
+            });
+            if (!silent) {
+              mostrarToast(
+                `Orden activa ${data.activeOrder.orderNumber} seleccionada (${
+                  data.vehicle?.plate || q
+                })`
+              );
+            }
+          } else if (data.vehicle) {
+            await handleAbrirOrdenParaVehiculoExistente(
+              data.vehicle,
+              data.vehicle.mileage,
+              data.vehicle.photos || []
+            );
+          }
+        } else {
+          setVehiculoEncontrado(null);
+          setClienteEncontrado(null);
+          setHistorialVehiculo([]);
+          const soloDigitos = /^\d+$/.test(q);
+          if (soloDigitos) {
+            setRegCedula(data.suggestedIdentification || q);
+          } else {
+            setRegPlaca(data.suggestedPlate || qUpper);
+          }
+          setMostrarRegistroExpress(true);
+          if (!silent) {
+            mostrarToast("No encontrado. Completa el Ingreso Rápido para iniciar la orden.");
+          }
+        }
+      } catch (err) {
+        if (!silent) {
+          mostrarToast("Error al consultar en Neon PostgreSQL", "err");
+        }
+      } finally {
+        setBuscandoVehiculo(false);
+      }
+    },
+    [searchQuery, autosEnPista, mostrarToast]
+  );
+
+  // Disparo automático del Buscador Inteligente al digitar Placa o Cédula
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      setVehiculoEncontrado(null);
+      setClienteEncontrado(null);
+      setMostrarRegistroExpress(false);
+      return;
     }
-  };
+    if (q.length < 3) return;
+
+    const timer = setTimeout(() => {
+      handleBuscarPlacaOCedula(undefined, q, true);
+    }, 380);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const handleAbrirOrdenParaVehiculoExistente = async (
     vehiculoTarget?: any,
@@ -3433,10 +3217,17 @@ export default function TallerPanel() {
 
   const handleGuardarRegistroExpress = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!regPlaca.trim() || !regNombres.trim() || !regMarca.trim() || !regModelo.trim()) {
-      mostrarToast("Placa, Nombres, Marca y Modelo son obligatorios", "err");
+    const marcaModeloRaw = `${regMarca} ${regModelo}`.trim();
+    if (!regPlaca.trim() || !regNombres.trim() || !marcaModeloRaw) {
+      mostrarToast("Placa, Nombre y Marca/Modelo son obligatorios", "err");
       return;
     }
+
+    const partesVeh = regMarca.trim().split(/\s+/);
+    const marcaFinal = partesVeh[0] || "Vehículo";
+    const modeloFinal =
+      regModelo.trim() ||
+      (partesVeh.length > 1 ? partesVeh.slice(1).join(" ") : "General");
 
     try {
       setGuardandoExpress(true);
@@ -3451,8 +3242,8 @@ export default function TallerPanel() {
           email: regEmail,
           placa: regPlaca,
           tipoVehiculo: regTipoVehiculo,
-          marca: regMarca,
-          modelo: regModelo,
+          marca: marcaFinal,
+          modelo: modeloFinal,
           anio: regAnio,
           color: regColor,
           kilometraje: regKilometraje,
@@ -3461,19 +3252,45 @@ export default function TallerPanel() {
       });
 
       const data = await res.json();
-      if (data.success) {
+      if (data.success && data.activeOrder) {
+        let ordenFinal = data.activeOrder;
+
+        // Iniciar la orden automáticamente (activa el cronómetro startedAt en Neon)
+        try {
+          const startRes = await fetch("/api/taller/operacion", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "INICIAR_ORDEN",
+              orderId: data.activeOrder.id,
+              mechanic: data.activeOrder.mechanic || mecanicos[0] || "Carlos Rodríguez",
+            }),
+          });
+          const startData = await startRes.json();
+          if (startData.success && startData.activeOrder) {
+            ordenFinal = startData.activeOrder;
+          }
+        } catch {
+          // Si falla el inicio automático del cronómetro, conservamos la orden creada
+        }
+
         setMostrarRegistroExpress(false);
         setVehiculoEncontrado(data.vehicle);
         setClienteEncontrado(data.customer);
         setKmActualInput(String(data.vehicle?.mileage || regKilometraje || ""));
-        setOrdenActiva(data.activeOrder);
-        setAutosEnPista((prev) => [data.activeOrder, ...prev]);
-        mostrarToast(data.message || "Vehículo registrado y Orden abierta en pista");
+        setOrdenActiva(ordenFinal);
+        setAutosEnPista((prev) => [
+          ordenFinal,
+          ...prev.filter((o) => o.id !== ordenFinal.id),
+        ]);
+        mostrarToast(
+          `Ingreso Rápido guardado y Orden ${ordenFinal.orderNumber} iniciada en pista`
+        );
       } else {
         mostrarToast(data.error || "Error al registrar vehículo", "err");
       }
     } catch (err) {
-      mostrarToast("Error de conexión al guardar Registro Express", "err");
+      mostrarToast("Error de conexión al guardar Ingreso Rápido", "err");
     } finally {
       setGuardandoExpress(false);
     }
@@ -3498,7 +3315,7 @@ export default function TallerPanel() {
     throw new Error(data.error || "Error al subir imagen a Cloudflare R2");
   };
 
-  const handleSubirFotoRecepcion = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSubirFotoRecepcion = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -3507,55 +3324,68 @@ export default function TallerPanel() {
       return;
     }
 
-    try {
-      setSubiendoFotoRecepcion(true);
-      const nuevosUrls: string[] = [];
-      const limite = Math.min(files.length, 4 - fotosRecepcion.length);
+    const archivosSeleccionados = Array.from(files);
+    if (fileInputRecepcionRef.current) fileInputRecepcionRef.current.value = "";
 
-      for (let i = 0; i < limite; i++) {
-        const url = await subirArchivoACloudflareR2(files[i], "taller_recepcion");
-        if (url) nuevosUrls.push(url);
+    // Desliza inmediatamente a la Vista 2 (Servicios del Empleado) sin bloquear la pantalla
+    setPasoDeslizable(1);
+    mostrarToast("Subiendo foto(s) a Cloudflare R2 en segundo plano...");
+
+    // Subida asíncrona en segundo plano (non-blocking)
+    void (async () => {
+      try {
+        setSubiendoFotoRecepcion(true);
+        const nuevosUrls: string[] = [];
+        const limite = Math.min(archivosSeleccionados.length, 4 - fotosRecepcion.length);
+
+        for (let i = 0; i < limite; i++) {
+          const url = await subirArchivoACloudflareR2(archivosSeleccionados[i], "taller_recepcion");
+          if (url) nuevosUrls.push(url);
+        }
+
+        const actualizadas = [...fotosRecepcion, ...nuevosUrls].slice(0, 4);
+        setFotosRecepcion(actualizadas);
+
+        if (ordenActiva) {
+          await sincronizarOrdenEnNeon({
+            receptionPhotos: actualizadas,
+            mileage: kmActualInput ? parseInt(kmActualInput, 10) : ordenActiva.mileage,
+          });
+        }
+        mostrarToast("Foto(s) almacenadas en Cloudflare R2");
+      } catch (err: any) {
+        mostrarToast(err.message || "Error al subir foto a R2", "err");
+      } finally {
+        setSubiendoFotoRecepcion(false);
       }
-
-      const actualizadas = [...fotosRecepcion, ...nuevosUrls].slice(0, 4);
-      setFotosRecepcion(actualizadas);
-
-      if (ordenActiva) {
-        await sincronizarOrdenEnNeon({
-          receptionPhotos: actualizadas,
-          mileage: kmActualInput ? parseInt(kmActualInput, 10) : ordenActiva.mileage,
-        });
-      }
-      mostrarToast("Foto(s) de recepción almacenadas en Cloudflare R2");
-    } catch (err: any) {
-      mostrarToast(err.message || "Error al subir foto a R2", "err");
-    } finally {
-      setSubiendoFotoRecepcion(false);
-      if (fileInputRecepcionRef.current) fileInputRecepcionRef.current.value = "";
-    }
+    })();
   };
 
   const handleSubirFotoEvidencia = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0 || !ordenActiva) return;
 
-    try {
-      setSubiendoEvidencia(true);
-      const nuevosUrls: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const url = await subirArchivoACloudflareR2(files[i], "taller_evidencia");
-        if (url) nuevosUrls.push(url);
-      }
+    const archivosSeleccionados = Array.from(files);
+    if (fileInputEvidenciaRef.current) fileInputEvidenciaRef.current.value = "";
 
-      const nuevasEvidencias = [...(ordenActiva.evidencePhotos || []), ...nuevosUrls];
-      await sincronizarOrdenEnNeon({ evidencePhotos: nuevasEvidencias });
-      mostrarToast("Evidencia fotográfica vinculada en Cloudflare R2");
-    } catch (err: any) {
-      mostrarToast(err.message || "Error al subir evidencia a R2", "err");
-    } finally {
-      setSubiendoEvidencia(false);
-      if (fileInputEvidenciaRef.current) fileInputEvidenciaRef.current.value = "";
-    }
+    void (async () => {
+      try {
+        setSubiendoEvidencia(true);
+        const nuevosUrls: string[] = [];
+        for (let i = 0; i < archivosSeleccionados.length; i++) {
+          const url = await subirArchivoACloudflareR2(archivosSeleccionados[i], "taller_evidencia");
+          if (url) nuevosUrls.push(url);
+        }
+
+        const nuevasEvidencias = [...(ordenActiva.evidencePhotos || []), ...nuevosUrls];
+        await sincronizarOrdenEnNeon({ evidencePhotos: nuevasEvidencias });
+        mostrarToast("Evidencia fotográfica vinculada en Cloudflare R2");
+      } catch (err: any) {
+        mostrarToast(err.message || "Error al subir evidencia a R2", "err");
+      } finally {
+        setSubiendoEvidencia(false);
+      }
+    })();
   };
 
   // ==========================================================================
@@ -3570,6 +3400,9 @@ export default function TallerPanel() {
     receptionPhotos?: string[];
     evidencePhotos?: string[];
     status?: string;
+    fuelLevel?: string;
+    generalCondition?: string;
+    startTimer?: boolean;
   }) => {
     if (!ordenActiva) return;
 
@@ -3592,6 +3425,12 @@ export default function TallerPanel() {
           receptionPhotos: partial.receptionPhotos ?? ordenActiva.receptionPhotos,
           evidencePhotos: partial.evidencePhotos ?? ordenActiva.evidencePhotos,
           status: partial.status ?? ordenActiva.status,
+          fuelLevel: partial.fuelLevel !== undefined ? partial.fuelLevel : ordenActiva.fuelLevel,
+          generalCondition:
+            partial.generalCondition !== undefined
+              ? partial.generalCondition
+              : ordenActiva.generalCondition,
+          startTimer: partial.startTimer,
         }),
       });
 
@@ -3612,7 +3451,7 @@ export default function TallerPanel() {
     }
   };
 
-  // Agregar o quitar un servicio rápido de las tarjetas
+  // Agregar o quitar un servicio rápido de las tarjetas asignando empleado_id e iniciando cronómetro
   const handleToggleServicioPreset = async (cardTitle: string, preset: ServicePreset) => {
     if (!ordenActiva) {
       mostrarToast("Primero selecciona un auto en pista o busca una placa arriba", "err");
@@ -3620,10 +3459,14 @@ export default function TallerPanel() {
     }
 
     const existe = ordenActiva.items.find(
-      (i) => i.code === preset.code || i.name.toLowerCase() === preset.name.toLowerCase()
+      (i) =>
+        (i.code === preset.code || i.name.toLowerCase() === preset.name.toLowerCase()) &&
+        (!i.empleado_id || i.empleado_id === empleadoLogueado.id)
     );
 
     let nuevosItems: OrderItem[];
+    let iniciarTimer = false;
+
     if (existe) {
       nuevosItems = ordenActiva.items.filter((i) => i.id !== existe.id);
     } else {
@@ -3636,14 +3479,33 @@ export default function TallerPanel() {
         price: preset.price,
         qty: 1,
         status: "Pendiente",
+        empleado_id: empleadoLogueado.id,
+        empleado_nombre: empleadoLogueado.nombre,
       };
       nuevosItems = [...ordenActiva.items, nuevo];
+      iniciarTimer = true;
     }
 
-    await sincronizarOrdenEnNeon({ items: nuevosItems });
+    // Actualización optimista inmediata con inicio de cronómetro si aún no estaba activo
+    const startedOptimistic =
+      iniciarTimer && !ordenActiva.startedAt
+        ? new Date().toISOString()
+        : ordenActiva.startedAt;
+
+    setOrdenActiva({
+      ...ordenActiva,
+      items: nuevosItems,
+      startedAt: startedOptimistic,
+      status: iniciarTimer && ordenActiva.status === "En Pista" ? "En Proceso" : ordenActiva.status,
+    });
+
+    await sincronizarOrdenEnNeon({
+      items: nuevosItems,
+      startTimer: iniciarTimer,
+    });
   };
 
-  // Agregar servicio personalizado desde la tarjeta "Otro"
+  // Agregar servicio personalizado desde la tarjeta "Otro" (SIN precios para el empleado)
   const handleAgregarServicioOtroCustom = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ordenActiva) {
@@ -3655,26 +3517,34 @@ export default function TallerPanel() {
       return;
     }
 
-    const precioNum = parseFloat(otroPrecioCustom) || 0;
     const nuevo: OrderItem = {
       id: `otro-${Date.now()}`,
       type: "SERVICE",
       category: "Otro",
       code: `OTR-${Math.floor(100 + Math.random() * 900)}`,
       name: otroNombreCustom.trim(),
-      price: precioNum,
+      price: 0,
       qty: 1,
       status: "Pendiente",
+      empleado_id: empleadoLogueado.id,
+      empleado_nombre: empleadoLogueado.nombre,
     };
 
     const nuevosItems = [...ordenActiva.items, nuevo];
     setOtroNombreCustom("");
     setOtroPrecioCustom("");
-    await sincronizarOrdenEnNeon({ items: nuevosItems });
-    mostrarToast(`"${nuevo.name}" agregado a la orden ${ordenActiva.orderNumber}`);
+
+    setOrdenActiva({
+      ...ordenActiva,
+      items: nuevosItems,
+      startedAt: ordenActiva.startedAt || new Date().toISOString(),
+    });
+
+    await sincronizarOrdenEnNeon({ items: nuevosItems, startTimer: true });
+    mostrarToast(`"${nuevo.name}" asignado a ${empleadoLogueado.nombre}`);
   };
 
-  // Agregar repuesto/insumo desde el inventario de Oficina (Tarjeta Repuestos)
+  // Agregar repuesto/insumo desde el inventario asignando empleado_id e iniciando cronómetro
   const handleAgregarRepuestoAOrden = async (prod: InventoryProduct) => {
     if (!ordenActiva) {
       mostrarToast("Selecciona primero un vehículo o auto en pista", "err");
@@ -3686,7 +3556,11 @@ export default function TallerPanel() {
       return;
     }
 
-    const existente = ordenActiva.items.find((i) => i.productId === prod.id || i.code === prod.code);
+    const existente = ordenActiva.items.find(
+      (i) =>
+        (i.productId === prod.id || i.code === prod.code) &&
+        (!i.empleado_id || i.empleado_id === empleadoLogueado.id)
+    );
     let nuevosItems: OrderItem[];
 
     if (existente) {
@@ -3709,12 +3583,20 @@ export default function TallerPanel() {
         status: "Pendiente",
         productId: prod.id,
         imageUrl: prod.imageUrl,
+        empleado_id: empleadoLogueado.id,
+        empleado_nombre: empleadoLogueado.nombre,
       };
       nuevosItems = [...ordenActiva.items, nuevo];
     }
 
-    await sincronizarOrdenEnNeon({ items: nuevosItems });
-    mostrarToast(`${prod.name} agregado a la orden ${ordenActiva.orderNumber}`);
+    setOrdenActiva({
+      ...ordenActiva,
+      items: nuevosItems,
+      startedAt: ordenActiva.startedAt || new Date().toISOString(),
+    });
+
+    await sincronizarOrdenEnNeon({ items: nuevosItems, startTimer: true });
+    mostrarToast(`${prod.name} asignado por ${empleadoLogueado.nombre}`);
   };
 
   // Cambiar estado de un ítem con 1 clic: Pendiente -> En Proceso -> Listo
@@ -3777,13 +3659,29 @@ export default function TallerPanel() {
     }
   };
 
-  // Enviar Orden Unificada a POS / Caja (Conecta con POS, Oficina, Gerencia y Clientes)
-  const handleEnviarAPosCaja = async () => {
-    if (!ordenActiva) return;
-    if (ordenActiva.items.length === 0) {
-      mostrarToast("Agrega al menos un servicio o repuesto a la orden antes de enviar a POS", "err");
+  // Enviar Orden a Oficina / Caja POS (Detiene cronómetro, pasa a EN_CAJA y transfiere servicios, repuestos y empleados)
+  const handleEnviarAPosCaja = async (targetOrder?: UnifiedOrder) => {
+    const ord = targetOrder || ordenActiva;
+    if (!ord) return;
+    if (ord.items.length === 0) {
+      mostrarToast("Agrega al menos un servicio o repuesto a la orden antes de enviar a Oficina / Caja", "err");
       return;
     }
+
+    const nowIso = new Date().toISOString();
+    const optimisticOrder: UnifiedOrder = {
+      ...ord,
+      status: "EN_CAJA",
+      completedAt: nowIso,
+      items: ord.items.map((it) => ({ ...it, status: "Listo" as const })),
+    };
+
+    if (ordenActiva?.id === ord.id) {
+      setOrdenActiva(optimisticOrder);
+    }
+    setAutosEnPista((prev) =>
+      prev.map((o) => (o.id === ord.id ? optimisticOrder : o))
+    );
 
     try {
       setEnviandoAPos(true);
@@ -3792,13 +3690,15 @@ export default function TallerPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "ENVIAR_A_POS",
-          orderId: ordenActiva.id,
+          orderId: ord.id,
         }),
       });
 
       const data = await res.json();
       if (data.success) {
-        setOrdenActiva(data.activeOrder);
+        if (ordenActiva?.id === ord.id) {
+          setOrdenActiva(data.activeOrder);
+        }
         setAutosEnPista((prev) =>
           prev.map((o) => (o.id === data.activeOrder.id ? data.activeOrder : o))
         );
@@ -3809,12 +3709,12 @@ export default function TallerPanel() {
         }
 
         setModalConfirmPos(data.posRequest || data.activeOrder);
-        mostrarToast(`Orden ${ordenActiva.orderNumber} enviada a POS / Caja con éxito`);
+        mostrarToast(`Orden #${ord.orderNumber} (${ord.plate}) enviada a Oficina / Lista para Caja`);
       } else {
-        mostrarToast(data.error || "No se pudo enviar la orden a POS", "err");
+        mostrarToast(data.error || "No se pudo enviar la orden a Oficina / POS", "err");
       }
     } catch (err) {
-      mostrarToast("Error de red al transferir a POS", "err");
+      mostrarToast("Error de red al transferir a Oficina / POS", "err");
     } finally {
       setEnviandoAPos(false);
     }
@@ -4006,160 +3906,57 @@ export default function TallerPanel() {
             </div>
           </div>
 
-          {/* Indicador de Autos en Pista y Accesos a Etapas Flotantes 01 al 08 */}
+          {/* Selector de Login de Empleado Activo + Autos en Pista + Tablero OT */}
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setMostrarFlotanteEtapa2(false);
-                setMostrarFlotanteEtapa3(false);
-                setMostrarFlotanteEtapa4(false);
-                setMostrarFlotanteEtapa5(false);
-                setMostrarFlotanteEtapa6(false);
-                setMostrarFlotanteEtapa7(false);
-                setMostrarFlotanteEtapa8(false);
-                setMostrarFlotanteEtapa1(true);
-              }}
-              className="px-3.5 py-2 rounded-2xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-xs font-semibold text-blue-300 transition-all cursor-pointer active:scale-95 flex items-center gap-2"
-            >
-              <span className="px-1.5 py-0.5 rounded-md bg-blue-500/30 text-[10px] font-bold text-white">
-                01
-              </span>
-              <span>Etapa 1: Cliente</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMostrarFlotanteEtapa1(false);
-                setMostrarFlotanteEtapa3(false);
-                setMostrarFlotanteEtapa4(false);
-                setMostrarFlotanteEtapa5(false);
-                setMostrarFlotanteEtapa6(false);
-                setMostrarFlotanteEtapa7(false);
-                setMostrarFlotanteEtapa8(false);
-                setMostrarFlotanteEtapa2(true);
-              }}
-              className="px-3.5 py-2 rounded-2xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-semibold text-emerald-300 transition-all cursor-pointer active:scale-95 flex items-center gap-2"
-            >
-              <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/30 text-[10px] font-bold text-white">
-                02
-              </span>
-              <span>Etapa 2: Vehículo o equipo</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMostrarFlotanteEtapa1(false);
-                setMostrarFlotanteEtapa2(false);
-                setMostrarFlotanteEtapa4(false);
-                setMostrarFlotanteEtapa5(false);
-                setMostrarFlotanteEtapa6(false);
-                setMostrarFlotanteEtapa7(false);
-                setMostrarFlotanteEtapa8(false);
-                setMostrarFlotanteEtapa3(true);
-              }}
-              className="px-3.5 py-2 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-xs font-semibold text-amber-300 transition-all cursor-pointer active:scale-95 flex items-center gap-2"
-            >
-              <span className="px-1.5 py-0.5 rounded-md bg-amber-500/30 text-[10px] font-bold text-white">
-                03
-              </span>
-              <span>Etapa 3: Inspección</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMostrarFlotanteEtapa1(false);
-                setMostrarFlotanteEtapa2(false);
-                setMostrarFlotanteEtapa3(false);
-                setMostrarFlotanteEtapa5(false);
-                setMostrarFlotanteEtapa6(false);
-                setMostrarFlotanteEtapa7(false);
-                setMostrarFlotanteEtapa8(false);
-                setMostrarFlotanteEtapa4(true);
-              }}
-              className="px-3.5 py-2 rounded-2xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-xs font-semibold text-purple-300 transition-all cursor-pointer active:scale-95 flex items-center gap-2"
-            >
-              <span className="px-1.5 py-0.5 rounded-md bg-purple-500/30 text-[10px] font-bold text-white">
-                04
-              </span>
-              <span>Etapa 4: Presupuesto</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMostrarFlotanteEtapa1(false);
-                setMostrarFlotanteEtapa2(false);
-                setMostrarFlotanteEtapa3(false);
-                setMostrarFlotanteEtapa4(false);
-                setMostrarFlotanteEtapa6(false);
-                setMostrarFlotanteEtapa7(false);
-                setMostrarFlotanteEtapa8(false);
-                setMostrarFlotanteEtapa5(true);
-              }}
-              className="px-3.5 py-2 rounded-2xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-xs font-semibold text-sky-300 transition-all cursor-pointer active:scale-95 flex items-center gap-2"
-            >
-              <span className="px-1.5 py-0.5 rounded-md bg-sky-500/30 text-[10px] font-bold text-white">
-                05
-              </span>
-              <span>Etapa 5: Reparación</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMostrarFlotanteEtapa1(false);
-                setMostrarFlotanteEtapa2(false);
-                setMostrarFlotanteEtapa3(false);
-                setMostrarFlotanteEtapa4(false);
-                setMostrarFlotanteEtapa5(false);
-                setMostrarFlotanteEtapa7(false);
-                setMostrarFlotanteEtapa8(false);
-                setMostrarFlotanteEtapa6(true);
-              }}
-              className="px-3.5 py-2 rounded-2xl bg-pink-500/20 hover:bg-pink-500/30 border border-pink-500/40 text-xs font-semibold text-pink-300 transition-all cursor-pointer active:scale-95 flex items-center gap-2"
-            >
-              <span className="px-1.5 py-0.5 rounded-md bg-pink-500/30 text-[10px] font-bold text-white">
-                06
-              </span>
-              <span>Etapa 6: Estado y aviso</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMostrarFlotanteEtapa1(false);
-                setMostrarFlotanteEtapa2(false);
-                setMostrarFlotanteEtapa3(false);
-                setMostrarFlotanteEtapa4(false);
-                setMostrarFlotanteEtapa5(false);
-                setMostrarFlotanteEtapa6(false);
-                setMostrarFlotanteEtapa8(false);
-                setMostrarFlotanteEtapa7(true);
-              }}
-              className="px-3.5 py-2 rounded-2xl bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 text-xs font-semibold text-teal-300 transition-all cursor-pointer active:scale-95 flex items-center gap-2"
-            >
-              <span className="px-1.5 py-0.5 rounded-md bg-teal-500/30 text-[10px] font-bold text-white">
-                07
-              </span>
-              <span>Etapa 7: Entrega y firma</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMostrarFlotanteEtapa1(false);
-                setMostrarFlotanteEtapa2(false);
-                setMostrarFlotanteEtapa3(false);
-                setMostrarFlotanteEtapa4(false);
-                setMostrarFlotanteEtapa5(false);
-                setMostrarFlotanteEtapa6(false);
-                setMostrarFlotanteEtapa7(false);
-                setMostrarFlotanteEtapa8(true);
-              }}
-              className="px-3.5 py-2 rounded-2xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-xs font-semibold text-indigo-300 transition-all cursor-pointer active:scale-95 flex items-center gap-2"
-            >
-              <span className="px-1.5 py-0.5 rounded-md bg-indigo-500/30 text-[10px] font-bold text-white">
-                08
-              </span>
-              <span>Etapa 8: Cobro y documento</span>
-            </button>
+            <div className="px-3 py-1.5 rounded-2xl bg-white/[0.03] backdrop-blur-md border border-white/[0.08] flex items-center gap-2 text-xs text-zinc-200">
+              <span className="w-2 h-2 rounded-full bg-blue-400" />
+              <span className="text-zinc-400">Empleado:</span>
+              <select
+                value={empleadoLogueado.nombre}
+                onChange={(e) => handleCambiarEmpleadoLogueado(e.target.value)}
+                className="bg-transparent text-white font-semibold focus:outline-none cursor-pointer"
+                title={`ID activo: ${empleadoLogueado.id}`}
+              >
+                {Array.from(new Set([empleadoLogueado.nombre, ...mecanicos])).map((emp) => (
+                  <option key={emp} value={emp} className="bg-[#111113] text-white">
+                    {emp}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Toggle de Roles: Modo Empleado Garaje vs Oficina */}
+            <div className="flex items-center rounded-2xl bg-white/[0.03] backdrop-blur-md border border-white/[0.08] p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setRolUsuario("EMPLEADO");
+                  mostrarToast("Modo Garaje: Precios y cobros ocultos para el operario");
+                }}
+                className={`px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer ${
+                  rolUsuario === "EMPLEADO"
+                    ? "bg-white/10 text-white font-semibold shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                🔧 Garaje
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRolUsuario("OFICINA");
+                  mostrarToast("Modo Oficina: Totales, presupuestos y cobros visibles");
+                }}
+                className={`px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer ${
+                  rolUsuario === "OFICINA"
+                    ? "bg-white/10 text-white font-semibold shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                🏢 Oficina
+              </button>
+            </div>
+
             <div className="px-3.5 py-2 rounded-2xl bg-[#111113] border border-white/5 flex items-center gap-2 text-xs font-semibold text-zinc-300">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>{autosEnPista.length} Autos en Pista</span>
@@ -4174,7 +3971,7 @@ export default function TallerPanel() {
         </div>
 
         {/* ===================================================================
-            BLOQUE 1 (SUPERIOR): BUSCADOR POR PLACA/CÉDULA Y REGISTRO EXPRESS
+            BLOQUE 1 (SUPERIOR): BUSCADOR INTELIGENTE AUTOMÁTICO E INGRESO RÁPIDO
             =================================================================== */}
         <section className="bg-[#111113] rounded-2xl border border-white/5 p-4 sm:p-5 shadow-xl relative overflow-hidden">
           <div
@@ -4185,13 +3982,13 @@ export default function TallerPanel() {
           <form onSubmit={handleBuscarPlacaOCedula} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 relative z-10">
             <div className="relative flex-1">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm pointer-events-none">
-                🔍
+                {buscandoVehiculo ? "⏳" : "🔍"}
               </span>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar vehículo por Placa (ej: ABC-123) o Cédula/RUC del cliente..."
+                placeholder="Digita Placa (ej: ABC-123) o Cédula/RUC para buscar o ingresar automáticamente..."
                 className="w-full pl-11 pr-10 h-12 rounded-xl bg-[#0a0a0a] border border-white/10 focus:border-blue-500/60 text-white text-sm font-medium placeholder:text-zinc-500 focus:outline-none transition-all"
               />
               {searchQuery && (
@@ -4209,704 +4006,1575 @@ export default function TallerPanel() {
                 </button>
               )}
             </div>
-
-            <div className="flex items-center gap-2.5">
-              <button
-                type="submit"
-                disabled={buscandoVehiculo}
-                className="h-12 px-5 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/30 text-sm font-semibold transition-all active:scale-95 cursor-pointer flex-1 sm:flex-initial"
-              >
-                {buscandoVehiculo ? "Buscando..." : "Buscar / Recepcionar"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setMostrarRegistroExpress((prev) => !prev);
-                  if (!regPlaca && searchQuery) setRegPlaca(searchQuery.toUpperCase());
-                }}
-                className="h-12 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-200 border border-white/10 text-sm font-semibold transition-all active:scale-95 cursor-pointer shrink-0"
-              >
-                + Registro Express
-              </button>
-            </div>
           </form>
 
-          {/* SI EL VEHÍCULO YA EXISTE: BARRA COMPACTA DE RECEPCIÓN E INSPECCIÓN R2 */}
-          {vehiculoEncontrado && !mostrarRegistroExpress && (
-            <div className="mt-4 pt-4 border-t border-white/5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 relative z-10">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="px-3 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 font-mono text-sm font-bold text-blue-300 tracking-wider">
-                  {vehiculoEncontrado.plate}
-                </span>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm sm:text-base font-semibold text-white">
-                      {vehiculoEncontrado.brand} {vehiculoEncontrado.model}
-                    </span>
-                    {vehiculoEncontrado.year && (
-                      <span className="text-xs px-2 py-0.5 rounded-md bg-white/5 text-zinc-300">
-                        {vehiculoEncontrado.year}
-                      </span>
-                    )}
-                    {vehiculoEncontrado.color && (
-                      <span className="text-xs text-zinc-400">• {vehiculoEncontrado.color}</span>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400 mt-0.5">
-                    <span>
-                      Cliente: <strong className="text-zinc-200">{clienteEncontrado?.name || "Cliente General"}</strong>
-                    </span>
-                    {clienteEncontrado?.identification && (
-                      <span>ID/RUC: {clienteEncontrado.identification}</span>
-                    )}
-                    {clienteEncontrado?.phone && (
-                      <a
-                        href={`https://wa.me/${clienteEncontrado.phone.replace(/[^0-9]/g, "")}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-emerald-400 hover:underline font-medium flex items-center gap-1"
-                      >
-                        <span>WhatsApp: {clienteEncontrado.phone}</span>
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2.5">
-                <div className="flex items-center bg-[#0a0a0a] border border-white/10 rounded-xl px-3 h-10">
-                  <span className="text-[11px] text-zinc-400 mr-2">Km actual:</span>
-                  <input
-                    type="number"
-                    value={kmActualInput}
-                    onChange={(e) => setKmActualInput(e.target.value)}
-                    onBlur={() => {
-                      if (ordenActiva && kmActualInput) {
-                        const km = parseInt(kmActualInput, 10);
-                        if (!isNaN(km)) {
-                          sincronizarOrdenEnNeon({
-                            mileage: km,
-                            nextOilChangeKm: km + 5000,
-                          });
-                        }
-                      }
-                    }}
-                    placeholder="Ej: 52000"
-                    className="w-24 bg-transparent text-white text-xs font-semibold focus:outline-none"
-                  />
-                </div>
-
-                <input
-                  ref={fileInputRecepcionRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  multiple
-                  onChange={handleSubirFotoRecepcion}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRecepcionRef.current?.click()}
-                  disabled={subiendoFotoRecepcion || fotosRecepcion.length >= 4}
-                  className="h-10 px-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-zinc-200 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  <span>📷</span>
-                  <span>
-                    {subiendoFotoRecepcion
-                      ? "Subiendo R2..."
-                      : `Fotos R2 (${fotosRecepcion.length}/4)`}
-                  </span>
-                </button>
-
-                {fotosRecepcion.length > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    {fotosRecepcion.map((url, idx) => (
-                      <a
-                        key={idx}
-                        href={url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="w-9 h-9 rounded-lg overflow-hidden border border-white/15 bg-black shrink-0 block"
-                        title={`Foto recepción ${idx + 1}`}
-                      >
-                        <img src={url} alt={`Recepción ${idx + 1}`} className="w-full h-full object-cover" />
-                      </a>
-                    ))}
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setMostrarModalHistorial(true)}
-                  className="h-10 px-3.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 text-xs font-semibold transition-all cursor-pointer"
-                >
-                  Ver Historial ({historialVehiculo.length})
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* SI NO EXISTE: FORMULARIO "REGISTRO EXPRESS" DE UN SOLO PASO CON 2 COLUMNAS */}
+          {/* SI NO EXISTE: TARJETA LIMPIA Y DESLIZABLE DE "INGRESO RÁPIDO" */}
           {mostrarRegistroExpress && (
             <form
               onSubmit={handleGuardarRegistroExpress}
-              className="mt-4 pt-4 border-t border-white/10 space-y-4 relative z-10 animate-fade-in"
+              className="mt-3 pt-3 border-t border-white/10 relative z-10 overflow-hidden transition-all duration-300 ease-out animate-fade-in"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm sm:text-base font-semibold text-white">
-                    Registro Express (Cliente + Vehículo + Apertura de Orden)
-                  </h3>
-                  <p className="text-xs text-zinc-400">
-                    Se sincroniza al instante en Neon DB para Clientes, Oficina, Gerencia y POS
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setMostrarRegistroExpress(false)}
-                  className="text-xs text-zinc-400 hover:text-white px-2.5 py-1 rounded-lg bg-white/5 cursor-pointer"
-                >
-                  Cerrar ✕
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-[#0a0a0a] border border-white/5 space-y-3">
-                  <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
-                    1. Datos Personales del Cliente
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <input
-                      type="text"
-                      value={regCedula}
-                      onChange={(e) => setRegCedula(e.target.value)}
-                      placeholder="Cédula / RUC *"
-                      className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
-                    />
-                    <input
-                      type="text"
-                      required
-                      value={regNombres}
-                      onChange={(e) => setRegNombres(e.target.value)}
-                      placeholder="Nombres Completos *"
-                      className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
-                    />
-                    <input
-                      type="text"
-                      value={regTelefono}
-                      onChange={(e) => setRegTelefono(e.target.value)}
-                      placeholder="Teléfono / WhatsApp"
-                      className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
-                    />
-                    <input
-                      type="email"
-                      value={regEmail}
-                      onChange={(e) => setRegEmail(e.target.value)}
-                      placeholder="Email (Opcional)"
-                      className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
-                    />
-                  </div>
+              <div className="p-3.5 rounded-2xl bg-[#0a0a0a] border border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    Ingreso Rápido
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setMostrarRegistroExpress(false)}
+                    className="text-xs text-zinc-400 hover:text-white px-2 py-0.5 rounded-lg bg-white/5 cursor-pointer"
+                  >
+                    ✕
+                  </button>
                 </div>
 
-                <div className="p-4 rounded-xl bg-[#0a0a0a] border border-white/5 space-y-3">
-                  <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-                    2. Datos del Vehículo
-                  </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                    <input
-                      type="text"
-                      required
-                      value={regPlaca}
-                      onChange={(e) => setRegPlaca(e.target.value.toUpperCase())}
-                      placeholder="Placa (ABC-123) *"
-                      className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white font-mono text-xs font-bold uppercase focus:outline-none focus:border-emerald-500/60"
-                    />
-                    <select
-                      value={regTipoVehiculo}
-                      onChange={(e) => setRegTipoVehiculo(e.target.value as any)}
-                      className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500/60"
-                    >
-                      <option value="Auto">Auto</option>
-                      <option value="SUV">SUV</option>
-                      <option value="Camioneta">Camioneta</option>
-                      <option value="Moto">Moto</option>
-                    </select>
-                    <input
-                      type="text"
-                      required
-                      value={regMarca}
-                      onChange={(e) => setRegMarca(e.target.value)}
-                      placeholder="Marca (Toyota) *"
-                      className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500/60"
-                    />
-                    <input
-                      type="text"
-                      required
-                      value={regModelo}
-                      onChange={(e) => setRegModelo(e.target.value)}
-                      placeholder="Modelo (Hilux) *"
-                      className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500/60"
-                    />
-                    <input
-                      type="number"
-                      value={regAnio}
-                      onChange={(e) => setRegAnio(e.target.value)}
-                      placeholder="Año"
-                      className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500/60"
-                    />
-                    <input
-                      type="text"
-                      value={regColor}
-                      onChange={(e) => setRegColor(e.target.value)}
-                      placeholder="Color"
-                      className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500/60"
-                    />
-                    <input
-                      type="number"
-                      value={regKilometraje}
-                      onChange={(e) => setRegKilometraje(e.target.value)}
-                      placeholder="Kilometraje actual"
-                      className="col-span-2 sm:col-span-3 h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500/60"
-                    />
-                  </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5">
+                  <input
+                    type="text"
+                    value={regCedula}
+                    onChange={(e) => setRegCedula(e.target.value)}
+                    placeholder="Cédula / RUC"
+                    className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
+                  />
+                  <input
+                    type="text"
+                    required
+                    value={regNombres}
+                    onChange={(e) => setRegNombres(e.target.value)}
+                    placeholder="Nombre *"
+                    className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
+                  />
+                  <input
+                    type="text"
+                    value={regTelefono}
+                    onChange={(e) => setRegTelefono(e.target.value)}
+                    placeholder="Teléfono"
+                    className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
+                  />
+                  <input
+                    type="text"
+                    required
+                    value={regPlaca}
+                    onChange={(e) => setRegPlaca(e.target.value.toUpperCase())}
+                    placeholder="Placa *"
+                    className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white font-mono text-xs font-bold uppercase focus:outline-none focus:border-emerald-500/60"
+                  />
+                  <input
+                    type="text"
+                    required
+                    value={regMarca}
+                    onChange={(e) => {
+                      setRegMarca(e.target.value);
+                      setRegModelo("");
+                    }}
+                    placeholder="Marca / Modelo *"
+                    className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500/60"
+                  />
+                  <input
+                    type="number"
+                    value={regKilometraje}
+                    onChange={(e) => setRegKilometraje(e.target.value)}
+                    placeholder="Km"
+                    className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500/60"
+                  />
+                  <button
+                    type="submit"
+                    disabled={guardandoExpress}
+                    className="col-span-2 sm:col-span-3 lg:col-span-1 h-10 px-4 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs font-semibold transition-all cursor-pointer active:scale-95"
+                  >
+                    {guardandoExpress ? "Iniciando..." : "▶ Guardar e Iniciar"}
+                  </button>
                 </div>
-              </div>
-
-              <div className="flex justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setMostrarRegistroExpress(false)}
-                  className="h-10 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-semibold cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={guardandoExpress}
-                  className="h-10 px-5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold transition-all cursor-pointer active:scale-95"
-                >
-                  {guardandoExpress ? "Registrando en Neon..." : "Guardar y Abrir Orden de Trabajo"}
-                </button>
               </div>
             </form>
           )}
         </section>
 
-        {/* ===================================================================
-            CUERPO CENTRAL: BLOQUE 2 (7 TARJETAS) + BLOQUE 3 (ORDEN UNIFICADA)
+                                {/* ===================================================================
+            CONTENEDOR DESLIZABLE HORIZONTAL: 8 ETAPAS (CAROUSEL GLASSMORPHISM)
             =================================================================== */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* -----------------------------------------------------------------
-              BLOQUE 2 (CENTRAL - 7 COLUMNAS EN DESKTOP):
-              LAS 7 TARJETAS DE SERVICIO DIRECTO (AL MARCAR SALEN FLOTANTES)
-              ----------------------------------------------------------------- */}
-          <div className="lg:col-span-7 space-y-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-5">
-              {SERVICE_CARDS.map((card) => {
-                const isSelected = activeCardId === card.id;
-                const countInOrder = conteoPorTarjeta[card.id] || 0;
+        <section className="bg-[#111113]/90 rounded-2xl border border-white/[0.08] p-4 sm:p-6 shadow-2xl space-y-5 overflow-hidden">
+          {/* Cabecera del Auto Seleccionado + Información Rápida */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/[0.08] pb-4">
+            {ordenActiva ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="px-3 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 font-mono text-sm font-bold text-blue-300 tracking-wider">
+                  {ordenActiva.plate}
+                </span>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm sm:text-base font-semibold text-white">
+                      {ordenActiva.vehicle}
+                    </span>
+                    <span className="text-xs font-mono text-zinc-400">
+                      #{ordenActiva.orderNumber}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-lg bg-[#0a0a0a] border border-white/10 font-mono text-xs font-bold text-emerald-400">
+                      ⏱ {formatElapsedTime(ordenActiva.startedAt, ordenActiva.completedAt, nowTick)}
+                    </span>
+                    {cronometroTecnicoActivo && (
+                      <span className="px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30 font-mono text-xs text-amber-300 animate-pulse">
+                        ⏱ Técnico: {formatCronometro(cronometroTecnicoSegundos)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400 mt-0.5">
+                    <span>
+                      Cliente: <strong className="text-zinc-200">{ordenActiva.client}</strong>
+                    </span>
+                    <span>
+                      ⛽ <strong className="text-zinc-200">{ordenActiva.fuelLevel || "1/2"}</strong>
+                    </span>
+                    <span>
+                      Servicios: <strong className="text-emerald-400">{ordenActiva.items.length}</strong>
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-zinc-300">
+                      {ordenActiva.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-xs text-zinc-400 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                <span>Digita una placa arriba o selecciona un auto en pista abajo para comenzar.</span>
+              </div>
+            )}
 
+            {/* Selector de Rol Visual */}
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-zinc-500 uppercase tracking-wider font-semibold">Modo:</span>
+              <div className="flex items-center p-1 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRolUsuario("EMPLEADO");
+                    mostrarToast("Modo Empleado: Precios ocultos");
+                  }}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    rolUsuario === "EMPLEADO"
+                      ? "bg-white/10 text-white font-semibold shadow-sm"
+                      : "text-zinc-400 hover:text-zinc-200"
+                  }`}
+                >
+                  🔧 Garaje
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRolUsuario("OFICINA");
+                    mostrarToast("Modo Oficina: Precios y cálculos visibles");
+                  }}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    rolUsuario === "OFICINA"
+                      ? "bg-white/10 text-white font-semibold shadow-sm"
+                      : "text-zinc-400 hover:text-zinc-200"
+                  }`}
+                >
+                  🏢 Oficina
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* ===================================================================
+              STEPPER DE 8 ICONOS TRANSPARENTES (GLASSMORPHISM)
+              =================================================================== */}
+          <div className="bg-white/[0.02] backdrop-blur-md border border-white/[0.08] p-2 rounded-2xl overflow-x-auto">
+            <div className="grid grid-cols-4 lg:grid-cols-8 gap-2 min-w-[620px] lg:min-w-0">
+              {[
+                {
+                  id: 0,
+                  label: "1. Cliente",
+                  icon: (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                    </svg>
+                  ),
+                },
+                {
+                  id: 1,
+                  label: "2. Vehículo",
+                  icon: (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.125-.504 1.125-1.125V14.25m-17.25 0h17.25M3.75 14.25l2.25-6.75h12l2.25 6.75" />
+                    </svg>
+                  ),
+                },
+                {
+                  id: 2,
+                  label: "3. Inspección",
+                  icon: (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                  ),
+                },
+                {
+                  id: 3,
+                  label: "4. Catálogo",
+                  icon: (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                    </svg>
+                  ),
+                },
+                {
+                  id: 4,
+                  label: "5. Taller",
+                  icon: (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.016a4.5 4.5 0 0 0 5.093-5.093c-.172-.58-.148-1.193.016-1.743l-3.07 3.07a1.5 1.5 0 0 1-2.122-2.122l3.07-3.07c-.55.164-1.163.188-1.743.016a4.5 4.5 0 0 0-5.093 5.093c.172.58.148 1.193-.016 1.743l-3.07-3.07a1.5 1.5 0 0 0-2.122 2.122l3.07 3.07Z" />
+                    </svg>
+                  ),
+                },
+                {
+                  id: 5,
+                  label: "6. Aviso",
+                  icon: (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                    </svg>
+                  ),
+                },
+                {
+                  id: 6,
+                  label: "7. Firma",
+                  icon: (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+                    </svg>
+                  ),
+                },
+                {
+                  id: 7,
+                  label: "8. Cobro/Doc",
+                  icon: (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v-.75A.75.75 0 0 1 3 4.5h.75m0 0a9.006 9.006 0 0 1 16.5 0m0 0h.75a.75.75 0 0 1 .75.75V6m0 0h-.75a.75.75 0 0 1-.75-.75V4.5m0 10.5v.75c0 .414.336.75.75.75h.75m0 0v-.75a.75.75 0 0 0-.75-.75h-.75m-15 0H3a.75.75 0 0 0-.75.75v.75m0 0h.75a.75.75 0 0 0 .75-.75v-.75" />
+                    </svg>
+                  ),
+                },
+              ].map((step) => {
+                const active = etapaActiva === step.id;
                 return (
                   <button
-                    key={card.id}
+                    key={step.id}
                     type="button"
-                    onClick={() => handleAbrirTarjetaFlotante(card.id)}
-                    className={`group text-left bg-[#111113] hover:bg-[#161618] rounded-2xl p-5 sm:p-6 min-h-[96px] sm:min-h-[104px] border transition-all duration-300 ease-out hover:-translate-y-1 shadow-lg active:scale-[0.98] overflow-hidden relative flex flex-col justify-center cursor-pointer w-full ${
-                      isSelected
-                        ? "border-blue-500/60 ring-1 ring-blue-500/30"
-                        : "border-white/5 hover:border-white/15"
+                    onClick={() => {
+                      setEtapaActiva(step.id);
+                      setPasoDeslizable(step.id === 0 ? 0 : step.id === 1 ? 1 : 2);
+                    }}
+                    className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all cursor-pointer active:scale-95 ${
+                      active
+                        ? "bg-blue-500/15 border-blue-500/40 text-blue-300 shadow-md shadow-blue-500/10"
+                        : "bg-white/[0.02] hover:bg-white/[0.06] border-white/5 text-zinc-400 hover:text-zinc-200"
                     }`}
                   >
-                    {/* Resplandor radial suave en la esquina derecha de cada tarjeta */}
-                    <div
-                      className="absolute top-0 right-0 w-36 h-36 rounded-bl-full -mr-8 -mt-8 transition-all duration-500 ease-out group-hover:scale-125 pointer-events-none"
-                      style={{
-                        background: `radial-gradient(circle at top right, ${card.glowColor}, transparent 70%)`,
-                      }}
-                    />
-
-                    <div className="flex items-center justify-between gap-3 min-w-0 relative z-10 w-full">
-                      <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
-                        {/* Ícono cuadrado redondeado con degradado vibrante exacto */}
-                        <div
-                          className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${card.gradient} shadow-md flex items-center justify-center flex-shrink-0 transition-transform duration-300 ease-out group-hover:scale-110 group-hover:-rotate-3`}
-                        >
-                          {card.icon}
-                        </div>
-
-                        <div className="min-w-0">
-                          <h3 className="text-sm sm:text-base font-semibold text-white leading-snug">
-                            {card.title}
-                          </h3>
-                          {countInOrder > 0 && (
-                            <span className="inline-block mt-0.5 text-[11px] font-medium text-emerald-400">
-                              {countInOrder} {countInOrder === 1 ? "ítem en orden" : "ítems en orden"}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Botón circular gris oscuro con el ícono chevron > a la derecha */}
-                      <div className="w-8 h-8 rounded-full bg-zinc-800/80 border border-white/5 flex items-center justify-center text-zinc-400 group-hover:text-white group-hover:translate-x-0.5 transition-all duration-200 shrink-0">
-                        <svg
-                          className="w-4 h-4 sm:w-5 sm:h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          strokeWidth="2.2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </div>
+                    <div className="p-1 rounded-lg bg-white/5">{step.icon}</div>
+                    <span className="text-[10px] sm:text-xs font-medium tracking-tight mt-1 truncate max-w-full">
+                      {step.label}
+                    </span>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* -----------------------------------------------------------------
-              BLOQUE 3 (LATERAL DERECHO - 5 COLUMNAS EN DESKTOP):
-              PANEL DE "ORDEN UNIFICADA (#OT)" EN CURSO
-              ----------------------------------------------------------------- */}
-          <div className="lg:col-span-5 bg-[#111113] rounded-2xl border border-white/5 p-5 shadow-2xl space-y-4 lg:sticky lg:top-6">
-            {!ordenActiva ? (
-              <div className="py-12 text-center space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-xl">
-                  🔧
-                </div>
-                <h3 className="text-base font-semibold text-white">
-                  Sin Orden Unificada Seleccionada
-                </h3>
-                <p className="text-xs text-zinc-400 max-w-xs mx-auto">
-                  Busca un vehículo por Placa o Cédula arriba, o selecciona uno de los{" "}
-                  <strong>Autos en Pista</strong> abajo para gestionar su orden.
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Encabezado de la Orden Unificada */}
-                <div className="flex items-start justify-between gap-3 border-b border-white/5 pb-3.5">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-300 border border-blue-500/30">
-                        #{ordenActiva.orderNumber}
+          {/* ===================================================================
+              CONTENEDOR DESLIZABLE HORIZONTAL: 8 SLIDES CON TRANSLATE-X
+              =================================================================== */}
+          <div className="overflow-hidden w-full">
+            <div
+              className="flex w-[800%] transition-transform duration-500 ease-out items-start"
+              style={{ transform: `translateX(-${etapaActiva * 12.5}%)` }}
+            >
+              {/* ===============================================================
+                  SLIDE 0: ETAPA 1 - CLIENTE Y RECEPCIÓN
+                  =============================================================== */}
+              <div className="w-[12.5%] shrink-0 pr-2 sm:pr-4 space-y-4">
+                {ordenActiva ? (
+                  <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-400" />
+                        Cliente y Vehículo Seleccionados
                       </span>
-                      <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-lg bg-white/5 text-white border border-white/10">
-                        {ordenActiva.plate}
-                      </span>
-                      <span
-                        className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
-                          getEstiloColorEstado(ordenActiva.statusColor).bg
-                        } ${getEstiloColorEstado(ordenActiva.statusColor).border} ${
-                          getEstiloColorEstado(ordenActiva.statusColor).text
-                        }`}
+                      <button
+                        type="button"
+                        onClick={() => setEtapaActiva(1)}
+                        className="px-3 py-1.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs font-semibold transition-all cursor-pointer"
                       >
-                        {ordenActiva.status}
-                      </span>
+                        Continuar a Vehículo (Paso 2) →
+                      </button>
                     </div>
-                    <h3 className="text-base font-semibold text-white mt-2">
-                      {ordenActiva.vehicle}
-                    </h3>
-                    <p className="text-xs text-zinc-400">
-                      Cliente: <span className="text-zinc-200">{ordenActiva.client}</span>
-                      {ordenActiva.mileage ? ` • ${ordenActiva.mileage.toLocaleString()} km` : ""}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-zinc-300">
-                        ⛽ Combustible: <strong className="text-white">{ordenActiva.fuelLevel || "1/2"}</strong>
-                      </span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-zinc-300">
-                        🛡️ Estado: <strong className="text-white">{(ordenActiva.generalCondition || "Bueno").split("|")[0].trim()}</strong>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setMostrarFlotanteEtapa2(true)}
-                        className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-semibold cursor-pointer transition-colors"
-                      >
-                        02 Vehículo ({ordenActiva.receptionInventory?.length || 0})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setMostrarFlotanteEtapa3(true)}
-                        className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-semibold cursor-pointer transition-colors"
-                      >
-                        03 Inspección ({etapa3Hallazgos.length})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setMostrarFlotanteEtapa4(true)}
-                        className="text-[10px] px-2 py-0.5 rounded-md bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 font-semibold cursor-pointer transition-colors"
-                      >
-                        04 Presupuesto ({ordenActiva.quoteStatus === "Aprobado por Cliente" ? "✓ Aprobado" : `$${ordenActiva.totalCost.toFixed(2)}`})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setMostrarFlotanteEtapa5(true)}
-                        className="text-[10px] px-2 py-0.5 rounded-md bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-300 font-semibold cursor-pointer transition-colors"
-                      >
-                        05 Reparación ({ordenActiva.progress || 0}%)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setMostrarFlotanteEtapa6(true)}
-                        className="text-[10px] px-2 py-0.5 rounded-md bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 text-pink-300 font-semibold cursor-pointer transition-colors"
-                      >
-                        06 Estado y aviso (PIN {ordenActiva.trackingPin || etapa6TrackingPin})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setMostrarFlotanteEtapa7(true)}
-                        className="text-[10px] px-2 py-0.5 rounded-md bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 text-teal-300 font-semibold cursor-pointer transition-colors"
-                      >
-                        07 Entrega ({ordenActiva.deliverySignatureUrl || etapa7FirmaDataUrl ? "✓ Firmado" : "Pendiente"})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setMostrarFlotanteEtapa8(true)}
-                        className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 font-semibold cursor-pointer transition-colors"
-                      >
-                        08 Cobro ({calculosCobroEtapa8.saldoPendiente <= 0 && calculosCobroEtapa8.totalOrden > 0 ? "✓ Pagado" : `Saldo $${calculosCobroEtapa8.saldoPendiente.toFixed(2)}`})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleGenerarPdfInspeccion}
-                        className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 font-semibold cursor-pointer transition-colors"
-                      >
-                        📄 PDF Inspección
-                      </button>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                      <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+                        <span className="text-zinc-500 block">Cliente</span>
+                        <strong className="text-white text-sm">{ordenActiva.client}</strong>
+                      </div>
+                      <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+                        <span className="text-zinc-500 block">Vehículo / Placa</span>
+                        <strong className="text-white text-sm">{ordenActiva.vehicle} ({ordenActiva.plate})</strong>
+                      </div>
+                      <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+                        <span className="text-zinc-500 block">Mecánico Asignado</span>
+                        <strong className="text-white text-sm">{ordenActiva.mechanic || "Sin asignar"}</strong>
+                      </div>
+                      <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+                        <span className="text-zinc-500 block">Orden #</span>
+                        <strong className="text-emerald-400 text-sm font-mono">#{ordenActiva.orderNumber}</strong>
+                      </div>
                     </div>
                   </div>
-
-                  {/* Cronómetro en Vivo */}
-                  <div className="text-right shrink-0">
-                    <div className="px-3 py-1.5 rounded-xl bg-[#0a0a0a] border border-white/10 font-mono text-sm font-bold text-emerald-400">
-                      ⏱ {formatElapsedTime(ordenActiva.startedAt, ordenActiva.completedAt, nowTick)}
-                    </div>
-                    {!ordenActiva.startedAt ? (
-                      <button
-                        type="button"
-                        onClick={handleIniciarOrden}
-                        disabled={iniciandoCronometro}
-                        className="mt-1.5 w-full px-3 py-1 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-[11px] font-semibold transition-all cursor-pointer active:scale-95"
-                      >
-                        {iniciandoCronometro ? "Iniciando..." : "▶ Iniciar Orden"}
-                      </button>
-                    ) : (
-                      <span className="text-[10px] text-zinc-400 block mt-1">
-                        Progreso: {ordenActiva.progress}%
+                ) : (
+                  <form onSubmit={handleCrearOrdenEtapa1} className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-400" />
+                        Ingreso Rápido de Cliente y Vehículo
                       </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <div>
+                        <label className="text-[11px] text-zinc-400 font-medium block mb-1">Nombre del Cliente *</label>
+                        <input
+                          type="text"
+                          required
+                          value={etapa1Nombre}
+                          onChange={(e) => setEtapa1Nombre(e.target.value)}
+                          placeholder="Nombre completo"
+                          className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-zinc-400 font-medium block mb-1">Cédula / RUT / RUC</label>
+                        <input
+                          type="text"
+                          value={etapa1Ruc}
+                          onChange={(e) => setEtapa1Ruc(e.target.value)}
+                          placeholder="Identificación"
+                          className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-zinc-400 font-medium block mb-1">Teléfono / WhatsApp *</label>
+                        <input
+                          type="text"
+                          required
+                          value={etapa1Telefono}
+                          onChange={(e) => setEtapa1Telefono(e.target.value)}
+                          placeholder="+56 9..."
+                          className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-zinc-400 font-medium block mb-1">Correo Electrónico</label>
+                        <input
+                          type="email"
+                          value={etapa1Email}
+                          onChange={(e) => setEtapa1Email(e.target.value)}
+                          placeholder="cliente@correo.com"
+                          className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-zinc-400 font-medium block mb-1">Placa / Patente *</label>
+                        <input
+                          type="text"
+                          required
+                          value={etapa1PlacaOpcional}
+                          onChange={(e) => setEtapa1PlacaOpcional(e.target.value.toUpperCase())}
+                          placeholder="ABC-123"
+                          className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white font-mono font-bold uppercase text-xs focus:outline-none focus:border-emerald-500/60"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-zinc-400 font-medium block mb-1">Marca / Modelo *</label>
+                        <input
+                          type="text"
+                          required
+                          value={etapa2Marca}
+                          onChange={(e) => setEtapa2Marca(e.target.value)}
+                          placeholder="Toyota Corolla"
+                          className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-zinc-400 font-medium block mb-1">Técnico Asignado</label>
+                        <select
+                          value={etapa1Tecnico}
+                          onChange={(e) => setEtapa1Tecnico(e.target.value)}
+                          className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
+                        >
+                          <option value="">Seleccionar técnico...</option>
+                          {mecanicos.map((emp) => (
+                            <option key={emp} value={emp}>{emp}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-zinc-400 font-medium block mb-1">Motivo de Ingreso</label>
+                        <input
+                          type="text"
+                          value={etapa1MotivoIngreso}
+                          onChange={(e) => setEtapa1MotivoIngreso(e.target.value)}
+                          placeholder="Mantenimiento preventivo..."
+                          className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <button
+                        type="submit"
+                        disabled={creandoOrdenEtapa1}
+                        className="h-10 px-6 rounded-xl bg-blue-500/25 hover:bg-blue-500/35 border border-blue-500/50 text-blue-200 text-xs font-semibold transition-all cursor-pointer"
+                      >
+                        {creandoOrdenEtapa1 ? "Iniciando orden..." : "▶ Iniciar Orden y Pasar a Vehículo"}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+
+              {/* ===============================================================
+                  SLIDE 1: ETAPA 2 - VEHÍCULO (CHECK TÁCTIL + FOTOS R2)
+                  =============================================================== */}
+              <div className="w-[12.5%] shrink-0 pr-2 sm:pr-4 space-y-4">
+                {!ordenActiva ? (
+                  <div className="py-12 text-center text-xs text-zinc-400">
+                    Selecciona un vehículo en el paso 1 para registrar el check y subir fotos R2.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    {/* Controles de Combustible, Km e Inventario */}
+                    <div className="lg:col-span-7 space-y-4">
+                      <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-zinc-300">⛽ Nivel de Combustible</span>
+                          <span className="text-xs font-mono text-emerald-400 font-bold">{etapa2NivelCombustible || "1/2"}</span>
+                        </div>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {["E (Vacío)", "1/4", "1/2", "3/4", "F (Lleno)"].map((lvl) => {
+                            const sel = (etapa2NivelCombustible || "1/2").startsWith(lvl.split(" ")[0]);
+                            return (
+                              <button
+                                key={lvl}
+                                type="button"
+                                onClick={() => setEtapa2NivelCombustible(lvl.split(" ")[0])}
+                                className={`h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                  sel
+                                    ? "bg-emerald-500/20 border border-emerald-500/50 text-emerald-300"
+                                    : "bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 text-zinc-400"
+                                }`}
+                              >
+                                {lvl.split(" ")[0]}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-zinc-300">Kilometraje de Ingreso</span>
+                          <input
+                            type="number"
+                            value={etapa2Kilometraje}
+                            onChange={(e) => setEtapa2Kilometraje(e.target.value)}
+                            placeholder="Ej: 85400"
+                            className="h-8 w-32 px-3 rounded-lg bg-black/50 border border-white/10 text-white text-xs font-mono text-right"
+                          />
+                        </div>
+                        <div className="space-y-1.5 pt-1">
+                          <span className="text-[11px] text-zinc-400 block">Inventario de lo que trae el vehículo:</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {["Gata hidráulica y palanca", "Llave de ruedas / Cruz", "Triángulos", "Botiquín", "Extintor", "Llanta de repuesto", "Tarjeta de propiedad / Matrícula"].map((item) => {
+                              const sel = etapa2InventarioTrae.includes(item);
+                              return (
+                                <button
+                                  key={item}
+                                  type="button"
+                                  onClick={() => handleToggleInventarioEtapa2(item)}
+                                  className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer ${
+                                    sel
+                                      ? "bg-blue-500/20 border border-blue-500/40 text-blue-300"
+                                      : "bg-white/[0.02] border border-white/5 text-zinc-400 hover:text-zinc-200"
+                                  }`}
+                                >
+                                  {sel ? "✓ " : "+ "}{item}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Cámara y Fotos Cloudflare R2 */}
+                    <div className="lg:col-span-5 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-zinc-300">Fotos Iniciales (Cloudflare R2)</span>
+                        {subiendoFotoRecepcion && (
+                          <span className="text-xs text-blue-400 animate-pulse font-mono">Subiendo a R2...</span>
+                        )}
+                      </div>
+
+                      <label className="border-2 border-dashed border-white/10 hover:border-white/20 rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all bg-black/20">
+                        <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                        </svg>
+                        <span className="text-xs text-zinc-300 font-medium">Tocar para tomar foto o adjuntar</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={handleSubirFotoRecepcion}
+                          className="hidden"
+                        />
+                      </label>
+
+                      {fotosRecepcion.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2">
+                          {fotosRecepcion.map((url, i) => (
+                            <img
+                              key={i}
+                              src={url}
+                              alt="Foto R2"
+                              className="w-full h-16 object-cover rounded-lg border border-white/10"
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEtapaActiva(0)}
+                    className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
+                  >
+                    ← Anterior (Cliente)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEtapaActiva(2)}
+                    className="px-4 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs font-semibold cursor-pointer"
+                  >
+                    Continuar a Inspección (Paso 3) →
+                  </button>
+                </div>
+              </div>
+
+              {/* ===============================================================
+                  SLIDE 2: ETAPA 3 - INSPECCIÓN (5 VISTAS + R2 + PDF)
+                  =============================================================== */}
+              <div className="w-[12.5%] shrink-0 pr-2 sm:pr-4 space-y-4">
+                <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-purple-400" />
+                      Inspección Visual del Vehículo (5 Vistas)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleGenerarPdfInspeccion}
+                      className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-zinc-300 hover:text-white flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                      </svg>
+                      <span>Descargar Reporte PDF</span>
+                    </button>
+                  </div>
+
+                  {/* Selector de las 5 vistas */}
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {[
+                      { id: "frontal" as const, label: "Frontal" },
+                      { id: "trasera" as const, label: "Trasera" },
+                      { id: "lateral_izq" as const, label: "Lat. Izq" },
+                      { id: "lateral_der" as const, label: "Lat. Der" },
+                      { id: "superior" as const, label: "Superior" },
+                    ].map((vista) => {
+                      const sel = etapa3VistaActiva === vista.id;
+                      return (
+                        <button
+                          key={vista.id}
+                          type="button"
+                          onClick={() => setEtapa3VistaActiva(vista.id)}
+                          className={`h-9 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                            sel
+                              ? "bg-purple-500/20 border border-purple-500/50 text-purple-300"
+                              : "bg-white/[0.02] border border-white/5 text-zinc-400 hover:text-zinc-200"
+                          }`}
+                        >
+                          {vista.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Diagrama Táctil Interactivo */}
+                  <div
+                    onClick={handleTocarEsquemaVehiculo}
+                    className="h-44 sm:h-52 rounded-xl bg-black/40 border border-white/10 relative flex items-center justify-center cursor-crosshair overflow-hidden group"
+                  >
+                    <span className="text-zinc-600 text-xs font-mono pointer-events-none">
+                      [Toca cualquier parte del esquema {etapa3VistaActiva} para marcar un hallazgo]
+                    </span>
+                    {/* Render marcas de hallazgos */}
+                    {etapa3Hallazgos
+                      .filter((h) => h.vista === etapa3VistaActiva)
+                      .map((h) => (
+                        <div
+                          key={h.id}
+                          style={{ left: `${h.x}%`, top: `${h.y}%` }}
+                          className="absolute -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-lg bg-amber-500"
+                        >
+                          !
+                        </div>
+                      ))}
+                  </div>
+
+                  {/* Lista de Hallazgos */}
+                  <div className="space-y-2">
+                    <span className="text-xs text-zinc-400 block font-medium">
+                      Hallazgos registrados ({etapa3Hallazgos.length}):
+                    </span>
+                    {etapa3Hallazgos.length === 0 ? (
+                      <div className="text-xs text-zinc-500 italic">No hay detalles o daños registrados.</div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {etapa3Hallazgos.map((h) => (
+                          <div
+                            key={h.id}
+                            className="px-2.5 py-1 rounded-lg bg-black/40 border border-white/10 flex items-center gap-2 text-xs text-zinc-200"
+                          >
+                            <span>{h.descripcion || h.tipo || "Detalle"} ({h.vista})</span>
+                            <button
+                              type="button"
+                              onClick={() => handleEliminarHallazgoEtapa3(h.id)}
+                              className="text-zinc-500 hover:text-rose-400 cursor-pointer"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>
 
-                {/* Selector de Técnico y Próximo Cambio de Aceite */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div className="bg-[#0a0a0a] border border-white/5 rounded-xl p-2.5">
-                    <label className="block text-[10px] text-zinc-400 uppercase">
-                      Técnico Asignado
-                    </label>
-                    <select
-                      value={ordenActiva.mechanic}
-                      onChange={(e) => sincronizarOrdenEnNeon({ mechanic: e.target.value })}
-                      className="w-full bg-transparent text-xs font-semibold text-white focus:outline-none mt-0.5"
-                    >
-                      {mecanicos.map((m) => (
-                        <option key={m} value={m} className="bg-[#111113] text-white">
-                          {m}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="bg-[#0a0a0a] border border-white/5 rounded-xl p-2.5">
-                    <label className="block text-[10px] text-zinc-400 uppercase">
-                      Próx. Cambio Aceite (Km)
-                    </label>
-                    <input
-                      type="number"
-                      value={ordenActiva.nextOilChangeKm || ""}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        setOrdenActiva({
-                          ...ordenActiva,
-                          nextOilChangeKm: isNaN(val) ? null : val,
-                        });
-                      }}
-                      onBlur={() =>
-                        sincronizarOrdenEnNeon({ nextOilChangeKm: ordenActiva.nextOilChangeKm })
-                      }
-                      placeholder="Ej: 57000"
-                      className="w-full bg-transparent text-xs font-semibold text-emerald-400 focus:outline-none mt-0.5"
-                    />
-                  </div>
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEtapaActiva(1)}
+                    className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
+                  >
+                    ← Anterior (Vehículo)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEtapaActiva(3)}
+                    className="px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 text-xs font-semibold cursor-pointer"
+                  >
+                    Continuar a Catálogo (Paso 4) →
+                  </button>
                 </div>
+              </div>
 
-                {/* Barra de Progreso en Tiempo Real */}
-                <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-blue-500 to-emerald-400 transition-all duration-300"
-                    style={{ width: `${Math.min(100, Math.max(5, ordenActiva.progress || 10))}%` }}
-                  />
-                </div>
-
-                {/* Lista de Servicios y Repuestos de la Orden Unificada */}
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {ordenActiva.items.length === 0 ? (
-                    <div className="py-8 text-center border border-dashed border-white/10 rounded-xl">
-                      <p className="text-xs text-zinc-400">
-                        Toca cualquiera de las <strong>7 tarjetas</strong> a la izquierda para sumar servicios o repuestos a esta orden.
-                      </p>
+              {/* ===============================================================
+                  SLIDE 3: ETAPA 4 - CATÁLOGO / PRESUPUESTO (EMPLEADO vs OFICINA)
+                  =============================================================== */}
+              <div className="w-[12.5%] shrink-0 pr-2 sm:pr-4 space-y-4">
+                {/* Banner de Lógica de Roles */}
+                {rolUsuario === "EMPLEADO" ? (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                    <span>Modo Garaje: Valores monetarios ocultos. Toca un servicio para agregarlo con tu usuario técnico.</span>
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-200 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                      <span>Modo Oficina: Precios unitarios, descuentos e impuestos activos.</span>
                     </div>
-                  ) : (
-                    ordenActiva.items.map((item) => {
-                      const statusStyle =
-                        item.status === "Listo"
-                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                          : item.status === "En Proceso"
-                          ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
-                          : "bg-zinc-800 text-zinc-300 border-white/10";
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCopiarLinkPresupuesto}
+                        className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold text-white transition-all cursor-pointer"
+                      >
+                        {copiadoLinkPresupuesto ? "✓ Copiado" : "Copiar Link"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleEnviarWhatsAppPresupuesto}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-[11px] font-semibold text-emerald-300 transition-all cursor-pointer"
+                      >
+                        📲 WhatsApp
+                      </button>
+                    </div>
+                  </div>
+                )}
 
+                {/* Tarjetas Rápidas de Servicios Minimalistas con Glassmorphism */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-zinc-300">Servicios Rápidos (1 toque para sumar a la orden):</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {SERVICE_CARDS.slice(0, 8).map((card) => {
+                      const firstPreset = card.presets[0] || {
+                        code: `${card.id.toUpperCase()}-001`,
+                        name: card.title,
+                        price: 25.0,
+                        subCategory: card.title,
+                      };
                       return (
                         <div
-                          key={item.id}
-                          className="p-3 rounded-xl bg-[#161618] border border-white/5 flex items-center justify-between gap-2.5"
+                          key={card.id}
+                          onClick={() => handleToggleServicioPreset(card.title, firstPreset)}
+                          className="p-3 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] backdrop-blur-md border border-white/[0.08] transition-all cursor-pointer active:scale-95 space-y-2 group"
                         >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-400 font-mono">
-                                {item.type === "PART" ? "REP" : "SRV"}
-                              </span>
-                              <p className="text-xs font-semibold text-white truncate">
-                                {item.name}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs font-bold text-emerald-400">
-                                ${((Number(item.price) || 0) * (item.qty || 1)).toFixed(2)}
-                              </span>
-                              <div className="flex items-center gap-1 bg-[#0a0a0a] rounded-lg px-1.5 py-0.5 border border-white/5">
-                                <button
-                                  type="button"
-                                  onClick={() => handleCambiarCantidadItem(item.id, -1)}
-                                  className="text-xs text-zinc-400 hover:text-white px-1 cursor-pointer"
-                                >
-                                  -
-                                </button>
-                                <span className="text-[11px] font-semibold text-white px-1">
-                                  {item.qty}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleCambiarCantidadItem(item.id, 1)}
-                                  className="text-xs text-zinc-400 hover:text-white px-1 cursor-pointer"
-                                >
-                                  +
-                                </button>
-                              </div>
-                            </div>
+                          <div className="flex items-center justify-between">
+                            <div className="p-2 rounded-xl bg-white/5">{card.icon}</div>
+                            <span className="text-[10px] text-zinc-500 group-hover:text-zinc-300 font-semibold">+ Sumar</span>
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold text-white leading-tight">{card.title}</div>
+                            <div className="text-[10px] text-zinc-400 truncate">{firstPreset.name}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Lista de Ítems en la Orden */}
+                <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-zinc-200">
+                      Servicios y Repuestos en la Orden ({ordenActiva?.items.length || 0})
+                    </span>
+                    {rolUsuario === "OFICINA" && (
+                      <span className="text-xs font-mono font-bold text-emerald-400">
+                        Total: ${calculosPresupuestoEtapa4.total.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+
+                  {!ordenActiva || ordenActiva.items.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-zinc-500 italic">
+                      No hay servicios añadidos todavía. Toca una tarjeta rápida de arriba.
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-white/5">
+                      {ordenActiva.items.map((it) => (
+                        <div key={it.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
+                          <div className="space-y-0.5">
+                            <span className="font-semibold text-white block">{it.name}</span>
+                            <span className="text-[10px] text-zinc-400">
+                              Asignado: {it.empleado_nombre || it.empleado_id || "Taller general"} • Estado: {it.status}
+                            </span>
                           </div>
 
-                          <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex items-center gap-3">
+                            {/* Si es oficina, mostrar precio unitario */}
+                            {rolUsuario === "OFICINA" && (
+                              <span className="font-mono text-zinc-300">
+                                ${(it.price || 0).toFixed(2)}
+                              </span>
+                            )}
                             <button
                               type="button"
-                              onClick={() => handleCiclarEstadoItem(item.id)}
-                              title="Clic para cambiar estado: Pendiente → En Proceso → Listo"
-                              className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all cursor-pointer active:scale-95 ${statusStyle}`}
+                              onClick={() => handleCiclarEstadoItem(it.id)}
+                              className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-[10px] text-zinc-300 cursor-pointer"
                             >
-                              {item.status}
+                              {it.status}
                             </button>
-
                             <button
                               type="button"
-                              onClick={() => handleEliminarItemOrden(item.id)}
-                              className="w-7 h-7 rounded-lg bg-white/5 hover:bg-rose-500/20 text-zinc-400 hover:text-rose-300 flex items-center justify-center text-xs cursor-pointer"
-                              title="Quitar ítem"
+                              onClick={() => handleEliminarItemEtapa4(it.id)}
+                              className="text-zinc-500 hover:text-rose-400 text-xs cursor-pointer"
                             >
                               ✕
                             </button>
                           </div>
                         </div>
-                      );
-                    })
-                  )}
-                </div>
-
-                {/* Evidencia Fotográfica (Cloudflare R2) vinculada a la orden */}
-                <div className="pt-2 border-t border-white/5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-zinc-400">
-                      Evidencia Fotográfica R2 ({ordenActiva.evidencePhotos?.length || 0})
-                    </span>
-                    <input
-                      ref={fileInputEvidenciaRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      multiple
-                      onChange={handleSubirFotoEvidencia}
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputEvidenciaRef.current?.click()}
-                      disabled={subiendoEvidencia}
-                      className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-zinc-200 transition-all cursor-pointer"
-                    >
-                      {subiendoEvidencia ? "Subiendo a R2..." : "📎 Adjuntar Foto R2"}
-                    </button>
-                  </div>
-
-                  {ordenActiva.evidencePhotos && ordenActiva.evidencePhotos.length > 0 && (
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                      {ordenActiva.evidencePhotos.map((url, idx) => (
-                        <a
-                          key={idx}
-                          href={url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="w-12 h-12 rounded-xl overflow-hidden border border-white/15 bg-black shrink-0 block"
-                        >
-                          <img src={url} alt={`Evidencia ${idx + 1}`} className="w-full h-full object-cover" />
-                        </a>
                       ))}
                     </div>
                   )}
                 </div>
 
-                {/* Total Acumulado y Botón [ Enviar a POS / Caja ] */}
-                <div className="pt-3 border-t border-white/10 space-y-3">
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-xs text-zinc-400">
-                      Total Orden ({ordenActiva.items.reduce((a, b) => a + (b.qty || 1), 0)} ítems)
-                    </span>
-                    <span className="text-2xl font-bold text-emerald-400">
-                      ${Number(ordenActiva.totalCost || 0).toFixed(2)}
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEtapaActiva(2)}
+                    className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
+                  >
+                    ← Anterior (Inspección)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEtapaActiva(4)}
+                    className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-semibold cursor-pointer"
+                  >
+                    Continuar a Taller / Reparación (Paso 5) →
+                  </button>
+                </div>
+              </div>
+
+              {/* ===============================================================
+                  SLIDE 4: ETAPA 5 - TALLER / REPARACIÓN (TIEMPOS, VOZ Y CHAT)
+                  =============================================================== */}
+              <div className="w-[12.5%] shrink-0 pr-2 sm:pr-4 space-y-4">
+                {/* 3 Botones Transparentes de Acción Rápida */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Botón 1: Cronómetro Tiempos */}
+                  <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between gap-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+                        <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                        Cronómetro
+                      </span>
+                      <span className="text-xs font-mono font-bold text-emerald-400">
+                        {formatCronometro(cronometroTecnicoSegundos)}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleToggleCronometroTecnico}
+                      className={`h-10 w-full rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                        cronometroTecnicoActivo
+                          ? "bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300"
+                          : "bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-300"
+                      }`}
+                    >
+                      <span>{cronometroTecnicoActivo ? "⏸ Pausar Tarea" : "▶ Iniciar Tarea"}</span>
+                    </button>
+                  </div>
+
+                  {/* Botón 2: Grabadora Voz R2 */}
+                  <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between gap-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+                        <svg className="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v7.5a3 3 0 0 1-3 3Z" />
+                        </svg>
+                        Nota de Voz (R2)
+                      </span>
+                      {subiendoAudioEtapa5 && (
+                        <span className="text-[10px] text-blue-400 animate-pulse">Subiendo...</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleToggleGrabacionNotaVozEtapa5}
+                      className={`h-10 w-full rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                        grabandoAudioEtapa5
+                          ? "bg-rose-500/20 border border-rose-500/50 text-rose-300 animate-pulse"
+                          : "bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-zinc-200"
+                      }`}
+                    >
+                      <span>{grabandoAudioEtapa5 ? "⏹ Detener y Subir" : "🎙 Grabar Audio"}</span>
+                    </button>
+                  </div>
+
+                  {/* Botón 3: Fotos de Avance R2 */}
+                  <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between gap-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+                        <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                        </svg>
+                        Fotos de Avance (R2)
+                      </span>
+                    </div>
+                    <label className="h-10 w-full rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-zinc-200 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all">
+                      <span>📷 Tomar / Subir Foto</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleSubirFotoAvanceEtapa5}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Chat Interno y Horas de la Orden */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Chat Interno */}
+                  <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
+                    <span className="text-xs font-semibold text-zinc-300 block">💬 Chat Interno de la Orden</span>
+                    <div className="h-44 overflow-y-auto space-y-2 p-2 rounded-xl bg-black/30 border border-white/5">
+                      {etapa5ChatMensajes.length === 0 ? (
+                        <div className="text-center py-8 text-xs text-zinc-500 italic">
+                          No hay comentarios en esta orden. Escribe una nota para el equipo.
+                        </div>
+                      ) : (
+                        etapa5ChatMensajes.map((msg) => (
+                          <div key={msg.id} className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5 text-xs space-y-1">
+                            <div className="flex items-center justify-between text-[10px] text-zinc-400">
+                              <strong className="text-zinc-200">{msg.author}</strong>
+                              <span>{msg.createdAt}</span>
+                            </div>
+                            <div className="text-zinc-300">{msg.text}</div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={etapa5ChatTexto}
+                        onChange={(e) => setEtapa5ChatTexto(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleEnviarMensajeChatEtapa5();
+                          }
+                        }}
+                        placeholder="Escribe un mensaje para el equipo..."
+                        className="flex-1 h-9 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleEnviarMensajeChatEtapa5}
+                        className="h-9 px-3 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-semibold cursor-pointer"
+                      >
+                        Enviar
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Registro de Horas por Técnicos */}
+                  <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
+                    <span className="text-xs font-semibold text-zinc-300 block">⏱ Horas Registradas por Técnicos</span>
+                    <div className="h-44 overflow-y-auto space-y-1.5 p-2 rounded-xl bg-black/30 border border-white/5 text-xs">
+                      {etapa5HorasRegistros.length === 0 ? (
+                        <div className="text-center py-8 text-zinc-500 italic">
+                          No hay registros de horas. Inicia el cronómetro arriba o añade un intervalo manual.
+                        </div>
+                      ) : (
+                        etapa5HorasRegistros.map((reg) => (
+                          <div key={reg.id} className="p-2 rounded-lg bg-white/[0.03] border border-white/5 flex items-center justify-between">
+                            <div>
+                              <strong className="text-white">{reg.technician}</strong>: {reg.taskDescription}
+                            </div>
+                            <span className="font-mono text-emerald-400 font-bold">
+                              {reg.hours}h {reg.minutes}m
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEtapaActiva(3)}
+                    className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
+                  >
+                    ← Anterior (Catálogo)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEtapaActiva(5)}
+                    className="px-4 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs font-semibold cursor-pointer"
+                  >
+                    Continuar a Aviso y Estado (Paso 6) →
+                  </button>
+                </div>
+              </div>
+
+              {/* ===============================================================
+                  SLIDE 5: ETAPA 6 - ESTADO, AVISO AUTOMÁTICO Y PIN DE SEGUIMIENTO
+                  =============================================================== */}
+              <div className="w-[12.5%] shrink-0 pr-2 sm:pr-4 space-y-4">
+                <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-teal-400 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-teal-400" />
+                      Estado de la Orden y Aviso Automático al Cliente
                     </span>
                   </div>
 
+                  {/* Chips de Estados con Automatización Instantánea */}
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] text-zinc-400 block font-medium">
+                      Toca un estado para actualizar Neon DB y autogenerar el texto para el cliente:
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                      {etapa6EstadosLista.map((st) => {
+                        const sel = etapa6EstadoSeleccionado.toLowerCase() === st.name.toLowerCase();
+                        const estilo = getEstiloColorEstado(st.color);
+                        return (
+                          <button
+                            key={st.id}
+                            type="button"
+                            onClick={() => handleSeleccionarEstadoEtapa6(st)}
+                            className={`p-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer flex flex-col items-center gap-1 active:scale-95 ${
+                              sel
+                                ? `${estilo.bg} ${estilo.border} ${estilo.text} ring-1 ring-white/20 shadow-lg`
+                                : "bg-white/[0.02] hover:bg-white/[0.06] border-white/5 text-zinc-400 hover:text-zinc-200"
+                            }`}
+                          >
+                            <span className={`w-2 h-2 rounded-full ${estilo.dot}`} />
+                            <span className="truncate max-w-full">{st.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Tarjeta de Credenciales de Seguimiento (PIN + URL) */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-2">
+                    <div className="lg:col-span-5 p-4 rounded-xl bg-black/40 border border-white/10 space-y-3">
+                      <span className="text-xs font-semibold text-zinc-300 block">
+                        🔑 Credenciales de Seguimiento en Línea
+                      </span>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-zinc-400">Orden de Trabajo:</span>
+                        <strong className="text-white font-mono">#{ordenActiva?.orderNumber || "---"}</strong>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-zinc-400">PIN de Seguridad:</span>
+                        <div className="flex items-center gap-2">
+                          <strong className="text-emerald-400 font-mono text-sm">{etapa6TrackingPin}</strong>
+                          <button
+                            type="button"
+                            onClick={handleGenerarNuevoPinEtapa6}
+                            className="p-1 rounded bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs cursor-pointer"
+                            title="Regenerar PIN"
+                          >
+                            🔄
+                          </button>
+                        </div>
+                      </div>
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={handleCopiarLinkSeguimientoEtapa6}
+                          className="w-full h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer"
+                        >
+                          {copiadoLinkSeguimiento ? "✓ ¡Link de Seguimiento Copiado!" : "📋 Copiar Link de Seguimiento"}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Mensaje Autogenerado y Envíos 1-Clic */}
+                    <div className="lg:col-span-7 p-4 rounded-xl bg-black/40 border border-white/10 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-zinc-300">
+                          Mensaje Autogenerado para el Cliente:
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleEnviarWhatsAppAvisoEtapa6}
+                            className="h-8 px-3 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+                          >
+                            <span>💬 Enviar WhatsApp</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleEnviarCorreoAvisoEtapa6}
+                            className="h-8 px-3 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+                          >
+                            <span>✉️ Correo</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <textarea
+                        rows={3}
+                        value={etapa6MensajeAviso}
+                        onChange={(e) => setEtapa6MensajeAviso(e.target.value)}
+                        className="w-full p-2.5 rounded-xl bg-black/60 border border-white/10 text-white text-xs focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
                   <button
                     type="button"
-                    onClick={handleEnviarAPosCaja}
-                    disabled={enviandoAPos || ordenActiva.items.length === 0}
-                    className="w-full h-12 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-semibold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed shadow-lg"
+                    onClick={() => setEtapaActiva(4)}
+                    className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
                   >
-                    <span>
-                      {enviandoAPos
-                        ? "Sincronizando POS, Stock y Tiempos..."
-                        : "Enviar a POS / Caja"}
-                    </span>
+                    ← Anterior (Taller)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEtapaActiva(6)}
+                    className="px-4 py-2 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 text-teal-300 text-xs font-semibold cursor-pointer"
+                  >
+                    Continuar a Firma y Entrega (Paso 7) →
                   </button>
                 </div>
-              </>
-            )}
+              </div>
+
+              {/* ===============================================================
+                  SLIDE 6: ETAPA 7 - ENTREGA EN 3 PASOS + FIRMA EN PANTALLA O REMOTA
+                  =============================================================== */}
+              <div className="w-[12.5%] shrink-0 pr-2 sm:pr-4 space-y-4">
+                <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4">
+                  {/* Cabecera de 3 Pasos de Entrega */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-teal-400" />
+                      <span className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider">
+                        Entrega en 3 Pasos y Firma de Recepción
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-400">
+                      <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-zinc-300">1. Verificación</span>
+                      <span>→</span>
+                      <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-zinc-300">2. Informe</span>
+                      <span>→</span>
+                      <span className="px-2 py-0.5 rounded-md bg-teal-500/20 border border-teal-500/40 text-teal-300">3. Firma</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                    {/* PASO 1 Y 2: CHECKLIST + INFORME TÉCNICO AUTOGENERADO */}
+                    <div className="lg:col-span-7 space-y-4">
+                      {/* Paso 1: Checklist de Verificación de Entrega */}
+                      <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2.5">
+                        <span className="text-xs font-semibold text-zinc-200 block">
+                          Paso 1: Verificación de Entrega al Cliente
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                          {[
+                            { key: "vehiculoLimpio" as const, label: "Vehículo limpio (interior y exterior)" },
+                            { key: "trabajosVerificados" as const, label: "Niveles de fluidos y torque revisados" },
+                            { key: "pertenenciasEntregadas" as const, label: "Pertenencias del cliente devueltas" },
+                            { key: "repuestosMostrados" as const, label: "Prueba de ruta aprobada sin testigos" },
+                          ].map((chk) => {
+                            const val = Boolean(etapa7Checklist[chk.key]);
+                            return (
+                              <label
+                                key={chk.key}
+                                className="p-2.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 flex items-center gap-2.5 cursor-pointer text-zinc-300 transition-all select-none"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={val}
+                                  onChange={(e) =>
+                                    setEtapa7Checklist({ ...etapa7Checklist, [chk.key]: e.target.checked })
+                                  }
+                                  className="w-4 h-4 rounded text-teal-500 bg-black/60 border-white/20 focus:ring-0 cursor-pointer"
+                                />
+                                <span className="text-[11px] font-medium leading-tight">{chk.label}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Paso 2: Informe Técnico de la Orden */}
+                      <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-zinc-200">
+                            Paso 2: Informe Técnico de Trabajos
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleAutogenerarInformeTecnico}
+                            className="px-2.5 py-1 rounded-lg bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 text-teal-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+                          >
+                            <span>✨ Autogenerar con Etapas Previas</span>
+                          </button>
+                        </div>
+
+                        <textarea
+                          rows={4}
+                          value={etapa7InformeTecnico}
+                          onChange={(e) => setEtapa7InformeTecnico(e.target.value)}
+                          placeholder="Resumen técnico de tareas ejecutadas, repuestos cambiados y recomendaciones de mantenimiento..."
+                          className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white text-xs font-mono leading-relaxed focus:outline-none focus:border-teal-500/50"
+                        />
+
+                        <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                          <span>Adjunto Cloudflare R2: {etapa7InformeAdjuntoUrl ? "✓ Adjuntado" : "Ninguno"}</span>
+                          <label className="text-teal-400 hover:text-teal-300 font-semibold cursor-pointer">
+                            <span>+ Adjuntar PDF/Archivo R2</span>
+                            <input
+                              type="file"
+                              accept=".pdf,image/*"
+                              onChange={handleSubirInformeTecnicoEtapa7}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* PASO 3: FIRMA DIGITAL EN PANTALLA O REMOTA */}
+                    <div className="lg:col-span-5 space-y-4">
+                      {/* Lienzo Canvas Minimalista Táctil */}
+                      <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-zinc-200">
+                            Paso 3: Firma en Pantalla (Tablet / Celular)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={limpiarCanvasFirmaEtapa7}
+                            className="text-[11px] text-zinc-400 hover:text-white px-2 py-0.5 rounded bg-white/5 transition-all cursor-pointer"
+                          >
+                            Limpiar
+                          </button>
+                        </div>
+
+                        <div className="h-44 rounded-xl bg-[#0a0a0c] border border-white/10 relative overflow-hidden flex items-center justify-center">
+                          <canvas
+                            ref={canvasFirmaEtapa7Ref}
+                            width={420}
+                            height={176}
+                            onMouseDown={iniciarTrazoFirmaEtapa7}
+                            onMouseMove={moverTrazoFirmaEtapa7}
+                            onMouseUp={terminarTrazoFirmaEtapa7}
+                            onMouseLeave={terminarTrazoFirmaEtapa7}
+                            onTouchStart={iniciarTrazoFirmaEtapa7}
+                            onTouchMove={moverTrazoFirmaEtapa7}
+                            onTouchEnd={terminarTrazoFirmaEtapa7}
+                            className="w-full h-full cursor-crosshair touch-none select-none"
+                          />
+                          {!tieneTrazosFirmaEtapa7Ref.current && (
+                            <div className="absolute pointer-events-none text-zinc-600 text-xs font-mono">
+                              [Firma aquí con el dedo o puntero táctil]
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleGuardarEtapa7EntregaFirma()}
+                          disabled={guardandoEtapa7}
+                          className="w-full h-11 rounded-xl bg-teal-500 hover:bg-teal-400 text-black text-xs sm:text-sm font-bold shadow-lg shadow-teal-500/20 transition-all cursor-pointer active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          <span>{guardandoEtapa7 ? "Guardando..." : "Guardar y Pasar a Caja (Paso 8) →"}</span>
+                        </button>
+                      </div>
+
+                      {/* Firma a Distancia (WhatsApp o Correo) */}
+                      <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-zinc-300">
+                            ¿Cliente no está en el taller?
+                          </span>
+                          <span className="text-[10px] text-teal-400 font-semibold uppercase">Firma a Distancia</span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400">
+                          Envía el link al cliente para que revise el informe y firme desde su celular:
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={handleEnviarWhatsAppAceptacionEtapa7}
+                            className="h-9 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            <span>📲 WhatsApp</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCopiarLinkFirmaEtapa7}
+                            className="h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            <span>{copiadoLinkFirmaEtapa7 ? "✓ Copiado" : "📋 Copiar Link"}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEtapaActiva(5)}
+                    className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
+                  >
+                    ← Anterior (Aviso)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEtapaActiva(7)}
+                    className="px-4 py-2 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 text-teal-300 text-xs font-semibold cursor-pointer"
+                  >
+                    Siguiente: Cobro y Documentos (Paso 8) →
+                  </button>
+                </div>
+              </div>
+
+              {/* ===============================================================
+                  SLIDE 7: ETAPA 8 - COBRO CONECTADO AL POS DE OFICINA + DOCUMENTOS
+                  =============================================================== */}
+              <div className="w-[12.5%] shrink-0 pr-2 sm:pr-4 space-y-4">
+                <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-5">
+                  {/* SECCIÓN 1: CONEXIÓN DIRECTA CON EL MÓDULO POS DE OFICINA */}
+                  <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/25 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                        <h3 className="text-sm sm:text-base font-bold text-white">
+                          Conexión Directa con POS de Oficina (/pos/venta)
+                        </h3>
+                      </div>
+                      <p className="text-xs text-zinc-300 max-w-xl">
+                        Los servicios y repuestos registrados en garaje se transfieren a la caja de oficina con precios editables para el cobro oficial, sincronizando inventario y evitando cajas paralelas.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        disabled={enviandoAPos || !ordenActiva}
+                        onClick={() => ordenActiva && handleEnviarAPosCaja(ordenActiva)}
+                        className="h-11 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs sm:text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all cursor-pointer active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                      >
+                        <span>🚀</span>
+                        <span>
+                          {enviandoAPos
+                            ? "Transfiriendo..."
+                            : ordenActiva?.status === "EN_CAJA"
+                            ? "✓ En Oficina / Listo para Caja"
+                            : "Enviar a Oficina / Listo para Caja"}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => router.push("/pos/venta")}
+                        className="h-11 px-4 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <span>Abrir POS →</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* SECCIÓN 2: ABONOS, PAGOS PARCIALES/TOTALES Y SALDO EN VIVO */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                    {/* Tarjetas de Saldos en Vivo */}
+                    <div className="lg:col-span-5 space-y-3">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-1 text-center">
+                          <span className="text-[10px] text-zinc-400 block uppercase font-medium">Total Orden</span>
+                          <strong className="text-white text-sm font-mono block">
+                            ${(Number(ordenActiva?.totalCost) || Number(calculosPresupuestoEtapa4.total) || 0).toFixed(2)}
+                          </strong>
+                        </div>
+                        <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-1 text-center">
+                          <span className="text-[10px] text-zinc-400 block uppercase font-medium">Abonado</span>
+                          <strong className="text-emerald-400 text-sm font-mono block">
+                            ${(ordenActiva?.totalPaid || 0).toFixed(2)}
+                          </strong>
+                        </div>
+                        <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-1 text-center">
+                          <span className="text-[10px] text-zinc-400 block uppercase font-medium">Saldo Pendiente</span>
+                          <strong className="text-amber-400 text-sm font-mono block">
+                            ${(ordenActiva?.balanceDue !== undefined ? ordenActiva.balanceDue : Math.max(0, (Number(ordenActiva?.totalCost) || Number(calculosPresupuestoEtapa4.total) || 0) - (ordenActiva?.totalPaid || 0))).toFixed(2)}
+                          </strong>
+                        </div>
+                      </div>
+
+                      {/* Historial de Abonos Registrados */}
+                      <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2">
+                        <span className="text-xs font-semibold text-zinc-300 block">
+                          Abonos y Pagos Registrados ({(ordenActiva?.payments || []).length})
+                        </span>
+                        <div className="max-h-36 overflow-y-auto space-y-1.5 divide-y divide-white/5 text-xs">
+                          {(ordenActiva?.payments || []).length === 0 ? (
+                            <div className="text-center py-4 text-zinc-500 italic text-[11px]">
+                              Sin abonos previos. Registra uno al lado.
+                            </div>
+                          ) : (
+                            ordenActiva?.payments?.map((p) => (
+                              <div key={p.id} className="pt-1.5 flex items-center justify-between text-zinc-300">
+                                <div>
+                                  <strong className="text-white font-medium">{p.method}</strong>
+                                  <span className="text-[10px] text-zinc-500 block">{p.reference} • {p.date}</span>
+                                </div>
+                                <span className="font-mono font-bold text-emerald-400">+${Number(p.amount).toFixed(2)}</span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Formulario de Registro Rápido de Abonos / Pasarela */}
+                    <div className="lg:col-span-7 p-4 rounded-xl bg-black/40 border border-white/10 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-zinc-200">
+                          Registrar Abono o Pago Inmediato
+                        </span>
+                        <span className="text-[11px] text-zinc-400">Actualiza saldo automáticamente</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[11px] text-zinc-400 block mb-1">Monto del Abono ($) *</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={etapa8AbonoMonto}
+                            onChange={(e) => setEtapa8AbonoMonto(e.target.value)}
+                            placeholder="0.00"
+                            className="w-full h-10 px-3 rounded-xl bg-black/60 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-emerald-500/60"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] text-zinc-400 block mb-1">Forma de Pago *</label>
+                          <select
+                            value={etapa8AbonoMetodo}
+                            onChange={(e) => setEtapa8AbonoMetodo(e.target.value as any)}
+                            className="w-full h-10 px-3 rounded-xl bg-black/60 border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500/60"
+                          >
+                            <option value="EFECTIVO">💵 Efectivo</option>
+                            <option value="TARJETA">💳 Tarjeta de Débito / Crédito</option>
+                            <option value="TRANSFERENCIA">🏦 Transferencia Bancaria</option>
+                            <option value="LINK_PAGO">🔗 Link de Pago Web (Pasarela)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <input
+                          type="text"
+                          value={etapa8AbonoReferencia}
+                          onChange={(e) => setEtapa8AbonoReferencia(e.target.value)}
+                          placeholder="Referencia / N° Comprobante / Voucher..."
+                          className="flex-1 h-10 px-3 rounded-xl bg-black/60 border border-white/10 text-white text-xs focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          disabled={etapa8RegistrandoPago || !etapa8AbonoMonto}
+                          onClick={() => handleRegistrarAbonoPagoEtapa8()}
+                          className="h-10 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                        >
+                          {etapa8RegistrandoPago ? "Guardando..." : "+ Registrar Abono"}
+                        </button>
+                      </div>
+
+                      {etapa8AbonoMetodo === "LINK_PAGO" && (
+                        <div className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs flex items-center justify-between text-blue-200">
+                          <span>Pasarela activa: Link de pago web para el cliente.</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (ordenActiva) {
+                                const url = `${window.location.origin}/taller/seguimiento?orden=${ordenActiva.orderNumber}&pin=${etapa6TrackingPin}&pago=1`;
+                                navigator.clipboard.writeText(url);
+                                mostrarToast("Link de pago copiado");
+                              }
+                            }}
+                            className="px-2.5 py-1 rounded-md bg-blue-500/20 hover:bg-blue-500/30 text-[11px] font-semibold text-blue-300 cursor-pointer"
+                          >
+                            Copiar Link de Pago Web
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* SECCIÓN 3: BARRA FINAL DE 3 BOTONES CON ICONOS TRANSPARENTES SUAVES */}
+                  <div className="space-y-2 pt-2 border-t border-white/5">
+                    <span className="text-xs font-semibold text-zinc-300 block">
+                      Emisión de Documentos en 1 Clic:
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {/* Botón 1: Descargar / Imprimir Orden en PDF */}
+                      <button
+                        type="button"
+                        onClick={() => setModalImpresionDoc("PDF")}
+                        className="h-14 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] backdrop-blur-md border border-white/[0.08] text-xs font-semibold text-zinc-200 hover:text-white flex items-center justify-center gap-3 transition-all cursor-pointer active:scale-95 shadow-sm group"
+                      >
+                        <div className="p-2 rounded-xl bg-white/5 group-hover:bg-white/10 transition-colors">
+                          <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                          </svg>
+                        </div>
+                        <div className="text-left">
+                          <span className="block font-bold">1. Orden en PDF con Logo</span>
+                          <span className="text-[10px] text-zinc-400">Reporte oficial con firma</span>
+                        </div>
+                      </button>
+
+                      {/* Botón 2: Imprimir Ticket Térmico 80mm/58mm */}
+                      <button
+                        type="button"
+                        onClick={() => setModalImpresionDoc("TICKET")}
+                        className="h-14 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] backdrop-blur-md border border-white/[0.08] text-xs font-semibold text-zinc-200 hover:text-white flex items-center justify-center gap-3 transition-all cursor-pointer active:scale-95 shadow-sm group"
+                      >
+                        <div className="p-2 rounded-xl bg-white/5 group-hover:bg-white/10 transition-colors">
+                          <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.656" />
+                          </svg>
+                        </div>
+                        <div className="text-left">
+                          <span className="block font-bold">2. Ticket Térmico</span>
+                          <span className="text-[10px] text-zinc-400">POS 80mm / 58mm</span>
+                        </div>
+                      </button>
+
+                      {/* Botón 3: Imprimir Etiqueta con Código QR */}
+                      <button
+                        type="button"
+                        onClick={() => setModalImpresionDoc("ETIQUETA_QR")}
+                        className="h-14 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] backdrop-blur-md border border-white/[0.08] text-xs font-semibold text-zinc-200 hover:text-white flex items-center justify-center gap-3 transition-all cursor-pointer active:scale-95 shadow-sm group"
+                      >
+                        <div className="p-2 rounded-xl bg-white/5 group-hover:bg-white/10 transition-colors">
+                          <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 14.625h3v3h-3zM18 18h3v3h-3zM18 13.5h3v1.5H18zM13.5 19.5h1.5v3h-1.5z" />
+                          </svg>
+                        </div>
+                        <div className="text-left">
+                          <span className="block font-bold">3. Etiqueta con QR</span>
+                          <span className="text-[10px] text-zinc-400">Para llave y parabrisas</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEtapaActiva(6)}
+                    className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
+                  >
+                    ← Anterior (Firma)
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
 
         {/* ===================================================================
-            FILA INFERIOR: "AUTOS EN PISTA" (TARJETAS HORIZONTALES COMPACTAS)
+            FILA INFERIOR: "AUTOS EN PISTA" (MODO EMPLEADO: SIN REFERENCIA A PRECIOS)
             =================================================================== */}
         <section className="space-y-3 pt-2">
           <div className="flex items-center justify-between">
@@ -4938,52 +5606,120 @@ export default function TallerPanel() {
             <div className="flex gap-3.5 overflow-x-auto pb-2">
               {autosEnPista.map((auto) => {
                 const activo = ordenActiva?.id === auto.id;
+                const enCaja = auto.status === "EN_CAJA" || auto.status === "LISTO_PARA_COBRO";
                 return (
-                  <button
+                  <div
                     key={auto.id}
-                    type="button"
                     onClick={() => {
                       setOrdenActiva(auto);
                       setKmActualInput(auto.mileage ? String(auto.mileage) : "");
                       setFotosRecepcion(auto.receptionPhotos || []);
                     }}
-                    className={`min-w-[260px] sm:min-w-[290px] text-left p-4 rounded-2xl transition-all cursor-pointer shrink-0 border ${
+                    className={`min-w-[280px] sm:min-w-[310px] text-left p-4 rounded-2xl transition-all cursor-pointer shrink-0 border flex flex-col justify-between ${
                       activo
-                        ? "bg-[#161618] border-blue-500/60 ring-1 ring-blue-500/30"
-                        : "bg-[#111113] hover:bg-[#161618] border-white/5"
+                        ? "bg-white/[0.08] border-white/25 ring-1 ring-white/15"
+                        : "bg-white/[0.03] hover:bg-white/[0.06] border-white/[0.08]"
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="px-2.5 py-0.5 rounded-lg bg-blue-500/15 border border-blue-500/30 font-mono text-xs font-bold text-blue-300">
-                        {auto.plate}
-                      </span>
-                      <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                          auto.status === "LISTO_PARA_COBRO"
-                            ? "bg-emerald-500/20 text-emerald-300"
-                            : "bg-amber-500/15 text-amber-300"
+                    <div>
+                      {/* Placa y Cronómetro */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="px-2.5 py-0.5 rounded-lg bg-blue-500/15 border border-blue-500/30 font-mono text-xs font-bold text-blue-300">
+                            {auto.plate}
+                          </span>
+                          <span className="text-[10px] font-mono text-zinc-400">
+                            #{auto.orderNumber}
+                          </span>
+                        </div>
+                        <span
+                          className={`px-2 py-0.5 rounded-lg bg-[#0a0a0a] border font-mono text-[11px] font-bold ${
+                            enCaja
+                              ? "border-emerald-500/30 text-emerald-300"
+                              : "border-white/10 text-emerald-400"
+                          }`}
+                        >
+                          ⏱ {formatElapsedTime(auto.startedAt, auto.completedAt, nowTick)}
+                        </span>
+                      </div>
+
+                      {/* Vehículo y Cliente */}
+                      <p className="text-sm font-semibold text-white truncate mt-2">
+                        {auto.vehicle}
+                      </p>
+                      <p className="text-xs text-zinc-400 truncate">
+                        Cliente: <span className="text-zinc-200">{auto.client}</span>
+                      </p>
+
+                      {/* Combustible y Servicios Asignados */}
+                      <div className="mt-2.5 pt-2.5 border-t border-white/5 space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-zinc-300">
+                            ⛽ Combustible: <strong>{auto.fuelLevel || "1/2"}</strong>
+                          </span>
+                          <span className="text-emerald-400 font-semibold">
+                            {auto.items.length} {auto.items.length === 1 ? "servicio" : "servicios"}
+                          </span>
+                        </div>
+
+                        {auto.items.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {auto.items.slice(0, 3).map((it) => (
+                              <span
+                                key={it.id}
+                                className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-zinc-300 truncate max-w-[130px]"
+                              >
+                                {it.name}
+                              </span>
+                            ))}
+                            {auto.items.length > 3 && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/5 text-zinc-400">
+                                +{auto.items.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Botón minimalista: Enviar a Oficina / Listo para Caja */}
+                    <div className="mt-3 pt-2.5 border-t border-white/5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOrdenActiva(auto);
+                          handleEnviarAPosCaja(auto);
+                        }}
+                        disabled={enviandoAPos || auto.items.length === 0}
+                        className={`w-full h-9 px-3 rounded-xl border text-[11px] font-medium transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] disabled:opacity-40 backdrop-blur-md ${
+                          enCaja
+                            ? "bg-emerald-500/15 border-emerald-500/35 text-emerald-200"
+                            : "bg-white/[0.04] hover:bg-white/[0.09] border-white/[0.1] text-zinc-200 hover:text-white"
                         }`}
                       >
-                        {auto.status}
-                      </span>
+                        <span className="p-1 rounded-md bg-white/5 text-zinc-200">
+                          <svg
+                            className="w-3.5 h-3.5"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={1.5}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M22 2 11 13" />
+                            <path d="m22 2-7 20-4-9-9-4Z" />
+                          </svg>
+                        </span>
+                        <span>
+                          {enCaja
+                            ? "En Oficina / Listo para Caja"
+                            : "Enviar a Oficina / Listo para Caja"}
+                        </span>
+                      </button>
                     </div>
-
-                    <p className="text-sm font-semibold text-white truncate mt-2">
-                      {auto.vehicle}
-                    </p>
-                    <p className="text-xs text-zinc-400 truncate">
-                      {auto.client} • {auto.orderNumber}
-                    </p>
-
-                    <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-xs">
-                      <span className="text-zinc-400">
-                        {auto.items.length} {auto.items.length === 1 ? "servicio" : "servicios"}
-                      </span>
-                      <span className="font-bold text-emerald-400">
-                        ${Number(auto.totalCost || 0).toFixed(2)}
-                      </span>
-                    </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -4993,7 +5729,7 @@ export default function TallerPanel() {
 
       {/* =====================================================================
           VENTANA FLOTANTE AL MARCAR CUALQUIERA DE LAS 7 TARJETAS
-          (CON BUSCADOR Y FILTRO ARRIBA SOBRE EL FLOTANTE)
+          (ESTÉTICA GLASSMORPHISM Y SIN MOSTRAR PRECIOS NI SUBTOTALES)
           ===================================================================== */}
       {tarjetaSeleccionadaObj && (
         <div
@@ -5005,14 +5741,12 @@ export default function TallerPanel() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#111113] border border-white/10 rounded-t-3xl sm:rounded-2xl w-full max-w-2xl p-5 sm:p-6 shadow-2xl relative max-h-[88vh] flex flex-col space-y-4"
+            className="bg-[#111113]/95 backdrop-blur-xl border border-white/10 rounded-t-3xl sm:rounded-2xl w-full max-w-2xl p-5 sm:p-6 shadow-2xl relative max-h-[88vh] flex flex-col space-y-4"
           >
             {/* Cabecera del Flotante */}
             <div className="flex items-center justify-between gap-3 border-b border-white/5 pb-3.5">
               <div className="flex items-center gap-3 min-w-0">
-                <div
-                  className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${tarjetaSeleccionadaObj.gradient} flex items-center justify-center shrink-0 shadow-md`}
-                >
+                <div className="p-3 rounded-xl bg-white/5 text-zinc-200 shrink-0">
                   {tarjetaSeleccionadaObj.icon}
                 </div>
                 <div className="min-w-0">
@@ -5021,7 +5755,7 @@ export default function TallerPanel() {
                   </h3>
                   <p className="text-xs text-zinc-400 truncate">
                     {ordenActiva
-                      ? `Orden activa: #${ordenActiva.orderNumber} • Placa ${ordenActiva.plate}`
+                      ? `Orden #${ordenActiva.orderNumber} (${ordenActiva.plate}) • 👤 ${empleadoLogueado.nombre}`
                       : "Selecciona o busca un vehículo para sumar a su orden"}
                   </p>
                 </div>
@@ -5041,7 +5775,6 @@ export default function TallerPanel() {
 
             {/* BARRA DE BUSCADOR Y FILTRO SOBRE EL FLOTANTE */}
             <div className="flex items-center gap-2.5 relative z-20">
-              {/* Buscador h-11 */}
               <div className="relative flex-1">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 text-sm pointer-events-none">
                   🔍
@@ -5055,7 +5788,7 @@ export default function TallerPanel() {
                       ? "Buscar repuesto por nombre, viscosidad, código o marca..."
                       : `Buscar en ${tarjetaSeleccionadaObj.title}...`
                   }
-                  className="w-full pl-10 pr-9 h-11 rounded-xl bg-[#0a0a0a] border border-white/10 focus:border-blue-500/60 text-white text-sm font-normal placeholder:text-zinc-500 focus:outline-none transition-all"
+                  className="w-full pl-10 pr-9 h-11 rounded-xl bg-[#0a0a0a] border border-white/10 focus:border-white/25 text-white text-sm font-normal placeholder:text-zinc-500 focus:outline-none transition-all"
                 />
                 {busquedaFlotante && (
                   <button
@@ -5090,7 +5823,7 @@ export default function TallerPanel() {
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      strokeWidth={2}
+                      strokeWidth={1.5}
                       d="M19 9l-7 7-7-7"
                     />
                   </svg>
@@ -5108,7 +5841,7 @@ export default function TallerPanel() {
                         }}
                         className={`w-full text-left px-4 py-2 text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
                           filtroFlotante === opt.id
-                            ? "bg-blue-500/20 text-blue-300"
+                            ? "bg-white/10 text-white"
                             : "text-zinc-300 hover:bg-white/5"
                         }`}
                       >
@@ -5121,7 +5854,7 @@ export default function TallerPanel() {
               </div>
             </div>
 
-            {/* SI ES LA TARJETA "OTRO": FORMULARIO RÁPIDO PARA AGREGAR SERVICIO / TRABAJO LIBRE */}
+            {/* SI ES LA TARJETA "OTRO": FORMULARIO RÁPIDO SIN PRECIOS */}
             {tarjetaSeleccionadaObj.id === "otro" && (
               <form
                 onSubmit={handleAgregarServicioOtroCustom}
@@ -5131,29 +5864,19 @@ export default function TallerPanel() {
                   type="text"
                   value={otroNombreCustom}
                   onChange={(e) => setOtroNombreCustom(e.target.value)}
-                  placeholder="Escribir otro servicio o trabajo personalizado..."
-                  className="flex-1 h-10 px-3 rounded-lg bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-violet-500/60"
+                  placeholder="Escribir otro servicio o trabajo realizado..."
+                  className="flex-1 h-10 px-3 rounded-lg bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-white/25"
                 />
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={otroPrecioCustom}
-                    onChange={(e) => setOtroPrecioCustom(e.target.value)}
-                    placeholder="Precio $"
-                    className="w-28 h-10 px-3 rounded-lg bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-violet-500/60"
-                  />
-                  <button
-                    type="submit"
-                    className="h-10 px-4 rounded-lg bg-violet-500/20 hover:bg-violet-500/30 border border-violet-500/40 text-violet-300 text-xs font-semibold transition-all cursor-pointer shrink-0 active:scale-95"
-                  >
-                    + Agregar
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  className="h-10 px-4 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 text-zinc-100 text-xs font-semibold transition-all cursor-pointer shrink-0 active:scale-95"
+                >
+                  + Asignar Servicio
+                </button>
               </form>
             )}
 
-            {/* LISTADO MULTISELECCIÓN DENTRO DEL FLOTANTE */}
+            {/* LISTADO DE SERVICIOS E ÍTEMS DENTRO DEL FLOTANTE (SIN PRECIOS NI SUBTOTALES) */}
             <div className="overflow-y-auto pr-1 flex-1 space-y-2.5">
               {tarjetaSeleccionadaObj.id !== "repuestos" ? (
                 presetsFiltradosFlotante.length === 0 ? (
@@ -5163,11 +5886,13 @@ export default function TallerPanel() {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {presetsFiltradosFlotante.map((preset) => {
-                      const seleccionado = ordenActiva?.items.some(
+                      const itemEnOrden = ordenActiva?.items.find(
                         (i) =>
-                          i.code === preset.code ||
-                          i.name.toLowerCase() === preset.name.toLowerCase()
+                          (i.code === preset.code ||
+                            i.name.toLowerCase() === preset.name.toLowerCase()) &&
+                          (!i.empleado_id || i.empleado_id === empleadoLogueado.id)
                       );
+                      const seleccionado = Boolean(itemEnOrden);
 
                       return (
                         <button
@@ -5176,10 +5901,10 @@ export default function TallerPanel() {
                           onClick={() =>
                             handleToggleServicioPreset(tarjetaSeleccionadaObj.title, preset)
                           }
-                          className={`p-3.5 rounded-xl border text-left transition-all flex items-center justify-between gap-3 cursor-pointer active:scale-[0.98] ${
+                          className={`p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between gap-3 cursor-pointer active:scale-[0.98] ${
                             seleccionado
                               ? "bg-emerald-500/15 border-emerald-500/40 text-white"
-                              : "bg-[#161618] hover:bg-zinc-800/80 border-white/5 text-zinc-200"
+                              : "bg-white/[0.03] hover:bg-white/[0.08] border-white/[0.08] text-zinc-200"
                           }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
@@ -5201,8 +5926,8 @@ export default function TallerPanel() {
                               </span>
                             </div>
                           </div>
-                          <span className="text-xs font-bold text-emerald-400 shrink-0">
-                            ${preset.price.toFixed(2)}
+                          <span className="text-[11px] font-medium text-zinc-400 shrink-0">
+                            {seleccionado ? "Asignado" : "+ Agregar"}
                           </span>
                         </button>
                       );
@@ -5216,15 +5941,19 @@ export default function TallerPanel() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {repuestosFiltradosFlotante.map((prod) => {
-                    const enOrden = ordenActiva?.items.find((i) => i.productId === prod.id);
+                    const enOrden = ordenActiva?.items.find(
+                      (i) =>
+                        i.productId === prod.id &&
+                        (!i.empleado_id || i.empleado_id === empleadoLogueado.id)
+                    );
                     return (
                       <div
                         key={prod.id}
                         onClick={() => handleAgregarRepuestoAOrden(prod)}
-                        className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 cursor-pointer active:scale-[0.98] ${
+                        className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer active:scale-[0.98] ${
                           enOrden
-                            ? "bg-pink-500/15 border-pink-500/40"
-                            : "bg-[#161618] hover:bg-zinc-800/80 border-white/5"
+                            ? "bg-emerald-500/15 border-emerald-500/40"
+                            : "bg-white/[0.03] hover:bg-white/[0.08] border-white/[0.08]"
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
@@ -5235,7 +5964,7 @@ export default function TallerPanel() {
                               className="w-10 h-10 rounded-lg object-cover bg-black border border-white/10 shrink-0"
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-lg bg-zinc-800 border border-white/5 flex items-center justify-center text-base shrink-0">
+                            <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-base shrink-0">
                               🛢️
                             </div>
                           )}
@@ -5262,12 +5991,13 @@ export default function TallerPanel() {
                         </div>
 
                         <div className="text-right shrink-0">
-                          <p className="text-xs font-bold text-emerald-400">
-                            ${Number(prod.price).toFixed(2)}
-                          </p>
-                          {enOrden && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-pink-500/20 text-pink-300 font-semibold">
+                          {enOrden ? (
+                            <span className="text-[10px] px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-semibold">
                               {enOrden.qty} en OT
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-zinc-400 font-medium">
+                              + Agregar
                             </span>
                           )}
                         </div>
@@ -5278,15 +6008,13 @@ export default function TallerPanel() {
               )}
             </div>
 
-            {/* Pie del Flotante */}
+            {/* Pie del Flotante (SIN PRECIOS NI SUBTOTALES) */}
             <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-3">
               <div className="text-xs text-zinc-400">
                 {ordenActiva ? (
                   <span>
-                    En orden: <strong className="text-white">{ordenActiva.items.length} ítems</strong> • Total:{" "}
-                    <strong className="text-emerald-400">
-                      ${Number(ordenActiva.totalCost || 0).toFixed(2)}
-                    </strong>
+                    En orden: <strong className="text-white">{ordenActiva.items.length} servicios / ítems</strong> • Empleado:{" "}
+                    <strong className="text-emerald-400">{empleadoLogueado.nombre}</strong>
                   </span>
                 ) : (
                   <span>Sin vehículo activo seleccionado</span>
@@ -5299,7 +6027,7 @@ export default function TallerPanel() {
                   setActiveCardId(null);
                   setMostrarMenuFiltroFlotante(false);
                 }}
-                className="h-10 px-5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs font-semibold transition-all cursor-pointer active:scale-95"
+                className="h-10 px-5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white text-xs font-semibold transition-all cursor-pointer active:scale-95"
               >
                 Listo
               </button>
@@ -5358,8 +6086,8 @@ export default function TallerPanel() {
                       <span>
                         Técnico: {h.mechanic} • Km: {h.mileage}
                       </span>
-                      <span className="text-emerald-400 font-bold">
-                        ${Number(h.cost || 0).toFixed(2)}
+                      <span className="text-emerald-400 font-semibold">
+                        Completado
                       </span>
                     </div>
                   </div>
@@ -5371,7 +6099,7 @@ export default function TallerPanel() {
       )}
 
       {/* =====================================================================
-          MODAL CONFIRMACIÓN DE ENVÍO A POS / CAJA
+          MODAL CONFIRMACIÓN DE ENVÍO A OFICINA / CAJA POS
           ===================================================================== */}
       {modalConfirmPos && (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
@@ -5380,10 +6108,10 @@ export default function TallerPanel() {
               ✓
             </div>
             <h3 className="text-lg font-semibold text-white">
-              Orden Lista para Cobro en POS
+              Enviado a Oficina / Listo para Caja
             </h3>
             <p className="text-xs text-zinc-400 leading-relaxed">
-              Los servicios y repuestos fueron transferidos a <strong>POS / Caja</strong>, el stock fue actualizado en <strong>Oficina</strong>, los tiempos en <strong>Gerencia</strong> y el expediente en <strong>Clientes</strong>.
+              El cronómetro se ha detenido, el estado en Neon cambió a <strong>EN_CAJA</strong> y los servicios realizados, repuestos utilizados y empleados asignados ya están disponibles en el <strong>POS de Oficina</strong>.
             </p>
             <div className="flex gap-2.5 pt-2">
               <button
@@ -5391,4439 +6119,210 @@ export default function TallerPanel() {
                 onClick={() => setModalConfirmPos(null)}
                 className="flex-1 h-11 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 text-xs font-semibold cursor-pointer"
               >
-                Seguir en Taller
+                Seguir en Pista
               </button>
               <button
                 type="button"
                 onClick={() => router.push("/pos/venta")}
                 className="flex-1 h-11 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold cursor-pointer"
               >
-                Ir a POS / Cobrar →
+                Abrir POS de Oficina →
               </button>
             </div>
           </div>
         </div>
       )}
 
+      
       {/* =====================================================================
-          FLOTANTE 01: ETAPA 1 - CLIENTE ("NUEVA ORDEN DE TRABAJO")
-          Se abre primero al ingresar al Panel Taller.
-          - Búsqueda por nombre, RUC/RUT, teléfono o correo
-          - Cliente nuevo sin salir de la orden
-          - Técnico asignado y motivo de ingreso
+          MODAL DE IMPRESIÓN Y EMISIÓN DE DOCUMENTOS (PDF, TICKET, ETIQUETA QR)
           ===================================================================== */}
-      {mostrarFlotanteEtapa1 && (
+      {modalImpresionDoc && ordenActiva && (
         <div
-          onClick={() => setMostrarFlotanteEtapa1(false)}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-md animate-fade-in"
+          onClick={() => setModalImpresionDoc(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-fade-in"
         >
-          <form
-            onSubmit={handleCrearOrdenEtapa1}
+          <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#111113] border border-white/10 rounded-t-3xl sm:rounded-2xl w-full max-w-lg p-5 sm:p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto space-y-5"
+            className="bg-[#111113] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-2xl space-y-4"
           >
-            {/* Cabecera del Flotante 01 */}
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-md bg-blue-500/20 border border-blue-500/40 text-[11px] font-bold text-blue-300">
-                    01
-                  </span>
-                  <span className="text-xs font-semibold uppercase tracking-wider text-blue-400">
-                    Etapa 1: Cliente
-                  </span>
-                </div>
-                <h2 className="text-lg sm:text-xl font-bold text-white">
-                  Nueva Orden de Trabajo
-                </h2>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setMostrarFlotanteEtapa1(false)}
-                aria-label="Cerrar"
-                className="w-8 h-8 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center text-sm cursor-pointer shrink-0 transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Selector Tipo: Persona / Empresa */}
-            <div className="flex items-center gap-5 text-sm">
-              <span className="text-xs font-medium text-zinc-400">Tipo:</span>
-              <label className="flex items-center gap-2 cursor-pointer text-xs sm:text-sm font-medium text-zinc-200">
-                <input
-                  type="radio"
-                  name="tipoClienteEtapa1"
-                  checked={etapa1TipoCliente === "Persona"}
-                  onChange={() => setEtapa1TipoCliente("Persona")}
-                  className="accent-blue-500 w-4 h-4 cursor-pointer"
-                />
-                <span>Persona</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer text-xs sm:text-sm font-medium text-zinc-200">
-                <input
-                  type="radio"
-                  name="tipoClienteEtapa1"
-                  checked={etapa1TipoCliente === "Empresa"}
-                  onChange={() => setEtapa1TipoCliente("Empresa")}
-                  className="accent-blue-500 w-4 h-4 cursor-pointer"
-                />
-                <span>Empresa</span>
-              </label>
-            </div>
-
-            {/* Bloque Cliente: Tarjeta Seleccionada / Buscador / Nuevo Cliente Inline */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-zinc-300">Cliente</label>
-                {!modoFormularioClienteEtapa1 && (
-                  <button
-                    type="button"
-                    onClick={() => handleIniciarNuevoClienteInline()}
-                    className="text-xs font-semibold text-blue-400 hover:text-blue-300 cursor-pointer transition-colors"
-                  >
-                    + Cliente nuevo sin salir de la orden
-                  </button>
-                )}
-              </div>
-
-              {/* ESTADO 1: CLIENTE SELECCIONADO (DISEÑO IDÉNTICO A LA CAPTURA) */}
-              {clienteSeleccionadoEtapa1 && !modoFormularioClienteEtapa1 ? (
-                <div className="p-3.5 rounded-xl bg-[#161618] border border-blue-500/30 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    {/* Avatar circular con ícono de cliente */}
-                    <div className="w-10 h-10 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0">
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                        <circle cx="9" cy="7" r="4" />
-                        <line x1="19" y1="8" x2="19" y2="14" />
-                        <line x1="22" y1="11" x2="16" y2="11" />
-                      </svg>
-                    </div>
-
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-white truncate">
-                        {clienteSeleccionadoEtapa1.name}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400 mt-0.5">
-                        <span>
-                          # {clienteSeleccionadoEtapa1.identification || "Sin RUC/RUT"}
-                        </span>
-                        {clienteSeleccionadoEtapa1.phone &&
-                          clienteSeleccionadoEtapa1.phone !== "S/N" && (
-                            <span className="flex items-center gap-1">
-                              <span>📞</span>
-                              <span>{clienteSeleccionadoEtapa1.phone}</span>
-                            </span>
-                          )}
-                        {clienteSeleccionadoEtapa1.email && (
-                          <span className="truncate max-w-[180px]">
-                            ✉️ {clienteSeleccionadoEtapa1.email}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Botones Lápiz (Editar) y X (Cambiar cliente) */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={handleEditarClienteSeleccionadoEtapa1}
-                      title="Editar datos del cliente"
-                      className="w-8 h-8 rounded-lg hover:bg-white/10 text-blue-400 hover:text-blue-300 flex items-center justify-center cursor-pointer transition-colors"
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setClienteSeleccionadoEtapa1(null);
-                        setBusquedaClienteEtapa1("");
-                      }}
-                      title="Quitar y buscar otro cliente"
-                      className="w-8 h-8 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center text-xs cursor-pointer transition-colors"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              ) : modoFormularioClienteEtapa1 ? (
-                /* ESTADO 2: REGISTRO / EDICIÓN DE CLIENTE NUEVO SIN SALIR DE LA ORDEN */
-                <div className="p-4 rounded-xl bg-[#161618] border border-blue-500/30 space-y-3 animate-fade-in">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-blue-400">
-                      {clienteSeleccionadoEtapa1
-                        ? "Editar Cliente en la Orden"
-                        : "Registrar Cliente Nuevo (Sin salir de la orden)"}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setModoFormularioClienteEtapa1(false)}
-                      className="text-[11px] text-zinc-400 hover:text-white cursor-pointer"
-                    >
-                      Volver a buscar
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <input
-                      type="text"
-                      value={etapa1Nombre}
-                      onChange={(e) => setEtapa1Nombre(e.target.value)}
-                      placeholder={
-                        etapa1TipoCliente === "Empresa"
-                          ? "Razón Social / Empresa *"
-                          : "Nombre y Apellido *"
-                      }
-                      className="sm:col-span-2 h-10 px-3 rounded-lg bg-[#0a0a0a] border border-white/10 focus:border-blue-500 text-white text-xs focus:outline-none"
-                    />
-                    <input
-                      type="text"
-                      value={etapa1Ruc}
-                      onChange={(e) => setEtapa1Ruc(e.target.value)}
-                      placeholder="RUC / RUT / Cédula (ej: 12.345.678-5)"
-                      className="h-10 px-3 rounded-lg bg-[#0a0a0a] border border-white/10 focus:border-blue-500 text-white text-xs focus:outline-none"
-                    />
-                    <input
-                      type="text"
-                      value={etapa1Telefono}
-                      onChange={(e) => setEtapa1Telefono(e.target.value)}
-                      placeholder="Teléfono / WhatsApp (ej: +56 900000412)"
-                      className="h-10 px-3 rounded-lg bg-[#0a0a0a] border border-white/10 focus:border-blue-500 text-white text-xs focus:outline-none"
-                    />
-                    <input
-                      type="email"
-                      value={etapa1Email}
-                      onChange={(e) => setEtapa1Email(e.target.value)}
-                      placeholder="Correo electrónico"
-                      className="h-10 px-3 rounded-lg bg-[#0a0a0a] border border-white/10 focus:border-blue-500 text-white text-xs focus:outline-none"
-                    />
-                    <input
-                      type="text"
-                      value={etapa1PlacaOpcional}
-                      onChange={(e) => setEtapa1PlacaOpcional(e.target.value.toUpperCase())}
-                      placeholder="Placa Vehículo (Opcional: ABC-123)"
-                      className="h-10 px-3 rounded-lg bg-[#0a0a0a] border border-white/10 focus:border-blue-500 text-white font-mono text-xs uppercase focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={handleConfirmarClienteInlineEtapa1}
-                      disabled={guardandoClienteEtapa1}
-                      className="h-9 px-4 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs font-semibold cursor-pointer transition-all active:scale-95"
-                    >
-                      {guardandoClienteEtapa1
-                        ? "Guardando cliente..."
-                        : "✓ Confirmar Cliente"}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                /* ESTADO 3: BUSCADOR POR NOMBRE, RUC/RUT, TELÉFONO O CORREO */
-                <div className="space-y-2">
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 text-sm pointer-events-none">
-                      🔍
-                    </span>
-                    <input
-                      type="text"
-                      value={busquedaClienteEtapa1}
-                      onChange={(e) => setBusquedaClienteEtapa1(e.target.value)}
-                      placeholder="Buscar por nombre, RUC/RUT, teléfono o correo (o escribe un nombre nuevo)..."
-                      className="w-full pl-10 pr-9 h-11 rounded-xl bg-[#0a0a0a] border border-white/10 focus:border-blue-500 text-white text-xs sm:text-sm placeholder:text-zinc-500 focus:outline-none transition-all"
-                    />
-                    {busquedaClienteEtapa1 && (
-                      <button
-                        type="button"
-                        onClick={() => setBusquedaClienteEtapa1("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white text-xs cursor-pointer"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Resultados de clientes o botón directo para registrar el nombre escrito */}
-                  <div className="rounded-xl bg-[#0a0a0a] border border-white/5 max-h-44 overflow-y-auto divide-y divide-white/5">
-                    {busquedaClienteEtapa1.trim() && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleIniciarNuevoClienteInline(busquedaClienteEtapa1.trim())
-                        }
-                        className="w-full text-left px-3.5 py-2.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 text-xs font-semibold flex items-center justify-between gap-2 cursor-pointer transition-colors"
-                      >
-                        <span>
-                          + Registrar &ldquo;{busquedaClienteEtapa1.trim()}&rdquo; como cliente nuevo
-                        </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 border border-blue-500/30">
-                          Nuevo
-                        </span>
-                      </button>
-                    )}
-
-                    {buscandoClientesRemoto && clientesFiltradosEtapa1.length === 0 ? (
-                      <p className="text-xs text-zinc-500 py-3 px-3.5">
-                        Buscando clientes en Neon DB...
-                      </p>
-                    ) : clientesFiltradosEtapa1.length === 0 ? (
-                      <p className="text-xs text-zinc-500 py-3 px-3.5">
-                        No se encontró coincidencia. Toca arriba para registrarlo como cliente nuevo o presiona &ldquo;Crear orden&rdquo; directamente.
-                      </p>
-                    ) : (
-                      clientesFiltradosEtapa1.map((cli) => (
-                        <button
-                          key={cli.id}
-                          type="button"
-                          onClick={() => {
-                            setClienteSeleccionadoEtapa1(cli);
-                            setBusquedaClienteEtapa1("");
-                            if (cli.type === "Empresa") setEtapa1TipoCliente("Empresa");
-                            else setEtapa1TipoCliente("Persona");
-                          }}
-                          className="w-full text-left px-3.5 py-2.5 hover:bg-white/5 flex items-center justify-between gap-3 cursor-pointer transition-colors"
-                        >
-                          <div className="min-w-0">
-                            <p className="text-xs sm:text-sm font-semibold text-white truncate">
-                              {cli.name}
-                            </p>
-                            <p className="text-[11px] text-zinc-400 truncate">
-                              # {cli.identification}
-                              {cli.phone && cli.phone !== "S/N" ? ` • 📞 ${cli.phone}` : ""}
-                              {cli.email ? ` • ✉️ ${cli.email}` : ""}
-                            </p>
-                          </div>
-                          {cli.vehicles && cli.vehicles.length > 0 && (
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 border border-white/10 text-zinc-300 shrink-0">
-                              {cli.vehicles[0].plate}
-                            </span>
-                          )}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Fila 2 Columnas: Ingresado por & Técnico asignado */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1 border-t border-white/5">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-zinc-300">
-                  Ingresado por
-                </label>
-                <input
-                  type="text"
-                  value={etapa1IngresadoPor}
-                  onChange={(e) => setEtapa1IngresadoPor(e.target.value)}
-                  placeholder="Nombre de quien recepciona"
-                  className="w-full h-11 px-3.5 rounded-xl bg-[#0a0a0a] border border-white/10 focus:border-blue-500 text-zinc-200 text-xs sm:text-sm focus:outline-none transition-all"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-zinc-300">
-                  Técnico asignado
-                </label>
-                <select
-                  value={etapa1Tecnico}
-                  onChange={(e) => setEtapa1Tecnico(e.target.value)}
-                  className="w-full h-11 px-3.5 rounded-xl bg-[#0a0a0a] border border-white/10 focus:border-blue-500 text-white text-xs sm:text-sm font-medium focus:outline-none transition-all cursor-pointer"
-                >
-                  {mecanicos.map((mec) => (
-                    <option key={mec} value={mec} className="bg-[#111113] text-white">
-                      {mec}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Motivo de ingreso */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium text-zinc-300">
-                Motivo de ingreso
-              </label>
-              <textarea
-                rows={3}
-                value={etapa1MotivoIngreso}
-                onChange={(e) => setEtapa1MotivoIngreso(e.target.value)}
-                placeholder="Ej: Mantención 40.000 km. Luz de check engine encendida."
-                className="w-full p-3.5 rounded-xl bg-[#0a0a0a] border border-blue-500/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-white text-xs sm:text-sm placeholder:text-zinc-500 focus:outline-none transition-all resize-none"
-              />
-            </div>
-
-            {/* Pie del Flotante: Cancelar / Crear orden */}
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-white/5">
-              <button
-                type="button"
-                onClick={() => setMostrarFlotanteEtapa1(false)}
-                className="h-11 px-5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer active:scale-95"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={creandoOrdenEtapa1}
-                className="h-11 px-6 rounded-xl bg-blue-600/25 hover:bg-blue-600/35 border border-blue-500/50 text-blue-200 hover:text-white text-xs sm:text-sm font-semibold shadow-lg transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-              >
-                {creandoOrdenEtapa1 ? "Creando orden..." : "Crear orden → Etapa 2"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* =====================================================================
-          FLOTANTE 02: ETAPA 2 - VEHÍCULO O EQUIPO ("RECIBE EL VEHÍCULO O EQUIPO")
-          Asocias el vehículo o equipo del cliente y registras cómo llega:
-          - Kilometraje y nivel de combustible
-          - Estado general (condición + testigos + observaciones + fotos R2)
-          - Inventario de lo que trae
-          ===================================================================== */}
-      {mostrarFlotanteEtapa2 && (
-        <div
-          onClick={() => setMostrarFlotanteEtapa2(false)}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-md animate-fade-in"
-        >
-          <form
-            onSubmit={handleGuardarEtapa2Vehiculo}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-[#111113] border border-white/10 rounded-t-3xl sm:rounded-2xl w-full max-w-2xl p-5 sm:p-6 shadow-2xl relative max-h-[92vh] overflow-y-auto space-y-5"
-          >
-            {/* Cabecera del Flotante 02 */}
-            <div className="flex items-start justify-between gap-3 border-b border-white/5 pb-4">
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMostrarFlotanteEtapa2(false);
-                      setMostrarFlotanteEtapa1(true);
-                    }}
-                    className="px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    01 Cliente ✓
-                  </button>
-                  <span className="text-zinc-600 text-xs">→</span>
-                  <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-[11px] font-bold text-emerald-300">
-                    02
-                  </span>
-                  <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
-                    Etapa 2: Vehículo o equipo
-                  </span>
-                </div>
-
-                <h2 className="text-lg sm:text-xl font-bold text-white">
-                  Recibe el vehículo o equipo
-                </h2>
-                <p className="text-xs text-zinc-400 leading-relaxed">
-                  Asocias el vehículo o equipo del cliente y registras cómo llega: kilometraje, nivel de combustible, estado general y el inventario de lo que trae.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setMostrarFlotanteEtapa2(false)}
-                aria-label="Cerrar"
-                className="w-8 h-8 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center text-sm cursor-pointer shrink-0 transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* 1. ASOCIAR O REGISTRAR VEHÍCULO / EQUIPO DEL CLIENTE */}
-            <div className="p-4 rounded-xl bg-[#0a0a0a] border border-white/5 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-                  1. Asociar Vehículo o Equipo del Cliente
-                </span>
-                <span className="text-xs text-zinc-400">
-                  Cliente:{" "}
-                  <strong className="text-white">
-                    {clienteEncontrado?.name ||
-                      clienteSeleccionadoEtapa1?.name ||
-                      ordenActiva?.client ||
-                      "Cliente Taller"}
-                  </strong>
-                </span>
-              </div>
-
-              {/* Si el cliente ya tiene vehículos registrados, permitir seleccionarlos con 1 clic */}
-              {((clienteEncontrado?.vehicles && clienteEncontrado.vehicles.length > 0) ||
-                (clienteSeleccionadoEtapa1?.vehicles &&
-                  clienteSeleccionadoEtapa1.vehicles.length > 0)) && (
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <span className="text-[11px] text-zinc-400">Vehículos del cliente:</span>
-                  {(
-                    clienteEncontrado?.vehicles ||
-                    clienteSeleccionadoEtapa1?.vehicles ||
-                    []
-                  ).map((v: any) => {
-                    const activo = etapa2Placa === v.plate;
-                    return (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => cargarVehiculoEnFormularioEtapa2(v)}
-                        className={`px-3 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
-                          activo
-                            ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300"
-                            : "bg-[#111113] hover:bg-[#161618] border-white/10 text-zinc-300"
-                        }`}
-                      >
-                        <span className="font-mono font-bold">{v.plate}</span> • {v.brand}{" "}
-                        {v.model}
-                      </button>
-                    );
-                  })}
-                  <button
-                    type="button"
-                    onClick={() => cargarVehiculoEnFormularioEtapa2(null)}
-                    className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] text-blue-300 font-semibold cursor-pointer"
-                  >
-                    + Nuevo vehículo / equipo
-                  </button>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                <div className="space-y-1">
-                  <label className="block text-[11px] text-zinc-400">Tipo</label>
-                  <select
-                    value={etapa2TipoVehiculo}
-                    onChange={(e) => setEtapa2TipoVehiculo(e.target.value as any)}
-                    className="w-full h-10 px-3 rounded-lg bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="Auto">Auto</option>
-                    <option value="SUV">SUV</option>
-                    <option value="Camioneta">Camioneta</option>
-                    <option value="Moto">Moto</option>
-                    <option value="Camión / Maquinaria">Camión / Maquinaria</option>
-                    <option value="Equipo">Equipo / Motor</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-[11px] text-zinc-400">
-                    Placa / N° Serie *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={etapa2Placa}
-                    onChange={(e) => setEtapa2Placa(e.target.value.toUpperCase())}
-                    placeholder="Ej: ABC-123"
-                    className="w-full h-10 px-3 rounded-lg bg-[#111113] border border-white/10 text-white font-mono text-xs font-bold uppercase focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-[11px] text-zinc-400">Marca</label>
-                  <input
-                    type="text"
-                    value={etapa2Marca}
-                    onChange={(e) => setEtapa2Marca(e.target.value)}
-                    placeholder="Ej: Toyota"
-                    className="w-full h-10 px-3 rounded-lg bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-[11px] text-zinc-400">Modelo</label>
-                  <input
-                    type="text"
-                    value={etapa2Modelo}
-                    onChange={(e) => setEtapa2Modelo(e.target.value)}
-                    placeholder="Ej: Hilux"
-                    className="w-full h-10 px-3 rounded-lg bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-[11px] text-zinc-400">Año</label>
-                  <input
-                    type="number"
-                    value={etapa2Anio}
-                    onChange={(e) => setEtapa2Anio(e.target.value)}
-                    placeholder="2024"
-                    className="w-full h-10 px-3 rounded-lg bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-[11px] text-zinc-400">Color</label>
-                  <input
-                    type="text"
-                    value={etapa2Color}
-                    onChange={(e) => setEtapa2Color(e.target.value)}
-                    placeholder="Ej: Plata"
-                    className="w-full h-10 px-3 rounded-lg bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 2. KILOMETRAJE Y NIVEL DE COMBUSTIBLE */}
-            <div className="p-4 rounded-xl bg-[#0a0a0a] border border-white/5 space-y-3.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
-                  2. Kilometraje y Combustible
-                </span>
-                {etapa2Kilometraje && !isNaN(parseInt(etapa2Kilometraje, 10)) && (
-                  <span className="text-[11px] text-emerald-400 font-medium">
-                    Próx. cambio aceite:{" "}
-                    {(parseInt(etapa2Kilometraje, 10) + 5000).toLocaleString()} km
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="block text-[11px] text-zinc-400">
-                    Kilometraje / Horómetro de llegada
-                  </label>
-                  <input
-                    type="number"
-                    value={etapa2Kilometraje}
-                    onChange={(e) => setEtapa2Kilometraje(e.target.value)}
-                    placeholder="Ej: 40000"
-                    className="w-full h-10 px-3 rounded-lg bg-[#111113] border border-white/10 text-white text-xs font-semibold focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-[11px] text-zinc-400">
-                    Tipo de Combustible / Energía
-                  </label>
-                  <select
-                    value={etapa2TipoCombustible}
-                    onChange={(e) => setEtapa2TipoCombustible(e.target.value)}
-                    className="w-full h-10 px-3 rounded-lg bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500"
-                  >
-                    <option value="Gasolina">Gasolina</option>
-                    <option value="Diésel">Diésel</option>
-                    <option value="Híbrido">Híbrido</option>
-                    <option value="Eléctrico">Eléctrico</option>
-                    <option value="GLP / GNV">GLP / GNV</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Selector Visual de Nivel de Combustible */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-zinc-400">Nivel de Combustible al ingreso:</span>
-                  <strong className="text-white">⛽ {etapa2NivelCombustible}</strong>
-                </div>
-
-                <div className="grid grid-cols-5 gap-1.5">
-                  {NIVELES_COMBUSTIBLE.map((niv) => {
-                    const activo = etapa2NivelCombustible === niv.id;
-                    return (
-                      <button
-                        key={niv.id}
-                        type="button"
-                        onClick={() => setEtapa2NivelCombustible(niv.id)}
-                        className={`h-9 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
-                          activo
-                            ? "bg-blue-500/20 border-blue-500 text-blue-200 shadow-sm"
-                            : "bg-[#111113] hover:bg-[#161618] border-white/10 text-zinc-400"
-                        }`}
-                      >
-                        {niv.label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Barra de nivel visual */}
-                <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-300 ${
-                      NIVELES_COMBUSTIBLE.find((n) => n.id === etapa2NivelCombustible)
-                        ?.color || "bg-blue-500"
-                    }`}
-                    style={{
-                      width: `${
-                        NIVELES_COMBUSTIBLE.find((n) => n.id === etapa2NivelCombustible)
-                          ?.pct || 50
-                      }%`,
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 3. ESTADO GENERAL */}
-            <div className="p-4 rounded-xl bg-[#0a0a0a] border border-white/5 space-y-3.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">
-                  3. Estado General de Llegada
-                </span>
-                <button
-                  type="button"
-                  onClick={() => fileInputRecepcionRef.current?.click()}
-                  disabled={subiendoFotoRecepcion || fotosRecepcion.length >= 4}
-                  className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-semibold text-zinc-200 cursor-pointer"
-                >
-                  {subiendoFotoRecepcion
-                    ? "Subiendo R2..."
-                    : `📷 Fotos Recepción R2 (${fotosRecepcion.length}/4)`}
-                </button>
-              </div>
-
-              {/* Condición Exterior / General */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {ESTADOS_GENERALES.map((est) => {
-                  const activo = etapa2EstadoGeneral === est.id;
-                  return (
-                    <button
-                      key={est.id}
-                      type="button"
-                      onClick={() => setEtapa2EstadoGeneral(est.id)}
-                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                        activo
-                          ? "bg-amber-500/15 border-amber-500/50 text-white"
-                          : "bg-[#111113] hover:bg-[#161618] border-white/5 text-zinc-300"
-                      }`}
-                    >
-                      <p className="text-xs font-semibold">{est.label}</p>
-                      <p className="text-[10px] text-zinc-400 truncate">{est.desc}</p>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Testigos encendidos en tablero */}
-              <div className="space-y-1.5">
-                <span className="block text-[11px] text-zinc-400">
-                  Testigos encendidos en tablero (marca si aplica):
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {TESTIGOS_TABLERO.map((testigo) => {
-                    const marcado = etapa2Testigos.includes(testigo);
-                    return (
-                      <button
-                        key={testigo}
-                        type="button"
-                        onClick={() => handleToggleTestigoEtapa2(testigo)}
-                        className={`px-2.5 py-1 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
-                          marcado
-                            ? "bg-rose-500/20 border-rose-500/40 text-rose-300"
-                            : "bg-[#111113] hover:bg-white/5 border-white/10 text-zinc-400"
-                        }`}
-                      >
-                        {marcado ? `⚠️ ${testigo}` : testigo}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Observaciones del estado general */}
-              <input
-                type="text"
-                value={etapa2ObservacionesEstado}
-                onChange={(e) => setEtapa2ObservacionesEstado(e.target.value)}
-                placeholder="Observaciones de carrocería o estado general (rayones, golpes, ruidos al llegar)..."
-                className="w-full h-10 px-3 rounded-lg bg-[#111113] border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-amber-500"
-              />
-            </div>
-
-            {/* 4. INVENTARIO DE LO QUE TRAE */}
-            <div className="p-4 rounded-xl bg-[#0a0a0a] border border-white/5 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
-                  4. Inventario de lo que trae ({etapa2InventarioTrae.length} marcados)
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setEtapa2InventarioTrae([...INVENTARIO_RECEPCION_ITEMS])}
-                    className="text-[11px] text-purple-300 hover:underline cursor-pointer"
-                  >
-                    Marcar todos
-                  </button>
-                  <span className="text-zinc-600">•</span>
-                  <button
-                    type="button"
-                    onClick={() => setEtapa2InventarioTrae([])}
-                    className="text-[11px] text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    Limpiar
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                {INVENTARIO_RECEPCION_ITEMS.map((item) => {
-                  const marcado = etapa2InventarioTrae.includes(item);
-                  return (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => handleToggleInventarioEtapa2(item)}
-                      className={`p-2.5 rounded-lg border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                        marcado
-                          ? "bg-purple-500/15 border-purple-500/40 text-white"
-                          : "bg-[#111113] hover:bg-[#161618] border-white/5 text-zinc-400"
-                      }`}
-                    >
-                      <span
-                        className={`w-4 h-4 rounded flex items-center justify-center text-[10px] border shrink-0 ${
-                          marcado
-                            ? "bg-purple-500 border-purple-400 text-black font-bold"
-                            : "border-zinc-600 bg-black/40 text-transparent"
-                        }`}
-                      >
-                        ✓
-                      </span>
-                      <span className="text-xs font-medium truncate">{item}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <input
-                type="text"
-                value={etapa2ObjetosValor}
-                onChange={(e) => setEtapa2ObjetosValor(e.target.value)}
-                placeholder="Objetos personales o pertenencias adicionales que deja el cliente..."
-                className="w-full h-10 px-3 rounded-lg bg-[#111113] border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-purple-500"
-              />
-            </div>
-
-            {/* Pie del Flotante 02 */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-white/5">
-              <button
-                type="button"
-                onClick={() => {
-                  setMostrarFlotanteEtapa2(false);
-                  setMostrarFlotanteEtapa1(true);
-                }}
-                className="h-11 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
-              >
-                ← Volver a Etapa 1
-              </button>
-
-              <div className="flex items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMostrarFlotanteEtapa2(false);
-                    setMostrarFlotanteEtapa3(true);
-                  }}
-                  className="h-11 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
-                >
-                  Ir a Etapa 3 →
-                </button>
-                <button
-                  type="submit"
-                  disabled={guardandoEtapa2}
-                  className="h-11 px-6 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs sm:text-sm font-semibold shadow-lg transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-                >
-                  {guardandoEtapa2
-                    ? "Guardando recepción..."
-                    : "Guardar y Pasar a Etapa 3: Inspección →"}
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* =====================================================================
-          FLOTANTE 03 — ETAPA 3: INSPECCIÓN (5 VISTAS, EVIDENCIA Y PDF)
-          ===================================================================== */}
-      {mostrarFlotanteEtapa3 && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
-          onClick={() => setMostrarFlotanteEtapa3(false)}
-        >
-          <form
-            onSubmit={handleGuardarEtapa3Inspeccion}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-[#111113] border border-white/10 rounded-t-3xl sm:rounded-2xl w-full max-w-4xl p-5 sm:p-6 shadow-2xl relative max-h-[93vh] overflow-y-auto space-y-5"
-          >
-            {/* Cabecera del Flotante 03 */}
-            <div className="flex items-start justify-between gap-3 border-b border-white/5 pb-4">
-              <div className="space-y-1.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMostrarFlotanteEtapa3(false);
-                      setMostrarFlotanteEtapa1(true);
-                    }}
-                    className="px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    01 Cliente ✓
-                  </button>
-                  <span className="text-zinc-600 text-xs">→</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMostrarFlotanteEtapa3(false);
-                      setMostrarFlotanteEtapa2(true);
-                    }}
-                    className="px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    02 Vehículo ✓
-                  </button>
-                  <span className="text-zinc-600 text-xs">→</span>
-                  <span className="px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-500/40 text-[11px] font-bold text-amber-300">
-                    03
-                  </span>
-                  <span className="text-xs font-semibold uppercase tracking-wider text-amber-400">
-                    Etapa 3: Inspección
-                  </span>
-                </div>
-
-                <h2 className="text-lg sm:text-xl font-bold text-white">
-                  Registra la inspección y marca cada hallazgo
-                </h2>
-                <p className="text-xs text-zinc-400 leading-relaxed max-w-2xl">
-                  Desde el celular tocas el esquema del vehículo en la vista frontal, trasera, laterales o superior y anotas lo que encuentras. Sumas fotos como evidencia y generas el PDF de la inspección.
-                </p>
-
-                {/* 3 Píldoras clave de Etapa 3 */}
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <span className="text-[11px] px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 font-medium">
-                    ✓ Cinco vistas del vehículo
-                  </span>
-                  <span className="text-[11px] px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-medium">
-                    ✓ Fotos como evidencia
-                  </span>
-                  <span className="text-[11px] px-2.5 py-1 rounded-lg bg-sky-500/15 border border-sky-500/30 text-sky-300 font-medium">
-                    ✓ PDF de inspección
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setMostrarFlotanteEtapa3(false)}
-                aria-label="Cerrar"
-                className="w-8 h-8 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center text-sm cursor-pointer shrink-0 transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* BARRA RESUMEN DEL VEHÍCULO Y BOTÓN RÁPIDO DE PDF */}
-            <div className="p-3.5 rounded-xl bg-[#0a0a0a] border border-white/5 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 font-mono font-bold text-amber-300">
-                  {ordenActiva?.plate || vehiculoEncontrado?.plate || etapa2Placa || "SIN PLACA"}
-                </span>
-                <span className="font-semibold text-white">
-                  {ordenActiva?.vehicle ||
-                    (vehiculoEncontrado
-                      ? `${vehiculoEncontrado.brand} ${vehiculoEncontrado.model}`
-                      : `${etapa2Marca} ${etapa2Modelo}`.trim() || "Vehículo en recepción")}
-                </span>
-                <span className="text-zinc-500">•</span>
-                <span className="text-zinc-400">
-                  Cliente:{" "}
-                  <strong className="text-zinc-200">
-                    {ordenActiva?.client ||
-                      clienteSeleccionadoEtapa1?.name ||
-                      etapa1Nombre ||
-                      "Cliente"}
-                  </strong>
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleGenerarPdfInspeccion}
-                className="h-9 px-3.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 hover:text-white text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer active:scale-95"
-              >
-                <span>📄</span>
-                <span>Generar PDF de Inspección</span>
-              </button>
-            </div>
-
-            {/* ===============================================================
-                SECCIÓN 1: CINCO VISTAS DEL VEHÍCULO + ESQUEMA INTERACTIVO TÁCTIL
-                =============================================================== */}
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">
-                  1. Cinco Vistas del Vehículo (Toca el esquema o una zona para marcar hallazgos)
-                </span>
-                <span className="text-[11px] text-zinc-400">
-                  Total marcados:{" "}
-                  <strong className="text-amber-300">{etapa3Hallazgos.length}</strong>
-                </span>
-              </div>
-
-              {/* Selector de las 5 Vistas */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                {VISTAS_INSPECCION.map((v) => {
-                  const activa = etapa3VistaActiva === v.id;
-                  const countVista = etapa3Hallazgos.filter((h) => h.vista === v.id).length;
-                  return (
-                    <button
-                      key={v.id}
-                      type="button"
-                      onClick={() => {
-                        setEtapa3VistaActiva(v.id);
-                        setEtapa3ZonaActual("");
-                      }}
-                      className={`h-11 px-3 rounded-xl border text-xs font-semibold flex items-center justify-between gap-1.5 transition-all cursor-pointer active:scale-95 ${
-                        activa
-                          ? "bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-md"
-                          : "bg-[#0a0a0a] hover:bg-[#161618] border-white/10 text-zinc-400 hover:text-white"
-                      }`}
-                    >
-                      <span className="truncate">{v.label}</span>
-                      <span
-                        className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
-                          countVista > 0
-                            ? "bg-amber-500 text-black"
-                            : "bg-white/5 text-zinc-500"
-                        }`}
-                      >
-                        {countVista}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Contenedor Principal: Esquema Táctil (Izquierda) + Editor de Hallazgo (Derecha) */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                {/* ESQUEMA INTERACTIVO DEL VEHÍCULO (7 COLUMNAS) */}
-                <div className="lg:col-span-7 p-4 rounded-2xl bg-[#0a0a0a] border border-white/10 space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold text-white">
-                      Esquema: {vistaActivaConfig.label}
-                    </span>
-                    <span className="text-[11px] text-amber-300/90">
-                      👆 Toca cualquier punto del vehículo para marcar
-                    </span>
-                  </div>
-
-                  {/* Lienzo interactivo con SVG de las 5 vistas */}
-                  <div
-                    onClick={handleTocarEsquemaVehiculo}
-                    className="relative w-full h-64 sm:h-72 rounded-xl bg-gradient-to-b from-[#111115] to-[#08080a] border border-white/10 overflow-hidden cursor-crosshair select-none touch-manipulation flex items-center justify-center"
-                  >
-                    {/* Cuadrícula técnica sutil de fondo */}
-                    <div
-                      className="absolute inset-0 opacity-15 pointer-events-none"
-                      style={{
-                        backgroundImage:
-                          "radial-gradient(circle, rgba(255,255,255,0.25) 1px, transparent 1px)",
-                        backgroundSize: "18px 18px",
-                      }}
-                    />
-
-                    {/* Dibujo técnico SVG según la vista activa */}
-                    {etapa3VistaActiva === "frontal" && (
-                      <svg
-                        viewBox="0 0 300 220"
-                        className="w-full h-full max-w-[340px] pointer-events-none stroke-zinc-400"
-                        fill="none"
-                      >
-                        {/* Silueta Frontal del Vehículo */}
-                        <path
-                          d="M65 160 L50 115 L78 55 L222 55 L250 115 L235 160 Z"
-                          strokeWidth="2.5"
-                          className="fill-zinc-900/70"
-                        />
-                        {/* Parabrisas delantero */}
-                        <polygon
-                          points="86,62 214,62 232,108 68,108"
-                          strokeWidth="2"
-                          className="fill-sky-500/10 stroke-sky-400/50"
-                        />
-                        {/* Capó */}
-                        <path d="M68 108 L232 108 L242 135 L58 135 Z" strokeWidth="1.8" />
-                        {/* Parrilla y Faros */}
-                        <rect x="62" y="136" width="36" height="16" rx="4" strokeWidth="2" className="fill-amber-400/20 stroke-amber-300" />
-                        <rect x="202" y="136" width="36" height="16" rx="4" strokeWidth="2" className="fill-amber-400/20 stroke-amber-300" />
-                        <rect x="106" y="138" width="88" height="14" rx="3" strokeWidth="1.8" className="fill-zinc-800" />
-                        {/* Parachoques delantero */}
-                        <rect x="48" y="154" width="204" height="22" rx="8" strokeWidth="2.2" className="fill-zinc-800/90" />
-                        {/* Espejos laterales */}
-                        <rect x="38" y="92" width="18" height="12" rx="4" strokeWidth="1.8" />
-                        <rect x="244" y="92" width="18" height="12" rx="4" strokeWidth="1.8" />
-                        {/* Llantas delanteras */}
-                        <rect x="52" y="172" width="32" height="26" rx="5" strokeWidth="2" className="fill-zinc-950" />
-                        <rect x="216" y="172" width="32" height="26" rx="5" strokeWidth="2" className="fill-zinc-950" />
-                        <text x="150" y="25" textAnchor="middle" className="fill-zinc-500 text-[10px] font-mono">
-                          VISTA FRONTAL
-                        </text>
-                      </svg>
-                    )}
-
-                    {etapa3VistaActiva === "trasera" && (
-                      <svg
-                        viewBox="0 0 300 220"
-                        className="w-full h-full max-w-[340px] pointer-events-none stroke-zinc-400"
-                        fill="none"
-                      >
-                        {/* Silueta Trasera */}
-                        <path
-                          d="M65 160 L54 112 L82 56 L218 56 L246 112 L235 160 Z"
-                          strokeWidth="2.5"
-                          className="fill-zinc-900/70"
-                        />
-                        {/* Parabrisas trasero */}
-                        <polygon
-                          points="90,64 210,64 226,105 74,105"
-                          strokeWidth="2"
-                          className="fill-sky-500/10 stroke-sky-400/50"
-                        />
-                        {/* Compuerta / Maletero */}
-                        <rect x="70" y="108" width="160" height="44" rx="4" strokeWidth="1.8" />
-                        {/* Faros traseros (Stops) */}
-                        <rect x="58" y="118" width="32" height="20" rx="4" strokeWidth="2" className="fill-rose-500/30 stroke-rose-400" />
-                        <rect x="210" y="118" width="32" height="20" rx="4" strokeWidth="2" className="fill-rose-500/30 stroke-rose-400" />
-                        {/* Placa */}
-                        <rect x="122" y="126" width="56" height="16" rx="3" strokeWidth="1.5" className="fill-amber-400/20 stroke-amber-300" />
-                        {/* Parachoques trasero */}
-                        <rect x="48" y="154" width="204" height="22" rx="8" strokeWidth="2.2" className="fill-zinc-800/90" />
-                        {/* Llantas traseras */}
-                        <rect x="52" y="172" width="32" height="26" rx="5" strokeWidth="2" className="fill-zinc-950" />
-                        <rect x="216" y="172" width="32" height="26" rx="5" strokeWidth="2" className="fill-zinc-950" />
-                        <text x="150" y="25" textAnchor="middle" className="fill-zinc-500 text-[10px] font-mono">
-                          VISTA TRASERA
-                        </text>
-                      </svg>
-                    )}
-
-                    {etapa3VistaActiva === "lateral_izq" && (
-                      <svg
-                        viewBox="0 0 360 200"
-                        className="w-full h-full max-w-[420px] pointer-events-none stroke-zinc-400"
-                        fill="none"
-                      >
-                        {/* Carrocería Lateral Izquierda */}
-                        <path
-                          d="M28 135 L35 102 L95 92 L135 55 L255 55 L295 92 L332 102 L336 138 L28 138 Z"
-                          strokeWidth="2.4"
-                          className="fill-zinc-900/75"
-                        />
-                        {/* Ventanas */}
-                        <polygon points="105,90 140,62 192,62 192,90" strokeWidth="1.8" className="fill-sky-500/15 stroke-sky-400/50" />
-                        <polygon points="198,62 250,62 282,90 198,90" strokeWidth="1.8" className="fill-sky-500/15 stroke-sky-400/50" />
-                        {/* División de Puertas */}
-                        <line x1="115" y1="90" x2="115" y2="136" strokeWidth="1.8" />
-                        <line x1="195" y1="58" x2="195" y2="136" strokeWidth="1.8" />
-                        <line x1="270" y1="90" x2="270" y2="136" strokeWidth="1.8" />
-                        {/* Manijas */}
-                        <rect x="168" y="102" width="16" height="4" rx="2" strokeWidth="1.5" />
-                        <rect x="242" y="102" width="16" height="4" rx="2" strokeWidth="1.5" />
-                        {/* Ruedas */}
-                        <circle cx="88" cy="142" r="26" strokeWidth="3" className="fill-zinc-950 stroke-zinc-300" />
-                        <circle cx="88" cy="142" r="12" strokeWidth="1.5" />
-                        <circle cx="276" cy="142" r="26" strokeWidth="3" className="fill-zinc-950 stroke-zinc-300" />
-                        <circle cx="276" cy="142" r="12" strokeWidth="1.5" />
-                        <text x="180" y="24" textAnchor="middle" className="fill-zinc-500 text-[10px] font-mono">
-                          LATERAL IZQUIERDO (CONDUCTOR)
-                        </text>
-                      </svg>
-                    )}
-
-                    {etapa3VistaActiva === "lateral_der" && (
-                      <svg
-                        viewBox="0 0 360 200"
-                        className="w-full h-full max-w-[420px] pointer-events-none stroke-zinc-400"
-                        fill="none"
-                      >
-                        {/* Carrocería Lateral Derecha */}
-                        <path
-                          d="M332 135 L325 102 L265 92 L225 55 L105 55 L65 92 L28 102 L24 138 L332 138 Z"
-                          strokeWidth="2.4"
-                          className="fill-zinc-900/75"
-                        />
-                        {/* Ventanas */}
-                        <polygon points="255,90 220,62 168,62 168,90" strokeWidth="1.8" className="fill-sky-500/15 stroke-sky-400/50" />
-                        <polygon points="162,62 110,62 78,90 162,90" strokeWidth="1.8" className="fill-sky-500/15 stroke-sky-400/50" />
-                        {/* División de Puertas */}
-                        <line x1="245" y1="90" x2="245" y2="136" strokeWidth="1.8" />
-                        <line x1="165" y1="58" x2="165" y2="136" strokeWidth="1.8" />
-                        <line x1="90" y1="90" x2="90" y2="136" strokeWidth="1.8" />
-                        {/* Manijas */}
-                        <rect x="176" y="102" width="16" height="4" rx="2" strokeWidth="1.5" />
-                        <rect x="102" y="102" width="16" height="4" rx="2" strokeWidth="1.5" />
-                        {/* Ruedas */}
-                        <circle cx="84" cy="142" r="26" strokeWidth="3" className="fill-zinc-950 stroke-zinc-300" />
-                        <circle cx="84" cy="142" r="12" strokeWidth="1.5" />
-                        <circle cx="272" cy="142" r="26" strokeWidth="3" className="fill-zinc-950 stroke-zinc-300" />
-                        <circle cx="272" cy="142" r="12" strokeWidth="1.5" />
-                        <text x="180" y="24" textAnchor="middle" className="fill-zinc-500 text-[10px] font-mono">
-                          LATERAL DERECHO (COPILOTO)
-                        </text>
-                      </svg>
-                    )}
-
-                    {etapa3VistaActiva === "superior" && (
-                      <svg
-                        viewBox="0 0 260 240"
-                        className="w-full h-full max-w-[280px] pointer-events-none stroke-zinc-400"
-                        fill="none"
-                      >
-                        {/* Contorno Superior del Vehículo */}
-                        <rect x="65" y="18" width="130" height="204" rx="34" strokeWidth="2.5" className="fill-zinc-900/75" />
-                        {/* Capó superior */}
-                        <path d="M72 68 L188 68" strokeWidth="1.8" />
-                        {/* Parabrisas delantero */}
-                        <polygon points="75,68 185,68 175,98 85,98" strokeWidth="1.8" className="fill-sky-500/15 stroke-sky-400/50" />
-                        {/* Techo central */}
-                        <rect x="85" y="98" width="90" height="64" rx="6" strokeWidth="2" className="fill-zinc-800/70" />
-                        {/* Luneta trasera */}
-                        <polygon points="85,162 175,162 184,188 76,188" strokeWidth="1.8" className="fill-sky-500/15 stroke-sky-400/50" />
-                        {/* Espejos */}
-                        <rect x="48" y="82" width="16" height="10" rx="4" strokeWidth="1.6" />
-                        <rect x="196" y="82" width="16" height="10" rx="4" strokeWidth="1.6" />
-                        <text x="130" y="12" textAnchor="middle" className="fill-zinc-500 text-[9px] font-mono">
-                          FRENTE ↑ • VISTA SUPERIOR
-                        </text>
-                      </svg>
-                    )}
-
-                    {/* Puntos guía sutiles de las zonas predefinidas */}
-                    {vistaActivaConfig.zonas.map((z) => (
-                      <button
-                        key={z.nombre}
-                        type="button"
-                        title={`Marcar en: ${z.nombre}`}
-                        onClick={(ev) => {
-                          ev.stopPropagation();
-                          handleAgregarHallazgoEnPunto(z.x, z.y, z.nombre);
-                        }}
-                        style={{ left: `${z.x}%`, top: `${z.y}%` }}
-                        className="absolute -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white/10 hover:bg-amber-400/40 border border-white/25 hover:border-amber-300 flex items-center justify-center text-[9px] text-white/70 hover:scale-125 transition-all cursor-pointer"
-                      >
-                        +
-                      </button>
-                    ))}
-
-                    {/* Pines numerados de Hallazgos registrados en esta vista */}
-                    {etapa3Hallazgos
-                      .map((h, globalIdx) => ({ h, globalIdx }))
-                      .filter(({ h }) => h.vista === etapa3VistaActiva)
-                      .map(({ h, globalIdx }) => {
-                        const seleccionado = etapa3HallazgoSeleccionadoId === h.id;
-                        return (
-                          <button
-                            key={h.id}
-                            type="button"
-                            onClick={(ev) => {
-                              ev.stopPropagation();
-                              setEtapa3HallazgoSeleccionadoId(h.id);
-                              setEtapa3TipoHallazgoActual(h.tipo);
-                              setEtapa3ZonaActual(h.zona);
-                              setEtapa3DescripcionActual(h.descripcion);
-                            }}
-                            style={{ left: `${h.x}%`, top: `${h.y}%` }}
-                            className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full font-mono text-xs font-bold flex items-center justify-center shadow-lg transition-all cursor-pointer z-20 ${
-                              seleccionado
-                                ? "bg-amber-400 text-black ring-4 ring-amber-400/40 scale-125"
-                                : "bg-rose-500 text-white border-2 border-white hover:scale-110"
-                            }`}
-                            title={`#${globalIdx + 1} ${h.zona}: ${h.tipo}`}
-                          >
-                            {globalIdx + 1}
-                          </button>
-                        );
-                      })}
-                  </div>
-
-                  {/* Botones rápidos de Zonas de la Vista Activa (Ideal para tocar rápido en celular) */}
-                  <div className="space-y-1.5">
-                    <span className="text-[11px] font-medium text-zinc-400 block">
-                      Toque rápido por pieza ({vistaActivaConfig.label}):
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {vistaActivaConfig.zonas.map((z) => (
-                        <button
-                          key={z.nombre}
-                          type="button"
-                          onClick={() => handleAgregarHallazgoEnPunto(z.x, z.y, z.nombre)}
-                          className="px-2.5 py-1.5 rounded-lg bg-[#111113] hover:bg-amber-500/20 border border-white/10 hover:border-amber-500/40 text-[11px] text-zinc-300 hover:text-amber-200 transition-all cursor-pointer active:scale-95"
-                        >
-                          + {z.nombre}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* PANEL DERECHO: DETALLE DEL HALLAZGO Y LISTA DE MARCADOS (5 COLUMNAS) */}
-                <div className="lg:col-span-5 p-4 rounded-2xl bg-[#0a0a0a] border border-white/10 flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">
-                        Detalle del Hallazgo
-                      </span>
-                      {etapa3HallazgoSeleccionadoId && (
-                        <span className="text-[11px] px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-mono">
-                          Editando punto seleccionado
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Selector de Tipo de Hallazgo */}
-                    <div>
-                      <label className="text-[11px] font-medium text-zinc-400 block mb-1.5">
-                        Tipo de daño / hallazgo
-                      </label>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                        {TIPOS_HALLAZGO.map((t) => {
-                          const activo = etapa3TipoHallazgoActual === t.id;
-                          return (
-                            <button
-                              key={t.id}
-                              type="button"
-                              onClick={() => {
-                                setEtapa3TipoHallazgoActual(t.id);
-                                if (etapa3HallazgoSeleccionadoId) {
-                                  handleActualizarHallazgoSeleccionado(
-                                    etapa3HallazgoSeleccionadoId,
-                                    { tipo: t.id }
-                                  );
-                                }
-                              }}
-                              className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-all cursor-pointer ${
-                                activo
-                                  ? t.color
-                                  : "bg-[#111113] border-white/5 text-zinc-400 hover:text-white"
-                              }`}
-                            >
-                              {t.id}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Zona y Anotación de lo encontrado */}
-                    <div className="grid grid-cols-1 gap-2.5">
-                      <div>
-                        <label className="text-[11px] font-medium text-zinc-400 block mb-1">
-                          Pieza / Zona del esquema
-                        </label>
-                        <input
-                          type="text"
-                          value={etapa3ZonaActual}
-                          onChange={(e) => {
-                            setEtapa3ZonaActual(e.target.value);
-                            if (etapa3HallazgoSeleccionadoId) {
-                              handleActualizarHallazgoSeleccionado(
-                                etapa3HallazgoSeleccionadoId,
-                                { zona: e.target.value }
-                              );
-                            }
-                          }}
-                          placeholder="Ej: Puerta delantera izq., Parachoques..."
-                          className="w-full h-10 px-3 rounded-lg bg-[#111113] border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-amber-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-medium text-zinc-400 block mb-1">
-                          Anota lo que encuentras en este punto
-                        </label>
-                        <input
-                          type="text"
-                          value={etapa3DescripcionActual}
-                          onChange={(e) => {
-                            setEtapa3DescripcionActual(e.target.value);
-                            if (etapa3HallazgoSeleccionadoId) {
-                              handleActualizarHallazgoSeleccionado(
-                                etapa3HallazgoSeleccionadoId,
-                                { descripcion: e.target.value }
-                              );
-                            }
-                          }}
-                          placeholder="Ej: Rayón profundo de 10cm, abolladura leve..."
-                          className="w-full h-10 px-3 rounded-lg bg-[#111113] border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-amber-500"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Lista de Hallazgos Marcados */}
-                    <div className="pt-2 border-t border-white/5 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-semibold text-zinc-300">
-                          Hallazgos registrados ({etapa3Hallazgos.length})
-                        </span>
-                        {etapa3Hallazgos.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEtapa3Hallazgos([]);
-                              setEtapa3HallazgoSeleccionadoId(null);
-                            }}
-                            className="text-[10px] text-rose-400 hover:underline cursor-pointer"
-                          >
-                            Limpiar todos
-                          </button>
-                        )}
-                      </div>
-
-                      {etapa3Hallazgos.length === 0 ? (
-                        <div className="p-4 rounded-xl bg-[#111113] border border-white/5 text-center text-xs text-zinc-500">
-                          Toca el esquema del vehículo a la izquierda para agregar el punto #1.
-                        </div>
-                      ) : (
-                        <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
-                          {etapa3Hallazgos.map((h, idx) => {
-                            const activo = etapa3HallazgoSeleccionadoId === h.id;
-                            return (
-                              <div
-                                key={h.id}
-                                onClick={() => {
-                                  setEtapa3VistaActiva(h.vista);
-                                  setEtapa3HallazgoSeleccionadoId(h.id);
-                                  setEtapa3TipoHallazgoActual(h.tipo);
-                                  setEtapa3ZonaActual(h.zona);
-                                  setEtapa3DescripcionActual(h.descripcion);
-                                }}
-                                className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 text-xs transition-all cursor-pointer ${
-                                  activo
-                                    ? "bg-amber-500/15 border-amber-500/40 text-white"
-                                    : "bg-[#111113] hover:bg-[#161618] border-white/5 text-zinc-300"
-                                }`}
-                              >
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <span className="w-5 h-5 rounded-full bg-amber-500 text-black font-mono text-[11px] font-bold flex items-center justify-center shrink-0">
-                                    {idx + 1}
-                                  </span>
-                                  <div className="truncate">
-                                    <p className="font-semibold text-white truncate">
-                                      {h.zona}{" "}
-                                      <span className="text-[10px] text-amber-300 font-normal">
-                                        ({h.tipo})
-                                      </span>
-                                    </p>
-                                    <p className="text-[11px] text-zinc-400 truncate">
-                                      {h.vistaLabel}: {h.descripcion}
-                                    </p>
-                                  </div>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={(ev) => {
-                                    ev.stopPropagation();
-                                    handleEliminarHallazgoEtapa3(h.id);
-                                  }}
-                                  className="w-6 h-6 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 flex items-center justify-center text-xs shrink-0 cursor-pointer"
-                                  title="Eliminar hallazgo"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ===============================================================
-                SECCIÓN 2: FOTOS COMO EVIDENCIA (CLOUDFLARE R2) Y OBSERVACIONES
-                =============================================================== */}
-            <div className="p-4 rounded-xl bg-[#0a0a0a] border border-white/5 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider block">
-                    2. Fotos como Evidencia (Cloudflare R2)
-                  </span>
-                  <p className="text-[11px] text-zinc-400">
-                    Toma fotos con la cámara del celular o súbelas de la galería como respaldo de la recepción.
-                  </p>
-                </div>
-
-                <label className="h-10 px-4 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all active:scale-95">
-                  <span>📷</span>
-                  <span>
-                    {subiendoFotoRecepcion ? "Subiendo a R2..." : "+ Sumar Foto de Evidencia"}
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleSubirFotoRecepcion}
-                    className="hidden"
-                    disabled={subiendoFotoRecepcion}
-                  />
-                </label>
-              </div>
-
-              {/* Galería de fotos cargadas */}
-              {fotosRecepcion.length > 0 ? (
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5 pt-1">
-                  {fotosRecepcion.map((url, idx) => (
-                    <div
-                      key={`${url}-${idx}`}
-                      className="relative group rounded-xl overflow-hidden border border-white/10 bg-[#111113] aspect-video"
-                    >
-                      <img
-                        src={url}
-                        alt={`Evidencia ${idx + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFotosRecepcion((prev) => prev.filter((_, i) => i !== idx))
-                        }
-                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/80 text-rose-400 text-xs flex items-center justify-center opacity-90 hover:opacity-100 cursor-pointer"
-                        title="Quitar foto"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-3 rounded-xl bg-[#111113] border border-dashed border-white/10 text-center text-xs text-zinc-500">
-                  Aún no se han adjuntado fotos de evidencia en esta inspección.
-                </div>
-              )}
-
-              {/* Observaciones generales de la inspección */}
-              <div className="pt-1">
-                <label className="text-[11px] font-medium text-zinc-400 block mb-1">
-                  Observaciones adicionales de la inspección
-                </label>
-                <input
-                  type="text"
-                  value={etapa3NotasGenerales}
-                  onChange={(e) => setEtapa3NotasGenerales(e.target.value)}
-                  placeholder="Ej: Vehículo ingresa con carrocería húmeda / sucia, cliente autoriza revisión..."
-                  className="w-full h-10 px-3 rounded-lg bg-[#111113] border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-amber-500"
-                />
-              </div>
-            </div>
-
-            {/* ===============================================================
-                PIE DEL FLOTANTE 03: VOLVER, GENERAR PDF Y GUARDAR INSPECCIÓN
-                =============================================================== */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-white/5">
-              <button
-                type="button"
-                onClick={() => {
-                  setMostrarFlotanteEtapa3(false);
-                  setMostrarFlotanteEtapa2(true);
-                }}
-                className="h-11 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
-              >
-                ← Volver a Etapa 2
-              </button>
-
-              <div className="flex flex-wrap items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={handleGenerarPdfInspeccion}
-                  className="h-11 px-4 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 hover:text-white text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 active:scale-95"
-                >
-                  <span>📄</span>
-                  <span>PDF de Inspección</span>
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={guardandoEtapa3}
-                  className="h-11 px-6 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 hover:text-white text-xs sm:text-sm font-semibold shadow-lg transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-                >
-                  {guardandoEtapa3
-                    ? "Guardando inspección..."
-                    : "Guardar y Pasar a Etapa 4: Presupuesto →"}
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* =====================================================================
-          FLOTANTE 04 — ETAPA 4: PRESUPUESTO
-          - Servicios y repuestos de tu catálogo (con los más usados a un clic)
-          - Impuestos y descuentos al instante
-          - Aprobación del cliente con un link desde su celular
-          ===================================================================== */}
-      {mostrarFlotanteEtapa4 && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
-          onClick={() => setMostrarFlotanteEtapa4(false)}
-        >
-          <form
-            onSubmit={(e) => handleGuardarEtapa4Presupuesto(e)}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-[#111113] border border-white/10 rounded-t-3xl sm:rounded-2xl w-full max-w-4xl p-5 sm:p-6 shadow-2xl relative max-h-[93vh] overflow-y-auto space-y-5"
-          >
-            {/* Cabecera del Flotante 04 */}
-            <div className="flex items-start justify-between gap-3 border-b border-white/5 pb-4">
-              <div className="space-y-1.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMostrarFlotanteEtapa4(false);
-                      setMostrarFlotanteEtapa1(true);
-                    }}
-                    className="px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    01 Cliente ✓
-                  </button>
-                  <span className="text-zinc-600 text-xs">→</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMostrarFlotanteEtapa4(false);
-                      setMostrarFlotanteEtapa2(true);
-                    }}
-                    className="px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    02 Vehículo ✓
-                  </button>
-                  <span className="text-zinc-600 text-xs">→</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMostrarFlotanteEtapa4(false);
-                      setMostrarFlotanteEtapa3(true);
-                    }}
-                    className="px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    03 Inspección ✓
-                  </button>
-                  <span className="text-zinc-600 text-xs">→</span>
-                  <span className="px-2 py-0.5 rounded-md bg-purple-500/20 border border-purple-500/40 text-[11px] font-bold text-purple-300">
-                    04
-                  </span>
-                  <span className="text-xs font-semibold uppercase tracking-wider text-purple-400">
-                    Etapa 4: Presupuesto
-                  </span>
-                </div>
-
-                <h2 className="text-lg sm:text-xl font-bold text-white">
-                  Arma el presupuesto
-                </h2>
-                <p className="text-xs text-zinc-400 leading-relaxed max-w-2xl">
-                  Agregas servicios y repuestos desde tu catálogo, con los más usados a un clic, y los totales se calculan con impuestos y descuentos. Creas el presupuesto desde la misma orden y el cliente lo aprueba desde su celular con un link.
-                </p>
-
-                {/* 3 Píldoras clave de Etapa 4 */}
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <span className="text-[11px] px-2.5 py-1 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 font-medium">
-                    ✓ Servicios y repuestos de tu catálogo
-                  </span>
-                  <span className="text-[11px] px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-medium">
-                    ✓ Impuestos y descuentos al instante
-                  </span>
-                  <span className="text-[11px] px-2.5 py-1 rounded-lg bg-sky-500/15 border border-sky-500/30 text-sky-300 font-medium">
-                    ✓ Aprobación del cliente con un link
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setMostrarFlotanteEtapa4(false)}
-                aria-label="Cerrar"
-                className="w-8 h-8 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center text-sm cursor-pointer shrink-0 transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* BARRA RESUMEN DE LA ORDEN Y ESTADO DEL PRESUPUESTO */}
-            <div className="p-3.5 rounded-xl bg-[#0a0a0a] border border-white/5 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="px-2.5 py-1 rounded-lg bg-purple-500/15 border border-purple-500/30 font-mono font-bold text-purple-300">
-                  {ordenActiva?.quoteNumber ||
-                    (ordenActiva ? `PRE-${ordenActiva.orderNumber}` : "NUEVO PRESUPUESTO")}
-                </span>
-                <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 font-mono text-zinc-200">
-                  {ordenActiva?.plate || vehiculoEncontrado?.plate || etapa2Placa || "SIN PLACA"}
-                </span>
-                <span className="font-semibold text-white">
-                  {ordenActiva?.vehicle ||
-                    (vehiculoEncontrado
-                      ? `${vehiculoEncontrado.brand} ${vehiculoEncontrado.model}`
-                      : `${etapa2Marca} ${etapa2Modelo}`.trim() || "Vehículo")}
-                </span>
-                <span className="text-zinc-500">•</span>
-                <span className="text-zinc-400">
-                  Cliente:{" "}
-                  <strong className="text-zinc-200">
-                    {ordenActiva?.client ||
-                      clienteSeleccionadoEtapa1?.name ||
-                      etapa1Nombre ||
-                      "Cliente"}
-                  </strong>
-                </span>
-              </div>
-
+            {/* Cabecera del Documento */}
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
-                <span
-                  className={`px-3 py-1 rounded-full text-[11px] font-semibold border ${
-                    etapa4QuoteStatus === "Aprobado por Cliente"
-                      ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
-                      : "bg-amber-500/15 border-amber-500/30 text-amber-300"
-                  }`}
-                >
-                  {etapa4QuoteStatus}
-                </span>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                <h3 className="text-base font-bold text-white">
+                  {modalImpresionDoc === "PDF"
+                    ? "Vista Previa: Orden de Trabajo en PDF"
+                    : modalImpresionDoc === "TICKET"
+                    ? "Vista Previa: Ticket Térmico POS (80mm)"
+                    : "Vista Previa: Etiqueta Adhesiva QR"}
+                </h3>
               </div>
+              <button
+                type="button"
+                onClick={() => setModalImpresionDoc(null)}
+                className="text-zinc-400 hover:text-white px-2.5 py-1 rounded-lg bg-white/5 cursor-pointer text-xs"
+              >
+                ✕ Cerrar
+              </button>
             </div>
 
-            {/* ===============================================================
-                BLOQUE PRINCIPAL (2 COLUMNAS EN DESKTOP):
-                IZQUIERDA: CATÁLOGO (MÁS USADOS A 1 CLIC, SERVICIOS Y REPUESTOS)
-                DERECHA: PRESUPUESTO EN VIVO + IMPUESTOS Y DESCUENTOS AL INSTANTE
-                =============================================================== */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-              {/* COLUMNA IZQUIERDA (7 COLS): CATÁLOGO Y MÁS USADOS A UN CLIC */}
-              <div className="lg:col-span-7 p-4 rounded-2xl bg-[#0a0a0a] border border-white/10 space-y-3.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
-                    1. Servicios y Repuestos de tu Catálogo
-                  </span>
-                  <span className="text-[11px] text-zinc-400">
-                    Toca para sumar al presupuesto
-                  </span>
-                </div>
-
-                {/* Pestañas del Catálogo */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                  {[
-                    { id: "MAS_USADOS", label: "⚡ Más usados (1 clic)" },
-                    { id: "SERVICIOS", label: `🔧 Servicios (${catalogoServiciosCompleto.length})` },
-                    { id: "REPUESTOS", label: `⚙️ Repuestos (${productosInventario.length})` },
-                    { id: "MANUAL", label: "➕ Ítem libre" },
-                  ].map((tab) => {
-                    const activo = etapa4TabCatalogo === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => setEtapa4TabCatalogo(tab.id as any)}
-                        className={`h-9 px-2.5 rounded-xl border text-[11px] font-semibold transition-all cursor-pointer truncate ${
-                          activo
-                            ? "bg-purple-500/20 border-purple-500/50 text-purple-300 shadow"
-                            : "bg-[#111113] hover:bg-[#161618] border-white/10 text-zinc-400 hover:text-white"
-                        }`}
-                      >
-                        {tab.label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Buscador rápido cuando está en Servicios o Repuestos */}
-                {(etapa4TabCatalogo === "SERVICIOS" || etapa4TabCatalogo === "REPUESTOS") && (
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={etapa4BusquedaCatalogo}
-                      onChange={(e) => setEtapa4BusquedaCatalogo(e.target.value)}
-                      placeholder={
-                        etapa4TabCatalogo === "SERVICIOS"
-                          ? "Buscar servicio en tu catálogo por nombre o código..."
-                          : "Buscar repuesto o insumo por nombre, código o marca..."
-                      }
-                      className="w-full h-10 pl-3.5 pr-9 rounded-xl bg-[#111113] border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-purple-500"
-                    />
-                    {etapa4BusquedaCatalogo && (
-                      <button
-                        type="button"
-                        onClick={() => setEtapa4BusquedaCatalogo("")}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white text-xs cursor-pointer"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* VISTA 1: LOS MÁS USADOS A UN CLIC */}
-                {etapa4TabCatalogo === "MAS_USADOS" && (
-                  <div className="space-y-2">
-                    <p className="text-[11px] text-zinc-400">
-                      Agrega los servicios y repuestos más frecuentes con un solo toque:
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
-                      {masUsadosCatalogo.map((item) => {
-                        const enPresupuesto = etapa4Items.find(
-                          (i) =>
-                            i.code === item.code ||
-                            i.name.toLowerCase() === item.name.toLowerCase()
-                        );
-                        return (
-                          <button
-                            key={item.code}
-                            type="button"
-                            onClick={() => handleToggleItemCatalogoEtapa4(item)}
-                            className={`p-3 rounded-xl border text-left flex items-center justify-between gap-2 transition-all cursor-pointer active:scale-95 ${
-                              enPresupuesto
-                                ? "bg-purple-500/15 border-purple-500/40 text-white"
-                                : "bg-[#111113] hover:bg-[#161618] border-white/5 text-zinc-200"
-                            }`}
-                          >
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span
-                                  className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
-                                    item.type === "PART"
-                                      ? "bg-pink-500/20 text-pink-300"
-                                      : "bg-blue-500/20 text-blue-300"
-                                  }`}
-                                >
-                                  {item.type === "PART" ? "REPUESTO" : "SERVICIO"}
-                                </span>
-                                <span className="text-[10px] font-mono text-zinc-500">
-                                  {item.code}
-                                </span>
-                              </div>
-                              <p className="text-xs font-semibold text-white truncate mt-1">
-                                {item.name}
-                              </p>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <span className="text-xs font-mono font-bold text-emerald-400 block">
-                                ${item.price.toFixed(2)}
-                              </span>
-                              <span className="text-[10px] text-purple-300 font-semibold">
-                                {enPresupuesto ? `✓ Cant: ${enPresupuesto.qty}` : "+ Sumar"}
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
+            {/* Contenido según el tipo de documento */}
+            <div className="p-4 rounded-xl bg-white text-black font-sans shadow-inner space-y-4">
+              {modalImpresionDoc === "PDF" && (
+                <div className="space-y-4 text-xs">
+                  <div className="flex items-start justify-between border-b border-zinc-200 pb-3">
+                    <div>
+                      <h2 className="text-lg font-bold text-zinc-900 tracking-tight">TALLER AUTOMOTRIZ</h2>
+                      <p className="text-[11px] text-zinc-500">Orden de Servicio & Control de Calidad</p>
+                    </div>
+                    <div className="text-right font-mono">
+                      <span className="text-sm font-bold text-zinc-900">#{ordenActiva.orderNumber}</span>
+                      <p className="text-[10px] text-zinc-500">{new Date().toLocaleDateString("es-EC")}</p>
                     </div>
                   </div>
-                )}
 
-                {/* VISTA 2: CATÁLOGO COMPLETO DE SERVICIOS */}
-                {etapa4TabCatalogo === "SERVICIOS" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
-                    {catalogoServiciosCompleto
-                      .filter((s) => {
-                        const q = etapa4BusquedaCatalogo.trim().toLowerCase();
-                        if (!q) return true;
-                        return (
-                          s.name.toLowerCase().includes(q) ||
-                          s.code.toLowerCase().includes(q) ||
-                          s.category.toLowerCase().includes(q)
-                        );
-                      })
-                      .map((srv) => {
-                        const enPresupuesto = etapa4Items.find(
-                          (i) =>
-                            i.code === srv.code ||
-                            i.name.toLowerCase() === srv.name.toLowerCase()
-                        );
-                        return (
-                          <button
-                            key={`${srv.code}-${srv.name}`}
-                            type="button"
-                            onClick={() =>
-                              handleToggleItemCatalogoEtapa4({
-                                ...srv,
-                                type: "SERVICE",
-                              })
-                            }
-                            className={`p-2.5 rounded-xl border text-left flex items-center justify-between gap-2 transition-all cursor-pointer active:scale-95 ${
-                              enPresupuesto
-                                ? "bg-blue-500/15 border-blue-500/40 text-white"
-                                : "bg-[#111113] hover:bg-[#161618] border-white/5 text-zinc-200"
-                            }`}
-                          >
-                            <div className="min-w-0">
-                              <span className="text-[10px] text-blue-300 block truncate">
-                                {srv.category}
-                              </span>
-                              <p className="text-xs font-semibold text-white truncate">
-                                {srv.name}
-                              </p>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <span className="text-xs font-mono font-bold text-emerald-400 block">
-                                ${srv.price.toFixed(2)}
-                              </span>
-                              <span className="text-[10px] text-blue-300">
-                                {enPresupuesto ? `✓ (${enPresupuesto.qty})` : "+ Sumar"}
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                  </div>
-                )}
-
-                {/* VISTA 3: CATÁLOGO DE REPUESTOS E INSUMOS (INVENTARIO EN VIVO) */}
-                {etapa4TabCatalogo === "REPUESTOS" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
-                    {productosInventario
-                      .filter((p) => {
-                        const q = etapa4BusquedaCatalogo.trim().toLowerCase();
-                        if (!q) return true;
-                        return (
-                          p.name.toLowerCase().includes(q) ||
-                          p.code.toLowerCase().includes(q) ||
-                          (p.brand || "").toLowerCase().includes(q) ||
-                          (p.category || "").toLowerCase().includes(q)
-                        );
-                      })
-                      .map((prod) => {
-                        const enPresupuesto = etapa4Items.find(
-                          (i) => i.productId === prod.id || i.code === prod.code
-                        );
-                        return (
-                          <button
-                            key={prod.id}
-                            type="button"
-                            onClick={() =>
-                              handleToggleItemCatalogoEtapa4({
-                                code: prod.code,
-                                name: prod.name,
-                                price: Number(prod.price) || 0,
-                                type: "PART",
-                                category: "Repuestos e Insumos",
-                                productId: prod.id,
-                                imageUrl: prod.imageUrl,
-                              })
-                            }
-                            className={`p-2.5 rounded-xl border text-left flex items-center justify-between gap-2 transition-all cursor-pointer active:scale-95 ${
-                              enPresupuesto
-                                ? "bg-pink-500/15 border-pink-500/40 text-white"
-                                : "bg-[#111113] hover:bg-[#161618] border-white/5 text-zinc-200"
-                            }`}
-                          >
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] font-mono text-pink-300">
-                                  {prod.code}
-                                </span>
-                                <span className="text-[10px] text-zinc-400">
-                                  • Stock: {prod.stock}
-                                </span>
-                              </div>
-                              <p className="text-xs font-semibold text-white truncate">
-                                {prod.name}
-                              </p>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <span className="text-xs font-mono font-bold text-emerald-400 block">
-                                ${Number(prod.price || 0).toFixed(2)}
-                              </span>
-                              <span className="text-[10px] text-pink-300">
-                                {enPresupuesto ? `✓ (${enPresupuesto.qty})` : "+ Sumar"}
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                  </div>
-                )}
-
-                {/* VISTA 4: AGREGAR ÍTEM LIBRE / PERSONALIZADO */}
-                {etapa4TabCatalogo === "MANUAL" && (
-                  <div className="p-3.5 rounded-xl bg-[#111113] border border-white/10 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEtapa4ManualTipo("SERVICE")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer ${
-                          etapa4ManualTipo === "SERVICE"
-                            ? "bg-blue-500/20 border-blue-500/40 text-blue-300"
-                            : "bg-black/40 border-white/10 text-zinc-400"
-                        }`}
-                      >
-                        🔧 Servicio
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEtapa4ManualTipo("PART")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer ${
-                          etapa4ManualTipo === "PART"
-                            ? "bg-pink-500/20 border-pink-500/40 text-pink-300"
-                            : "bg-black/40 border-white/10 text-zinc-400"
-                        }`}
-                      >
-                        ⚙️ Repuesto / Insumo
-                      </button>
+                  <div className="grid grid-cols-2 gap-2 text-zinc-700 bg-zinc-50 p-2.5 rounded-lg border border-zinc-200">
+                    <div>
+                      <p><strong>Cliente:</strong> {ordenActiva.client}</p>
+                      <p><strong>Teléfono:</strong> {ordenActiva.clientPhone || "N/A"}</p>
                     </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                      <div className="sm:col-span-2">
-                        <input
-                          type="text"
-                          value={etapa4ManualNombre}
-                          onChange={(e) => setEtapa4ManualNombre(e.target.value)}
-                          placeholder="Descripción del servicio o repuesto..."
-                          className="w-full h-10 px-3 rounded-lg bg-[#0a0a0a] border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-purple-500"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={etapa4ManualPrecio}
-                          onChange={(e) => setEtapa4ManualPrecio(e.target.value)}
-                          placeholder="$ Precio"
-                          className="w-full h-10 px-3 rounded-lg bg-[#0a0a0a] border border-white/10 text-white text-xs font-mono placeholder:text-zinc-500 focus:outline-none focus:border-purple-500"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAgregarManualEtapa4}
-                          className="h-10 px-3.5 rounded-lg bg-purple-500/25 hover:bg-purple-500/35 border border-purple-500/40 text-purple-200 text-xs font-semibold shrink-0 cursor-pointer"
-                        >
-                          + Agregar
-                        </button>
-                      </div>
+                    <div>
+                      <p><strong>Vehículo:</strong> {ordenActiva.vehicle}</p>
+                      <p><strong>Placa:</strong> {ordenActiva.plate} | <strong>Km:</strong> {ordenActiva.mileage || "N/D"}</p>
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* COLUMNA DERECHA (5 COLS): DETALLE DEL PRESUPUESTO, IMPUESTOS Y DESCUENTOS AL INSTANTE */}
-              <div className="lg:col-span-5 p-4 rounded-2xl bg-[#0a0a0a] border border-white/10 flex flex-col justify-between space-y-4">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-                      2. Ítems e Impuestos al Instante
-                    </span>
-                    <span className="text-[11px] font-mono text-zinc-400">
-                      {etapa4Items.length} ítem(s)
-                    </span>
+                  <div>
+                    <h4 className="font-bold text-zinc-900 mb-1 border-b pb-1">SERVICIOS Y REPUESTOS:</h4>
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b text-[11px] text-zinc-600">
+                          <th className="py-1">Descripción</th>
+                          <th className="py-1 text-center">Cant</th>
+                          <th className="py-1 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ordenActiva.items.map((it) => (
+                          <tr key={it.id} className="border-b border-zinc-100">
+                            <td className="py-1 font-medium">{it.name}</td>
+                            <td className="py-1 text-center">{it.qty || 1}</td>
+                            <td className="py-1 text-right font-mono">${((it.price || 0) * (it.qty || 1)).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
 
-                  {/* Lista editable de ítems del presupuesto */}
-                  {etapa4Items.length === 0 ? (
-                    <div className="p-5 rounded-xl bg-[#111113] border border-white/5 text-center text-xs text-zinc-500">
-                      Toca cualquier servicio o repuesto a la izquierda para armar el presupuesto.
+                  <div className="flex justify-end pt-2">
+                    <div className="text-right space-y-0.5 font-mono">
+                      <p className="text-xs"><strong>Total Orden:</strong> ${(Number(ordenActiva.totalCost) || Number(calculosPresupuestoEtapa4.total) || 0).toFixed(2)}</p>
+                      <p className="text-xs text-emerald-700"><strong>Abonado:</strong> ${(ordenActiva.totalPaid || 0).toFixed(2)}</p>
+                      <p className="text-sm font-bold text-zinc-900"><strong>Saldo:</strong> ${(ordenActiva.balanceDue !== undefined ? ordenActiva.balanceDue : Math.max(0, (Number(ordenActiva.totalCost) || Number(calculosPresupuestoEtapa4.total) || 0) - (ordenActiva.totalPaid || 0))).toFixed(2)}</p>
                     </div>
-                  ) : (
-                    <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                      {etapa4Items.map((it) => (
-                        <div
-                          key={it.id}
-                          className="p-2.5 rounded-xl bg-[#111113] border border-white/5 flex items-center justify-between gap-2 text-xs"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <p className="font-semibold text-white truncate">{it.name}</p>
-                            <div className="flex items-center gap-1.5 mt-1">
-                              <span className="text-[10px] text-zinc-400">P.Unit $:</span>
-                              <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={it.price}
-                                onChange={(e) =>
-                                  handleCambiarPrecioEtapa4(it.id, e.target.value)
-                                }
-                                className="w-16 h-6 px-1.5 rounded bg-black/50 border border-white/10 text-white font-mono text-[11px]"
-                              />
-                            </div>
-                          </div>
+                  </div>
 
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => handleCambiarCantidadEtapa4(it.id, -1)}
-                              className="w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 text-zinc-300 flex items-center justify-center font-bold cursor-pointer"
-                            >
-                              -
-                            </button>
-                            <span className="w-5 text-center font-mono font-bold text-white">
-                              {it.qty}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleCambiarCantidadEtapa4(it.id, 1)}
-                              className="w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 text-zinc-300 flex items-center justify-center font-bold cursor-pointer"
-                            >
-                              +
-                            </button>
-                            <span className="w-14 text-right font-mono font-bold text-emerald-400">
-                              ${((Number(it.price) || 0) * (Number(it.qty) || 1)).toFixed(2)}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleEliminarItemEtapa4(it.id)}
-                              className="w-6 h-6 rounded-md bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 flex items-center justify-center text-[11px] cursor-pointer"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                  {etapa7InformeTecnico && (
+                    <div className="p-2 bg-zinc-50 rounded border border-zinc-200">
+                      <strong className="block text-[11px] mb-0.5">INFORME TÉCNICO:</strong>
+                      <p className="font-mono text-[10px] whitespace-pre-wrap">{etapa7InformeTecnico}</p>
                     </div>
                   )}
 
-                  {/* Controles de Descuento e Impuestos (IVA) al instante */}
-                  <div className="p-3 rounded-xl bg-[#111113] border border-white/5 space-y-2.5">
-                    <div className="grid grid-cols-2 gap-2.5">
-                      {/* Descuento */}
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="text-[11px] font-medium text-zinc-400">
-                            Descuento
-                          </label>
-                          <div className="flex rounded overflow-hidden border border-white/10 text-[10px]">
-                            <button
-                              type="button"
-                              onClick={() => setEtapa4DiscountType("PERCENT")}
-                              className={`px-1.5 py-0.5 font-bold cursor-pointer ${
-                                etapa4DiscountType === "PERCENT"
-                                  ? "bg-purple-500 text-white"
-                                  : "bg-black/40 text-zinc-400"
-                              }`}
-                            >
-                              %
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setEtapa4DiscountType("FIXED")}
-                              className={`px-1.5 py-0.5 font-bold cursor-pointer ${
-                                etapa4DiscountType === "FIXED"
-                                  ? "bg-purple-500 text-white"
-                                  : "bg-black/40 text-zinc-400"
-                              }`}
-                            >
-                              $
-                            </button>
-                          </div>
-                        </div>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={etapa4Discount}
-                          onChange={(e) => setEtapa4Discount(e.target.value)}
-                          className="w-full h-9 px-2.5 rounded-lg bg-[#0a0a0a] border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-purple-500"
-                        />
+                  <div className="pt-4 flex items-end justify-between border-t border-zinc-200">
+                    <div className="text-center w-40">
+                      <div className="h-10 border-b border-zinc-400 mb-1 flex items-center justify-center">
+                        {etapa7FirmaDataUrl ? (
+                          <img src={etapa7FirmaDataUrl} alt="Firma" className="max-h-10" />
+                        ) : (
+                          <span className="text-[10px] text-zinc-400">Firma registrada</span>
+                        )}
                       </div>
-
-                      {/* Impuesto IVA (%) */}
-                      <div>
-                        <label className="text-[11px] font-medium text-zinc-400 block mb-1">
-                          Impuesto (IVA %)
-                        </label>
-                        <div className="flex gap-1">
-                          {["0", "12", "15"].map((tasa) => (
-                            <button
-                              key={tasa}
-                              type="button"
-                              onClick={() => setEtapa4TaxRate(tasa)}
-                              className={`flex-1 h-9 rounded-lg border text-xs font-mono font-semibold cursor-pointer ${
-                                etapa4TaxRate === tasa
-                                  ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300"
-                                  : "bg-[#0a0a0a] border-white/10 text-zinc-400 hover:text-white"
-                              }`}
-                            >
-                              {tasa}%
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                      <p className="text-[10px] text-zinc-600 font-semibold">Firma del Cliente</p>
                     </div>
-
-                    {/* Resumen numérico en tiempo real */}
-                    <div className="pt-2 border-t border-white/5 space-y-1 text-xs">
-                      <div className="flex justify-between text-zinc-400">
-                        <span>Subtotal Catálogo</span>
-                        <span className="font-mono text-zinc-200">
-                          ${calculosPresupuestoEtapa4.subtotal.toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-emerald-400">
-                        <span>
-                          Descuento{" "}
-                          {etapa4DiscountType === "PERCENT" ? `(${etapa4Discount || 0}%)` : "($)"}
-                        </span>
-                        <span className="font-mono">
-                          -${calculosPresupuestoEtapa4.discountAmount.toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-zinc-400">
-                        <span>Impuesto (IVA {calculosPresupuestoEtapa4.taxRateNum}%)</span>
-                        <span className="font-mono text-zinc-200">
-                          +${calculosPresupuestoEtapa4.taxAmount.toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center pt-1.5 border-t border-white/10 text-sm font-bold text-white">
-                        <span>Total Presupuesto</span>
-                        <span className="text-base font-mono text-emerald-400">
-                          ${calculosPresupuestoEtapa4.total.toFixed(2)}
-                        </span>
-                      </div>
+                    <div className="text-right text-[10px] text-zinc-400">
+                      Documento generado por Sistema Taller AutoG
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              )}
 
-            {/* ===============================================================
-                SECCIÓN 3: APROBACIÓN DEL CLIENTE CON UN LINK DESDE SU CELULAR
-                =============================================================== */}
-            <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-sky-500/25 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <span className="text-xs font-semibold text-sky-400 uppercase tracking-wider block">
-                    3. Aprobación del Cliente con un Link (Desde su Celular)
-                  </span>
-                  <p className="text-[11px] text-zinc-400">
-                    Comparte este link por WhatsApp o cópialo para que el cliente revise y apruebe el presupuesto desde su teléfono.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleCopiarLinkPresupuesto}
-                    className="h-9 px-3.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
-                  >
-                    <span>📋</span>
-                    <span>{copiadoLinkPresupuesto ? "¡Link Copiado!" : "Copiar Link"}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleEnviarWhatsAppPresupuesto}
-                    className="h-9 px-3.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
-                  >
-                    <span>📲</span>
-                    <span>Enviar Link por WhatsApp</span>
-                  </button>
-
-                  <a
-                    href={linkAprobacionCliente}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all"
-                  >
-                    <span>🔗</span>
-                    <span>Abrir Vista Cliente</span>
-                  </a>
-                </div>
-              </div>
-
-              {/* Caja con la URL del Link Móvil y botón de aprobación directa */}
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
-                <div className="sm:col-span-8">
-                  <input
-                    type="text"
-                    readOnly
-                    value={linkAprobacionCliente}
-                    onClick={(e) => (e.target as HTMLInputElement).select()}
-                    className="w-full h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-sky-300 font-mono text-xs focus:outline-none"
-                  />
-                </div>
-                <div className="sm:col-span-4">
-                  <button
-                    type="button"
-                    disabled={guardandoEtapa4}
-                    onClick={() =>
-                      handleGuardarEtapa4Presupuesto(undefined, "Aprobado por Cliente")
-                    }
-                    className="w-full h-10 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs font-semibold cursor-pointer active:scale-95 transition-all"
-                  >
-                    ✅ Marcar Aprobado Ahora
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* ===============================================================
-                PIE DEL FLOTANTE 04: VOLVER Y GUARDAR PRESUPUESTO EN LA ORDEN
-                =============================================================== */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-white/5">
-              <button
-                type="button"
-                onClick={() => {
-                  setMostrarFlotanteEtapa4(false);
-                  setMostrarFlotanteEtapa3(true);
-                }}
-                className="h-11 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
-              >
-                ← Volver a Etapa 3: Inspección
-              </button>
-
-              <div className="flex flex-wrap items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setMostrarFlotanteEtapa4(false)}
-                  className="h-11 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
-                >
-                  Seguir en Panel Taller
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={guardandoEtapa4}
-                  className="h-11 px-6 rounded-xl bg-purple-500/25 hover:bg-purple-500/35 border border-purple-500/50 text-purple-200 hover:text-white text-xs sm:text-sm font-semibold shadow-lg transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-                >
-                  {guardandoEtapa4
-                    ? "Guardando presupuesto..."
-                    : "Guardar y Pasar a Etapa 5: Reparación →"}
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* =====================================================================
-          FLOTANTE 05 — ETAPA 5: REPARACIÓN
-          - Asignas uno o más técnicos y cada uno recibe el aviso
-          - Fotos del avance (desde el computador o el celular a Cloudflare R2)
-          - Notas de voz y chat interno
-          - Registro de horas por técnico
-          ===================================================================== */}
-      {mostrarFlotanteEtapa5 && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
-          onClick={() => setMostrarFlotanteEtapa5(false)}
-        >
-          <form
-            onSubmit={handleGuardarEtapa5Reparacion}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-[#111113] border border-white/10 rounded-t-3xl sm:rounded-2xl w-full max-w-4xl p-5 sm:p-6 shadow-2xl relative max-h-[93vh] overflow-y-auto space-y-5"
-          >
-            {/* Cabecera del Flotante 05 */}
-            <div className="flex items-start justify-between gap-3 border-b border-white/5 pb-4">
-              <div className="space-y-1.5">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMostrarFlotanteEtapa5(false);
-                      setMostrarFlotanteEtapa1(true);
-                    }}
-                    className="px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    01 Cliente ✓
-                  </button>
-                  <span className="text-zinc-600 text-xs">→</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMostrarFlotanteEtapa5(false);
-                      setMostrarFlotanteEtapa2(true);
-                    }}
-                    className="px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    02 Vehículo ✓
-                  </button>
-                  <span className="text-zinc-600 text-xs">→</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMostrarFlotanteEtapa5(false);
-                      setMostrarFlotanteEtapa3(true);
-                    }}
-                    className="px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    03 Inspección ✓
-                  </button>
-                  <span className="text-zinc-600 text-xs">→</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMostrarFlotanteEtapa5(false);
-                      setMostrarFlotanteEtapa4(true);
-                    }}
-                    className="px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    04 Presupuesto ✓
-                  </button>
-                  <span className="text-zinc-600 text-xs">→</span>
-                  <span className="px-2 py-0.5 rounded-md bg-sky-500/20 border border-sky-500/40 text-[11px] font-bold text-sky-300">
-                    05
-                  </span>
-                  <span className="text-xs font-semibold uppercase tracking-wider text-sky-400">
-                    Etapa 5: Reparación
-                  </span>
-                </div>
-
-                <h2 className="text-lg sm:text-xl font-bold text-white">
-                  El técnico trabaja y la orden se va completando
-                </h2>
-                <p className="text-xs text-zinc-400 leading-relaxed max-w-2xl">
-                  Asignas uno o más técnicos y cada uno recibe el aviso. Desde el computador o el celular suben fotos, dejan notas de voz, conversan en el chat interno y registran sus horas en la orden.
-                </p>
-
-                {/* 3 Píldoras clave de Etapa 5 */}
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <span className="text-[11px] px-2.5 py-1 rounded-lg bg-sky-500/15 border border-sky-500/30 text-sky-300 font-medium">
-                    ✓ Fotos del avance
-                  </span>
-                  <span className="text-[11px] px-2.5 py-1 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 font-medium">
-                    ✓ Notas de voz y chat interno
-                  </span>
-                  <span className="text-[11px] px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-medium">
-                    ✓ Registro de horas por técnico
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setMostrarFlotanteEtapa5(false)}
-                aria-label="Cerrar"
-                className="w-8 h-8 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center text-sm cursor-pointer shrink-0 transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* BARRA DE PROGRESO EN VIVO DE LA ORDEN Y CRONÓMETRO */}
-            <div className="p-4 rounded-xl bg-[#0a0a0a] border border-white/5 space-y-2.5">
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2.5 py-1 rounded-lg bg-sky-500/15 border border-sky-500/30 font-mono font-bold text-sky-300">
-                    #{ordenActiva?.orderNumber || "OT-EN-CURSO"}
-                  </span>
-                  <span className="font-semibold text-white">
-                    {ordenActiva?.vehicle ||
-                      `${etapa2Marca} ${etapa2Modelo}`.trim() ||
-                      "Vehículo en Reparación"}{" "}
-                    ({ordenActiva?.plate || etapa2Placa || "S/P"})
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-1 rounded-lg bg-[#111113] border border-white/10 font-mono text-xs font-bold text-emerald-400">
-                    ⏱ {formatElapsedTime(ordenActiva?.startedAt || null, ordenActiva?.completedAt || null, nowTick)}
-                  </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-sky-500/20 border border-sky-500/40 font-mono text-xs font-bold text-sky-300">
-                    Avance: {ordenActiva?.progress ?? 50}%
-                  </span>
-                </div>
-              </div>
-
-              {/* Barra de progreso visual */}
-              <div className="w-full h-2.5 rounded-full bg-[#161618] overflow-hidden border border-white/5">
-                <div
-                  className="h-full bg-gradient-to-r from-sky-500 to-emerald-400 transition-all duration-300"
-                  style={{ width: `${Math.min(100, Math.max(8, ordenActiva?.progress ?? 50))}%` }}
-                />
-              </div>
-
-              {/* Tareas / Servicios de la orden que se van completando con 1 clic */}
-              {ordenActiva && ordenActiva.items.length > 0 && (
-                <div className="pt-1 space-y-1.5">
-                  <span className="text-[11px] font-medium text-zinc-400 block">
-                    Toca cada trabajo para actualizar su avance (Pendiente → En Proceso → Listo):
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
+              {modalImpresionDoc === "TICKET" && (
+                <div className="font-mono text-[11px] space-y-2 max-w-xs mx-auto text-zinc-800">
+                  <div className="text-center border-b border-dashed border-zinc-400 pb-2">
+                    <h3 className="font-bold text-sm">TALLER AUTOMOTRIZ</h3>
+                    <p className="text-[10px]">COMPROBANTE DE SERVICIO</p>
+                    <p className="text-[10px]">#{ordenActiva.orderNumber} • {new Date().toLocaleDateString("es-EC")}</p>
+                  </div>
+                  <div className="border-b border-dashed border-zinc-400 pb-2 space-y-0.5 text-[10px]">
+                    <p>PLACA: <strong>{ordenActiva.plate}</strong></p>
+                    <p>VEHÍCULO: {ordenActiva.vehicle}</p>
+                    <p>CLIENTE: {ordenActiva.client}</p>
+                  </div>
+                  <div className="border-b border-dashed border-zinc-400 pb-2">
                     {ordenActiva.items.map((it) => (
-                      <button
-                        key={it.id}
-                        type="button"
-                        onClick={() => handleCiclarEstadoItem(it.id)}
-                        className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
-                          it.status === "Listo"
-                            ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
-                            : it.status === "En Proceso"
-                            ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
-                            : "bg-[#111113] border-white/10 text-zinc-300 hover:text-white"
-                        }`}
-                      >
-                        <span>
-                          {it.status === "Listo"
-                            ? "✓"
-                            : it.status === "En Proceso"
-                            ? "⚙️"
-                            : "○"}
-                        </span>
+                      <div key={it.id} className="flex justify-between py-0.5">
                         <span className="truncate max-w-[180px]">{it.name}</span>
-                        <span className="text-[10px] opacity-80">({it.status})</span>
-                      </button>
+                        <span>${((it.price || 0) * (it.qty || 1)).toFixed(2)}</span>
+                      </div>
                     ))}
                   </div>
+                  <div className="border-b border-dashed border-zinc-400 pb-2 space-y-0.5 text-right font-bold">
+                    <p>TOTAL: ${(Number(ordenActiva.totalCost) || Number(calculosPresupuestoEtapa4.total) || 0).toFixed(2)}</p>
+                    <p className="text-emerald-700">ABONADO: ${(ordenActiva.totalPaid || 0).toFixed(2)}</p>
+                    <p>SALDO: ${(ordenActiva.balanceDue !== undefined ? ordenActiva.balanceDue : Math.max(0, (Number(ordenActiva.totalCost) || Number(calculosPresupuestoEtapa4.total) || 0) - (ordenActiva.totalPaid || 0))).toFixed(2)}</p>
+                  </div>
+                  <div className="text-center pt-2">
+                    <p className="text-[10px] text-zinc-600">¡Gracias por su preferencia!</p>
+                    <p className="text-[9px] text-zinc-500 font-mono">PIN: {etapa6TrackingPin}</p>
+                  </div>
+                </div>
+              )}
+
+              {modalImpresionDoc === "ETIQUETA_QR" && (
+                <div className="p-4 border-2 border-dashed border-zinc-400 rounded-xl max-w-sm mx-auto text-center space-y-3">
+                  <div className="bg-zinc-900 text-white py-1 px-3 rounded font-mono text-xl font-bold tracking-widest inline-block">
+                    {ordenActiva.plate}
+                  </div>
+                  <div className="space-y-0.5 text-xs text-zinc-700">
+                    <p className="font-bold">ORDEN #{ordenActiva.orderNumber}</p>
+                    <p>{ordenActiva.vehicle}</p>
+                    <p className="text-[10px] text-zinc-500">Fecha: {new Date().toLocaleDateString("es-EC")}</p>
+                  </div>
+                  <div className="p-3 bg-zinc-100 rounded-lg inline-block border border-zinc-300">
+                    <svg className="w-24 h-24 mx-auto text-zinc-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 14.625h3v3h-3zM18 18h3v3h-3zM18 13.5h3v1.5H18zM13.5 19.5h1.5v3h-1.5z" />
+                    </svg>
+                    <span className="text-[9px] text-zinc-500 font-mono block mt-1">PIN: {etapa6TrackingPin}</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-500">Escanea para ver avance en vivo</p>
                 </div>
               )}
             </div>
 
-            {/* ===============================================================
-                SECCIÓN 1: ASIGNAR UNO O MÁS TÉCNICOS Y ENVIAR AVISO
-                =============================================================== */}
-            <div className="p-4 rounded-xl bg-[#0a0a0a] border border-white/5 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <span className="text-xs font-semibold text-sky-400 uppercase tracking-wider block">
-                    1. Técnicos Asignados a la Orden ({etapa5TecnicosAsignados.length})
-                  </span>
-                  <p className="text-[11px] text-zinc-400">
-                    Selecciona uno o varios técnicos para esta reparación; cada uno recibe el aviso en su tablero.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleEnviarAvisoTecnicosEtapa5}
-                  className="h-9 px-3.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
-                >
-                  <span>🔔</span>
-                  <span>Enviar Aviso a Técnicos ({etapa5TecnicosAsignados.length})</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                {mecanicos.map((nombreTec) => {
-                  const asignadoObj = etapa5TecnicosAsignados.find(
-                    (t) => t.name === nombreTec
-                  );
-                  const activo = Boolean(asignadoObj);
-                  return (
-                    <button
-                      key={nombreTec}
-                      type="button"
-                      onClick={() => handleToggleTecnicoEtapa5(nombreTec)}
-                      className={`p-3 rounded-xl border text-left flex items-center justify-between gap-2 transition-all cursor-pointer active:scale-95 ${
-                        activo
-                          ? "bg-sky-500/15 border-sky-500/40 text-white"
-                          : "bg-[#111113] hover:bg-[#161618] border-white/5 text-zinc-400"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span
-                          className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                            activo
-                              ? "bg-sky-500 text-black"
-                              : "bg-white/5 text-zinc-400"
-                          }`}
-                        >
-                          {nombreTec.slice(0, 1).toUpperCase()}
-                        </span>
-                        <div className="truncate">
-                          <p className="text-xs font-semibold truncate">{nombreTec}</p>
-                          <p className="text-[10px] text-emerald-400">
-                            {activo ? "🔔 Aviso recibido" : "Toca para asignar"}
-                          </p>
-                        </div>
-                      </div>
-                      <span
-                        className={`w-4 h-4 rounded flex items-center justify-center text-[10px] border shrink-0 ${
-                          activo
-                            ? "bg-sky-500 border-sky-400 text-black font-bold"
-                            : "border-zinc-700 bg-black/40 text-transparent"
-                        }`}
-                      >
-                        ✓
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* ===============================================================
-                SECCIÓN 2 Y 3 (2 COLUMNAS EN DESKTOP):
-                IZQUIERDA: NOTAS DE VOZ Y CHAT INTERNO DE LA ORDEN
-                DERECHA: FOTOS DEL AVANCE (R2) + REGISTRO DE HORAS POR TÉCNICO
-                =============================================================== */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-              {/* COLUMNA IZQUIERDA (6 COLS): NOTAS DE VOZ Y CHAT INTERNO */}
-              <div className="lg:col-span-6 p-4 rounded-2xl bg-[#0a0a0a] border border-white/10 flex flex-col justify-between space-y-3">
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
-                      2. Notas de Voz y Chat Interno
-                    </span>
-                    <select
-                      value={etapa5ChatAutor}
-                      onChange={(e) => setEtapa5ChatAutor(e.target.value)}
-                      className="h-7 px-2 rounded-lg bg-[#111113] border border-white/10 text-[11px] text-zinc-200 focus:outline-none focus:border-purple-500"
-                    >
-                      {etapa5TecnicosAsignados.map((t) => (
-                        <option key={t.name} value={t.name} className="bg-[#111113]">
-                          Habla: {t.name}
-                        </option>
-                      ))}
-                      <option value="Jefe de Taller" className="bg-[#111113]">
-                        Habla: Jefe de Taller
-                      </option>
-                    </select>
-                  </div>
-
-                  {/* Historial de mensajes y notas de voz */}
-                  <div className="h-60 rounded-xl bg-[#111113] border border-white/5 p-3 overflow-y-auto space-y-2.5">
-                    {etapa5ChatMensajes.length === 0 ? (
-                      <div className="h-full flex flex-col items-center justify-center text-center text-xs text-zinc-500 space-y-1">
-                        <span>💬</span>
-                        <p>
-                          Sin mensajes aún. Escribe en el chat o graba una nota de voz desde el celular o PC.
-                        </p>
-                      </div>
-                    ) : (
-                      etapa5ChatMensajes.map((msg) => (
-                        <div
-                          key={msg.id}
-                          className="p-2.5 rounded-xl bg-[#161618] border border-white/5 space-y-1.5 text-xs"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-bold text-purple-300">{msg.author}</span>
-                            <span className="text-[10px] font-mono text-zinc-500">
-                              {msg.createdAt}
-                            </span>
-                          </div>
-                          {msg.text && <p className="text-zinc-200 leading-relaxed">{msg.text}</p>}
-                          {msg.audioUrl && (
-                            <audio
-                              controls
-                              src={msg.audioUrl}
-                              className="w-full h-8 mt-1"
-                            />
-                          )}
-                          {msg.photoUrl && (
-                            <img
-                              src={msg.photoUrl}
-                              alt="Avance"
-                              className="w-28 h-20 object-cover rounded-lg border border-white/10 mt-1"
-                            />
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {/* Controles para enviar mensaje o grabar nota de voz */}
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={etapa5ChatTexto}
-                      onChange={(e) => setEtapa5ChatTexto(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleEnviarMensajeChatEtapa5();
-                        }
-                      }}
-                      placeholder="Escribe un comentario técnico en el chat interno..."
-                      className="flex-1 h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-purple-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleEnviarMensajeChatEtapa5}
-                      className="h-10 px-3.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 hover:text-white text-xs font-semibold cursor-pointer active:scale-95 shrink-0"
-                    >
-                      Enviar
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      disabled={subiendoAudioEtapa5}
-                      onClick={handleToggleGrabacionNotaVozEtapa5}
-                      className={`flex-1 h-9 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 ${
-                        grabandoAudioEtapa5
-                          ? "bg-rose-500/25 border-rose-500/50 text-rose-300 animate-pulse"
-                          : "bg-white/5 hover:bg-white/10 border-white/10 text-zinc-300 hover:text-white"
-                      }`}
-                    >
-                      <span>🎙️</span>
-                      <span>
-                        {subiendoAudioEtapa5
-                          ? "Subiendo nota de voz a R2..."
-                          : grabandoAudioEtapa5
-                          ? `Grabando (${segundosGrabacionAudio}s) • Toca para enviar`
-                          : "Grabar Nota de Voz (Celular / PC)"}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* COLUMNA DERECHA (6 COLS): FOTOS DEL AVANCE (R2) + REGISTRO DE HORAS POR TÉCNICO */}
-              <div className="lg:col-span-6 space-y-4">
-                {/* SUB-BLOQUE A: FOTOS DEL AVANCE (CLOUDFLARE R2) */}
-                <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-white/10 space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <span className="text-xs font-semibold text-sky-400 uppercase tracking-wider block">
-                        3. Fotos del Avance (Cloudflare R2)
-                      </span>
-                      <p className="text-[11px] text-zinc-400">
-                        Sube fotos del proceso o repuestos instalados desde tu celular o PC.
-                      </p>
-                    </div>
-
-                    <label className="h-9 px-3.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all">
-                      <span>📷</span>
-                      <span>
-                        {subiendoEvidencia ? "Subiendo..." : "+ Subir Foto Avance"}
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleSubirFotoAvanceEtapa5}
-                        className="hidden"
-                        disabled={subiendoEvidencia}
-                      />
-                    </label>
-                  </div>
-
-                  {ordenActiva?.evidencePhotos && ordenActiva.evidencePhotos.length > 0 ? (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                      {ordenActiva.evidencePhotos.map((url, idx) => (
-                        <div
-                          key={`${url}-${idx}`}
-                          className="relative rounded-xl overflow-hidden border border-white/10 bg-[#111113] aspect-video"
-                        >
-                          <img
-                            src={url}
-                            alt={`Avance ${idx + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-3 rounded-xl bg-[#111113] border border-dashed border-white/10 text-center text-xs text-zinc-500">
-                      Aún no se han subido fotos del avance de reparación.
-                    </div>
-                  )}
-                </div>
-
-                {/* SUB-BLOQUE B: REGISTRO DE HORAS POR TÉCNICO */}
-                <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-white/10 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-                      4. Registro de Horas por Técnico
-                    </span>
-                    <span className="text-[11px] font-mono text-zinc-400">
-                      {etapa5HorasRegistros.length} registro(s)
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
-                    <div className="sm:col-span-5">
-                      <select
-                        value={etapa5HoraTecnico}
-                        onChange={(e) => setEtapa5HoraTecnico(e.target.value)}
-                        className="w-full h-9 px-2.5 rounded-lg bg-[#111113] border border-white/10 text-xs text-white focus:outline-none focus:border-emerald-500"
-                      >
-                        {mecanicos.map((m) => (
-                          <option key={m} value={m} className="bg-[#111113]">
-                            {m}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="sm:col-span-3 flex items-center gap-1">
-                      <input
-                        type="number"
-                        min="0"
-                        max="24"
-                        value={etapa5HoraCantHoras}
-                        onChange={(e) => setEtapa5HoraCantHoras(e.target.value)}
-                        className="w-full h-9 px-2 rounded-lg bg-[#111113] border border-white/10 text-white font-mono text-xs text-center"
-                        title="Horas"
-                      />
-                      <span className="text-[11px] text-zinc-400">h</span>
-                    </div>
-                    <div className="sm:col-span-4 flex items-center gap-1">
-                      <input
-                        type="number"
-                        min="0"
-                        max="59"
-                        step="5"
-                        value={etapa5HoraCantMinutos}
-                        onChange={(e) => setEtapa5HoraCantMinutos(e.target.value)}
-                        className="w-full h-9 px-2 rounded-lg bg-[#111113] border border-white/10 text-white font-mono text-xs text-center"
-                        title="Minutos"
-                      />
-                      <span className="text-[11px] text-zinc-400">m</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={etapa5HoraTarea}
-                      onChange={(e) => setEtapa5HoraTarea(e.target.value)}
-                      placeholder="Actividad realizada (ej: Cambio de pastillas y purga)..."
-                      className="flex-1 h-9 px-3 rounded-lg bg-[#111113] border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-emerald-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAgregarHorasTecnicoEtapa5}
-                      className="h-9 px-3.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs font-semibold shrink-0 cursor-pointer active:scale-95"
-                    >
-                      + Registrar Horas
-                    </button>
-                  </div>
-
-                  {/* Lista de horas registradas por técnico */}
-                  {etapa5HorasRegistros.length > 0 && (
-                    <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1 pt-1">
-                      {etapa5HorasRegistros.map((reg) => (
-                        <div
-                          key={reg.id}
-                          className="p-2 rounded-lg bg-[#111113] border border-white/5 flex items-center justify-between gap-2 text-xs"
-                        >
-                          <div className="min-w-0">
-                            <p className="font-semibold text-white truncate">
-                              {reg.technician}{" "}
-                              <span className="text-emerald-400 font-mono">
-                                ({reg.hours}h {reg.minutes}m)
-                              </span>
-                            </p>
-                            <p className="text-[11px] text-zinc-400 truncate">
-                              {reg.taskDescription} • {reg.date}
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleEliminarHoraTecnicoEtapa5(reg.id)}
-                            className="w-6 h-6 rounded bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 flex items-center justify-center text-xs shrink-0 cursor-pointer"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* ===============================================================
-                PIE DEL FLOTANTE 05: VOLVER Y GUARDAR AVANCE DE REPARACIÓN
-                =============================================================== */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-white/5">
+            {/* Pie del Modal con Botón de Imprimir */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setModalImpresionDoc(null)}
+                className="h-10 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-zinc-300 transition-all cursor-pointer"
+              >
+                Cerrar
+              </button>
               <button
                 type="button"
                 onClick={() => {
-                  setMostrarFlotanteEtapa5(false);
-                  setMostrarFlotanteEtapa4(true);
+                  if (typeof window !== "undefined") window.print();
                 }}
-                className="h-11 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
+                className="h-10 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95"
               >
-                ← Volver a Etapa 4: Presupuesto
-              </button>
-
-              <div className="flex flex-wrap items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setMostrarFlotanteEtapa5(false)}
-                  className="h-11 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
-                >
-                  Seguir en Panel Taller
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={guardandoEtapa5}
-                  className="h-11 px-6 rounded-xl bg-sky-500/25 hover:bg-sky-500/35 border border-sky-500/50 text-sky-200 hover:text-white text-xs sm:text-sm font-semibold shadow-lg transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-                >
-                  {guardandoEtapa5
-                    ? "Guardando avance..."
-                    : "Guardar Avance → Etapa 6: Estado y aviso"}
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* =====================================================================
-          FLOTANTE 06: ETAPA 6 - ESTADO Y AVISO
-          ("CAMBIAS EL ESTADO Y EL AVISO AL CLIENTE YA ESTÁ ESCRITO")
-          - Estados con el nombre y color que elijas
-          - Aviso por WhatsApp o correo en un clic
-          - Seguimiento en línea con número de orden y PIN
-          ===================================================================== */}
-      {mostrarFlotanteEtapa6 && (
-        <div
-          onClick={() => setMostrarFlotanteEtapa6(false)}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-md animate-fade-in"
-        >
-          <form
-            onSubmit={handleGuardarEtapa6EstadoAviso}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-[#111113] border border-white/10 rounded-t-3xl sm:rounded-2xl w-full max-w-4xl p-5 sm:p-6 shadow-2xl relative max-h-[94vh] overflow-y-auto space-y-5"
-          >
-            {/* Cabecera del Flotante 06 */}
-            <div className="flex items-start justify-between gap-3 border-b border-white/5 pb-4">
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMostrarFlotanteEtapa6(false);
-                      setMostrarFlotanteEtapa1(true);
-                    }}
-                    className="px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    01 Cliente ✓
-                  </button>
-                  <span className="text-zinc-600 text-xs">→</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMostrarFlotanteEtapa6(false);
-                      setMostrarFlotanteEtapa2(true);
-                    }}
-                    className="px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    02 Vehículo ✓
-                  </button>
-                  <span className="text-zinc-600 text-xs">→</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMostrarFlotanteEtapa6(false);
-                      setMostrarFlotanteEtapa3(true);
-                    }}
-                    className="px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    03 Inspección ✓
-                  </button>
-                  <span className="text-zinc-600 text-xs">→</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMostrarFlotanteEtapa6(false);
-                      setMostrarFlotanteEtapa4(true);
-                    }}
-                    className="px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    04 Presupuesto ✓
-                  </button>
-                  <span className="text-zinc-600 text-xs">→</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMostrarFlotanteEtapa6(false);
-                      setMostrarFlotanteEtapa5(true);
-                    }}
-                    className="px-2 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-semibold text-zinc-400 hover:text-white cursor-pointer"
-                  >
-                    05 Reparación ✓
-                  </button>
-                  <span className="text-zinc-600 text-xs">→</span>
-                  <span className="px-2 py-0.5 rounded-md bg-pink-500/20 border border-pink-500/40 text-[11px] font-bold text-pink-300">
-                    06
-                  </span>
-                  <span className="text-xs font-semibold uppercase tracking-wider text-pink-400">
-                    Etapa 6: Estado y aviso
-                  </span>
-                </div>
-
-                <h2 className="text-lg sm:text-xl font-bold text-white">
-                  Cambias el estado y el aviso al cliente ya está escrito
-                </h2>
-                <p className="text-xs text-zinc-400 leading-relaxed max-w-2xl">
-                  Cada orden avanza por los estados que definas. Al cambiar el estado, la app te ofrece el mensaje listo para enviarlo por WhatsApp o correo. El cliente también puede revisar su orden en la página de seguimiento.
-                </p>
-
-                {/* 3 Píldoras clave de Etapa 6 */}
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <span className="text-[11px] px-2.5 py-1 rounded-lg bg-pink-500/15 border border-pink-500/30 text-pink-300 font-medium">
-                    ✓ Estados con el nombre y color que elijas
-                  </span>
-                  <span className="text-[11px] px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-medium">
-                    ✓ Aviso por WhatsApp o correo en un clic
-                  </span>
-                  <span className="text-[11px] px-2.5 py-1 rounded-lg bg-sky-500/15 border border-sky-500/30 text-sky-300 font-medium">
-                    ✓ Seguimiento en línea con número de orden y PIN
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setMostrarFlotanteEtapa6(false)}
-                aria-label="Cerrar"
-                className="w-8 h-8 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center text-sm cursor-pointer shrink-0 transition-colors"
-              >
-                ✕
+                <span>🖨️</span>
+                <span>Imprimir Ahora (Ctrl + P)</span>
               </button>
             </div>
-
-            {/* ===============================================================
-                SECCIÓN 1: ESTADOS CON EL NOMBRE Y COLOR QUE ELIJAS
-                =============================================================== */}
-            <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-white/10 space-y-3.5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <span className="text-xs font-semibold text-pink-400 uppercase tracking-wider block">
-                    1. Estados con el nombre y color que elijas
-                  </span>
-                  <p className="text-[11px] text-zinc-400">
-                    Toca cualquier estado para avanzar la orden y redactar el aviso al instante, o crea tus propios estados personalizados.
-                  </p>
-                </div>
-
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 ${
-                    getEstiloColorEstado(etapa6ColorSeleccionado).bg
-                  } ${getEstiloColorEstado(etapa6ColorSeleccionado).border} ${
-                    getEstiloColorEstado(etapa6ColorSeleccionado).text
-                  }`}
-                >
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      getEstiloColorEstado(etapa6ColorSeleccionado).dot
-                    }`}
-                  />
-                  <span>Actual: {etapa6EstadoSeleccionado}</span>
-                </span>
-              </div>
-
-              {/* Grilla de Estados (Predefinidos + Personalizados) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {etapa6EstadosLista.map((st) => {
-                  const activo =
-                    etapa6EstadoSeleccionado.toLowerCase() === st.name.toLowerCase();
-                  const estilo = getEstiloColorEstado(st.color);
-
-                  return (
-                    <div
-                      key={st.id}
-                      onClick={() => handleSeleccionarEstadoEtapa6(st)}
-                      className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 active:scale-95 ${
-                        activo
-                          ? `${estilo.bg} ${estilo.border} ${estilo.text} ring-1 ring-white/20`
-                          : "bg-[#111113] hover:bg-[#161618] border-white/5 text-zinc-300"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span
-                          className={`w-3 h-3 rounded-full shrink-0 ${estilo.dot}`}
-                        />
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold text-white truncate">
-                            {st.name}
-                          </p>
-                          <p className="text-[10px] text-zinc-400">
-                            Avance: {st.progress}%
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {activo && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-black/30 text-white">
-                            Activo
-                          </span>
-                        )}
-                        {st.isCustom && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEliminarEstadoPersonalizadoEtapa6(st.id);
-                            }}
-                            className="w-6 h-6 rounded bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 flex items-center justify-center text-[10px]"
-                            title="Eliminar estado personalizado"
-                          >
-                            ✕
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Creador de Nuevo Estado Personalizado con Nombre y Color */}
-              <div className="pt-3 border-t border-white/5 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                <input
-                  type="text"
-                  value={etapa6NuevoEstadoNombre}
-                  onChange={(e) => setEtapa6NuevoEstadoNombre(e.target.value)}
-                  placeholder="Escribe un nuevo estado (ej: En Prueba de Ruta, En Pintura)..."
-                  className="flex-1 h-10 px-3.5 rounded-xl bg-[#111113] border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-pink-500"
-                />
-
-                {/* Selector de color para el nuevo estado */}
-                <div className="flex items-center gap-1.5 bg-[#111113] border border-white/10 rounded-xl px-2.5 py-1.5 overflow-x-auto">
-                  {COLORES_ESTADO_ETAPA6.map((col) => {
-                    const sel = etapa6NuevoEstadoColor === col.id;
-                    return (
-                      <button
-                        key={col.id}
-                        type="button"
-                        onClick={() => {
-                          setEtapa6NuevoEstadoColor(col.id);
-                          setEtapa6ColorSeleccionado(col.id);
-                        }}
-                        className={`px-2 py-1 rounded-lg text-[10px] font-semibold flex items-center gap-1 cursor-pointer transition-all ${
-                          sel
-                            ? `${col.bg} ${col.border} ${col.text} border`
-                            : "text-zinc-400 hover:text-white"
-                        }`}
-                      >
-                        <span className={`w-2 h-2 rounded-full ${col.dot}`} />
-                        <span>{col.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleCrearEstadoPersonalizadoEtapa6}
-                  className="h-10 px-4 rounded-xl bg-pink-500/20 hover:bg-pink-500/30 border border-pink-500/40 text-pink-300 hover:text-white text-xs font-semibold shrink-0 cursor-pointer active:scale-95 transition-all"
-                >
-                  + Crear Estado
-                </button>
-              </div>
-            </div>
-
-            {/* ===============================================================
-                SECCIÓN 2 Y 3 (2 COLUMNAS EN DESKTOP):
-                IZQUIERDA: AVISO AL CLIENTE YA ESCRITO (WHATSAPP O CORREO EN 1 CLIC)
-                DERECHA: SEGUIMIENTO EN LÍNEA CON NÚMERO DE ORDEN Y PIN
-                =============================================================== */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-              {/* COLUMNA IZQUIERDA (7 COLS): AVISO POR WHATSAPP O CORREO EN UN CLIC */}
-              <div className="lg:col-span-7 p-4 rounded-2xl bg-[#0a0a0a] border border-white/10 space-y-3.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider block">
-                      2. Aviso al Cliente Listo para Enviar (1 Clic)
-                    </span>
-                    <p className="text-[11px] text-zinc-400">
-                      El mensaje se redacta automáticamente al elegir el estado. Puedes editarlo si deseas.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setEtapa6MensajeAviso(
-                        generarMensajeAvisoClienteEtapa6(etapa6EstadoSeleccionado)
-                      )
-                    }
-                    className="h-8 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-semibold text-zinc-300 hover:text-white cursor-pointer"
-                  >
-                    🔄 Regenerar texto
-                  </button>
-                </div>
-
-                {/* Datos de contacto del cliente (WhatsApp y Correo) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-[11px] text-zinc-400 mb-1">
-                      WhatsApp / Teléfono del cliente
-                    </label>
-                    <input
-                      type="text"
-                      value={etapa6ClienteTelefono}
-                      onChange={(e) => setEtapa6ClienteTelefono(e.target.value)}
-                      placeholder="Ej: 0991234567"
-                      className="w-full h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-zinc-400 mb-1">
-                      Correo electrónico del cliente
-                    </label>
-                    <input
-                      type="email"
-                      value={etapa6ClienteEmail}
-                      onChange={(e) => setEtapa6ClienteEmail(e.target.value)}
-                      placeholder="cliente@correo.com"
-                      className="w-full h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-
-                {/* Mensaje pre-escrito listo para enviar */}
-                <div className="space-y-1">
-                  <label className="block text-[11px] text-zinc-400">
-                    Mensaje de aviso pre-escrito (incluye estado, link de seguimiento, orden y PIN):
-                  </label>
-                  <textarea
-                    rows={6}
-                    value={etapa6MensajeAviso}
-                    onChange={(e) => setEtapa6MensajeAviso(e.target.value)}
-                    className="w-full p-3.5 rounded-xl bg-[#111113] border border-emerald-500/30 focus:border-emerald-500 text-zinc-100 text-xs leading-relaxed focus:outline-none resize-none"
-                  />
-                </div>
-
-                {/* Botones de envío en 1 clic: WhatsApp y Correo */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                  <button
-                    type="button"
-                    onClick={handleEnviarWhatsAppAvisoEtapa6}
-                    className="h-11 px-4 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all shadow-lg"
-                  >
-                    <span>📲</span>
-                    <span>Enviar por WhatsApp en 1 clic</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleEnviarCorreoAvisoEtapa6}
-                    className="h-11 px-4 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all shadow-lg"
-                  >
-                    <span>✉️</span>
-                    <span>Enviar por Correo en 1 clic</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* COLUMNA DERECHA (5 COLS): SEGUIMIENTO EN LÍNEA CON NÚMERO DE ORDEN Y PIN */}
-              <div className="lg:col-span-5 p-4 rounded-2xl bg-[#0a0a0a] border border-white/10 flex flex-col justify-between space-y-4">
-                <div className="space-y-3.5">
-                  <div>
-                    <span className="text-xs font-semibold text-sky-400 uppercase tracking-wider block">
-                      3. Seguimiento en Línea con Orden y PIN
-                    </span>
-                    <p className="text-[11px] text-zinc-400">
-                      El cliente ingresa con su número de orden y PIN para ver el estado, fotos y servicios en vivo.
-                    </p>
-                  </div>
-
-                  {/* Tarjeta de Credenciales de Seguimiento (N° Orden + PIN) */}
-                  <div className="p-3.5 rounded-xl bg-[#111113] border border-sky-500/30 space-y-3">
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <div className="p-2.5 rounded-lg bg-[#0a0a0a] border border-white/5">
-                        <span className="text-[10px] text-zinc-500 uppercase block">
-                          Número de Orden
-                        </span>
-                        <strong className="text-sm font-mono text-white">
-                          #{ordenActiva?.orderNumber || "OT-EN-CURSO"}
-                        </strong>
-                      </div>
-
-                      <div className="p-2.5 rounded-lg bg-[#0a0a0a] border border-sky-500/30">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-sky-400 uppercase font-semibold">
-                            PIN Cliente
-                          </span>
-                          <button
-                            type="button"
-                            onClick={handleGenerarNuevoPinEtapa6}
-                            className="text-[10px] text-zinc-400 hover:text-white cursor-pointer"
-                            title="Generar nuevo PIN de 4 dígitos"
-                          >
-                            🔄 Nuevo
-                          </button>
-                        </div>
-                        <input
-                          type="text"
-                          maxLength={6}
-                          value={etapa6TrackingPin}
-                          onChange={(e) => {
-                            const nuevo = e.target.value;
-                            setEtapa6TrackingPin(nuevo);
-                            setEtapa6MensajeAviso(
-                              generarMensajeAvisoClienteEtapa6(
-                                etapa6EstadoSeleccionado,
-                                nuevo
-                              )
-                            );
-                          }}
-                          className="w-full bg-transparent text-sm font-mono font-bold text-emerald-400 focus:outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    {/* URL de la página de seguimiento */}
-                    <div className="space-y-1.5">
-                      <span className="text-[10px] text-zinc-400 block">
-                        Página pública de seguimiento del cliente:
-                      </span>
-                      <div className="p-2 rounded-lg bg-[#0a0a0a] border border-white/10 font-mono text-[11px] text-sky-300 break-all">
-                        {linkSeguimientoEnLinea}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={handleCopiarLinkSeguimientoEtapa6}
-                        className="h-9 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 text-xs font-semibold cursor-pointer active:scale-95"
-                      >
-                        {copiadoLinkSeguimiento ? "✓ Link Copiado" : "📋 Copiar Link"}
-                      </button>
-
-                      <a
-                        href={linkSeguimientoEnLinea}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="h-9 px-3 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1"
-                      >
-                        <span>🔎 Ver Seguimiento ↗</span>
-                      </a>
-                    </div>
-                  </div>
-
-                  {/* Bitácora / Historial de Estados y Avisos de la Orden */}
-                  <div className="space-y-1.5">
-                    <span className="text-[11px] font-semibold text-zinc-400 block">
-                      Historial reciente de estados y avisos:
-                    </span>
-                    <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
-                      {Array.isArray(ordenActiva?.statusHistory) &&
-                      ordenActiva.statusHistory.length > 0 ? (
-                        ordenActiva.statusHistory.map((h) => {
-                          const col = getEstiloColorEstado(h.color as any);
-                          return (
-                            <div
-                              key={h.id}
-                              className="p-2 rounded-lg bg-[#111113] border border-white/5 flex items-center justify-between gap-2 text-[11px]"
-                            >
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className={`w-2 h-2 rounded-full shrink-0 ${col.dot}`} />
-                                <span className="font-semibold text-white truncate">
-                                  {h.status}
-                                </span>
-                                {h.channel && (
-                                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 text-[9px] font-bold">
-                                    {h.channel}
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-[10px] font-mono text-zinc-500 shrink-0">
-                                {h.createdAt}
-                              </span>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <p className="text-[11px] text-zinc-500 py-2">
-                          Al cambiar de estado o enviar un aviso quedará registrado aquí.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ===============================================================
-                PIE DEL FLOTANTE 06: VOLVER A ETAPA 5 Y GUARDAR ESTADO Y AVISO
-                =============================================================== */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-white/5">
-              <button
-                type="button"
-                onClick={() => {
-                  setMostrarFlotanteEtapa6(false);
-                  setMostrarFlotanteEtapa5(true);
-                }}
-                className="h-11 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
-              >
-                ← Volver a Etapa 5: Reparación
-              </button>
-
-              <div className="flex flex-wrap items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setMostrarFlotanteEtapa6(false)}
-                  className="h-11 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
-                >
-                  Cerrar
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={guardandoEtapa6}
-                  className="h-11 px-6 rounded-xl bg-pink-500/25 hover:bg-pink-500/35 border border-pink-500/50 text-pink-200 hover:text-white text-xs sm:text-sm font-semibold shadow-lg transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-                >
-                  {guardandoEtapa6
-                    ? "Guardando estado..."
-                    : "Guardar y Continuar a Etapa 7 →"}
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* =====================================================================
-          FLOTANTE 07 — ETAPA 7: ENTREGA Y FIRMA
-          (1. Detalle de la entrega, 2. Informe técnico, 3. Firma en el taller o a distancia)
-          ===================================================================== */}
-      {mostrarFlotanteEtapa7 && (
-        <div
-          className="fixed inset-0 z-[79] bg-black/85 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
-          onClick={() => setMostrarFlotanteEtapa7(false)}
-        >
-          <form
-            onSubmit={handleGuardarEtapa7EntregaFirma}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-[#111113] border border-white/10 rounded-t-3xl sm:rounded-3xl w-full max-w-6xl max-h-[94vh] overflow-y-auto p-5 sm:p-7 shadow-2xl space-y-5 relative"
-          >
-            {/* Resplandor superior */}
-            <div
-              className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none opacity-25 blur-3xl"
-              style={{
-                background:
-                  "radial-gradient(circle, rgba(20,184,166,0.45) 0%, transparent 70%)",
-              }}
-            />
-
-            {/* Encabezado Flotante 07 */}
-            <div className="flex items-start justify-between gap-4 border-b border-white/5 pb-4 relative z-10">
-              <div className="flex items-start gap-3.5">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-teal-400 to-emerald-600 shadow-lg flex flex-col items-center justify-center shrink-0 border border-white/10">
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-teal-100/90 leading-none">
-                    ETAPA
-                  </span>
-                  <span className="text-lg sm:text-xl font-black text-white leading-tight">
-                    07
-                  </span>
-                </div>
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30">
-                      Etapa 7: Entrega y firma
-                    </span>
-                    {ordenActiva && (
-                      <span className="text-[11px] font-mono font-semibold px-2.5 py-0.5 rounded-full bg-white/5 text-zinc-200 border border-white/10">
-                        #{ordenActiva.orderNumber} • {ordenActiva.plate} •{" "}
-                        {ordenActiva.client}
-                      </span>
-                    )}
-                    <span
-                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
-                        etapa7FirmaDataUrl
-                          ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
-                          : "bg-amber-500/15 text-amber-300 border-amber-500/30"
-                      }`}
-                    >
-                      {etapa7FirmaDataUrl
-                        ? `✓ Recepción Firmada (${etapa7FirmadoPor || ordenActiva?.client || "Cliente"})`
-                        : ordenActiva?.deliveryStatus || "Pendiente de Firma"}
-                    </span>
-                  </div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-white mt-1">
-                    Entrega en tres pasos, con la firma del cliente.
-                  </h2>
-                  <p className="text-xs sm:text-sm text-zinc-400 mt-0.5 max-w-3xl leading-relaxed">
-                    Revisas el detalle de la entrega, adjuntas el informe técnico y el
-                    cliente firma la recepción en la pantalla. Si no está en el taller, le
-                    envías la aceptación por correo para que firme desde su celular.
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setMostrarFlotanteEtapa7(false)}
-                className="w-9 h-9 rounded-full bg-zinc-800/90 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center shrink-0 cursor-pointer"
-                title="Cerrar"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* 3 Pilares Clave de la Etapa 7 */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 relative z-10">
-              <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#0a0a0a] border border-white/5">
-                <span className="w-6 h-6 rounded-lg bg-teal-500/20 text-teal-400 flex items-center justify-center text-xs font-bold shrink-0">
-                  1
-                </span>
-                <span className="text-xs font-medium text-zinc-200">
-                  Detalle de la entrega
-                </span>
-              </div>
-              <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#0a0a0a] border border-white/5">
-                <span className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold shrink-0">
-                  2
-                </span>
-                <span className="text-xs font-medium text-zinc-200">
-                  Informe técnico
-                </span>
-              </div>
-              <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#0a0a0a] border border-white/5">
-                <span className="w-6 h-6 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center text-xs font-bold shrink-0">
-                  3
-                </span>
-                <span className="text-xs font-medium text-zinc-200">
-                  Firma en el taller o a distancia
-                </span>
-              </div>
-            </div>
-
-            {/* CUERPO EN 3 COLUMNAS: PASO 1 (DETALLE), PASO 2 (INFORME TÉCNICO), PASO 3 (FIRMA) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 relative z-10">
-              {/* =============================================================
-                  PASO 1 (4 COLUMNAS): DETALLE DE LA ENTREGA Y CHECKLIST
-                  ============================================================= */}
-              <div className="lg:col-span-4 space-y-4">
-                <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-white/10 space-y-3.5">
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-teal-400">
-                      1. Detalle de la entrega
-                    </h3>
-                    <p className="text-[11px] text-zinc-400">
-                      Verifica con el cliente los trabajos realizados y las condiciones de salida.
-                    </p>
-                  </div>
-
-                  {/* Resumen de trabajos realizados */}
-                  <div className="p-3 rounded-xl bg-[#111113] border border-white/5 space-y-2">
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-zinc-400 font-medium">
-                        Servicios / Repuestos en orden:
-                      </span>
-                      <span className="font-mono font-bold text-emerald-400">
-                        {ordenActiva?.items.length || 0} ítems ($
-                        {Number(ordenActiva?.totalCost || 0).toFixed(2)})
-                      </span>
-                    </div>
-                    <div className="max-h-28 overflow-y-auto space-y-1 pr-1">
-                      {ordenActiva?.items && ordenActiva.items.length > 0 ? (
-                        ordenActiva.items.map((it) => (
-                          <div
-                            key={it.id}
-                            className="flex items-center justify-between text-[11px] py-1 border-b border-white/5 last:border-none"
-                          >
-                            <span className="text-zinc-200 truncate pr-2">
-                              ✓ {it.name} (x{it.qty || 1})
-                            </span>
-                            <span className="font-mono text-zinc-400 shrink-0">
-                              ${((it.qty || 1) * Number(it.price || 0)).toFixed(2)}
-                            </span>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-[11px] text-zinc-500">
-                          Sin servicios cargados aún en la orden activa.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Checklist de conformidad de entrega */}
-                  <div className="space-y-2">
-                    <span className="text-[11px] font-semibold text-zinc-300 block">
-                      Checklist de control de entrega:
-                    </span>
-                    {[
-                      {
-                        key: "trabajosVerificados" as const,
-                        label: "Trabajos y servicios revisados con el cliente",
-                      },
-                      {
-                        key: "pertenenciasEntregadas" as const,
-                        label: "Inventario e ítems personales entregados completos",
-                      },
-                      {
-                        key: "repuestosMostrados" as const,
-                        label: "Repuestos reemplazados mostrados / entregados",
-                      },
-                      {
-                        key: "vehiculoLimpio" as const,
-                        label: "Vehículo limpio y niveles verificados para salida",
-                      },
-                    ].map((chk) => {
-                      const checked = Boolean(etapa7Checklist[chk.key]);
-                      return (
-                        <label
-                          key={chk.key}
-                          className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
-                            checked
-                              ? "bg-teal-500/10 border-teal-500/30 text-white"
-                              : "bg-[#111113] border-white/5 text-zinc-400"
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(e) =>
-                              setEtapa7Checklist((prev) => ({
-                                ...prev,
-                                [chk.key]: e.target.checked,
-                              }))
-                            }
-                            className="w-4 h-4 accent-teal-500 rounded"
-                          />
-                          <span>{chk.label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-
-                  {/* Datos de quien recibe y observaciones */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[10px] text-zinc-400 mb-1">
-                        Recibido por (Nombre)
-                      </label>
-                      <input
-                        type="text"
-                        value={etapa7Checklist.recibidoPorNombre}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setEtapa7Checklist((prev) => ({
-                            ...prev,
-                            recibidoPorNombre: val,
-                          }));
-                          if (!etapa7FirmadoPor) setEtapa7FirmadoPor(val);
-                        }}
-                        placeholder="Nombre del cliente"
-                        className="w-full h-9 px-2.5 rounded-lg bg-[#111113] border border-white/10 text-xs text-white focus:outline-none focus:border-teal-500/50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] text-zinc-400 mb-1">
-                        Cédula / RUC / ID
-                      </label>
-                      <input
-                        type="text"
-                        value={etapa7Checklist.recibidoPorDoc}
-                        onChange={(e) =>
-                          setEtapa7Checklist((prev) => ({
-                            ...prev,
-                            recibidoPorDoc: e.target.value,
-                          }))
-                        }
-                        placeholder="Documento"
-                        className="w-full h-9 px-2.5 rounded-lg bg-[#111113] border border-white/10 text-xs text-white focus:outline-none focus:border-teal-500/50"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] text-zinc-400 mb-1">
-                      Observaciones de entrega / Garantía
-                    </label>
-                    <input
-                      type="text"
-                      value={etapa7Checklist.observacionesEntrega}
-                      onChange={(e) =>
-                        setEtapa7Checklist((prev) => ({
-                          ...prev,
-                          observacionesEntrega: e.target.value,
-                        }))
-                      }
-                      placeholder="Ej: Garantía de 30 días en mano de obra..."
-                      className="w-full h-9 px-2.5 rounded-lg bg-[#111113] border border-white/10 text-xs text-white focus:outline-none focus:border-teal-500/50"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* =============================================================
-                  PASO 2 (4 COLUMNAS): INFORME TÉCNICO Y ADJUNTO
-                  ============================================================= */}
-              <div className="lg:col-span-4 space-y-4">
-                <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-white/10 space-y-3.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                        2. Informe técnico
-                      </h3>
-                      <p className="text-[11px] text-zinc-400">
-                        Redacta o adjunta el diagnóstico y trabajo final entregado.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const resumenItems = (ordenActiva?.items || [])
-                          .map((i) => `• ${i.name} (x${i.qty || 1})`)
-                          .join("\n");
-                        const hallazgosTxt =
-                          etapa3Hallazgos.length > 0
-                            ? `\n\nHallazgos atendidos:\n` +
-                              etapa3Hallazgos
-                                .map((h) => `• [${h.vista.toUpperCase()}] ${h.descripcion}`)
-                                .join("\n")
-                            : "";
-                        setEtapa7InformeTecnico(
-                          `INFORME TÉCNICO DE ENTREGA - ORDEN #${
-                            ordenActiva?.orderNumber || "OT"
-                          }\nVehículo: ${ordenActiva?.vehicle || ""} (${
-                            ordenActiva?.plate || ""
-                          })\nTécnico Responsable: ${
-                            ordenActiva?.mechanic || "Taller"
-                          }\n\nTrabajos ejecutados:\n${
-                            resumenItems || "• Revisión y mantenimiento general."
-                          }${hallazgosTxt}\n\nRecomendaciones: Próximo control sugerido a los ${
-                            ordenActiva?.nextOilChangeKm
-                              ? `${ordenActiva.nextOilChangeKm.toLocaleString()} km`
-                              : "+5,000 km"
-                          }. Vehículo operativo y probado en pista.`
-                        );
-                      }}
-                      className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-[10px] font-semibold text-emerald-300 cursor-pointer shrink-0"
-                    >
-                      ⚡ Autocompletar
-                    </button>
-                  </div>
-
-                  <textarea
-                    rows={8}
-                    value={etapa7InformeTecnico}
-                    onChange={(e) => setEtapa7InformeTecnico(e.target.value)}
-                    placeholder="Describe el diagnóstico final, pruebas realizadas y recomendaciones para el cliente..."
-                    className="w-full p-3 rounded-xl bg-[#111113] border border-white/10 focus:border-emerald-500/50 text-xs text-white leading-relaxed focus:outline-none resize-none"
-                  />
-
-                  {/* Subir archivo / foto del Informe Técnico a Cloudflare R2 */}
-                  <div className="p-3 rounded-xl bg-[#111113] border border-white/5 space-y-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <span className="text-xs font-semibold text-white block">
-                          Adjuntar Informe Técnico (PDF / Imagen)
-                        </span>
-                        <span className="text-[10px] text-zinc-400">
-                          Sube el escaneo de escáner o hoja técnica a Cloudflare R2
-                        </span>
-                      </div>
-                      <label className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold cursor-pointer transition-all shrink-0">
-                        {subiendoInformeEtapa7 ? "Subiendo..." : "📎 Adjuntar"}
-                        <input
-                          type="file"
-                          accept="image/*,.pdf"
-                          onChange={handleSubirInformeTecnicoEtapa7}
-                          className="hidden"
-                          disabled={subiendoInformeEtapa7}
-                        />
-                      </label>
-                    </div>
-
-                    {etapa7InformeAdjuntoUrl && (
-                      <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[#0a0a0a] border border-emerald-500/30 text-xs">
-                        <a
-                          href={etapa7InformeAdjuntoUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-emerald-300 hover:underline truncate font-medium"
-                        >
-                          📄 Ver Informe Técnico Adjunto ↗
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => setEtapa7InformeAdjuntoUrl(null)}
-                          className="text-rose-400 hover:text-rose-300 text-[11px] cursor-pointer"
-                        >
-                          Quitar
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* =============================================================
-                  PASO 3 (4 COLUMNAS): FIRMA EN EL TALLER O A DISTANCIA
-                  ============================================================= */}
-              <div className="lg:col-span-4 space-y-4">
-                <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-white/10 space-y-3.5">
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-sky-400">
-                      3. Firma en el taller o a distancia
-                    </h3>
-                    <p className="text-[11px] text-zinc-400">
-                      El cliente firma en pantalla o recibe el enlace por correo/WhatsApp para firmar desde su celular.
-                    </p>
-                  </div>
-
-                  {/* Lienzo de Firma Digital en Pantalla */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-zinc-200">
-                        ✍️ Firma del cliente en pantalla:
-                      </span>
-                      <button
-                        type="button"
-                        onClick={limpiarCanvasFirmaEtapa7}
-                        className="text-[11px] text-rose-400 hover:text-rose-300 font-semibold cursor-pointer"
-                      >
-                        🗑️ Limpiar firma
-                      </button>
-                    </div>
-
-                    <div className="rounded-xl overflow-hidden border border-teal-500/30 bg-[#050505] relative">
-                      <canvas
-                        ref={canvasFirmaEtapa7Ref}
-                        width={420}
-                        height={150}
-                        onMouseDown={iniciarTrazoFirmaEtapa7}
-                        onMouseMove={moverTrazoFirmaEtapa7}
-                        onMouseUp={terminarTrazoFirmaEtapa7}
-                        onMouseLeave={terminarTrazoFirmaEtapa7}
-                        onTouchStart={iniciarTrazoFirmaEtapa7}
-                        onTouchMove={moverTrazoFirmaEtapa7}
-                        onTouchEnd={terminarTrazoFirmaEtapa7}
-                        className="w-full h-36 touch-none cursor-crosshair block"
-                      />
-                      {!etapa7FirmaDataUrl && (
-                        <span className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-zinc-600 uppercase tracking-widest">
-                          Firme aquí con el dedo o mouse
-                        </span>
-                      )}
-                    </div>
-
-                    {etapa7FirmaDataUrl && (
-                      <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2">
-                        <span className="text-[11px] text-emerald-300 font-semibold">
-                          ✓ Firma capturada lista para el documento
-                        </span>
-                        <img
-                          src={etapa7FirmaDataUrl}
-                          alt="Firma del cliente"
-                          className="h-8 bg-black/50 rounded px-1 object-contain"
-                        />
-                      </div>
-                    )}
-
-                    <div>
-                      <label className="block text-[10px] text-zinc-400 mb-1">
-                        Nombre de quien firma la conformidad
-                      </label>
-                      <input
-                        type="text"
-                        value={etapa7FirmadoPor}
-                        onChange={(e) => setEtapa7FirmadoPor(e.target.value)}
-                        placeholder={ordenActiva?.client || "Nombre y Apellido"}
-                        className="w-full h-9 px-2.5 rounded-lg bg-[#111113] border border-white/10 text-xs text-white focus:outline-none focus:border-sky-500/50"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Si el cliente NO está en el taller: Envío a distancia para firmar desde su celular */}
-                  <div className="p-3 rounded-xl bg-[#111113] border border-sky-500/30 space-y-2.5">
-                    <div>
-                      <span className="text-xs font-semibold text-white block">
-                        📲 ¿El cliente no está en el taller?
-                      </span>
-                      <span className="text-[10px] text-zinc-400">
-                        Envíale la aceptación por correo o WhatsApp para que firme desde su celular:
-                      </span>
-                    </div>
-
-                    <div className="p-2 rounded-lg bg-[#0a0a0a] border border-white/10 font-mono text-[10px] text-sky-300 break-all">
-                      {linkFirmaRemotaEtapa7}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={handleEnviarCorreoAceptacionEtapa7}
-                        className="h-9 px-2.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-200 hover:text-white text-[11px] font-semibold flex items-center justify-center gap-1 cursor-pointer active:scale-95"
-                      >
-                        <span>✉️ Enviar por Correo</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleEnviarWhatsAppAceptacionEtapa7}
-                        className="h-9 px-2.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 hover:text-white text-[11px] font-semibold flex items-center justify-center gap-1 cursor-pointer active:scale-95"
-                      >
-                        <span>💬 Enviar WhatsApp</span>
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={handleCopiarLinkFirmaEtapa7}
-                        className="h-8 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 text-[11px] font-semibold cursor-pointer"
-                      >
-                        {copiadoLinkFirmaEtapa7 ? "✓ Link Copiado" : "📋 Copiar Link"}
-                      </button>
-
-                      <a
-                        href={linkFirmaRemotaEtapa7}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="h-8 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 hover:text-white text-[11px] font-semibold flex items-center justify-center gap-1"
-                      >
-                        <span>📱 Vista Celular ↗</span>
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* PIE DEL FLOTANTE 07 */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-white/5 relative z-10">
-              <button
-                type="button"
-                onClick={() => {
-                  setMostrarFlotanteEtapa7(false);
-                  setMostrarFlotanteEtapa6(true);
-                }}
-                className="h-11 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
-              >
-                ← Volver a Etapa 6: Estado y aviso
-              </button>
-
-              <div className="flex flex-wrap items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setMostrarFlotanteEtapa7(false)}
-                  className="h-11 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
-                >
-                  Cerrar
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={guardandoEtapa7}
-                  className="h-11 px-6 rounded-xl bg-teal-500/25 hover:bg-teal-500/35 border border-teal-500/50 text-teal-200 hover:text-white text-xs sm:text-sm font-semibold shadow-lg transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-                >
-                  {guardandoEtapa7
-                    ? "Guardando entrega..."
-                    : "Guardar Entrega y Continuar a Etapa 8: Cobro →"}
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* =====================================================================
-          FLOTANTE 08 — ETAPA 8: COBRO Y DOCUMENTO
-          (1. Abonos y saldo pendiente, 2. Link de pago pasarela, 3. PDF con logo, ticket térmico y etiqueta QR)
-          ===================================================================== */}
-      {mostrarFlotanteEtapa8 && (
-        <div
-          className="fixed inset-0 z-[80] bg-black/85 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
-          onClick={() => setMostrarFlotanteEtapa8(false)}
-        >
-          <form
-            onSubmit={handleGuardarEtapa8CobroDocumento}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-[#111113] border border-white/10 rounded-t-3xl sm:rounded-3xl w-full max-w-6xl max-h-[94vh] overflow-y-auto p-5 sm:p-7 shadow-2xl space-y-5 relative"
-          >
-            {/* Resplandor superior */}
-            <div
-              className="absolute top-0 right-0 w-80 h-80 rounded-full pointer-events-none opacity-25 blur-3xl"
-              style={{
-                background:
-                  "radial-gradient(circle, rgba(99,102,241,0.45) 0%, transparent 70%)",
-              }}
-            />
-
-            {/* Encabezado Flotante 08 */}
-            <div className="flex items-start justify-between gap-4 border-b border-white/5 pb-4 relative z-10">
-              <div className="flex items-start gap-3.5">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 shadow-lg flex flex-col items-center justify-center shrink-0 border border-white/10">
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-indigo-100/90 leading-none">
-                    ETAPA
-                  </span>
-                  <span className="text-lg sm:text-xl font-black text-white leading-tight">
-                    08
-                  </span>
-                </div>
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
-                      Etapa 8: Cobro y documento
-                    </span>
-                    {ordenActiva && (
-                      <span className="text-[11px] font-mono font-semibold px-2.5 py-0.5 rounded-full bg-white/5 text-zinc-200 border border-white/10">
-                        #{ordenActiva.orderNumber} • {ordenActiva.plate} •{" "}
-                        {ordenActiva.client}
-                      </span>
-                    )}
-                    <span
-                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
-                        calculosCobroEtapa8.saldoPendiente <= 0 &&
-                        calculosCobroEtapa8.totalOrden > 0
-                          ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
-                          : "bg-amber-500/15 text-amber-300 border-amber-500/30"
-                      }`}
-                    >
-                      {calculosCobroEtapa8.saldoPendiente <= 0 &&
-                      calculosCobroEtapa8.totalOrden > 0
-                        ? "✓ Orden Pagada al 100%"
-                        : `Saldo Pendiente: $${calculosCobroEtapa8.saldoPendiente.toFixed(2)}`}
-                    </span>
-                  </div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-white mt-1">
-                    Cobra y entrega el documento que necesites.
-                  </h2>
-                  <p className="text-xs sm:text-sm text-zinc-400 mt-0.5 max-w-3xl leading-relaxed">
-                    Registras abonos y pagos con la forma de pago que corresponda, y el
-                    saldo pendiente se actualiza solo. Imprimes la orden en PDF con tu
-                    logo, ticket térmico o etiqueta con QR.
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setMostrarFlotanteEtapa8(false)}
-                className="w-9 h-9 rounded-full bg-zinc-800/90 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center shrink-0 cursor-pointer"
-                title="Cerrar"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* 3 Pilares Clave de la Etapa 8 */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 relative z-10">
-              <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#0a0a0a] border border-white/5">
-                <span className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold shrink-0">
-                  1
-                </span>
-                <span className="text-xs font-medium text-zinc-200">
-                  Abonos y saldo pendiente
-                </span>
-              </div>
-              <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#0a0a0a] border border-white/5">
-                <span className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-bold shrink-0">
-                  2
-                </span>
-                <span className="text-xs font-medium text-zinc-200">
-                  Link de pago si conectas una pasarela
-                </span>
-              </div>
-              <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#0a0a0a] border border-white/5">
-                <span className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold shrink-0">
-                  3
-                </span>
-                <span className="text-xs font-medium text-zinc-200">
-                  PDF, ticket térmico y etiqueta QR
-                </span>
-              </div>
-            </div>
-
-            {/* CUERPO EN 3 COLUMNAS: 1. ABONOS Y SALDO, 2. PASARELA DE PAGO, 3. DOCUMENTOS IMPRIMIBLES */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 relative z-10">
-              {/* =============================================================
-                  COLUMNA 1 (5 COLUMNAS): ABONOS Y SALDO PENDIENTE AUTOMÁTICO
-                  ============================================================= */}
-              <div className="lg:col-span-5 space-y-4">
-                <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-white/10 space-y-3.5">
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                      1. Abonos y saldo pendiente
-                    </h3>
-                    <p className="text-[11px] text-zinc-400">
-                      Registra anticipos, abonos o el pago total; el saldo se recalcula al instante.
-                    </p>
-                  </div>
-
-                  {/* Resumen numérico en vivo */}
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="p-2.5 rounded-xl bg-[#111113] border border-white/5">
-                      <span className="text-[10px] text-zinc-400 uppercase block">
-                        Total Orden
-                      </span>
-                      <strong className="text-sm sm:text-base font-mono font-bold text-white">
-                        ${calculosCobroEtapa8.totalOrden.toFixed(2)}
-                      </strong>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-[#111113] border border-emerald-500/30">
-                      <span className="text-[10px] text-emerald-400 uppercase block">
-                        Abonado
-                      </span>
-                      <strong className="text-sm sm:text-base font-mono font-bold text-emerald-400">
-                        ${calculosCobroEtapa8.totalAbonado.toFixed(2)}
-                      </strong>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-[#111113] border border-amber-500/30">
-                      <span className="text-[10px] text-amber-400 uppercase block">
-                        Saldo
-                      </span>
-                      <strong className="text-sm sm:text-base font-mono font-bold text-amber-300">
-                        ${calculosCobroEtapa8.saldoPendiente.toFixed(2)}
-                      </strong>
-                    </div>
-                  </div>
-
-                  {/* Barra de progreso de pago */}
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[10px] text-zinc-400">
-                      <span>Avance de cobro</span>
-                      <span className="font-mono text-emerald-400 font-bold">
-                        {calculosCobroEtapa8.porcentajePagado}%
-                      </span>
-                    </div>
-                    <div className="w-full h-2 rounded-full bg-zinc-800 overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300"
-                        style={{ width: `${calculosCobroEtapa8.porcentajePagado}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Formulario para agregar abono / pago */}
-                  <div className="p-3 rounded-xl bg-[#111113] border border-white/5 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-white">
-                        Registrar nuevo abono o pago
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setEtapa8MontoAbono(
-                              (calculosCobroEtapa8.saldoPendiente / 2).toFixed(2)
-                            )
-                          }
-                          className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-[10px] text-zinc-300 cursor-pointer"
-                        >
-                          50%
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setEtapa8MontoAbono(
-                              calculosCobroEtapa8.saldoPendiente.toFixed(2)
-                            )
-                          }
-                          className="px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-[10px] text-emerald-300 font-semibold cursor-pointer"
-                        >
-                          100% Saldo
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[10px] text-zinc-400 mb-1">
-                          Monto ($)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={etapa8MontoAbono}
-                          onChange={(e) => setEtapa8MontoAbono(e.target.value)}
-                          placeholder="0.00"
-                          className="w-full h-9 px-2.5 rounded-lg bg-[#0a0a0a] border border-white/10 text-xs font-mono font-bold text-emerald-400 focus:outline-none focus:border-emerald-500/50"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] text-zinc-400 mb-1">
-                          Forma de pago
-                        </label>
-                        <select
-                          value={etapa8MetodoPago}
-                          onChange={(e) => setEtapa8MetodoPago(e.target.value)}
-                          className="w-full h-9 px-2 rounded-lg bg-[#0a0a0a] border border-white/10 text-xs text-white focus:outline-none focus:border-emerald-500/50"
-                        >
-                          <option value="Efectivo">💵 Efectivo</option>
-                          <option value="Transferencia Bancaria">
-                            🏦 Transferencia Bancaria
-                          </option>
-                          <option value="Tarjeta de Crédito / Débito">
-                            💳 Tarjeta Crédito / Débito
-                          </option>
-                          <option value="Deuna / PayPhone">📱 Deuna / PayPhone</option>
-                          <option value="Cheque / Crédito">📄 Cheque / Crédito</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        value={etapa8ReferenciaPago}
-                        onChange={(e) => setEtapa8ReferenciaPago(e.target.value)}
-                        placeholder="N° Comprobante / Ref."
-                        className="w-full h-8 px-2.5 rounded-lg bg-[#0a0a0a] border border-white/10 text-[11px] text-white focus:outline-none"
-                      />
-                      <input
-                        type="text"
-                        value={etapa8NotaPago}
-                        onChange={(e) => setEtapa8NotaPago(e.target.value)}
-                        placeholder="Nota (ej: Anticipo 50%)"
-                        className="w-full h-8 px-2.5 rounded-lg bg-[#0a0a0a] border border-white/10 text-[11px] text-white focus:outline-none"
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleRegistrarAbonoPagoEtapa8}
-                      className="w-full h-9 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs font-semibold transition-all cursor-pointer active:scale-95"
-                    >
-                      + Registrar Abono / Pago
-                    </button>
-                  </div>
-
-                  {/* Historial de abonos de la orden */}
-                  <div className="space-y-1.5">
-                    <span className="text-[11px] font-semibold text-zinc-400 block">
-                      Pagos y abonos registrados ({etapa8PagosLista.length}):
-                    </span>
-                    <div className="max-h-32 overflow-y-auto space-y-1.5 pr-1">
-                      {etapa8PagosLista.length > 0 ? (
-                        etapa8PagosLista.map((p) => (
-                          <div
-                            key={p.id}
-                            className="p-2 rounded-lg bg-[#111113] border border-white/5 flex items-center justify-between gap-2 text-xs"
-                          >
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-mono font-bold text-emerald-400">
-                                  ${Number(p.amount).toFixed(2)}
-                                </span>
-                                <span className="text-white font-medium truncate">
-                                  • {p.method}
-                                </span>
-                              </div>
-                              <span className="text-[10px] text-zinc-500 block truncate">
-                                {p.date} {p.reference ? `• Ref: ${p.reference}` : ""}{" "}
-                                {p.note ? `(${p.note})` : ""}
-                              </span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleEliminarPagoEtapa8(p.id)}
-                              className="text-rose-400 hover:text-rose-300 text-[11px] px-1.5 cursor-pointer shrink-0"
-                              title="Eliminar abono"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-[11px] text-zinc-500 py-1.5">
-                          Aún no se han registrado abonos en esta orden.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* =============================================================
-                  COLUMNA 2 (3 COLUMNAS): LINK DE PAGO SI CONECTAS UNA PASARELA
-                  ============================================================= */}
-              <div className="lg:col-span-3 space-y-4">
-                <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-white/10 space-y-3.5">
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-400">
-                      2. Link de pago pasarela
-                    </h3>
-                    <p className="text-[11px] text-zinc-400">
-                      Comparte un link de cobro en línea con el saldo pendiente.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] text-zinc-400 mb-1">
-                      Pasarela conectada
-                    </label>
-                    <select
-                      value={etapa8PasarelaNombre}
-                      onChange={(e) => setEtapa8PasarelaNombre(e.target.value)}
-                      className="w-full h-9 px-2.5 rounded-lg bg-[#111113] border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500/50"
-                    >
-                      <option value="PayPhone / Deuna">📱 PayPhone / Deuna</option>
-                      <option value="Stripe / Tarjeta Online">
-                        💳 Stripe / Tarjeta Online
-                      </option>
-                      <option value="Kushki / Datafast">🏦 Kushki / Datafast</option>
-                      <option value="MercadoPago / PayPal">🌎 MercadoPago / PayPal</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] text-zinc-400 mb-1">
-                      Link de pasarela externo (opcional)
-                    </label>
-                    <input
-                      type="text"
-                      value={etapa8PasarelaUrl}
-                      onChange={(e) => setEtapa8PasarelaUrl(e.target.value)}
-                      placeholder="https://pay.tu-pasarela.com/..."
-                      className="w-full h-9 px-2.5 rounded-lg bg-[#111113] border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500/50"
-                    />
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-[#111113] border border-indigo-500/30 space-y-2">
-                    <span className="text-[10px] text-indigo-300 font-semibold block">
-                      Link activo por ${calculosCobroEtapa8.saldoPendiente.toFixed(2)}:
-                    </span>
-                    <div className="p-2 rounded-lg bg-[#0a0a0a] border border-white/5 font-mono text-[10px] text-indigo-300 break-all">
-                      {linkPagoPasarelaEtapa8}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleCopiarLinkPagoEtapa8}
-                      className="w-full h-8 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 text-[11px] font-semibold cursor-pointer"
-                    >
-                      {copiadoLinkPagoEtapa8 ? "✓ Link Copiado" : "📋 Copiar Link de Pago"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleEnviarLinkPagoWhatsAppEtapa8}
-                      className="w-full h-9 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-indigo-200 hover:text-white text-xs font-semibold cursor-pointer active:scale-95"
-                    >
-                      💬 Enviar Link de Pago por WhatsApp
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* =============================================================
-                  COLUMNA 3 (4 COLUMNAS): PDF CON TU LOGO, TICKET TÉRMICO Y ETIQUETA QR
-                  ============================================================= */}
-              <div className="lg:col-span-4 space-y-4">
-                <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-white/10 space-y-3.5">
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                      3. PDF, ticket térmico y etiqueta QR
-                    </h3>
-                    <p className="text-[11px] text-zinc-400">
-                      Imprime al instante el documento que necesites entregar al cliente.
-                    </p>
-                  </div>
-
-                  {/* Opción 1: Orden en PDF con tu logo */}
-                  <button
-                    type="button"
-                    onClick={handleImprimirOrdenPdfConLogoEtapa8}
-                    className="w-full p-3.5 rounded-xl bg-[#111113] hover:bg-[#161618] border border-white/10 hover:border-blue-500/40 text-left flex items-center justify-between gap-3 transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-lg shrink-0">
-                        📄
-                      </div>
-                      <div>
-                        <span className="text-xs sm:text-sm font-bold text-white block group-hover:text-blue-300">
-                          Orden en PDF con tu Logo
-                        </span>
-                        <span className="text-[11px] text-zinc-400">
-                          Formato A4 con servicios, abonos, firma y QR
-                        </span>
-                      </div>
-                    </div>
-                    <span className="text-xs font-semibold text-blue-400 shrink-0">
-                      Imprimir ↗
-                    </span>
-                  </button>
-
-                  {/* Opción 2: Ticket Térmico 80mm */}
-                  <button
-                    type="button"
-                    onClick={handleImprimirTicketTermicoEtapa8}
-                    className="w-full p-3.5 rounded-xl bg-[#111113] hover:bg-[#161618] border border-white/10 hover:border-emerald-500/40 text-left flex items-center justify-between gap-3 transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-lg shrink-0">
-                        🧾
-                      </div>
-                      <div>
-                        <span className="text-xs sm:text-sm font-bold text-white block group-hover:text-emerald-300">
-                          Ticket Térmico (80mm)
-                        </span>
-                        <span className="text-[11px] text-zinc-400">
-                          Tirilla rápida de caja con abonos, saldo y QR
-                        </span>
-                      </div>
-                    </div>
-                    <span className="text-xs font-semibold text-emerald-400 shrink-0">
-                      Imprimir ↗
-                    </span>
-                  </button>
-
-                  {/* Opción 3: Etiqueta Adhesiva con QR */}
-                  <button
-                    type="button"
-                    onClick={handleImprimirEtiquetaQrEtapa8}
-                    className="w-full p-3.5 rounded-xl bg-[#111113] hover:bg-[#161618] border border-white/10 hover:border-amber-500/40 text-left flex items-center justify-between gap-3 transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-lg shrink-0">
-                        🏷️
-                      </div>
-                      <div>
-                        <span className="text-xs sm:text-sm font-bold text-white block group-hover:text-amber-300">
-                          Etiqueta con QR (Parabrisas / Llave)
-                        </span>
-                        <span className="text-[11px] text-zinc-400">
-                          Placa, Km actual, próximo servicio y QR en vivo
-                        </span>
-                      </div>
-                    </div>
-                    <span className="text-xs font-semibold text-amber-400 shrink-0">
-                      Imprimir ↗
-                    </span>
-                  </button>
-
-                  {/* Conexión directa con POS / Facturación */}
-                  <div className="pt-2 border-t border-white/5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMostrarFlotanteEtapa8(false);
-                        handleEnviarAPosCaja();
-                      }}
-                      className="w-full h-10 rounded-xl bg-gradient-to-r from-emerald-500/25 to-teal-500/25 hover:from-emerald-500/35 hover:to-teal-500/35 border border-emerald-500/40 text-emerald-200 hover:text-white text-xs font-bold transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-2"
-                    >
-                      <span>💳 Enviar a Caja POS / Emitir Factura</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* PIE DEL FLOTANTE 08 */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-white/5 relative z-10">
-              <button
-                type="button"
-                onClick={() => {
-                  setMostrarFlotanteEtapa8(false);
-                  setMostrarFlotanteEtapa7(true);
-                }}
-                className="h-11 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
-              >
-                ← Volver a Etapa 7: Entrega y firma
-              </button>
-
-              <div className="flex flex-wrap items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setMostrarFlotanteEtapa8(false)}
-                  className="h-11 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
-                >
-                  Cerrar
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={guardandoEtapa8}
-                  className="h-11 px-6 rounded-xl bg-indigo-500/25 hover:bg-indigo-500/35 border border-indigo-500/50 text-indigo-200 hover:text-white text-xs sm:text-sm font-semibold shadow-lg transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-                >
-                  {guardandoEtapa8
-                    ? "Guardando cobro..."
-                    : "Guardar Cobro y Finalizar Orden ✓"}
-                </button>
-              </div>
-            </div>
-          </form>
+          </div>
         </div>
       )}
 
