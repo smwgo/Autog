@@ -1399,7 +1399,14 @@ export async function POST(request: Request) {
                 .join("; ")
             : "Inspección 5 Vistas: Sin daños ni hallazgos reportados.";
 
-        const updatedNotes = [current.notes, findingsSummary, notesInspeccion?.trim() || null]
+        // Limpiar cualquier resumen anterior de 'Inspección 5 Vistas' para no acumular repeticiones
+        const cleanBaseNotes = (current.notes || "")
+          .split(" • ")
+          .filter((part: string) => !part.trim().startsWith("Inspección 5 Vistas"))
+          .join(" • ")
+          .trim();
+
+        const updatedNotes = [cleanBaseNotes, findingsSummary, notesInspeccion?.trim() || null]
           .filter(Boolean)
           .join(" • ");
 

@@ -53,6 +53,7 @@ function FacturasPagosContent() {
     try {
       setLoading(true);
       const res = await fetch('/api/cliente/facturas', { cache: 'no-store' });
+      const data = await res.json();
       const lista = Array.isArray(data.facturas) ? data.facturas : (Array.isArray(data.invoices) ? data.invoices : []);
       if (data.success && lista.length > 0) {
         setInvoices(lista);

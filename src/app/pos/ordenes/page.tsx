@@ -24,32 +24,42 @@ interface OrderItem {
   totalCost?: number;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; badge: string; bg: string }> = {
-  "En Diagnóstico": {
-    label: "En Diagnóstico",
-    color: "bg-amber-500",
-    badge: "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10",
-    bg: "bg-amber-500",
-  },
-  "Reparando": {
-    label: "Reparando",
-    color: "bg-blue-500",
-    badge: "border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/10",
-    bg: "bg-blue-500",
-  },
-  "Espera de Repuestos": {
-    label: "Espera de Repuestos",
-    color: "bg-rose-500",
-    badge: "border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/10",
-    bg: "bg-rose-500",
-  },
-  "Listo para Entregar": {
-    label: "Listo para Entregar",
-    color: "bg-emerald-500",
-    badge: "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10",
-    bg: "bg-emerald-500",
-  },
-};
+function getStatusBadge(status: string) {
+  const s = (status || "").toLowerCase().trim();
+  if (s.includes("listo") || s.includes("entreg") || s.includes("terminad")) {
+    return {
+      label: status || "Listo para Entregar",
+      badge: "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10",
+      dot: "bg-emerald-500",
+    };
+  }
+  if (s.includes("repar") || s.includes("proceso") || s.includes("pista")) {
+    return {
+      label: status || "En Reparación",
+      badge: "border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/10",
+      dot: "bg-blue-500",
+    };
+  }
+  if (s.includes("repuesto") || s.includes("pausa") || s.includes("espera")) {
+    return {
+      label: status || "Espera de Repuestos",
+      badge: "border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/10",
+      dot: "bg-rose-500",
+    };
+  }
+  if (s.includes("diagn") || s.includes("revis") || s.includes("inspec")) {
+    return {
+      label: status || "En Diagnóstico",
+      badge: "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10",
+      dot: "bg-amber-500",
+    };
+  }
+  return {
+    label: status || "En Proceso",
+    badge: "border-zinc-500/30 text-zinc-600 dark:text-zinc-400 bg-zinc-500/10",
+    dot: "bg-zinc-500",
+  };
+}
 
 export default function PosOrdenesPage() {
   const router = useRouter();
@@ -57,6 +67,7 @@ export default function PosOrdenesPage() {
   const [cargando, setCargando] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<string>("TODAS");
+  const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
   const [ordenSeleccionada, setOrdenSeleccionada] = useState<OrderItem | null>(null);
   const [guardandoId, setGuardandoId] = useState<string | null>(null);
   const [toastMensaje, setToastMensaje] = useState<{ tipo: "ok" | "err"; texto: string } | null>(null);
@@ -236,26 +247,10 @@ export default function PosOrdenesPage() {
                   {cargando ? "..." : totalOrdenes}
                 </span>
               </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Seguimiento de órdenes de trabajo, servicio en taller y facturación POS
-              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <Link
-              href="/taller"
-              className="h-10 sm:h-11 px-4 rounded-xl sm:rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/60 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 shadow-sm"
-            >
-              <span>🔧</span> Ir a Taller
-            </Link>
-            <Link
-              href="/taller/ordenes/nueva"
-              className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white text-xs sm:text-sm font-bold shadow-lg shadow-orange-500/20 active:scale-95 transition-all flex items-center gap-2"
-            >
-              <span>+</span> Nueva Orden
-            </Link>
-          </div>
+
         </div>
 
         {/* Métricas KPI */}
@@ -319,7 +314,7 @@ export default function PosOrdenesPage() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por # Orden, placa, vehículo, cliente o mecánico..."
+              placeholder="Buscar..."
               className="w-full pl-10 pr-9 h-11 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-amber-500 text-zinc-900 dark:text-white text-xs sm:text-sm font-medium placeholder:text-zinc-400 focus:outline-none transition-all"
             />
             {searchTerm && (
@@ -333,28 +328,74 @@ export default function PosOrdenesPage() {
             )}
           </div>
 
-          {/* Filtros de Estado */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-            {[
-              { id: "TODAS", label: "Todas" },
-              { id: "DIAGNOSTICO", label: "Diagnóstico" },
-              { id: "REPARANDO", label: "Reparando" },
-              { id: "REPUESTOS", label: "Repuestos" },
-              { id: "LISTO", label: "Listo" },
-            ].map((btn) => (
-              <button
-                key={btn.id}
-                type="button"
-                onClick={() => setFiltroEstado(btn.id)}
-                className={`h-9 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                  filtroEstado === btn.id
-                    ? "bg-amber-500 text-white shadow-sm shadow-amber-500/25"
-                    : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
-                }`}
+          {/* Selector de Estado Desplegable */}
+          <div className="relative min-w-[160px] sm:w-48 shrink-0">
+            <button
+              type="button"
+              onClick={() => setFiltroMenuAbierto(!filtroMenuAbierto)}
+              className="w-full h-11 px-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-200 flex items-center justify-between gap-2 shadow-sm hover:border-amber-500/50 dark:hover:border-amber-500/50 transition-all cursor-pointer"
+            >
+              <div className="flex items-center gap-2 truncate">
+                <span className="text-amber-500 text-xs">●</span>
+                <span className="truncate">
+                  {filtroEstado === "TODAS"
+                    ? "Todas"
+                    : filtroEstado === "DIAGNOSTICO"
+                    ? "Diagnóstico"
+                    : filtroEstado === "REPARANDO"
+                    ? "Reparando"
+                    : filtroEstado === "REPUESTOS"
+                    ? "Repuestos"
+                    : filtroEstado === "LISTO"
+                    ? "Listo"
+                    : "Estado"}
+                </span>
+              </div>
+              <svg
+                className={`w-4 h-4 text-zinc-400 transition-transform ${filtroMenuAbierto ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                {btn.label}
-              </button>
-            ))}
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {filtroMenuAbierto && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setFiltroMenuAbierto(false)} />
+                <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                  {[
+                    { id: "TODAS", label: "Todas" },
+                    { id: "DIAGNOSTICO", label: "Diagnóstico" },
+                    { id: "REPARANDO", label: "Reparando" },
+                    { id: "REPUESTOS", label: "Repuestos" },
+                    { id: "LISTO", label: "Listo" },
+                  ].map((opcion) => (
+                    <button
+                      key={opcion.id}
+                      type="button"
+                      onClick={() => {
+                        setFiltroEstado(opcion.id);
+                        setFiltroMenuAbierto(false);
+                      }}
+                      className={`w-full px-3.5 py-2.5 text-left text-xs sm:text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                        filtroEstado === opcion.id
+                          ? "bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold"
+                          : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-white"
+                      }`}
+                    >
+                      <span>{opcion.label}</span>
+                      {filtroEstado === opcion.id && (
+                        <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -375,145 +416,180 @@ export default function PosOrdenesPage() {
                 ? "No hay órdenes que coincidan con la búsqueda o filtro aplicado."
                 : "No hay órdenes registradas actualmente en el sistema."}
             </p>
-            <Link
-              href="/taller/ordenes/nueva"
-              className="mt-2 h-10 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all flex items-center gap-2"
-            >
-              <span>+</span> Crear Primera Orden
-            </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {ordenesFiltradas.map((ord) => {
-              const statusCfg = STATUS_CONFIG[ord.status] || {
-                label: ord.status,
-                color: "bg-zinc-500",
-                badge: "border-zinc-500/30 text-zinc-600 dark:text-zinc-400 bg-zinc-500/10",
-                bg: "bg-zinc-500",
-              };
+          <div className="space-y-4">
+            {/* Vista Móvil (Lista Compacta) */}
+            <div className="md:hidden space-y-2.5">
+              {ordenesFiltradas.map((ord) => {
+                const statusCfg = getStatusBadge(ord.status);
 
-              return (
-                <div
-                  key={ord.id || ord.dbId}
-                  className="bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl border border-zinc-200/80 dark:border-zinc-800 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-4 group relative overflow-hidden"
-                >
-                  <div className="flex flex-col gap-3">
-                    {/* Encabezado de la Tarjeta */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono text-xs font-extrabold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
-                            {ord.orderNumber}
-                          </span>
-                          <span className="font-mono text-xs font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md border border-zinc-200 dark:border-zinc-700">
-                            {ord.plate}
-                          </span>
+                return (
+                  <div
+                    key={ord.id || ord.dbId}
+                    className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-3.5 space-y-2.5 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/30">
+                          🚗
                         </div>
-                        <h3 className="text-base font-bold text-zinc-900 dark:text-white mt-1.5 leading-snug">
-                          {ord.vehicle}
-                        </h3>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                              {ord.vehicle}
+                            </p>
+                            <span className="font-mono text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
+                              #{ord.orderNumber}
+                            </span>
+                          </div>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
+                            <span className="font-semibold text-zinc-700 dark:text-zinc-300">{ord.plate}</span>
+                            <span> • {ord.client}</span>
+                          </p>
+                        </div>
                       </div>
 
-                      {/* Badge de Estado */}
-                      <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border shrink-0 ${statusCfg.badge}`}>
-                        {ord.status}
-                      </span>
-                    </div>
-
-                    {/* Cliente y Mecánico */}
-                    <div className="text-xs text-zinc-600 dark:text-zinc-400 flex flex-col gap-1 pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
-                      <div className="flex items-center justify-between">
-                        <span className="text-zinc-400">Cliente:</span>
-                        <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate max-w-[170px]">
-                          {ord.client}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-zinc-400">Mecánico:</span>
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          {ord.mechanic || "No asignado"}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-zinc-400">Total estimado:</span>
-                        <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                      <div className="text-right shrink-0">
+                        <p className="font-bold text-sm text-emerald-600 dark:text-emerald-400">
                           ${Number(ord.totalCost || 0).toFixed(2)}
+                        </p>
+                        <span className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusCfg.badge}`}>
+                          {ord.status}
                         </span>
                       </div>
                     </div>
 
-                    {/* Barra de Progreso */}
-                    <div>
-                      <div className="flex justify-between text-[11px] text-zinc-400 mb-1">
-                        <span>Progreso</span>
-                        <span className="font-semibold text-zinc-600 dark:text-zinc-300">{ord.progress}%</span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
-                        <div
-                          className={`h-full transition-all duration-500 rounded-full ${statusCfg.bg}`}
-                          style={{ width: `${Math.min(100, Math.max(5, ord.progress))}%` }}
-                        />
-                      </div>
+                    <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-2">
+                      {(() => {
+                        const badgeCfg = getStatusBadge(ord.status);
+                        return (
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${badgeCfg.badge}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${badgeCfg.dot}`} />
+                            {badgeCfg.label}
+                          </span>
+                        );
+                      })()}
+
+                      <button
+                        type="button"
+                        onClick={() => setOrdenSeleccionada(ord)}
+                        className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center text-xs font-bold transition-all shrink-0 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+                        title="Ver Detalles"
+                      >
+                        👁️
+                      </button>
                     </div>
-
-                    {/* Lista corta de servicios */}
-                    {ord.services && ord.services.length > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-1">
-                        {ord.services.slice(0, 2).map((srv, idx) => (
-                          <span
-                            key={idx}
-                            className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 px-2 py-0.5 rounded-md truncate max-w-[180px]"
-                          >
-                            • {srv}
-                          </span>
-                        ))}
-                        {ord.services.length > 2 && (
-                          <span className="text-[10px] text-zinc-400 font-semibold self-center">
-                            +{ord.services.length - 2} más
-                          </span>
-                        )}
-                      </div>
-                    )}
                   </div>
+                );
+              })}
+            </div>
 
-                  {/* Acciones de la Tarjeta */}
-                  <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center gap-2">
-                    {/* Botón Cobrar en POS */}
-                    <button
-                      type="button"
-                      onClick={() => handleCobrarEnPos(ord)}
-                      className="flex-1 h-9 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm shadow-emerald-500/20 cursor-pointer"
-                      title="Cobrar en Punto de Venta"
-                    >
-                      <span>💳</span> Cobrar en POS
-                    </button>
+            {/* Vista Desktop / Tablet (Tabla compacta idéntica a Clientes) */}
+            <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider font-semibold">
+                    <tr>
+                      <th className="py-2.5 px-4">Orden / Vehículo</th>
+                      <th className="py-2.5 px-4">Placa & Servicios</th>
+                      <th className="py-2.5 px-4">Cliente</th>
+                      <th className="py-2.5 px-4">Total</th>
+                      <th className="py-2.5 px-4">Estado de Proceso</th>
+                      <th className="py-2.5 px-4 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                    {ordenesFiltradas.map((ord) => {
+                      const badgeCfg = getStatusBadge(ord.status);
 
-                    {/* Selector de Estado Rápido */}
-                    <select
-                      value={ord.status}
-                      disabled={guardandoId === (ord.id || ord.dbId)}
-                      onChange={(e) => handleCambiarEstado(ord.id || ord.dbId || "", e.target.value)}
-                      className="h-9 px-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-medium border border-zinc-200 dark:border-zinc-700 cursor-pointer focus:outline-none"
-                    >
-                      <option value="En Diagnóstico">En Diagnóstico</option>
-                      <option value="Reparando">Reparando</option>
-                      <option value="Espera de Repuestos">Espera Repuestos</option>
-                      <option value="Listo para Entregar">Listo para Entregar</option>
-                    </select>
+                      return (
+                        <tr
+                          key={ord.id || ord.dbId}
+                          className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors"
+                        >
+                          {/* Orden / Vehículo con avatar estilo Clientes */}
+                          <td className="py-2.5 px-4 whitespace-nowrap">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30">
+                                🚗
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">
+                                    {ord.vehicle}
+                                  </span>
+                                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                    #{ord.orderNumber}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
 
-                    {/* Botón Ver Detalle */}
-                    <button
-                      type="button"
-                      onClick={() => setOrdenSeleccionada(ord)}
-                      className="w-9 h-9 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center text-xs font-bold transition-all shrink-0 cursor-pointer"
-                      title="Ver Detalles Completos"
-                    >
-                      👁️
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                          {/* Placa & Servicios (estilo badge vehículo de Clientes) */}
+                          <td className="py-2.5 px-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700">
+                                {ord.plate}
+                              </span>
+                              {ord.services && ord.services[0] && (
+                                <span className="text-xs text-zinc-500 dark:text-zinc-400 truncate max-w-[180px]" title={ord.services.join(", ")}>
+                                  {ord.services[0]}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Cliente & Mecánico en línea compacta */}
+                          <td className="py-2.5 px-4 whitespace-nowrap">
+                            <div className="text-sm">
+                              <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                                {ord.client}
+                              </span>
+                              {ord.mechanic && (
+                                <span className="text-xs text-zinc-400 dark:text-zinc-500 ml-1.5" title={`Mecánico: ${ord.mechanic}`}>
+                                  • {ord.mechanic.split(" ")[0]}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Total Estimado */}
+                          <td className="py-2.5 px-4 whitespace-nowrap">
+                            <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                              ${Number(ord.totalCost || 0).toFixed(2)}
+                            </span>
+                          </td>
+
+                          {/* Estado real según proceso de taller */}
+                          <td className="py-2.5 px-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${badgeCfg.badge}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${badgeCfg.dot}`} />
+                              {badgeCfg.label}
+                            </span>
+                          </td>
+
+                          {/* Acciones: solo ver detalle */}
+                          <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end">
+                              <button
+                                type="button"
+                                onClick={() => setOrdenSeleccionada(ord)}
+                                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center text-xs font-bold transition-all shrink-0 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+                                title="Ver Detalles Completos"
+                              >
+                                👁️
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
@@ -596,20 +672,9 @@ export default function PosOrdenesPage() {
                 <button
                   type="button"
                   onClick={() => setOrdenSeleccionada(null)}
-                  className="flex-1 h-11 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold cursor-pointer"
+                  className="w-full h-11 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold cursor-pointer transition-colors"
                 >
                   Cerrar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const ord = ordenSeleccionada;
-                    setOrdenSeleccionada(null);
-                    handleCobrarEnPos(ord);
-                  }}
-                  className="flex-1 h-11 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm cursor-pointer"
-                >
-                  <span>💳</span> Cobrar en POS
                 </button>
               </div>
             </div>

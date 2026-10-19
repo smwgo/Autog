@@ -473,18 +473,6 @@ export default function FacturasPosPage() {
 
                         {/* Acciones Rápidas */}
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => setVentaDetalle(v)}
-                            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all cursor-pointer"
-                            title="Ver e Imprimir Factura A4"
-                            aria-label="Ver e Imprimir Factura A4"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </button>
                           <Link
                             href={`/pos/facturas/editar?id=${v.id}`}
                             className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all cursor-pointer"
@@ -558,31 +546,18 @@ export default function FacturasPosPage() {
                             className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
                           >
                             <td className="py-3.5 px-4 font-mono font-bold text-zinc-900 dark:text-zinc-100">
-                              <button
-                                type="button"
-                                onClick={() => setVentaDetalle(v)}
-                                className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline cursor-pointer text-left"
-                                title="Ver detalle de factura"
-                              >
-                                {v.saleNumber}
-                              </button>
+                              {v.saleNumber}
                             </td>
                             <td className="py-3.5 px-4 text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
                               {fecha}
                             </td>
                             <td className="py-3.5 px-4 font-medium text-zinc-800 dark:text-zinc-200">
-                              <button
-                                type="button"
-                                onClick={() => setVentaDetalle(v)}
-                                className="hover:text-blue-600 dark:hover:text-blue-400 text-left cursor-pointer"
-                              >
-                                <div>{v.customerName || "Consumidor Final"}</div>
-                                {v.customer?.identification && (
-                                  <span className="text-[11px] text-zinc-400 font-mono">
-                                    CI: {v.customer.identification}
-                                  </span>
-                                )}
-                              </button>
+                              <div>{v.customerName || "Consumidor Final"}</div>
+                              {v.customer?.identification && (
+                                <span className="text-[11px] text-zinc-400 font-mono">
+                                  CI: {v.customer.identification}
+                                </span>
+                              )}
                             </td>
                             <td className="py-3.5 px-4">
                               <span className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-medium">
@@ -604,22 +579,8 @@ export default function FacturasPosPage() {
                               </span>
                             </td>
                             <td className="py-3.5 px-4 text-center">
-                              <div className="flex items-center justify-center gap-1.5">
-                                {/* Ver e Imprimir Factura A4 */}
-                                <button
-                                  type="button"
-                                  onClick={() => setVentaDetalle(v)}
-                                  className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/15 text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
-                                  title="Ver e Imprimir Factura A4"
-                                  aria-label="Ver e Imprimir Factura A4"
-                                >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                  </svg>
-                                </button>
-
-                                {/* Editar (en pagina completa) */}
+                              <div className="flex items-center justify-center gap-2">
+                                {/* Editar (Solo icono, en otra pagina) */}
                                 <Link
                                   href={`/pos/facturas/editar?id=${v.id}`}
                                   className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
@@ -630,36 +591,6 @@ export default function FacturasPosPage() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                   </svg>
                                 </Link>
-
-                                {/* Anular si no esta anulada */}
-                                {!esAnulada && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAnular(v)}
-                                    disabled={accionEnCurso}
-                                    className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs disabled:opacity-50"
-                                    title="Anular factura y devolver inventario"
-                                    aria-label="Anular factura"
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                                    </svg>
-                                  </button>
-                                )}
-
-                                {/* Eliminar */}
-                                <button
-                                  type="button"
-                                  onClick={() => handleEliminar(v)}
-                                  disabled={accionEnCurso}
-                                  className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs disabled:opacity-50"
-                                  title="Eliminar definitivamente"
-                                  aria-label="Eliminar factura"
-                                >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                  </svg>
-                                </button>
                               </div>
                             </td>
                           </tr>

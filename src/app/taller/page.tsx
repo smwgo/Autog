@@ -404,115 +404,152 @@ const TIPOS_HALLAZGO = [
 ];
 
 // ============================================================================
-// CATÁLOGO RÁPIDO DE LAS 7 TARJETAS (ESTÉTICA MINIMALISTA GLASSMORPHISM)
+// CATÁLOGO RÁPIDO DE LAS TARJETAS DE TALLER MECÁNICO (GLASSMORPHISM)
 // ============================================================================
 const SERVICE_CARDS = [
   {
-    id: "lubricacion",
-    title: "Lubricación y Filtros",
+    id: "diagnostico",
+    title: "Diagnóstico y Escáner",
     color: "bg-white/5",
     gradient: "from-white/10 to-white/5",
     glowColor: "rgba(255, 255, 255, 0.04)",
     icon: (
       <svg className="w-6 h-6 text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+        <path d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0H3m6 6h6" />
       </svg>
     ),
     presets: [
-      { code: "LUB-001", name: "Cambio de aceite de motor", price: 15.0, subCategory: "Lubricación" },
-      { code: "LUB-002", name: "Cambio de aceite de caja", price: 20.0, subCategory: "Lubricación" },
-      { code: "LUB-003", name: "Cambio de aceite de corona / diferencial", price: 18.0, subCategory: "Lubricación" },
-      { code: "LUB-004", name: "Engrasado general de chasis", price: 12.0, subCategory: "Lubricación" },
-      { code: "LUB-005", name: "Cambio / Relleno de refrigerante", price: 15.0, subCategory: "Lubricación" },
-      { code: "FIL-001", name: "Check: Filtro de aceite", price: 8.0, subCategory: "Filtros", isFilterCheck: true },
-      { code: "FIL-002", name: "Check: Filtro de aire", price: 10.0, subCategory: "Filtros", isFilterCheck: true },
-      { code: "FIL-003", name: "Check: Filtro de cabina (A/C)", price: 12.0, subCategory: "Filtros", isFilterCheck: true },
-      { code: "FIL-004", name: "Check: Filtro de combustible", price: 14.0, subCategory: "Filtros", isFilterCheck: true },
+      { code: "DIA-001", name: "Escáner computarizado OBD2", price: 20.0, subCategory: "Diagnóstico" },
+      { code: "DIA-002", name: "Diagnóstico Check Engine y borrado de fallas", price: 18.0, subCategory: "Diagnóstico" },
+      { code: "DIA-003", name: "Prueba de compresión de cilindros", price: 25.0, subCategory: "Diagnóstico" },
+      { code: "DIA-004", name: "Diagnóstico de fuga de compresión / vacío", price: 20.0, subCategory: "Diagnóstico" },
+      { code: "DIA-005", name: "Inspección técnica general / Pre-compra", price: 30.0, subCategory: "Diagnóstico" },
     ] as ServicePreset[],
   },
   {
-    id: "alineacion",
-    title: "Alineación y Balanceo",
+    id: "mantenimiento",
+    title: "Mantenimiento y Afinamiento",
+    color: "bg-white/5",
+    gradient: "from-white/10 to-white/5",
+    glowColor: "rgba(255, 255, 255, 0.04)",
+    icon: (
+      <svg className="w-6 h-6 text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.07a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091.455.087.935-.012 1.39" />
+      </svg>
+    ),
+    presets: [
+      { code: "MAN-001", name: "Afinamiento electrónico de motor", price: 35.0, subCategory: "Afinamiento" },
+      { code: "MAN-002", name: "Limpieza por ultrasonido de inyectores", price: 30.0, subCategory: "Afinamiento" },
+      { code: "MAN-003", name: "Limpieza y calibración cuerpo aceleración", price: 20.0, subCategory: "Afinamiento" },
+      { code: "MAN-004", name: "Calibración y cambio de bujías", price: 18.0, subCategory: "Afinamiento" },
+      { code: "MAN-005", name: "Mantenimiento preventivo por kilometraje", price: 40.0, subCategory: "General" },
+      { code: "MAN-006", name: "Cambio de filtros (aire y combustible)", price: 15.0, subCategory: "General" },
+    ] as ServicePreset[],
+  },
+  {
+    id: "frenos",
+    title: "Frenos",
     color: "bg-white/5",
     gradient: "from-white/10 to-white/5",
     glowColor: "rgba(255, 255, 255, 0.04)",
     icon: (
       <svg className="w-6 h-6 text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="9" />
-        <circle cx="12" cy="12" r="3" />
-        <path d="M12 3v6M12 15v6M3 12h6M15 12h6" />
+        <path d="M12 7v5l3 3" />
+        <path d="M5 12a7 7 0 0 1 7-7" />
+        <path d="M19 12a7 7 0 0 1-7 7" />
       </svg>
     ),
     presets: [
-      { code: "ALI-001", name: "Alineación computarizada (2 ruedas)", price: 20.0, subCategory: "Alineación" },
-      { code: "ALI-002", name: "Alineación computarizada 3D (4 ruedas)", price: 30.0, subCategory: "Alineación" },
-      { code: "BAL-001", name: "Balanceo por llanta", price: 5.0, subCategory: "Balanceo" },
-      { code: "BAL-004", name: "Balanceo completo (4 ruedas)", price: 18.0, subCategory: "Balanceo" },
-      { code: "ROT-001", name: "Rotación de llantas", price: 10.0, subCategory: "Balanceo" },
-      { code: "CAM-001", name: "Corrección de camber / convergencia", price: 25.0, subCategory: "Alineación" },
+      { code: "FRE-001", name: "Cambio de pastillas de freno", price: 25.0, subCategory: "Frenos" },
+      { code: "FRE-002", name: "Rectificado de discos de freno (par)", price: 30.0, subCategory: "Frenos" },
+      { code: "FRE-003", name: "Cambio y regulación de zapatas / tambor", price: 28.0, subCategory: "Frenos" },
+      { code: "FRE-004", name: "Purga y cambio de líquido de frenos", price: 18.0, subCategory: "Frenos" },
+      { code: "FRE-005", name: "Mantenimiento integral de 4 frenos", price: 45.0, subCategory: "Frenos" },
+      { code: "FRE-006", name: "Reparación de caliper / cilindro de freno", price: 35.0, subCategory: "Frenos" },
     ] as ServicePreset[],
   },
   {
-    id: "llantera",
-    title: "Llantera e Inflado",
+    id: "motor",
+    title: "Motor",
     color: "bg-white/5",
     gradient: "from-white/10 to-white/5",
     glowColor: "rgba(255, 255, 255, 0.04)",
     icon: (
       <svg className="w-6 h-6 text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <circle cx="12" cy="12" r="4" />
-        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4" />
+        <rect x="4" y="6" width="16" height="12" rx="2" />
+        <path d="M8 6V4m8 2V4m4 6h2m-2 4h2M2 10h2m-2 4h2m4-1v2m8-2v2" />
       </svg>
     ),
     presets: [
-      { code: "LLA-001", name: "Inflado de llantas (Aire)", price: 3.0, subCategory: "Inflado" },
-      { code: "LLA-002", name: "Inflado de llantas (Nitrógeno)", price: 12.0, subCategory: "Inflado" },
-      { code: "LLA-003", name: "Calibración electrónica de presión", price: 5.0, subCategory: "Inflado" },
-      { code: "LLA-004", name: "Parchado al frío / Vulcanizado", price: 8.0, subCategory: "Reparación" },
-      { code: "LLA-005", name: "Enllantaje / Desenllantaje", price: 10.0, subCategory: "Montaje" },
-      { code: "LLA-006", name: "Cambio de válvulas", price: 6.0, subCategory: "Reparación" },
+      { code: "MOT-001", name: "Cambio de faja / kit de distribución", price: 75.0, subCategory: "Distribución" },
+      { code: "MOT-002", name: "Cambio de empaquetadura tapa válvulas", price: 30.0, subCategory: "Empaquetaduras" },
+      { code: "MOT-003", name: "Cambio de retenes cigüeñal / árbol levas", price: 40.0, subCategory: "Retenes" },
+      { code: "MOT-004", name: "Reparación y cepillado de culata", price: 120.0, subCategory: "Motor Mayor" },
+      { code: "MOT-005", name: "Cambio de bomba de agua y termostato", price: 45.0, subCategory: "Refrigeración" },
+      { code: "MOT-006", name: "Reparación completa de motor (Overhaul)", price: 300.0, subCategory: "Motor Mayor" },
     ] as ServicePreset[],
   },
   {
-    id: "lavado",
-    title: "Lavado de Carro",
+    id: "suspension",
+    title: "Suspensión y Dirección",
     color: "bg-white/5",
     gradient: "from-white/10 to-white/5",
     glowColor: "rgba(255, 255, 255, 0.04)",
     icon: (
       <svg className="w-6 h-6 text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z" />
-        <path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97" />
+        <path d="M12 2v3m0 14v3M9 5h6m-5 4 4-2m-4 4 4-2m-4 4 4-2m-4 4 4-2m-1 3h6" />
       </svg>
     ),
     presets: [
-      { code: "LAV-001", name: "Lavado express exterior", price: 8.0, subCategory: "Exterior" },
-      { code: "LAV-002", name: "Lavado completo (interior + exterior)", price: 15.0, subCategory: "Completo" },
-      { code: "LAV-003", name: "Lavado de motor y chasis", price: 22.0, subCategory: "Chasis y Motor" },
-      { code: "LAV-004", name: "Aspirado profundo", price: 10.0, subCategory: "Interior" },
-      { code: "LAV-005", name: "Pulverizado / Grafito en chasis", price: 14.0, subCategory: "Chasis y Motor" },
-      { code: "LAV-006", name: "Limpieza profunda de tapicería", price: 35.0, subCategory: "Interior" },
+      { code: "SUS-001", name: "Cambio de amortiguadores delanteros (par)", price: 40.0, subCategory: "Suspensión" },
+      { code: "SUS-002", name: "Cambio de amortiguadores posteriores (par)", price: 35.0, subCategory: "Suspensión" },
+      { code: "SUS-003", name: "Cambio de terminales y rótulas dirección", price: 30.0, subCategory: "Dirección" },
+      { code: "SUS-004", name: "Cambio de bujes trapecio / barra estabilizadora", price: 35.0, subCategory: "Suspensión" },
+      { code: "SUS-005", name: "Reparación / Cambio cremallera de dirección", price: 80.0, subCategory: "Dirección" },
+      { code: "SUS-006", name: "Alineación computarizada y balanceo", price: 25.0, subCategory: "Dirección" },
     ] as ServicePreset[],
   },
   {
-    id: "mecanica",
-    title: "Mecánica Rápida",
+    id: "electrico",
+    title: "Sistema Eléctrico",
     color: "bg-white/5",
     gradient: "from-white/10 to-white/5",
     glowColor: "rgba(255, 255, 255, 0.04)",
     icon: (
       <svg className="w-6 h-6 text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
       </svg>
     ),
     presets: [
-      { code: "MEC-001", name: "Cambio de pastillas / zapatas de freno", price: 25.0, subCategory: "Frenos" },
-      { code: "MEC-002", name: "Purga / Cambio de líquido de frenos", price: 15.0, subCategory: "Frenos" },
-      { code: "MEC-003", name: "Diagnóstico / Cambio de batería", price: 10.0, subCategory: "Eléctrico" },
-      { code: "MEC-004", name: "Cambio y calibración de bujías", price: 18.0, subCategory: "Motor" },
-      { code: "MEC-005", name: "Amortiguadores / Suspensión", price: 40.0, subCategory: "Suspensión" },
-      { code: "MEC-006", name: "Escáner automotriz OBD2", price: 20.0, subCategory: "Eléctrico" },
+      { code: "ELE-001", name: "Diagnóstico y cambio de batería", price: 12.0, subCategory: "Batería" },
+      { code: "ELE-002", name: "Mantenimiento / Reparación de alternador", price: 45.0, subCategory: "Carga" },
+      { code: "ELE-003", name: "Mantenimiento motor de arranque", price: 45.0, subCategory: "Arranque" },
+      { code: "ELE-004", name: "Reparación de cableado y cortocircuitos", price: 30.0, subCategory: "Cableado" },
+      { code: "ELE-005", name: "Diagnóstico de sensores (Oxígeno, MAF, CKP)", price: 25.0, subCategory: "Sensores" },
+      { code: "ELE-006", name: "Regulación y cambio de faros / focos", price: 15.0, subCategory: "Iluminación" },
+    ] as ServicePreset[],
+  },
+  {
+    id: "transmision",
+    title: "Transmisión y Embrague",
+    color: "bg-white/5",
+    gradient: "from-white/10 to-white/5",
+    glowColor: "rgba(255, 255, 255, 0.04)",
+    icon: (
+      <svg className="w-6 h-6 text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="8" cy="8" r="4" />
+        <circle cx="16" cy="16" r="4" />
+        <path d="M11 11l2 2" />
+      </svg>
+    ),
+    presets: [
+      { code: "TRA-001", name: "Cambio de kit de embrague (disco, plato, collarín)", price: 80.0, subCategory: "Embrague" },
+      { code: "TRA-002", name: "Bajada y reparación de caja mecánica", price: 95.0, subCategory: "Caja" },
+      { code: "TRA-003", name: "Cambio de guardapolvos y puntas de palier", price: 35.0, subCategory: "Transmisión" },
+      { code: "TRA-004", name: "Cambio de bomba / bombín de embrague", price: 25.0, subCategory: "Embrague" },
+      { code: "TRA-005", name: "Mantenimiento de caja automática (ATF)", price: 50.0, subCategory: "Caja" },
+      { code: "TRA-006", name: "Cambio de crucetas y cardán", price: 35.0, subCategory: "Transmisión" },
     ] as ServicePreset[],
   },
   {
@@ -529,29 +566,6 @@ const SERVICE_CARDS = [
     ),
     presets: [] as ServicePreset[],
   },
-  {
-    id: "otro",
-    title: "Otro",
-    color: "bg-white/5",
-    gradient: "from-white/10 to-white/5",
-    glowColor: "rgba(255, 255, 255, 0.04)",
-    icon: (
-      <svg className="w-6 h-6 text-zinc-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" rx="1.5" />
-        <rect x="14" y="3" width="7" height="7" rx="1.5" />
-        <rect x="3" y="14" width="7" height="7" rx="1.5" />
-        <path d="M17.5 14v7M14 17.5h7" />
-      </svg>
-    ),
-    presets: [
-      { code: "OTR-001", name: "Diagnóstico eléctrico general", price: 20.0, subCategory: "Diagnóstico" },
-      { code: "OTR-002", name: "Revisión y carga de Aire Acondicionado (A/C)", price: 35.0, subCategory: "Climatización" },
-      { code: "OTR-003", name: "Inspección pre-viaje de 35 puntos", price: 18.0, subCategory: "Diagnóstico" },
-      { code: "OTR-004", name: "Soldadura / Reparación de escape", price: 25.0, subCategory: "Especial" },
-      { code: "OTR-005", name: "Auxilio mecánico / Servicio externo", price: 30.0, subCategory: "Especial" },
-      { code: "OTR-006", name: "Mano de obra adicional / Ajuste técnico", price: 15.0, subCategory: "Mano de Obra" },
-    ] as ServicePreset[],
-  },
 ];
 
 function formatElapsedTime(startedAt: string | null, completedAt: string | null, nowTick: number): string {
@@ -565,14 +579,11 @@ function formatElapsedTime(startedAt: string | null, completedAt: string | null,
   return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }
 
-function formatearFechaIngreso(dateStr?: string | null): string {
-  if (!dateStr) {
-    const d = new Date();
-    return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
-  }
+function formatearFechaCompleta(dateStr?: string | null): string {
+  if (!dateStr) return "";
   try {
     const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
+    if (isNaN(d.getTime())) return String(dateStr);
     const dia = String(d.getDate()).padStart(2, "0");
     const mes = String(d.getMonth() + 1).padStart(2, "0");
     const anio = d.getFullYear();
@@ -581,6 +592,50 @@ function formatearFechaIngreso(dateStr?: string | null): string {
     return `${dia}/${mes}/${anio} ${hora}:${min}`;
   } catch {
     return String(dateStr);
+  }
+}
+
+function formatearFechaIngreso(dateStr?: string | null): string {
+  if (!dateStr) return "Hoy";
+  try {
+    const ingreso = new Date(dateStr);
+    if (isNaN(ingreso.getTime())) return String(dateStr);
+
+    const ahora = new Date();
+    // Cálculo de días calendario exactos entre la fecha de ingreso y hoy
+    const fechaIngresoZero = new Date(ingreso.getFullYear(), ingreso.getMonth(), ingreso.getDate());
+    const fechaAhoraZero = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+    const diffDias = Math.round((fechaAhoraZero.getTime() - fechaIngresoZero.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDias <= 0) {
+      return "Hoy";
+    }
+    if (diffDias === 1) {
+      return "Ayer";
+    }
+    if (diffDias >= 2 && diffDias <= 6) {
+      return `${diffDias} días`;
+    }
+    if (diffDias >= 7 && diffDias <= 13) {
+      return "1 semana";
+    }
+    if (diffDias >= 14 && diffDias <= 20) {
+      return "Quincena";
+    }
+    if (diffDias >= 21 && diffDias <= 27) {
+      return "3 semanas";
+    }
+    const diffMeses = Math.floor(diffDias / 30);
+    if (diffMeses <= 1) {
+      return "1 mes";
+    }
+    if (diffMeses < 12) {
+      return `${diffMeses} meses`;
+    }
+    const diffAnios = Math.floor(diffDias / 365);
+    return diffAnios === 1 ? "1 año" : `${diffAnios} años`;
+  } catch {
+    return "Hoy";
   }
 }
 
@@ -3888,21 +3943,22 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
     [activeCardId]
   );
 
-  // Lista combinada de presets para la tarjeta activa (en "Otro" suma también los servicios personalizados de Neon DB)
+  // Lista combinada de presets para la tarjeta activa (incluye también los servicios de DB según la categoría)
   const presetsTarjetaActiva = useMemo<ServicePreset[]>(() => {
     if (!tarjetaSeleccionadaObj) return [];
-    if (tarjetaSeleccionadaObj.id !== "otro") {
-      return tarjetaSeleccionadaObj.presets;
-    }
     const base = [...tarjetaSeleccionadaObj.presets];
     const existingCodes = new Set(base.map((b) => b.code));
     serviciosDb.forEach((s) => {
-      if (s.code && !existingCodes.has(s.code)) {
+      const matchCat =
+        !s.category ||
+        s.category.toLowerCase().includes(tarjetaSeleccionadaObj.id) ||
+        s.category.toLowerCase().includes(tarjetaSeleccionadaObj.title.toLowerCase());
+      if (s.code && !existingCodes.has(s.code) && matchCat) {
         base.push({
           code: s.code,
           name: s.name,
           price: Number(s.price) || 15,
-          subCategory: s.category || "General",
+          subCategory: s.category || tarjetaSeleccionadaObj.title,
         });
       }
     });
@@ -4069,7 +4125,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             </div>
           </div>
 
-          {/* Botones de Cabecera: Nueva Orden + Lista de Autos en Atención + Fecha Ingreso y Estado */}
+          {/* Botones de Cabecera: Nueva Orden */}
           <div className="flex flex-wrap items-center gap-2">
             {/* Botón Flotante / Acceso Rápido a Nueva Orden */}
             <button
@@ -4081,62 +4137,13 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               <span className="text-sm font-bold leading-none">+</span>
               <span>Nueva Orden</span>
             </button>
-
-            {/* Icono de Lista: Clientes y Autos que estoy atendiendo */}
-            <button
-              type="button"
-              onClick={() => setMostrarModalAutosAtencion(true)}
-              className="h-9 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:border-white/20 active:scale-95"
-              title="Ver todos los clientes en atención / pausar o continuar trabajos"
-            >
-              <svg
-                className="w-4 h-4 text-zinc-300"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
-                />
-              </svg>
-              {autosEnPista.length > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold">
-                  {autosEnPista.length}
-                </span>
-              )}
-            </button>
-
-            {/* Al lado de Nueva Orden: Fecha de Ingreso y si está en Pausa o Trabajando */}
-            {ordenActiva && (
-              <div className="flex flex-col justify-center px-3 py-1 rounded-xl bg-black/40 border border-white/10 text-xs">
-                <span className="text-[10px] text-zinc-400 leading-tight">
-                  Ingreso: <strong className="text-zinc-200 font-mono">{formatearFechaIngreso(ordenActiva.dateIn || ordenActiva.startedAt)}</strong>
-                </span>
-                <span className="text-[11px] font-semibold leading-tight mt-0.5">
-                  {ordenActiva.status === "Pausada" ? (
-                    <span className="text-amber-400 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                      <span>En Pausa</span>
-                    </span>
-                  ) : (
-                    <span className="text-emerald-400 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>Trabajando</span>
-                    </span>
-                  )}
-                </span>
-              </div>
-            )}
           </div>
         </div>
 
         {/* ===================================================================
             SELECTOR SUPERIOR DESLIZABLE: [ 🔧 TALLER ] | [ 💧 LUBRICENTRO & EXPRESS ]
             =================================================================== */}
-        <div className="flex items-center justify-start">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex items-center p-1 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md shadow-xl gap-1">
             <button
               type="button"
@@ -4188,6 +4195,33 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               <span>Lubricentro</span>
             </button>
           </div>
+
+          {/* Icono de Lista: Clientes y Autos que estoy atendiendo (a la derecha al filo) */}
+          <button
+            type="button"
+            onClick={() => setMostrarModalAutosAtencion(true)}
+            className="h-9 sm:h-10 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:border-white/20 active:scale-95"
+            title="Ver todos los clientes en atención / pausar o continuar trabajos"
+          >
+            <svg
+              className="w-4 h-4 text-zinc-300"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+              />
+            </svg>
+            {autosEnPista.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] sm:text-xs font-bold">
+                {autosEnPista.length}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* ===================================================================
@@ -4226,36 +4260,35 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               </div>
             ) : null}
 
-            {/* Interruptor de Modo: al marcar sale qué es */}
-            <button
-              type="button"
-              role="switch"
-              aria-checked={rolUsuario === "OFICINA"}
-              onClick={() => {
-                const nuevo = rolUsuario === "EMPLEADO" ? "OFICINA" : "EMPLEADO";
-                setRolUsuario(nuevo);
-                mostrarToast(nuevo === "OFICINA" ? "Modo Oficina activado" : "Modo Garaje activado");
-              }}
-              className="flex items-center gap-2 bg-black/40 hover:bg-black/60 border border-white/10 px-3 py-1.5 rounded-2xl cursor-pointer transition-all select-none"
-              title="Clic para cambiar de modo"
-            >
-              <span
-                className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-white/15 transition-colors duration-200 ease-in-out ${
-                  rolUsuario === "OFICINA" ? "bg-blue-600" : "bg-emerald-600"
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
-                    rolUsuario === "OFICINA" ? "translate-x-4" : "translate-x-1"
-                  }`}
-                />
-              </span>
-
-              <span className="text-xs font-semibold text-white flex items-center gap-1.5">
-                <span>{rolUsuario === "OFICINA" ? "🏢" : "🔧"}</span>
-                <span>{rolUsuario === "OFICINA" ? "Oficina" : "Garaje"}</span>
-              </span>
-            </button>
+            {/* Lado derecho: Estado de Ingreso/Pausa */}
+            <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+              {ordenActiva && (
+                <div className="flex flex-col justify-center px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-black/50 border border-white/15 shadow-md">
+                  <span className="text-xs sm:text-sm text-zinc-300 leading-tight font-normal">
+                    Ingreso:{" "}
+                    <span
+                      className="text-white font-normal"
+                      title={formatearFechaCompleta(ordenActiva.dateIn || ordenActiva.startedAt)}
+                    >
+                      {formatearFechaIngreso(ordenActiva.dateIn || ordenActiva.startedAt)}
+                    </span>
+                  </span>
+                  <span className="text-sm sm:text-base font-normal leading-tight mt-1">
+                    {ordenActiva.status === "Pausada" ? (
+                      <span className="text-amber-400 flex items-center gap-1.5 font-normal">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+                        <span>En Pausa</span>
+                      </span>
+                    ) : (
+                      <span className="text-emerald-400 flex items-center gap-1.5 font-normal">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                        <span>Trabajando</span>
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* VISTAS SEGÚN EL SELECTOR: LUBRICENTRO O TALLER */}
@@ -4301,10 +4334,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 },
                 {
                   id: 3,
-                  label: "3. Catálogo",
+                  label: "3. Presupuesto",
                   icon: (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
                     </svg>
                   ),
                 },
@@ -4350,10 +4383,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   <button
                     key={step.id}
                     type="button"
-                    onClick={() => {
-                      setEtapaActiva(step.id);
-                      setPasoDeslizable(step.id === 1 ? 0 : step.id === 2 ? 1 : 2);
-                    }}
+                    onClick={() => setEtapaActiva(step.id)}
                     className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all cursor-pointer active:scale-95 ${
                       active
                         ? "bg-blue-500/15 border-blue-500/40 text-blue-300 shadow-md shadow-blue-500/10"
@@ -4689,13 +4719,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             {/* ETAPA 3: CATÁLOGO / PRESUPUESTO (EMPLEADO vs OFICINA) */}
             {etapaActiva === 3 && (
               <div className="w-full space-y-4 animate-fade-in">
-                {/* Banner de Lógica de Roles */}
-                {rolUsuario === "EMPLEADO" ? (
-                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-                    <span>Modo Garaje: Valores monetarios ocultos. Toca un servicio para agregarlo con tu usuario técnico.</span>
-                  </div>
-                ) : (
+                {/* Banner de Lógica de Roles (Solo si está en Modo Oficina) */}
+                {rolUsuario === "OFICINA" && (
                   <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-200 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
@@ -4722,11 +4747,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
                 {/* Tarjetas Rápidas de Servicios Minimalistas con Glassmorphism */}
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-zinc-300">Servicios Rápidos (1 toque para sumar a la orden):</span>
-                  </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    {SERVICE_CARDS.slice(0, 8).map((card) => {
+                    {SERVICE_CARDS.map((card) => {
                       const firstPreset = card.presets[0] || {
                         code: `${card.id.toUpperCase()}-001`,
                         name: card.title,

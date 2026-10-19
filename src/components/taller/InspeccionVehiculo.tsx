@@ -28,66 +28,101 @@ export interface InspectionTemplate {
   items: InspectionChecklistItem[];
 }
 
-export const PLANTILLAS_INSPECCION: InspectionTemplate[] = [
+export type SeccionInspeccionId = "carroceria" | "motor" | "frenos" | "suspension" | "electrico";
+
+export interface SeccionInspeccionConfig {
+  id: SeccionInspeccionId;
+  name: string;
+  shortName: string;
+  icon: string;
+  description: string;
+  items?: InspectionChecklistItem[];
+}
+
+export const SISTEMAS_INSPECCION: SeccionInspeccionConfig[] = [
   {
-    id: "general",
-    name: "Recepción General",
-    icon: "📋",
-    description: "Inspección integral de ingreso al taller",
+    id: "carroceria",
+    name: "Carrocería (5 Vistas)",
+    shortName: "Carrocería",
+    icon: "🚗",
+    description: "Inspección exterior en 5 planos vectoriales con registro de daños y fotos",
+  },
+  {
+    id: "motor",
+    name: "Motor y Componentes",
+    shortName: "Motor",
+    icon: "⚙️",
+    description: "Fugas de fluidos, refrigeración, correas, soportes y encendido",
     items: [
-      { id: "gen_luces", label: "Luces principales, altas y direccionales", modo: "semaforo" },
-      { id: "gen_neumaticos", label: "Presión y desgaste parejo de neumáticos", modo: "semaforo" },
-      { id: "gen_fluidos", label: "Nivel de fluidos (aceite, frenos, refrigerante)", modo: "cumplimiento" },
-      { id: "gen_parabrisas", label: "Parabrisas y cristales sin fisuras", modo: "binario" },
-      { id: "gen_freno_mano", label: "Tensión y anclaje de freno de mano", modo: "cumplimiento" },
-      { id: "gen_bateria", label: "Voltaje y estado de bornes de batería", modo: "puntaje" },
-      { id: "gen_habitaculo", label: "Limpieza y estado interior del habitáculo", modo: "puntaje" },
+      { id: "mot_fugas", label: "Fugas de aceite o fluidos de motor", modo: "semaforo" },
+      { id: "mot_refrigerante", label: "Nivel, estado y mangueras de refrigerante", modo: "semaforo" },
+      { id: "mot_correas", label: "Correas de accesorios y distribución", modo: "semaforo" },
+      { id: "mot_ruidos", label: "Ruidos anómalos o vibraciones del motor", modo: "semaforo" },
+      { id: "mot_soportes", label: "Soportes / patas de motor y caja", modo: "semaforo" },
+      { id: "mot_radiador", label: "Radiador, electroventilador y termostato", modo: "semaforo" },
+      { id: "mot_admision", label: "Sistema de admisión, filtro de aire y escape", modo: "semaforo" },
+      { id: "mot_bujias", label: "Encendido, bujías y compresión", modo: "semaforo" },
     ],
   },
   {
     id: "frenos",
-    name: "Frenos",
+    name: "Sistema de Frenos",
+    shortName: "Frenos",
     icon: "🛑",
-    description: "Evaluación de pastillas, discos y sistema hidráulico",
+    description: "Pastillas, discos, tambores, cañerías hidráulicas y pedal",
     items: [
       { id: "frn_pastillas_del", label: "Espesor de pastillas de freno delanteras", modo: "semaforo" },
       { id: "frn_pastillas_tras", label: "Espesor de pastillas / balatas traseras", modo: "semaforo" },
-      { id: "frn_discos", label: "Discos de freno sin ceja pronunciada", modo: "cumplimiento" },
-      { id: "frn_liquido", label: "Punto de ebullición / nivel de líquido de frenos", modo: "semaforo" },
-      { id: "frn_fugas", label: "Fugas en mangueras o cañerías hidráulicas", modo: "binario" },
-      { id: "frn_pedal", label: "Tacto y firmeza del pedal de freno", modo: "puntaje" },
+      { id: "frn_discos", label: "Discos y tambores de freno (ceja o alabeo)", modo: "semaforo" },
+      { id: "frn_liquido", label: "Nivel y punto de ebullición de líquido de frenos", modo: "semaforo" },
+      { id: "frn_fugas", label: "Fugas en cañerías hidráulicas, flexibles o calipers", modo: "semaforo" },
+      { id: "frn_pedal", label: "Tacto, firmeza y recorrido del pedal", modo: "semaforo" },
+      { id: "frn_freno_mano", label: "Freno de estacionamiento / mano (tensión y bloqueo)", modo: "semaforo" },
     ],
   },
   {
     id: "suspension",
-    name: "Suspensión",
+    name: "Suspensión y Dirección",
+    shortName: "Suspensión",
     icon: "🔩",
-    description: "Amortiguadores, rótulas, bujes y terminales",
+    description: "Amortiguadores, rótulas, bujes, terminales y dirección",
     items: [
-      { id: "susp_amort_del", label: "Amortiguadores delanteros sin fugas de aceite", modo: "semaforo" },
-      { id: "susp_amort_tras", label: "Amortiguadores traseros y rebote", modo: "semaforo" },
-      { id: "susp_rotulas", label: "Rótulas de suspensión y terminales de dirección", modo: "cumplimiento" },
-      { id: "susp_bujes", label: "Bujes de tijetas / bandejas sin holguras", modo: "semaforo" },
-      { id: "susp_alineacion", label: "Desgaste parejo en banda de rodado", modo: "binario" },
-      { id: "susp_estabilidad", label: "Estabilidad y respuesta de amortiguación", modo: "puntaje" },
+      { id: "susp_amort_del", label: "Amortiguadores delanteros (sin fugas ni rebote)", modo: "semaforo" },
+      { id: "susp_amort_tras", label: "Amortiguadores y espirales / muelles traseros", modo: "semaforo" },
+      { id: "susp_rotulas", label: "Rótulas de suspensión y muñones", modo: "semaforo" },
+      { id: "susp_terminales", label: "Terminales de dirección y barras axiales", modo: "semaforo" },
+      { id: "susp_bujes", label: "Bujes de tijetas / bandejas y barra estabilizadora", modo: "semaforo" },
+      { id: "susp_cremallera", label: "Caja o cremallera de dirección y fuelles", modo: "semaforo" },
+      { id: "susp_neumaticos", label: "Alineación, balanceo y desgaste parejo de neumáticos", modo: "semaforo" },
     ],
   },
   {
-    id: "lubricacion",
-    name: "Lubricación",
-    icon: "🛢️",
-    description: "Fluidos de motor, caja y filtros de aire/aceite",
+    id: "electrico",
+    name: "Sistema Eléctrico y Batería",
+    shortName: "Eléctrico",
+    icon: "⚡",
+    description: "Batería, alternador, luces, arranque y testigos de tablero",
     items: [
-      { id: "lub_aceite_motor", label: "Nivel, color y viscosidad de aceite motor", modo: "semaforo" },
-      { id: "lub_filtro_aceite", label: "Filtro de aceite bien sellado y sin fugas", modo: "cumplimiento" },
-      { id: "lub_filtro_aire", label: "Estado y saturación de filtro de aire motor", modo: "semaforo" },
-      { id: "lub_filtro_cabina", label: "Filtro de polen / cabina A/C", modo: "semaforo" },
-      { id: "lub_refrigerante", label: "Nivel y concentración de líquido refrigerante", modo: "cumplimiento" },
-      { id: "lub_fugas_carter", label: "Fugas en cárter o tapón de drenaje", modo: "binario" },
-      { id: "lub_engrase", label: "Engrase general de rótulas y articulaciones", modo: "puntaje" },
+      { id: "elec_bateria", label: "Batería: voltaje de reposo, bornes y sujeción", modo: "semaforo" },
+      { id: "elec_alternador", label: "Alternador: carga y voltaje con accesorios encendidos", modo: "semaforo" },
+      { id: "elec_arranque", label: "Motor de arranque y respuesta de encendido", modo: "semaforo" },
+      { id: "elec_luces_del", label: "Luces principales (bajas, altas y neblineros)", modo: "semaforo" },
+      { id: "elec_luces_tras", label: "Luces de freno, retroceso, placas y direccionales", modo: "semaforo" },
+      { id: "elec_tablero", label: "Testigos de advertencia en tablero (Check Engine, ABS)", modo: "semaforo" },
+      { id: "elec_clima", label: "Sistema de climatización / A/C y ventilación", modo: "semaforo" },
     ],
   },
 ];
+
+export const PLANTILLAS_INSPECCION: InspectionTemplate[] = SISTEMAS_INSPECCION
+  .filter((s): s is SeccionInspeccionConfig & { items: InspectionChecklistItem[] } => Boolean(s.items && s.items.length > 0))
+  .map((s) => ({
+    id: s.id,
+    name: s.name,
+    icon: s.icon,
+    description: s.description,
+    items: s.items,
+  }));
 
 const CHIPS_HALLAZGO = [
   { id: "Rayón", label: "Rayón", color: "bg-amber-500/20 text-amber-300 border-amber-500/40" },
@@ -116,8 +151,8 @@ export default function InspeccionVehiculo({
   const [observacionTexto, setObservacionTexto] = useState("");
   const [subiendoFotoPin, setSubiendoFotoPin] = useState(false);
 
-  // Estados para Plantillas de Inspección Dinámicas
-  const [plantillaActivaId, setPlantillaActivaId] = useState<string>("general");
+  // Estados para Sistemas de Inspección Total del Vehículo
+  const [seccionActiva, setSeccionActiva] = useState<SeccionInspeccionId>("carroceria");
   const [evaluacionesPlantilla, setEvaluacionesPlantilla] = useState<Record<string, any>>({});
 
   // Modal de PDF y Envío WhatsApp de Inspección
@@ -140,6 +175,9 @@ export default function InspeccionVehiculo({
     if (ordenActiva?.receptionSignatureUrl) {
       setFirmaRecepcionUrl(ordenActiva.receptionSignatureUrl);
     }
+    if ((ordenActiva as any)?.inspectionChecklist) {
+      setEvaluacionesPlantilla((ordenActiva as any).inspectionChecklist);
+    }
   }, [ordenActiva]);
 
   // Persistir hallazgos y evaluaciones en Neon DB
@@ -148,7 +186,7 @@ export default function InspeccionVehiculo({
       nuevosHallazgos: InspectionFinding[],
       firmaUrl?: string | null,
       evals?: Record<string, any>,
-      plantillaId?: string
+      seccionId?: string
     ) => {
       if (!ordenActiva) return;
       try {
@@ -162,7 +200,7 @@ export default function InspeccionVehiculo({
         }
         if (evals !== undefined) {
           payload.inspectionChecklist = evals;
-          payload.inspectionTemplateId = plantillaId || plantillaActivaId;
+          payload.inspectionTemplateId = seccionId || seccionActiva;
         }
 
         const res = await fetch("/api/taller/operacion", {
@@ -178,7 +216,7 @@ export default function InspeccionVehiculo({
         console.warn("Aviso de sincronización de inspección:", err);
       }
     },
-    [ordenActiva, onUpdateOrden, plantillaActivaId]
+    [ordenActiva, onUpdateOrden, seccionActiva]
   );
 
   // 1. ESQUEMA INTERACTIVO: DETECCIÓN DE TOQUE EN COORDENADAS PORCENTUALES Y PINES NUMERADOS
@@ -306,30 +344,37 @@ export default function InspeccionVehiculo({
     }
   };
 
-  // 3. PLANTILLAS DE INSPECCIÓN: EVALUACIÓN EN 1 TOQUE Y BARRA DE PROGRESO
+  // 3. SELECCIÓN DE SISTEMAS Y EVALUACIÓN
   const plantillaSeleccionada = useMemo(() => {
     return (
-      PLANTILLAS_INSPECCION.find((p) => p.id === plantillaActivaId) ||
+      PLANTILLAS_INSPECCION.find((s) => s.id === seccionActiva) ||
       PLANTILLAS_INSPECCION[0]
     );
-  }, [plantillaActivaId]);
-
-  const itemsRespondidosCount = useMemo(() => {
-    return plantillaSeleccionada.items.filter(
-      (it) => evaluacionesPlantilla[it.id] !== undefined
-    ).length;
-  }, [plantillaSeleccionada, evaluacionesPlantilla]);
+  }, [seccionActiva]);
 
   const porcentajeProgresoPlantilla = useMemo(() => {
-    if (plantillaSeleccionada.items.length === 0) return 0;
-    return Math.round((itemsRespondidosCount / plantillaSeleccionada.items.length) * 100);
-  }, [itemsRespondidosCount, plantillaSeleccionada]);
+    if (!plantillaSeleccionada.items || plantillaSeleccionada.items.length === 0) return 0;
+    const evaluados = plantillaSeleccionada.items.filter(
+      (it: InspectionChecklistItem) => evaluacionesPlantilla[it.id] !== undefined
+    ).length;
+    return Math.round((evaluados / plantillaSeleccionada.items.length) * 100);
+  }, [plantillaSeleccionada, evaluacionesPlantilla]);
 
   const handleEvaluarItem = (itemId: string, valor: any) => {
     const nuevo = { ...evaluacionesPlantilla, [itemId]: valor };
     setEvaluacionesPlantilla(nuevo);
-    sincronizarHallazgosNeon(hallazgos, firmaRecepcionUrl, nuevo, plantillaActivaId);
+    sincronizarHallazgosNeon(hallazgos, firmaRecepcionUrl, nuevo, seccionActiva);
     mostrarToast("Evaluación guardada automáticamente.");
+  };
+
+  const handleMarcarTodosBueno = (items: InspectionChecklistItem[]) => {
+    const nuevo = { ...evaluacionesPlantilla };
+    items.forEach((it) => {
+      nuevo[it.id] = "BUENO";
+    });
+    setEvaluacionesPlantilla(nuevo);
+    sincronizarHallazgosNeon(hallazgos, firmaRecepcionUrl, nuevo, seccionActiva);
+    mostrarToast("Todos los ítems de esta sección marcados como BUENO.");
   };
 
   // 4. FIRMA RÁPIDA DE RECEPCIÓN (CONFORMIDAD DE RECEPCIÓN)
@@ -400,7 +445,7 @@ export default function InspeccionVehiculo({
     }
     const dataUrl = canvas.toDataURL("image/png");
     setFirmaRecepcionUrl(dataUrl);
-    await sincronizarHallazgosNeon(hallazgos, dataUrl, evaluacionesPlantilla, plantillaActivaId);
+    await sincronizarHallazgosNeon(hallazgos, dataUrl, evaluacionesPlantilla, seccionActiva);
     mostrarToast("✓ Firma de conformidad de recepción registrada correctamente");
   };
 
@@ -411,19 +456,38 @@ export default function InspeccionVehiculo({
     const hallazgosTxt =
       hallazgos.length > 0
         ? hallazgos.map((h) => `#${h.pinNumber || 1} [${h.vistaLabel}] ${h.tipo}: ${h.descripcion || "Sin nota"}`).join("\n")
-        : "Sin daños reportados.";
+        : "Sin daños de carrocería reportados.";
 
     const urlSeguimiento = `${typeof window !== "undefined" ? window.location.origin : ""}/taller/seguimiento?orden=${ordenActiva.orderNumber}&pin=${ordenActiva.trackingPin || "4821"}`;
 
-    const msg = `🚗 *INFORME DE INSPECCIÓN VEHICULAR - TALLER AUTOG*
+    const sistemasTxt = SISTEMAS_INSPECCION
+      .filter((s) => s.items && s.items.length > 0)
+      .map((s) => {
+        const evals = s.items!
+          .map((it) => {
+            const val = evaluacionesPlantilla[it.id];
+            const nota = evaluacionesPlantilla[`${it.id}_nota`];
+            if (!val) return null;
+            return `  • ${it.label}: ${val}${nota ? ` (${nota})` : ""}`;
+          })
+          .filter(Boolean);
+        if (evals.length === 0) return null;
+        return `*${s.icon} ${s.name}:*\n${evals.join("\n")}`;
+      })
+      .filter(Boolean)
+      .join("\n\n");
+
+    const msg = `🚗 *INFORME DE INSPECCIÓN TOTAL VEHICULAR - TALLER AUTOG*
 --------------------------------------------------
 *Orden:* #${ordenActiva.orderNumber}
 *Vehículo:* ${ordenActiva.vehicle} (${ordenActiva.plate})
 *Cliente:* ${ordenActiva.client}
-*Plantilla:* ${plantillaSeleccionada.name} (${porcentajeProgresoPlantilla}% evaluado)
 
-📌 *Pines de Daños / Hallazgos Registrados:*
+📌 *Daños de Carrocería (${hallazgos.length} pines):*
 ${hallazgosTxt}
+
+⚙️ *Sistemas Mecánicos y Eléctricos:*
+${sistemasTxt || "Sin evaluaciones adicionales registradas."}
 
 Consulte el informe completo con fotos y firma aquí:
 ${urlSeguimiento}`;
@@ -440,33 +504,76 @@ ${urlSeguimiento}`;
   return (
     <div className="space-y-4">
       {/* ===================================================================
-          BARRA SUPERIOR: SELECTOR DE VISTAS + BOTÓN PDF DE INSPECCIÓN
+          BARRA DE SISTEMAS DEL VEHÍCULO: INSPECCIÓN TOTAL (5 SISTEMAS)
           =================================================================== */}
-      <div className="p-3 sm:p-4 rounded-2xl bg-white/[0.03] backdrop-blur-md border border-white/[0.08] flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-purple-400" />
-          <h3 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider">
-            Inspección de 5 Vistas y Plantillas Dinámicas
-          </h3>
-          <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-zinc-300">
-            {hallazgos.length} pin(es) • {porcentajeProgresoPlantilla}% evaluado
-          </span>
+      <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2 border-b border-white/10">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          {SISTEMAS_INSPECCION.map((sis) => {
+            const active = seccionActiva === sis.id;
+            let badge = null;
+            if (sis.id === "carroceria") {
+              if (hallazgos.length > 0) {
+                badge = (
+                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">
+                    {hallazgos.length}
+                  </span>
+                );
+              }
+            } else if (sis.items) {
+              const resp = sis.items.filter((it) => evaluacionesPlantilla[it.id] !== undefined).length;
+              const malos = sis.items.filter((it) => evaluacionesPlantilla[it.id] === "MALO").length;
+              if (malos > 0) {
+                badge = (
+                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">
+                    ! {malos}
+                  </span>
+                );
+              } else if (resp > 0) {
+                badge = (
+                  <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono">
+                    {resp}/{sis.items.length}
+                  </span>
+                );
+              }
+            }
+
+            return (
+              <button
+                key={sis.id}
+                type="button"
+                onClick={() => setSeccionActiva(sis.id)}
+                className={`h-10 px-3 sm:px-4 rounded-xl border flex items-center gap-2 transition-all cursor-pointer text-xs font-medium active:scale-95 ${
+                  active
+                    ? "bg-purple-500/20 border-purple-500/40 text-purple-200 shadow-md shadow-purple-500/10"
+                    : "bg-white/[0.02] hover:bg-white/[0.05] border-white/5 text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                <span className="text-sm">{sis.icon}</span>
+                <span>{sis.shortName}</span>
+                {badge}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* BOTÓN MINIMALISTA CON ICONO TRANSPARENTE: "PDF DE INSPECCIÓN" */}
-          <button
-            type="button"
-            onClick={() => setModalPdfAbierto(true)}
-            className="h-9 px-3.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer active:scale-95 shadow-sm"
-          >
-            <svg className="w-4 h-4 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-            </svg>
-            <span>PDF de Inspección</span>
-          </button>
-        </div>
+        {/* BOTÓN MINIMALISTA CON ICONO TRANSPARENTE: "PDF DE INSPECCIÓN" */}
+        <button
+          type="button"
+          onClick={() => setModalPdfAbierto(true)}
+          className="h-10 px-3.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer active:scale-95 shadow-sm ml-auto"
+        >
+          <svg className="w-4 h-4 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+          </svg>
+          <span>PDF de Inspección</span>
+        </button>
       </div>
+
+      {/* ===================================================================
+          CONTENIDO DINÁMICO SEGÚN EL SISTEMA ACTIVO
+          =================================================================== */}
+      {seccionActiva === "carroceria" ? (
+        <div className="space-y-3 animate-fade-in">
 
       {/* ===================================================================
           1. ESQUEMA INTERACTIVO EN 5 VISTAS CON PINES NUMERADOS (1, 2, 3...)
@@ -559,16 +666,6 @@ ${urlSeguimiento}`;
 
       {/* LIENZO/SVG LIMPIO DEL VEHÍCULO CON PINES NUMERADOS */}
       <div className="relative rounded-2xl bg-[#09090b] border border-white/10 p-3 sm:p-6 overflow-hidden select-none">
-        <div className="flex items-center justify-between text-xs text-zinc-400 mb-2">
-          <span className="flex items-center gap-1.5 font-medium">
-            <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
-            Toca el vehículo para colocar un Pin correlativo (1, 2, 3...):
-          </span>
-          <span className="text-[11px] font-mono text-zinc-500">
-            Vista activa: <strong className="text-zinc-300 uppercase">{vistaActiva}</strong>
-          </span>
-        </div>
-
         <div
           onClick={handleTocarLienzo}
           className="relative w-full h-64 sm:h-80 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-center cursor-crosshair overflow-hidden group transition-all"
@@ -780,173 +877,123 @@ ${urlSeguimiento}`;
           </div>
         )}
       </div>
+    </div>
+  ) : (
+    /* SISTEMAS MECÁNICOS Y ELÉCTRICOS (Motor, Frenos, Suspensión, Eléctrico) */
+    <div className="p-4 sm:p-5 rounded-2xl bg-[#09090b] border border-white/10 space-y-4 animate-fade-in">
+      {(() => {
+        const sistemaActual = SISTEMAS_INSPECCION.find((s) => s.id === seccionActiva);
+        if (!sistemaActual || !sistemaActual.items) return null;
 
-      {/* ===================================================================
-          PLANTILLAS DE INSPECCIÓN POR TIPO DE SERVICIO (EVALUACIÓN EN 1 TOQUE)
-          =================================================================== */}
-      <div className="p-4 rounded-2xl bg-white/[0.03] backdrop-blur-md border border-white/[0.08] space-y-4">
-        {/* Selector de Plantilla */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-0.5">
-            <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-blue-400" />
-              Plantillas de Inspección por Servicio
-            </span>
-            <p className="text-[11px] text-zinc-400">
-              Evaluación táctil de 1 toque sin escribir texto.
-            </p>
-          </div>
+        const total = sistemaActual.items.length;
+        const evaluados = sistemaActual.items.filter((it) => evaluacionesPlantilla[it.id] !== undefined).length;
+        const pct = total > 0 ? Math.round((evaluados / total) * 100) : 0;
+        const malosCount = sistemaActual.items.filter((it) => evaluacionesPlantilla[it.id] === "MALO").length;
 
-          {/* Barra de progreso de la plantilla */}
-          <div className="flex items-center gap-3">
-            <div className="w-32 sm:w-44 h-2 rounded-full bg-white/5 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-purple-500 via-blue-500 to-emerald-400 transition-all duration-300"
-                style={{ width: `${porcentajeProgresoPlantilla}%` }}
-              />
-            </div>
-            <span className="text-xs font-mono font-bold text-emerald-400 shrink-0">
-              {porcentajeProgresoPlantilla}%
-            </span>
-          </div>
-        </div>
+        return (
+          <>
+            {/* Cabecera del sistema */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-3">
+              <div>
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <span className="text-base">{sistemaActual.icon}</span>
+                  <span>{sistemaActual.name}</span>
+                  {malosCount > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[11px] font-bold">
+                      {malosCount} {malosCount === 1 ? "falla detectada" : "fallas detectadas"}
+                    </span>
+                  )}
+                </h3>
+                <p className="text-xs text-zinc-400 mt-0.5">{sistemaActual.description}</p>
+              </div>
 
-        {/* Chips de selección de plantilla deslizable */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {PLANTILLAS_INSPECCION.map((p) => {
-            const active = plantillaActivaId === p.id;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setPlantillaActivaId(p.id)}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5 ${
-                  active
-                    ? "bg-blue-500/15 border-blue-500/40 text-white shadow-md shadow-blue-500/10"
-                    : "bg-white/[0.02] hover:bg-white/[0.06] border-white/5 text-zinc-400 hover:text-zinc-200"
-                }`}
-              >
-                <span className="text-base">{p.icon}</span>
-                <div className="truncate">
-                  <span className="text-xs font-semibold block truncate">{p.name}</span>
-                  <span className="text-[10px] text-zinc-500 block truncate">{p.items.length} ítems</span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="w-28 sm:w-36 h-2 rounded-full bg-white/5 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-purple-500 via-blue-500 to-emerald-400 transition-all duration-300"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <span className="font-mono text-zinc-300 text-xs">{evaluados}/{total} ({pct}%)</span>
                 </div>
-              </button>
-            );
-          })}
-        </div>
 
-        {/* Listado de ítems con los 4 modos de evaluación */}
-        <div className="divide-y divide-white/5 pt-1">
-          {plantillaSeleccionada.items.map((item) => {
-            const val = evaluacionesPlantilla[item.id];
-            return (
-              <div
-                key={item.id}
-                className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs"
-              >
-                <span className="text-zinc-200 font-medium">{item.label}</span>
+                <button
+                  type="button"
+                  onClick={() => handleMarcarTodosBueno(sistemaActual.items!)}
+                  className="h-8 px-3 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-medium transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
+                >
+                  <span>✓</span>
+                  <span>Todo Bueno</span>
+                </button>
+              </div>
+            </div>
 
-                {/* Controles de evaluación según el modo */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {/* a) MODO SEMÁFORO TÁCTIL: Bueno (verde) / Regular (ámbar) / Malo (rojo) */}
-                  {item.modo === "semaforo" && (
-                    <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
-                      {[
-                        { id: "BUENO", label: "Bueno", color: "bg-emerald-500/25 border-emerald-500/50 text-emerald-300" },
-                        { id: "REGULAR", label: "Regular", color: "bg-amber-500/25 border-amber-500/50 text-amber-300" },
-                        { id: "MALO", label: "Malo", color: "bg-rose-500/25 border-rose-500/50 text-rose-300" },
-                      ].map((opt) => (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => handleEvaluarItem(item.id, opt.id)}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer ${
-                            val === opt.id
-                              ? `${opt.color} shadow-sm font-bold scale-105`
-                              : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-white/5"
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+            {/* Lista de Ítems del Sistema */}
+            <div className="divide-y divide-white/5">
+              {sistemaActual.items.map((item) => {
+                const val = evaluacionesPlantilla[item.id];
+                const notaKey = `${item.id}_nota`;
+                const notaVal = evaluacionesPlantilla[notaKey] || "";
 
-                  {/* b) MODO BINARIO: Sí / No */}
-                  {item.modo === "binario" && (
-                    <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
-                      {[
-                        { id: "SI", label: "Sí", color: "bg-emerald-500/25 border-emerald-500/50 text-emerald-300" },
-                        { id: "NO", label: "No", color: "bg-rose-500/25 border-rose-500/50 text-rose-300" },
-                      ].map((opt) => (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => handleEvaluarItem(item.id, opt.id)}
-                          className={`px-3 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer ${
-                            val === opt.id
-                              ? `${opt.color} shadow-sm font-bold scale-105`
-                              : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-white/5"
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                return (
+                  <div key={item.id} className="py-3.5 space-y-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                      <span className="text-xs font-medium text-zinc-200">{item.label}</span>
 
-                  {/* c) MODO CUMPLIMIENTO: Cumple / No cumple */}
-                  {item.modo === "cumplimiento" && (
-                    <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
-                      {[
-                        { id: "CUMPLE", label: "Cumple", color: "bg-blue-500/25 border-blue-500/50 text-blue-300" },
-                        { id: "NO_CUMPLE", label: "No cumple", color: "bg-amber-500/25 border-amber-500/50 text-amber-300" },
-                      ].map((opt) => (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => handleEvaluarItem(item.id, opt.id)}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer ${
-                            val === opt.id
-                              ? `${opt.color} shadow-sm font-bold scale-105`
-                              : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-white/5"
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* d) MODO PUNTAJE VISUAL: Escala de 1 a 5 */}
-                  {item.modo === "puntaje" && (
-                    <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
-                      {[1, 2, 3, 4, 5].map((num) => {
-                        const sel = val !== undefined && Number(val) >= num;
-                        return (
+                      {/* 1-touch Semáforo: BUENO, REGULAR, MALO */}
+                      <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/5 shrink-0 self-start sm:self-center">
+                        {[
+                          { id: "BUENO", label: "Bueno", color: "bg-emerald-500/25 border-emerald-500/50 text-emerald-300" },
+                          { id: "REGULAR", label: "Regular", color: "bg-amber-500/25 border-amber-500/50 text-amber-300" },
+                          { id: "MALO", label: "Malo", color: "bg-rose-500/25 border-rose-500/50 text-rose-300" },
+                        ].map((opt) => (
                           <button
-                            key={num}
+                            key={opt.id}
                             type="button"
-                            onClick={() => handleEvaluarItem(item.id, num)}
-                            className={`w-7 h-7 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center ${
-                              sel
-                                ? "bg-amber-500/25 border border-amber-500/50 text-amber-300"
-                                : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
+                            onClick={() => handleEvaluarItem(item.id, opt.id)}
+                            className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                              val === opt.id
+                                ? `${opt.color} shadow-sm font-semibold scale-105`
+                                : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-white/5"
                             }`}
                           >
-                            ★ {num}
+                            {opt.label}
                           </button>
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+
+                    {/* Si es Regular o Malo, campo de detalle/observación */}
+                    {(val === "REGULAR" || val === "MALO" || notaVal) && (
+                      <div className="pl-1 flex items-center gap-2">
+                        <span className="text-[11px] text-zinc-500">Detalle:</span>
+                        <input
+                          type="text"
+                          value={notaVal}
+                          onChange={(e) => {
+                            const nuevo = { ...evaluacionesPlantilla, [notaKey]: e.target.value };
+                            setEvaluacionesPlantilla(nuevo);
+                            sincronizarHallazgosNeon(hallazgos, firmaRecepcionUrl, nuevo, seccionActiva);
+                          }}
+                          placeholder={
+                            val === "MALO"
+                              ? "Describir falla detectada (ej: requiere cambio urgente)..."
+                              : "Observación preventiva (ej: desgaste moderado)..."
+                          }
+                          className="flex-1 h-8 px-2.5 rounded-lg bg-black/40 border border-white/10 text-white text-xs placeholder:text-zinc-600 focus:outline-none focus:border-purple-500/50"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        );
+      })()}
+    </div>
+  )}
 
       {/* ===================================================================
           CONFORMIDAD DE RECEPCIÓN (FIRMA DEL CLIENTE)
@@ -1135,29 +1182,55 @@ ${urlSeguimiento}`;
                 )}
               </div>
 
-              {/* Resultados de la Plantilla de Inspección */}
+              {/* Resultados de la Inspección de Sistemas (Motor, Frenos, Suspensión, Eléctrico) */}
               <div>
                 <div className="flex items-center justify-between mb-2 border-b pb-1">
                   <h4 className="font-bold text-xs uppercase tracking-wider text-zinc-900">
-                    Evaluación de Servicio: {plantillaSeleccionada.name}
+                    Inspección de Sistemas Mecánicos y Eléctricos
                   </h4>
                   <span className="text-xs font-mono font-bold text-zinc-700">
-                    Conformidad: {porcentajeProgresoPlantilla}%
+                    Diagnóstico Total
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                  {plantillaSeleccionada.items.map((it) => {
-                    const res = evaluacionesPlantilla[it.id];
+                <div className="space-y-3">
+                  {SISTEMAS_INSPECCION.filter((s) => s.items && s.items.length > 0).map((sis) => {
+                    const evals = sis.items!.filter((it) => evaluacionesPlantilla[it.id] !== undefined);
+                    if (evals.length === 0) return null;
+
                     return (
-                      <div
-                        key={it.id}
-                        className="p-2 rounded bg-zinc-50 border border-zinc-200 flex items-center justify-between"
-                      >
-                        <span className="text-zinc-700 truncate pr-2">{it.label}</span>
-                        <span className="font-bold text-zinc-900 shrink-0 font-mono">
-                          {res !== undefined ? String(res) : "N/E"}
+                      <div key={sis.id} className="space-y-1">
+                        <span className="text-[11px] font-bold text-zinc-800 uppercase flex items-center gap-1.5">
+                          <span>{sis.icon}</span> {sis.name}
                         </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
+                          {sis.items!.map((it) => {
+                            const res = evaluacionesPlantilla[it.id];
+                            const nota = evaluacionesPlantilla[`${it.id}_nota`];
+                            if (!res) return null;
+
+                            return (
+                              <div
+                                key={it.id}
+                                className={`p-2 rounded border flex items-center justify-between ${
+                                  res === "MALO"
+                                    ? "bg-rose-50 border-rose-300 text-rose-900"
+                                    : res === "REGULAR"
+                                    ? "bg-amber-50 border-amber-300 text-amber-900"
+                                    : "bg-zinc-50 border-zinc-200 text-zinc-700"
+                                }`}
+                              >
+                                <div className="truncate pr-2">
+                                  <span className="block truncate">{it.label}</span>
+                                  {nota && <span className="block text-[10px] text-zinc-500 italic truncate">Nota: {nota}</span>}
+                                </div>
+                                <span className="font-bold shrink-0 font-mono text-[11px]">
+                                  {res}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     );
                   })}
@@ -1237,7 +1310,7 @@ ${urlSeguimiento}`;
             onClick={onContinuar}
             className="px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 text-xs font-semibold transition-all cursor-pointer"
           >
-            Continuar a Catálogo / Presupuesto (Paso 4) →
+            Continuar a Presupuesto (Paso 3) →
           </button>
         )}
       </div>
