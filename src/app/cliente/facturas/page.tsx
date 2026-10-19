@@ -53,9 +53,9 @@ function FacturasPagosContent() {
     try {
       setLoading(true);
       const res = await fetch('/api/cliente/facturas', { cache: 'no-store' });
-      const data = await res.json();
-      if (data.success && Array.isArray(data.facturas)) {
-        setInvoices(data.facturas);
+      const lista = Array.isArray(data.facturas) ? data.facturas : (Array.isArray(data.invoices) ? data.invoices : []);
+      if (data.success && lista.length > 0) {
+        setInvoices(lista);
       }
     } catch (err) {
       console.error('Error cargando facturas desde Neon DB:', err);
