@@ -331,7 +331,7 @@ export default function NuevaVentaPage() {
   const [mostrarModalPedidos, setMostrarModalPedidos] = useState(false);
   const [listaPedidos, setListaPedidos] = useState<any[]>([]);
   const [cargandoPedidos, setCargandoPedidos] = useState(false);
-  const [filtroOrigenModal, setFiltroOrigenModal] = useState<"todos" | "Selector" | "Tienda" | "Taller">("todos");
+  const [filtroOrigenModal, setFiltroOrigenModal] = useState<"todos" | "Tienda" | "Ordenes">("todos");
   const [pedidoParaVer, setPedidoParaVer] = useState<any | null>(null);
   const [pedidoAEliminar, setPedidoAEliminar] = useState<{ id: string; requestNumber: string } | null>(null);
   const [eliminandoPedido, setEliminandoPedido] = useState(false);
@@ -374,36 +374,28 @@ export default function NuevaVentaPage() {
 
 
 
-  const obtenerOrigenPedido = (tipo?: string): "Selector" | "Tienda" | "Taller" => {
-    if (!tipo) return "Selector";
+  const obtenerOrigenPedido = (tipo?: string): "Tienda" | "Ordenes" => {
+    if (!tipo) return "Tienda";
     const t = tipo.toUpperCase();
-    if (t.includes("TALLER") || t.includes("MECANICO") || t.includes("ORDEN")) return "Taller";
-    if (t.includes("TIENDA") || t.includes("ECOMMERCE") || t.includes("PRODUCTO")) return "Tienda";
-    return "Selector";
+    if (t.includes("TALLER") || t.includes("MECANICO") || t.includes("ORDEN") || t.includes("LUBRI") || t.includes("OT")) return "Ordenes";
+    return "Tienda";
   };
 
   const renderOrigenBadge = (tipo?: string) => {
     const origen = obtenerOrigenPedido(tipo);
-    if (origen === "Taller") {
+    if (origen === "Ordenes") {
+      const isLubri = (tipo || "").toUpperCase().includes("LUBRI");
       return (
         <span className="text-[10px] px-2 py-0.5 rounded-md font-medium border flex items-center gap-1 bg-amber-500/15 border-amber-500/30 text-amber-300">
           <span>🔧</span>
-          <span>Taller</span>
-        </span>
-      );
-    }
-    if (origen === "Tienda") {
-      return (
-        <span className="text-[10px] px-2 py-0.5 rounded-md font-medium border flex items-center gap-1 bg-purple-500/15 border-purple-500/30 text-purple-300">
-          <span>🛒</span>
-          <span>Tienda</span>
+          <span>{isLubri ? "Lubricentro" : "Órdenes"}</span>
         </span>
       );
     }
     return (
-      <span className="text-[10px] px-2 py-0.5 rounded-md font-medium border flex items-center gap-1 bg-cyan-500/15 border-cyan-500/30 text-cyan-300">
-        <span>🚗</span>
-        <span>Selector</span>
+      <span className="text-[10px] px-2 py-0.5 rounded-md font-medium border flex items-center gap-1 bg-purple-500/15 border-purple-500/30 text-purple-300">
+        <span>🛒</span>
+        <span>Tienda</span>
       </span>
     );
   };
@@ -4000,7 +3992,7 @@ export default function NuevaVentaPage() {
               </button>
             </div>
 
-            {/* Filtro Rápido de 3 Orígenes: Todos | Landing | Tienda | Taller */}
+            {/* Filtro Rápido de Orígenes: Todos | Tienda | Órdenes */}
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
@@ -4012,21 +4004,6 @@ export default function NuevaVentaPage() {
                 }`}
               >
                 Todos ({listaPedidos.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFiltroOrigenModal("Selector")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                  filtroOrigenModal === "Selector"
-                    ? "bg-cyan-100 text-cyan-800 dark:bg-cyan-500/20 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-500/40 shadow-sm"
-                    : "bg-cyan-50 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-400/80 hover:text-cyan-900 dark:hover:text-cyan-300 border border-cyan-200 dark:border-cyan-500/20"
-                }`}
-              >
-                <span>🚗</span>
-                <span>Selector</span>
-                <span className="text-[10px] opacity-80">
-                  ({listaPedidos.filter((p) => obtenerOrigenPedido(p.type) === "Selector").length})
-                </span>
               </button>
               <button
                 type="button"
@@ -4045,17 +4022,17 @@ export default function NuevaVentaPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setFiltroOrigenModal("Taller")}
+                onClick={() => setFiltroOrigenModal("Ordenes")}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                  filtroOrigenModal === "Taller"
+                  filtroOrigenModal === "Ordenes"
                     ? "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 shadow-sm"
                     : "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400/80 hover:text-amber-900 dark:hover:text-amber-300 border border-amber-200 dark:border-amber-500/20"
                 }`}
               >
                 <span>🔧</span>
-                <span>Taller</span>
+                <span>Órdenes</span>
                 <span className="text-[10px] opacity-80">
-                  ({listaPedidos.filter((p) => obtenerOrigenPedido(p.type) === "Taller").length})
+                  ({listaPedidos.filter((p) => obtenerOrigenPedido(p.type) === "Ordenes").length})
                 </span>
               </button>
             </div>

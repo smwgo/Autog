@@ -724,20 +724,64 @@ export default function ModalNuevaOrdenTrabajo({
                 <div>
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                    Vehículo para la Orden de Trabajo
+                    Vehículo
                   </h3>
                   <p className="text-xs text-zinc-400">
                     Cliente: <strong className="text-zinc-200">{clienteSeleccionado?.name || nuevoClienteNombre}</strong>
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setPasoActivo(1)}
-                  className="text-xs text-blue-400 hover:text-blue-300 underline cursor-pointer"
-                >
-                  ← Cambiar Cliente
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* Icono Registrar otro vehículo para este cliente */}
+                  {clienteSeleccionado?.vehicles?.length > 0 && !mostrarFormNuevoVehiculo && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVehiculoSeleccionadoId("NUEVO");
+                        setVehiculoPlaca("");
+                        setVehiculoMarca("");
+                        setVehiculoModelo("");
+                        setVehiculoKm("");
+                        setMostrarFormNuevoVehiculo(true);
+                      }}
+                      title="Registrar otro vehículo nuevo para este cliente"
+                      aria-label="Registrar otro vehículo"
+                      className="w-8 h-8 rounded-xl bg-white/5 hover:bg-emerald-500/15 border border-white/10 hover:border-emerald-500/40 text-zinc-400 hover:text-emerald-400 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </button>
+                  )}
+
+                  {/* Icono volver a lista de vehículos guardados si está en el form de nuevo */}
+                  {clienteSeleccionado?.vehicles?.length > 0 && mostrarFormNuevoVehiculo && (
+                    <button
+                      type="button"
+                      onClick={() => setMostrarFormNuevoVehiculo(false)}
+                      title="Ver vehículos guardados"
+                      aria-label="Ver vehículos guardados"
+                      className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                      </svg>
+                    </button>
+                  )}
+
+                  {/* Icono Cambiar Cliente */}
+                  <button
+                    type="button"
+                    onClick={() => setPasoActivo(1)}
+                    title="Cambiar cliente"
+                    aria-label="Cambiar cliente"
+                    className="w-8 h-8 rounded-xl bg-white/5 hover:bg-blue-500/15 border border-white/10 hover:border-blue-500/40 text-zinc-400 hover:text-blue-400 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               {/* Si el cliente ya tiene vehículos registrados en Neon */}
@@ -783,24 +827,6 @@ export default function ModalNuevaOrdenTrabajo({
                       );
                     })}
                   </div>
-
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setVehiculoSeleccionadoId("NUEVO");
-                        setVehiculoPlaca("");
-                        setVehiculoMarca("");
-                        setVehiculoModelo("");
-                        setVehiculoKm("");
-                        setMostrarFormNuevoVehiculo(true);
-                      }}
-                      className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer flex items-center gap-2"
-                    >
-                      <span>+</span>
-                      <span>Registrar otro vehículo nuevo para este cliente</span>
-                    </button>
-                  </div>
                 </div>
               )}
 
@@ -809,15 +835,15 @@ export default function ModalNuevaOrdenTrabajo({
                 <div className="p-5 rounded-3xl bg-white/[0.02] border border-white/10 space-y-4 animate-fade-in">
                   <div className="flex items-center justify-between border-b border-white/5 pb-2">
                     <span className="text-xs font-bold text-zinc-200">
-                      Datos del Vehículo a Ingresar:
+                      Datos del Vehículo:
                     </span>
                     {clienteSeleccionado?.vehicles?.length > 0 && (
                       <button
                         type="button"
                         onClick={() => setMostrarFormNuevoVehiculo(false)}
-                        className="text-xs text-zinc-400 hover:text-white"
+                        className="text-xs text-zinc-400 hover:text-white cursor-pointer"
                       >
-                        Ver vehículos guardados
+                        Ver guardados
                       </button>
                     )}
                   </div>
@@ -929,22 +955,6 @@ export default function ModalNuevaOrdenTrabajo({
                 </div>
               )}
 
-              {/* Botón de Continuar si ya tiene un vehículo seleccionado */}
-              {vehiculoPlaca && !mostrarFormNuevoVehiculo && (
-                <div className="flex justify-between items-center pt-3 border-t border-white/5">
-                  <span className="text-xs text-zinc-400">
-                    Vehículo activo: <strong className="text-white font-mono">{vehiculoPlaca}</strong> ({vehiculoMarca} {vehiculoModelo})
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setPasoActivo(3)}
-                    className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-600/30"
-                  >
-                    <span>Continuar a Datos de la Orden</span>
-                    <span>→</span>
-                  </button>
-                </div>
-              )}
             </div>
           )}
 
