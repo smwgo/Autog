@@ -26,56 +26,24 @@ interface OrderItem {
   billingStatus?: string;
 }
 
-function getBillingBadge(billingStatus?: string, isBilled?: boolean) {
-  const billed = isBilled || billingStatus?.toLowerCase() === "facturada";
-  if (billed) {
+function getEstadoSimplificado(ord: OrderItem) {
+  const pagado =
+    Boolean(ord.isBilled) ||
+    ord.billingStatus?.toLowerCase() === "facturada" ||
+    (ord.status || "").toLowerCase().includes("factur") ||
+    (ord.status || "").toLowerCase().includes("pagad");
+
+  if (pagado) {
     return {
-      label: "Facturada",
+      label: "Pagado",
       badge: "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10",
       dot: "bg-emerald-500",
     };
   }
   return {
-    label: "En Proceso",
+    label: "En Orden",
     badge: "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10",
     dot: "bg-amber-500",
-  };
-}
-
-function getStatusBadge(status: string) {
-  const s = (status || "").toLowerCase().trim();
-  if (s.includes("listo") || s.includes("entreg") || s.includes("terminad")) {
-    return {
-      label: status || "Listo para Entregar",
-      badge: "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10",
-      dot: "bg-emerald-500",
-    };
-  }
-  if (s.includes("repar") || s.includes("proceso") || s.includes("pista")) {
-    return {
-      label: status || "En Reparación",
-      badge: "border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/10",
-      dot: "bg-blue-500",
-    };
-  }
-  if (s.includes("repuesto") || s.includes("pausa") || s.includes("espera")) {
-    return {
-      label: status || "Espera de Repuestos",
-      badge: "border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/10",
-      dot: "bg-rose-500",
-    };
-  }
-  if (s.includes("diagn") || s.includes("revis") || s.includes("inspec")) {
-    return {
-      label: status || "En Diagnóstico",
-      badge: "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10",
-      dot: "bg-amber-500",
-    };
-  }
-  return {
-    label: status || "En Proceso",
-    badge: "border-zinc-500/30 text-zinc-600 dark:text-zinc-400 bg-zinc-500/10",
-    dot: "bg-zinc-500",
   };
 }
 
@@ -86,7 +54,6 @@ export default function PosOrdenesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<string>("TODAS");
   const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
-  const [ordenSeleccionada, setOrdenSeleccionada] = useState<OrderItem | null>(null);
   const [guardandoId, setGuardandoId] = useState<string | null>(null);
   const [toastMensaje, setToastMensaje] = useState<{ tipo: "ok" | "err"; texto: string } | null>(null);
 
@@ -149,12 +116,6 @@ export default function PosOrdenesPage() {
         )
       );
 
-      if (ordenSeleccionada && (ordenSeleccionada.id === orderId || ordenSeleccionada.dbId === orderId)) {
-        setOrdenSeleccionada((prev) =>
-          prev ? { ...prev, status: nuevoEstado, progress: nuevoProgreso } : null
-        );
-      }
-
       mostrarToast(`Orden actualizada a: ${nuevoEstado}`);
     } catch (err: any) {
       mostrarToast(err.message || "Error al actualizar orden", "err");
@@ -200,13 +161,16 @@ export default function PosOrdenesPage() {
 
   // Filtrado de órdenes
   const ordenesFiltradas = orders.filter((o) => {
+    const isPagado =
+      Boolean(o.isBilled) ||
+      o.billingStatus?.toLowerCase() === "facturada" ||
+      (o.status || "").toLowerCase().includes("factur") ||
+      (o.status || "").toLowerCase().includes("pagad");
+
     const matchEstado =
       filtroEstado === "TODAS" ||
-      o.status.toLowerCase() === filtroEstado.toLowerCase() ||
-      (filtroEstado === "DIAGNOSTICO" && o.status.toLowerCase().includes("diagn")) ||
-      (filtroEstado === "REPARANDO" && o.status.toLowerCase().includes("repar")) ||
-      (filtroEstado === "REPUESTOS" && o.status.toLowerCase().includes("repuest")) ||
-      (filtroEstado === "LISTO" && o.status.toLowerCase().includes("listo"));
+      (filtroEstado === "PAGADO" && isPagado) ||
+      (filtroEstado === "EN_ORDEN" && !isPagado);
 
     const q = searchTerm.trim().toLowerCase();
     const matchSearch =
@@ -221,9 +185,14 @@ export default function PosOrdenesPage() {
   });
 
   const totalOrdenes = orders.length;
-  const totalDiagnostico = orders.filter((o) => o.status.toLowerCase().includes("diagn")).length;
-  const totalReparando = orders.filter((o) => o.status.toLowerCase().includes("repar")).length;
-  const totalListos = orders.filter((o) => o.status.toLowerCase().includes("listo")).length;
+  const totalPagados = orders.filter(
+    (o) =>
+      Boolean(o.isBilled) ||
+      o.billingStatus?.toLowerCase() === "facturada" ||
+      (o.status || "").toLowerCase().includes("factur") ||
+      (o.status || "").toLowerCase().includes("pagad")
+  ).length;
+  const totalEnOrden = totalOrdenes - totalPagados;
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 pb-20 md:pb-8">
@@ -267,12 +236,10 @@ export default function PosOrdenesPage() {
               </div>
             </div>
           </div>
-
-
         </div>
 
-        {/* Métricas KPI */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        {/* Métricas KPI Simplificadas */}
+        <div className="grid grid-cols-3 gap-3 sm:gap-4">
           <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex items-center gap-3.5">
             <div className="w-11 h-11 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl shrink-0">
               📋
@@ -287,25 +254,13 @@ export default function PosOrdenesPage() {
 
           <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex items-center gap-3.5">
             <div className="w-11 h-11 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl shrink-0">
-              🔍
+              ⏳
             </div>
             <div>
               <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
-                {cargando ? "..." : totalDiagnostico}
+                {cargando ? "..." : totalEnOrden}
               </p>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Diagnóstico</span>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl shrink-0">
-              ⚙️
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-                {cargando ? "..." : totalReparando}
-              </p>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Reparación</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">En Orden</span>
             </div>
           </div>
 
@@ -315,9 +270,9 @@ export default function PosOrdenesPage() {
             </div>
             <div>
               <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                {cargando ? "..." : totalListos}
+                {cargando ? "..." : totalPagados}
               </p>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Listos para Cobrar</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Pagados</span>
             </div>
           </div>
         </div>
@@ -346,7 +301,7 @@ export default function PosOrdenesPage() {
             )}
           </div>
 
-          {/* Selector de Estado Desplegable */}
+          {/* Selector de Estado Desplegable Simplificado */}
           <div className="relative min-w-[160px] sm:w-48 shrink-0">
             <button
               type="button"
@@ -358,14 +313,10 @@ export default function PosOrdenesPage() {
                 <span className="truncate">
                   {filtroEstado === "TODAS"
                     ? "Todas"
-                    : filtroEstado === "DIAGNOSTICO"
-                    ? "Diagnóstico"
-                    : filtroEstado === "REPARANDO"
-                    ? "Reparando"
-                    : filtroEstado === "REPUESTOS"
-                    ? "Repuestos"
-                    : filtroEstado === "LISTO"
-                    ? "Listo"
+                    : filtroEstado === "EN_ORDEN"
+                    ? "En Orden"
+                    : filtroEstado === "PAGADO"
+                    ? "Pagado"
                     : "Estado"}
                 </span>
               </div>
@@ -385,10 +336,8 @@ export default function PosOrdenesPage() {
                 <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
                   {[
                     { id: "TODAS", label: "Todas" },
-                    { id: "DIAGNOSTICO", label: "Diagnóstico" },
-                    { id: "REPARANDO", label: "Reparando" },
-                    { id: "REPUESTOS", label: "Repuestos" },
-                    { id: "LISTO", label: "Listo" },
+                    { id: "EN_ORDEN", label: "En Orden" },
+                    { id: "PAGADO", label: "Pagado" },
                   ].map((opcion) => (
                     <button
                       key={opcion.id}
@@ -440,8 +389,6 @@ export default function PosOrdenesPage() {
             {/* Vista Móvil (Lista Compacta) */}
             <div className="md:hidden space-y-2.5">
               {ordenesFiltradas.map((ord) => {
-                const statusCfg = getStatusBadge(ord.status);
-
                 return (
                   <div
                     key={ord.id || ord.dbId}
@@ -472,52 +419,27 @@ export default function PosOrdenesPage() {
                         <p className="font-bold text-sm text-emerald-600 dark:text-emerald-400">
                           ${Number(ord.totalCost || 0).toFixed(2)}
                         </p>
-                        <span className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusCfg.badge}`}>
-                          {ord.status}
-                        </span>
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {(() => {
-                          const badgeCfg = getStatusBadge(ord.status);
-                          return (
-                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold border ${badgeCfg.badge}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${badgeCfg.dot}`} />
-                              {badgeCfg.label}
-                            </span>
-                          );
-                        })()}
+                    <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-2">
+                      {(() => {
+                        const estadoCfg = getEstadoSimplificado(ord);
+                        return (
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${estadoCfg.badge}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${estadoCfg.dot}`} />
+                            {estadoCfg.label}
+                          </span>
+                        );
+                      })()}
 
-                        {(() => {
-                          const billingCfg = getBillingBadge(ord.billingStatus, ord.isBilled);
-                          return (
-                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold border ${billingCfg.badge}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${billingCfg.dot}`} />
-                              {billingCfg.label}
-                            </span>
-                          );
-                        })()}
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-                        <button
-                          type="button"
-                          onClick={() => setOrdenSeleccionada(ord)}
-                          className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center text-xs font-bold transition-all shrink-0 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
-                          title="Vista Rápida"
-                        >
-                          👁️
-                        </button>
-                        <Link
-                          href={`/pos/ordenes/detalle?id=${encodeURIComponent(ord.orderNumber || ord.id || ord.dbId || "")}`}
-                          className="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center text-xs font-bold transition-all shrink-0 active:scale-95 shadow-xs cursor-pointer"
-                          title="Ver Orden Completa"
-                        >
-                          📋
-                        </Link>
-                      </div>
+                      <Link
+                        href={`/pos/ordenes/detalle?id=${encodeURIComponent(ord.orderNumber || ord.id || ord.dbId || "")}`}
+                        className="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center text-xs font-bold transition-all shrink-0 active:scale-95 shadow-xs cursor-pointer"
+                        title="Ver Orden Completa"
+                      >
+                        📋
+                      </Link>
                     </div>
                   </div>
                 );
@@ -534,15 +456,13 @@ export default function PosOrdenesPage() {
                       <th className="py-2.5 px-4">Placa & Servicios</th>
                       <th className="py-2.5 px-4">Cliente</th>
                       <th className="py-2.5 px-4">Total</th>
-                      <th className="py-2.5 px-4">Estado de Proceso</th>
-                      <th className="py-2.5 px-4">Facturación</th>
-                      <th className="py-2.5 px-4 text-right">Acciones</th>
+                      <th className="py-2.5 px-4">Estado</th>
+                      <th className="py-2.5 px-4 text-right">Acción</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                     {ordenesFiltradas.map((ord) => {
-                      const badgeCfg = getStatusBadge(ord.status);
-                      const billingCfg = getBillingBadge(ord.billingStatus, ord.isBilled);
+                      const estadoCfg = getEstadoSimplificado(ord);
 
                       return (
                         <tr
@@ -603,33 +523,17 @@ export default function PosOrdenesPage() {
                             </span>
                           </td>
 
-                          {/* Estado real según proceso de taller */}
+                          {/* Estado Simplificado: Pagado o En Orden */}
                           <td className="py-2.5 px-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${badgeCfg.badge}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${badgeCfg.dot}`} />
-                              {badgeCfg.label}
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${estadoCfg.badge}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${estadoCfg.dot}`} />
+                              {estadoCfg.label}
                             </span>
                           </td>
 
-                          {/* Estado de Facturación (Facturada / En Proceso) */}
-                          <td className="py-2.5 px-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${billingCfg.badge}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${billingCfg.dot}`} />
-                              {billingCfg.label}
-                            </span>
-                          </td>
-
-                          {/* Acciones: vista rápida y ver orden completa */}
+                          {/* Acción: ver orden completa */}
                           <td className="py-2.5 px-4 text-right whitespace-nowrap">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => setOrdenSeleccionada(ord)}
-                                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center text-xs font-bold transition-all shrink-0 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
-                                title="Vista Rápida"
-                              >
-                                👁️
-                              </button>
+                            <div className="flex items-center justify-end">
                               <Link
                                 href={`/pos/ordenes/detalle?id=${encodeURIComponent(ord.orderNumber || ord.id || ord.dbId || "")}`}
                                 className="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center text-xs font-bold transition-all shrink-0 active:scale-95 shadow-xs cursor-pointer"
@@ -644,101 +548,6 @@ export default function PosOrdenesPage() {
                     })}
                   </tbody>
                 </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal de Detalle Rápido de Orden */}
-        {ordenSeleccionada && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="relative w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl flex flex-col gap-5">
-              <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-500 flex items-center justify-center text-lg">
-                    📋
-                  </span>
-                  <div>
-                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
-                      Orden {ordenSeleccionada.orderNumber}
-                    </h3>
-                    <p className="text-xs text-zinc-400">
-                      Placa: {ordenSeleccionada.plate} • {ordenSeleccionada.vehicle}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setOrdenSeleccionada(null)}
-                  className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:hover:text-white flex items-center justify-center text-xs cursor-pointer"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-3 text-xs">
-                <div className="grid grid-cols-2 gap-2 bg-zinc-50 dark:bg-zinc-950 p-3 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-                  <div>
-                    <span className="text-zinc-400 block">Cliente:</span>
-                    <span className="font-semibold text-zinc-800 dark:text-zinc-200">{ordenSeleccionada.client}</span>
-                  </div>
-                  <div>
-                    <span className="text-zinc-400 block">Teléfono:</span>
-                    <span className="font-semibold text-zinc-800 dark:text-zinc-200">{ordenSeleccionada.clientPhone || "N/A"}</span>
-                  </div>
-                  <div>
-                    <span className="text-zinc-400 block">Mecánico:</span>
-                    <span className="font-semibold text-zinc-800 dark:text-zinc-200">{ordenSeleccionada.mechanic}</span>
-                  </div>
-                  <div>
-                    <span className="text-zinc-400 block">Total Estimado:</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">
-                      ${Number(ordenSeleccionada.totalCost || 0).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-
-                <div>
-                  <span className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1.5">Servicios Incluidos:</span>
-                  <div className="flex flex-col gap-1.5 bg-zinc-50 dark:bg-zinc-950 p-3 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-                    {ordenSeleccionada.services && ordenSeleccionada.services.length > 0 ? (
-                      ordenSeleccionada.services.map((s, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 font-medium">
-                          <span className="text-amber-500">✓</span>
-                          <span>{s}</span>
-                        </div>
-                      ))
-                    ) : (
-                      <span className="text-zinc-400">Sin servicios detallados</span>
-                    )}
-                  </div>
-                </div>
-
-                {ordenSeleccionada.notes && (
-                  <div>
-                    <span className="font-bold text-zinc-700 dark:text-zinc-300 block mb-1">Notas / Diagnóstico:</span>
-                    <p className="p-3 bg-zinc-50 dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 italic">
-                      "{ordenSeleccionada.notes}"
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setOrdenSeleccionada(null)}
-                  className="flex-1 h-11 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold cursor-pointer transition-colors"
-                >
-                  Cerrar
-                </button>
-                <Link
-                  href={`/pos/ordenes/detalle?id=${encodeURIComponent(ordenSeleccionada.orderNumber || ordenSeleccionada.id || ordenSeleccionada.dbId || "")}`}
-                  className="flex-1 h-11 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
-                >
-                  <span>Ver Orden Completa</span>
-                  <span>↗</span>
-                </Link>
               </div>
             </div>
           </div>

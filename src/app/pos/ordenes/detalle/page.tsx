@@ -146,10 +146,11 @@ function DetalleOrdenContent() {
     cargarOrden();
   }, [cargarOrden]);
 
-  // Cambiar estado de facturación (Facturada <-> En Proceso)
+  // Cambiar estado de facturación (Pagado <-> En Orden)
   const toggleFacturacion = async () => {
     if (!order) return;
     const nuevoEstado = order.isBilled ? "En Proceso" : "Facturada";
+    const labelEstado = order.isBilled ? "En Orden" : "Pagado";
     try {
       setActualizandoFacturacion(true);
       const res = await fetch("/api/taller/ordenes", {
@@ -163,7 +164,7 @@ function DetalleOrdenContent() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "No se pudo actualizar el estado de facturación");
+        throw new Error(data.error || "No se pudo actualizar el estado");
       }
       setOrder((prev) =>
         prev
@@ -174,9 +175,9 @@ function DetalleOrdenContent() {
             }
           : null
       );
-      mostrarToast(`Orden marcada como: ${nuevoEstado}`);
+      mostrarToast(`Orden marcada como: ${labelEstado}`);
     } catch (err: any) {
-      mostrarToast(err.message || "Error al actualizar estado de facturación", "err");
+      mostrarToast(err.message || "Error al actualizar estado", "err");
     } finally {
       setActualizandoFacturacion(false);
     }
@@ -260,16 +261,16 @@ function DetalleOrdenContent() {
                 <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
                   Orden #{order.orderNumber}
                 </h1>
-                {/* ETIQUETA PRINCIPAL: FACTURADA O EN PROCESO */}
+                {/* ETIQUETA PRINCIPAL: PAGADO O EN ORDEN */}
                 {order.isBilled ? (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-xs">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    ✓ FACTURADA
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    ✓ PAGADO
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-xs">
-                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                    ⏳ EN PROCESO
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                    ⏳ EN ORDEN
                   </span>
                 )}
               </div>
@@ -280,7 +281,7 @@ function DetalleOrdenContent() {
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-            {/* Botón para cambiar estado de facturación */}
+            {/* Botón para cambiar estado */}
             <button
               type="button"
               onClick={toggleFacturacion}
@@ -291,7 +292,7 @@ function DetalleOrdenContent() {
                   : "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 shadow-emerald-500/20"
               }`}
             >
-              <span>{order.isBilled ? "↩️ Marcar En Proceso" : "✓ Marcar como Facturada"}</span>
+              <span>{order.isBilled ? "↩️ Marcar En Orden" : "✓ Marcar como Pagado"}</span>
             </button>
 
             {/* Imprimir */}
@@ -328,32 +329,21 @@ function DetalleOrdenContent() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap md:flex-nowrap border-t md:border-t-0 pt-3 md:pt-0 border-zinc-100 dark:border-zinc-800">
-            {/* Badge Estado Proceso Taller */}
+          <div className="flex items-center gap-3 border-t md:border-t-0 pt-3 md:pt-0 border-zinc-100 dark:border-zinc-800">
+            {/* Estado Simplificado: Pagado o En Orden */}
             <div className="flex flex-col items-start md:items-end">
               <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
-                Estado en Taller
-              </span>
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${statusBadge.badge}`}>
-                <span className={`w-2 h-2 rounded-full ${statusBadge.dot}`} />
-                {statusBadge.label}
-              </span>
-            </div>
-
-            {/* Badge Estado Facturación */}
-            <div className="flex flex-col items-start md:items-end">
-              <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
-                Condición Facturación
+                Estado
               </span>
               {order.isBilled ? (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  Facturada {order.invoiceInfo ? `(#${order.invoiceInfo.invoiceNumber})` : ""}
+                  Pagado {order.invoiceInfo ? `(#${order.invoiceInfo.invoiceNumber})` : ""}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
                   <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  En Proceso (No Facturada)
+                  En Orden
                 </span>
               )}
             </div>
@@ -571,11 +561,11 @@ function DetalleOrdenContent() {
               <p>Valores expresados en Dólares Americanos (USD).</p>
               {order.isBilled ? (
                 <p className="text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
-                  ✓ Esta orden ya se encuentra debidamente facturada.
+                  ✓ Esta orden se encuentra debidamente Pagada.
                 </p>
               ) : (
                 <p className="text-amber-600 dark:text-amber-400 font-semibold mt-0.5">
-                  ⏳ Esta orden continúa en proceso / pendiente de facturar.
+                  ⏳ Esta orden se encuentra En Orden.
                 </p>
               )}
             </div>
