@@ -1010,7 +1010,7 @@ export default function ClientePanel() {
 
   const modulosCliente = [
     {
-      title: "Taller & Proceso",
+      title: "Taller",
       href: "/cliente/taller",
       color: "bg-blue-600",
       gradient: "from-blue-600 via-indigo-600 to-blue-700",
@@ -1019,16 +1019,9 @@ export default function ClientePanel() {
           <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
         </svg>
       ),
-      badge: (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-[10px] font-bold text-blue-700 dark:text-blue-300">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          Paso {etapaActualIdx + 1}/6
-        </span>
-      ),
-      subtitle: `Orden #${ordenMostrada.orderNumber} • ${ordenMostrada.status || "En Taller"}`,
     },
     {
-      title: "Mis Créditos",
+      title: "Créditos",
       href: "/cliente/creditos",
       color: "bg-amber-500",
       gradient: "from-amber-500 via-orange-500 to-amber-600",
@@ -1040,15 +1033,9 @@ export default function ClientePanel() {
           <line x1="11" x2="16" y1="15" y2="15" />
         </svg>
       ),
-      badge: (
-        <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
-          ${creditos ? creditos.availableCredit.toFixed(0) : "430"} disp.
-        </span>
-      ),
-      subtitle: `Saldo adeudado: ${creditos ? creditos.currentBalance.toFixed(2) : "170.00"}`,
     },
     {
-      title: "Mis Facturas",
+      title: "Facturas",
       href: "/cliente/facturas",
       color: "bg-indigo-500",
       gradient: "from-indigo-500 to-purple-600",
@@ -1058,12 +1045,6 @@ export default function ClientePanel() {
           <path d="M16 8h-8m8 4h-8m6 4h-6" />
         </svg>
       ),
-      badge: (
-        <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-[10px] font-bold">
-          ${facturasFiltradas.length} Facturas
-        </span>
-      ),
-      subtitle: "Compras en mostrador POS y taller",
     },
     {
       title: "Cotizaciones",
@@ -1079,19 +1060,9 @@ export default function ClientePanel() {
           <line x1="10" x2="8" y1="9" y2="9" />
         </svg>
       ),
-      badge: cotizacionesPendientes.length > 0 ? (
-        <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold animate-pulse shadow-xs">
-          ${cotizacionesPendientes.length} Por aprobar
-        </span>
-      ) : (
-        <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-[10px] font-bold">
-          ${cotizacionesFiltradas.length} Presupuestos
-        </span>
-      ),
-      subtitle: "Aprobación y costos estimados",
     },
     {
-      title: "Mis Vehículos",
+      title: "Vehículos",
       href: "/cliente/vehiculos",
       color: "bg-sky-500",
       gradient: "from-sky-500 to-blue-600",
@@ -1103,15 +1074,9 @@ export default function ClientePanel() {
           <circle cx="17" cy="17" r="2" />
         </svg>
       ),
-      badge: (
-        <span className="px-2 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/70 border border-sky-200 dark:border-sky-800 text-[10px] font-bold text-sky-700 dark:text-sky-300 font-mono">
-          ${vehiculoActivo ? vehiculoActivo.plate : `${vehiculos.length} Autos`}
-        </span>
-      ),
-      subtitle: `${vehiculos.length} Vehículos en garaje digital`,
     },
     {
-      title: "Agendar Citas",
+      title: "Citas",
       href: "/cliente/citas",
       color: "bg-rose-500",
       gradient: "from-rose-500 to-pink-600",
@@ -1124,15 +1089,9 @@ export default function ClientePanel() {
           <path d="m9 16 2 2 4-4" />
         </svg>
       ),
-      badge: (
-        <span className="px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/70 border border-rose-200 dark:border-rose-800 text-[10px] font-bold text-rose-700 dark:text-rose-300">
-          Online 24/7
-        </span>
-      ),
-      subtitle: "Turnos de taller y alineación 3D",
     },
     {
-      title: "Historial Clínico",
+      title: "Historial",
       href: "/cliente/historial",
       color: "bg-teal-500",
       gradient: "from-teal-400 to-cyan-600",
@@ -1143,15 +1102,9 @@ export default function ClientePanel() {
           <path d="M9 12h6M9 16h6" />
         </svg>
       ),
-      badge: (
-        <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-[10px] font-bold">
-          ${historialClinico.length} Visitas
-        </span>
-      ),
-      subtitle: "Bitácora técnica y garantías",
     },
     {
-      title: "Mi Perfil",
+      title: "Perfil",
       href: "/cliente/perfil",
       color: "bg-slate-700",
       gradient: "from-zinc-700 via-slate-800 to-zinc-900",
@@ -1163,12 +1116,6 @@ export default function ClientePanel() {
           <path d="M16 3.13a4 4 0 0 1 0 7.75" />
         </svg>
       ),
-      badge: (
-        <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-[10px] font-bold text-blue-700 dark:text-blue-300">
-          ${cliente?.vip ? "VIP" : "Titular"}
-        </span>
-      ),
-      subtitle: cliente?.name ? cliente.name : "Datos personales y RUC",
     },
   ];
 
@@ -1208,197 +1155,44 @@ export default function ClientePanel() {
       )}
 
       {/* =====================================================================
-          SUB-BARRA CONTEXTUAL: ORDEN EN TALLER + ACCIÓN "VOY EN CAMINO" + CLIENTE
+          CONTENIDO PRINCIPAL Y CABECERA (ESTILO POS: REGRESO Y TÍTULO CLIENTE)
           ===================================================================== */}
-      <div className="border-b border-slate-200 dark:border-zinc-800/80 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
-          {/* Orden activa e identificador */}
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              aria-label="Volver al Inicio"
-              className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 flex items-center justify-center transition-all cursor-pointer active:scale-95"
+      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
+        {/* Cabecera: Flecha de regreso, Título Cliente y Acción */}
+        <div className="mb-6 sm:mb-8 flex items-center justify-between">
+          <div className="flex items-center gap-3.5">
+            <Link 
+              href="/" 
+              aria-label="Volver"
+              className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-zinc-500/10 dark:bg-zinc-800/30 hover:bg-zinc-500/20 dark:hover:bg-zinc-800/60 border border-zinc-300/40 dark:border-zinc-700/30 text-zinc-700 dark:text-zinc-200 backdrop-blur-sm transition-all flex items-center justify-center shrink-0 active:scale-95"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
               </svg>
             </Link>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs uppercase font-bold tracking-wider text-blue-600 dark:text-blue-400">
-                Portal Cliente
-              </span>
-              <span className="text-slate-300 dark:text-zinc-700">•</span>
-              <h1 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
-                <span>Orden #{ordenMostrada.orderNumber || "1042"}</span>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              </h1>
-            </div>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Cliente
+            </h1>
           </div>
 
-          {/* ACCIONES RÁPIDAS: "¡VOY EN CAMINO!" + SELECTOR */}
-          <div className="flex items-center gap-2">
-            {/* Botón Principal: ¡Voy en camino al taller! */}
-            <button
-              type="button"
-              onClick={() => setModalVoyEnCamino(true)}
-              className="h-9 px-3.5 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-all cursor-pointer active:scale-95"
-            >
-              <span>🚗</span>
-              <span className="font-bold">¡Voy en camino!</span>
-            </button>
-
-            {/* Botón: Solicitar Servicio o Repuesto */}
-            <button
-              type="button"
-              onClick={() => setModalSolicitarServicio(true)}
-              className="h-9 px-3 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 font-medium text-xs sm:text-sm hidden md:flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-            >
-              <span>⚡</span>
-              <span>Solicitar</span>
-            </button>
-
-            {/* Selector de perfil cliente */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setMostrarSelectorCliente(!mostrarSelectorCliente)}
-                className="h-9 px-2.5 sm:px-3 rounded-xl bg-slate-50 dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 border border-slate-200 dark:border-zinc-700 text-xs text-slate-700 dark:text-zinc-200 flex items-center gap-2 transition-all cursor-pointer"
-              >
-                <div className="w-5 h-5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold text-[10px] flex items-center justify-center">
-                  {cliente?.name ? cliente.name.slice(0, 2).toUpperCase() : "CL"}
-                </div>
-                <span className="font-medium hidden sm:inline max-w-[110px] truncate">
-                  {cliente?.name || "Camila Rojas"}
-                </span>
-                <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                </svg>
-              </button>
-
-              {/* Dropdown de conmutador de cuentas */}
-              {mostrarSelectorCliente && (
-                <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-2xl p-2.5 z-40 animate-fade-in">
-                  <div className="px-2 py-1.5 border-b border-slate-100 dark:border-zinc-800 mb-2">
-                    <span className="text-[11px] font-bold text-slate-400 dark:text-zinc-400 uppercase tracking-wider block">
-                      Cambiar de Cliente
-                    </span>
-                    <input
-                      type="text"
-                      value={filtroBusquedaCliente}
-                      onChange={(e) => setFiltroBusquedaCliente(e.target.value)}
-                      placeholder="Buscar cliente o cédula..."
-                      className="w-full mt-1.5 px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-800 dark:text-zinc-100 text-xs focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div className="max-h-52 overflow-y-auto space-y-1">
-                    {clientesDisponibles
-                      .filter((c) => {
-                        const q = filtroBusquedaCliente.toLowerCase();
-                        return (
-                          c.name.toLowerCase().includes(q) ||
-                          c.identification.toLowerCase().includes(q)
-                        );
-                      })
-                      .map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => {
-                            setMostrarSelectorCliente(false);
-                            cargarDashboard(c.identification);
-                          }}
-                          className={`w-full text-left p-2 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer ${
-                            c.id === cliente?.id
-                              ? "bg-blue-50 text-blue-900 font-semibold border border-blue-200"
-                              : "text-slate-700 hover:bg-slate-50"
-                          }`}
-                        >
-                          <div className="truncate">
-                            <strong className="block text-slate-900 truncate">{c.name}</strong>
-                            <span className="text-[10px] text-slate-500 font-mono">
-                              {c.identification} • {c.phone}
-                            </span>
-                          </div>
-                          {c.id === cliente?.id && <span className="text-blue-600 font-bold">✓</span>}
-                        </button>
-                      ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* =====================================================================
-          SELECTOR HORIZONTAL DE VEHÍCULOS DEL CLIENTE
-          ===================================================================== */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 w-full">
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-          <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400 shrink-0 mr-1">
-            Mis Vehículos:
-          </span>
-          {vehiculos.map((v) => {
-            const isSelected =
-              vehiculoSeleccionadoPlaca?.toUpperCase() === v.plate.trim().toUpperCase();
-            return (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => setVehiculoSeleccionadoPlaca(v.plate)}
-                className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition-all shrink-0 flex items-center gap-2 cursor-pointer ${
-                  isSelected
-                    ? "bg-white dark:bg-zinc-800 border-blue-500 text-blue-900 dark:text-blue-300 font-bold shadow-xs ring-2 ring-blue-500/20"
-                    : "bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300"
-                }`}
-              >
-                <span className="w-2 h-2 rounded-full bg-blue-600" />
-                <span className="font-mono">{v.plate}</span>
-                <span className="text-slate-400 dark:text-zinc-500">({v.brand} {v.model})</span>
-              </button>
-            );
-          })}
+          {/* Botón ¡Voy en camino! */}
           <button
             type="button"
-            onClick={() => setModalNuevoVehiculo(true)}
-            className="px-3 py-1.5 rounded-xl bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border border-dashed border-slate-300 dark:border-zinc-700 text-xs font-medium text-slate-600 dark:text-zinc-400 flex items-center gap-1.5 shrink-0 transition-all cursor-pointer"
+            onClick={() => setModalVoyEnCamino(true)}
+            className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl sm:rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm flex items-center gap-2 shadow-sm transition-all cursor-pointer active:scale-95"
           >
-            <span>+</span>
-            <span>Registrar otro auto</span>
+            <span>🚗</span>
+            <span className="font-bold">¡Voy en camino!</span>
           </button>
         </div>
-      </section>
 
-      {/* =====================================================================
-          MÓDULOS PRINCIPALES DEL CLIENTE (TARJETAS DE ACCESO DIRECTO)
-          ===================================================================== */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-5 pb-2 w-full">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-3.5">
-          <div>
-            <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-              <span>Módulos del Cliente</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-semibold font-mono">
-                8 accesos
-              </span>
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-zinc-400">
-              Ingresa directamente a cada módulo o consulta el estado en tiempo real
-            </p>
-          </div>
-          <span className="text-[11px] text-slate-400 dark:text-zinc-500 hidden sm:inline">
-            Toca una tarjeta para ingresar al módulo correspondiente
-          </span>
-        </div>
-
-        {/* Módulos POS para el Portal de Cliente */}
+        {/* Módulos Cliente (Estilo POS) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
           {modulosCliente.map((mod, index) => (
             <Link 
               key={mod.href} 
               href={mod.href}
-              className="group block bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-4 sm:p-5 min-h-[96px] sm:min-h-[104px] border border-zinc-200/80 dark:border-zinc-800 hover:border-blue-500/60 dark:hover:border-blue-500/60 transition-all duration-300 ease-out hover:-translate-y-1.5 shadow-[0_2px_12px_-3px_rgba(0,0,0,0.06)] hover:shadow-xl hover:shadow-blue-500/10 active:scale-[0.97] overflow-hidden relative flex flex-col justify-center"
+              className="group block bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl p-5 sm:p-6 min-h-[96px] sm:min-h-[104px] border border-zinc-200/80 dark:border-zinc-800 hover:border-blue-500/60 dark:hover:border-blue-500/60 transition-all duration-300 ease-out hover:-translate-y-1.5 shadow-[0_2px_12px_-3px_rgba(0,0,0,0.06)] hover:shadow-xl hover:shadow-blue-500/10 active:scale-[0.97] overflow-hidden relative flex flex-col justify-center"
             >
               {/* Esquina con color suave: sutil y elegante */}
               <div
@@ -1412,23 +1206,15 @@ export default function ClientePanel() {
               />
 
               <div className="flex items-center justify-between gap-3 min-w-0 relative z-10 w-full">
-                <div className="flex items-center gap-3.5 min-w-0">
+                <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
                   <div
-                    className={`w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br ${mod.gradient} shadow-md flex items-center justify-center flex-shrink-0 transition-transform duration-300 ease-out group-hover:scale-110 group-hover:-rotate-3`}
+                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${mod.gradient} shadow-md flex items-center justify-center flex-shrink-0 transition-transform duration-300 ease-out group-hover:scale-110 group-hover:-rotate-3`}
                   >
                     {mod.icon}
                   </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <h3 className="text-sm sm:text-base font-semibold text-zinc-800 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 truncate">
-                        {mod.title}
-                      </h3>
-                      {mod.badge}
-                    </div>
-                    <p className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
-                      {mod.subtitle}
-                    </p>
-                  </div>
+                  <h3 className="text-base sm:text-lg font-normal text-zinc-800 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 truncate">
+                    {mod.title}
+                  </h3>
                 </div>
 
                 {/* Flecha a la derecha con animación sutil en hover */}
@@ -1441,47 +1227,30 @@ export default function ClientePanel() {
             </Link>
           ))}
         </div>
-      </section>
 
-            {/* =====================================================================
-          SECCIÓN DE SOPORTE Y CONTACTO RÁPIDO
-          ===================================================================== */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8 pb-12 w-full">
-        <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800 flex items-center justify-center text-2xl shrink-0">
-              🛡️
-            </div>
-            <div>
-              <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                Centro de Asistencia & Garantía AutoG
-              </h4>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
-                ¿Tienes alguna consulta técnica sobre tu vehículo, repuestos o facturas? Estamos disponibles para asistirte.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <button
-              type="button"
-              onClick={() => setModalSolicitarServicio(true)}
-              className="flex-1 md:flex-initial px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
-            >
-              ⚡ Solicitar Servicio
-            </button>
-            <a
-              href="https://wa.me/593998765432"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 md:flex-initial px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5"
-            >
-              <span>💬</span>
-              <span>WhatsApp Taller</span>
-            </a>
-          </div>
+        {/* Botones de acción rápida */}
+        <div className="pt-8 flex items-center justify-end gap-3 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setModalSolicitarServicio(true)}
+            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
+          >
+            <span>⚡</span>
+            <span>Solicitar Servicio</span>
+          </button>
+          <a
+            href="https://wa.me/593998765432"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-xs transition-all flex items-center justify-center gap-2"
+          >
+            <span>💬</span>
+            <span>WhatsApp Taller</span>
+          </a>
         </div>
-      </section>
+      </main>
+
+
 
       {/* =====================================================================
           MODAL 1: "¡VOY EN CAMINO AL TALLER!"

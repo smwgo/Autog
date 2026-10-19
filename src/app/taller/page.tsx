@@ -691,7 +691,7 @@ export default function TallerPanel() {
     ) {
       setModuloTaller("lubricentro");
     }
-    setEtapaActiva(0);
+    setEtapaActiva(1);
   };
 
   // ==========================================================================
@@ -739,12 +739,12 @@ export default function TallerPanel() {
   const [etapa2Testigos, setEtapa2Testigos] = useState<string[]>([]);
   const [etapa2ObservacionesEstado, setEtapa2ObservacionesEstado] = useState("");
   const [etapa2InventarioTrae, setEtapa2InventarioTrae] = useState<string[]>([
-    "Tarjeta de propiedad / Matrícula",
-    "Llanta de repuesto",
-    "Gata hidráulica y palanca",
-    "Llave de ruedas / Cruz",
-    "Pisos / Alfombras",
+    "Matrícula",
+    "Repuesto",
+    "Gata",
+    "Llave",
   ]);
+  const [itemManualInventario, setItemManualInventario] = useState("");
   const [etapa2ObjetosValor, setEtapa2ObjetosValor] = useState("");
   const [guardandoEtapa2, setGuardandoEtapa2] = useState(false);
 
@@ -891,8 +891,8 @@ export default function TallerPanel() {
   const [regKilometraje, setRegKilometraje] = useState("");
   const [guardandoExpress, setGuardandoExpress] = useState(false);
 
-  // Flujo Deslizable Automático de 8 Etapas (Slide-Over Carousel)
-  const [etapaActiva, setEtapaActiva] = useState<number>(0);
+  // Flujo Deslizable Automático de 7 Etapas (Slide-Over Carousel)
+  const [etapaActiva, setEtapaActiva] = useState<number>(1);
   const [rolUsuario, setRolUsuario] = useState<"EMPLEADO" | "OFICINA">("EMPLEADO");
   const [cronometroTecnicoActivo, setCronometroTecnicoActivo] = useState(false);
   const [cronometroTecnicoSegundos, setCronometroTecnicoSegundos] = useState(0);
@@ -1301,6 +1301,15 @@ export default function TallerPanel() {
     setEtapa2InventarioTrae((prev) =>
       prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
     );
+  };
+
+  const handleAgregarItemManualInventario = () => {
+    const val = itemManualInventario.trim();
+    if (!val) return;
+    if (!etapa2InventarioTrae.includes(val)) {
+      setEtapa2InventarioTrae((prev) => [...prev, val]);
+    }
+    setItemManualInventario("");
   };
 
   // Alternar un testigo del tablero en Etapa 2
@@ -4215,12 +4224,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   </div>
                 </div>
               </div>
-            ) : (
-              <div className="text-xs text-zinc-400 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-400" />
-                <span>Digita una placa arriba o selecciona un auto en pista abajo para comenzar.</span>
-              </div>
-            )}
+            ) : null}
 
             {/* Interruptor de Modo: al marcar sale qué es */}
             <button
@@ -4272,23 +4276,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             <>
 
           {/* ===================================================================
-              STEPPER DE 8 ICONOS TRANSPARENTES (GLASSMORPHISM)
+              STEPPER DE 7 ICONOS TRANSPARENTES (GLASSMORPHISM)
               =================================================================== */}
           <div className="bg-white/[0.02] backdrop-blur-md border border-white/[0.08] p-2 rounded-2xl overflow-x-auto">
-            <div className="grid grid-cols-4 lg:grid-cols-8 gap-2 min-w-[620px] lg:min-w-0">
+            <div className="grid grid-cols-4 lg:grid-cols-7 gap-2 min-w-[620px] lg:min-w-0">
               {[
                 {
-                  id: 0,
-                  label: "1. Cliente",
-                  icon: (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-                    </svg>
-                  ),
-                },
-                {
                   id: 1,
-                  label: "2. Vehículo",
+                  label: "1. Ingreso",
                   icon: (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.125-.504 1.125-1.125V14.25m-17.25 0h17.25M3.75 14.25l2.25-6.75h12l2.25 6.75" />
@@ -4297,7 +4292,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 },
                 {
                   id: 2,
-                  label: "3. Inspección",
+                  label: "2. Inspección",
                   icon: (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -4306,7 +4301,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 },
                 {
                   id: 3,
-                  label: "4. Catálogo",
+                  label: "3. Catálogo",
                   icon: (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
@@ -4315,7 +4310,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 },
                 {
                   id: 4,
-                  label: "5. Taller",
+                  label: "4. Taller",
                   icon: (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.016a4.5 4.5 0 0 0 5.093-5.093c-.172-.58-.148-1.193.016-1.743l-3.07 3.07a1.5 1.5 0 0 1-2.122-2.122l3.07-3.07c-.55.164-1.163.188-1.743.016a4.5 4.5 0 0 0-5.093 5.093c.172.58.148 1.193-.016 1.743l-3.07-3.07a1.5 1.5 0 0 0-2.122 2.122l3.07 3.07Z" />
@@ -4324,7 +4319,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 },
                 {
                   id: 5,
-                  label: "6. Aviso",
+                  label: "5. Aviso",
                   icon: (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
@@ -4333,7 +4328,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 },
                 {
                   id: 6,
-                  label: "7. Firma",
+                  label: "6. Firma",
                   icon: (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
@@ -4342,7 +4337,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 },
                 {
                   id: 7,
-                  label: "8. Cobro/Doc",
+                  label: "7. Cobro/Doc",
                   icon: (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v-.75A.75.75 0 0 1 3 4.5h.75m0 0a9.006 9.006 0 0 1 16.5 0m0 0h.75a.75.75 0 0 1 .75.75V6m0 0h-.75a.75.75 0 0 1-.75-.75V4.5m0 10.5v.75c0 .414.336.75.75.75h.75m0 0v-.75a.75.75 0 0 0-.75-.75h-.75m-15 0H3a.75.75 0 0 0-.75.75v.75m0 0h.75a.75.75 0 0 0 .75-.75v-.75" />
@@ -4357,7 +4352,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     type="button"
                     onClick={() => {
                       setEtapaActiva(step.id);
-                      setPasoDeslizable(step.id === 0 ? 0 : step.id === 1 ? 1 : 2);
+                      setPasoDeslizable(step.id === 1 ? 0 : step.id === 2 ? 1 : 2);
                     }}
                     className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all cursor-pointer active:scale-95 ${
                       active
@@ -4376,53 +4371,13 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
           </div>
 
           {/* ===================================================================
-              CONTENEDOR DESLIZABLE HORIZONTAL: 8 SLIDES CON TRANSLATE-X
+              VISTA DE CADA ETAPA ACTIVA (ALTURA DINÁMICA SIN ESPACIOS VACÍOS)
               =================================================================== */}
-          <div className="overflow-hidden w-full">
-            <div
-              className="flex w-[800%] transition-transform duration-500 ease-out items-start"
-              style={{ transform: `translateX(-${etapaActiva * 12.5}%)` }}
-            >
-              {/* ===============================================================
-                  SLIDE 0: ETAPA 1 - CLIENTE Y RECEPCIÓN
-                  =============================================================== */}
-              <div className="w-[12.5%] shrink-0 pr-2 sm:pr-4 space-y-4">
-                {ordenActiva ? (
-                  <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-blue-400" />
-                        Cliente y Vehículo Seleccionados
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setEtapaActiva(1)}
-                        className="px-3 py-1.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs font-semibold transition-all cursor-pointer"
-                      >
-                        Continuar a Vehículo (Paso 2) →
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                      <div className="p-3 rounded-xl bg-black/40 border border-white/5">
-                        <span className="text-zinc-500 block">Cliente</span>
-                        <strong className="text-white text-sm">{ordenActiva.client}</strong>
-                      </div>
-                      <div className="p-3 rounded-xl bg-black/40 border border-white/5">
-                        <span className="text-zinc-500 block">Vehículo / Placa</span>
-                        <strong className="text-white text-sm">{ordenActiva.vehicle} ({ordenActiva.plate})</strong>
-                      </div>
-                      <div className="p-3 rounded-xl bg-black/40 border border-white/5">
-                        <span className="text-zinc-500 block">Mecánico Asignado</span>
-                        <strong className="text-white text-sm">{ordenActiva.mechanic || "Sin asignar"}</strong>
-                      </div>
-                      <div className="p-3 rounded-xl bg-black/40 border border-white/5">
-                        <span className="text-zinc-500 block">Orden #</span>
-                        <strong className="text-emerald-400 text-sm font-mono">#{ordenActiva.orderNumber}</strong>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
+          <div className="w-full">
+            {/* ETAPA 1: INGRESO (CHECK TÁCTIL + FOTOS R2) */}
+            {etapaActiva === 1 && (
+              <div className="w-full space-y-4 animate-fade-in">
+                {!ordenActiva ? (
                   <form onSubmit={handleCrearOrdenEtapa1} className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
@@ -4527,21 +4482,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                         disabled={creandoOrdenEtapa1}
                         className="h-10 px-6 rounded-xl bg-blue-500/25 hover:bg-blue-500/35 border border-blue-500/50 text-blue-200 text-xs font-semibold transition-all cursor-pointer"
                       >
-                        {creandoOrdenEtapa1 ? "Iniciando orden..." : "▶ Iniciar Orden y Pasar a Vehículo"}
+                        {creandoOrdenEtapa1 ? "Iniciando orden..." : "▶ Iniciar Orden e Ingresar"}
                       </button>
                     </div>
                   </form>
-                )}
-              </div>
-
-              {/* ===============================================================
-                  SLIDE 1: ETAPA 2 - VEHÍCULO (CHECK TÁCTIL + FOTOS R2)
-                  =============================================================== */}
-              <div className="w-[12.5%] shrink-0 pr-2 sm:pr-4 space-y-4">
-                {!ordenActiva ? (
-                  <div className="py-12 text-center text-xs text-zinc-400">
-                    Selecciona un vehículo en el paso 1 para registrar el check y subir fotos R2.
-                  </div>
                 ) : (
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                     {/* Controles de Combustible, Km e Inventario */}
@@ -4583,27 +4527,90 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                             className="h-8 w-32 px-3 rounded-lg bg-black/50 border border-white/10 text-white text-xs font-mono text-right"
                           />
                         </div>
-                        <div className="space-y-1.5 pt-1">
-                          <span className="text-[11px] text-zinc-400 block">Inventario de lo que trae el vehículo:</span>
+                        <div className="space-y-2 pt-1">
+                          <span className="text-[11px] text-zinc-400 block font-medium">Inventario de lo que trae el vehículo:</span>
+                          
+                          {/* Tags con una sola palabra */}
                           <div className="flex flex-wrap gap-1.5">
-                            {["Gata hidráulica y palanca", "Llave de ruedas / Cruz", "Triángulos", "Botiquín", "Extintor", "Llanta de repuesto", "Tarjeta de propiedad / Matrícula"].map((item) => {
+                            {Array.from(
+                              new Set([
+                                "Gata",
+                                "Llave",
+                                "Triángulos",
+                                "Botiquín",
+                                "Extintor",
+                                "Repuesto",
+                                "Matrícula",
+                                ...etapa2InventarioTrae,
+                              ])
+                            ).map((item) => {
                               const sel = etapa2InventarioTrae.includes(item);
+                              const esManual = ![
+                                "Gata",
+                                "Llave",
+                                "Triángulos",
+                                "Botiquín",
+                                "Extintor",
+                                "Repuesto",
+                                "Matrícula",
+                              ].includes(item);
                               return (
                                 <button
                                   key={item}
                                   type="button"
                                   onClick={() => handleToggleInventarioEtapa2(item)}
-                                  className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer ${
+                                  className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
                                     sel
                                       ? "bg-blue-500/20 border border-blue-500/40 text-blue-300"
                                       : "bg-white/[0.02] border border-white/5 text-zinc-400 hover:text-zinc-200"
                                   }`}
                                 >
-                                  {sel ? "✓ " : "+ "}{item}
+                                  <span>{sel ? "✓" : "+"}</span>
+                                  <span>{item}</span>
+                                  {esManual && (
+                                    <span
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEtapa2InventarioTrae((prev) =>
+                                          prev.filter((i) => i !== item)
+                                        );
+                                      }}
+                                      className="text-zinc-500 hover:text-red-400 ml-0.5 text-[10px]"
+                                      title="Quitar ítem"
+                                    >
+                                      ✕
+                                    </span>
+                                  )}
                                 </button>
                               );
                             })}
                           </div>
+
+                          {/* Campo para ingresar ítems manualmente */}
+                          <div className="flex items-center gap-1.5 pt-1">
+                            <input
+                              type="text"
+                              value={itemManualInventario}
+                              onChange={(e) => setItemManualInventario(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleAgregarItemManualInventario();
+                                }
+                              }}
+                              placeholder="Escribir ítem manual y presionar Enter..."
+                              className="h-8 flex-1 px-3 rounded-lg bg-black/40 border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-blue-500/60"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleAgregarItemManualInventario}
+                              disabled={!itemManualInventario.trim()}
+                              className="h-8 px-3 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 disabled:opacity-40 text-xs font-semibold transition-all cursor-pointer"
+                            >
+                              + Agregar
+                            </button>
+                          </div>
+
                         </div>
                       </div>
                     </div>
@@ -4648,28 +4655,21 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   </div>
                 )}
 
-                <div className="flex items-center justify-between pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setEtapaActiva(0)}
-                    className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
-                  >
-                    ← Anterior (Cliente)
-                  </button>
+                <div className="flex items-center justify-end pt-2">
                   <button
                     type="button"
                     onClick={() => setEtapaActiva(2)}
                     className="px-4 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs font-semibold cursor-pointer"
                   >
-                    Continuar a Inspección (Paso 3) →
+                    Siguiente →
                   </button>
                 </div>
               </div>
+            )}
 
-              {/* ===============================================================
-                  SLIDE 2: ETAPA 3 - INSPECCIÓN (5 VISTAS + PINES NUMERADOS + R2)
-                  =============================================================== */}
-              <div className="w-[12.5%] shrink-0 pr-2 sm:pr-4 space-y-4">
+            {/* ETAPA 2: INSPECCIÓN (5 VISTAS + PINES NUMERADOS + R2) */}
+            {etapaActiva === 2 && (
+              <div className="w-full space-y-4 animate-fade-in">
                 <InspeccionVehiculo
                   ordenActiva={ordenActiva}
                   onUpdateOrden={(updated) => {
@@ -4684,11 +4684,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   mostrarToast={mostrarToast}
                 />
               </div>
+            )}
 
-              {/* ===============================================================
-                  SLIDE 3: ETAPA 4 - CATÁLOGO / PRESUPUESTO (EMPLEADO vs OFICINA)
-                  =============================================================== */}
-              <div className="w-[12.5%] shrink-0 pr-2 sm:pr-4 space-y-4">
+            {/* ETAPA 3: CATÁLOGO / PRESUPUESTO (EMPLEADO vs OFICINA) */}
+            {etapaActiva === 3 && (
+              <div className="w-full space-y-4 animate-fade-in">
                 {/* Banner de Lógica de Roles */}
                 {rolUsuario === "EMPLEADO" ? (
                   <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200 flex items-center gap-2">
@@ -4822,15 +4822,15 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     onClick={() => setEtapaActiva(4)}
                     className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-semibold cursor-pointer"
                   >
-                    Continuar a Taller / Reparación (Paso 5) →
+                    Continuar a Taller / Reparación (Paso 4) →
                   </button>
                 </div>
               </div>
+            )}
 
-              {/* ===============================================================
-                  SLIDE 4: ETAPA 5 - TALLER / REPARACIÓN (TIEMPOS, VOZ Y CHAT)
-                  =============================================================== */}
-              <div className="w-[12.5%] shrink-0 pr-2 sm:pr-4 space-y-4">
+            {/* ETAPA 4: TALLER / REPARACIÓN (TIEMPOS, VOZ Y CHAT) */}
+            {etapaActiva === 4 && (
+              <div className="w-full space-y-4 animate-fade-in">
                 {/* 3 Botones Transparentes de Acción Rápida */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {/* Botón 1: Cronómetro Tiempos */}
@@ -5068,15 +5068,15 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     onClick={() => setEtapaActiva(5)}
                     className="px-4 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs font-semibold cursor-pointer"
                   >
-                    Continuar a Aviso y Estado (Paso 6) →
+                    Continuar a Aviso y Estado (Paso 5) →
                   </button>
                 </div>
               </div>
+            )}
 
-              {/* ===============================================================
-                  SLIDE 5: ETAPA 6 - ESTADO, AVISO AUTOMÁTICO Y PIN DE SEGUIMIENTO
-                  =============================================================== */}
-              <div className="w-[12.5%] shrink-0 pr-2 sm:pr-4 space-y-4">
+            {/* ETAPA 5: ESTADO, AVISO AUTOMÁTICO Y PIN DE SEGUIMIENTO */}
+            {etapaActiva === 5 && (
+              <div className="w-full space-y-4 animate-fade-in">
                 <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-teal-400 flex items-center gap-2">
@@ -5223,15 +5223,15 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     onClick={() => setEtapaActiva(6)}
                     className="px-4 py-2 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 text-teal-300 text-xs font-semibold cursor-pointer"
                   >
-                    Continuar a Firma y Entrega (Paso 7) →
+                    Continuar a Firma y Entrega (Paso 6) →
                   </button>
                 </div>
               </div>
+            )}
 
-              {/* ===============================================================
-                  SLIDE 6: ETAPA 7 - ENTREGA EN 3 PASOS + FIRMA EN PANTALLA O REMOTA
-                  =============================================================== */}
-              <div className="w-[12.5%] shrink-0 pr-2 sm:pr-4 space-y-4">
+            {/* ETAPA 6: ENTREGA EN 3 PASOS + FIRMA EN PANTALLA O REMOTA */}
+            {etapaActiva === 6 && (
+              <div className="w-full space-y-4 animate-fade-in">
                 <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4">
                   {/* Cabecera de 3 Pasos de Entrega */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-3">
@@ -5369,7 +5369,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           disabled={guardandoEtapa7}
                           className="w-full h-11 rounded-xl bg-teal-500 hover:bg-teal-400 text-black text-xs sm:text-sm font-bold shadow-lg shadow-teal-500/20 transition-all cursor-pointer active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                         >
-                          <span>{guardandoEtapa7 ? "Guardando..." : "Guardar y Pasar a Caja (Paso 8) →"}</span>
+                          <span>{guardandoEtapa7 ? "Guardando..." : "Guardar y Pasar a Caja (Paso 7) →"}</span>
                         </button>
                       </div>
 
@@ -5419,15 +5419,15 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     onClick={() => setEtapaActiva(7)}
                     className="px-4 py-2 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 text-teal-300 text-xs font-semibold cursor-pointer"
                   >
-                    Siguiente: Cobro y Documentos (Paso 8) →
+                    Siguiente: Cobro y Documentos (Paso 7) →
                   </button>
                 </div>
               </div>
+            )}
 
-              {/* ===============================================================
-                  SLIDE 7: ETAPA 8 - COBRO CONECTADO AL POS DE OFICINA + DOCUMENTOS
-                  =============================================================== */}
-              <div className="w-[12.5%] shrink-0 pr-2 sm:pr-4 space-y-4">
+            {/* ETAPA 7: COBRO CONECTADO AL POS DE OFICINA + DOCUMENTOS */}
+            {etapaActiva === 7 && (
+              <div className="w-full space-y-4 animate-fade-in">
                 <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-5">
                   {/* SECCIÓN 1: CONEXIÓN DIRECTA CON EL MÓDULO POS DE OFICINA */}
                   <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/25 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
@@ -5667,7 +5667,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   </button>
                 </div>
               </div>
-            </div>
+            )}
           </div>
             </>
           )}
