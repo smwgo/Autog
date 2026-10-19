@@ -158,14 +158,9 @@ export default function InspeccionVehiculo({
   // Modal de PDF y Envío WhatsApp de Inspección
   const [modalPdfAbierto, setModalPdfAbierto] = useState(false);
 
-  // Acordeón y Firma rápida de recepción
-  const [mostrarFirmaRecepcion, setMostrarFirmaRecepcion] = useState(false);
   const [firmaRecepcionUrl, setFirmaRecepcionUrl] = useState<string | null>(
     ordenActiva?.receptionSignatureUrl || null
   );
-  const canvasRecepcionRef = useRef<HTMLCanvasElement | null>(null);
-  const dibujandoRef = useRef(false);
-  const tieneTrazosRef = useRef(false);
 
   // Sincronizar hallazgos locales cuando la orden activa cambie
   useEffect(() => {
@@ -377,77 +372,7 @@ export default function InspeccionVehiculo({
     mostrarToast("Todos los ítems de esta sección marcados como BUENO.");
   };
 
-  // 4. FIRMA RÁPIDA DE RECEPCIÓN (CONFORMIDAD DE RECEPCIÓN)
-  const obtenerCoords = (
-    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
-  ) => {
-    const canvas = canvasRecepcionRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-    return {
-      x: ((clientX - rect.left) / rect.width) * canvas.width,
-      y: ((clientY - rect.top) / rect.height) * canvas.height,
-    };
-  };
 
-  const iniciarTrazo = (
-    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
-  ) => {
-    const canvas = canvasRecepcionRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const pos = obtenerCoords(e);
-    dibujandoRef.current = true;
-    tieneTrazosRef.current = true;
-    ctx.strokeStyle = "#38bdf8";
-    ctx.lineWidth = 2.4;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.beginPath();
-    ctx.moveTo(pos.x, pos.y);
-  };
-
-  const moverTrazo = (
-    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
-  ) => {
-    if (!dibujandoRef.current) return;
-    const canvas = canvasRecepcionRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const pos = obtenerCoords(e);
-    ctx.lineTo(pos.x, pos.y);
-    ctx.stroke();
-  };
-
-  const terminarTrazo = () => {
-    dibujandoRef.current = false;
-  };
-
-  const limpiarFirma = () => {
-    const canvas = canvasRecepcionRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext("2d");
-      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-    tieneTrazosRef.current = false;
-    setFirmaRecepcionUrl(null);
-  };
-
-  const guardarFirmaRecepcion = async () => {
-    const canvas = canvasRecepcionRef.current;
-    if (!canvas || !tieneTrazosRef.current) {
-      mostrarToast("Dibuja la firma antes de guardar la conformidad", "err");
-      return;
-    }
-    const dataUrl = canvas.toDataURL("image/png");
-    setFirmaRecepcionUrl(dataUrl);
-    await sincronizarHallazgosNeon(hallazgos, dataUrl, evaluacionesPlantilla, seccionActiva);
-    mostrarToast("✓ Firma de conformidad de recepción registrada correctamente");
-  };
 
   // 5. ENVÍO DEL REPORTE POR WHATSAPP EN UN CLIC
   const handleEnviarReporteWhatsApp = () => {
@@ -672,64 +597,290 @@ ${urlSeguimiento}`;
         >
           {/* Planos Vectoriales SVG Limpios */}
           <div className="w-full h-full flex items-center justify-center pointer-events-none p-4">
+            {/* 1. VISTA FRONTAL: Sedán deportivo moderno de alta gama */}
             {vistaActiva === "frontal" && (
-              <svg className="w-full h-full max-h-72 text-zinc-600 group-hover:text-zinc-500 transition-colors" viewBox="0 0 600 320" fill="none" stroke="currentColor" strokeWidth={1.6}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M120 250 L100 230 L110 170 L170 120 L240 70 L360 70 L430 120 L490 170 L500 230 L480 250 Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M185 125 L245 80 L355 80 L415 125 Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M175 130 L150 190 L450 190 L425 130 Z" />
-                <polygon strokeLinecap="round" strokeLinejoin="round" points="140,195 190,195 180,225 130,220" />
-                <polygon strokeLinecap="round" strokeLinejoin="round" points="460,195 410,195 420,225 470,220" />
-                <rect x="230" y="200" width="140" height="40" rx="6" strokeLinecap="round" />
-                <line x1="240" y1="210" x2="360" y2="210" />
-                <line x1="240" y1="220" x2="360" y2="220" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M100 250 Q300 280 500 250" />
-                <rect x="70" y="140" width="35" height="20" rx="5" />
-                <rect x="495" y="140" width="35" height="20" rx="5" />
+              <svg className="w-full h-full max-h-72 text-zinc-400 group-hover:text-cyan-400 transition-colors" viewBox="0 0 600 320" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                {/* Neumáticos y línea de suelo */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 124 236 L 124 268 C 124 272, 146 272, 146 268 L 146 238" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 454 238 L 454 268 C 454 272, 476 272, 476 268 L 476 236" />
+                <line x1="80" y1="270" x2="520" y2="270" strokeWidth={1} strokeDasharray="6 4" opacity={0.3} />
+
+                {/* Silueta exterior aerodinámica deportiva */}
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M 226 64 C 265 56, 335 56, 374 64 C 398 96, 420 132, 436 148 C 456 156, 476 172, 484 196 C 488 214, 484 238, 470 252 C 420 266, 180 266, 130 252 C 116 238, 112 214, 116 196 C 124 172, 144 156, 164 148 C 180 132, 202 96, 226 64 Z" />
+
+                {/* Parabrisas aerodinámico con curvatura suave */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 232 74 C 270 66, 330 66, 368 74 C 396 114, 410 136, 418 144 C 360 152, 240 152, 182 144 C 190 136, 204 114, 232 74 Z" />
+                {/* Espejo retrovisor interior */}
+                <line x1="300" y1="74" x2="300" y2="82" strokeWidth={1.5} />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 288 82 L 312 82 L 309 92 L 291 92 Z" strokeWidth={1.2} />
+
+                {/* Líneas de carácter en el capó (nervaduras aerodinámicas) */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 234 150 C 240 176, 232 200, 216 208" opacity={0.7} />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 366 150 C 360 176, 368 200, 384 208" opacity={0.7} />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 276 154 C 278 178, 268 200, 258 208" opacity={0.5} />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 324 154 C 322 178, 332 200, 342 208" opacity={0.5} />
+
+                {/* Faros Matrix LED modernos con firma lumínica DRL */}
+                {/* Faro Izquierdo */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 136 186 C 160 182, 198 186, 218 202 C 210 214, 174 218, 142 208 C 134 200, 132 194, 136 186 Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 142 190 C 164 187, 194 191, 212 202" strokeWidth={2.4} opacity={0.9} />
+                <circle cx="160" cy="198" r="4.5" strokeWidth={1.4} opacity={0.8} />
+                <circle cx="180" cy="201" r="4.5" strokeWidth={1.4} opacity={0.8} />
+
+                {/* Faro Derecho */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 464 186 C 440 182, 402 186, 382 202 C 390 214, 426 218, 458 208 C 466 200, 468 194, 464 186 Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 458 190 C 436 187, 406 191, 388 202" strokeWidth={2.4} opacity={0.9} />
+                <circle cx="440" cy="198" r="4.5" strokeWidth={1.4} opacity={0.8} />
+                <circle cx="420" cy="201" r="4.5" strokeWidth={1.4} opacity={0.8} />
+
+                {/* Parrilla central deportiva con entramado y emblema */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 234 206 C 274 204, 326 204, 366 206 L 356 246 C 326 250, 274 250, 244 246 Z" />
+                <line x1="242" y1="218" x2="358" y2="218" opacity={0.4} />
+                <line x1="246" y1="228" x2="354" y2="228" opacity={0.4} />
+                <line x1="249" y1="238" x2="351" y2="238" opacity={0.4} />
+                <ellipse cx="300" cy="214" rx="14" ry="9" strokeWidth={1.4} />
+
+                {/* Tomas de aire inferiores, difusor y splitter */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 132 222 L 180 226 L 174 246 L 130 240 Z" opacity={0.7} />
+                <line x1="152" y1="224" x2="148" y2="242" opacity={0.5} />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 468 222 L 420 226 L 426 246 L 470 240 Z" opacity={0.7} />
+                <line x1="448" y1="224" x2="452" y2="242" opacity={0.5} />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 224 254 C 265 258, 335 258, 376 254 L 382 262 C 335 266, 265 266, 218 262 Z" strokeWidth={1.6} />
+
+                {/* Retrovisores modernos aerodinámicos con intermitente LED */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 170 156 L 152 152" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 152 144 C 136 140, 96 142, 88 152 C 86 160, 102 166, 132 164 C 146 162, 154 154, 152 144 Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 94 154 C 108 156, 126 158, 142 155" strokeWidth={2} opacity={0.9} />
+
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 430 156 L 448 152" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 448 144 C 464 140, 504 142, 512 152 C 514 160, 498 166, 468 164 C 454 162, 446 154, 448 144 Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 506 154 C 492 156, 474 158, 458 155" strokeWidth={2} opacity={0.9} />
               </svg>
             )}
 
+            {/* 2. VISTA TRASERA: Blueprint automotriz moderno y proporcionado */}
             {vistaActiva === "trasera" && (
-              <svg className="w-full h-full max-h-72 text-zinc-600 group-hover:text-zinc-500 transition-colors" viewBox="0 0 600 320" fill="none" stroke="currentColor" strokeWidth={1.6}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M120 250 L100 230 L115 170 L170 115 L240 68 L360 68 L430 115 L485 170 L500 230 L480 250 Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M185 120 L245 78 L355 78 L415 120 Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M175 130 L160 210 L440 210 L425 130 Z" />
-                <polygon strokeLinecap="round" strokeLinejoin="round" points="135,190 190,190 185,225 130,225" />
-                <polygon strokeLinecap="round" strokeLinejoin="round" points="465,190 410,190 415,225 470,225" />
-                <rect x="250" y="205" width="100" height="30" rx="4" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M100 250 Q300 275 500 250" />
-                <ellipse cx="440" cy="270" rx="10" ry="6" />
+              <svg className="w-full h-full max-h-72 text-zinc-400 group-hover:text-cyan-400 transition-colors" viewBox="0 0 600 320" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                {/* Neumáticos y línea de suelo */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 118 226 L 118 265 L 144 265 L 144 238" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 482 226 L 482 265 L 456 265 L 456 238" />
+                <line x1="70" y1="265" x2="530" y2="265" strokeWidth={1} strokeDasharray="6 4" opacity={0.3} />
+
+                {/* Espejos retrovisores visibles en perspectiva */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 155 142 C 138 140, 118 144, 114 150 C 118 156, 140 156, 156 150 Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 445 142 C 462 140, 482 144, 486 150 C 482 156, 460 156, 444 150 Z" />
+
+                {/* Silueta exterior del vehículo (Chasis y carrocería) */}
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M 200 75 Q 300 68 400 75 C 418 100, 436 130, 446 148 C 464 155, 478 170, 482 192 C 484 216, 480 238, 470 252 C 415 260, 185 260, 130 252 C 120 238, 116 216, 118 192 C 122 170, 136 155, 154 148 C 164 130, 182 100, 200 75 Z" />
+
+                {/* Luneta trasera (Parabrisas posterior con tercera luz de freno y desempañador) */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 210 82 Q 300 76 390 82 L 426 145 Q 300 150 174 145 Z" />
+                <rect x="270" y="84" width="60" height="4" rx="2" strokeWidth={1.5} opacity={0.9} />
+                <line x1="196" y1="105" x2="404" y2="105" strokeWidth={0.8} opacity={0.3} />
+                <line x1="186" y1="122" x2="414" y2="122" strokeWidth={0.8} opacity={0.3} />
+                <line x1="178" y1="138" x2="422" y2="138" strokeWidth={0.8} opacity={0.3} />
+
+                {/* Tapa del maletero / Compuerta posterior (Líneas de corte) */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 174 152 Q 300 156 426 152" />
+                <ellipse cx="300" cy="166" rx="12" ry="8" strokeWidth={1.4} />
+
+                {/* Faro trasero izquierdo (Óptica moderna LED) */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 126 172 L 230 174 L 226 196 L 132 192 C 126 186, 124 178, 126 172 Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 134 178 L 224 180 L 222 188 L 138 186 Z" strokeWidth={1.4} opacity={0.8} />
+
+                {/* Faro trasero derecho (Óptica moderna LED) */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 474 172 L 370 174 L 374 196 L 468 192 C 474 186, 476 178, 474 172 Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 466 178 L 376 180 L 378 188 L 462 186 Z" strokeWidth={1.4} opacity={0.8} />
+
+                {/* Moldura central de unión entre faros */}
+                <line x1="230" y1="184" x2="370" y2="184" strokeWidth={1.6} opacity={0.6} />
+
+                {/* Línea de corte de la maletera hacia el paragolpes */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 226 196 L 224 236 Q 300 240 376 236 L 374 196" opacity={0.7} />
+
+                {/* Espacio para la placa patente (Recuadro empotrado y marco) */}
+                <rect x="236" y="202" width="128" height="30" rx="4" strokeWidth={1.2} opacity={0.6} />
+                <rect x="246" y="206" width="108" height="22" rx="3" strokeWidth={1.5} />
+                <line x1="262" y1="217" x2="338" y2="217" strokeWidth={1.5} strokeDasharray="14 5 14 5" opacity={0.4} />
+
+                {/* Paragolpes trasero: Línea de tensión, catadióptricos y sensores */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 120 216 Q 300 224 480 216" opacity={0.5} />
+                <rect x="136" y="222" width="28" height="5" rx="2.5" strokeWidth={1.2} opacity={0.8} />
+                <rect x="436" y="222" width="28" height="5" rx="2.5" strokeWidth={1.2} opacity={0.8} />
+
+                <circle cx="178" cy="225" r="2" opacity={0.6} />
+                <circle cx="218" cy="225" r="2" opacity={0.6} />
+                <circle cx="382" cy="225" r="2" opacity={0.6} />
+                <circle cx="422" cy="225" r="2" opacity={0.6} />
+
+                {/* Faldón inferior / Difusor */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 185 248 Q 300 252 415 248 L 405 260 Q 300 263 195 260 Z" opacity={0.7} />
+
+                {/* Salidas de escape dobles cromadas */}
+                <rect x="146" y="246" width="26" height="11" rx="4" strokeWidth={1.4} />
+                <rect x="428" y="246" width="26" height="11" rx="4" strokeWidth={1.4} />
               </svg>
             )}
 
+            {/* 3. VISTA LATERAL IZQUIERDA: Coupé 4 puertas de perfil dinámico */}
             {vistaActiva === "lateral_izq" && (
-              <svg className="w-full h-full max-h-72 text-zinc-600 group-hover:text-zinc-500 transition-colors" viewBox="0 0 600 320" fill="none" stroke="currentColor" strokeWidth={1.6}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M50 220 L70 170 L140 160 L210 95 L390 95 L460 155 L550 165 L560 220 Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M215 105 L310 105 L310 150 L165 150 Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M320 105 L390 105 L445 150 L320 150 Z" />
-                <line x1="315" y1="105" x2="315" y2="220" />
-                <circle cx="140" cy="220" r="32" />
-                <circle cx="460" cy="220" r="32" />
+              <svg className="w-full h-full max-h-72 text-zinc-400 group-hover:text-cyan-400 transition-colors" viewBox="0 0 600 320" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                {/* Línea de suelo */}
+                <line x1="20" y1="270" x2="580" y2="270" strokeWidth={1} strokeDasharray="6 4" opacity={0.3} />
+
+                {/* Silueta exterior fluida tipo fastback */}
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M 42 208 C 42 196, 52 184, 72 176 C 114 166, 160 158, 198 146 C 228 114, 262 86, 304 82 C 354 78, 406 82, 442 96 C 478 116, 516 150, 540 164 C 552 166, 562 170, 566 174 C 574 186, 572 208, 554 222 C 544 226, 524 228, 512 228 C 512 203, 492 184, 462 184 C 432 184, 412 203, 412 228 L 208 228 C 208 203, 188 184, 158 184 C 128 184, 108 203, 108 228 L 54 228 C 44 224, 42 216, 42 208 Z" />
+
+                {/* Acristalamiento con pilar B y curva Hofmeister */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 208 144 L 292 90 L 348 90 L 348 148 L 208 144 Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 356 90 L 428 100 C 456 114, 484 136, 494 146 L 356 148 Z" />
+                <line x1="456" y1="146" x2="444" y2="106" opacity={0.5} />
+                <rect x="348" y="90" width="8" height="58" opacity={0.6} />
+
+                {/* Línea de cintura tensa y faldón lateral */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 74 178 C 178 164, 380 154, 552 170" opacity={0.7} />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 216 216 C 300 212, 400 212, 418 216" opacity={0.5} />
+
+                {/* Líneas de apertura de puertas */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 204 146 L 202 226" opacity={0.8} />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 352 90 L 352 226" opacity={0.8} />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 434 148 C 438 170, 428 203, 416 226" opacity={0.8} />
+
+                {/* Manijas de puerta integradas enrasadas */}
+                <rect x="254" y="160" width="22" height="5" rx="2.5" strokeWidth={1.4} />
+                <rect x="366" y="160" width="22" height="5" rx="2.5" strokeWidth={1.4} />
+
+                {/* Espejo y antena de tiburón */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 206 140 C 194 134, 182 138, 178 146 C 182 152, 194 154, 204 148 Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 436 94 L 444 84 L 452 94 Z" opacity={0.8} />
+
+                {/* Remates ópticos envolventes */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 48 186 C 64 182, 84 180, 94 180 L 91 190 Z" opacity={0.8} />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 560 174 C 550 176, 534 178, 528 184 L 538 190 Z" opacity={0.8} />
+
+                {/* Rueda Delantera con llanta de aleación y freno de disco (158, 228) */}
+                <circle cx="158" cy="228" r="41" strokeWidth={2} />
+                <circle cx="158" cy="228" r="31" strokeWidth={1.4} />
+                <circle cx="158" cy="228" r="23" strokeWidth={1} strokeDasharray="3 2" opacity={0.6} />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 142 214 C 146 210, 154 210, 158 214 L 155 224 L 142 220 Z" strokeWidth={1.6} />
+                <circle cx="158" cy="228" r="9" strokeWidth={1.4} />
+                <line x1="158" y1="219" x2="158" y2="199" strokeWidth={2.2} />
+                <line x1="166" y1="223" x2="183" y2="210" strokeWidth={2.2} />
+                <line x1="164" y1="234" x2="176" y2="252" strokeWidth={2.2} />
+                <line x1="152" y1="234" x2="140" y2="252" strokeWidth={2.2} />
+                <line x1="150" y1="223" x2="133" y2="210" strokeWidth={2.2} />
+
+                {/* Rueda Trasera con llanta de aleación y freno de disco (462, 228) */}
+                <circle cx="462" cy="228" r="41" strokeWidth={2} />
+                <circle cx="462" cy="228" r="31" strokeWidth={1.4} />
+                <circle cx="462" cy="228" r="23" strokeWidth={1} strokeDasharray="3 2" opacity={0.6} />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 446 214 C 450 210, 458 210, 462 214 L 459 224 L 446 220 Z" strokeWidth={1.6} />
+                <circle cx="462" cy="228" r="9" strokeWidth={1.4} />
+                <line x1="462" y1="219" x2="462" y2="199" strokeWidth={2.2} />
+                <line x1="470" y1="223" x2="487" y2="210" strokeWidth={2.2} />
+                <line x1="468" y1="234" x2="480" y2="252" strokeWidth={2.2} />
+                <line x1="456" y1="234" x2="444" y2="252" strokeWidth={2.2} />
+                <line x1="454" y1="223" x2="437" y2="210" strokeWidth={2.2} />
               </svg>
             )}
 
+            {/* 4. VISTA LATERAL DERECHA: Reflejo simétrico exacto */}
             {vistaActiva === "lateral_der" && (
-              <svg className="w-full h-full max-h-72 text-zinc-600 group-hover:text-zinc-500 transition-colors" viewBox="0 0 600 320" fill="none" stroke="currentColor" strokeWidth={1.6}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M550 220 L530 170 L460 160 L390 95 L210 95 L140 155 L50 165 L40 220 Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M385 105 L290 105 L290 150 L435 150 Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M280 105 L210 105 L155 150 L280 150 Z" />
-                <line x1="285" y1="105" x2="285" y2="220" />
-                <circle cx="460" cy="220" r="32" />
-                <circle cx="140" cy="220" r="32" />
+              <svg className="w-full h-full max-h-72 text-zinc-400 group-hover:text-cyan-400 transition-colors" viewBox="0 0 600 320" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                <g transform="scale(-1, 1) translate(-600, 0)">
+                  {/* Línea de suelo */}
+                  <line x1="20" y1="270" x2="580" y2="270" strokeWidth={1} strokeDasharray="6 4" opacity={0.3} />
+
+                  {/* Silueta exterior fluida tipo fastback */}
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M 42 208 C 42 196, 52 184, 72 176 C 114 166, 160 158, 198 146 C 228 114, 262 86, 304 82 C 354 78, 406 82, 442 96 C 478 116, 516 150, 540 164 C 552 166, 562 170, 566 174 C 574 186, 572 208, 554 222 C 544 226, 524 228, 512 228 C 512 203, 492 184, 462 184 C 432 184, 412 203, 412 228 L 208 228 C 208 203, 188 184, 158 184 C 128 184, 108 203, 108 228 L 54 228 C 44 224, 42 216, 42 208 Z" />
+
+                  {/* Acristalamiento con pilar B y curva Hofmeister */}
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M 208 144 L 292 90 L 348 90 L 348 148 L 208 144 Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M 356 90 L 428 100 C 456 114, 484 136, 494 146 L 356 148 Z" />
+                  <line x1="456" y1="146" x2="444" y2="106" opacity={0.5} />
+                  <rect x="348" y="90" width="8" height="58" opacity={0.6} />
+
+                  {/* Línea de cintura tensa y faldón lateral */}
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M 74 178 C 178 164, 380 154, 552 170" opacity={0.7} />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M 216 216 C 300 212, 400 212, 418 216" opacity={0.5} />
+
+                  {/* Líneas de apertura de puertas */}
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M 204 146 L 202 226" opacity={0.8} />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M 352 90 L 352 226" opacity={0.8} />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M 434 148 C 438 170, 428 203, 416 226" opacity={0.8} />
+
+                  {/* Manijas de puerta integradas enrasadas */}
+                  <rect x="254" y="160" width="22" height="5" rx="2.5" strokeWidth={1.4} />
+                  <rect x="366" y="160" width="22" height="5" rx="2.5" strokeWidth={1.4} />
+
+                  {/* Espejo y antena de tiburón */}
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M 206 140 C 194 134, 182 138, 178 146 C 182 152, 194 154, 204 148 Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M 436 94 L 444 84 L 452 94 Z" opacity={0.8} />
+
+                  {/* Remates ópticos envolventes */}
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M 48 186 C 64 182, 84 180, 94 180 L 91 190 Z" opacity={0.8} />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M 560 174 C 550 176, 534 178, 528 184 L 538 190 Z" opacity={0.8} />
+
+                  {/* Ruedas de aleación con frenos */}
+                  <circle cx="158" cy="228" r="41" strokeWidth={2} />
+                  <circle cx="158" cy="228" r="31" strokeWidth={1.4} />
+                  <circle cx="158" cy="228" r="23" strokeWidth={1} strokeDasharray="3 2" opacity={0.6} />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M 142 214 C 146 210, 154 210, 158 214 L 155 224 L 142 220 Z" strokeWidth={1.6} />
+                  <circle cx="158" cy="228" r="9" strokeWidth={1.4} />
+                  <line x1="158" y1="219" x2="158" y2="199" strokeWidth={2.2} />
+                  <line x1="166" y1="223" x2="183" y2="210" strokeWidth={2.2} />
+                  <line x1="164" y1="234" x2="176" y2="252" strokeWidth={2.2} />
+                  <line x1="152" y1="234" x2="140" y2="252" strokeWidth={2.2} />
+                  <line x1="150" y1="223" x2="133" y2="210" strokeWidth={2.2} />
+
+                  <circle cx="462" cy="228" r="41" strokeWidth={2} />
+                  <circle cx="462" cy="228" r="31" strokeWidth={1.4} />
+                  <circle cx="462" cy="228" r="23" strokeWidth={1} strokeDasharray="3 2" opacity={0.6} />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M 446 214 C 450 210, 458 210, 462 214 L 459 224 L 446 220 Z" strokeWidth={1.6} />
+                  <circle cx="462" cy="228" r="9" strokeWidth={1.4} />
+                  <line x1="462" y1="219" x2="462" y2="199" strokeWidth={2.2} />
+                  <line x1="470" y1="223" x2="487" y2="210" strokeWidth={2.2} />
+                  <line x1="468" y1="234" x2="480" y2="252" strokeWidth={2.2} />
+                  <line x1="456" y1="234" x2="444" y2="252" strokeWidth={2.2} />
+                  <line x1="454" y1="223" x2="437" y2="210" strokeWidth={2.2} />
+                </g>
               </svg>
             )}
 
+            {/* 5. VISTA SUPERIOR: Planta aerodinámica con techo panorámico doble */}
             {vistaActiva === "superior" && (
-              <svg className="w-full h-full max-h-72 text-zinc-600 group-hover:text-zinc-500 transition-colors" viewBox="0 0 600 320" fill="none" stroke="currentColor" strokeWidth={1.6}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M180 50 Q300 35 420 50 Q480 80 480 160 Q480 240 420 270 Q300 285 180 270 Q120 240 120 160 Q120 80 180 50 Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M190 75 Q300 65 410 75" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M170 105 Q300 95 430 105" />
-                <rect x="220" y="115" width="160" height="90" rx="8" strokeLinecap="round" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M170 215 Q300 225 430 215" />
+              <svg className="w-full h-full max-h-72 text-zinc-400 group-hover:text-cyan-400 transition-colors" viewBox="0 0 600 320" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                {/* Contorno aerodinámico del vehículo */}
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M 118 160 C 118 108, 142 66, 212 54 C 290 48, 380 48, 458 56 C 518 68, 542 110, 542 160 C 542 210, 518 252, 458 264 C 380 272, 290 272, 212 266 C 142 254, 118 212, 118 160 Z" />
+
+                {/* Capó delantero con nervaduras y emblema */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 146 100 C 186 104, 208 108, 224 112" opacity={0.6} />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 146 220 C 186 216, 208 212, 224 208" opacity={0.6} />
+                <ellipse cx="132" cy="160" rx="4" ry="7" strokeWidth={1.2} />
+
+                {/* Parabrisas delantero curvo */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 228 74 C 240 118, 240 202, 228 246 C 264 240, 276 234, 282 232 C 282 120, 282 120, 282 88 C 276 86, 264 80, 228 74 Z" />
+
+                {/* Techo panorámico de cristal de 2 secciones */}
+                <rect x="288" y="86" width="60" height="148" rx="10" strokeWidth={1.4} opacity={0.9} />
+                <rect x="354" y="88" width="64" height="144" rx="10" strokeWidth={1.4} opacity={0.9} />
+
+                {/* Luneta trasera curva */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 424 90 C 434 120, 434 200, 424 230 C 452 224, 464 216, 470 210 C 470 120, 470 120, 470 110 C 464 104, 452 96, 424 90 Z" />
+
+                {/* Tapa de baúl y alerón ducktail */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 478 110 C 496 114, 514 122, 524 130 L 524 190 C 514 198, 496 206, 478 210" opacity={0.8} />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 522 136 C 532 144, 534 176, 522 184" strokeWidth={2} />
+
+                {/* Espejos retrovisores laterales aerodinámicos */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 242 72 C 238 54, 222 46, 210 50 C 208 58, 220 68, 238 74 Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 242 248 C 238 266, 222 274, 210 270 C 208 262, 220 252, 238 246 Z" />
+
+                {/* Ópticas delanteras y traseras vistas desde arriba */}
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 124 135 C 136 122, 150 115, 166 112" strokeWidth={2.2} opacity={0.8} />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 124 185 C 136 198, 150 205, 166 208" strokeWidth={2.2} opacity={0.8} />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 534 135 C 522 122, 508 115, 492 112" strokeWidth={2.2} opacity={0.8} />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M 534 185 C 522 198, 508 205, 492 208" strokeWidth={2.2} opacity={0.8} />
               </svg>
             )}
           </div>
@@ -929,6 +1080,244 @@ ${urlSeguimiento}`;
               </div>
             </div>
 
+            {/* LIENZO VECTORIAL TÉCNICO DEL SISTEMA (Motor, Frenos, Suspensión, Eléctrico) */}
+            <div className="relative w-full h-52 sm:h-64 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-center overflow-hidden group transition-all">
+              <div className="w-full h-full flex items-center justify-center p-3 pointer-events-none">
+                {/* 1. PLANO VANO MOTOR Y COMPONENTES */}
+                {seccionActiva === "motor" && (
+                  <svg className="w-full h-full max-h-60 text-zinc-400 group-hover:text-cyan-400 transition-colors" viewBox="0 0 600 240" fill="none" stroke="currentColor" strokeWidth={1.6}>
+                    {/* Contorno del vano motor y cortafuegos */}
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M 60 25 L 540 25 L 525 220 L 75 220 Z" opacity={0.4} />
+
+                    {/* Radiador frontal y electroventiladores */}
+                    <rect x="150" y="32" width="300" height="22" rx="4" strokeWidth={1.5} />
+                    <line x1="170" y1="36" x2="430" y2="36" strokeWidth={1} strokeDasharray="4 3" opacity={0.6} />
+                    <line x1="170" y1="44" x2="430" y2="44" strokeWidth={1} strokeDasharray="4 3" opacity={0.6} />
+                    <circle cx="240" cy="43" r="8" strokeWidth={1.2} />
+                    <circle cx="360" cy="43" r="8" strokeWidth={1.2} />
+                    <circle cx="160" cy="32" r="5" strokeWidth={1.4} /> {/* Tapón radiador */}
+
+                    {/* Manguera superior de refrigerante */}
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 210 54 C 210 75, 230 85, 255 92" strokeWidth={2.4} opacity={0.8} />
+
+                    {/* Bloque motor central / Tapa de balancines */}
+                    <rect x="220" y="92" width="160" height="95" rx="10" strokeWidth={2} />
+                    {/* Tapón de aceite */}
+                    <circle cx="250" cy="112" r="9" strokeWidth={1.6} />
+                    <path strokeLinecap="round" d="M 245 112 L 255 112" strokeWidth={1.5} />
+                    {/* 4 Bobinas / Bujías de encendido */}
+                    <rect x="245" y="130" width="16" height="20" rx="3" strokeWidth={1.2} />
+                    <rect x="280" y="130" width="16" height="20" rx="3" strokeWidth={1.2} />
+                    <rect x="315" y="130" width="16" height="20" rx="3" strokeWidth={1.2} />
+                    <rect x="350" y="130" width="16" height="20" rx="3" strokeWidth={1.2} />
+                    <line x1="240" y1="160" x2="370" y2="160" strokeWidth={1.2} opacity={0.6} />
+
+                    {/* Varilla medidora de aceite */}
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 390 105 C 400 98, 410 102, 408 112 L 380 140" strokeWidth={1.6} />
+                    <circle cx="405" cy="102" r="5" strokeWidth={1.4} />
+
+                    {/* Filtro de aire y caja de admisión (Izquierda) */}
+                    <rect x="85" y="105" width="85" height="60" rx="8" strokeWidth={1.6} />
+                    <line x1="95" y1="115" x2="160" y2="115" strokeWidth={1} opacity={0.5} />
+                    <line x1="95" y1="125" x2="160" y2="125" strokeWidth={1} opacity={0.5} />
+                    <line x1="95" y1="135" x2="160" y2="135" strokeWidth={1} opacity={0.5} />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 170 135 C 195 135, 205 120, 220 115" strokeWidth={2.4} />
+
+                    {/* Alternador y correa de accesorios (Derecha) */}
+                    <circle cx="415" cy="155" r="18" strokeWidth={1.8} />
+                    <circle cx="415" cy="155" r="7" strokeWidth={1.4} />
+                    {/* Polea del cigüeñal y correa tensora */}
+                    <circle cx="395" cy="195" r="14" strokeWidth={1.6} />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 380 160 L 405 140 C 430 145, 435 170, 420 185 L 405 205 C 385 205, 385 185, 380 160 Z" strokeWidth={1.6} strokeDasharray="3 2" opacity={0.8} />
+
+                    {/* Batería 12V (Superior derecha) */}
+                    <rect x="445" y="50" width="75" height="50" rx="6" strokeWidth={1.6} />
+                    <rect x="455" y="42" width="14" height="8" rx="2" strokeWidth={1.2} />
+                    <rect x="495" y="42" width="14" height="8" rx="2" strokeWidth={1.2} />
+                    <line x1="462" y1="62" x2="462" y2="70" strokeWidth={1.5} />
+                    <line x1="458" y1="66" x2="466" y2="66" strokeWidth={1.5} />
+                    <line x1="498" y1="66" x2="506" y2="66" strokeWidth={1.5} />
+
+                    {/* Depósito de expansión de refrigerante */}
+                    <rect x="450" y="120" width="55" height="42" rx="7" strokeWidth={1.6} />
+                    <line x1="460" y1="135" x2="495" y2="135" strokeWidth={1} strokeDasharray="4 2" opacity={0.6} />
+                    <line x1="460" y1="145" x2="495" y2="145" strokeWidth={1} strokeDasharray="4 2" opacity={0.6} />
+
+                    {/* Soportes de motor (Patas) */}
+                    <rect x="185" y="130" width="25" height="20" rx="4" strokeWidth={1.4} opacity={0.7} />
+                    <rect x="390" y="105" width="22" height="18" rx="4" strokeWidth={1.4} opacity={0.7} />
+
+                    {/* Indicadores / Etiquetas técnicas */}
+                    <text x="300" y="210" textAnchor="middle" fill="currentColor" fontSize="11" fontFamily="monospace" opacity={0.7}>[VANO MOTOR • REFRIGERACIÓN • ENCENDIDO • CORREAS]</text>
+                  </svg>
+                )}
+
+                {/* 2. PLANO SISTEMA DE FRENOS */}
+                {seccionActiva === "frenos" && (
+                  <svg className="w-full h-full max-h-60 text-zinc-400 group-hover:text-cyan-400 transition-colors" viewBox="0 0 600 240" fill="none" stroke="currentColor" strokeWidth={1.6}>
+                    {/* Disco de freno ventilado de alto rendimiento */}
+                    <circle cx="250" cy="120" r="95" strokeWidth={2} />
+                    <circle cx="250" cy="120" r="82" strokeWidth={1.2} opacity={0.6} />
+                    <circle cx="250" cy="120" r="44" strokeWidth={1.6} />
+                    <circle cx="250" cy="120" r="18" strokeWidth={1.4} />
+
+                    {/* 5 Pernos / Espárragos de rueda */}
+                    <circle cx="250" cy="90" r="5" strokeWidth={1.4} />
+                    <circle cx="278" cy="105" r="5" strokeWidth={1.4} />
+                    <circle cx="268" cy="138" r="5" strokeWidth={1.4} />
+                    <circle cx="232" cy="138" r="5" strokeWidth={1.4} />
+                    <circle cx="222" cy="105" r="5" strokeWidth={1.4} />
+
+                    {/* Perforaciones radiales de ventilación */}
+                    <circle cx="205" cy="80" r="2.5" opacity={0.5} />
+                    <circle cx="215" cy="70" r="2.5" opacity={0.5} />
+                    <circle cx="295" cy="80" r="2.5" opacity={0.5} />
+                    <circle cx="305" cy="70" r="2.5" opacity={0.5} />
+                    <circle cx="205" cy="160" r="2.5" opacity={0.5} />
+                    <circle cx="215" cy="170" r="2.5" opacity={0.5} />
+                    <circle cx="295" cy="160" r="2.5" opacity={0.5} />
+                    <circle cx="305" cy="170" r="2.5" opacity={0.5} />
+
+                    {/* Cáliper de freno deportivo (Pinza de 4 pistones) */}
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M 160 55 C 190 40, 260 40, 305 52 C 320 58, 322 72, 315 85 C 305 105, 275 118, 240 120 C 200 120, 175 105, 162 90 C 152 76, 150 62, 160 55 Z" />
+                    {/* Pastilla de freno visible */}
+                    <rect x="195" y="65" width="65" height="16" rx="3" strokeWidth={1.4} />
+                    {/* Pistones hidráulicos duales */}
+                    <circle cx="215" cy="73" r="8" strokeWidth={1.2} />
+                    <circle cx="245" cy="73" r="8" strokeWidth={1.2} />
+                    {/* Purgador de líquido */}
+                    <rect x="175" y="48" width="5" height="10" rx="1.5" strokeWidth={1.2} />
+
+                    {/* Latiguillo / Línea hidráulica trenzada */}
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 178 55 C 150 50, 120 70, 95 105 C 75 130, 60 160, 45 180" strokeWidth={2.4} opacity={0.8} />
+
+                    {/* Servofreno (Bomba de vacío y cilindro maestro en esquema) */}
+                    <circle cx="465" cy="90" r="32" strokeWidth={1.8} />
+                    <rect x="395" y="82" width="45" height="16" rx="3" strokeWidth={1.5} />
+                    <rect x="405" y="58" width="30" height="24" rx="4" strokeWidth={1.5} /> {/* Depósito líquido */}
+                    <line x1="410" y1="70" x2="430" y2="70" strokeWidth={1} strokeDasharray="3 2" opacity={0.6} />
+                    <line x1="440" y1="90" x2="395" y2="90" strokeWidth={2} />
+
+                    {/* Pedal de freno y tubería hidráulica hacia el caliper */}
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 497 90 L 530 90 L 530 165 L 518 165" strokeWidth={2} />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 395 90 C 350 90, 310 70, 270 55" strokeWidth={1.8} strokeDasharray="5 3" opacity={0.7} />
+
+                    {/* Indicadores / Etiquetas técnicas */}
+                    <text x="300" y="225" textAnchor="middle" fill="currentColor" fontSize="11" fontFamily="monospace" opacity={0.7}>[DISCO VENTILADO • CÁLIPER • PASTILLAS • LÍNEA HIDRÁULICA • BOMBA]</text>
+                  </svg>
+                )}
+
+                {/* 3. PLANO SUSPENSIÓN Y DIRECCIÓN */}
+                {seccionActiva === "suspension" && (
+                  <svg className="w-full h-full max-h-60 text-zinc-400 group-hover:text-cyan-400 transition-colors" viewBox="0 0 600 240" fill="none" stroke="currentColor" strokeWidth={1.6}>
+                    {/* Columna de Suspensión MacPherson (Izquierda) */}
+                    {/* Copela superior con rodamiento */}
+                    <rect x="155" y="28" width="50" height="14" rx="4" strokeWidth={1.8} />
+                    <line x1="180" y1="20" x2="180" y2="28" strokeWidth={2} />
+                    {/* Vástago del amortiguador */}
+                    <rect x="175" y="42" width="10" height="35" strokeWidth={1.2} />
+                    {/* Guardapolvo fuelle */}
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 168 50 L 192 50 L 168 58 L 192 58 L 168 66 L 192 66" strokeWidth={1.4} opacity={0.8} />
+
+                    {/* Resorte helicoidal / Espiral */}
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M 155 78 C 210 68, 210 90, 155 96 C 210 88, 210 110, 155 116 C 210 108, 210 130, 155 136 C 210 128, 210 150, 155 156 L 205 156" />
+
+                    {/* Cuerpo cilíndrico del amortiguador */}
+                    <rect x="170" y="156" width="20" height="52" rx="3" strokeWidth={1.8} />
+
+                    {/* Mangueta y cubo de rueda */}
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M 165 190 L 130 195 L 120 220 L 175 222 Z" />
+
+                    {/* Brazo de suspensión inferior / Trapecio / Parrilla */}
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M 175 222 L 250 228 L 250 236 L 165 230 Z" />
+                    <circle cx="170" cy="226" r="6" strokeWidth={1.4} /> {/* Rótula inferior */}
+                    <circle cx="250" cy="232" r="7" strokeWidth={1.4} /> {/* Buje */}
+
+                    {/* Cremallera de dirección central */}
+                    <rect x="260" y="130" width="190" height="18" rx="4" strokeWidth={1.8} />
+                    {/* Fuelle de cremallera */}
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 260 126 L 235 130 L 235 148 L 260 152 Z" opacity={0.8} />
+                    {/* Terminal y axial de dirección hacia la mangueta */}
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M 235 139 L 155 165 L 150 185" />
+                    <circle cx="150" cy="185" r="5" strokeWidth={1.4} /> {/* Terminal de dirección */}
+
+                    {/* Barra estabilizadora y bieleta de acoplamiento */}
+                    <line x1="200" y1="140" x2="220" y2="195" strokeWidth={2.4} /> {/* Bieleta */}
+                    <circle cx="200" cy="140" r="4" strokeWidth={1.4} />
+                    <circle cx="220" cy="195" r="4" strokeWidth={1.4} />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M 220 195 C 260 200, 310 200, 350 200" opacity={0.7} />
+
+                    {/* Columna de dirección / Volante en esquema */}
+                    <rect x="350" y="90" width="12" height="40" rx="3" strokeWidth={1.4} />
+                    <circle cx="356" cy="70" r="16" strokeWidth={1.6} />
+
+                    {/* Indicadores / Etiquetas técnicas */}
+                    <text x="300" y="228" textAnchor="middle" fill="currentColor" fontSize="11" fontFamily="monospace" opacity={0.7}>[AMORTIGUADOR • ESPIRAL • CREMALLERA • RÓTULAS • BIELETA]</text>
+                  </svg>
+                )}
+
+                {/* 4. PLANO SISTEMA ELÉCTRICO */}
+                {seccionActiva === "electrico" && (
+                  <svg className="w-full h-full max-h-60 text-zinc-400 group-hover:text-cyan-400 transition-colors" viewBox="0 0 600 240" fill="none" stroke="currentColor" strokeWidth={1.6}>
+                    {/* Batería principal de 12V con voltímetro integrado */}
+                    <rect x="70" y="65" width="130" height="95" rx="8" strokeWidth={2} />
+                    {/* Bornes Positivo y Negativo */}
+                    <rect x="88" y="50" width="22" height="15" rx="3" strokeWidth={1.4} />
+                    <rect x="160" y="50" width="22" height="15" rx="3" strokeWidth={1.4} />
+                    <line x1="99" y1="55" x2="99" y2="61" strokeWidth={1.8} />
+                    <line x1="96" y1="58" x2="102" y2="58" strokeWidth={1.8} />
+                    <line x1="168" y1="58" x2="174" y2="58" strokeWidth={1.8} />
+
+                    {/* Display de estado de carga / voltímetro */}
+                    <rect x="95" y="95" width="80" height="30" rx="4" strokeWidth={1.4} />
+                    <text x="135" y="115" textAnchor="middle" fill="currentColor" fontSize="12" fontFamily="monospace" fontWeight="bold">12.6V</text>
+                    <text x="135" y="145" textAnchor="middle" fill="currentColor" fontSize="9" fontFamily="monospace" opacity={0.6}>BATERÍA 12V</text>
+
+                    {/* Cable de masa / Tierra al chasis */}
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 171 50 C 171 35, 171 30, 205 30" strokeWidth={2.4} />
+                    <line x1="205" y1="24" x2="205" y2="36" strokeWidth={2} />
+                    <line x1="210" y1="26" x2="210" y2="34" strokeWidth={1.6} />
+                    <line x1="215" y1="28" x2="215" y2="32" strokeWidth={1.2} />
+
+                    {/* Cable principal positivo al alternador y arranque */}
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M 99 50 C 99 35, 230 35, 270 65 L 270 120" strokeWidth={3} opacity={0.9} />
+
+                    {/* Alternador con polea y regulador de voltaje */}
+                    <circle cx="270" cy="155" r="38" strokeWidth={2} />
+                    <circle cx="270" cy="155" r="16" strokeWidth={1.6} />
+                    <circle cx="270" cy="155" r="6" strokeWidth={1.2} />
+                    <line x1="250" y1="135" x2="290" y2="175" opacity={0.4} />
+                    <line x1="290" y1="135" x2="250" y2="175" opacity={0.4} />
+                    <text x="270" y="208" textAnchor="middle" fill="currentColor" fontSize="9" fontFamily="monospace" opacity={0.6}>ALTERNADOR</text>
+
+                    {/* Motor de arranque / Solenoide (Bendix) */}
+                    <rect x="350" y="130" width="75" height="42" rx="8" strokeWidth={1.8} />
+                    <rect x="360" y="108" width="48" height="22" rx="5" strokeWidth={1.6} /> {/* Solenoide */}
+                    <circle cx="360" cy="151" r="9" strokeWidth={1.4} />
+                    <text x="388" y="188" textAnchor="middle" fill="currentColor" fontSize="9" fontFamily="monospace" opacity={0.6}>ARRANQUE</text>
+
+                    {/* Fusilera principal y relés (Vano motor) */}
+                    <rect x="350" y="35" width="115" height="60" rx="8" strokeWidth={1.8} />
+                    <rect x="360" y="45" width="18" height="18" rx="3" strokeWidth={1.2} /> {/* Relé 1 */}
+                    <rect x="385" y="45" width="18" height="18" rx="3" strokeWidth={1.2} /> {/* Relé 2 */}
+                    <rect x="410" y="45" width="18" height="18" rx="3" strokeWidth={1.2} /> {/* Relé 3 */}
+                    <rect x="435" y="45" width="18" height="18" rx="3" strokeWidth={1.2} /> {/* Relé 4 */}
+                    <line x1="360" y1="75" x2="455" y2="75" strokeWidth={1} strokeDasharray="4 2" opacity={0.6} />
+                    <text x="408" y="88" textAnchor="middle" fill="currentColor" fontSize="8" fontFamily="monospace" opacity={0.6}>FUSIBLES / RELÉS</text>
+
+                    {/* Módulo Electrónico ECU / Computadora */}
+                    <rect x="490" y="55" width="75" height="90" rx="7" strokeWidth={1.8} />
+                    <rect x="480" y="75" width="10" height="50" rx="2" strokeWidth={1.4} /> {/* Conector mazo */}
+                    <path d="M 505 80 L 550 80 M 505 95 L 550 95 M 505 110 L 550 110" strokeWidth={1} opacity={0.4} />
+                    <text x="528" y="135" textAnchor="middle" fill="currentColor" fontSize="9" fontFamily="monospace" opacity={0.6}>ECU / MÓDULO</text>
+
+                    {/* Indicadores / Etiquetas técnicas */}
+                    <text x="300" y="228" textAnchor="middle" fill="currentColor" fontSize="11" fontFamily="monospace" opacity={0.7}>[BATERÍA 12V • ALTERNADOR • MOTOR DE ARRANQUE • FUSIBLERA • ECU]</text>
+                  </svg>
+                )}
+              </div>
+            </div>
+
             {/* Lista de Ítems del Sistema */}
             <div className="divide-y divide-white/5">
               {sistemaActual.items.map((item) => {
@@ -995,84 +1384,6 @@ ${urlSeguimiento}`;
     </div>
   )}
 
-      {/* ===================================================================
-          CONFORMIDAD DE RECEPCIÓN (FIRMA DEL CLIENTE)
-          =================================================================== */}
-      <div className="p-3.5 sm:p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
-        <div
-          onClick={() => setMostrarFirmaRecepcion(!mostrarFirmaRecepcion)}
-          className="flex items-center justify-between cursor-pointer select-none"
-        >
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-sky-400" />
-            <span className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider">
-              Conformidad de Recepción (Firma del Cliente)
-            </span>
-            {firmaRecepcionUrl && (
-              <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold">
-                ✓ Firmada
-              </span>
-            )}
-          </div>
-
-          <span className="text-xs text-zinc-400">
-            {mostrarFirmaRecepcion ? "Ocultar ▲" : "Desplegar Firma ▼"}
-          </span>
-        </div>
-
-        {mostrarFirmaRecepcion && (
-          <div className="pt-2 border-t border-white/5 space-y-3 animate-fade-in">
-            <p className="text-[11px] text-zinc-400 leading-relaxed">
-              El cliente declara conformidad con el estado inicial del vehículo y los daños registrados en los pines numerados de esta inspección previa al ingreso a garaje:
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
-              <div className="sm:col-span-8">
-                <div className="h-36 rounded-xl bg-black/60 border border-white/10 relative overflow-hidden flex items-center justify-center">
-                  <canvas
-                    ref={canvasRecepcionRef}
-                    width={400}
-                    height={144}
-                    onMouseDown={iniciarTrazo}
-                    onMouseMove={moverTrazo}
-                    onMouseUp={terminarTrazo}
-                    onMouseLeave={terminarTrazo}
-                    onTouchStart={iniciarTrazo}
-                    onTouchMove={moverTrazo}
-                    onTouchEnd={terminarTrazo}
-                    className="w-full h-full cursor-crosshair touch-none select-none"
-                  />
-                  {!tieneTrazosRef.current && !firmaRecepcionUrl && (
-                    <div className="absolute pointer-events-none text-zinc-600 text-xs font-mono">
-                      [El cliente firma aquí con el dedo o puntero táctil]
-                    </div>
-                  )}
-                  {firmaRecepcionUrl && !tieneTrazosRef.current && (
-                    <img src={firmaRecepcionUrl} alt="Firma Recepción" className="max-h-24 object-contain pointer-events-none" />
-                  )}
-                </div>
-              </div>
-
-              <div className="sm:col-span-4 flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={limpiarFirma}
-                  className="h-10 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-zinc-300 transition-all cursor-pointer"
-                >
-                  Limpiar Firma
-                </button>
-                <button
-                  type="button"
-                  onClick={guardarFirmaRecepcion}
-                  className="h-11 rounded-xl bg-sky-500 hover:bg-sky-400 text-black text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-lg shadow-sky-500/20"
-                >
-                  Confirmar Firma ✓
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* ===================================================================
           MODAL DE PDF DE INSPECCIÓN (IMPRIMIR O ENVIAR POR WHATSAPP)
@@ -1300,7 +1611,7 @@ ${urlSeguimiento}`;
             onClick={onVolver}
             className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 transition-all cursor-pointer"
           >
-            ← Anterior (Vehículo)
+            ← Anterior
           </button>
         ) : <div />}
 
@@ -1310,7 +1621,7 @@ ${urlSeguimiento}`;
             onClick={onContinuar}
             className="px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 text-xs font-semibold transition-all cursor-pointer"
           >
-            Continuar a Presupuesto (Paso 3) →
+            Siguiente →
           </button>
         )}
       </div>
