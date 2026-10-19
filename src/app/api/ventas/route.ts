@@ -142,7 +142,27 @@ export async function POST(request: Request) {
       const numDiscount = Math.max(0, parseFloat(discount.toString()) || 0);
       const taxCalc = Math.max(0, (subtotalCalc - numDiscount) * (parseFloat(taxPercent.toString()) || 0));
       const totalCalc = Math.max(0, subtotalCalc - numDiscount + taxCalc);
-      const saleNumber = `VEN-${Date.now().toString().slice(-6)}`;
+
+      // Numeración correlativa secuencial: VENTA-001, VENTA-002 en adelante
+      const lastVenta = await tx.sale.findFirst({
+        where: {
+          OR: [
+            { saleNumber: { startsWith: "VENTA-" } },
+            { saleNumber: { startsWith: "VENTA " } },
+          ],
+        },
+        orderBy: { createdAt: "desc" },
+        select: { saleNumber: true },
+      });
+
+      let nextSeq = 1;
+      if (lastVenta && lastVenta.saleNumber) {
+        const match = lastVenta.saleNumber.match(/\d+/);
+        if (match) {
+          nextSeq = parseInt(match[0], 10) + 1;
+        }
+      }
+      const saleNumber = `VENTA-${String(nextSeq).padStart(3, "0")}`;
 
       const createdSale = await tx.sale.create({
         data: {

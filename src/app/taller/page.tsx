@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { TallerMobileNav } from "@/components/TallerMobileNav";
+import InspeccionVehiculo from "@/components/taller/InspeccionVehiculo";
+import ModalNuevaOrdenTrabajo from "@/components/taller/ModalNuevaOrdenTrabajo";
+import LubricentroExpress from "./components/LubricentroExpress";
 
 // ============================================================================
 // INTERFACES Y TIPOS OPERATIVOS
@@ -18,6 +21,7 @@ export interface OrderItem {
   price: number;
   qty: number;
   status: "Pendiente" | "En Proceso" | "Listo";
+  completed?: boolean;
   productId?: string;
   imageUrl?: string | null;
   empleado_id?: string;
@@ -27,6 +31,7 @@ export interface OrderItem {
 export interface UnifiedOrder {
   id: string;
   orderNumber: string;
+  workshopName?: string;
   customerId?: string | null;
   vehicleId?: string | null;
   vehicle: string;
@@ -79,6 +84,8 @@ export interface UnifiedOrder {
   deliverySignedBy?: string;
   deliverySignedAt?: string | null;
   deliveryStatus?: string;
+  receptionSignatureUrl?: string | null;
+  receptionSignedAt?: string | null;
   payments?: OrderPaymentItem[];
   totalPaid?: number;
   balanceDue?: number;
@@ -158,6 +165,10 @@ export interface InspectionFinding {
   zona: string;
   tipo: string;
   descripcion: string;
+  pinNumber?: number;
+  photoUrl?: string;
+  capturedAt?: string;
+  severidad?: "LEVE" | "MODERADO" | "GRAVE" | string;
 }
 
 export interface InventoryProduct {
@@ -185,13 +196,11 @@ export interface ServicePreset {
 // CONSTANTES PARA FLOTANTE 06 (ETAPA 6: ESTADO Y AVISO)
 // ============================================================================
 const ESTADOS_ORDEN_DEFAULT: CustomOrderStatus[] = [
-  { id: "st-1", name: "Recibido / En Diagnóstico", color: "blue", progress: 20 },
-  { id: "st-2", name: "Esperando Aprobación", color: "purple", progress: 35 },
-  { id: "st-3", name: "Esperando Repuestos", color: "amber", progress: 45 },
-  { id: "st-4", name: "En Reparación", color: "sky", progress: 65 },
-  { id: "st-5", name: "Control de Calidad / Lavado", color: "pink", progress: 85 },
-  { id: "st-6", name: "Listo para Entregar", color: "emerald", progress: 100 },
-  { id: "st-7", name: "Entregado", color: "emerald", progress: 100 },
+  { id: "st-1", name: "01 Pendiente", color: "amber", progress: 10 },
+  { id: "st-2", name: "02 En Diagnóstico", color: "blue", progress: 30 },
+  { id: "st-3", name: "03 En Reparación", color: "sky", progress: 60 },
+  { id: "st-4", name: "04 Listo para Entrega", color: "emerald", progress: 90 },
+  { id: "st-5", name: "05 Entregada", color: "purple", progress: 100 },
 ];
 
 const COLORES_ESTADO_ETAPA6: {
@@ -556,6 +565,25 @@ function formatElapsedTime(startedAt: string | null, completedAt: string | null,
   return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }
 
+function formatearFechaIngreso(dateStr?: string | null): string {
+  if (!dateStr) {
+    const d = new Date();
+    return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+  }
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const dia = String(d.getDate()).padStart(2, "0");
+    const mes = String(d.getMonth() + 1).padStart(2, "0");
+    const anio = d.getFullYear();
+    const hora = String(d.getHours()).padStart(2, "0");
+    const min = String(d.getMinutes()).padStart(2, "0");
+    return `${dia}/${mes}/${anio} ${hora}:${min}`;
+  } catch {
+    return String(dateStr);
+  }
+}
+
 export default function TallerPanel() {
   const router = useRouter();
 
@@ -575,8 +603,99 @@ export default function TallerPanel() {
   ]);
   const [cargandoInicial, setCargandoInicial] = useState(true);
 
+  // SELECTOR SUPERIOR 2 EN 1: TALLER MECÁNICO VS LUBRICENTRO & EXPRESS
+  const [moduloTaller, setModuloTaller] = useState<"taller" | "lubricentro">("taller");
+
+  // FLOTANTE DE INICIO AL LOGUEARSE O ENTRAR (NUEVA ORDEN DE TRABAJO)
+  const [mostrarModalNuevaOrden, setMostrarModalNuevaOrden] = useState(true);
+  // MODAL / LISTA DE CLIENTES Y AUTOS EN ATENCIÓN (PAUSAR, CAMBIAR, CONTINUAR)
+  const [mostrarModalAutosAtencion, setMostrarModalAutosAtencion] = useState(false);
+
+  // Pausar el trabajo de una orden para seguir con otra
+  const handlePausarOrden = async (auto: UnifiedOrder, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    try {
+      const res = await fetch("/api/taller/operacion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "ACTUALIZAR_ORDEN",
+          orderId: auto.id,
+          status: "Pausada",
+        }),
+      });
+      const data = await res.json();
+      const updated = data.success && data.activeOrder ? data.activeOrder : { ...auto, status: "Pausada" };
+      setAutosEnPista((prev) => prev.map((o) => (o.id === auto.id ? updated : o)));
+      if (ordenActiva?.id === auto.id) {
+        setOrdenActiva(updated);
+      }
+      mostrarToast(`Trabajo de ${auto.plate} pausado`);
+    } catch {
+      mostrarToast("No se pudo pausar la orden", "err");
+    }
+  };
+
+  // Reanudar el trabajo de una orden pausada y seleccionarla
+  const handleReanudarOrden = async (auto: UnifiedOrder, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    try {
+      const res = await fetch("/api/taller/operacion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "ACTUALIZAR_ORDEN",
+          orderId: auto.id,
+          status: "En Proceso",
+          startTimer: !auto.startedAt,
+        }),
+      });
+      const data = await res.json();
+      const updated = data.success && data.activeOrder ? data.activeOrder : { ...auto, status: "En Proceso" };
+      setAutosEnPista((prev) => prev.map((o) => (o.id === auto.id ? updated : o)));
+      setOrdenActiva(updated);
+      setKmActualInput(updated.mileage ? String(updated.mileage) : "");
+      setFotosRecepcion(updated.receptionPhotos || []);
+      setMostrarModalAutosAtencion(false);
+      mostrarToast(`Trabajo reanudado para ${auto.plate}`);
+    } catch {
+      mostrarToast("No se pudo reanudar la orden", "err");
+    }
+  };
+
+  // Seleccionar auto de la lista y volver a la vista
+  const handleSeleccionarAutoYVolver = (auto: UnifiedOrder) => {
+    setOrdenActiva(auto);
+    setKmActualInput(auto.mileage ? String(auto.mileage) : "");
+    setFotosRecepcion(auto.receptionPhotos || []);
+    setMostrarModalAutosAtencion(false);
+    mostrarToast(`Atendiendo a ${auto.client} (${auto.plate})`);
+  };
+
+  const handleOrdenCreadaDesdeModal = (nuevaOrden: UnifiedOrder, cliente?: any) => {
+    setOrdenActiva(nuevaOrden);
+    setAutosEnPista((prev) => [
+      nuevaOrden,
+      ...prev.filter((o) => o.id !== nuevaOrden.id),
+    ]);
+    if (cliente) {
+      setClientesCatalogo((prev) => [
+        cliente,
+        ...prev.filter((c) => c.id !== cliente.id),
+      ]);
+    }
+    // Si la orden se creó como Lubricentro, abrir directamente la vista express
+    if (
+      nuevaOrden?.notes?.includes("[Lubricentro]") ||
+      (nuevaOrden as any)?.motivoIngreso?.includes("[Lubricentro]")
+    ) {
+      setModuloTaller("lubricentro");
+    }
+    setEtapaActiva(0);
+  };
+
   // ==========================================================================
-  // FLOTANTE 01 - ETAPA 1: CLIENTE (DESACTIVADO AL INGRESAR EN MODO EMPLEADO)
+  // FLOTANTE 01 - ETAPA 1: CLIENTE
   // ==========================================================================
   const [mostrarFlotanteEtapa1, setMostrarFlotanteEtapa1] = useState(false);
   const [etapa1TipoCliente, setEtapa1TipoCliente] = useState<"Persona" | "Empresa">("Persona");
@@ -883,6 +1002,27 @@ export default function TallerPanel() {
       setToastMensaje((prev) => (prev?.texto === texto ? null : prev));
     }, 4000);
   }, []);
+
+  // Número de veces que se ha atendido el cliente / vehículo
+  const [vecesAtendido, setVecesAtendido] = useState<number>(1);
+
+  useEffect(() => {
+    if (!ordenActiva?.plate) return;
+    let cancel = false;
+    fetch(`/api/taller/operacion?q=${encodeURIComponent(ordenActiva.plate)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancel) return;
+        const countHistory = Array.isArray(data.history) ? data.history.length : 0;
+        const total = countHistory > 0 ? countHistory + 1 : 1;
+        setVecesAtendido(total);
+        if (data.history) setHistorialVehiculo(data.history);
+      })
+      .catch(() => {});
+    return () => {
+      cancel = true;
+    };
+  }, [ordenActiva?.id, ordenActiva?.plate]);
 
   // ==========================================================================
   // CRONÓMETRO EN VIVO (TICK CADA SEGUNDO)
@@ -2419,49 +2559,22 @@ export default function TallerPanel() {
         clienteEncontrado?.name ||
         clienteSeleccionadoEtapa1?.name ||
         etapa1Nombre ||
-        "Cliente";
-      const vehDesc =
-        ordenActiva?.vehicle ||
-        `${etapa2Marca} ${etapa2Modelo}`.trim() ||
-        "tu vehículo";
-      const placa = ordenActiva?.plate || etapa2Placa || "S/P";
+        "Estimado(a) Cliente";
       const ordNum = ordenActiva?.orderNumber || "OT-EN-CURSO";
       const pin = customPin || etapa6TrackingPin || ordenActiva?.trackingPin || "4821";
-      const totalOrden = Number(ordenActiva?.totalCost || 0).toFixed(2);
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const urlSeguimiento = `${origin}/taller/seguimiento?orden=${encodeURIComponent(
         ordNum
       )}&pin=${encodeURIComponent(pin)}`;
+      const nombreTaller = ordenActiva?.workshopName || "Taller Mecánico Especializado";
 
-      const lower = estadoNombre.toLowerCase();
-      let cuerpoContexto = `Tu orden ha avanzado al estado *${estadoNombre}*.`;
-
-      if (lower.includes("diagn") || lower.includes("recibido")) {
-        cuerpoContexto = `Hemos recibido tu vehículo en nuestro taller y el equipo técnico ha iniciado el diagnóstico.`;
-      } else if (lower.includes("aprobaci") || lower.includes("presupuesto")) {
-        cuerpoContexto = `El diagnóstico está listo y el presupuesto se encuentra pendiente de tu confirmación.`;
-      } else if (lower.includes("repuesto")) {
-        cuerpoContexto = `Estamos gestionando los repuestos e insumos requeridos para continuar con el trabajo.`;
-      } else if (lower.includes("reparaci") || lower.includes("proceso")) {
-        cuerpoContexto = `Nuestros especialistas se encuentran trabajando en la reparación y mantenimiento de tu vehículo.`;
-      } else if (lower.includes("calidad") || lower.includes("lavado")) {
-        cuerpoContexto = `Los trabajos mecánicos finalizaron y tu vehículo está en control de calidad y alistamiento.`;
-      } else if (lower.includes("listo") || lower.includes("entregar")) {
-        cuerpoContexto = `¡Tu vehículo ya está *Listo para Entregar*! El valor total de la orden es *$${totalOrden}*. Puedes pasar a retirarlo.`;
-      } else if (lower.includes("entregado")) {
-        cuerpoContexto = `Gracias por confiar en nuestro centro automotriz. Tu orden ha quedado registrada como *Entregada*.`;
-      }
-
-      return `Hola *${clienteNom}*, te escribimos del Taller Automotriz sobre tu vehículo *${vehDesc}* (${placa}).\n\n📌 *Estado de la Orden #${ordNum}:* ${estadoNombre}\n${cuerpoContexto}\n\n🔎 *Sigue tu orden en línea con fotos y avance en vivo:*\n${urlSeguimiento}\n• *N° de Orden:* ${ordNum}\n• *PIN de seguridad:* ${pin}`;
+      return `Hola ${clienteNom}, le informamos que su orden *#${ordNum}* cambió a estado: *${estadoNombre}*.\nSiga su orden en línea: ${urlSeguimiento}\nSi tiene consultas, contáctenos.\n${nombreTaller}`;
     },
     [
       ordenActiva,
       clienteEncontrado,
       clienteSeleccionadoEtapa1,
       etapa1Nombre,
-      etapa2Marca,
-      etapa2Modelo,
-      etapa2Placa,
       etapa6TrackingPin,
     ]
   );
@@ -3608,11 +3721,47 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
       Listo: "Pendiente",
     };
 
-    const nuevosItems = ordenActiva.items.map((it) =>
-      it.id === itemId ? { ...it, status: ciclo[it.status] || "En Proceso" } : it
-    );
+    const nuevosItems = ordenActiva.items.map((it) => {
+      if (it.id === itemId) {
+        const nextStatus = ciclo[it.status] || "En Proceso";
+        return {
+          ...it,
+          status: nextStatus,
+          completed: nextStatus === "Listo",
+        };
+      }
+      return it;
+    });
 
+    setOrdenActiva({ ...ordenActiva, items: nuevosItems });
+    setAutosEnPista((prev) =>
+      prev.map((o) => (o.id === ordenActiva.id ? { ...o, items: nuevosItems } : o))
+    );
     await sincronizarOrdenEnNeon({ items: nuevosItems });
+    mostrarToast("Tarea sincronizada con el portal de seguimiento");
+  };
+
+  const handleToggleCompletarItem = async (itemId: string) => {
+    if (!ordenActiva) return;
+    const nuevosItems = ordenActiva.items.map((it) => {
+      if (it.id === itemId) {
+        const esListo = it.status === "Listo" || it.completed;
+        const nextStatus = esListo ? "Pendiente" : "Listo";
+        return {
+          ...it,
+          status: nextStatus as "Pendiente" | "En Proceso" | "Listo",
+          completed: !esListo,
+        };
+      }
+      return it;
+    });
+
+    setOrdenActiva({ ...ordenActiva, items: nuevosItems });
+    setAutosEnPista((prev) =>
+      prev.map((o) => (o.id === ordenActiva.id ? { ...o, items: nuevosItems } : o))
+    );
+    await sincronizarOrdenEnNeon({ items: nuevosItems });
+    mostrarToast("Checklist actualizado y sincronizado en vivo");
   };
 
   const handleCambiarCantidadItem = async (itemId: string, delta: number) => {
@@ -3710,6 +3859,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
         setModalConfirmPos(data.posRequest || data.activeOrder);
         mostrarToast(`Orden #${ord.orderNumber} (${ord.plate}) enviada a Oficina / Lista para Caja`);
+
+        // Al completar la orden, volver a disparar el flotante para registrar al siguiente cliente
+        setTimeout(() => {
+          setMostrarModalNuevaOrden(true);
+        }, 1200);
       } else {
         mostrarToast(data.error || "No se pudo enviar la orden a Oficina / POS", "err");
       }
@@ -3906,231 +4060,157 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             </div>
           </div>
 
-          {/* Selector de Login de Empleado Activo + Autos en Pista + Tablero OT */}
+          {/* Botones de Cabecera: Nueva Orden + Lista de Autos en Atención + Fecha Ingreso y Estado */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="px-3 py-1.5 rounded-2xl bg-white/[0.03] backdrop-blur-md border border-white/[0.08] flex items-center gap-2 text-xs text-zinc-200">
-              <span className="w-2 h-2 rounded-full bg-blue-400" />
-              <span className="text-zinc-400">Empleado:</span>
-              <select
-                value={empleadoLogueado.nombre}
-                onChange={(e) => handleCambiarEmpleadoLogueado(e.target.value)}
-                className="bg-transparent text-white font-semibold focus:outline-none cursor-pointer"
-                title={`ID activo: ${empleadoLogueado.id}`}
-              >
-                {Array.from(new Set([empleadoLogueado.nombre, ...mecanicos])).map((emp) => (
-                  <option key={emp} value={emp} className="bg-[#111113] text-white">
-                    {emp}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Toggle de Roles: Modo Empleado Garaje vs Oficina */}
-            <div className="flex items-center rounded-2xl bg-white/[0.03] backdrop-blur-md border border-white/[0.08] p-0.5 text-xs">
-              <button
-                type="button"
-                onClick={() => {
-                  setRolUsuario("EMPLEADO");
-                  mostrarToast("Modo Garaje: Precios y cobros ocultos para el operario");
-                }}
-                className={`px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer ${
-                  rolUsuario === "EMPLEADO"
-                    ? "bg-white/10 text-white font-semibold shadow-sm"
-                    : "text-zinc-400 hover:text-zinc-200"
-                }`}
-              >
-                🔧 Garaje
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setRolUsuario("OFICINA");
-                  mostrarToast("Modo Oficina: Totales, presupuestos y cobros visibles");
-                }}
-                className={`px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer ${
-                  rolUsuario === "OFICINA"
-                    ? "bg-white/10 text-white font-semibold shadow-sm"
-                    : "text-zinc-400 hover:text-zinc-200"
-                }`}
-              >
-                🏢 Oficina
-              </button>
-            </div>
-
-            <div className="px-3.5 py-2 rounded-2xl bg-[#111113] border border-white/5 flex items-center gap-2 text-xs font-semibold text-zinc-300">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>{autosEnPista.length} Autos en Pista</span>
-            </div>
-            <Link
-              href="/taller/ordenes"
-              className="px-3.5 py-2 rounded-2xl bg-[#111113] hover:bg-[#161618] border border-white/5 text-xs font-semibold text-zinc-300 hover:text-white transition-all"
+            {/* Botón Flotante / Acceso Rápido a Nueva Orden */}
+            <button
+              type="button"
+              onClick={() => setMostrarModalNuevaOrden(true)}
+              className="h-9 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-blue-600/25 active:scale-95"
+              title="Abrir formulario de Nueva Orden de Trabajo"
             >
-              Tablero OT
-            </Link>
+              <span className="text-sm font-bold leading-none">+</span>
+              <span>Nueva Orden</span>
+            </button>
+
+            {/* Icono de Lista: Clientes y Autos que estoy atendiendo */}
+            <button
+              type="button"
+              onClick={() => setMostrarModalAutosAtencion(true)}
+              className="h-9 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:border-white/20 active:scale-95"
+              title="Ver todos los clientes en atención / pausar o continuar trabajos"
+            >
+              <svg
+                className="w-4 h-4 text-zinc-300"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+                />
+              </svg>
+              {autosEnPista.length > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold">
+                  {autosEnPista.length}
+                </span>
+              )}
+            </button>
+
+            {/* Al lado de Nueva Orden: Fecha de Ingreso y si está en Pausa o Trabajando */}
+            {ordenActiva && (
+              <div className="flex flex-col justify-center px-3 py-1 rounded-xl bg-black/40 border border-white/10 text-xs">
+                <span className="text-[10px] text-zinc-400 leading-tight">
+                  Ingreso: <strong className="text-zinc-200 font-mono">{formatearFechaIngreso(ordenActiva.dateIn || ordenActiva.startedAt)}</strong>
+                </span>
+                <span className="text-[11px] font-semibold leading-tight mt-0.5">
+                  {ordenActiva.status === "Pausada" ? (
+                    <span className="text-amber-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                      <span>En Pausa</span>
+                    </span>
+                  ) : (
+                    <span className="text-emerald-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>Trabajando</span>
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
         {/* ===================================================================
-            BLOQUE 1 (SUPERIOR): BUSCADOR INTELIGENTE AUTOMÁTICO E INGRESO RÁPIDO
+            SELECTOR SUPERIOR DESLIZABLE: [ 🔧 TALLER ] | [ 💧 LUBRICENTRO & EXPRESS ]
             =================================================================== */}
-        <section className="bg-[#111113] rounded-2xl border border-white/5 p-4 sm:p-5 shadow-xl relative overflow-hidden">
-          <div
-            className="absolute top-0 right-0 w-64 h-64 rounded-full pointer-events-none opacity-20 blur-3xl"
-            style={{ background: "radial-gradient(circle, rgba(59,130,246,0.35) 0%, transparent 70%)" }}
-          />
-
-          <form onSubmit={handleBuscarPlacaOCedula} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 relative z-10">
-            <div className="relative flex-1">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-sm pointer-events-none">
-                {buscandoVehiculo ? "⏳" : "🔍"}
-              </span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Digita Placa (ej: ABC-123) o Cédula/RUC para buscar o ingresar automáticamente..."
-                className="w-full pl-11 pr-10 h-12 rounded-xl bg-[#0a0a0a] border border-white/10 focus:border-blue-500/60 text-white text-sm font-medium placeholder:text-zinc-500 focus:outline-none transition-all"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setVehiculoEncontrado(null);
-                    setClienteEncontrado(null);
-                    setMostrarRegistroExpress(false);
-                  }}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 text-xs cursor-pointer"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          </form>
-
-          {/* SI NO EXISTE: TARJETA LIMPIA Y DESLIZABLE DE "INGRESO RÁPIDO" */}
-          {mostrarRegistroExpress && (
-            <form
-              onSubmit={handleGuardarRegistroExpress}
-              className="mt-3 pt-3 border-t border-white/10 relative z-10 overflow-hidden transition-all duration-300 ease-out animate-fade-in"
+        <div className="flex items-center justify-start">
+          <div className="flex items-center p-1 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md shadow-xl gap-1">
+            <button
+              type="button"
+              onClick={() => setModuloTaller("taller")}
+              className={`h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${
+                moduloTaller === "taller"
+                  ? "bg-blue-600 border border-blue-400/40 text-white shadow-lg shadow-blue-600/30 scale-[1.01]"
+                  : "text-zinc-400 hover:text-white hover:bg-white/5"
+              }`}
             >
-              <div className="p-3.5 rounded-2xl bg-[#0a0a0a] border border-white/10 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                    Ingreso Rápido
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setMostrarRegistroExpress(false)}
-                    className="text-xs text-zinc-400 hover:text-white px-2 py-0.5 rounded-lg bg-white/5 cursor-pointer"
-                  >
-                    ✕
-                  </button>
-                </div>
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.07a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091.455.087.935-.012 1.39"
+                />
+              </svg>
+              <span>Taller</span>
+            </button>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5">
-                  <input
-                    type="text"
-                    value={regCedula}
-                    onChange={(e) => setRegCedula(e.target.value)}
-                    placeholder="Cédula / RUC"
-                    className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
-                  />
-                  <input
-                    type="text"
-                    required
-                    value={regNombres}
-                    onChange={(e) => setRegNombres(e.target.value)}
-                    placeholder="Nombre *"
-                    className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
-                  />
-                  <input
-                    type="text"
-                    value={regTelefono}
-                    onChange={(e) => setRegTelefono(e.target.value)}
-                    placeholder="Teléfono"
-                    className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
-                  />
-                  <input
-                    type="text"
-                    required
-                    value={regPlaca}
-                    onChange={(e) => setRegPlaca(e.target.value.toUpperCase())}
-                    placeholder="Placa *"
-                    className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white font-mono text-xs font-bold uppercase focus:outline-none focus:border-emerald-500/60"
-                  />
-                  <input
-                    type="text"
-                    required
-                    value={regMarca}
-                    onChange={(e) => {
-                      setRegMarca(e.target.value);
-                      setRegModelo("");
-                    }}
-                    placeholder="Marca / Modelo *"
-                    className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500/60"
-                  />
-                  <input
-                    type="number"
-                    value={regKilometraje}
-                    onChange={(e) => setRegKilometraje(e.target.value)}
-                    placeholder="Km"
-                    className="h-10 px-3 rounded-xl bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500/60"
-                  />
-                  <button
-                    type="submit"
-                    disabled={guardandoExpress}
-                    className="col-span-2 sm:col-span-3 lg:col-span-1 h-10 px-4 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs font-semibold transition-all cursor-pointer active:scale-95"
-                  >
-                    {guardandoExpress ? "Iniciando..." : "▶ Guardar e Iniciar"}
-                  </button>
-                </div>
-              </div>
-            </form>
-          )}
-        </section>
+            <button
+              type="button"
+              onClick={() => setModuloTaller("lubricentro")}
+              className={`h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${
+                moduloTaller === "lubricentro"
+                  ? "bg-amber-600 border border-amber-400/40 text-white shadow-lg shadow-amber-600/30 scale-[1.01]"
+                  : "text-zinc-400 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z"
+                />
+              </svg>
+              <span>Lubricentro</span>
+            </button>
+          </div>
+        </div>
 
-                                {/* ===================================================================
-            CONTENEDOR DESLIZABLE HORIZONTAL: 8 ETAPAS (CAROUSEL GLASSMORPHISM)
+        {/* ===================================================================
+            CONTENEDOR PRINCIPAL: CABECERA COMÚN (PLACA, VEHÍCULO, CLIENTE, VECES ATENDIDO Y MODO)
+            SALE EXACTAMENTE IGUAL PARA TALLER Y LUBRICENTRO
             =================================================================== */}
         <section className="bg-[#111113]/90 rounded-2xl border border-white/[0.08] p-4 sm:p-6 shadow-2xl space-y-5 overflow-hidden">
-          {/* Cabecera del Auto Seleccionado + Información Rápida */}
+          {/* Cabecera del Auto Seleccionado + Información Rápida (para Taller y Lubricentro) */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-white/[0.08] pb-4">
             {ordenActiva ? (
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="px-3 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 font-mono text-sm font-bold text-blue-300 tracking-wider">
+              <div className="flex flex-wrap items-center gap-3.5">
+                {/* Placa Destacada */}
+                <span className="px-3 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 font-mono text-sm sm:text-base font-bold text-blue-300 tracking-wider shrink-0 shadow-sm">
                   {ordenActiva.plate}
                 </span>
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm sm:text-base font-semibold text-white">
+
+                <div className="space-y-1">
+                  {/* Fila 1: Solo Vehículo */}
+                  <div>
+                    <span className="text-sm sm:text-base font-bold text-white">
                       {ordenActiva.vehicle}
                     </span>
-                    <span className="text-xs font-mono text-zinc-400">
-                      #{ordenActiva.orderNumber}
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-lg bg-[#0a0a0a] border border-white/10 font-mono text-xs font-bold text-emerald-400">
-                      ⏱ {formatElapsedTime(ordenActiva.startedAt, ordenActiva.completedAt, nowTick)}
-                    </span>
-                    {cronometroTecnicoActivo && (
-                      <span className="px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-500/30 font-mono text-xs text-amber-300 animate-pulse">
-                        ⏱ Técnico: {formatCronometro(cronometroTecnicoSegundos)}
-                      </span>
-                    )}
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400 mt-0.5">
-                    <span>
-                      Cliente: <strong className="text-zinc-200">{ordenActiva.client}</strong>
+
+                  {/* Fila 2: Solo Cliente y Número de veces que se ha atendido */}
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+                    <span className="text-zinc-200 font-semibold">
+                      <span className="text-zinc-400 font-normal">Cliente:</span> {ordenActiva.client}
                     </span>
-                    <span>
-                      ⛽ <strong className="text-zinc-200">{ordenActiva.fuelLevel || "1/2"}</strong>
-                    </span>
-                    <span>
-                      Servicios: <strong className="text-emerald-400">{ordenActiva.items.length}</strong>
-                    </span>
-                    <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-zinc-300">
-                      {ordenActiva.status}
+                    <span className="text-zinc-600">•</span>
+                    <span className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-300 font-medium text-[11px]">
+                      {vecesAtendido} {vecesAtendido === 1 ? "vez atendido" : "veces atendido"}
                     </span>
                   </div>
                 </div>
@@ -4142,41 +4222,54 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               </div>
             )}
 
-            {/* Selector de Rol Visual */}
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-zinc-500 uppercase tracking-wider font-semibold">Modo:</span>
-              <div className="flex items-center p-1 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRolUsuario("EMPLEADO");
-                    mostrarToast("Modo Empleado: Precios ocultos");
-                  }}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                    rolUsuario === "EMPLEADO"
-                      ? "bg-white/10 text-white font-semibold shadow-sm"
-                      : "text-zinc-400 hover:text-zinc-200"
+            {/* Interruptor de Modo: al marcar sale qué es */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={rolUsuario === "OFICINA"}
+              onClick={() => {
+                const nuevo = rolUsuario === "EMPLEADO" ? "OFICINA" : "EMPLEADO";
+                setRolUsuario(nuevo);
+                mostrarToast(nuevo === "OFICINA" ? "Modo Oficina activado" : "Modo Garaje activado");
+              }}
+              className="flex items-center gap-2 bg-black/40 hover:bg-black/60 border border-white/10 px-3 py-1.5 rounded-2xl cursor-pointer transition-all select-none"
+              title="Clic para cambiar de modo"
+            >
+              <span
+                className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border border-white/15 transition-colors duration-200 ease-in-out ${
+                  rolUsuario === "OFICINA" ? "bg-blue-600" : "bg-emerald-600"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
+                    rolUsuario === "OFICINA" ? "translate-x-4" : "translate-x-1"
                   }`}
-                >
-                  🔧 Garaje
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRolUsuario("OFICINA");
-                    mostrarToast("Modo Oficina: Precios y cálculos visibles");
-                  }}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                    rolUsuario === "OFICINA"
-                      ? "bg-white/10 text-white font-semibold shadow-sm"
-                      : "text-zinc-400 hover:text-zinc-200"
-                  }`}
-                >
-                  🏢 Oficina
-                </button>
-              </div>
-            </div>
+                />
+              </span>
+
+              <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+                <span>{rolUsuario === "OFICINA" ? "🏢" : "🔧"}</span>
+                <span>{rolUsuario === "OFICINA" ? "Oficina" : "Garaje"}</span>
+              </span>
+            </button>
           </div>
+
+          {/* VISTAS SEGÚN EL SELECTOR: LUBRICENTRO O TALLER */}
+          {moduloTaller === "lubricentro" ? (
+            <LubricentroExpress
+              empleadoLogueado={empleadoLogueado}
+              mecanicos={mecanicos}
+              clientesCatalogo={clientesCatalogo}
+              mostrarToast={mostrarToast}
+              ordenActiva={ordenActiva}
+              onOrdenCreada={(orden) => {
+                setAutosEnPista((prev) => [orden, ...prev.filter((o) => o.id !== orden.id)]);
+                setOrdenActiva(orden);
+              }}
+              onCambiarATaller={() => setModuloTaller("taller")}
+            />
+          ) : (
+            <>
 
           {/* ===================================================================
               STEPPER DE 8 ICONOS TRANSPARENTES (GLASSMORPHISM)
@@ -4574,121 +4667,22 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               </div>
 
               {/* ===============================================================
-                  SLIDE 2: ETAPA 3 - INSPECCIÓN (5 VISTAS + R2 + PDF)
+                  SLIDE 2: ETAPA 3 - INSPECCIÓN (5 VISTAS + PINES NUMERADOS + R2)
                   =============================================================== */}
               <div className="w-[12.5%] shrink-0 pr-2 sm:pr-4 space-y-4">
-                <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-purple-400" />
-                      Inspección Visual del Vehículo (5 Vistas)
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleGenerarPdfInspeccion}
-                      className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-zinc-300 hover:text-white flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                      </svg>
-                      <span>Descargar Reporte PDF</span>
-                    </button>
-                  </div>
-
-                  {/* Selector de las 5 vistas */}
-                  <div className="grid grid-cols-5 gap-1.5">
-                    {[
-                      { id: "frontal" as const, label: "Frontal" },
-                      { id: "trasera" as const, label: "Trasera" },
-                      { id: "lateral_izq" as const, label: "Lat. Izq" },
-                      { id: "lateral_der" as const, label: "Lat. Der" },
-                      { id: "superior" as const, label: "Superior" },
-                    ].map((vista) => {
-                      const sel = etapa3VistaActiva === vista.id;
-                      return (
-                        <button
-                          key={vista.id}
-                          type="button"
-                          onClick={() => setEtapa3VistaActiva(vista.id)}
-                          className={`h-9 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                            sel
-                              ? "bg-purple-500/20 border border-purple-500/50 text-purple-300"
-                              : "bg-white/[0.02] border border-white/5 text-zinc-400 hover:text-zinc-200"
-                          }`}
-                        >
-                          {vista.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Diagrama Táctil Interactivo */}
-                  <div
-                    onClick={handleTocarEsquemaVehiculo}
-                    className="h-44 sm:h-52 rounded-xl bg-black/40 border border-white/10 relative flex items-center justify-center cursor-crosshair overflow-hidden group"
-                  >
-                    <span className="text-zinc-600 text-xs font-mono pointer-events-none">
-                      [Toca cualquier parte del esquema {etapa3VistaActiva} para marcar un hallazgo]
-                    </span>
-                    {/* Render marcas de hallazgos */}
-                    {etapa3Hallazgos
-                      .filter((h) => h.vista === etapa3VistaActiva)
-                      .map((h) => (
-                        <div
-                          key={h.id}
-                          style={{ left: `${h.x}%`, top: `${h.y}%` }}
-                          className="absolute -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-lg bg-amber-500"
-                        >
-                          !
-                        </div>
-                      ))}
-                  </div>
-
-                  {/* Lista de Hallazgos */}
-                  <div className="space-y-2">
-                    <span className="text-xs text-zinc-400 block font-medium">
-                      Hallazgos registrados ({etapa3Hallazgos.length}):
-                    </span>
-                    {etapa3Hallazgos.length === 0 ? (
-                      <div className="text-xs text-zinc-500 italic">No hay detalles o daños registrados.</div>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {etapa3Hallazgos.map((h) => (
-                          <div
-                            key={h.id}
-                            className="px-2.5 py-1 rounded-lg bg-black/40 border border-white/10 flex items-center gap-2 text-xs text-zinc-200"
-                          >
-                            <span>{h.descripcion || h.tipo || "Detalle"} ({h.vista})</span>
-                            <button
-                              type="button"
-                              onClick={() => handleEliminarHallazgoEtapa3(h.id)}
-                              className="text-zinc-500 hover:text-rose-400 cursor-pointer"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setEtapaActiva(1)}
-                    className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
-                  >
-                    ← Anterior (Vehículo)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEtapaActiva(3)}
-                    className="px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 text-xs font-semibold cursor-pointer"
-                  >
-                    Continuar a Catálogo (Paso 4) →
-                  </button>
-                </div>
+                <InspeccionVehiculo
+                  ordenActiva={ordenActiva}
+                  onUpdateOrden={(updated) => {
+                    setOrdenActiva(updated);
+                    setAutosEnPista((prev) =>
+                      prev.map((o) => (o.id === updated.id ? updated : o))
+                    );
+                  }}
+                  onGenerarPdf={handleGenerarPdfInspeccion}
+                  onVolver={() => setEtapaActiva(1)}
+                  onContinuar={() => setEtapaActiva(3)}
+                  mostrarToast={mostrarToast}
+                />
               </div>
 
               {/* ===============================================================
@@ -4914,6 +4908,82 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   </div>
                 </div>
 
+                {/* Checklist de Trabajos Sincronizado en Vivo con Seguimiento */}
+                <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">
+                        ✓
+                      </div>
+                      <span className="text-xs font-semibold text-white">
+                        Checklist de Trabajos ({ordenActiva?.items.filter((i) => i.status === "Listo" || i.completed).length || 0}/{ordenActiva?.items.length || 0})
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-zinc-400">
+                      Toca para marcar completado (sincroniza en vivo)
+                    </span>
+                  </div>
+
+                  {!ordenActiva || ordenActiva.items.length === 0 ? (
+                    <div className="py-4 text-center text-xs text-zinc-500 italic">
+                      No hay tareas registradas en esta orden.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {ordenActiva.items.map((it) => {
+                        const completado = it.status === "Listo" || it.completed;
+                        return (
+                          <div
+                            key={it.id}
+                            onClick={() => handleToggleCompletarItem(it.id)}
+                            className={`p-3 rounded-xl border flex items-center justify-between gap-3 text-xs transition-all cursor-pointer active:scale-98 ${
+                              completado
+                                ? "bg-emerald-500/[0.04] border-emerald-500/20 text-zinc-300"
+                                : "bg-white/[0.02] hover:bg-white/[0.05] border-white/5 text-white"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div
+                                className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all ${
+                                  completado
+                                    ? "bg-emerald-500 text-black font-bold text-xs"
+                                    : "border border-white/20 bg-white/5"
+                                }`}
+                              >
+                                {completado && "✓"}
+                              </div>
+                              <div className="min-w-0">
+                                <span
+                                  className={`block truncate font-medium ${
+                                    completado ? "line-through text-zinc-400" : "text-white"
+                                  }`}
+                                >
+                                  {it.name}
+                                </span>
+                                <span className="text-[10px] text-zinc-500 block truncate">
+                                  Asignado: {it.empleado_nombre || "Taller"}
+                                </span>
+                              </div>
+                            </div>
+
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono shrink-0 ${
+                                completado
+                                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold"
+                                  : it.status === "En Proceso"
+                                  ? "bg-sky-500/15 text-sky-300 border border-sky-500/30"
+                                  : "bg-white/5 text-zinc-400 border border-white/10"
+                              }`}
+                            >
+                              {completado ? "Listo" : it.status || "Pendiente"}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
                 {/* Chat Interno y Horas de la Orden */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {/* Chat Interno */}
@@ -5015,32 +5085,60 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     </span>
                   </div>
 
-                  {/* Chips de Estados con Automatización Instantánea */}
-                  <div className="space-y-1.5">
+                  {/* Chips de los 5 Estados con Automatización Instantánea */}
+                  <div className="space-y-2">
                     <span className="text-[11px] text-zinc-400 block font-medium">
-                      Toca un estado para actualizar Neon DB y autogenerar el texto para el cliente:
+                      Selector rápido de los 5 estados (actualiza Neon y prepara el aviso de WhatsApp):
                     </span>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-                      {etapa6EstadosLista.map((st) => {
-                        const sel = etapa6EstadoSeleccionado.toLowerCase() === st.name.toLowerCase();
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                      {etapa6EstadosLista.slice(0, 5).map((st, idx) => {
+                        const sel =
+                          etapa6EstadoSeleccionado.toLowerCase() === st.name.toLowerCase() ||
+                          etapa6EstadoSeleccionado.toLowerCase().includes(st.name.toLowerCase().replace(/^\d+\s*/, ""));
                         const estilo = getEstiloColorEstado(st.color);
                         return (
                           <button
-                            key={st.id}
+                            key={st.id || idx}
                             type="button"
                             onClick={() => handleSeleccionarEstadoEtapa6(st)}
-                            className={`p-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer flex flex-col items-center gap-1 active:scale-95 ${
+                            className={`p-3 rounded-2xl border text-xs font-semibold transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 active:scale-95 ${
                               sel
-                                ? `${estilo.bg} ${estilo.border} ${estilo.text} ring-1 ring-white/20 shadow-lg`
-                                : "bg-white/[0.02] hover:bg-white/[0.06] border-white/5 text-zinc-400 hover:text-zinc-200"
+                                ? `${estilo.bg} ${estilo.border} ${estilo.text} ring-2 ring-white/20 shadow-lg scale-[1.02]`
+                                : "bg-white/[0.03] hover:bg-white/[0.07] border-white/10 text-zinc-400 hover:text-white"
                             }`}
                           >
-                            <span className={`w-2 h-2 rounded-full ${estilo.dot}`} />
-                            <span className="truncate max-w-full">{st.name}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className={`w-2.5 h-2.5 rounded-full ${estilo.dot} ${sel ? "animate-pulse" : ""}`} />
+                              <span className="font-bold tracking-tight">{st.name}</span>
+                            </div>
+                            <span className="text-[10px] text-zinc-500 font-mono">{st.progress}%</span>
                           </button>
                         );
                       })}
                     </div>
+                  </div>
+
+                  {/* Botón Destacado de 1 Clic para WhatsApp */}
+                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="text-xs text-left w-full sm:w-auto">
+                      <span className="font-bold text-emerald-300 block flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                        Aviso listo para enviar al cliente:
+                      </span>
+                      <span className="text-[11px] text-zinc-400">
+                        Estado: <strong className="text-zinc-200">{etapa6EstadoSeleccionado}</strong> • Destino: <strong className="text-zinc-200">{etapa6ClienteTelefono || ordenActiva?.clientPhone || "Teléfono del cliente"}</strong>
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleEnviarWhatsAppAvisoEtapa6}
+                      className="w-full sm:w-auto h-10 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 shrink-0"
+                    >
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                      </svg>
+                      <span>Enviar aviso por WhatsApp</span>
+                    </button>
                   </div>
 
                   {/* Tarjeta de Credenciales de Seguimiento (PIN + URL) */}
@@ -5571,160 +5669,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               </div>
             </div>
           </div>
-        </section>
-
-        {/* ===================================================================
-            FILA INFERIOR: "AUTOS EN PISTA" (MODO EMPLEADO: SIN REFERENCIA A PRECIOS)
-            =================================================================== */}
-        <section className="space-y-3 pt-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm sm:text-base font-semibold text-white flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span>Autos en Pista (Toca un vehículo para gestionar o sumar servicios)</span>
-            </h2>
-            {sincronizandoOrden && (
-              <span className="text-xs text-blue-400 animate-pulse">
-                Sincronizando con Neon DB...
-              </span>
-            )}
-          </div>
-
-          {cargandoInicial ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {[1, 2, 3, 4].map((n) => (
-                <div
-                  key={n}
-                  className="h-24 rounded-2xl bg-[#111113] border border-white/5 animate-pulse p-4"
-                />
-              ))}
-            </div>
-          ) : autosEnPista.length === 0 ? (
-            <div className="bg-[#111113] rounded-2xl border border-white/5 p-6 text-center text-xs text-zinc-400">
-              No hay vehículos en pista en este momento. Busca una placa arriba para iniciar.
-            </div>
-          ) : (
-            <div className="flex gap-3.5 overflow-x-auto pb-2">
-              {autosEnPista.map((auto) => {
-                const activo = ordenActiva?.id === auto.id;
-                const enCaja = auto.status === "EN_CAJA" || auto.status === "LISTO_PARA_COBRO";
-                return (
-                  <div
-                    key={auto.id}
-                    onClick={() => {
-                      setOrdenActiva(auto);
-                      setKmActualInput(auto.mileage ? String(auto.mileage) : "");
-                      setFotosRecepcion(auto.receptionPhotos || []);
-                    }}
-                    className={`min-w-[280px] sm:min-w-[310px] text-left p-4 rounded-2xl transition-all cursor-pointer shrink-0 border flex flex-col justify-between ${
-                      activo
-                        ? "bg-white/[0.08] border-white/25 ring-1 ring-white/15"
-                        : "bg-white/[0.03] hover:bg-white/[0.06] border-white/[0.08]"
-                    }`}
-                  >
-                    <div>
-                      {/* Placa y Cronómetro */}
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="px-2.5 py-0.5 rounded-lg bg-blue-500/15 border border-blue-500/30 font-mono text-xs font-bold text-blue-300">
-                            {auto.plate}
-                          </span>
-                          <span className="text-[10px] font-mono text-zinc-400">
-                            #{auto.orderNumber}
-                          </span>
-                        </div>
-                        <span
-                          className={`px-2 py-0.5 rounded-lg bg-[#0a0a0a] border font-mono text-[11px] font-bold ${
-                            enCaja
-                              ? "border-emerald-500/30 text-emerald-300"
-                              : "border-white/10 text-emerald-400"
-                          }`}
-                        >
-                          ⏱ {formatElapsedTime(auto.startedAt, auto.completedAt, nowTick)}
-                        </span>
-                      </div>
-
-                      {/* Vehículo y Cliente */}
-                      <p className="text-sm font-semibold text-white truncate mt-2">
-                        {auto.vehicle}
-                      </p>
-                      <p className="text-xs text-zinc-400 truncate">
-                        Cliente: <span className="text-zinc-200">{auto.client}</span>
-                      </p>
-
-                      {/* Combustible y Servicios Asignados */}
-                      <div className="mt-2.5 pt-2.5 border-t border-white/5 space-y-1.5">
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="text-zinc-300">
-                            ⛽ Combustible: <strong>{auto.fuelLevel || "1/2"}</strong>
-                          </span>
-                          <span className="text-emerald-400 font-semibold">
-                            {auto.items.length} {auto.items.length === 1 ? "servicio" : "servicios"}
-                          </span>
-                        </div>
-
-                        {auto.items.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {auto.items.slice(0, 3).map((it) => (
-                              <span
-                                key={it.id}
-                                className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-zinc-300 truncate max-w-[130px]"
-                              >
-                                {it.name}
-                              </span>
-                            ))}
-                            {auto.items.length > 3 && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/5 text-zinc-400">
-                                +{auto.items.length - 3}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Botón minimalista: Enviar a Oficina / Listo para Caja */}
-                    <div className="mt-3 pt-2.5 border-t border-white/5">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOrdenActiva(auto);
-                          handleEnviarAPosCaja(auto);
-                        }}
-                        disabled={enviandoAPos || auto.items.length === 0}
-                        className={`w-full h-9 px-3 rounded-xl border text-[11px] font-medium transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] disabled:opacity-40 backdrop-blur-md ${
-                          enCaja
-                            ? "bg-emerald-500/15 border-emerald-500/35 text-emerald-200"
-                            : "bg-white/[0.04] hover:bg-white/[0.09] border-white/[0.1] text-zinc-200 hover:text-white"
-                        }`}
-                      >
-                        <span className="p-1 rounded-md bg-white/5 text-zinc-200">
-                          <svg
-                            className="w-3.5 h-3.5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={1.5}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M22 2 11 13" />
-                            <path d="m22 2-7 20-4-9-9-4Z" />
-                          </svg>
-                        </span>
-                        <span>
-                          {enCaja
-                            ? "En Oficina / Listo para Caja"
-                            : "Enviar a Oficina / Listo para Caja"}
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            </>
           )}
         </section>
+
       </main>
 
       {/* =====================================================================
@@ -6231,7 +6179,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   )}
 
                   <div className="pt-4 flex items-end justify-between border-t border-zinc-200">
-                    <div className="text-center w-40">
+                    <div className="text-center w-36">
                       <div className="h-10 border-b border-zinc-400 mb-1 flex items-center justify-center">
                         {etapa7FirmaDataUrl ? (
                           <img src={etapa7FirmaDataUrl} alt="Firma" className="max-h-10" />
@@ -6241,8 +6189,30 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       </div>
                       <p className="text-[10px] text-zinc-600 font-semibold">Firma del Cliente</p>
                     </div>
+
+                    <div className="flex items-center gap-2.5 bg-zinc-50 border border-zinc-200 p-2 rounded-lg">
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(
+                          typeof window !== "undefined"
+                            ? `${window.location.origin}/taller/seguimiento?orden=${encodeURIComponent(
+                                ordenActiva.orderNumber
+                              )}&pin=${encodeURIComponent(etapa6TrackingPin || ordenActiva.trackingPin || "4821")}`
+                            : ""
+                        )}`}
+                        alt="QR Seguimiento"
+                        className="w-14 h-14 bg-white p-0.5 border rounded"
+                      />
+                      <div className="text-[9px] text-zinc-600 space-y-0.5">
+                        <strong className="block text-zinc-900 font-bold">Seguimiento en Vivo</strong>
+                        <span>Escanea para ver avance en línea</span>
+                        <span className="block font-mono text-[9px] text-emerald-700 font-bold">
+                          PIN: {etapa6TrackingPin || ordenActiva.trackingPin || "4821"}
+                        </span>
+                      </div>
+                    </div>
+
                     <div className="text-right text-[10px] text-zinc-400">
-                      Documento generado por Sistema Taller AutoG
+                      Documento oficial del Taller
                     </div>
                   </div>
                 </div>
@@ -6273,31 +6243,54 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     <p className="text-emerald-700">ABONADO: ${(ordenActiva.totalPaid || 0).toFixed(2)}</p>
                     <p>SALDO: ${(ordenActiva.balanceDue !== undefined ? ordenActiva.balanceDue : Math.max(0, (Number(ordenActiva.totalCost) || Number(calculosPresupuestoEtapa4.total) || 0) - (ordenActiva.totalPaid || 0))).toFixed(2)}</p>
                   </div>
-                  <div className="text-center pt-2">
-                    <p className="text-[10px] text-zinc-600">¡Gracias por su preferencia!</p>
-                    <p className="text-[9px] text-zinc-500 font-mono">PIN: {etapa6TrackingPin}</p>
+                  <div className="text-center pt-2 space-y-1">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(
+                        typeof window !== "undefined"
+                          ? `${window.location.origin}/taller/seguimiento?orden=${encodeURIComponent(
+                              ordenActiva.orderNumber
+                            )}&pin=${encodeURIComponent(etapa6TrackingPin || ordenActiva.trackingPin || "4821")}`
+                          : ""
+                      )}`}
+                      alt="QR Ticket"
+                      className="w-20 h-20 mx-auto bg-white p-0.5 border rounded"
+                    />
+                    <p className="text-[10px] text-zinc-700 font-bold">Escanea para seguir tu orden en vivo</p>
+                    <p className="text-[10px] text-zinc-900 font-mono font-bold">PIN: {etapa6TrackingPin || ordenActiva.trackingPin || "4821"}</p>
+                    <p className="text-[9px] text-zinc-500">¡Gracias por su preferencia!</p>
                   </div>
                 </div>
               )}
 
               {modalImpresionDoc === "ETIQUETA_QR" && (
                 <div className="p-4 border-2 border-dashed border-zinc-400 rounded-xl max-w-sm mx-auto text-center space-y-3">
-                  <div className="bg-zinc-900 text-white py-1 px-3 rounded font-mono text-xl font-bold tracking-widest inline-block">
+                  <div className="bg-zinc-900 text-white py-1.5 px-4 rounded-xl font-mono text-2xl font-bold tracking-widest inline-block shadow-sm">
                     {ordenActiva.plate}
                   </div>
                   <div className="space-y-0.5 text-xs text-zinc-700">
-                    <p className="font-bold">ORDEN #{ordenActiva.orderNumber}</p>
+                    <p className="font-bold text-sm">ORDEN #{ordenActiva.orderNumber}</p>
                     <p>{ordenActiva.vehicle}</p>
                     <p className="text-[10px] text-zinc-500">Fecha: {new Date().toLocaleDateString("es-EC")}</p>
                   </div>
-                  <div className="p-3 bg-zinc-100 rounded-lg inline-block border border-zinc-300">
-                    <svg className="w-24 h-24 mx-auto text-zinc-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 14.625h3v3h-3zM18 18h3v3h-3zM18 13.5h3v1.5H18zM13.5 19.5h1.5v3h-1.5z" />
-                    </svg>
-                    <span className="text-[9px] text-zinc-500 font-mono block mt-1">PIN: {etapa6TrackingPin}</span>
+                  <div className="p-3 bg-white rounded-xl inline-block border border-zinc-300 shadow-md">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+                        typeof window !== "undefined"
+                          ? `${window.location.origin}/taller/seguimiento?orden=${encodeURIComponent(
+                              ordenActiva.orderNumber
+                            )}&pin=${encodeURIComponent(etapa6TrackingPin || ordenActiva.trackingPin || "4821")}`
+                          : ""
+                      )}`}
+                      alt="Código QR de la Orden"
+                      className="w-36 h-36 mx-auto object-contain"
+                    />
+                    <span className="text-xs text-zinc-900 font-mono font-bold block mt-1.5">
+                      PIN: {etapa6TrackingPin || ordenActiva.trackingPin || "4821"}
+                    </span>
                   </div>
-                  <p className="text-[10px] text-zinc-500">Escanea para ver avance en vivo</p>
+                  <p className="text-[11px] font-semibold text-zinc-700">
+                    Escanea con la cámara de tu celular para ver fotos y avance en vivo
+                  </p>
                 </div>
               )}
             </div>
@@ -6325,6 +6318,191 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
           </div>
         </div>
       )}
+
+      {/* Modal / Drawer: Clientes y Autos en Atención (Pausar, Cambiar, Continuar) */}
+      {mostrarModalAutosAtencion && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+          <div className="w-full max-w-2xl max-h-[88vh] bg-[#141417] border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-scale-in">
+            {/* Header */}
+            <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-white">
+                    Clientes en Atención ({autosEnPista.length})
+                  </h3>
+                  <p className="text-[11px] text-zinc-400">
+                    Selecciona para ver en pantalla o pausa el trabajo para seguir con otro
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setMostrarModalAutosAtencion(false)}
+                className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Lista de Autos */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
+              {autosEnPista.length === 0 ? (
+                <div className="py-12 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-white/5 mx-auto flex items-center justify-center text-zinc-500 text-xl">
+                    🚗
+                  </div>
+                  <p className="text-sm text-zinc-400">No hay vehículos en pista en este momento.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMostrarModalAutosAtencion(false);
+                      setMostrarModalNuevaOrden(true);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer"
+                  >
+                    + Registrar Nueva Orden
+                  </button>
+                </div>
+              ) : (
+                autosEnPista.map((auto) => {
+                  const esActivo = ordenActiva?.id === auto.id;
+                  const estaPausado = auto.status === "Pausada";
+                  return (
+                    <div
+                      key={auto.id}
+                      onClick={() => handleSeleccionarAutoYVolver(auto)}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 group ${
+                        esActivo
+                          ? "bg-blue-600/10 border-blue-500/40 ring-1 ring-blue-500/30"
+                          : estaPausado
+                          ? "bg-amber-500/[0.04] border-amber-500/30 hover:bg-amber-500/[0.08]"
+                          : "bg-white/[0.03] border-white/10 hover:bg-white/[0.07]"
+                      }`}
+                    >
+                      <div className="space-y-1.5 min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="px-2.5 py-0.5 rounded-lg bg-blue-500/15 border border-blue-500/30 font-mono text-xs font-bold text-blue-300">
+                            {auto.plate}
+                          </span>
+                          <span className="text-[11px] font-mono text-zinc-400">
+                            #{auto.orderNumber}
+                          </span>
+
+                          {esActivo && (
+                            <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold">
+                              ✓ En pantalla
+                            </span>
+                          )}
+
+                          {estaPausado ? (
+                            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold flex items-center gap-1">
+                              <span>⏸</span>
+                              <span>Pausado</span>
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
+                              <span>🟢</span>
+                              <span>En atención</span>
+                            </span>
+                          )}
+
+                          <span className="px-2 py-0.5 rounded-lg bg-black/60 border border-white/10 font-mono text-[11px] text-emerald-400 font-bold ml-auto sm:ml-0">
+                            ⏱ {formatElapsedTime(auto.startedAt, auto.completedAt, nowTick)}
+                          </span>
+                        </div>
+
+                        <p className="text-sm font-semibold text-white truncate">
+                          {auto.vehicle}
+                        </p>
+                        <p className="text-xs text-zinc-400 truncate">
+                          Cliente: <span className="text-zinc-200 font-medium">{auto.client}</span>
+                          {auto.items?.length > 0 && (
+                            <span className="ml-2 text-zinc-500">
+                              • {auto.items.length} {auto.items.length === 1 ? "servicio" : "servicios"}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5 w-full sm:w-auto justify-end">
+                        {estaPausado ? (
+                          <button
+                            type="button"
+                            onClick={(e) => handleReanudarOrden(auto, e)}
+                            className="h-8 px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                            title="Reanudar trabajo en este auto"
+                          >
+                            <span>▶</span>
+                            <span>Reanudar</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => handlePausarOrden(auto, e)}
+                            className="h-8 px-3 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                            title="Pausar trabajo para seguir con otro"
+                          >
+                            <span>⏸</span>
+                            <span>Pausar</span>
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => handleSeleccionarAutoYVolver(auto)}
+                          className={`h-8 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                            esActivo
+                              ? "bg-white/10 hover:bg-white/15 text-white"
+                              : "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30"
+                          }`}
+                        >
+                          <span>{esActivo ? "Volver" : "Trabajar"}</span>
+                          <span>→</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-white/10 bg-black/40 flex items-center justify-between">
+              <span className="text-xs text-zinc-500">
+                Total en pista: <strong>{autosEnPista.length}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setMostrarModalAutosAtencion(false);
+                  setMostrarModalNuevaOrden(true);
+                }}
+                className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-600/25"
+              >
+                <span>+</span>
+                <span>Nueva Orden</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Flotante de Inicio: Nueva Orden de Trabajo (Cliente + Vehículo + Técnico) */}
+      <ModalNuevaOrdenTrabajo
+        isOpen={mostrarModalNuevaOrden}
+        onClose={() => setMostrarModalNuevaOrden(false)}
+        empleadoLogueado={empleadoLogueado}
+        mecanicos={mecanicos}
+        clientesCatalogo={clientesCatalogo}
+        onOrdenCreada={handleOrdenCreadaDesdeModal}
+        mostrarToast={mostrarToast}
+      />
 
       <TallerMobileNav />
     </div>

@@ -3,61 +3,6 @@ import { prisma, withRetry } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-const INITIAL_CREDITS = [
-  {
-    id: "cred-1",
-    customerName: "Flota Taxis El Sol S.A.",
-    identification: "1792345678001",
-    phone: "0991234567",
-    creditLimit: 1500,
-    currentBalance: 650.0,
-    dueDate: "2026-11-15",
-    status: "AL_DIA",
-    lastPaymentDate: "2026-10-10",
-    lastPaymentAmount: 300,
-    notes: "Cuenta corporativa flota de taxis",
-  },
-  {
-    id: "cred-2",
-    customerName: "Carlos Méndez (Taller Aliado)",
-    identification: "1718293041",
-    phone: "0987654321",
-    creditLimit: 800,
-    currentBalance: 780.0,
-    dueDate: "2026-10-18",
-    status: "POR_VENCER",
-    lastPaymentDate: "2026-09-25",
-    lastPaymentAmount: 150,
-    notes: "Descuento aliado en repuestos",
-  },
-  {
-    id: "cred-3",
-    customerName: "Transportes Andinos Cía. Ltda.",
-    identification: "1790011223001",
-    phone: "0998877665",
-    creditLimit: 3000,
-    currentBalance: 1200.0,
-    dueDate: "2026-09-30",
-    status: "VENCIDO",
-    lastPaymentDate: "2026-08-20",
-    lastPaymentAmount: 500,
-    notes: "Contactar departamento contable",
-  },
-  {
-    id: "cred-4",
-    customerName: "María Belén Andrade",
-    identification: "1723456789",
-    phone: "0981122334",
-    creditLimit: 400,
-    currentBalance: 95.0,
-    dueDate: "2026-11-05",
-    status: "AL_DIA",
-    lastPaymentDate: "2026-10-01",
-    lastPaymentAmount: 100,
-    notes: "Cliente frecuente mostrador",
-  },
-];
-
 let isTableEnsured = false;
 
 async function ensureCreditsTable() {
@@ -153,10 +98,46 @@ export async function POST(req: Request) {
       );
     }
 
-    const id = `cred-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-
     const created = await withRetry(async () => {
       await ensureCreditsTable();
+
+      // Verificar si ya existe una cuenta de crédito con esa identificación
+      const existingRows: any[] = await prisma.$queryRawUnsafe(
+        `SELECT * FROM "PosCreditAccount" WHERE "identification" = $1 LIMIT 1`,
+        String(identification).trim()
+      );
+
+      if (existingRows.length > 0) {
+        const curr = existingRows[0];
+        const prevBal = Number(curr.currentBalance || 0);
+        const addBal = Number(currentBalance || 0);
+        const nextBalance = prevBal + addBal;
+        const nextLimit = Math.max(Number(curr.creditLimit || 0), nextBalance + 200, Number(creditLimit || 500));
+        const nextNotes = notes
+          ? (curr.notes ? curr.notes + " | " + notes : notes)
+          : curr.notes;
+        const nextStatus = nextBalance > 0 ? "AL_DIA" : curr.status;
+
+        await prisma.$executeRawUnsafe(
+          `UPDATE "PosCreditAccount"
+           SET "currentBalance" = $1, "creditLimit" = $2, "dueDate" = $3, "status" = $4, "notes" = $5, "updatedAt" = CURRENT_TIMESTAMP
+           WHERE "id" = $6`,
+          nextBalance,
+          nextLimit,
+          String(dueDate),
+          nextStatus,
+          nextNotes,
+          curr.id
+        );
+
+        const updatedRows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM "PosCreditAccount" WHERE "id" = $1 LIMIT 1`,
+          curr.id
+        );
+        return mapCreditRow(updatedRows[0]);
+      }
+
+      const id = `cred-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       await prisma.$executeRawUnsafe(
         `INSERT INTO "PosCreditAccount" ("id", "customerName", "identification", "phone", "creditLimit", "currentBalance", "dueDate", "status", "notes", "createdAt", "updatedAt")
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
@@ -164,7 +145,7 @@ export async function POST(req: Request) {
         String(customerName).trim(),
         String(identification).trim(),
         String(phone || "N/A").trim(),
-        Number(creditLimit) || 500,
+        Math.max(Number(creditLimit) || 500, (Number(currentBalance) || 0) + 200),
         Number(currentBalance) || 0,
         String(dueDate),
         String(status || "AL_DIA"),

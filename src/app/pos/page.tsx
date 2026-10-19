@@ -28,7 +28,7 @@ const modules = [
     ),
   },
   {
-    title: "Facturas",
+    title: "Historial",
     href: "/pos/facturas",
     color: "bg-indigo-500",
     gradient: "from-indigo-500 to-purple-600",
@@ -310,6 +310,9 @@ export default function PosPanel() {
             <button
               type="button"
               onClick={() => {
+                if (typeof window !== "undefined") {
+                  sessionStorage.removeItem("pos_caja_omitida");
+                }
                 setFondoApertura("");
                 setMostrarModalApertura(true);
               }}

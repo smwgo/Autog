@@ -3,66 +3,6 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-// Datos iniciales de demostración para auto-seed
-const SEED_ORDERS = [
-  {
-    orderNumber: "ORD-2023-001",
-    vehicle: "Toyota Hilux 2020",
-    plate: "ABC-123",
-    client: "Juan Pérez",
-    clientPhone: "+593 99 111 2233",
-    mechanic: "Carlos Rodríguez",
-    status: "En Diagnóstico",
-    progress: 25,
-    servicesJson: JSON.stringify(["Mantenimiento y Calibración de Frenos", "Diagnóstico Computarizado OBD2"]),
-    notes: "Ruido metálico al frenar y testigo de check engine encendido.",
-    estimatedOut: "24 Horas",
-    totalCost: 65.00,
-  },
-  {
-    orderNumber: "ORD-2023-002",
-    vehicle: "Honda Civic 2018",
-    plate: "XYZ-987",
-    client: "María Gómez",
-    clientPhone: "+593 98 444 5566",
-    mechanic: "Luis Martínez",
-    status: "Reparando",
-    progress: 60,
-    servicesJson: JSON.stringify(["Cambio de Aceite y Filtro (Mano de Obra)", "Lavado Premium y Chasis"]),
-    notes: "Mantenimiento preventivo por kilometraje.",
-    estimatedOut: "Hoy 17:00",
-    totalCost: 38.00,
-  },
-  {
-    orderNumber: "ORD-2023-003",
-    vehicle: "Ford Ranger 2021",
-    plate: "DEF-456",
-    client: "Empresa Logística SA",
-    clientPhone: "+593 95 777 8899",
-    mechanic: "Carlos Rodríguez",
-    status: "Espera de Repuestos",
-    progress: 40,
-    servicesJson: JSON.stringify(["Alineación 3D y Balanceo Computarizado"]),
-    notes: "Vibración en volante a más de 80 km/h.",
-    estimatedOut: "Pendiente repuestos",
-    totalCost: 35.00,
-  },
-  {
-    orderNumber: "ORD-2023-004",
-    vehicle: "Chevrolet Spark 2019",
-    plate: "GHI-789",
-    client: "Ana Torres",
-    clientPhone: "+593 99 333 4455",
-    mechanic: "Luis Martínez",
-    status: "Listo para Entregar",
-    progress: 100,
-    servicesJson: JSON.stringify(["Lavado Premium y Chasis", "Inspección General de 35 Puntos"]),
-    notes: "Revisión previa a viaje y lavado de carrocería.",
-    estimatedOut: "Listo para retiro",
-    totalCost: 33.00,
-  },
-];
-
 function generateId(): string {
   return "ord_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 }
@@ -82,7 +22,7 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3, delayMs = 600)
   throw lastError;
 }
 
-// GET: Listar órdenes con filtros
+// GET: Listar órdenes reales con filtros directamente desde Neon DB
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -90,32 +30,6 @@ export async function GET(request: Request) {
     const busqueda = searchParams.get("busqueda");
 
     return await withRetry(async () => {
-      // Auto-seed si la tabla está vacía
-      const countResult: any = await prisma.$queryRawUnsafe('SELECT COUNT(*)::int as count FROM "WorkshopOrder"');
-      const count = countResult?.[0]?.count || 0;
-
-      if (count === 0) {
-        for (const o of SEED_ORDERS) {
-          const id = generateId();
-          await prisma.$executeRawUnsafe(
-            `INSERT INTO "WorkshopOrder" ("id", "orderNumber", "vehicle", "plate", "client", "clientPhone", "mechanic", "status", "progress", "servicesJson", "notes", "estimatedOut", "totalCost", "dateIn", "createdAt", "updatedAt")
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW(), NOW())`,
-            id,
-            o.orderNumber,
-            o.vehicle,
-            o.plate,
-            o.client,
-            o.clientPhone,
-            o.mechanic,
-            o.status,
-            o.progress,
-            o.servicesJson,
-            o.notes,
-            o.estimatedOut,
-            o.totalCost
-          );
-        }
-      }
 
       let query = 'SELECT * FROM "WorkshopOrder" WHERE 1=1';
       const params: any[] = [];

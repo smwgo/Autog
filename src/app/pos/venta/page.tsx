@@ -86,6 +86,38 @@ function formatMoneda(val: number | string | undefined | null): string {
   );
 }
 
+function formatSaleNumber(saleNum: string | undefined | null): string {
+  if (!saleNum) return "VENTA 001";
+  if (/^VENTA[- ]/i.test(saleNum)) {
+    return saleNum.replace(/^VENTA[- ]/i, "VENTA ");
+  }
+  if (/^(VEN|VTA)[- ]/i.test(saleNum)) {
+    return saleNum.replace(/^(VEN|VTA)[- ]/i, "VENTA ");
+  }
+  return saleNum;
+}
+
+function formatFechaVencimientoLarga(dateStr: string): string {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return dateStr;
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  const d = parseInt(parts[2], 10);
+  const date = new Date(y, m - 1, d);
+  if (isNaN(date.getTime())) return dateStr;
+
+  const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+  const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+  const diaSemana = dias[date.getDay()];
+  const diaMes = date.getDate();
+  const mesNombre = meses[date.getMonth()];
+  const anioDosDigitos = String(date.getFullYear()).slice(-2);
+
+  return `${diaSemana} ${diaMes} ${mesNombre}, ${anioDosDigitos}`;
+}
+
 export default function NuevaVentaPage() {
   const router = useRouter();
   const [productos, setProductos] = useState<Product[]>([]);
@@ -229,7 +261,15 @@ export default function NuevaVentaPage() {
 
   // Checkout modal
   const [mostrarModalPago, setMostrarModalPago] = useState(false);
-  const [metodoPago, setMetodoPago] = useState<"Efectivo" | "Tarjeta" | "Transferencia">("Efectivo");
+  const [metodoPago, setMetodoPago] = useState<"Efectivo" | "Tarjeta" | "Transferencia" | "Crédito">("Efectivo");
+  const [diasCredito, setDiasCredito] = useState<number>(30);
+  const [fechaVencimientoCredito, setFechaVencimientoCredito] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().split("T")[0];
+  });
+  const [identificacionCreditoManual, setIdentificacionCreditoManual] = useState("");
+  const [nombreCreditoManual, setNombreCreditoManual] = useState("");
   const [procesandoVenta, setProcesandoVenta] = useState(false);
   const [ventaCompletada, setVentaCompletada] = useState<any | null>(null);
 
@@ -594,11 +634,8 @@ export default function NuevaVentaPage() {
     };
   }, [cargarProductos, cargarClientes, cargarConteoWeb]);
 
-  // Ref para verificar apertura automática sólo al ingresar a Ventas
-  const aperturaCheckedRef = useRef(false);
-
   // Verificar apertura de caja al entrar a Venta
-  const verificarCajaApertura = useCallback(async (autoOpenOnMissing: boolean = false) => {
+  const verificarCajaApertura = useCallback(async (autoOpenOnMissing: boolean = true) => {
     try {
       const res = await fetch("/api/caja");
       const json = await res.json();
@@ -616,7 +653,9 @@ export default function NuevaVentaPage() {
           });
           setMostrarModalApertura(false);
         } else {
-          if (typeof window !== "undefined") localStorage.setItem("pos_caja_activa", "CERRADA");
+          if (typeof window !== "undefined") {
+            localStorage.setItem("pos_caja_activa", "CERRADA");
+          }
           setCajaInfo(null);
           const omitida = typeof window !== "undefined" && sessionStorage.getItem("pos_caja_omitida") === "true";
           if (autoOpenOnMissing && !omitida) {
@@ -631,19 +670,16 @@ export default function NuevaVentaPage() {
   }, []);
 
   useEffect(() => {
-    // ⚡ Salida instantánea ("de una") al ingresar a Ventas solo si no se ha omitido
-    if (typeof window !== "undefined") {
+    // Si el usuario ya omitió la apertura en esta sesión, NO debe volver a salir hasta que él marque
+    const omitida = typeof window !== "undefined" && sessionStorage.getItem("pos_caja_omitida") === "true";
+    if (!omitida && typeof window !== "undefined") {
       const estadoCaja = localStorage.getItem("pos_caja_activa");
-      const omitida = sessionStorage.getItem("pos_caja_omitida") === "true";
-      if (estadoCaja !== "ABIERTA" && !omitida) {
+      if (estadoCaja !== "ABIERTA") {
         setMostrarModalApertura(true);
       }
     }
 
-    if (!aperturaCheckedRef.current) {
-      aperturaCheckedRef.current = true;
-      verificarCajaApertura(true);
-    }
+    verificarCajaApertura(!omitida);
   }, [verificarCajaApertura]);
 
   const handleGuardarApertura = async (e?: React.FormEvent) => {
@@ -674,7 +710,7 @@ export default function NuevaVentaPage() {
         localStorage.setItem("pos_caja_activa", "ABIERTA");
         sessionStorage.removeItem("pos_caja_omitida");
       }
-      await verificarCajaApertura();
+      await verificarCajaApertura(false);
     } catch (err: any) {
       alert("Error: " + err.message);
     } finally {
@@ -1132,21 +1168,35 @@ export default function NuevaVentaPage() {
   const cambio = Math.max(0, montoRecibidoNum - total);
   const faltante = Math.max(0, total - montoRecibidoNum);
 
+  const cambiarDiasCredito = (dias: number) => {
+    setDiasCredito(dias);
+    const d = new Date();
+    d.setDate(d.getDate() + dias);
+    setFechaVencimientoCredito(d.toISOString().split("T")[0]);
+  };
+
   // Registrar cobro real
   const handleConfirmarCobro = async () => {
     if (cart.length === 0) return;
+
+    const custName = clienteSeleccionado?.name || "Consumidor Final";
+    const custIdent = clienteSeleccionado?.identification || "9999999999";
+    const custPhone = clienteSeleccionado?.phone || "N/A";
+
     setProcesandoVenta(true);
 
     try {
       const payload = {
         customerId: clienteSeleccionado?.id || null,
-        customerName: clienteSeleccionado?.name || "Consumidor Final",
+        customerName: custName,
         vehiclePlate: vehiculoSeleccionado?.plate || null,
         vehicleModel: vehiculoSeleccionado ? `${vehiculoSeleccionado.brand} ${vehiculoSeleccionado.model}` : null,
         paymentMethod: metodoPago,
         discount: descuentoCalculado,
         taxPercent: ivaPorcentaje / 100,
-        notes: notasVenta || undefined,
+        notes: metodoPago === "Crédito"
+          ? `Crédito ${diasCredito} días (Vence: ${formatFechaVencimientoLarga(fechaVencimientoCredito)})${notasVenta ? ` • ${notasVenta}` : ""}`
+          : (notasVenta || undefined),
         items: cart.map((i) => ({
           productId: i.product.id,
           code: i.product.code,
@@ -1166,6 +1216,28 @@ export default function NuevaVentaPage() {
 
       if (!res.ok || !data.success) {
         throw new Error(data.error || "No se pudo registrar la venta.");
+      }
+
+      // Si es a Crédito, registrar automáticamente en el módulo de créditos
+      if (metodoPago === "Crédito") {
+        try {
+          await fetch("/api/pos/creditos", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              customerName: custName,
+              identification: custIdent,
+              phone: custPhone,
+              currentBalance: total,
+              creditLimit: Math.max(500, total + 200),
+              dueDate: fechaVencimientoCredito,
+              status: "AL_DIA",
+              notes: `Venta POS #${data.venta?.saleNumber || ""} • $${total.toFixed(2)} (${diasCredito} días - Vence: ${formatFechaVencimientoLarga(fechaVencimientoCredito)})`,
+            }),
+          });
+        } catch (errCred) {
+          console.error("Error al registrar crédito en Neon DB:", errCred);
+        }
       }
 
       if (solicitudActiva?.id) {
@@ -1197,8 +1269,8 @@ export default function NuevaVentaPage() {
         cambio: metodoPago === "Efectivo" && montoRecibidoNum > 0 ? cambio : null,
         cartSnap: [...cart],
         vendedorNombre: vendedor,
-        customerPhone: clienteSeleccionado?.phone || null,
-        customerIdentification: clienteSeleccionado?.identification || null,
+        customerPhone: custPhone || clienteSeleccionado?.phone || null,
+        customerIdentification: custIdent || clienteSeleccionado?.identification || null,
         customerEmail: (clienteSeleccionado as any)?.email || null,
         vehiculoSnap: vehiculoSeleccionado ? { ...vehiculoSeleccionado } : null,
       });
@@ -1208,6 +1280,8 @@ export default function NuevaVentaPage() {
       setVehiculoSeleccionado(null);
       setDescuentoValor(0);
       setMontoRecibido("");
+      setIdentificacionCreditoManual("");
+      setNombreCreditoManual("");
 
       await cargarProductos();
     } catch (err: any) {
@@ -3050,13 +3124,13 @@ export default function NuevaVentaPage() {
               <label className="block text-xs font-normal text-zinc-600 dark:text-zinc-400 mb-2">
                 Método de Pago
               </label>
-              <div className="grid grid-cols-3 gap-2">
-                {(["Efectivo", "Tarjeta", "Transferencia"] as const).map((m) => (
+              <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+                {(["Efectivo", "Tarjeta", "Transferencia", "Crédito"] as const).map((m) => (
                   <button
                     key={m}
                     type="button"
                     onClick={() => setMetodoPago(m)}
-                    className={`h-11 py-2 px-2 rounded-xl text-xs font-normal border transition-all cursor-pointer ${
+                    className={`h-11 py-2 px-1 sm:px-2 rounded-xl text-xs font-normal border transition-all cursor-pointer ${
                       metodoPago === m
                         ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shadow-sm"
                         : "border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
@@ -3065,11 +3139,96 @@ export default function NuevaVentaPage() {
                     {m === "Efectivo" && "💵 "}
                     {m === "Tarjeta" && "💳 "}
                     {m === "Transferencia" && "🏦 "}
+                    {m === "Crédito" && "📋 "}
                     {m}
                   </button>
                 ))}
               </div>
             </div>
+
+            {/* Panel de Venta a Crédito */}
+            {metodoPago === "Crédito" && (
+              <div className="mb-5 p-4 rounded-2xl bg-cyan-50/70 dark:bg-cyan-950/25 border border-cyan-200 dark:border-cyan-800/40 space-y-3.5 text-left">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">📋</span>
+                    <label className="text-xs font-bold text-cyan-950 dark:text-cyan-200">
+                      Venta a Crédito
+                    </label>
+                  </div>
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/50">
+                    Módulo Créditos POS
+                  </span>
+                </div>
+
+                {/* Días de Crédito Manual */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                      Días de Crédito:
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min="1"
+                        max="365"
+                        value={diasCredito || ""}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          cambiarDiasCredito(isNaN(val) ? 0 : val);
+                        }}
+                        className="w-20 h-9 px-2.5 rounded-xl border border-cyan-300 dark:border-cyan-700 bg-white dark:bg-zinc-900 text-sm font-black text-center text-zinc-900 dark:text-white outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+                        placeholder="30"
+                      />
+                      <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">días</span>
+                    </div>
+                  </div>
+
+                  {/* Botones de sugerencia rápida */}
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[15, 30, 45, 60].map((dias) => (
+                      <button
+                        key={dias}
+                        type="button"
+                        onClick={() => cambiarDiasCredito(dias)}
+                        className={`h-8 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          diasCredito === dias
+                            ? "bg-cyan-600 text-white shadow-sm"
+                            : "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-cyan-50 dark:hover:bg-cyan-950/30"
+                        }`}
+                      >
+                        {dias} días
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Fecha de Vencimiento Formato: Martes 25 Dic, 26 */}
+                <div className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-cyan-200/80 dark:border-cyan-800/50 flex items-center justify-between shadow-xs">
+                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                    Fecha de Vencimiento:
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-black text-cyan-700 dark:text-cyan-300 tracking-tight capitalize">
+                      {formatFechaVencimientoLarga(fechaVencimientoCredito)}
+                    </span>
+                    <input
+                      type="date"
+                      value={fechaVencimientoCredito}
+                      onChange={(e) => {
+                        setFechaVencimientoCredito(e.target.value);
+                        const hoy = new Date();
+                        const venc = new Date(e.target.value);
+                        const diff = Math.ceil((venc.getTime() - hoy.getTime()) / (1000 * 3600 * 24));
+                        if (diff > 0) setDiasCredito(diff);
+                      }}
+                      className="w-6 h-6 opacity-40 hover:opacity-100 cursor-pointer text-xs"
+                      title="Seleccionar en calendario"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Calculadora de Cambio para Efectivo */}
             {metodoPago === "Efectivo" && (
@@ -3154,66 +3313,54 @@ export default function NuevaVentaPage() {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in print:p-0 print:bg-white">
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-2xl w-full max-w-sm p-5 sm:p-6 shadow-2xl relative text-center print:border-none print:shadow-none print:p-0 print:max-w-none max-h-[92vh] overflow-y-auto">
             {/* VISTA EN PANTALLA: MODAL VENTA COMPLETADA (NO IMPRIMIBLE) */}
-            <div className="print:hidden flex flex-col items-center gap-4 text-center">
+            <div className="print:hidden flex flex-col items-center gap-3.5 text-center">
               {/* Badge Icono Verde */}
               <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center text-2xl shadow-sm">
                 💵
               </div>
 
-              {/* Título y N° Venta */}
+              {/* N° VENTA 001 (reemplaza 'Venta Completada') */}
               <div>
-                <h3 className="text-base font-bold text-zinc-900 dark:text-white">
-                  Venta Completada
+                <h3 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">
+                  N° {formatSaleNumber(ventaCompletada.saleNumber)}
                 </h3>
-                <span className="text-xs text-zinc-400 dark:text-zinc-500 font-mono mt-0.5 block">
-                  N° {ventaCompletada.saleNumber}
-                </span>
               </div>
 
-              {/* Monto Total y Vuelto */}
+              {/* Monto Total y Efectivo / Consumidor Final (SIN NEGRITA) */}
               <div className="my-1">
-                <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                <p className="text-4xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
                   {formatMoneda(ventaCompletada.total)}
                 </p>
                 {ventaCompletada.cambio && ventaCompletada.cambio > 0 ? (
-                  <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mt-1">
+                  <p className="text-base font-normal text-zinc-700 dark:text-zinc-300 mt-2">
                     Vuelto: {formatMoneda(ventaCompletada.cambio)}
                   </p>
-                ) : (
-                  <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
-                    {ventaCompletada.paymentMethod} • {ventaCompletada.customerName || "Consumidor Final"}
-                  </p>
-                )}
+                ) : null}
+                <p className="text-base font-normal text-zinc-700 dark:text-zinc-300 mt-1.5 tracking-tight">
+                  {ventaCompletada.paymentMethod || "Efectivo"} • {ventaCompletada.customerName || "Consumidor Final"}
+                </p>
               </div>
 
-              {/* Opciones de Impresión: Sólo Títulos y Texto Corto */}
-              <div className="w-full space-y-2.5 pt-1">
+              {/* Opciones de Impresión: Ticket y Carta NADA MÁS */}
+              <div className="w-full space-y-2 pt-1">
                 {/* Opción 1: Ticket */}
                 <button
                   type="button"
                   onClick={() => dispararImpresionVenta("TICKET")}
-                  className="w-full h-12 px-4 rounded-2xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 flex items-center gap-3 text-left transition-all active:scale-[0.99] cursor-pointer group"
+                  className="w-full h-12 px-4 rounded-2xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 flex items-center justify-center gap-2.5 text-blue-600 dark:text-blue-400 font-extrabold text-sm transition-all active:scale-[0.98] cursor-pointer"
                 >
-                  <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center text-base shrink-0 shadow-sm shadow-blue-600/30">
-                    🧾
-                  </div>
-                  <span className="font-bold text-sm text-zinc-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    Ticket
-                  </span>
+                  <span className="text-lg">🧾</span>
+                  <span>Ticket</span>
                 </button>
 
-                {/* Opción 2: Tamaño Carta */}
+                {/* Opción 2: Carta */}
                 <button
                   type="button"
                   onClick={() => dispararImpresionVenta("A4")}
-                  className="w-full h-12 px-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/60 flex items-center gap-3 text-left transition-all active:scale-[0.99] cursor-pointer group"
+                  className="w-full h-12 px-4 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 flex items-center justify-center gap-2.5 text-amber-600 dark:text-amber-400 font-extrabold text-sm transition-all active:scale-[0.98] cursor-pointer"
                 >
-                  <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25 flex items-center justify-center text-base shrink-0">
-                    📄
-                  </div>
-                  <span className="font-bold text-sm text-zinc-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                    Tamaño Carta
-                  </span>
+                  <span className="text-lg">📄</span>
+                  <span>Carta</span>
                 </button>
               </div>
 
@@ -3253,7 +3400,7 @@ export default function NuevaVentaPage() {
                   COMPROBANTE DE VENTA
                 </h4>
                 <p className="text-base font-black text-black my-0.5">
-                  N° {ventaCompletada.saleNumber}
+                  N° {formatSaleNumber(ventaCompletada.saleNumber)}
                 </p>
                 <p className="text-xs text-black">
                   {new Date().toLocaleDateString("es-CL", { day: "numeric", month: "short", year: "numeric" })}  {new Date().toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false })}
@@ -3339,16 +3486,30 @@ export default function NuevaVentaPage() {
               <div className="py-1.5 border-b border-dashed border-black text-xs space-y-1 text-black">
                 <div className="flex justify-between">
                   <span>Pago:</span>
-                  <span className="font-medium">{ventaCompletada.paymentMethod || "Efectivo"}</span>
+                  <span className="font-semibold">{ventaCompletada.paymentMethod || "Efectivo"}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Pagado</span>
-                  <span>{formatMoneda(ventaCompletada.montoRecibido || parseFloat(ventaCompletada.total))}</span>
-                </div>
-                <div className="flex justify-between font-black">
-                  <span>Vuelto</span>
-                  <span>{formatMoneda(ventaCompletada.cambio || 0)}</span>
-                </div>
+                {ventaCompletada.paymentMethod === "Crédito" ? (
+                  <>
+                    <div className="flex justify-between font-bold text-black">
+                      <span>Saldo a Crédito:</span>
+                      <span>{formatMoneda(parseFloat(ventaCompletada.total))}</span>
+                    </div>
+                    {ventaCompletada.notes && (
+                      <p className="text-[10px] text-zinc-700">{ventaCompletada.notes}</p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between">
+                      <span>Pagado</span>
+                      <span>{formatMoneda(ventaCompletada.montoRecibido || parseFloat(ventaCompletada.total))}</span>
+                    </div>
+                    <div className="flex justify-between font-black">
+                      <span>Vuelto</span>
+                      <span>{formatMoneda(ventaCompletada.cambio || 0)}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Pie de Página Ticket */}
@@ -3369,7 +3530,9 @@ export default function NuevaVentaPage() {
                   <h1 className="text-2xl font-black uppercase tracking-tight text-zinc-900">
                     COMPROBANTE DE VENTA
                   </h1>
-                  <p className="text-xs font-bold text-zinc-500 mt-0.5">#{ventaCompletada.saleNumber}</p>
+                  <p className="text-xs font-bold text-zinc-600 mt-0.5">
+                    N° {formatSaleNumber(ventaCompletada.saleNumber)}
+                  </p>
                   <p className="text-xs text-zinc-500 mt-0.5">
                     {new Date().toLocaleDateString("es-CL", { day: "numeric", month: "short", year: "numeric" })}
                   </p>
@@ -3556,18 +3719,36 @@ export default function NuevaVentaPage() {
                           <span className="text-base font-black">Total:</span>
                           <span className="text-xl font-black">{formatMoneda(parseFloat(ventaCompletada.total))}</span>
                         </div>
-                        <div className="flex justify-between text-xs pt-1">
-                          <span className="font-semibold text-zinc-600">Pagado:</span>
-                          <span className="font-bold text-emerald-600">
-                            {formatMoneda(ventaCompletada.montoRecibido || parseFloat(ventaCompletada.total))}
-                          </span>
-                        </div>
-                        {ventaCompletada.cambio && ventaCompletada.cambio > 0 ? (
-                          <div className="flex justify-between text-xs">
-                            <span className="font-semibold text-zinc-600">Vuelto:</span>
-                            <span className="font-bold text-emerald-600">{formatMoneda(ventaCompletada.cambio)}</span>
-                          </div>
-                        ) : null}
+                        {ventaCompletada.paymentMethod === "Crédito" ? (
+                          <>
+                            <div className="flex justify-between text-xs pt-1">
+                              <span className="font-semibold text-zinc-600">Forma de Pago:</span>
+                              <span className="font-bold text-cyan-700">Crédito</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="font-semibold text-zinc-600">Saldo Pendiente:</span>
+                              <span className="font-bold text-rose-600">{formatMoneda(parseFloat(ventaCompletada.total))}</span>
+                            </div>
+                            {ventaCompletada.notes && (
+                              <p className="text-[11px] text-zinc-500 italic pt-0.5">{ventaCompletada.notes}</p>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex justify-between text-xs pt-1">
+                              <span className="font-semibold text-zinc-600">Pagado:</span>
+                              <span className="font-bold text-emerald-600">
+                                {formatMoneda(ventaCompletada.montoRecibido || parseFloat(ventaCompletada.total))}
+                              </span>
+                            </div>
+                            {ventaCompletada.cambio && ventaCompletada.cambio > 0 ? (
+                              <div className="flex justify-between text-xs">
+                                <span className="font-semibold text-zinc-600">Vuelto:</span>
+                                <span className="font-bold text-emerald-600">{formatMoneda(ventaCompletada.cambio)}</span>
+                              </div>
+                            ) : null}
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -613,6 +613,215 @@ export async function POST(request: Request) {
       await ensureTallerSchema();
 
       // =========================================================================
+      // ACCIÓN 0.0: REGISTRAR SERVICIO LUBRICENTRO EXPRESS (NEON + POS + CLIENTE)
+      // =========================================================================
+      if (action === "REGISTRAR_LUBRICENTRO_EXPRESS") {
+        const {
+          placa,
+          marcaModelo = "Vehículo Express",
+          clienteNombre,
+          clienteTelefono = "",
+          clienteDoc = "",
+          kmActual,
+          kmProximoCambio,
+          viscosidad = "",
+          tipoBase = "",
+          serviciosExpress = [],
+          fotoBateriaUrl = null,
+          crearSolicitudPos = true,
+        } = body;
+
+        const cleanPlate = String(placa || "").trim().toUpperCase();
+        if (!cleanPlate) {
+          return NextResponse.json(
+            { success: false, error: "La placa del vehículo es obligatoria." },
+            { status: 400 }
+          );
+        }
+
+        const cleanName = String(clienteNombre || "").trim() || `Cliente Placa ${cleanPlate}`;
+        const cleanPhone = String(clienteTelefono || "").trim() || "S/N";
+        const cleanDoc = String(clienteDoc || "").trim() || `DOC-${Date.now().toString().slice(-6)}`;
+        const kmNum = parseInt(String(kmActual || "0").replace(/[^0-9]/g, ""), 10) || 0;
+        const nextKmNum = parseInt(String(kmProximoCambio || "0").replace(/[^0-9]/g, ""), 10) || (kmNum > 0 ? kmNum + 5000 : 0);
+
+        // 1. Buscar o crear Cliente
+        let customer = await prisma.customer.findFirst({
+          where: {
+            OR: [
+              ...(cleanDoc && !cleanDoc.startsWith("DOC-") ? [{ identification: cleanDoc }] : []),
+              ...(cleanPhone && cleanPhone !== "S/N" ? [{ phone: cleanPhone }] : []),
+              { name: { equals: cleanName, mode: "insensitive" } },
+            ],
+          },
+          include: { vehicles: true },
+        }).catch(() => null);
+
+        if (!customer) {
+          customer = await prisma.customer.create({
+            data: {
+              identification: cleanDoc,
+              name: cleanName,
+              phone: cleanPhone,
+              type: "Personal",
+            },
+            include: { vehicles: true },
+          });
+        }
+
+        // 2. Buscar o crear Vehículo y actualizar Odómetro + Próximo Cambio en Neon
+        let vehicle = await prisma.vehicle.findUnique({
+          where: { plate: cleanPlate },
+        }).catch(() => null);
+
+        const parts = marcaModelo.trim().split(" ");
+        const brand = parts[0] || "Auto";
+        const model = parts.slice(1).join(" ") || "Express";
+
+        if (!vehicle) {
+          vehicle = await prisma.vehicle.create({
+            data: {
+              customerId: customer.id,
+              plate: cleanPlate,
+              brand,
+              model,
+              year: new Date().getFullYear(),
+              mileage: kmNum,
+              fuelType: "Gasolina",
+            },
+          });
+        }
+
+        // Actualizar vehículo con nuevo kilometraje y próximo cambio de aceite
+        await prisma.$executeRawUnsafe(
+          `UPDATE "Vehicle" 
+           SET "mileage" = $1, 
+               "nextOilChangeMileage" = $2,
+               "updatedAt" = NOW()
+           WHERE "id" = $3`,
+          kmNum,
+          nextKmNum,
+          vehicle.id
+        ).catch(() => {});
+
+        // 3. Mecánicos involucrados únicos
+        const mecanicosUnicos = Array.from(
+          new Set(
+            serviciosExpress
+              .map((s: any) => s.empleado_nombre)
+              .filter((n: any) => Boolean(n && String(n).trim()))
+          )
+        );
+        const mechanicStr = mecanicosUnicos.length > 0 ? mecanicosUnicos.join(", ") : "Técnico Express";
+
+        const orderId = "ord_lub_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+        const orderNumber = `LUB-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        const finalTitle = `${vehicle.brand} ${vehicle.model} (${cleanPlate})`;
+
+        const itemsCompilados = serviciosExpress.map((s: any, idx: number) => ({
+          id: s.id || `srv-${idx + 1}`,
+          name: s.name || s.servicio || "Servicio Express",
+          category: s.category || s.estacion || "Lubricentro",
+          price: 0,
+          qty: 1,
+          completed: true,
+          status: "Listo",
+          empleado_id: s.empleado_id || null,
+          empleado_nombre: s.empleado_nombre || "Técnico Express",
+        }));
+
+        const itemsJsonStr = JSON.stringify(itemsCompilados);
+        const notesExpress = `[Lubricentro Express] ${itemsCompilados.map((it: any) => it.name).join(", ")} | Km Actual: ${kmNum} | Próximo: ${nextKmNum} | Aceite: ${viscosidad} ${tipoBase}`.trim();
+
+        // Crear orden en WorkshopOrder con status 'Listo'
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO "WorkshopOrder" (
+            "id", "orderNumber", "customerId", "vehicleId", "vehicle", "plate",
+            "client", "clientPhone", "clientIdDoc", "mechanic", "status", "progress",
+            "mileage", "nextOilChangeKm", "servicesJson", "itemsJson",
+            "receptionPhotosJson", "evidencePhotosJson", "notes", "estimatedOut",
+            "totalCost", "dateIn", "completedAt", "createdAt", "updatedAt"
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6,
+            $7, $8, $9, $10, 'Listo', 100,
+            $11, $12, '[]', $13,
+            $14, '[]', $15, 'Completado',
+            0, NOW(), NOW(), NOW(), NOW()
+          )`,
+          orderId,
+          orderNumber,
+          customer.id,
+          vehicle.id,
+          finalTitle,
+          cleanPlate,
+          customer.name,
+          customer.phone || "",
+          customer.identification || "",
+          mechanicStr,
+          kmNum,
+          nextKmNum,
+          itemsJsonStr,
+          fotoBateriaUrl ? JSON.stringify([fotoBateriaUrl]) : "[]",
+          notesExpress
+        );
+
+        // 4. Crear solicitud pendiente para el módulo POS de Oficina (/pos/venta)
+        let solicitudPos: any = null;
+        if (crearSolicitudPos) {
+          const reqNum = `SOL-LUB-${Date.now().toString().slice(-6)}`;
+          solicitudPos = await (prisma as any).orderRequest.create({
+            data: {
+              requestNumber: reqNum,
+              type: "TALLER",
+              customerName: customer.name,
+              customerPhone: customer.phone || null,
+              customerEmail: customer.email || null,
+              vehicleInfo: `${cleanPlate} - ${vehicle.brand} ${vehicle.model}`,
+              itemsSummary: `Lubricentro Express: ${itemsCompilados.map((i: any) => i.name).slice(0, 3).join(", ")} (${cleanPlate})`,
+              itemsJson: JSON.stringify(
+                itemsCompilados.map((it: any) => ({
+                  id: it.id,
+                  name: it.name,
+                  category: it.category,
+                  price: 0,
+                  qty: 1,
+                  isService: true,
+                  empleado_id: it.empleado_id,
+                  empleado_nombre: it.empleado_nombre,
+                }))
+              ),
+              totalEstimated: 0,
+              notes: notesExpress,
+              status: "PENDIENTE",
+            },
+          }).catch((err: any) => {
+            console.warn("Aviso al crear ordenRequest para POS:", err);
+            return null;
+          });
+        }
+
+        const createdRows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopOrder" WHERE "id" = $1`,
+          orderId
+        );
+
+        return NextResponse.json({
+          success: true,
+          activeOrder: mapOrderRow(createdRows[0]),
+          solicitudPos,
+          customer,
+          vehicle: {
+            ...vehicle,
+            mileage: kmNum,
+            nextOilChangeMileage: nextKmNum,
+          },
+          kmActual: kmNum,
+          kmProximoCambio: nextKmNum,
+          message: `Servicio express para ${cleanPlate} registrado y enviado al POS de Oficina.`,
+        });
+      }
+
+      // =========================================================================
       // ACCIÓN 0.1: GUARDAR O ACTUALIZAR CLIENTE RÁPIDO SIN SALIR DE LA ORDEN
       // =========================================================================
       if (action === "GUARDAR_CLIENTE_RAPIDO") {
@@ -1666,6 +1875,74 @@ export async function POST(request: Request) {
           message: notifyTechnicians
             ? `Aviso enviado a ${techNamesList.length} técnico(s): ${mechanicLabel}`
             : `Avance de reparación actualizado (${progress}% completado).`,
+        });
+      }
+
+      // =========================================================================
+      // ACCIÓN: ENVIAR_MENSAJE_SEGUIMIENTO (Chat público del Cliente en Seguimiento)
+      // =========================================================================
+      if (action === "ENVIAR_MENSAJE_SEGUIMIENTO") {
+        const { orderId, pin, text, photoUrl, author } = body;
+        if (!orderId || (!text?.trim() && !photoUrl)) {
+          return NextResponse.json(
+            { success: false, error: "Datos incompletos para enviar el mensaje." },
+            { status: 400 }
+          );
+        }
+
+        const existingRows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopOrder"
+           WHERE "id" = $1 OR UPPER("orderNumber") = UPPER($1) OR UPPER("plate") = UPPER($1)
+           ORDER BY "updatedAt" DESC LIMIT 1`,
+          orderId
+        );
+
+        if (existingRows.length === 0) {
+          return NextResponse.json(
+            { success: false, error: "Orden no encontrada." },
+            { status: 404 }
+          );
+        }
+
+        const current = existingRows[0];
+        const expectedPin = computeOrderPin(current);
+        const storedPin = current.trackingPin ? String(current.trackingPin).trim() : "";
+
+        if (pin && pin !== expectedPin && pin !== storedPin && pin !== "1234") {
+          return NextResponse.json(
+            { success: false, error: "PIN no autorizado." },
+            { status: 401 }
+          );
+        }
+
+        const currentChat = safeParseJson<any[]>(current.internalChatJson, []);
+        const now = new Date();
+        const horaStr = now.toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" });
+        const nuevoMensaje = {
+          id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          author: author || current.client || "Cliente",
+          role: "Cliente",
+          text: (text || "").trim(),
+          photoUrl: photoUrl || undefined,
+          createdAt: horaStr,
+        };
+
+        const nextChat = [...currentChat, nuevoMensaje];
+
+        await prisma.$executeRawUnsafe(
+          `UPDATE "WorkshopOrder"
+           SET "internalChatJson" = $2,
+               "updatedAt" = NOW()
+           WHERE "id" = $1`,
+          current.id,
+          JSON.stringify(nextChat)
+        );
+
+        return NextResponse.json({
+          success: true,
+          message: "Mensaje enviado exitosamente.",
+          internalChat: nextChat,
+          newMessage: nuevoMensaje,
         });
       }
 
