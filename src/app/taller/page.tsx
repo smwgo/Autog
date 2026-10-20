@@ -4828,6 +4828,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               empleadoLogueado={empleadoLogueado}
               mecanicos={mecanicos}
               clientesCatalogo={clientesCatalogo}
+              productosCatalogo={productosInventario}
+              serviciosCatalogo={serviciosDb}
               mostrarToast={mostrarToast}
               ordenActiva={ordenActiva}
               onOrdenCreada={(orden) => {
