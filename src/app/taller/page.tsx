@@ -4346,64 +4346,158 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
       <main className="flex-grow p-4 sm:p-6 md:p-8 max-w-[1440px] mx-auto w-full space-y-6">
         {/* ===================================================================
-            CABECERA PRINCIPAL: VOLVER + BOTONES (+ NUEVA ORDEN Y LISTA AUTOS) EN LA MISMA LÍNEA
+            CABECERA PRINCIPAL: VOLVER + SELECTOR SOLO ICONOS (TALLER/LUBRICENTRO)
+            LADO DERECHO: ICONOS DE PAUSA, TRABAJO Y NUEVA ORDEN
             =================================================================== */}
-        <div className="flex items-center justify-between gap-3 py-1">
-          {/* Botón Volver */}
-          <Link
-            href="/"
-            aria-label="Volver"
-            className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#111113] hover:bg-[#161618] border border-white/10 text-zinc-200 transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-sm"
-          >
-            <svg
-              className="w-4 h-4 sm:w-5 sm:h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        <div className="flex items-center justify-between gap-2.5 py-1">
+          {/* Lado izquierdo: Volver + Selector Solo Iconos Taller / Lubricentro */}
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            {/* Botón Volver */}
+            <Link
+              href="/"
+              aria-label="Volver"
+              className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#111113] hover:bg-[#161618] border border-white/10 text-zinc-200 transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-sm"
             >
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-          </Link>
+              <svg
+                className="w-4 h-4 sm:w-5 sm:h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </Link>
 
-          {/* En la misma línea: + Nueva Orden y Lista de Autos en atención */}
-          <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Selector SOLO ICONOS: Taller vs Lubricentro (sin texto flotante) */}
+            <div className="flex items-center p-0.5 rounded-xl bg-white/[0.04] border border-white/10 gap-0.5 shrink-0">
+              {/* Icono Taller */}
+              <button
+                type="button"
+                onClick={() => setModuloTaller("taller")}
+                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                  moduloTaller === "taller"
+                    ? "bg-blue-600 border border-blue-400/40 text-white shadow-md shadow-blue-600/30 scale-[1.03]"
+                    : "text-zinc-400 hover:text-white hover:bg-white/5"
+                }`}
+                title="Modo Taller Mecánico"
+              >
+                <svg
+                  className="w-4 h-4 sm:w-4.5 sm:h-4.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.75}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.07a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091.455.087.935-.012 1.39"
+                  />
+                </svg>
+              </button>
+
+              {/* Icono Lubricentro */}
+              <button
+                type="button"
+                onClick={() => setModuloTaller("lubricentro")}
+                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                  moduloTaller === "lubricentro"
+                    ? "bg-amber-600 border border-amber-400/40 text-white shadow-md shadow-amber-600/30 scale-[1.03]"
+                    : "text-zinc-400 hover:text-white hover:bg-white/5"
+                }`}
+                title="Modo Lubricentro Express"
+              >
+                <svg
+                  className="w-4 h-4 sm:w-4.5 sm:h-4.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.75}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Lado derecho: Iconos Pausa, Trabajo y Nueva Orden */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* 1. Icono Pausa */}
+            <button
+              type="button"
+              onClick={(e) => {
+                if (ordenActiva && ordenActiva.status !== "Pausada") {
+                  handlePausarOrden(ordenActiva, e);
+                } else {
+                  setMostrarModalAutosAtencion(true);
+                }
+              }}
+              className={`h-9 sm:h-10 px-2.5 sm:px-3 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 shrink-0 ${
+                ordenActiva?.status === "Pausada"
+                  ? "bg-amber-500/20 border-amber-500/40 text-amber-300 shadow-sm"
+                  : "bg-white/[0.04] hover:bg-amber-500/10 border-white/10 text-zinc-300 hover:text-amber-300 hover:border-amber-500/30"
+              }`}
+              title={
+                ordenActiva && ordenActiva.status !== "Pausada"
+                  ? `Pausar orden activa (${ordenActiva.plate})`
+                  : "Ver órdenes pausadas"
+              }
+            >
+              <svg className="w-4 h-4 text-amber-400 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+              </svg>
+              {autosEnPista.filter((a) => a.status === "Pausada").length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] sm:text-xs font-bold font-mono">
+                  {autosEnPista.filter((a) => a.status === "Pausada").length}
+                </span>
+              )}
+            </button>
+
+            {/* 2. Icono Trabajo (En atención) */}
+            <button
+              type="button"
+              onClick={(e) => {
+                if (ordenActiva && ordenActiva.status === "Pausada") {
+                  handleReanudarOrden(ordenActiva, e);
+                } else {
+                  setMostrarModalAutosAtencion(true);
+                }
+              }}
+              className={`h-9 sm:h-10 px-2.5 sm:px-3 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 shrink-0 ${
+                ordenActiva && ordenActiva.status !== "Pausada"
+                  ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-sm"
+                  : "bg-white/[0.04] hover:bg-emerald-500/10 border-white/10 text-zinc-300 hover:text-emerald-300 hover:border-emerald-500/30"
+              }`}
+              title={
+                ordenActiva && ordenActiva.status === "Pausada"
+                  ? `Reanudar trabajo para (${ordenActiva.plate})`
+                  : "Ver órdenes trabajando"
+              }
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              {autosEnPista.filter((a) => a.status !== "Pausada").length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] sm:text-xs font-bold font-mono">
+                  {autosEnPista.filter((a) => a.status !== "Pausada").length}
+                </span>
+              )}
+            </button>
+
+            {/* 3. Icono Nueva Orden */}
             <button
               type="button"
               onClick={() => setMostrarModalNuevaOrden(true)}
-              className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-blue-600/25 active:scale-95 shrink-0"
-              title="Abrir formulario de Nueva Orden de Trabajo"
+              className="h-9 sm:h-10 px-3 sm:px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-blue-600/25 active:scale-95 shrink-0"
+              title="Nueva Orden de Trabajo"
             >
-              <span className="text-sm sm:text-base font-bold leading-none">+</span>
-              <span>Nueva Orden</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setMostrarModalAutosAtencion(true)}
-              className="h-9 sm:h-10 px-3 sm:px-3.5 rounded-xl bg-[#111113] hover:bg-white/[0.08] border border-white/15 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:border-white/25 active:scale-95 shrink-0"
-              title="Ver clientes y autos en atención"
-            >
-              <svg
-                className="w-4 h-4 text-zinc-300"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
-                />
-              </svg>
-              {autosEnPista.length > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-bold font-mono">
-                  {autosEnPista.length}
-                </span>
-              )}
+              <span className="text-base sm:text-lg font-bold leading-none">+</span>
+              <span className="hidden md:inline">Nueva Orden</span>
             </button>
           </div>
         </div>
@@ -4414,42 +4508,41 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             =================================================================== */}
         <section className="bg-[#111113]/90 rounded-2xl border border-white/[0.08] p-4 sm:p-6 shadow-2xl space-y-5 overflow-hidden">
           {/* Cabecera del Auto Seleccionado + Información Rápida (para Taller y Lubricentro) */}
-          <div className="overflow-x-auto no-scrollbar [WebkitOverflowScrolling:touch] touch-pan-x pb-4 border-b border-white/[0.08]">
-            <div className="flex items-center justify-between gap-4 min-w-[500px] sm:min-w-0">
-              {ordenActiva ? (
-                <div className="flex items-center gap-3 shrink-0">
+          <div className="pb-3 border-b border-white/[0.08]">
+            {ordenActiva ? (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
+                {/* Lado izquierdo: Placa + Vehículo + Cliente */}
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                   {/* Placa Destacada */}
-                  <span className="px-3 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 font-mono text-sm sm:text-base font-bold text-blue-300 tracking-wider shrink-0 shadow-sm">
+                  <span className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 font-mono text-xs sm:text-base font-bold text-blue-300 tracking-wider shrink-0 shadow-sm">
                     {ordenActiva.plate}
                   </span>
 
-                  <div className="space-y-0.5">
+                  <div className="min-w-0 flex-1 space-y-0.5">
                     {/* Fila 1: Solo Vehículo */}
-                    <div className="whitespace-nowrap">
-                      <span className="text-sm sm:text-base font-bold text-white">
+                    <div className="truncate">
+                      <span className="text-sm sm:text-base font-bold text-white truncate block">
                         {ordenActiva.vehicle}
                       </span>
                     </div>
 
-                    {/* Fila 2: Solo Cliente y Número de veces que se ha atendido */}
-                    <div className="flex items-center gap-2 text-xs text-zinc-400 whitespace-nowrap">
-                      <span className="text-zinc-200 font-semibold">
+                    {/* Fila 2: Solo Cliente y Número de visitas */}
+                    <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
+                      <span className="text-zinc-200 font-semibold truncate">
                         <span className="text-zinc-400 font-normal">Cliente:</span> {ordenActiva.client}
                       </span>
-                      <span className="text-zinc-600">•</span>
-                      <span className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-300 font-medium text-[11px] shrink-0">
+                      <span className="text-zinc-600 shrink-0">•</span>
+                      <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-300 font-medium text-[10px] sm:text-[11px] shrink-0">
                         {vecesAtendido} {vecesAtendido === 1 ? "visita" : "visitas"}
                       </span>
                     </div>
                   </div>
                 </div>
-              ) : null}
 
-              {/* Lado derecho: Estado de Ingreso/Pausa (siempre a la derecha y con buen espaciado) */}
-              {ordenActiva && (
-                <div className="shrink-0 flex items-center justify-end">
-                  <div className="flex flex-col justify-center px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-black/60 border border-white/15 shadow-md text-right">
-                    <span className="text-xs sm:text-sm text-zinc-300 leading-tight font-normal whitespace-nowrap">
+                {/* Lado derecho: Estado de Ingreso/Pausa (en móvil visible sin scroll) */}
+                <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1.5 sm:pt-0 border-t border-white/5 sm:border-t-0">
+                  <div className="flex items-center gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-black/60 border border-white/15 shadow-sm text-xs w-full sm:w-auto justify-between sm:justify-end">
+                    <span className="text-zinc-300 font-normal">
                       Ingreso:{" "}
                       <span
                         className="text-white font-normal"
@@ -4458,23 +4551,22 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                         {formatearFechaIngreso(ordenActiva.dateIn || ordenActiva.startedAt)}
                       </span>
                     </span>
-                    <span className="text-sm sm:text-base font-normal leading-tight mt-1 flex items-center justify-end gap-1.5 whitespace-nowrap">
-                      {ordenActiva.status === "Pausada" ? (
-                        <span className="text-amber-400 flex items-center gap-1.5 font-normal">
-                          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
-                          <span>En Pausa</span>
-                        </span>
-                      ) : (
-                        <span className="text-emerald-400 flex items-center gap-1.5 font-normal">
-                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                          <span>Trabajando</span>
-                        </span>
-                      )}
-                    </span>
+                    <span className="text-zinc-600">•</span>
+                    {ordenActiva.status === "Pausada" ? (
+                      <span className="text-amber-400 flex items-center gap-1 font-normal">
+                        <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                        <span>En Pausa</span>
+                      </span>
+                    ) : (
+                      <span className="text-emerald-400 flex items-center gap-1 font-normal">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                        <span>Trabajando</span>
+                      </span>
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            ) : null}
           </div>
 
           {/* VISTAS SEGÚN EL SELECTOR: LUBRICENTRO O TALLER */}
@@ -4497,8 +4589,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
           {/* ===================================================================
               STEPPER DE ICONOS TRANSPARENTES (GLASSMORPHISM)
               =================================================================== */}
-          <div className="bg-white/[0.02] backdrop-blur-md border border-white/[0.08] p-2.5 sm:p-2 rounded-2xl overflow-x-auto no-scrollbar [WebkitOverflowScrolling:touch] touch-pan-x">
-            <div className="flex sm:grid sm:grid-cols-4 gap-2.5 sm:gap-2 min-w-max sm:min-w-0">
+          <div className="bg-white/[0.02] backdrop-blur-md border border-white/[0.08] p-1.5 sm:p-2 rounded-2xl">
+            <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
               {[
                 {
                   id: 1,
@@ -4543,7 +4635,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     key={step.id}
                     type="button"
                     onClick={() => setEtapaActiva(step.id)}
-                    className={`flex flex-col items-center justify-center p-3 sm:p-2.5 rounded-xl border transition-all cursor-pointer active:scale-95 shrink-0 min-w-[130px] sm:min-w-0 min-h-[64px] sm:min-h-[48px] ${
+                    className={`flex flex-col items-center justify-center p-3 sm:p-2.5 rounded-xl border transition-all cursor-pointer active:scale-95 shrink-0  min-h-[64px] sm:min-h-[48px] ${
                       active
                         ? "bg-blue-500/15 border-blue-500/40 text-blue-300 shadow-md shadow-blue-500/10"
                         : "bg-white/[0.02] hover:bg-white/[0.06] border-white/5 text-zinc-400 hover:text-zinc-200"
