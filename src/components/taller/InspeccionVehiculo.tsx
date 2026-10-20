@@ -1562,7 +1562,7 @@ ${urlSeguimiento}`;
                 onClick={handleEnviarReporteWhatsApp}
                 className="h-10 px-5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-2 active:scale-95"
               >
-                <span>💬 Enviar por WhatsApp</span>
+                <span>💬 WhatsApp</span>
               </button>
 
               <button
@@ -1572,7 +1572,7 @@ ${urlSeguimiento}`;
                 }}
                 className="h-10 px-6 rounded-xl bg-purple-500 hover:bg-purple-400 text-black text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shadow-lg shadow-purple-500/20 active:scale-95"
               >
-                <span>🖨️ Imprimir / Guardar PDF</span>
+                <span>🖨️ PDF</span>
               </button>
             </div>
           </div>

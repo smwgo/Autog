@@ -99,7 +99,7 @@ export function DetallePinModerno({
             title={`Añadir otro hallazgo o daño a este mismo Pin #${mismoNumero}`}
           >
             <span className="text-xs font-black">+</span>
-            <span>Hallazgo #{mismoNumero}</span>
+            <span>Hallazgo</span>
           </button>
           <button
             type="button"
@@ -124,7 +124,7 @@ export function DetallePinModerno({
       {/* PESTAÑAS SI EL PIN TIENE MÁS DE 1 DAÑO REGISTRADO */}
       {listaMismoPin.length > 1 && (
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar border-b border-white/[0.05]">
-          <span className="text-[10px] text-zinc-400 font-medium shrink-0">Daños en #{mismoNumero}:</span>
+          <span className="text-[10px] text-zinc-400 font-medium shrink-0">Daños:</span>
           {listaMismoPin.map((h, idx) => {
             const activo = h.id === pin.id;
             return (
@@ -192,8 +192,8 @@ export function DetallePinModerno({
             onChange={(e) => onChangeObservacion(e.target.value)}
             placeholder={
               escuchandoVoz
-                ? "🎙 Escuchando voz... habla ahora"
-                : "Escribe o dicta la observación..."
+                ? "🎙 Habla ahora..."
+                : "Observación..."
             }
             className={`w-full h-9 pl-3 pr-2 rounded-xl bg-black/60 border text-white text-xs placeholder:text-zinc-500 transition-all focus:outline-none ${
               escuchandoVoz
