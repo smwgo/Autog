@@ -4346,46 +4346,103 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
       <main className="flex-grow p-4 sm:p-6 md:p-8 max-w-[1440px] mx-auto w-full space-y-6">
         {/* ===================================================================
-            CABECERA PRINCIPAL: VOLVER (IZQUIERDA) + ESTOS DOS EN ICONOS A LA DERECHA (+ NUEVA ORDEN Y LISTA AUTOS)
+            CABECERA PRINCIPAL: VOLVER + SELECTOR (SOLO ICONO EN MÓVIL) + BOTONES ACCIÓN
             =================================================================== */}
-        <div className="flex items-center justify-between gap-3 py-1">
-          {/* Lado izquierdo: Botón Volver */}
-          <Link
-            href="/"
-            aria-label="Volver"
-            className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#111113] hover:bg-[#161618] border border-white/10 text-zinc-200 transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-sm"
-          >
-            <svg
-              className="w-4 h-4 sm:w-5 sm:h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        <div className="flex items-center justify-between gap-2 sm:gap-3 py-1">
+          {/* Lado izquierdo: Botón Volver + Selector Taller / Lubricentro */}
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <Link
+              href="/"
+              aria-label="Volver"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#111113] hover:bg-[#161618] border border-white/10 text-zinc-200 transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-sm"
             >
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-          </Link>
+              <svg
+                className="w-4 h-4 sm:w-5 sm:h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </Link>
 
-          {/* Lado derecho: Solo estos dos botones en iconos */}
-          <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* SELECTOR SUPERIOR 2 EN 1: [ 🔧 ] [ 💧 ] en móvil (solo icono) y con texto en desktop */}
+            <div className="flex items-center p-0.5 sm:p-1 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md shadow-xl gap-0.5 sm:gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => setModuloTaller("taller")}
+                className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  moduloTaller === "taller"
+                    ? "bg-blue-600 border border-blue-400/40 text-white shadow-lg shadow-blue-600/30 scale-[1.01]"
+                    : "text-zinc-400 hover:text-white hover:bg-white/5"
+                }`}
+                title="Taller Mecánico"
+              >
+                <svg
+                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.75}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.07a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091.455.087.935-.012 1.39"
+                  />
+                </svg>
+                <span className="hidden sm:inline">Taller</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setModuloTaller("lubricentro")}
+                className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  moduloTaller === "lubricentro"
+                    ? "bg-amber-600 border border-amber-400/40 text-white shadow-lg shadow-amber-600/30 scale-[1.01]"
+                    : "text-zinc-400 hover:text-white hover:bg-white/5"
+                }`}
+                title="Lubricentro Express"
+              >
+                <svg
+                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.75}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z"
+                  />
+                </svg>
+                <span className="hidden sm:inline">Lubricentro</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Lado derecho: Botones Nueva Orden y Lista de Autos */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             {/* 1. Botón + Nueva Orden */}
             <button
               type="button"
               onClick={() => setMostrarModalNuevaOrden(true)}
-              className="h-9 sm:h-10 px-3 sm:px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-blue-600/25 active:scale-95 shrink-0"
+              className="h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-blue-600/25 active:scale-95 shrink-0"
               title="Nueva Orden"
             >
               <span className="text-base sm:text-lg font-bold leading-none">+</span>
               <span className="text-xs sm:text-sm hidden sm:inline">Nueva Orden</span>
             </button>
 
-            {/* 2. Botón Lista de Autos (con icono ≡ y burbuja circular con el conteo) */}
+            {/* 2. Botón Lista de Autos */}
             <button
               type="button"
               onClick={() => setMostrarModalAutosAtencion(true)}
-              className="h-9 sm:h-10 px-2.5 sm:px-3 rounded-xl bg-[#111113] hover:bg-white/[0.08] border border-white/15 text-white flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:border-white/25 active:scale-95 shrink-0"
+              className="h-8 sm:h-9 px-2 sm:px-3 rounded-xl bg-[#111113] hover:bg-white/[0.08] border border-white/15 text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:border-white/25 active:scale-95 shrink-0"
               title="Ver autos y órdenes en atención"
             >
               <svg
