@@ -977,6 +977,36 @@ export default function TallerPanel() {
 
   // Flujo Deslizable Automático de 7 Etapas (Slide-Over Carousel)
   const [etapaActiva, setEtapaActiva] = useState<number>(1);
+  const stepperCarouselRef = useRef<HTMLDivElement | null>(null);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleStepperScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (typeof window !== "undefined" && window.innerWidth >= 640) return;
+    const container = e.currentTarget;
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    scrollTimeoutRef.current = setTimeout(() => {
+      const width = container.clientWidth;
+      if (width > 0) {
+        const pageIndex = Math.round(container.scrollLeft / width);
+        const steps = [1, 2, 3, 4];
+        const targetStep = steps[pageIndex];
+        if (targetStep && targetStep !== etapaActiva) {
+          setEtapaActiva(targetStep);
+        }
+      }
+    }, 80);
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 640 && stepperCarouselRef.current) {
+      const container = stepperCarouselRef.current;
+      const el = document.getElementById(`stepper-step-${etapaActiva}`);
+      if (el) {
+        const targetLeft = el.offsetLeft - container.offsetLeft;
+        container.scrollTo({ left: targetLeft, behavior: "smooth" });
+      }
+    }
+  }, [etapaActiva]);
   const [rolUsuario, setRolUsuario] = useState<"EMPLEADO" | "OFICINA">("EMPLEADO");
   const [cronometroTecnicoActivo, setCronometroTecnicoActivo] = useState(false);
   const [cronometroTecnicoSegundos, setCronometroTecnicoSegundos] = useState(0);
@@ -4475,9 +4505,9 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
           {/* Cabecera del Auto Seleccionado + Información Rápida (para Taller y Lubricentro) */}
           <div className="pb-3 border-b border-white/[0.08]">
             {ordenActiva ? (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
+              <div className="flex items-center justify-between gap-2.5 sm:gap-4">
                 {/* Lado izquierdo: Placa + Vehículo + Cliente */}
-                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                   {/* Placa Destacada */}
                   <span className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 font-mono text-xs sm:text-base font-bold text-blue-300 tracking-wider shrink-0 shadow-sm">
                     {ordenActiva.plate}
@@ -4486,7 +4516,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   <div className="min-w-0 flex-1 space-y-0.5">
                     {/* Fila 1: Solo Vehículo */}
                     <div className="truncate">
-                      <span className="text-sm sm:text-base font-bold text-white truncate block">
+                      <span className="text-xs sm:text-base font-bold text-white truncate block">
                         {ordenActiva.vehicle}
                       </span>
                     </div>
@@ -4504,10 +4534,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   </div>
                 </div>
 
-                {/* Lado derecho: Estado de Ingreso/Pausa (en móvil visible sin scroll) */}
-                <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1.5 sm:pt-0 border-t border-white/5 sm:border-t-0">
-                  <div className="flex items-center gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-black/60 border border-white/15 shadow-sm text-xs w-full sm:w-auto justify-between sm:justify-end">
-                    <span className="text-zinc-300 font-normal">
+                {/* Lado derecho: Estado de Ingreso con el círculo justo al lado */}
+                <div className="shrink-0 flex items-center justify-end">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-black/60 border border-white/15 shadow-sm text-xs">
+                    <span className="text-zinc-300 font-normal whitespace-nowrap">
                       Ingreso:{" "}
                       <span
                         className="text-white font-normal"
@@ -4516,21 +4546,21 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                         {formatearFechaIngreso(ordenActiva.dateIn || ordenActiva.startedAt)}
                       </span>
                     </span>
-                    <span className="text-zinc-600">•</span>
+
+                    {/* El círculo justo al lado de Ingreso */}
                     {ordenActiva.status === "Pausada" ? (
-                      <span className="text-amber-400 flex items-center gap-1.5 font-normal" title="En Pausa">
+                      <span className="inline-flex items-center gap-1 text-amber-400 font-normal shrink-0" title="En Pausa">
                         <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
                         <span className="hidden sm:inline">En Pausa</span>
                       </span>
                     ) : (
-                      <span className="text-emerald-400 flex items-center gap-1.5 font-normal" title="Trabajando">
+                      <span className="inline-flex items-center gap-1 text-emerald-400 font-normal shrink-0" title="Trabajando">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
                         <span className="hidden sm:inline">Trabajando</span>
                       </span>
                     )}
                   </div>
-                </div>
-              </div>
+                </div>              </div>
             ) : null}
           </div>
 
@@ -4552,16 +4582,21 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             <>
 
           {/* ===================================================================
-              STEPPER DE ICONOS TRANSPARENTES (GLASSMORPHISM)
+              STEPPER: EN MÓVIL 1 BOTÓN CUBRE TODO EL ANCHO Y SE DESLIZA CON EL DEDO (CAROUSEL)
+              EN DESKTOP: GRID DE 4 COLUMNAS (GLASSMORPHISM)
               =================================================================== */}
-          <div className="bg-white/[0.02] backdrop-blur-md border border-white/[0.08] p-1.5 sm:p-2 rounded-2xl">
-            <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+          <div className="bg-white/[0.02] backdrop-blur-md border border-white/[0.08] p-1.5 sm:p-2 rounded-2xl space-y-1.5">
+            <div
+              ref={stepperCarouselRef}
+              onScroll={handleStepperScroll}
+              className="flex sm:grid sm:grid-cols-4 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
+            >
               {[
                 {
                   id: 1,
                   label: "1. Ingreso",
                   icon: (
-                    <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <svg className="w-6 h-6 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.125-.504 1.125-1.125V14.25m-17.25 0h17.25M3.75 14.25l2.25-6.75h12l2.25 6.75" />
                     </svg>
                   ),
@@ -4570,7 +4605,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   id: 2,
                   label: "2. Inspección",
                   icon: (
-                    <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <svg className="w-6 h-6 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                     </svg>
                   ),
@@ -4579,16 +4614,16 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   id: 3,
                   label: "3. Presupuesto",
                   icon: (
-                    <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <svg className="w-6 h-6 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
                     </svg>
                   ),
                 },
                 {
                   id: 4,
-                  label: "4. Aviso y Firma",
+                  label: "4. Firma",
                   icon: (
-                    <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <svg className="w-6 h-6 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
                     </svg>
                   ),
@@ -4598,21 +4633,37 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 return (
                   <button
                     key={step.id}
+                    id={`stepper-step-${step.id}`}
                     type="button"
                     onClick={() => setEtapaActiva(step.id)}
-                    className={`flex flex-col items-center justify-center p-3 sm:p-2.5 rounded-xl border transition-all cursor-pointer active:scale-95 shrink-0  min-h-[64px] sm:min-h-[48px] ${
+                    className={`flex flex-col items-center justify-center p-3.5 sm:p-2.5 rounded-xl border transition-all cursor-pointer active:scale-95 w-full min-w-full sm:min-w-0 sm:w-auto snap-center shrink-0 min-h-[74px] sm:min-h-[48px] ${
                       active
                         ? "bg-blue-500/15 border-blue-500/40 text-blue-300 shadow-md shadow-blue-500/10"
                         : "bg-white/[0.02] hover:bg-white/[0.06] border-white/5 text-zinc-400 hover:text-zinc-200"
                     }`}
                   >
                     <div className="p-1.5 sm:p-1 rounded-lg bg-white/5">{step.icon}</div>
-                    <span className="text-xs sm:text-xs font-semibold tracking-tight mt-1.5 sm:mt-1 truncate max-w-full">
+                    <span className="text-sm sm:text-xs font-semibold tracking-tight mt-1.5 sm:mt-1 truncate max-w-full">
                       {step.label}
                     </span>
                   </button>
                 );
               })}
+            </div>
+
+            {/* Puntos de paginación solo en móvil para ver el paso y deslizar */}
+            <div className="flex sm:hidden items-center justify-center gap-1.5 pt-1">
+              {[1, 2, 3, 4].map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setEtapaActiva(id)}
+                  aria-label={`Ir a paso ${id}`}
+                  className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                    etapaActiva === id ? "w-5 bg-blue-500" : "w-1.5 bg-white/20"
+                  }`}
+                />
+              ))}
             </div>
           </div>
 
