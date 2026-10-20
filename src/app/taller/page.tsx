@@ -4343,65 +4343,42 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
       <main className="flex-grow p-4 sm:p-6 md:p-8 max-w-[1440px] mx-auto w-full space-y-6">
         {/* ===================================================================
-            CABECERA: FLECHA DE REGRESO Y TÍTULO TALLER (ESTILO EXACTO)
+            CABECERA RESPONSIVA: EN MÓVIL 1 SOLA LÍNEA (SIN "TALLER"), EN DESKTOP 2 FILAS
             =================================================================== */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <Link
-              href="/"
-              aria-label="Volver"
-              className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#111113] hover:bg-[#161618] border border-white/10 text-zinc-200 transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-sm"
+        
+        {/* VISTA MÓVIL (sm:hidden): Todos los botones en una sola fila compacta, sin el título blanco "Taller" */}
+        <div className="flex sm:hidden items-center justify-between gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          <Link
+            href="/"
+            aria-label="Volver"
+            className="w-9 h-9 rounded-full bg-[#111113] hover:bg-[#161618] border border-white/10 text-zinc-200 transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-sm"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <svg
-                className="w-5 h-5 sm:w-6 sm:h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M19 12H5M12 19l-7-7 7-7" />
-              </svg>
-            </Link>
-            <div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-white">
-                Taller
-              </h1>
-            </div>
-          </div>
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+          </Link>
 
-          {/* Botones de Cabecera: Nueva Orden */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Botón Flotante / Acceso Rápido a Nueva Orden */}
-            <button
-              type="button"
-              onClick={() => setMostrarModalNuevaOrden(true)}
-              className="h-9 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-blue-600/25 active:scale-95"
-              title="Abrir formulario de Nueva Orden de Trabajo"
-            >
-              <span className="text-sm font-bold leading-none">+</span>
-              <span>Nueva Orden</span>
-            </button>
-          </div>
-        </div>
-
-        {/* ===================================================================
-            SELECTOR SUPERIOR DESLIZABLE: [ 🔧 TALLER ] | [ 💧 LUBRICENTRO & EXPRESS ]
-            =================================================================== */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center p-1 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md shadow-xl gap-1">
+          {/* Selector Taller / Lubricentro en móvil */}
+          <div className="flex items-center p-0.5 rounded-xl bg-white/[0.03] border border-white/10 gap-0.5 shrink-0">
             <button
               type="button"
               onClick={() => setModuloTaller("taller")}
-              className={`h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${
+              className={`h-8 px-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                 moduloTaller === "taller"
-                  ? "bg-blue-600 border border-blue-400/40 text-white shadow-lg shadow-blue-600/30 scale-[1.01]"
-                  : "text-zinc-400 hover:text-white hover:bg-white/5"
+                  ? "bg-blue-600 border border-blue-400/40 text-white shadow-md shadow-blue-600/30"
+                  : "text-zinc-400 hover:text-white"
               }`}
             >
               <svg
-                className="w-4 h-4"
+                className="w-3.5 h-3.5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -4419,14 +4396,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             <button
               type="button"
               onClick={() => setModuloTaller("lubricentro")}
-              className={`h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${
+              className={`h-8 px-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                 moduloTaller === "lubricentro"
-                  ? "bg-amber-600 border border-amber-400/40 text-white shadow-lg shadow-amber-600/30 scale-[1.01]"
-                  : "text-zinc-400 hover:text-white hover:bg-white/5"
+                  ? "bg-amber-600 border border-amber-400/40 text-white shadow-md shadow-amber-600/30"
+                  : "text-zinc-400 hover:text-white"
               }`}
             >
               <svg
-                className="w-4 h-4"
+                className="w-3.5 h-3.5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -4442,15 +4419,15 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             </button>
           </div>
 
-          {/* Icono de Lista: Clientes y Autos que estoy atendiendo (a la derecha al filo) */}
+          {/* Botón Lista Autos en atención */}
           <button
             type="button"
             onClick={() => setMostrarModalAutosAtencion(true)}
-            className="h-9 sm:h-10 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:border-white/20 active:scale-95"
-            title="Ver todos los clientes en atención / pausar o continuar trabajos"
+            className="h-8 px-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 active:scale-95"
+            title="Ver clientes y autos en atención"
           >
             <svg
-              className="w-4 h-4 text-zinc-300"
+              className="w-3.5 h-3.5 text-zinc-300"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -4463,11 +4440,146 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               />
             </svg>
             {autosEnPista.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] sm:text-xs font-bold">
+              <span className="px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold">
                 {autosEnPista.length}
               </span>
             )}
           </button>
+
+          {/* Botón Nueva Orden */}
+          <button
+            type="button"
+            onClick={() => setMostrarModalNuevaOrden(true)}
+            className="h-8 px-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-md shadow-blue-600/25 shrink-0 active:scale-95"
+            title="Nueva Orden"
+          >
+            <span className="text-sm font-bold leading-none">+</span>
+            <span>Nueva Orden</span>
+          </button>
+        </div>
+
+        {/* VISTA DESKTOP / TABLET (hidden sm:block): 2 filas con el título "Taller" en blanco */}
+        <div className="hidden sm:block space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <Link
+                href="/"
+                aria-label="Volver"
+                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#111113] hover:bg-[#161618] border border-white/10 text-zinc-200 transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-sm"
+              >
+                <svg
+                  className="w-5 h-5 sm:w-6 sm:h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+              </Link>
+              <div>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-white">
+                  Taller
+                </h1>
+              </div>
+            </div>
+
+            {/* Botones de Cabecera: Nueva Orden */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMostrarModalNuevaOrden(true)}
+                className="h-9 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-blue-600/25 active:scale-95"
+                title="Abrir formulario de Nueva Orden de Trabajo"
+              >
+                <span className="text-sm font-bold leading-none">+</span>
+                <span>Nueva Orden</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Selector de módulo + botón de lista en desktop */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center p-1 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md shadow-xl gap-1">
+              <button
+                type="button"
+                onClick={() => setModuloTaller("taller")}
+                className={`h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${
+                  moduloTaller === "taller"
+                    ? "bg-blue-600 border border-blue-400/40 text-white shadow-lg shadow-blue-600/30 scale-[1.01]"
+                    : "text-zinc-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.07a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091.455.087.935-.012 1.39"
+                  />
+                </svg>
+                <span>Taller</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setModuloTaller("lubricentro")}
+                className={`h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${
+                  moduloTaller === "lubricentro"
+                    ? "bg-amber-600 border border-amber-400/40 text-white shadow-lg shadow-amber-600/30 scale-[1.01]"
+                    : "text-zinc-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z"
+                  />
+                </svg>
+                <span>Lubricentro</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setMostrarModalAutosAtencion(true)}
+              className="h-9 sm:h-10 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:border-white/20 active:scale-95"
+              title="Ver todos los clientes en atención / pausar o continuar trabajos"
+            >
+              <svg
+                className="w-4 h-4 text-zinc-300"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+                />
+              </svg>
+              {autosEnPista.length > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] sm:text-xs font-bold">
+                  {autosEnPista.length}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* ===================================================================
@@ -4499,7 +4611,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     </span>
                     <span className="text-zinc-600">•</span>
                     <span className="px-2 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-300 font-medium text-[11px]">
-                      {vecesAtendido} {vecesAtendido === 1 ? "vez atendido" : "veces atendido"}
+                      {vecesAtendido} {vecesAtendido === 1 ? "visita" : "visitas"}
                     </span>
                   </div>
                 </div>
@@ -4589,7 +4701,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 },
                 {
                   id: 4,
-                  label: "4. Aviso y Firma",
+                  label: "4. Firma",
                   icon: (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
@@ -4631,11 +4743,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     <div className="lg:col-span-7 space-y-4">
                       <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-zinc-300">⛽ Nivel de Combustible</span>
+                          <span className="text-xs font-semibold text-zinc-300">⛽ Combustible</span>
                           <span className="text-xs font-mono text-emerald-400 font-bold">{etapa2NivelCombustible || "1/2"}</span>
                         </div>
                         <div className="grid grid-cols-5 gap-1.5">
-                          {["E (Vacío)", "1/4", "1/2", "3/4", "F (Lleno)"].map((lvl) => {
+                          {["E", "1/4", "1/2", "3/4", "F"].map((lvl) => {
                             const sel = (etapa2NivelCombustible || "1/2").startsWith(lvl.split(" ")[0]);
                             return (
                               <button
@@ -4657,7 +4769,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
                       <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-zinc-300">Kilometraje de Ingreso</span>
+                          <span className="text-xs font-semibold text-zinc-300">Kilometraje</span>
                           <input
                             type="number"
                             value={etapa2Kilometraje}
@@ -4667,7 +4779,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           />
                         </div>
                         <div className="space-y-2 pt-1">
-                          <span className="text-[11px] text-zinc-400 block font-medium">Inventario de lo que trae el vehículo:</span>
+                          <span className="text-[11px] text-zinc-400 block font-medium">Inventario:</span>
                           
                           {/* Tags con una sola palabra */}
                           <div className="flex flex-wrap gap-1.5">
@@ -4737,7 +4849,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                   handleAgregarItemManualInventario();
                                 }
                               }}
-                              placeholder="Escribir ítem manual y presionar Enter..."
+                              placeholder="Nuevo ítem..."
                               className="h-8 flex-1 px-3 rounded-lg bg-black/40 border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-blue-500/60"
                             />
                             <button
@@ -4757,9 +4869,9 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     {/* Cámara y Fotos Cloudflare R2 */}
                     <div className="lg:col-span-5 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-zinc-300">Fotos Iniciales (Cloudflare R2)</span>
+                        <span className="text-xs font-semibold text-zinc-300">Fotos Iniciales</span>
                         {subiendoFotoRecepcion && (
-                          <span className="text-xs text-blue-400 animate-pulse font-mono">Subiendo a R2...</span>
+                          <span className="text-xs text-blue-400 animate-pulse font-mono">Subiendo...</span>
                         )}
                       </div>
 
@@ -4768,7 +4880,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
                           <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
                         </svg>
-                        <span className="text-xs text-zinc-300 font-medium">Tocar para tomar foto o adjuntar</span>
+                        <span className="text-xs text-zinc-300 font-medium">Tomar foto / adjuntar</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -4843,14 +4955,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   {(!ordenActiva?.inspectionFindings || ordenActiva.inspectionFindings.length === 0) ? (
                     <div className="py-6 text-center space-y-2 bg-black/30 rounded-xl border border-dashed border-white/10 p-4">
                       <p className="text-xs text-zinc-400">
-                        No se han marcado hallazgos en la inspección todavía.
+                        Sin hallazgos en la inspección.
                       </p>
                       <button
                         type="button"
                         onClick={() => setEtapaActiva(2)}
                         className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs font-semibold cursor-pointer"
                       >
-                        ← Ir a Marcar Inspección (Paso 2)
+                        ← Ir a Inspección
                       </button>
                     </div>
                   ) : (
@@ -4939,7 +5051,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                   </span>
                                 </div>
                                 <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${sec.color}`}>
-                                  {sec.items.length} {sec.items.length === 1 ? "hallazgo" : "hallazgos"}
+                                  {sec.items.length} {sec.items.length === 1 ? "ítem" : "ítems"}
                                 </span>
                               </div>
 
@@ -4999,14 +5111,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                           </p>
                                         ) : (
                                           <span className="text-zinc-500 text-[11px] italic pl-7">
-                                            Sin observación escrita.
+                                            Sin observación.
                                           </span>
                                         )}
 
                                         {fotosPin.length > 0 && (
                                           <div className="flex items-center gap-1.5 shrink-0 pl-7 sm:pl-0">
                                             <span className="text-[10px] text-zinc-500 font-mono">
-                                              Evidencia ({fotosPin.length}/3):
+                                              Fotos ({fotosPin.length}/3):
                                             </span>
                                             {fotosPin.map((url, fIdx) => (
                                               <a
@@ -5067,7 +5179,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                                   setDropdownBuscadorPinAbierto(true);
                                                 }}
                                                 onFocus={() => setDropdownBuscadorPinAbierto(true)}
-                                                placeholder="🔍 Buscar o escribir servicio / repuesto..."
+                                                placeholder="Buscar o escribir ítem..."
                                                 className="w-full h-8 pl-3 pr-7 rounded-lg bg-black border border-cyan-500/30 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-cyan-400"
                                               />
                                               {cotizarPinNombre && (
@@ -5099,7 +5211,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                                     if (filtrados.length === 0) {
                                                       return (
                                                         <div className="p-2.5 text-center text-xs text-zinc-500 italic">
-                                                          No hay coincidencias. Puedes escribir la descripción manualmente.
+                                                          Sin coincidencias. Escribe manualmente.
                                                         </div>
                                                       );
                                                     }
@@ -5134,7 +5246,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
                                             {/* Campo Valor */}
                                             <div className="relative w-full sm:w-32 shrink-0">
-                                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 text-xs font-semibold">Valor $</span>
+                                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 text-xs font-semibold">$</span>
                                               <input
                                                 type="number"
                                                 step="0.01"
@@ -5270,7 +5382,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                             if (filtrados.length === 0) {
                               return (
                                 <div className="p-4 text-center text-xs text-zinc-500 italic">
-                                  No hay coincidencias en tu catálogo para &quot;{etapa4BusquedaCatalogo}&quot;.
+                                  Sin coincidencias para &quot;{etapa4BusquedaCatalogo}&quot;.
                                 </div>
                               );
                             }
@@ -5331,7 +5443,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
                   {!ordenActiva || (ordenActiva.items.length === 0 && etapa4Items.length === 0) ? (
                     <div className="py-6 text-center text-xs text-zinc-500 italic bg-black/20 rounded-xl border border-dashed border-white/5">
-                      No hay servicios ni repuestos añadidos todavía.
+                      Sin servicios ni repuestos añadidos.
                     </div>
                   ) : (() => {
                     const allItems = etapa4Items.length > 0 ? etapa4Items : (ordenActiva?.items || []);
@@ -5432,7 +5544,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-600/30 active:scale-95"
                         >
                           <span>🖨️</span>
-                          <span>Descargar PDF</span>
+                          <span>PDF</span>
                         </button>
                       </div>
                       <div className="w-full sm:w-64 bg-black/50 p-3.5 rounded-xl border border-white/10 space-y-1.5 font-mono">
@@ -5541,7 +5653,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       {/* Notificación rápida */}
                       <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2">
                         <span className="text-xs font-normal text-zinc-300 block">
-                          Aviso al cliente:
+                          Aviso:
                         </span>
                         <div className="flex items-center gap-2">
                           <button
@@ -5549,7 +5661,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                             onClick={handleEnviarWhatsAppAvisoEtapa6}
                             className="flex-1 h-9 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-normal transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95"
                           >
-                            <span>📲 WhatsApp</span>
+                            <span>WhatsApp</span>
                           </button>
                           <button
                             type="button"
@@ -5581,7 +5693,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                   : "text-zinc-400 hover:text-white"
                               }`}
                             >
-                              Firma Aceptación
+                              Presupuesto
                             </button>
                             <button
                               type="button"
@@ -5595,7 +5707,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                   : "text-zinc-400 hover:text-white"
                               }`}
                             >
-                              Firma Entrega
+                              Entrega
                             </button>
                           </div>
 
@@ -5626,8 +5738,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           {!tieneTrazosFirmaEtapa7Ref.current && (
                             <div className="absolute pointer-events-none text-zinc-600 text-xs font-mono">
                               {modoFirma === "ACEPTACION"
-                                ? "[Firma de aceptación del presupuesto]"
-                                : "[Firma de entrega del vehículo]"}
+                                ? "[Firma presupuesto]"
+                                : "[Firma entrega]"}
                             </div>
                           )}
                         </div>
@@ -5640,7 +5752,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                             disabled={guardandoEtapa7}
                             className="h-9 px-4 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
                           >
-                            <span>💾 {guardandoEtapa7 ? "Guardando..." : "Guardar Firma"}</span>
+                            <span>💾 {guardandoEtapa7 ? "Guardando..." : "Guardar"}</span>
                           </button>
 
                           <button
@@ -5648,7 +5760,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                             onClick={handleEnviarWhatsAppAceptacionEtapa7}
                             className="h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
                           >
-                            <span>📲 Firma Remota</span>
+                            <span>📲 Firma remota</span>
                           </button>
                         </div>
                       </div>
@@ -5658,7 +5770,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   {/* Pie: Traspaso a POS / Órdenes */}
                   <div className="pt-3 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-3">
                     <div className="text-[11px] text-zinc-400 font-normal">
-                      <span>Aquí solo se genera la orden. El cobro y facturación se realiza en POS.</span>
+                      <span>Cobro en POS.</span>
                     </div>
 
                     <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -5676,7 +5788,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                         disabled={guardandoPasarPos}
                         className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs sm:text-sm font-normal shadow-lg shadow-emerald-600/20 transition-all cursor-pointer flex items-center gap-2 active:scale-95 disabled:opacity-50"
                       >
-                        <span>{guardandoPasarPos ? "Procesando..." : "🚀 Pasar a POS / Órdenes"}</span>
+                        <span>{guardandoPasarPos ? "Procesando..." : "🚀 Pasar a POS"}</span>
                       </button>
                     </div>
                   </div>
@@ -5719,7 +5831,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   <p className="text-xs text-zinc-400 truncate">
                     {ordenActiva
                       ? `Orden #${ordenActiva.orderNumber} (${ordenActiva.plate}) • 👤 ${empleadoLogueado.nombre}`
-                      : "Selecciona o busca un vehículo para sumar a su orden"}
+                      : "Selecciona un vehículo"}
                   </p>
                 </div>
               </div>
@@ -5748,8 +5860,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   onChange={(e) => setBusquedaFlotante(e.target.value)}
                   placeholder={
                     tarjetaSeleccionadaObj.id === "repuestos"
-                      ? "Buscar repuesto por nombre, viscosidad, código o marca..."
-                      : `Buscar en ${tarjetaSeleccionadaObj.title}...`
+                      ? "Buscar repuesto..."
+                      : `Buscar...`
                   }
                   className="w-full pl-10 pr-9 h-11 rounded-xl bg-[#0a0a0a] border border-white/10 focus:border-white/25 text-white text-sm font-normal placeholder:text-zinc-500 focus:outline-none transition-all"
                 />
@@ -5827,14 +5939,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   type="text"
                   value={otroNombreCustom}
                   onChange={(e) => setOtroNombreCustom(e.target.value)}
-                  placeholder="Escribir otro servicio o trabajo realizado..."
+                  placeholder="Otro servicio..."
                   className="flex-1 h-10 px-3 rounded-lg bg-[#111113] border border-white/10 text-white text-xs focus:outline-none focus:border-white/25"
                 />
                 <button
                   type="submit"
                   className="h-10 px-4 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 text-zinc-100 text-xs font-semibold transition-all cursor-pointer shrink-0 active:scale-95"
                 >
-                  + Asignar Servicio
+                  + Asignar
                 </button>
               </form>
             )}
