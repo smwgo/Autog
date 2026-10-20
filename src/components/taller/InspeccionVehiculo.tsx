@@ -173,6 +173,15 @@ export default function InspeccionVehiculo({
     ordenActiva?.receptionSignatureUrl || null
   );
 
+  // Estados de carga y error para la imagen 3D del vehículo (compatibilidad móvil)
+  const [imagenCargando, setImagenCargando] = useState<boolean>(true);
+  const [imagenError, setImagenError] = useState<boolean>(false);
+
+  useEffect(() => {
+    setImagenCargando(true);
+    setImagenError(false);
+  }, [vistaActiva, seccionActiva]);
+
   // Sincronizar hallazgos locales cuando la orden activa cambie
   useEffect(() => {
     if (ordenActiva?.inspectionFindings) {
@@ -225,11 +234,29 @@ export default function InspeccionVehiculo({
     [ordenActiva, onUpdateOrden, seccionActiva]
   );
 
-  // 1. ESQUEMA INTERACTIVO: DETECCIÓN DE TOQUE EN COORDENADAS PORCENTUALES Y PINES NUMERADOS
-  const handleTocarLienzo = (e: React.MouseEvent<HTMLDivElement>) => {
+  // 1. ESQUEMA INTERACTIVO: DETECCIÓN DE TOQUE EN COORDENADAS PORCENTUALES Y PINES NUMERADOS (RATÓN Y TÁCTIL MÓVIL)
+  const handleTocarLienzo = (
+    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>
+  ) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const xPct = Math.max(5, Math.min(95, Math.round(((e.clientX - rect.left) / rect.width) * 100)));
-    const yPct = Math.max(5, Math.min(95, Math.round(((e.clientY - rect.top) / rect.height) * 100)));
+    let clientX: number;
+    let clientY: number;
+
+    if ("touches" in e && e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else if ("changedTouches" in e && e.changedTouches && e.changedTouches.length > 0) {
+      clientX = e.changedTouches[0].clientX;
+      clientY = e.changedTouches[0].clientY;
+    } else if ("clientX" in e) {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    } else {
+      return;
+    }
+
+    const xPct = Math.max(5, Math.min(95, Math.round(((clientX - rect.left) / rect.width) * 100)));
+    const yPct = Math.max(5, Math.min(95, Math.round(((clientY - rect.top) / rect.height) * 100)));
 
     const maxNum = hallazgos.reduce((max, h) => Math.max(max, h.pinNumber || 0), 0);
     const nuevoPinNumero = maxNum + 1;
@@ -600,8 +627,8 @@ ${urlSeguimiento}`;
       {/* ===================================================================
           BARRA DE SISTEMAS DEL VEHÍCULO: INSPECCIÓN TOTAL (5 SISTEMAS)
           =================================================================== */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2 border-b border-white/10">
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+      <div className="flex items-center justify-between gap-2.5 pb-2 border-b border-white/10 overflow-x-auto no-scrollbar [WebkitOverflowScrolling:touch]">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {SISTEMAS_INSPECCION.map((sis) => {
             const active = seccionActiva === sis.id;
             let badge = null;
@@ -632,7 +659,7 @@ ${urlSeguimiento}`;
                 key={sis.id}
                 type="button"
                 onClick={() => setSeccionActiva(sis.id)}
-                className={`h-10 px-3 sm:px-4 rounded-xl border flex items-center gap-2 transition-all cursor-pointer text-xs font-medium active:scale-95 ${
+                className={`h-10 px-3 sm:px-4 rounded-xl border flex items-center gap-2 transition-all cursor-pointer text-xs font-medium shrink-0 active:scale-95 ${
                   active
                     ? "bg-purple-500/20 border-purple-500/40 text-purple-200 shadow-md shadow-purple-500/10"
                     : "bg-white/[0.02] hover:bg-white/[0.05] border-white/5 text-zinc-400 hover:text-zinc-200"
@@ -650,7 +677,7 @@ ${urlSeguimiento}`;
         <button
           type="button"
           onClick={() => setModalPdfAbierto(true)}
-          className="h-10 px-3.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer active:scale-95 shadow-sm ml-auto"
+          className="h-10 px-3.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer active:scale-95 shadow-sm ml-auto shrink-0"
         >
           <svg className="w-4 h-4 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
@@ -668,7 +695,7 @@ ${urlSeguimiento}`;
       {/* ===================================================================
           1. ESQUEMA INTERACTIVO EN 5 VISTAS CON PINES NUMERADOS (1, 2, 3...)
           =================================================================== */}
-      <div className="grid grid-cols-5 gap-2">
+      <div className="flex sm:grid sm:grid-cols-5 gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar [WebkitOverflowScrolling:touch] pb-1">
         {[
           {
             id: "frontal" as const,
@@ -736,7 +763,7 @@ ${urlSeguimiento}`;
                 setPinSeleccionadoId(null);
                 setPopoverAbierto(false);
               }}
-              className={`h-11 sm:h-12 rounded-xl border flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 transition-all cursor-pointer active:scale-95 ${
+              className={`h-11 sm:h-12 rounded-xl border flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 transition-all cursor-pointer active:scale-95 shrink-0 px-3 sm:px-0 min-w-[85px] sm:min-w-0 ${
                 active
                   ? "bg-purple-500/20 border-purple-500/40 text-purple-300 shadow-md shadow-purple-500/10"
                   : "bg-white/[0.02] hover:bg-white/[0.05] border-white/5 text-zinc-400 hover:text-zinc-200"
@@ -760,21 +787,63 @@ ${urlSeguimiento}`;
 
         <div
           onClick={handleTocarLienzo}
+          onTouchEnd={handleTocarLienzo}
+          style={{ touchAction: "manipulation" }}
           className="relative w-full h-72 sm:h-96 rounded-xl bg-black border border-cyan-500/30 flex items-center justify-center cursor-crosshair overflow-hidden group transition-all shadow-[0_0_35px_rgba(6,182,212,0.12)]"
         >
-            <div className="relative w-full h-full flex items-center justify-center pointer-events-none p-2 sm:p-4">
-              <img
-                src={
-                  vistaActiva === "trasera" || vistaActiva === "lateral_der"
-                    ? "/images/inspeccion/auto_3d_trasera.jpg"
-                    : vistaActiva === "superior"
-                    ? "/images/inspeccion/auto_3d_superior.jpg"
-                    : "/images/inspeccion/auto_3d_frontal.jpg"
-                }
-                alt={`Vehículo 3D ${vistaActiva}`}
-                className="w-full h-full object-contain filter drop-shadow-[0_0_25px_rgba(6,182,212,0.35)] select-none"
-              />
+          {/* Indicador de carga si la imagen está descargando en móvil */}
+          {imagenCargando && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-10 pointer-events-none gap-2">
+              <div className="w-8 h-8 rounded-full border-2 border-cyan-500/30 border-t-cyan-400 animate-spin" />
+              <span className="text-[11px] text-cyan-300 font-mono">Cargando vista 3D...</span>
             </div>
+          )}
+
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none p-2 sm:p-4">
+            <img
+              src={
+                vistaActiva === "trasera" || vistaActiva === "lateral_der"
+                  ? "/images/inspeccion/auto_3d_trasera.jpg"
+                  : vistaActiva === "superior"
+                  ? "/images/inspeccion/auto_3d_superior.jpg"
+                  : "/images/inspeccion/auto_3d_frontal.jpg"
+              }
+              alt={`Vehículo 3D ${vistaActiva}`}
+              loading="eager"
+              decoding="async"
+              onLoad={() => {
+                setImagenCargando(false);
+                setImagenError(false);
+              }}
+              onError={() => {
+                setImagenCargando(false);
+                setImagenError(true);
+              }}
+              className="max-w-full max-h-full w-auto h-auto object-contain select-none filter sm:drop-shadow-[0_0_25px_rgba(6,182,212,0.35)] transition-opacity duration-300"
+            />
+          </div>
+
+          {/* Fallback de respaldo en caso de que el navegador móvil bloquee o falle al cargar la imagen */}
+          {imagenError && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-10 p-4 text-center space-y-2 pointer-events-auto">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-2xl">
+                🚗
+              </div>
+              <p className="text-xs text-zinc-300 font-medium">Vista 3D: {vistaActiva}</p>
+              <p className="text-[11px] text-zinc-500 max-w-xs">Puedes marcar los daños tocando en cualquier punto de este recuadro.</p>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setImagenCargando(true);
+                  setImagenError(false);
+                }}
+                className="px-3 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-semibold cursor-pointer"
+              >
+                Reintentar carga
+              </button>
+            </div>
+          )}
 
           {/* PINES CIRCULARES ROJOS NUMERADOS */}
           {hallazgos
@@ -807,10 +876,10 @@ ${urlSeguimiento}`;
 
         {/* POPOVER MINIMALISTA DEL PIN ACTIVO */}
         {popoverAbierto && pinActual && (
-          <div className="mt-3 p-4 rounded-xl bg-white/[0.04] backdrop-blur-xl border border-white/10 shadow-2xl space-y-3 animate-fade-in">
-            <div className="flex items-center justify-between border-b border-white/5 pb-2">
+          <div className="mt-3 p-3.5 sm:p-4 rounded-xl bg-white/[0.04] backdrop-blur-xl border border-white/10 shadow-2xl space-y-3 animate-fade-in">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-2">
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-rose-500 text-white font-mono text-[11px] font-bold flex items-center justify-center">
+                <span className="w-5 h-5 rounded-full bg-rose-500 text-white font-mono text-[11px] font-bold flex items-center justify-center shrink-0">
                   {pinActual.pinNumber || 1}
                 </span>
                 <span className="text-xs font-bold text-white uppercase tracking-wider">
@@ -818,11 +887,11 @@ ${urlSeguimiento}`;
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <button
                   type="button"
                   onClick={() => handleDuplicarPin(pinActual)}
-                  className="px-2 py-0.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-medium cursor-pointer"
+                  className="px-2.5 py-1 sm:py-0.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-medium cursor-pointer min-h-[36px] sm:min-h-0 flex items-center justify-center"
                   title="Generar otro hallazgo en este mismo punto"
                 >
                   + Otro hallazgo
@@ -830,14 +899,14 @@ ${urlSeguimiento}`;
                 <button
                   type="button"
                   onClick={(e) => handleEliminarPin(pinActual.id, e)}
-                  className="px-2 py-0.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-medium cursor-pointer"
+                  className="px-2.5 py-1 sm:py-0.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-medium cursor-pointer min-h-[36px] sm:min-h-0 flex items-center justify-center"
                 >
                   Eliminar Pin ✕
                 </button>
                 <button
                   type="button"
                   onClick={() => setPopoverAbierto(false)}
-                  className="text-zinc-400 hover:text-white text-xs px-2 py-0.5 rounded bg-white/5 cursor-pointer"
+                  className="text-zinc-400 hover:text-white text-xs px-2.5 py-1 sm:py-0.5 rounded-lg bg-white/5 cursor-pointer min-h-[36px] sm:min-h-0 flex items-center justify-center"
                 >
                   Cerrar
                 </button>
@@ -889,7 +958,7 @@ ${urlSeguimiento}`;
                         ? "🎙 Escuchando... habla para describir el problema..."
                         : "Describe el problema o usa el micrófono al lado..."
                     }
-                    className={`w-full h-10 pl-3 pr-10 rounded-xl bg-black/60 border text-white text-xs transition-all focus:outline-none ${
+                    className={`w-full h-10 pl-3 pr-10 rounded-xl bg-black/60 border text-white text-base sm:text-xs transition-all focus:outline-none ${
                       escuchandoVoz
                         ? "border-rose-500 ring-2 ring-rose-500/40 placeholder:text-rose-400"
                         : "border-white/10 focus:border-purple-500/50"
@@ -899,7 +968,7 @@ ${urlSeguimiento}`;
                   <button
                     type="button"
                     onClick={() => handleToggleVozPin(pinActual.id)}
-                    className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                    className={`absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
                       escuchandoVoz
                         ? "bg-rose-500 text-white animate-pulse shadow-md shadow-rose-500/50"
                         : "text-zinc-400 hover:text-white hover:bg-white/10"
@@ -1028,9 +1097,19 @@ ${urlSeguimiento}`;
             {/* LIENZO 3D INTERACTIVO DEL SISTEMA (Tocar para marcar pines) */}
             <div
               onClick={handleTocarLienzo}
+              onTouchEnd={handleTocarLienzo}
+              style={{ touchAction: "manipulation" }}
               className="relative w-full h-72 sm:h-96 rounded-xl bg-black border border-cyan-500/30 flex items-center justify-center cursor-crosshair overflow-hidden group transition-all shadow-[0_0_35px_rgba(6,182,212,0.12)]"
             >
-              <div className="relative w-full h-full flex items-center justify-center pointer-events-none p-2 sm:p-4">
+              {/* Indicador de carga si la imagen está descargando en móvil */}
+              {imagenCargando && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-10 pointer-events-none gap-2">
+                  <div className="w-8 h-8 rounded-full border-2 border-cyan-500/30 border-t-cyan-400 animate-spin" />
+                  <span className="text-[11px] text-cyan-300 font-mono">Cargando esquema {sistemaActual.name}...</span>
+                </div>
+              )}
+
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none p-2 sm:p-4">
                 <img
                   src={
                     seccionActiva === "frenos"
@@ -1042,9 +1121,41 @@ ${urlSeguimiento}`;
                       : "/images/inspeccion/auto_3d_motor.jpg"
                   }
                   alt={`${sistemaActual.name} 3D`}
-                  className="w-full h-full object-contain filter drop-shadow-[0_0_25px_rgba(6,182,212,0.35)] select-none"
+                  loading="eager"
+                  decoding="async"
+                  onLoad={() => {
+                    setImagenCargando(false);
+                    setImagenError(false);
+                  }}
+                  onError={() => {
+                    setImagenCargando(false);
+                    setImagenError(true);
+                  }}
+                  className="max-w-full max-h-full w-auto h-auto object-contain select-none filter sm:drop-shadow-[0_0_25px_rgba(6,182,212,0.35)] transition-opacity duration-300"
                 />
               </div>
+
+              {/* Fallback de respaldo en caso de que el navegador móvil bloquee o falle al cargar la imagen */}
+              {imagenError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-10 p-4 text-center space-y-2 pointer-events-auto">
+                  <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-2xl">
+                    ⚙️
+                  </div>
+                  <p className="text-xs text-zinc-300 font-medium">Esquema 3D: {sistemaActual.name}</p>
+                  <p className="text-[11px] text-zinc-500 max-w-xs">Puedes marcar los hallazgos tocando en cualquier punto de este recuadro.</p>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setImagenCargando(true);
+                      setImagenError(false);
+                    }}
+                    className="px-3 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-semibold cursor-pointer"
+                  >
+                    Reintentar carga
+                  </button>
+                </div>
+              )}
 
               {/* PINES CIRCULARES NUMERADOS EN EL SISTEMA MECÁNICO */}
               {hallazgos
@@ -1077,10 +1188,10 @@ ${urlSeguimiento}`;
 
             {/* POPOVER PARA PINES DEL SISTEMA MECÁNICO */}
             {popoverAbierto && pinActual && pinActual.vista === seccionActiva && (
-              <div className="p-4 rounded-xl bg-white/[0.04] backdrop-blur-xl border border-white/10 shadow-2xl space-y-3 animate-fade-in">
-                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+              <div className="p-3.5 sm:p-4 rounded-xl bg-white/[0.04] backdrop-blur-xl border border-white/10 shadow-2xl space-y-3 animate-fade-in">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-2">
                   <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-rose-500 text-white font-mono text-[11px] font-bold flex items-center justify-center">
+                    <span className="w-5 h-5 rounded-full bg-rose-500 text-white font-mono text-[11px] font-bold flex items-center justify-center shrink-0">
                       {pinActual.pinNumber || 1}
                     </span>
                     <span className="text-xs font-bold text-white uppercase tracking-wider">
@@ -1088,11 +1199,11 @@ ${urlSeguimiento}`;
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                     <button
                       type="button"
                       onClick={() => handleDuplicarPin(pinActual)}
-                      className="px-2 py-0.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-medium cursor-pointer"
+                      className="px-2.5 py-1 sm:py-0.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-medium cursor-pointer min-h-[36px] sm:min-h-0 flex items-center justify-center"
                       title="Generar otro hallazgo en este mismo punto"
                     >
                       + Otro hallazgo
@@ -1100,14 +1211,14 @@ ${urlSeguimiento}`;
                     <button
                       type="button"
                       onClick={(e) => handleEliminarPin(pinActual.id, e)}
-                      className="px-2 py-0.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-medium cursor-pointer"
+                      className="px-2.5 py-1 sm:py-0.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-medium cursor-pointer min-h-[36px] sm:min-h-0 flex items-center justify-center"
                     >
                       Eliminar Pin ✕
                     </button>
                     <button
                       type="button"
                       onClick={() => setPopoverAbierto(false)}
-                      className="text-zinc-400 hover:text-white text-xs px-2 py-0.5 rounded bg-white/5 cursor-pointer"
+                      className="text-zinc-400 hover:text-white text-xs px-2.5 py-1 sm:py-0.5 rounded-lg bg-white/5 cursor-pointer min-h-[36px] sm:min-h-0 flex items-center justify-center"
                     >
                       Cerrar
                     </button>
@@ -1159,7 +1270,7 @@ ${urlSeguimiento}`;
                             ? "🎙 Escuchando... habla para describir el problema..."
                             : "Describe el problema o usa el micrófono al lado..."
                         }
-                        className={`w-full h-10 pl-3 pr-10 rounded-xl bg-black/60 border text-white text-xs transition-all focus:outline-none ${
+                        className={`w-full h-10 pl-3 pr-10 rounded-xl bg-black/60 border text-white text-base sm:text-xs transition-all focus:outline-none ${
                           escuchandoVoz
                             ? "border-rose-500 ring-2 ring-rose-500/40 placeholder:text-rose-400"
                             : "border-white/10 focus:border-purple-500/50"
@@ -1169,7 +1280,7 @@ ${urlSeguimiento}`;
                       <button
                         type="button"
                         onClick={() => handleToggleVozPin(pinActual.id)}
-                        className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                        className={`absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
                           escuchandoVoz
                             ? "bg-rose-500 text-white animate-pulse shadow-md shadow-rose-500/50"
                             : "text-zinc-400 hover:text-white hover:bg-white/10"
@@ -1277,7 +1388,7 @@ ${urlSeguimiento}`;
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#111113] border border-white/10 rounded-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto p-5 sm:p-6 shadow-2xl space-y-4"
+            className="bg-[#111113] border border-white/10 rounded-2xl w-[95%] sm:w-full max-w-3xl max-h-[90dvh] overflow-y-auto p-4 sm:p-6 shadow-2xl space-y-4 [WebkitOverflowScrolling:touch]"
           >
             {/* Cabecera del Modal */}
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
@@ -1319,7 +1430,7 @@ ${urlSeguimiento}`;
               </div>
 
               {/* Datos del Cliente y Vehículo */}
-              <div className="grid grid-cols-2 gap-3 p-3 bg-zinc-50 rounded-lg border border-zinc-200 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-zinc-50 rounded-lg border border-zinc-200 text-xs">
                 <div>
                   <p><strong>Cliente:</strong> {ordenActiva?.client || "Cliente general"}</p>
                   <p><strong>Teléfono:</strong> {ordenActiva?.clientPhone || "N/A"}</p>
@@ -1443,7 +1554,7 @@ ${urlSeguimiento}`;
               )}
 
               {/* Conformidad y Firma del Cliente */}
-              <div className="pt-4 border-t-2 border-zinc-900 flex items-end justify-between">
+              <div className="pt-4 border-t-2 border-zinc-900 flex flex-col sm:flex-row items-center sm:items-end justify-between gap-3">
                 <div className="w-56 text-center">
                   <div className="h-16 border-b border-zinc-400 mb-1 flex items-center justify-center">
                     {firmaRecepcionUrl ? (
@@ -1456,7 +1567,7 @@ ${urlSeguimiento}`;
                   <p className="text-[10px] text-zinc-500">{ordenActiva?.client}</p>
                 </div>
 
-                <div className="text-right text-[10px] text-zinc-500 font-mono">
+                <div className="text-center sm:text-right text-[10px] text-zinc-500 font-mono">
                   <p>Documento generado por Sistema AutoG Taller</p>
                   <p>Trazabilidad en Cloudflare R2 y Neon PostgreSQL</p>
                 </div>
