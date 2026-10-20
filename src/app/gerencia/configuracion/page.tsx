@@ -14,8 +14,8 @@ export default function ConfiguracionSistema() {
   const [editingBranch, setEditingBranch] = useState<any>(null);
 
   const [config, setConfig] = useState({
-    razonSocial: "AutoPro Servicios Automotrices S.A.",
-    nombreComercial: "AutoPro",
+    razonSocial: "AutoG Servicios Automotrices S.A.",
+    nombreComercial: "AutoG",
     ruc: "0992345678001",
     telefono: "04-234-5678",
     direccion: "Av. de las Américas y Plaza Dañín, Guayaquil, Ecuador",

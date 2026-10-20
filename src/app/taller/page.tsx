@@ -1474,16 +1474,24 @@ export default function TallerPanel() {
 
   // Alternar un ítem del checklist "Inventario de lo que trae" en Etapa 2
   const handleToggleInventarioEtapa2 = (item: string) => {
-    setEtapa2InventarioTrae((prev) =>
-      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
-    );
+    const nuevaLista = etapa2InventarioTrae.includes(item)
+      ? etapa2InventarioTrae.filter((i) => i !== item)
+      : [...etapa2InventarioTrae, item];
+    setEtapa2InventarioTrae(nuevaLista);
+    if (ordenActiva) {
+      void sincronizarOrdenEnNeon({ receptionInventory: nuevaLista });
+    }
   };
 
   const handleAgregarItemManualInventario = () => {
     const val = itemManualInventario.trim();
     if (!val) return;
     if (!etapa2InventarioTrae.includes(val)) {
-      setEtapa2InventarioTrae((prev) => [...prev, val]);
+      const nuevaLista = [...etapa2InventarioTrae, val];
+      setEtapa2InventarioTrae(nuevaLista);
+      if (ordenActiva) {
+        void sincronizarOrdenEnNeon({ receptionInventory: nuevaLista });
+      }
     }
     setItemManualInventario("");
   };
@@ -1902,6 +1910,14 @@ export default function TallerPanel() {
   // ==========================================================================
   useEffect(() => {
     if (!ordenActiva) return;
+    setEtapa2NivelCombustible(ordenActiva.fuelLevel || "1/2");
+    setEtapa2Kilometraje(ordenActiva.mileage ? String(ordenActiva.mileage) : "");
+    setEtapa2InventarioTrae(
+      Array.isArray(ordenActiva.receptionInventory) && ordenActiva.receptionInventory.length > 0
+        ? ordenActiva.receptionInventory
+        : ["Matrícula", "Repuesto", "Gata", "Llave"]
+    );
+    setFotosRecepcion(Array.isArray(ordenActiva.receptionPhotos) ? ordenActiva.receptionPhotos : []);
     setEtapa4Items(Array.isArray(ordenActiva.items) ? ordenActiva.items : []);
     if (ordenActiva.quoteTaxRate !== undefined) {
       setEtapa4TaxRate(String(ordenActiva.quoteTaxRate));
@@ -2237,13 +2253,15 @@ export default function TallerPanel() {
     productId?: string;
     imageUrl?: string | null;
   }) => {
-    setEtapa4Items((prev) => {
-      const existe = prev.find(
-        (i) => i.code === item.code || i.name.toLowerCase() === item.name.toLowerCase()
+    const existe = etapa4Items.find(
+      (i) => i.code === item.code || i.name.toLowerCase() === item.name.toLowerCase()
+    );
+    let nuevosItems: OrderItem[];
+    if (existe) {
+      nuevosItems = etapa4Items.map((i) =>
+        i.id === existe.id ? { ...i, qty: (i.qty || 1) + 1 } : i
       );
-      if (existe) {
-        return prev.map((i) => (i.id === existe.id ? { ...i, qty: (i.qty || 1) + 1 } : i));
-      }
+    } else {
       const nuevo: OrderItem = {
         id: `pre-${item.code}-${Date.now()}`,
         type: item.type || "SERVICE",
@@ -2256,25 +2274,43 @@ export default function TallerPanel() {
         productId: item.productId,
         imageUrl: item.imageUrl,
       };
-      return [...prev, nuevo];
-    });
+      nuevosItems = [...etapa4Items, nuevo];
+    }
+    setEtapa4Items(nuevosItems);
+    if (ordenActiva) {
+      setOrdenActiva({ ...ordenActiva, items: nuevosItems });
+      void sincronizarOrdenEnNeon({ items: nuevosItems });
+    }
   };
 
   const handleCambiarCantidadEtapa4 = (id: string, delta: number) => {
-    setEtapa4Items((prev) =>
-      prev
-        .map((it) => (it.id === id ? { ...it, qty: Math.max(0, (it.qty || 1) + delta) } : it))
-        .filter((it) => it.qty > 0)
-    );
+    const nuevosItems = etapa4Items
+      .map((it) => (it.id === id ? { ...it, qty: Math.max(0, (it.qty || 1) + delta) } : it))
+      .filter((it) => it.qty > 0);
+    setEtapa4Items(nuevosItems);
+    if (ordenActiva) {
+      setOrdenActiva({ ...ordenActiva, items: nuevosItems });
+      void sincronizarOrdenEnNeon({ items: nuevosItems });
+    }
   };
 
   const handleCambiarPrecioEtapa4 = (id: string, nuevoPrecio: string) => {
     const val = Math.max(0, parseFloat(nuevoPrecio) || 0);
-    setEtapa4Items((prev) => prev.map((it) => (it.id === id ? { ...it, price: val } : it)));
+    const nuevosItems = etapa4Items.map((it) => (it.id === id ? { ...it, price: val } : it));
+    setEtapa4Items(nuevosItems);
+    if (ordenActiva) {
+      setOrdenActiva({ ...ordenActiva, items: nuevosItems });
+      void sincronizarOrdenEnNeon({ items: nuevosItems });
+    }
   };
 
   const handleEliminarItemEtapa4 = (id: string) => {
-    setEtapa4Items((prev) => prev.filter((it) => it.id !== id));
+    const nuevosItems = etapa4Items.filter((it) => it.id !== id);
+    setEtapa4Items(nuevosItems);
+    if (ordenActiva) {
+      setOrdenActiva({ ...ordenActiva, items: nuevosItems });
+      void sincronizarOrdenEnNeon({ items: nuevosItems });
+    }
   };
 
   const handleAgregarManualEtapa4 = () => {
@@ -2293,9 +2329,14 @@ export default function TallerPanel() {
       qty: 1,
       status: "Pendiente",
     };
-    setEtapa4Items((prev) => [...prev, nuevo]);
+    const nuevosItems = [...etapa4Items, nuevo];
+    setEtapa4Items(nuevosItems);
     setEtapa4ManualNombre("");
     setEtapa4ManualPrecio("");
+    if (ordenActiva) {
+      setOrdenActiva({ ...ordenActiva, items: nuevosItems });
+      void sincronizarOrdenEnNeon({ items: nuevosItems });
+    }
   };
 
   const handleCotizarPin = async (
@@ -4051,6 +4092,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
     notes?: string;
     receptionPhotos?: string[];
     evidencePhotos?: string[];
+    receptionInventory?: string[];
     status?: string;
     fuelLevel?: string;
     generalCondition?: string;
@@ -4076,6 +4118,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
           notes: partial.notes !== undefined ? partial.notes : ordenActiva.notes,
           receptionPhotos: partial.receptionPhotos ?? ordenActiva.receptionPhotos,
           evidencePhotos: partial.evidencePhotos ?? ordenActiva.evidencePhotos,
+          receptionInventory: partial.receptionInventory ?? ordenActiva.receptionInventory,
           status: partial.status ?? ordenActiva.status,
           fuelLevel: partial.fuelLevel !== undefined ? partial.fuelLevel : ordenActiva.fuelLevel,
           generalCondition:
@@ -4949,7 +4992,13 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                               <button
                                 key={lvl}
                                 type="button"
-                                onClick={() => setEtapa2NivelCombustible(lvl.split(" ")[0])}
+                                onClick={() => {
+                                  const nuevoNivel = lvl.split(" ")[0];
+                                  setEtapa2NivelCombustible(nuevoNivel);
+                                  if (ordenActiva) {
+                                    void sincronizarOrdenEnNeon({ fuelLevel: nuevoNivel });
+                                  }
+                                }}
                                 className={`h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                                   sel
                                     ? "bg-emerald-500/20 border border-emerald-500/50 text-emerald-300"
@@ -4970,6 +5019,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                             type="number"
                             value={etapa2Kilometraje}
                             onChange={(e) => setEtapa2Kilometraje(e.target.value)}
+                            onBlur={() => {
+                              if (!ordenActiva) return;
+                              const kmNum = parseInt(String(etapa2Kilometraje).replace(/[^0-9]/g, ""), 10) || null;
+                              void sincronizarOrdenEnNeon({
+                                mileage: kmNum,
+                                nextOilChangeKm: kmNum ? kmNum + 5000 : null,
+                              });
+                            }}
                             placeholder="Ej: 85400"
                             className="h-8 w-32 px-3 rounded-lg bg-black/50 border border-white/10 text-white text-xs font-mono text-right"
                           />
@@ -5018,9 +5075,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                     <span
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setEtapa2InventarioTrae((prev) =>
-                                          prev.filter((i) => i !== item)
-                                        );
+                                        const filtrada = etapa2InventarioTrae.filter((i) => i !== item);
+                                        setEtapa2InventarioTrae(filtrada);
+                                        if (ordenActiva) {
+                                          void sincronizarOrdenEnNeon({ receptionInventory: filtrada });
+                                        }
                                       }}
                                       className="text-zinc-500 hover:text-red-400 ml-0.5 text-[10px]"
                                       title="Quitar ítem"
@@ -5144,7 +5203,19 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 <div className="flex items-center justify-end pt-2">
                   <button
                     type="button"
-                    onClick={() => setEtapaActiva(2)}
+                    onClick={() => {
+                      if (ordenActiva) {
+                        const kmNum = parseInt(String(etapa2Kilometraje).replace(/[^0-9]/g, ""), 10) || ordenActiva.mileage || null;
+                        void sincronizarOrdenEnNeon({
+                          fuelLevel: etapa2NivelCombustible || "1/2",
+                          mileage: kmNum,
+                          nextOilChangeKm: kmNum ? kmNum + 5000 : ordenActiva.nextOilChangeKm || null,
+                          receptionInventory: etapa2InventarioTrae,
+                          receptionPhotos: fotosRecepcion,
+                        });
+                      }
+                      setEtapaActiva(2);
+                    }}
                     className="px-4 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs font-semibold cursor-pointer"
                   >
                     Siguiente →

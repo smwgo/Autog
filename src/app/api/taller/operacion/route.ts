@@ -563,15 +563,36 @@ export async function GET(request: Request) {
 
       const autosEnPista = ordersRows.map(mapOrderRow);
 
-      const defaultMecanicos = [
-        "Hernan Marquez",
-        "Carlos Rodríguez",
-        "Luis Martínez",
-        "Ana Torres",
-        "Miguel Ángel",
-      ];
-      const mecanicosFromDb = employeesRows.map((e: any) => e.name).filter(Boolean);
-      const mecanicosList = Array.from(new Set([...defaultMecanicos, ...mecanicosFromDb]));
+      let finalEmployeesRows = employeesRows;
+      if (finalEmployeesRows.length === 0) {
+        const seedEmployees = [
+          { email: "hernan.marquez@autog.com", name: "Hernan Marquez", role: "Jefe de Taller", department: "TALLER" },
+          { email: "carlos.rodriguez@autog.com", name: "Carlos Rodríguez", role: "Mecánico Senior", department: "TALLER" },
+          { email: "luis.martinez@autog.com", name: "Luis Martínez", role: "Técnico Lubricentro", department: "TALLER" },
+          { email: "ana.torres@autog.com", name: "Ana Torres", role: "Inspectora Técnica", department: "TALLER" },
+          { email: "miguel.angel@autog.com", name: "Miguel Ángel", role: "Especialista Eléctrico", department: "TALLER" },
+        ];
+        for (const emp of seedEmployees) {
+          await prisma.employee
+            .upsert({
+              where: { email: emp.email },
+              update: {},
+              create: {
+                email: emp.email,
+                name: emp.name,
+                role: emp.role,
+                department: emp.department,
+                status: "Activo",
+              },
+            })
+            .catch(() => {});
+        }
+        finalEmployeesRows = (await prisma
+          .$queryRawUnsafe(`SELECT * FROM "Employee" WHERE "status" = 'Activo' ORDER BY "name" ASC`)
+          .catch(() => [])) as any[];
+      }
+
+      const mecanicosList = finalEmployeesRows.map((e: any) => e.name).filter(Boolean);
 
       return NextResponse.json({
         success: true,
@@ -2728,7 +2749,7 @@ export async function POST(request: Request) {
 
       // =========================================================================
       // =========================================================================
-      // ACCIÓN 3: ACTUALIZAR ORDEN UNIFICADA (Servicios, Repuestos, Fotos, Notas, Km, Combustible, Cronómetro)
+      // ACCIÓN 3: ACTUALIZAR ORDEN UNIFICADA (Servicios, Repuestos, Fotos, Notas, Km, Combustible, Inventario, Cronómetro)
       // =========================================================================
       if (action === "ACTUALIZAR_ORDEN") {
         const {
@@ -2740,6 +2761,7 @@ export async function POST(request: Request) {
           notes,
           receptionPhotos,
           evidencePhotos,
+          receptionInventory,
           status,
           fuelLevel,
           generalCondition,
@@ -2796,6 +2818,10 @@ export async function POST(request: Request) {
           ? evidencePhotos
           : safeParseJson<string[]>(current.evidencePhotosJson, []);
 
+        const finalReceptionInventory = Array.isArray(receptionInventory)
+          ? receptionInventory.map((x: any) => String(x || "").trim()).filter(Boolean)
+          : safeParseJson<string[]>(current.receptionInventoryJson, []);
+
         const finalMileage =
           mileage !== undefined && mileage !== null && mileage !== ""
             ? parseInt(String(mileage), 10)
@@ -2841,6 +2867,7 @@ export async function POST(request: Request) {
                "fuelLevel" = COALESCE($13, "fuelLevel"),
                "generalCondition" = COALESCE($14, "generalCondition"),
                "startedAt" = CASE WHEN $15 = TRUE THEN COALESCE("startedAt", NOW()) ELSE "startedAt" END,
+               "receptionInventoryJson" = $16,
                "updatedAt" = NOW()
            WHERE "id" = $1`,
           current.id,
@@ -2857,7 +2884,8 @@ export async function POST(request: Request) {
           finalStatus,
           fuelLevel || null,
           generalCondition || null,
-          Boolean(startTimer)
+          Boolean(startTimer),
+          JSON.stringify(finalReceptionInventory)
         );
 
         // Sincronizar kilometraje y fotos con el expediente del vehículo (Oficina / Clientes)
@@ -3391,6 +3419,43 @@ export async function POST(request: Request) {
         });
       }
 
+      // =========================================================================
+      // ACCIÓN 7: ELIMINAR ORDEN DE TRABAJO EN NEON POSTGRESQL (DELETE CRUD)
+      // =========================================================================
+      if (action === "ELIMINAR_ORDEN") {
+        const { orderId } = body;
+        if (!orderId) {
+          return NextResponse.json(
+            { success: false, error: "ID de orden requerido." },
+            { status: 400 }
+          );
+        }
+
+        const existing: any[] = await prisma.$queryRawUnsafe(
+          `SELECT "id", "orderNumber" FROM "WorkshopOrder" WHERE "id" = $1 OR "orderNumber" = $1 LIMIT 1`,
+          orderId
+        );
+
+        if (existing.length === 0) {
+          return NextResponse.json(
+            { success: false, error: "Orden no encontrada." },
+            { status: 404 }
+          );
+        }
+
+        await prisma.$executeRawUnsafe(
+          `DELETE FROM "WorkshopOrder" WHERE "id" = $1`,
+          existing[0].id
+        );
+
+        return NextResponse.json({
+          success: true,
+          deletedId: existing[0].id,
+          orderNumber: existing[0].orderNumber,
+          message: `Orden ${existing[0].orderNumber} eliminada de Neon PostgreSQL.`,
+        });
+      }
+
       return NextResponse.json(
         { success: false, error: `Acción desconocida: ${action}` },
         { status: 400 }
@@ -3400,6 +3465,52 @@ export async function POST(request: Request) {
     console.error("Error en POST /api/taller/operacion:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Error al ejecutar operación en Taller." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const orderId = (searchParams.get("id") || searchParams.get("orderId") || "").trim();
+    if (!orderId) {
+      return NextResponse.json(
+        { success: false, error: "ID de orden requerido." },
+        { status: 400 }
+      );
+    }
+
+    return await withRetry(async () => {
+      await ensureTallerSchema();
+
+      const existing: any[] = await prisma.$queryRawUnsafe(
+        `SELECT "id", "orderNumber" FROM "WorkshopOrder" WHERE "id" = $1 OR "orderNumber" = $1 LIMIT 1`,
+        orderId
+      );
+
+      if (existing.length === 0) {
+        return NextResponse.json(
+          { success: false, error: "Orden no encontrada." },
+          { status: 404 }
+        );
+      }
+
+      await prisma.$executeRawUnsafe(
+        `DELETE FROM "WorkshopOrder" WHERE "id" = $1`,
+        existing[0].id
+      );
+
+      return NextResponse.json({
+        success: true,
+        deletedId: existing[0].id,
+        orderNumber: existing[0].orderNumber,
+      });
+    });
+  } catch (error: any) {
+    console.error("Error en DELETE /api/taller/operacion:", error);
+    return NextResponse.json(
+      { success: false, error: error.message || "Error al eliminar orden." },
       { status: 500 }
     );
   }

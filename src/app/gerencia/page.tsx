@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
+import { GerenciaExecutiveKpis } from "@/components/gerencia/GerenciaExecutiveKpis";
 
 const modules = [
   {
@@ -83,33 +84,38 @@ const modules = [
       </svg>
     ),
   },
+  {
+    title: "Usuarios",
+    href: "/gerencia/usuarios",
+    color: "bg-cyan-500",
+    gradient: "from-cyan-500 via-sky-500 to-blue-600",
+    icon: (
+      <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <rect x="15" y="11" width="7" height="7" rx="1.5" />
+        <path d="M17 11V9a1.5 1.5 0 0 1 3 0v2" />
+      </svg>
+    ),
+  },
 ];
 
 export default function GerenciaPanel() {
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
-      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
-        {/* Cabecera: Flecha de regreso y Título Gerencia (Idéntico a POS) */}
-        <div className="mb-6 sm:mb-8 flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <Link 
-              href="/" 
-              aria-label="Volver"
-              className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-zinc-500/10 dark:bg-zinc-800/30 hover:bg-zinc-500/20 dark:hover:bg-zinc-800/60 border border-zinc-300/40 dark:border-zinc-700/30 text-zinc-700 dark:text-zinc-200 backdrop-blur-sm transition-all flex items-center justify-center shrink-0 active:scale-95"
-            >
-              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 12H5M12 19l-7-7 7-7" />
-              </svg>
-            </Link>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Gerencia
-            </h1>
-          </div>
-        </div>
+      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full space-y-8">
+        {/* Panel Ejecutivo KPI (Estilo CEO - Dirección) */}
+        <GerenciaExecutiveKpis backHref="/" />
 
-        {/* Módulos Gerencia: Exactamente igual al panel POS con solo un título por tarjeta */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
+        {/* Sección de Módulos de Gestión */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs sm:text-sm font-bold tracking-widest text-zinc-400 dark:text-zinc-500 uppercase">
+              Módulos de Gestión
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
           {modules.map((mod, index) => (
             <Link 
               key={mod.href} 
@@ -148,6 +154,7 @@ export default function GerenciaPanel() {
               </div>
             </Link>
           ))}
+          </div>
         </div>
       </main>
 

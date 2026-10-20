@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { GerenciaExecutiveKpis } from "@/components/gerencia/GerenciaExecutiveKpis";
 import { useEffect, useState } from "react";
 
 export default function DashboardGeneral() {
@@ -87,60 +88,26 @@ export default function DashboardGeneral() {
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
       <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
-        {/* Breadcrumb & Header */}
-        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-1.5 sm:mb-2">
-              <Link href="/gerencia" className="hover:text-blue-600 transition-colors">Gerencia</Link>
-              <span>/</span>
-              <span className="text-zinc-900 dark:text-zinc-100 font-medium">Tablero General</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Resumen del Negocio
-            </h1>
+        {/* Breadcrumb & CSV Export */}
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500">
+            <Link href="/gerencia" className="hover:text-blue-600 transition-colors">Gerencia</Link>
+            <span>/</span>
+            <span className="text-zinc-900 dark:text-zinc-100 font-medium">Tablero General</span>
           </div>
-          <div className="grid grid-cols-2 sm:flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              className="h-11 sm:h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 sm:px-4 text-base sm:text-sm font-medium outline-none focus:border-blue-500 w-full sm:w-auto"
-            >
-              <option>Hoy</option>
-              <option>Esta semana</option>
-              <option>Este mes</option>
-              <option>Este año</option>
-            </select>
-            <button
-              onClick={handleExport}
-              className="h-11 sm:h-10 px-3 sm:px-4 rounded-xl bg-blue-600 text-white font-medium text-xs sm:text-sm hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-1.5"
-            >
-              <span>📥</span>
-              <span>Reporte CSV</span>
-            </button>
-          </div>
+          <button
+            onClick={handleExport}
+            className="h-9 px-3.5 sm:px-4 rounded-xl bg-blue-600 text-white font-medium text-xs sm:text-sm hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-sm"
+          >
+            <span>📥</span>
+            <span>Reporte CSV</span>
+          </button>
         </div>
 
-        {/* KPIs Grid: 2x2 on mobile */}
-        <CollapsibleMetrics className="mb-6 sm:mb-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-            {kpis.map((kpi, i) => (
-              <div key={i} className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
-                <div className="flex justify-between items-start mb-2.5 sm:mb-4 gap-1">
-                  <div className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center text-base sm:text-xl ${kpi.color}`}>
-                    {kpi.icon}
-                  </div>
-                  <span className={`text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg ${kpi.isUp ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10' : 'text-red-600 bg-red-50 dark:bg-red-500/10'}`}>
-                    {kpi.trend}
-                  </span>
-                </div>
-                <div>
-                  <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 truncate">{kpi.label}</h3>
-                  <p className="text-xl sm:text-3xl font-bold text-zinc-900 dark:text-white truncate">{loading ? "..." : kpi.value}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CollapsibleMetrics>
+        {/* Panel Ejecutivo KPI (Exacto a Dirección) */}
+        <div className="mb-6 sm:mb-8">
+          <GerenciaExecutiveKpis onDataLoaded={(d) => setSummary(d)} />
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Main Chart */}
@@ -159,15 +126,35 @@ export default function DashboardGeneral() {
               </div>
             </div>
             <div className="flex-grow flex items-end justify-between gap-1.5 sm:gap-2 h-48 sm:h-64 mt-auto pt-4">
-              {[45, 72, 55, 90, 68, 85, 100].map((h, i) => (
+              {(summary?.weeklyChart || [
+                { day: "Lun", heightIncome: 4, heightExpense: 4, income: 0, expense: 0 },
+                { day: "Mar", heightIncome: 4, heightExpense: 4, income: 0, expense: 0 },
+                { day: "Mié", heightIncome: 4, heightExpense: 4, income: 0, expense: 0 },
+                { day: "Jue", heightIncome: 4, heightExpense: 4, income: 0, expense: 0 },
+                { day: "Vie", heightIncome: 4, heightExpense: 4, income: 0, expense: 0 },
+                { day: "Sáb", heightIncome: 4, heightExpense: 4, income: 0, expense: 0 },
+                { day: "Dom", heightIncome: 4, heightExpense: 4, income: 0, expense: 0 },
+              ]).map((bar: any, i: number) => (
                 <div key={i} className="w-full flex justify-center items-end gap-1 group h-full">
-                  <div className="w-1/2 bg-blue-500 rounded-t-md transition-all hover:bg-blue-400" style={{ height: `${h}%` }}></div>
-                  <div className="w-1/2 bg-zinc-200 dark:bg-zinc-800 rounded-t-md transition-all hover:bg-zinc-300 dark:hover:bg-zinc-700" style={{ height: `${h * 0.55}%` }}></div>
+                  <div
+                    title={`Ingresos ${bar.day}: $${Number(bar.income || 0).toFixed(2)}`}
+                    className="w-1/2 bg-blue-500 rounded-t-md transition-all hover:bg-blue-400 cursor-pointer"
+                    style={{ height: `${bar.heightIncome}%` }}
+                  />
+                  <div
+                    title={`Egresos ${bar.day}: $${Number(bar.expense || 0).toFixed(2)}`}
+                    className="w-1/2 bg-zinc-200 dark:bg-zinc-800 rounded-t-md transition-all hover:bg-zinc-300 dark:hover:bg-zinc-700 cursor-pointer"
+                    style={{ height: `${bar.heightExpense}%` }}
+                  />
                 </div>
               ))}
             </div>
             <div className="flex justify-between mt-3 sm:mt-4 text-[11px] sm:text-xs font-medium text-zinc-400">
-              <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+              {(summary?.weeklyChart || [
+                { day: "Lun" }, { day: "Mar" }, { day: "Mié" }, { day: "Jue" }, { day: "Vie" }, { day: "Sáb" }, { day: "Dom" }
+              ]).map((item: any, i: number) => (
+                <span key={i}>{item.day}</span>
+              ))}
             </div>
           </div>
 

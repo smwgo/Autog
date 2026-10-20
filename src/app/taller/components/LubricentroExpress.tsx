@@ -230,6 +230,7 @@ export default function LubricentroExpress({
     nextOilChangeKm?: number | null;
     receptionPhotos?: string[];
     evidencePhotos?: string[];
+    receptionInventory?: string[];
     status?: string;
     fuelLevel?: string;
     notes?: string;
@@ -253,6 +254,7 @@ export default function LubricentroExpress({
             partial.nextOilChangeKm !== undefined ? partial.nextOilChangeKm : kmProximoCambio,
           receptionPhotos: partial.receptionPhotos ?? fotosRecepcion,
           evidencePhotos: partial.evidencePhotos ?? ordenActiva.evidencePhotos ?? [],
+          receptionInventory: partial.receptionInventory ?? checklistIngreso,
           status: partial.status ?? ordenActiva.status,
           fuelLevel: partial.fuelLevel ?? nivelAceiteIngreso,
           notes: partial.notes !== undefined ? partial.notes : ordenActiva.notes,
@@ -321,16 +323,24 @@ export default function LubricentroExpress({
   };
 
   const handleToggleChecklistIngreso = (item: string) => {
-    setChecklistIngreso((prev) =>
-      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
-    );
+    const nuevaLista = checklistIngreso.includes(item)
+      ? checklistIngreso.filter((i) => i !== item)
+      : [...checklistIngreso, item];
+    setChecklistIngreso(nuevaLista);
+    if (ordenActiva) {
+      void sincronizarOrdenLubricentro({ receptionInventory: nuevaLista });
+    }
   };
 
   const handleAgregarChecklistManual = () => {
     const val = itemManualIngreso.trim();
     if (!val) return;
     if (!checklistIngreso.includes(val)) {
-      setChecklistIngreso((prev) => [...prev, val]);
+      const nuevaLista = [...checklistIngreso, val];
+      setChecklistIngreso(nuevaLista);
+      if (ordenActiva) {
+        void sincronizarOrdenLubricentro({ receptionInventory: nuevaLista });
+      }
     }
     setItemManualIngreso("");
   };
@@ -898,7 +908,16 @@ export default function LubricentroExpress({
                       <button
                         key={it.valor}
                         type="button"
-                        onClick={() => setIntervaloAceite(it.valor)}
+                        onClick={() => {
+                          setIntervaloAceite(it.valor);
+                          const kmNum = parseInt(String(kmActual).replace(/[^0-9]/g, ""), 10) || ordenActiva?.mileage || null;
+                          if (ordenActiva && kmNum) {
+                            void sincronizarOrdenLubricentro({
+                              mileage: kmNum,
+                              nextOilChangeKm: kmNum + it.valor,
+                            });
+                          }
+                        }}
                         className={`px-2 py-0.5 rounded-lg text-[11px] font-mono font-bold transition-all cursor-pointer border ${
                           intervaloAceite === it.valor
                             ? "bg-amber-500/20 border-amber-500/50 text-amber-300"
@@ -1068,7 +1087,19 @@ export default function LubricentroExpress({
           <div className="flex items-center justify-end pt-2">
             <button
               type="button"
-              onClick={() => setEtapaActiva(2)}
+              onClick={() => {
+                if (ordenActiva) {
+                  const kmNum = parseInt(String(kmActual).replace(/[^0-9]/g, ""), 10) || ordenActiva.mileage || null;
+                  void sincronizarOrdenLubricentro({
+                    fuelLevel: nivelAceiteIngreso,
+                    mileage: kmNum,
+                    nextOilChangeKm: kmNum ? kmNum + intervaloAceite : ordenActiva.nextOilChangeKm || null,
+                    receptionInventory: checklistIngreso,
+                    receptionPhotos: fotosRecepcion,
+                  });
+                }
+                setEtapaActiva(2);
+              }}
               className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-semibold cursor-pointer"
             >
               Siguiente →

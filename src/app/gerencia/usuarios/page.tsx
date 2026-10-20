@@ -1,0 +1,875 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { Header } from "@/components/Header";
+import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
+import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+
+interface AppUserRecord {
+  id: string;
+  identification?: string | null;
+  name: string;
+  email: string;
+  phone?: string | null;
+  username?: string | null;
+  pinCode: string;
+  role: string;
+  branch: string;
+  accessOficina: boolean;
+  accessPos: boolean;
+  accessTaller: boolean;
+  status: string;
+  lastAccess: string;
+  createdAt: string;
+}
+
+export default function GestionUsuarios() {
+  const [todosUsuarios, setTodosUsuarios] = useState<AppUserRecord[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filtro, setFiltro] = useState("todos");
+  const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+  const [togglingKey, setTogglingKey] = useState<string | null>(null);
+
+  // Eliminación y Toast idénticos a Clientes en POS
+  const [eliminandoId, setEliminandoId] = useState<string | null>(null);
+  const [usuarioAEliminar, setUsuarioAEliminar] = useState<{ id: string; name: string } | null>(null);
+  const [toast, setToast] = useState<{ tipo: "exito" | "error"; texto: string } | null>(null);
+
+  const mostrarToast = (texto: string, tipo: "exito" | "error" = "exito") => {
+    setToast({ tipo, texto });
+    setTimeout(() => {
+      setToast(null);
+    }, 4000);
+  };
+
+  const cargarUsuarios = useCallback(async () => {
+    try {
+      setCargando(true);
+      setError(null);
+      const res = await fetch("/api/gerencia/usuarios", { cache: "no-store" });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Error al cargar usuarios");
+      }
+
+      setTodosUsuarios(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Error al conectar con la base de datos.");
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    cargarUsuarios();
+  }, [cargarUsuarios]);
+
+  // Filtrado instantáneo en memoria idéntico a Clientes en POS
+  const usuarios = todosUsuarios.filter((u) => {
+    const q = busqueda.trim().toLowerCase();
+    const matchSearch =
+      !q ||
+      u.name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      (u.identification && u.identification.toLowerCase().includes(q)) ||
+      (u.phone && u.phone.toLowerCase().includes(q)) ||
+      (u.role && u.role.toLowerCase().includes(q)) ||
+      (u.pinCode && u.pinCode.toLowerCase().includes(q));
+
+    if (!matchSearch) return false;
+
+    if (filtro === "oficina") return Boolean(u.accessOficina);
+    if (filtro === "pos") return Boolean(u.accessPos);
+    if (filtro === "taller") return Boolean(u.accessTaller);
+
+    return true;
+  });
+
+  const stats = {
+    totalUsuarios: todosUsuarios.length,
+    totalOficina: todosUsuarios.filter((u) => u.accessOficina).length,
+    totalPos: todosUsuarios.filter((u) => u.accessPos).length,
+    totalTaller: todosUsuarios.filter((u) => u.accessTaller).length,
+  };
+
+  const handleToggleAccess = async (
+    usuario: AppUserRecord,
+    campo: "accessOficina" | "accessPos" | "accessTaller",
+    etiqueta: string
+  ) => {
+    const nuevoValor = !usuario[campo];
+    const key = `${usuario.id}_${campo}`;
+    setTogglingKey(key);
+
+    // Actualización optimista inmediata
+    setTodosUsuarios((prev) =>
+      prev.map((u) => (u.id === usuario.id ? { ...u, [campo]: nuevoValor } : u))
+    );
+
+    try {
+      const res = await fetch("/api/gerencia/usuarios", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: usuario.id,
+          [campo]: nuevoValor,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "No se pudo actualizar el acceso");
+      }
+      mostrarToast(
+        `${usuario.name}: acceso a ${etiqueta} ${nuevoValor ? "activado" : "desactivado"}.`,
+        "exito"
+      );
+    } catch (err: any) {
+      mostrarToast(err.message || "Error al actualizar acceso", "error");
+      await cargarUsuarios();
+    } finally {
+      setTogglingKey(null);
+    }
+  };
+
+  const solicitarEliminar = (id: string, name: string) => {
+    setUsuarioAEliminar({ id, name });
+  };
+
+  const confirmarEliminacion = async () => {
+    if (!usuarioAEliminar) return;
+    const { id, name } = usuarioAEliminar;
+
+    try {
+      setEliminandoId(id);
+      const res = await fetch(`/api/gerencia/usuarios?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        mostrarToast(data.error || "No se pudo eliminar el usuario.", "error");
+        return;
+      }
+
+      setUsuarioAEliminar(null);
+      mostrarToast(`Usuario "${name}" eliminado correctamente.`, "exito");
+      await cargarUsuarios();
+    } catch (err: any) {
+      mostrarToast("Error al eliminar usuario: " + err.message, "error");
+    } finally {
+      setEliminandoId(null);
+    }
+  };
+
+  const labelFiltroActual =
+    filtro === "oficina"
+      ? "Oficina"
+      : filtro === "pos"
+      ? "POS"
+      : filtro === "taller"
+      ? "Taller / Garaje"
+      : "Todos";
+
+  return (
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
+      <Header />
+
+      <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full flex flex-col">
+        {/* Header - Idéntico al estilo Clientes en POS (Móvil y Escritorio en una sola fila) */}
+        <div className="order-1 mb-4 sm:mb-8 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <Link
+              href="/gerencia"
+              title="Volver a Panel Gerencia"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
+            >
+              <svg
+                className="w-5 h-5 transition-transform group-hover:-translate-x-0.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2.5"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+            </Link>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
+              Usuarios
+            </h1>
+            <span className="inline-flex items-center justify-center px-2 min-w-6 h-6 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20 shrink-0">
+              {stats.totalUsuarios}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <Link
+              href="/gerencia/usuarios/nuevo"
+              className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Nuevo Usuario</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Mensaje de Error si ocurre */}
+        {error && (
+          <div className="mb-6 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 flex items-center justify-between text-rose-800 dark:text-rose-300 text-sm">
+            <span>⚠️ {error}</span>
+            <button
+              onClick={() => cargarUsuarios()}
+              className="px-3 py-1 bg-rose-600 text-white rounded-lg text-xs font-semibold hover:bg-rose-700 cursor-pointer"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+
+        {/* Resumen Cards Desplegable en Móvil: idéntico a Clientes en POS */}
+        <CollapsibleMetrics className="order-3 sm:order-2 mb-2 sm:mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-3 sm:mb-8">
+            <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-500 dark:text-blue-400 flex items-center justify-center text-xl shrink-0">
+                👥
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                  {cargando && stats.totalUsuarios === 0 ? "..." : stats.totalUsuarios}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">
+                  Usuarios
+                </h3>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-500 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0">
+                🏢
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                  {cargando && stats.totalUsuarios === 0 ? "..." : stats.totalOficina}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">
+                  Oficina
+                </h3>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-500 dark:text-amber-400 flex items-center justify-center text-xl shrink-0">
+                🛒
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                  {cargando && stats.totalUsuarios === 0 ? "..." : stats.totalPos}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">
+                  POS
+                </h3>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-500 dark:text-purple-400 flex items-center justify-center text-xl shrink-0">
+                🔧
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                  {cargando && stats.totalUsuarios === 0 ? "..." : stats.totalTaller}
+                </p>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">
+                  Taller / Garaje
+                </h3>
+              </div>
+            </div>
+          </div>
+        </CollapsibleMetrics>
+
+        {/* Filtros y Buscador: fila independiente idéntica a Clientes en POS */}
+        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-6">
+          <div className="relative w-full flex-1">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
+              🔍
+            </span>
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar..."
+              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
+            />
+            {busqueda && (
+              <button
+                onClick={() => setBusqueda("")}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm cursor-pointer"
+                title="Limpiar búsqueda"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          <div className="relative w-full sm:w-48 shrink-0">
+            <button
+              type="button"
+              onClick={() => setFiltroMenuAbierto(!filtroMenuAbierto)}
+              className="w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
+            >
+              <span>{labelFiltroActual}</span>
+              <svg
+                className={`w-4 h-4 text-zinc-400 transition-transform ${
+                  filtroMenuAbierto ? "rotate-180" : ""
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {filtroMenuAbierto && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setFiltroMenuAbierto(false)}
+                />
+                <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                  {[
+                    { id: "todos", label: "Todos" },
+                    { id: "oficina", label: "Oficina" },
+                    { id: "pos", label: "POS" },
+                    { id: "taller", label: "Taller / Garaje" },
+                  ].map((opcion) => (
+                    <button
+                      key={opcion.id}
+                      type="button"
+                      onClick={() => {
+                        setFiltro(opcion.id);
+                        setFiltroMenuAbierto(false);
+                      }}
+                      className={`w-full px-4 py-2.5 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
+                        filtro === opcion.id
+                          ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400 font-normal"
+                          : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-white"
+                      }`}
+                    >
+                      <span>{opcion.label}</span>
+                      {filtro === opcion.id && (
+                        <svg
+                          className="w-4 h-4 text-blue-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2.5"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Tabla de Usuarios (Desktop) y Tarjetas Nativas (Móvil) idénticas a Clientes en POS */}
+        <div className="order-4">
+          {/* Vista Móvil (Tarjetas adaptadas estilo Clientes POS) */}
+          <div className="md:hidden space-y-3.5">
+            {cargando && usuarios.length === 0 ? (
+              <div className="p-8 text-center text-zinc-500 dark:text-zinc-400 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                <div className="w-7 h-7 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                <p className="text-sm">Cargando usuarios...</p>
+              </div>
+            ) : usuarios.length === 0 ? (
+              <div className="p-8 text-center text-zinc-500 dark:text-zinc-400 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-2xl text-blue-600 mx-auto mb-3">
+                  👥
+                </div>
+                <p className="text-sm font-medium mb-3">No hay usuarios que coincidan</p>
+                <Link
+                  href="/gerencia/usuarios/nuevo"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-semibold shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer"
+                >
+                  <span>+</span> Registrar Usuario
+                </Link>
+              </div>
+            ) : (
+              usuarios.map((row) => {
+                const esAdmin = row.role?.toLowerCase().includes("admin");
+                return (
+                  <div
+                    key={row.id}
+                    className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border ${
+                            esAdmin
+                              ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30"
+                              : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30"
+                          }`}
+                        >
+                          {row.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                              {row.name}
+                            </p>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                              {row.role}
+                            </span>
+                          </div>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5">
+                            {row.identification ? `Cédula: ${row.identification} • ` : ""}PIN: {row.pinCode}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Acciones Rápidas */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Link
+                          href={`/gerencia/usuarios/nuevo?id=${row.id}`}
+                          className="w-10 h-10 rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all shadow-xs cursor-pointer"
+                          title="Editar en Formulario"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                            />
+                          </svg>
+                        </Link>
+                        <button
+                          onClick={() => solicitarEliminar(row.id, row.name)}
+                          disabled={eliminandoId === row.id}
+                          className="w-10 h-10 rounded-xl flex items-center justify-center text-zinc-500 hover:text-rose-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95 transition-all disabled:opacity-50 shadow-xs cursor-pointer"
+                          title="Eliminar"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Datos secundarios (WhatsApp, Correo, Estado) */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                      {row.phone ? (
+                        <a
+                          href={`https://wa.me/${row.phone.replace(/\D/g, "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 font-medium active:scale-95"
+                        >
+                          <span>📱</span> {row.phone}
+                        </a>
+                      ) : (
+                        <span className="text-zinc-400 dark:text-zinc-500 italic px-2 py-0.5">
+                          {row.email}
+                        </span>
+                      )}
+
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-medium border ${
+                          row.status === "Activo"
+                            ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-sky-400 border-blue-200 dark:border-blue-500/20"
+                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border-zinc-200 dark:border-zinc-700"
+                        }`}
+                      >
+                        {row.status}
+                      </span>
+
+                      <span className="text-zinc-400 ml-auto text-[11px]">
+                        {row.branch}
+                      </span>
+                    </div>
+
+                    {/* Chips Interactivos de Acceso a Paneles (Oficina, POS, Taller/Garaje) */}
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      <button
+                        type="button"
+                        disabled={togglingKey === `${row.id}_accessOficina`}
+                        onClick={() => handleToggleAccess(row, "accessOficina", "Oficina")}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-medium inline-flex items-center gap-1 border transition-all cursor-pointer ${
+                          row.accessOficina
+                            ? "bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-sky-400 border-blue-200 dark:border-blue-500/30 font-bold"
+                            : "bg-zinc-100 dark:bg-zinc-800/80 text-zinc-400 border-zinc-200 dark:border-zinc-700/60"
+                        }`}
+                      >
+                        <span>🏢</span>
+                        <span>Oficina</span>
+                        <span>{row.accessOficina ? "✓" : "Off"}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={togglingKey === `${row.id}_accessPos`}
+                        onClick={() => handleToggleAccess(row, "accessPos", "POS")}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-medium inline-flex items-center gap-1 border transition-all cursor-pointer ${
+                          row.accessPos
+                            ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30 font-bold"
+                            : "bg-zinc-100 dark:bg-zinc-800/80 text-zinc-400 border-zinc-200 dark:border-zinc-700/60"
+                        }`}
+                      >
+                        <span>🛒</span>
+                        <span>POS</span>
+                        <span>{row.accessPos ? "✓" : "Off"}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={togglingKey === `${row.id}_accessTaller`}
+                        onClick={() => handleToggleAccess(row, "accessTaller", "Taller / Garaje")}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-medium inline-flex items-center gap-1 border transition-all cursor-pointer ${
+                          row.accessTaller
+                            ? "bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/30 font-bold"
+                            : "bg-zinc-100 dark:bg-zinc-800/80 text-zinc-400 border-zinc-200 dark:border-zinc-700/60"
+                        }`}
+                      >
+                        <span>🔧</span>
+                        <span>Taller / Garaje</span>
+                        <span>{row.accessTaller ? "✓" : "Off"}</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Vista Tabla (Desktop md+) idéntica a Clientes en POS */}
+          <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400">
+                  <tr>
+                    <th className="px-6 py-4 font-medium">Usuario</th>
+                    <th className="px-6 py-4 font-medium">Contacto / Correo</th>
+                    <th className="px-6 py-4 font-medium">Acceso a Paneles</th>
+                    <th className="px-6 py-4 font-medium">Sucursal / Estado</th>
+                    <th className="px-6 py-4 font-medium text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                  {cargando && usuarios.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center text-zinc-500 dark:text-zinc-400">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <div className="w-7 h-7 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                          <p className="text-sm">Cargando usuarios...</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : usuarios.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-16 text-center text-zinc-500 dark:text-zinc-400">
+                        <div className="flex flex-col items-center justify-center gap-3 max-w-sm mx-auto">
+                          <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-3xl text-blue-600">
+                            👥
+                          </div>
+                          <Link
+                            href="/gerencia/usuarios/nuevo"
+                            className="mt-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-normal text-sm shadow-md shadow-blue-500/20 transition-all flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            Registrar Usuario
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    usuarios.map((row) => {
+                      const esAdmin = row.role?.toLowerCase().includes("admin");
+                      const cantidadPaneles =
+                        (row.accessOficina ? 1 : 0) +
+                        (row.accessPos ? 1 : 0) +
+                        (row.accessTaller ? 1 : 0);
+
+                      return (
+                        <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border ${
+                                  esAdmin
+                                    ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30"
+                                    : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30"
+                                }`}
+                              >
+                                {row.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <p className="font-bold text-zinc-900 dark:text-zinc-100">{row.name}</p>
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                                    {row.role}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
+                                  {row.identification ? `Cédula: ${row.identification} • ` : ""}PIN: {row.pinCode}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="px-6 py-4">
+                            {row.phone ? (
+                              <div className="space-y-0.5">
+                                <p className="text-zinc-900 dark:text-zinc-200 font-medium text-xs flex items-center gap-1.5">
+                                  <span className="text-emerald-500">📱</span> {row.phone}
+                                </p>
+                                <p className="text-xs text-zinc-500 dark:text-zinc-400">{row.email}</p>
+                              </div>
+                            ) : (
+                              <div className="space-y-0.5">
+                                <p className="text-xs text-zinc-900 dark:text-zinc-200 font-medium">{row.email}</p>
+                                <span className="text-xs text-zinc-400 dark:text-zinc-500 italic">
+                                  Sin WhatsApp
+                                </span>
+                              </div>
+                            )}
+                          </td>
+
+                          <td className="px-6 py-4">
+                            <div className="space-y-1.5">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-sky-400 border border-blue-200 dark:border-blue-500/20 whitespace-nowrap">
+                                {cantidadPaneles} {cantidadPaneles === 1 ? "panel activo" : "paneles activos"}
+                              </span>
+                              <div className="flex flex-wrap gap-1.5">
+                                <button
+                                  type="button"
+                                  disabled={togglingKey === `${row.id}_accessOficina`}
+                                  onClick={() => handleToggleAccess(row, "accessOficina", "Oficina")}
+                                  title="Clic para activar o desactivar acceso a Oficina"
+                                  className={`px-2.5 py-1 rounded-md text-xs font-medium inline-flex items-center gap-1 border transition-all cursor-pointer ${
+                                    row.accessOficina
+                                      ? "bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-sky-400 border-blue-200 dark:border-blue-500/30 font-bold"
+                                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 border-zinc-200 dark:border-zinc-700/60 hover:text-zinc-700 dark:hover:text-zinc-300"
+                                  }`}
+                                >
+                                  <span>🏢</span>
+                                  <span>Oficina</span>
+                                  <span>{row.accessOficina ? "✓" : "Off"}</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  disabled={togglingKey === `${row.id}_accessPos`}
+                                  onClick={() => handleToggleAccess(row, "accessPos", "POS")}
+                                  title="Clic para activar o desactivar acceso a POS"
+                                  className={`px-2.5 py-1 rounded-md text-xs font-medium inline-flex items-center gap-1 border transition-all cursor-pointer ${
+                                    row.accessPos
+                                      ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30 font-bold"
+                                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 border-zinc-200 dark:border-zinc-700/60 hover:text-zinc-700 dark:hover:text-zinc-300"
+                                  }`}
+                                >
+                                  <span>🛒</span>
+                                  <span>POS</span>
+                                  <span>{row.accessPos ? "✓" : "Off"}</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  disabled={togglingKey === `${row.id}_accessTaller`}
+                                  onClick={() => handleToggleAccess(row, "accessTaller", "Taller / Garaje")}
+                                  title="Clic para activar o desactivar acceso a Taller / Garaje"
+                                  className={`px-2.5 py-1 rounded-md text-xs font-medium inline-flex items-center gap-1 border transition-all cursor-pointer ${
+                                    row.accessTaller
+                                      ? "bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/30 font-bold"
+                                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 border-zinc-200 dark:border-zinc-700/60 hover:text-zinc-700 dark:hover:text-zinc-300"
+                                  }`}
+                                >
+                                  <span>🔧</span>
+                                  <span>Taller / Garaje</span>
+                                  <span>{row.accessTaller ? "✓" : "Off"}</span>
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400 text-xs">
+                            <div className="space-y-1">
+                              <p className="font-medium text-zinc-900 dark:text-zinc-200">{row.branch}</p>
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border ${
+                                  row.status === "Activo"
+                                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/40"
+                                    : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border-rose-200 dark:border-rose-800/40"
+                                }`}
+                              >
+                                {row.status}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Link
+                                href={`/gerencia/usuarios/nuevo?id=${row.id}`}
+                                className="p-2 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors inline-flex items-center justify-center"
+                                title="Editar Datos y Accesos"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                                  />
+                                </svg>
+                              </Link>
+
+                              <button
+                                onClick={() => solicitarEliminar(row.id, row.name)}
+                                disabled={eliminandoId === row.id}
+                                className="p-2 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                                title="Eliminar Usuario"
+                              >
+                                {eliminandoId === row.id ? (
+                                  <svg className="w-4 h-4 animate-spin text-rose-600" fill="none" viewBox="0 0 24 24">
+                                    <circle
+                                      className="opacity-25"
+                                      cx="12"
+                                      cy="12"
+                                      r="10"
+                                      stroke="currentColor"
+                                      strokeWidth="4"
+                                    ></circle>
+                                    <path
+                                      className="opacity-75"
+                                      fill="currentColor"
+                                      d="M4 12a8 8 0 018-8v8z"
+                                    ></path>
+                                  </svg>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    />
+                                  </svg>
+                                )}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-3.5 sm:p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs sm:text-sm text-zinc-500">
+              <span>
+                {usuarios.length} de {stats.totalUsuarios}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Flotante de Confirmación de Eliminación idéntico a Clientes en POS */}
+        {usuarioAEliminar && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-t-3xl sm:rounded-3xl w-full max-w-md p-5 sm:p-6 shadow-2xl relative text-center max-h-[90vh] overflow-y-auto">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-rose-100 dark:bg-rose-500/10 text-rose-600 flex items-center justify-center text-2xl sm:text-3xl mx-auto mb-3 sm:mb-4 border border-rose-200 dark:border-rose-900/40">
+                🗑️
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white mb-1.5 sm:mb-2">
+                ¿Eliminar Usuario?
+              </h3>
+              <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mb-5 sm:mb-6">
+                ¿Deseas eliminar a{" "}
+                <strong className="text-zinc-900 dark:text-zinc-100 font-semibold">
+                  {usuarioAEliminar.name}
+                </strong>{" "}
+                y revocar sus accesos?
+              </p>
+              <div className="flex gap-2.5 sm:gap-3">
+                <button
+                  type="button"
+                  disabled={eliminandoId !== null}
+                  onClick={() => setUsuarioAEliminar(null)}
+                  className="flex-1 h-11 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 font-semibold text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer flex items-center justify-center"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={eliminandoId !== null}
+                  onClick={confirmarEliminacion}
+                  className="flex-1 h-11 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm shadow-lg shadow-rose-600/20 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {eliminandoId ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Eliminando...</span>
+                    </>
+                  ) : (
+                    "Sí, Eliminar"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notificación Flotante (Toast adaptable a móvil) idéntica a Clientes en POS */}
+        {toast && (
+          <div className="fixed top-4 left-3 right-3 sm:left-auto sm:right-6 sm:top-6 z-50 animate-in slide-in-from-top-3 duration-300">
+            <div
+              className={`flex items-center gap-2.5 sm:gap-3 px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl shadow-2xl border backdrop-blur-md ${
+                toast.tipo === "exito"
+                  ? "bg-zinc-900/95 text-white border-zinc-800 dark:bg-white/95 dark:text-zinc-900 dark:border-zinc-200 shadow-emerald-500/10"
+                  : "bg-rose-600 text-white border-rose-500 shadow-rose-600/20"
+              }`}
+            >
+              <span className="text-base sm:text-lg">
+                {toast.tipo === "exito" ? "✅" : "⚠️"}
+              </span>
+              <span className="text-xs sm:text-sm font-semibold flex-1">{toast.texto}</span>
+              <button
+                onClick={() => setToast(null)}
+                className="ml-2 text-xs opacity-60 hover:opacity-100 p-1"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+      </main>
+
+      <GerenciaMobileNav />
+    </div>
+  );
+}

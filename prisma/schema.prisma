@@ -713,6 +713,7 @@ model Product {
   price     Decimal    @db.Decimal(12, 2)
   costPrice Decimal?   @db.Decimal(12, 2)
   stock     Int        @default(0)
+  stockNorte Int       @default(10)
   minStock  Int        @default(5)
   location  String?
   imageUrl  String?
@@ -1023,6 +1024,8 @@ model ClientAppointment {
   date              String
   timeSlot          String
   status            String   @default("Programada")
+  tech              String?  @default("Carlos Ruiz")
+  bay               String?  @default("Bahía 1")
   notes             String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -1226,4 +1229,27 @@ model Branch {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model AppUserAccess {
+  id             String   @id @default(cuid())
+  identification String?
+  name           String
+  email          String   @unique
+  phone          String?
+  username       String?
+  pinCode        String   @default("1234")
+  role           String   @default("Operador")
+  branch         String   @default("Sede Principal")
+  accessOficina  Boolean  @default(false)
+  accessPos      Boolean  @default(false)
+  accessTaller   Boolean  @default(true)
+  status         String   @default("Activo")
+  lastAccess     String   @default("Hoy")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([email])
+  @@index([status])
+}
+
 
