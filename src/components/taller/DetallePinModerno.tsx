@@ -15,7 +15,7 @@ export interface DetallePinModernoProps {
   onToggleVoz: () => void;
   reproduciendoAudio: boolean;
   onReproducirAudio: (text: string) => void;
-  // Fotos (hasta 3)
+  // Fotos (hasta 5)
   subiendoFotos: boolean;
   onSubirFotos: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onEliminarFoto: (idx: number, e?: React.MouseEvent) => void;
@@ -26,6 +26,7 @@ export interface DetallePinModernoProps {
   // Acciones
   onDuplicarPin: () => void;
   onEliminarPin: () => void;
+  onReubicarPin?: () => void;
   onCerrar: () => void;
   // Props opcionales de compatibilidad
   serviciosCatalogo?: any[];
@@ -50,13 +51,14 @@ export function DetallePinModerno({
   onEliminarFoto,
   onDuplicarPin,
   onEliminarPin,
+  onReubicarPin,
   onCerrar,
   hallazgosDelMismoPin = [],
   onSeleccionarHallazgoPin,
   onEliminarHallazgoEspecifico,
 }: DetallePinModernoProps) {
   const fotos = pin.photoUrls || (pin.photoUrl ? [pin.photoUrl] : []);
-  const maxFotosAlcanzado = fotos.length >= 3;
+  const maxFotosAlcanzado = fotos.length >= 5;
 
   const textoParaAudio =
     observacionTexto.trim() ||
@@ -91,6 +93,19 @@ export function DetallePinModerno({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Botón para mover/reubicar pin en el auto */}
+          {onReubicarPin && (
+            <button
+              type="button"
+              onClick={onReubicarPin}
+              className="h-7 px-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-[11px] font-medium transition-all cursor-pointer flex items-center gap-1 active:scale-95"
+              title={`Mover ubicación del Pin #${mismoNumero} en el vehículo`}
+            >
+              <span>📍</span>
+              <span className="hidden sm:inline">Mover</span>
+            </button>
+          )}
+
           {/* Botón que agrega hallazgo AL MISMO PIN sin generar un número nuevo */}
           <button
             type="button"
@@ -99,7 +114,7 @@ export function DetallePinModerno({
             title={`Añadir otro hallazgo o daño a este mismo Pin #${mismoNumero}`}
           >
             <span className="text-xs font-black">+</span>
-            <span>Hallazgo</span>
+            <span>Hallazgo #{mismoNumero}</span>
           </button>
           <button
             type="button"
@@ -241,21 +256,21 @@ export function DetallePinModerno({
           )}
         </button>
 
-        {/* Botón Cámara: Subir hasta 3 fotos con contador */}
+        {/* Botón Cámara: Subir hasta 5 fotos con contador */}
         <label
           className={`h-9 px-2.5 rounded-xl border flex items-center gap-1.5 transition-all shrink-0 cursor-pointer active:scale-95 ${
             maxFotosAlcanzado
               ? "bg-white/[0.02] border-white/5 text-zinc-500 cursor-not-allowed"
               : "bg-cyan-500/15 hover:bg-cyan-500/25 border-cyan-500/30 text-cyan-300"
           }`}
-          title={maxFotosAlcanzado ? "Máximo 3 fotos subidas" : "Subir hasta 3 fotos de evidencia"}
+          title={maxFotosAlcanzado ? "Máximo 5 fotos subidas" : "Subir hasta 5 fotos de evidencia"}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
           </svg>
           <span className="text-[11px] font-mono font-bold">
-            {subiendoFotos ? "..." : `${fotos.length}/3`}
+            {subiendoFotos ? "..." : `${fotos.length}/5`}
           </span>
           <input
             type="file"
@@ -269,7 +284,7 @@ export function DetallePinModerno({
         </label>
       </div>
 
-      {/* 4. TIRA DE HASTA 3 FOTOS CON PREVIEW Y BOTÓN ELIMINAR ✕ */}
+      {/* 4. TIRA DE HASTA 5 FOTOS CON PREVIEW Y BOTÓN ELIMINAR ✕ */}
       {fotos.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-white/[0.05]">
           <span className="text-[10px] text-zinc-400 font-medium">Fotos:</span>

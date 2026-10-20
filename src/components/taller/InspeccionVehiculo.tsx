@@ -246,6 +246,9 @@ export default function InspeccionVehiculo({
     ordenActiva?.inspectionFindings || []
   );
   const [pinSeleccionadoId, setPinSeleccionadoId] = useState<string | null>(null);
+  // Estados para colocación controlada de pines (evitar toques accidentales en móvil)
+  const [modoColocandoPin, setModoColocandoPin] = useState<boolean>(false);
+  const [pinReubicandoId, setPinReubicandoId] = useState<string | null>(null);
 
   // Estados para popover y detalle multimedia del pin activo
   const [popoverAbierto, setPopoverAbierto] = useState(false);
@@ -371,6 +374,11 @@ export default function InspeccionVehiculo({
   const handleTocarLienzo = (
     e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>
   ) => {
+    // Si NO estamos en modo colocación NI reubicación, NO crear pines por toques accidentales en móvil
+    if (!modoColocandoPin && !pinReubicandoId) {
+      return;
+    }
+
     const rect = e.currentTarget.getBoundingClientRect();
     let clientX: number;
     let clientY: number;
@@ -391,6 +399,25 @@ export default function InspeccionVehiculo({
     const xPct = Math.max(5, Math.min(95, Math.round(((clientX - rect.left) / rect.width) * 100)));
     const yPct = Math.max(5, Math.min(95, Math.round(((clientY - rect.top) / rect.height) * 100)));
 
+    if (pinReubicandoId) {
+      const pinObj = hallazgos.find((h) => h.id === pinReubicandoId);
+      if (pinObj) {
+        const mismoNumero = pinObj.pinNumber || 1;
+        const actualizados = hallazgos.map((h) => {
+          if ((h.pinNumber || 1) === mismoNumero && h.vista === pinObj.vista) {
+            return { ...h, x: xPct, y: yPct };
+          }
+          return h;
+        });
+        setHallazgos(actualizados);
+        sincronizarHallazgosNeon(actualizados);
+        setPinReubicandoId(null);
+        mostrarToast(`✓ Pin #${mismoNumero} reubicado en nueva posición.`);
+      }
+      return;
+    }
+
+    // Modo colocación de nuevo Pin
     const maxNum = hallazgos.reduce((max, h) => Math.max(max, h.pinNumber || 0), 0);
     const nuevoPinNumero = maxNum + 1;
 
@@ -434,9 +461,10 @@ export default function InspeccionVehiculo({
     setTipoSeleccionado(tipoDefault);
     setObservacionTexto("");
     setPopoverAbierto(true);
+    setModoColocandoPin(false);
 
     sincronizarHallazgosNeon(actualizados);
-    mostrarToast(`Pin #${nuevoPinNumero} marcado en ${vistaLabel}. Elige el detalle.`);
+    mostrarToast(`✓ Pin #${nuevoPinNumero} ubicado en ${vistaLabel}.`);
   };
 
   const pinActual = hallazgos.find((h) => h.id === pinSeleccionadoId) || null;
@@ -695,7 +723,7 @@ export default function InspeccionVehiculo({
     mostrarToast("Ítem removido de la propuesta.");
   };
 
-  // 2. FOTOS COMO EVIDENCIA EN CLOUDFLARE R2 (HASTA 3 FOTOS POR PIN)
+  // 2. FOTOS COMO EVIDENCIA EN CLOUDFLARE R2 (HASTA 5 FOTOS POR PIN)
   const handleSubirFotosPinR2 = async (e: React.ChangeEvent<HTMLInputElement>, targetPinId: string) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -703,13 +731,13 @@ export default function InspeccionVehiculo({
     const pinExistente = hallazgos.find((h) => h.id === targetPinId);
     const fotosActuales = pinExistente?.photoUrls || (pinExistente?.photoUrl ? [pinExistente.photoUrl] : []);
 
-    if (fotosActuales.length >= 3) {
-      mostrarToast("Ya alcanzaste el límite de 3 fotos para este hallazgo.", "err");
+    if (fotosActuales.length >= 5) {
+      mostrarToast("Ya alcanzaste el límite de 5 fotos para este hallazgo.", "err");
       e.target.value = "";
       return;
     }
 
-    const archivosSubir = files.slice(0, 3 - fotosActuales.length);
+    const archivosSubir = files.slice(0, 5 - fotosActuales.length);
 
     try {
       setSubiendoFotoPin(true);
@@ -743,7 +771,7 @@ export default function InspeccionVehiculo({
           second: "2-digit",
         });
 
-        const fotosFinales = [...fotosActuales, ...nuevasUrls].slice(0, 3);
+        const fotosFinales = [...fotosActuales, ...nuevasUrls].slice(0, 5);
 
         const actualizados = hallazgos.map((h) => {
           if (h.id === targetPinId) {
@@ -759,7 +787,7 @@ export default function InspeccionVehiculo({
 
         setHallazgos(actualizados);
         sincronizarHallazgosNeon(actualizados);
-        mostrarToast(`✓ ${nuevasUrls.length} ${nuevasUrls.length === 1 ? "foto agregada" : "fotos agregadas"} (${fotosFinales.length}/3)`);
+        mostrarToast(`✓ ${nuevasUrls.length} ${nuevasUrls.length === 1 ? "foto agregada" : "fotos agregadas"} (${fotosFinales.length}/5)`);
       } else {
         mostrarToast("No se pudo subir la foto a R2", "err");
       }
@@ -895,6 +923,37 @@ export default function InspeccionVehiculo({
   };
 
   // 3. SELECCIÓN DE SISTEMAS Y EVALUACIÓN
+  const maxPinNumero = useMemo(() => {
+    return hallazgos.reduce((max, h) => Math.max(max, h.pinNumber || 0), 0);
+  }, [hallazgos]);
+  const proximoPinNumero = maxPinNumero + 1;
+
+  const pinsCarroceriaVista = useMemo(() => {
+    const hallazgosVista = hallazgos.filter((h) => h.vista === vistaActiva);
+    const mapa = new Map<number, InspectionFinding[]>();
+    hallazgosVista.forEach((h) => {
+      const num = h.pinNumber || 1;
+      if (!mapa.has(num)) mapa.set(num, []);
+      mapa.get(num)!.push(h);
+    });
+    return Array.from(mapa.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([num, items]) => ({ num, items }));
+  }, [hallazgos, vistaActiva]);
+
+  const pinsSistemaActivo = useMemo(() => {
+    const hallazgosSis = hallazgos.filter((h) => h.vista === seccionActiva);
+    const mapa = new Map<number, InspectionFinding[]>();
+    hallazgosSis.forEach((h) => {
+      const num = h.pinNumber || 1;
+      if (!mapa.has(num)) mapa.set(num, []);
+      mapa.get(num)!.push(h);
+    });
+    return Array.from(mapa.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([num, items]) => ({ num, items }));
+  }, [hallazgos, seccionActiva]);
+
   const plantillaSeleccionada = useMemo(() => {
     return (
       PLANTILLAS_INSPECCION.find((s) => s.id === seccionActiva) ||
@@ -1127,8 +1186,51 @@ ${urlSeguimiento}`;
           onClick={handleTocarLienzo}
           onTouchEnd={handleTocarLienzo}
           style={{ touchAction: "manipulation" }}
-          className="relative w-full h-72 sm:h-96 rounded-xl bg-black border border-cyan-500/30 flex items-center justify-center cursor-crosshair overflow-hidden group transition-all shadow-[0_0_35px_rgba(6,182,212,0.12)]"
+          className={`relative w-full h-72 sm:h-96 rounded-xl bg-black border flex items-center justify-center overflow-hidden group transition-all shadow-[0_0_35px_rgba(6,182,212,0.12)] ${
+            modoColocandoPin || pinReubicandoId
+              ? "border-cyan-400 ring-2 ring-cyan-500/40 cursor-crosshair"
+              : "border-cyan-500/30 cursor-default"
+          }`}
         >
+          {/* Banner de modo colocación de nuevo Pin */}
+          {modoColocandoPin && (
+            <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-2 rounded-xl bg-cyan-950/95 border border-cyan-400 text-cyan-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-mono font-bold flex items-center justify-center text-[10px]">
+                  #{proximoPinNumero}
+                </span>
+                <span className="font-semibold text-[11px] sm:text-xs">Toca en el vehículo para ubicar el Pin #{proximoPinNumero}</span>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setModoColocandoPin(false);
+                }}
+                className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold cursor-pointer"
+              >
+                ✕ Cancelar
+              </button>
+            </div>
+          )}
+
+          {/* Banner de reubicación de Pin existente */}
+          {pinReubicandoId && (
+            <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-2 rounded-xl bg-amber-950/95 border border-amber-400 text-amber-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
+              <span className="font-semibold text-[11px] sm:text-xs">📍 Toca en el vehículo para reubicar este Pin</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPinReubicandoId(null);
+                }}
+                className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold cursor-pointer"
+              >
+                ✕ Cancelar
+              </button>
+            </div>
+          )}
+
           {/* Indicador de carga si la imagen está descargando en móvil */}
           {imagenCargando && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-10 pointer-events-none gap-2">
@@ -1229,6 +1331,64 @@ ${urlSeguimiento}`;
           })()}
         </div>
 
+        {/* BARRA INFERIOR DE CONTROL DE PINES: LISTA DE PINES EN ESTA VISTA + GENERAR SIGUIENTE */}
+        <div className="mt-2.5 flex items-center justify-between gap-2 p-2 rounded-xl bg-white/[0.03] border border-white/10">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1">
+            <span className="text-[11px] text-zinc-400 font-semibold shrink-0">Pines:</span>
+            {pinsCarroceriaVista.length === 0 ? (
+              <span className="text-[11px] text-zinc-500 italic shrink-0">Sin pines en esta vista</span>
+            ) : (
+              pinsCarroceriaVista.map((p) => {
+                const activo = p.items.some((it) => it.id === pinSeleccionadoId);
+                return (
+                  <button
+                    key={`pin-pill-carroceria-${p.num}`}
+                    type="button"
+                    onClick={() => {
+                      const item = p.items.find((it) => it.id === pinSeleccionadoId) || p.items[0];
+                      setPinSeleccionadoId(item.id);
+                      setTipoSeleccionado(item.tipo || "Rayón");
+                      setObservacionTexto(item.descripcion || "");
+                      setPopoverAbierto(true);
+                      setModoColocandoPin(false);
+                      setPinReubicandoId(null);
+                    }}
+                    className={`h-7 px-2.5 rounded-lg border font-mono text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shrink-0 active:scale-95 ${
+                      activo
+                        ? "bg-rose-500 text-white border-rose-400 shadow-sm ring-1 ring-white/30"
+                        : "bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-zinc-300 hover:text-white"
+                    }`}
+                  >
+                    <span>#{p.num}</span>
+                    {p.items.length > 1 && (
+                      <span className="w-3.5 h-3.5 rounded-full bg-cyan-400 text-black text-[9px] font-black flex items-center justify-center">
+                        {p.items.length}
+                      </span>
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setPinReubicandoId(null);
+              setModoColocandoPin(true);
+              mostrarToast(`Toca en el vehículo para ubicar el Pin #${proximoPinNumero}`);
+            }}
+            className={`h-7 px-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 active:scale-95 ${
+              modoColocandoPin
+                ? "bg-cyan-500 text-black border-cyan-400 animate-pulse font-black shadow-md shadow-cyan-500/30"
+                : "bg-cyan-500/15 hover:bg-cyan-500/25 border-cyan-500/40 text-cyan-300"
+            }`}
+          >
+            <span className="text-sm font-black">+</span>
+            <span>Generar #{proximoPinNumero}</span>
+          </button>
+        </div>
+
         {/* DETALLE MODERNO DEL PIN ACTIVO (Audio voz bidireccional, fotos R2 y cotización de servicios/productos) */}
         {popoverAbierto && pinActual && (
           <DetallePinModerno
@@ -1254,6 +1414,10 @@ ${urlSeguimiento}`;
             onEliminarItemPin={(itemId) => handleEliminarItemPin(pinActual.id, itemId)}
             onDuplicarPin={() => handleDuplicarPin(pinActual)}
             onEliminarPin={() => handleEliminarPin(pinActual.id)}
+            onReubicarPin={() => {
+              setPinReubicandoId(pinActual.id);
+              mostrarToast(`Toca en el vehículo para cambiar la posición del Pin #${pinActual.pinNumber || 1}`);
+            }}
             onCerrar={() => setPopoverAbierto(false)}
             hallazgosDelMismoPin={hallazgos}
             onSeleccionarHallazgoPin={(hId) => {
@@ -1309,8 +1473,51 @@ ${urlSeguimiento}`;
               onClick={handleTocarLienzo}
               onTouchEnd={handleTocarLienzo}
               style={{ touchAction: "manipulation" }}
-              className="relative w-full h-72 sm:h-96 rounded-xl bg-black border border-cyan-500/30 flex items-center justify-center cursor-crosshair overflow-hidden group transition-all shadow-[0_0_35px_rgba(6,182,212,0.12)]"
+              className={`relative w-full h-72 sm:h-96 rounded-xl bg-black border flex items-center justify-center overflow-hidden group transition-all shadow-[0_0_35px_rgba(6,182,212,0.12)] ${
+                modoColocandoPin || pinReubicandoId
+                  ? "border-cyan-400 ring-2 ring-cyan-500/40 cursor-crosshair"
+                  : "border-cyan-500/30 cursor-default"
+              }`}
             >
+              {/* Banner de modo colocación de nuevo Pin */}
+              {modoColocandoPin && (
+                <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-2 rounded-xl bg-cyan-950/95 border border-cyan-400 text-cyan-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-mono font-bold flex items-center justify-center text-[10px]">
+                      #{proximoPinNumero}
+                    </span>
+                    <span className="font-semibold text-[11px] sm:text-xs">Toca en el esquema para ubicar el Pin #{proximoPinNumero}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setModoColocandoPin(false);
+                    }}
+                    className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold cursor-pointer"
+                  >
+                    ✕ Cancelar
+                  </button>
+                </div>
+              )}
+
+              {/* Banner de reubicación de Pin existente */}
+              {pinReubicandoId && (
+                <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-2 rounded-xl bg-amber-950/95 border border-amber-400 text-amber-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
+                  <span className="font-semibold text-[11px] sm:text-xs">📍 Toca en el esquema para reubicar este Pin</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPinReubicandoId(null);
+                    }}
+                    className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold cursor-pointer"
+                  >
+                    ✕ Cancelar
+                  </button>
+                </div>
+              )}
+
               {/* Indicador de carga si la imagen está descargando en móvil */}
               {imagenCargando && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-10 pointer-events-none gap-2">
@@ -1413,6 +1620,64 @@ ${urlSeguimiento}`;
               })()}
             </div>
 
+            {/* BARRA INFERIOR DE CONTROL DE PINES: LISTA DE PINES EN ESTE SISTEMA + GENERAR SIGUIENTE */}
+            <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-white/[0.03] border border-white/10">
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1">
+                <span className="text-[11px] text-zinc-400 font-semibold shrink-0">Pines:</span>
+                {pinsSistemaActivo.length === 0 ? (
+                  <span className="text-[11px] text-zinc-500 italic shrink-0">Sin pines en este sistema</span>
+                ) : (
+                  pinsSistemaActivo.map((p) => {
+                    const activo = p.items.some((it) => it.id === pinSeleccionadoId);
+                    return (
+                      <button
+                        key={`pin-pill-sistema-${p.num}`}
+                        type="button"
+                        onClick={() => {
+                          const item = p.items.find((it) => it.id === pinSeleccionadoId) || p.items[0];
+                          setPinSeleccionadoId(item.id);
+                          setTipoSeleccionado(item.tipo || "Fuga");
+                          setObservacionTexto(item.descripcion || "");
+                          setPopoverAbierto(true);
+                          setModoColocandoPin(false);
+                          setPinReubicandoId(null);
+                        }}
+                        className={`h-7 px-2.5 rounded-lg border font-mono text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shrink-0 active:scale-95 ${
+                          activo
+                            ? "bg-rose-500 text-white border-rose-400 shadow-sm ring-1 ring-white/30"
+                            : "bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-zinc-300 hover:text-white"
+                        }`}
+                      >
+                        <span>#{p.num}</span>
+                        {p.items.length > 1 && (
+                          <span className="w-3.5 h-3.5 rounded-full bg-cyan-400 text-black text-[9px] font-black flex items-center justify-center">
+                            {p.items.length}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setPinReubicandoId(null);
+                  setModoColocandoPin(true);
+                  mostrarToast(`Toca en el esquema para ubicar el Pin #${proximoPinNumero}`);
+                }}
+                className={`h-7 px-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 active:scale-95 ${
+                  modoColocandoPin
+                    ? "bg-cyan-500 text-black border-cyan-400 animate-pulse font-black shadow-md shadow-cyan-500/30"
+                    : "bg-cyan-500/15 hover:bg-cyan-500/25 border-cyan-500/40 text-cyan-300"
+                }`}
+              >
+                <span className="text-sm font-black">+</span>
+                <span>Generar #{proximoPinNumero}</span>
+              </button>
+            </div>
+
             {/* DETALLE MODERNO PARA PINES DEL SISTEMA MECÁNICO */}
             {popoverAbierto && pinActual && pinActual.vista === seccionActiva && (
               <DetallePinModerno
@@ -1438,6 +1703,10 @@ ${urlSeguimiento}`;
                 onEliminarItemPin={(itemId) => handleEliminarItemPin(pinActual.id, itemId)}
                 onDuplicarPin={() => handleDuplicarPin(pinActual)}
                 onEliminarPin={() => handleEliminarPin(pinActual.id)}
+                onReubicarPin={() => {
+                  setPinReubicandoId(pinActual.id);
+                  mostrarToast(`Toca en el esquema para cambiar la posición del Pin #${pinActual.pinNumber || 1}`);
+                }}
                 onCerrar={() => setPopoverAbierto(false)}
                 hallazgosDelMismoPin={hallazgos}
                 onSeleccionarHallazgoPin={(hId) => {

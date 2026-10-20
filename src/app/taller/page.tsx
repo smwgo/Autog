@@ -977,6 +977,7 @@ export default function TallerPanel() {
 
   // Flujo Deslizable Automático de 7 Etapas (Slide-Over Carousel)
   const [etapaActiva, setEtapaActiva] = useState<number>(1);
+  const [mostrarCabeceraMovil, setMostrarCabeceraMovil] = useState(true);
   const stepperCarouselRef = useRef<HTMLDivElement | null>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -1110,11 +1111,8 @@ export default function TallerPanel() {
   const fileInputRecepcionRef = useRef<HTMLInputElement | null>(null);
   const fileInputEvidenciaRef = useRef<HTMLInputElement | null>(null);
 
-  const mostrarToast = useCallback((texto: string, tipo: "ok" | "err" = "ok") => {
-    setToastMensaje({ tipo, texto });
-    setTimeout(() => {
-      setToastMensaje((prev) => (prev?.texto === texto ? null : prev));
-    }, 4000);
+  const mostrarToast = useCallback((_texto: string, _tipo: "ok" | "err" = "ok") => {
+    // Desactivado: sin etiquetas flotantes verde ni roja al realizar acciones
   }, []);
 
   // Número de veces que se ha atendido el cliente / vehículo
@@ -4358,21 +4356,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
     <div className="flex flex-col min-h-screen bg-[#050505] text-white font-sans pb-28 md:pb-12 selection:bg-blue-500/30">
       <Header />
 
-      {/* NOTIFICACIÓN FLOTANTE RÁPIDA */}
-      {toastMensaje && (
-        <div className="fixed top-20 right-4 z-[60] max-w-md animate-fade-in">
-          <div
-            className={`px-4 py-3 rounded-2xl border backdrop-blur-xl shadow-2xl flex items-center gap-3 text-sm font-medium ${
-              toastMensaje.tipo === "ok"
-                ? "bg-[#111113]/95 border-emerald-500/30 text-emerald-300"
-                : "bg-[#111113]/95 border-rose-500/30 text-rose-300"
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-current shrink-0" />
-            <span>{toastMensaje.texto}</span>
-          </div>
-        </div>
-      )}
+
 
       <main className="flex-grow p-4 sm:p-6 md:p-8 max-w-[1440px] mx-auto w-full space-y-6">
         {/* ===================================================================
@@ -4505,62 +4489,102 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
           {/* Cabecera del Auto Seleccionado + Información Rápida (para Taller y Lubricentro) */}
           <div className="pb-3 border-b border-white/[0.08]">
             {ordenActiva ? (
-              <div className="flex items-center justify-between gap-2.5 sm:gap-4">
-                {/* Lado izquierdo: Placa + Vehículo + Cliente */}
-                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                  {/* Placa Destacada */}
-                  <span className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 font-mono text-xs sm:text-base font-bold text-blue-300 tracking-wider shrink-0 shadow-sm">
-                    {ordenActiva.plate}
-                  </span>
-
-                  <div className="min-w-0 flex-1 space-y-0.5">
-                    {/* Fila 1: Solo Vehículo */}
-                    <div className="truncate">
-                      <span className="text-xs sm:text-base font-bold text-white truncate block">
+              <>
+                {/* Pestaña colapsada solo en móvil para volver a aparecer */}
+                {!mostrarCabeceraMovil && (
+                  <div className="flex sm:hidden items-center justify-between py-1.5 px-3 rounded-xl bg-white/[0.03] border border-white/10 text-xs animate-fade-in">
+                    <div className="flex items-center gap-2 min-w-0 font-mono">
+                      <span className="px-2 py-0.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 font-bold text-xs shrink-0">
+                        {ordenActiva.plate}
+                      </span>
+                      <span className="text-zinc-200 font-semibold truncate text-xs">
                         {ordenActiva.vehicle}
                       </span>
                     </div>
-
-                    {/* Fila 2: Solo Cliente y Número de visitas */}
-                    <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
-                      <span className="text-zinc-200 font-semibold truncate">
-                        <span className="text-zinc-400 font-normal">Cliente:</span> {ordenActiva.client}
-                      </span>
-                      <span className="text-zinc-600 shrink-0">•</span>
-                      <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-300 font-medium text-[10px] sm:text-[11px] shrink-0">
-                        {vecesAtendido} {vecesAtendido === 1 ? "visita" : "visitas"}
-                      </span>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setMostrarCabeceraMovil(true)}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 text-xs font-medium cursor-pointer active:scale-95 shrink-0"
+                    >
+                      <span>Mostrar</span>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
                   </div>
-                </div>
+                )}
 
-                {/* Lado derecho: Estado de Ingreso con el círculo justo al lado */}
-                <div className="shrink-0 flex items-center justify-end">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-black/60 border border-white/15 shadow-sm text-xs">
-                    <span className="text-zinc-300 font-normal whitespace-nowrap">
-                      Ingreso:{" "}
-                      <span
-                        className="text-white font-normal"
-                        title={formatearFechaCompleta(ordenActiva.dateIn || ordenActiva.startedAt)}
-                      >
-                        {formatearFechaIngreso(ordenActiva.dateIn || ordenActiva.startedAt)}
-                      </span>
+                {/* Vista completa: siempre visible en desktop (sm:), y en móvil si mostrarCabeceraMovil es true */}
+                <div className={`${mostrarCabeceraMovil ? "flex" : "hidden sm:flex"} items-center justify-between gap-2.5 sm:gap-4`}>
+                  {/* Lado izquierdo: Placa + Vehículo + Cliente */}
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                    {/* Placa Destacada */}
+                    <span className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 font-mono text-xs sm:text-base font-bold text-blue-300 tracking-wider shrink-0 shadow-sm">
+                      {ordenActiva.plate}
                     </span>
 
-                    {/* El círculo justo al lado de Ingreso */}
-                    {ordenActiva.status === "Pausada" ? (
-                      <span className="inline-flex items-center gap-1 text-amber-400 font-normal shrink-0" title="En Pausa">
-                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
-                        <span className="hidden sm:inline">En Pausa</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-emerald-400 font-normal shrink-0" title="Trabajando">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                        <span className="hidden sm:inline">Trabajando</span>
-                      </span>
-                    )}
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      {/* Fila 1: Solo Vehículo */}
+                      <div className="truncate">
+                        <span className="text-xs sm:text-base font-bold text-white truncate block">
+                          {ordenActiva.vehicle}
+                        </span>
+                      </div>
+
+                      {/* Fila 2: Solo Cliente y Número de visitas */}
+                      <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
+                        <span className="text-zinc-200 font-semibold truncate">
+                          <span className="text-zinc-400 font-normal">Cliente:</span> {ordenActiva.client}
+                        </span>
+                        <span className="text-zinc-600 shrink-0">•</span>
+                        <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-300 font-medium text-[10px] sm:text-[11px] shrink-0">
+                          {vecesAtendido} {vecesAtendido === 1 ? "visita" : "visitas"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>              </div>
+
+                  {/* Lado derecho: Estado de Ingreso con el círculo y pestaña de ocultar en móvil */}
+                  <div className="shrink-0 flex items-center justify-end gap-1.5">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-black/60 border border-white/15 shadow-sm text-xs">
+                      <span className="text-zinc-300 font-normal whitespace-nowrap">
+                        Ingreso:{" "}
+                        <span
+                          className="text-white font-normal"
+                          title={formatearFechaCompleta(ordenActiva.dateIn || ordenActiva.startedAt)}
+                        >
+                          {formatearFechaIngreso(ordenActiva.dateIn || ordenActiva.startedAt)}
+                        </span>
+                      </span>
+
+                      {/* El círculo justo al lado de Ingreso */}
+                      {ordenActiva.status === "Pausada" ? (
+                        <span className="inline-flex items-center gap-1 text-amber-400 font-normal shrink-0" title="En Pausa">
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+                          <span className="hidden sm:inline">En Pausa</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-emerald-400 font-normal shrink-0" title="Trabajando">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                          <span className="hidden sm:inline">Trabajando</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Botón pestaña para esconder cabecera solo en móvil */}
+                    <button
+                      type="button"
+                      onClick={() => setMostrarCabeceraMovil(false)}
+                      title="Ocultar información del vehículo en móvil"
+                      className="flex sm:hidden items-center justify-center w-7 h-7 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-zinc-400 hover:text-white transition-all cursor-pointer active:scale-95 shrink-0"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </>
             ) : null}
           </div>
 
