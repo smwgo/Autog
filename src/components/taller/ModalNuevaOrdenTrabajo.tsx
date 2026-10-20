@@ -73,7 +73,6 @@ export default function ModalNuevaOrdenTrabajo({
   const [emailContacto, setEmailContacto] = useState("");
   const [motivoIngreso, setMotivoIngreso] = useState("");
   const [creando, setCreando] = useState(false);
-  const [mostrarFlotanteTipoIngreso, setMostrarFlotanteTipoIngreso] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const dropdownTecnicoRef = useRef<HTMLDivElement | null>(null);
@@ -238,7 +237,6 @@ export default function ModalNuevaOrdenTrabajo({
     setEmailContacto("");
     setMotivoIngreso("");
     setTipoIngreso("Taller");
-    setMostrarFlotanteTipoIngreso(false);
     setIngresadoPor(empleadoLogueado.nombre || "Hernan Marquez");
     setAsignacionesTecnicos([
       {
@@ -249,8 +247,8 @@ export default function ModalNuevaOrdenTrabajo({
     ]);
   };
 
-  // Paso previo: Valida campos y abre flotante para escoger Taller o Lubricentro
-  const handleClickCrearOrden = (e?: React.FormEvent) => {
+  // Crear la orden directamente en Neon DB y entrar a la página
+  const handleCrearOrdenFinal = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
     // 1. Validar Cliente
@@ -272,20 +270,8 @@ export default function ModalNuevaOrdenTrabajo({
       return;
     }
 
-    // Abrir flotante para escoger si entra por Taller o Lubricentro
-    setMostrarFlotanteTipoIngreso(true);
-  };
-
-  // Ejecución definitiva al escoger Taller o Lubricentro en el flotante
-  const handleEjecutarCrearOrden = async (tipoSeleccionado: "Taller" | "Lubricentro") => {
-    const nombreFinal = (
-      clienteSeleccionado ? clienteSeleccionado.name : nuevoClienteNombre
-    ).trim();
-    const placaFinal = vehiculoPlaca.trim().toUpperCase();
-
     try {
       setCreando(true);
-      setTipoIngreso(tipoSeleccionado);
       const mecanicosTexto =
         asignacionesTecnicos.length > 0
           ? asignacionesTecnicos
@@ -294,7 +280,7 @@ export default function ModalNuevaOrdenTrabajo({
           : empleadoLogueado.nombre || "Sin asignar";
 
       const motivoFinal =
-        tipoSeleccionado === "Lubricentro"
+        tipoIngreso === "Lubricentro"
           ? `[Lubricentro] ${motivoIngreso.trim() || "Mantenimiento y lubricación"}`
           : (motivoIngreso.trim() || "Ingreso a taller");
 
@@ -323,12 +309,11 @@ export default function ModalNuevaOrdenTrabajo({
 
       const data = await res.json();
       if (data.success && data.activeOrder) {
-        onOrdenCreada(data.activeOrder, data.customer, tipoSeleccionado);
+        onOrdenCreada(data.activeOrder, data.customer, tipoIngreso);
         mostrarToast(
           `Orden #${data.activeOrder.orderNumber} creada para ${nombreFinal} (${placaFinal})`
         );
         resetFormularioCompleto();
-        setMostrarFlotanteTipoIngreso(false);
         onClose();
       } else {
         mostrarToast(data.error || "No se pudo crear la orden", "err");
@@ -1403,7 +1388,7 @@ export default function ModalNuevaOrdenTrabajo({
             ) : (
               <button
                 type="button"
-                onClick={handleClickCrearOrden}
+                onClick={handleCrearOrdenFinal}
                 disabled={creando}
                 className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-lg shadow-blue-600/30 active:scale-95 disabled:opacity-50 flex items-center gap-2"
               >
@@ -1434,86 +1419,6 @@ export default function ModalNuevaOrdenTrabajo({
             )}
           </div>
         </div>
-
-        {/* ===================================================================
-            FLOTANTE: ESCOGER SI ENTRA POR TALLER O LUBRICENTRO
-            =================================================================== */}
-        {mostrarFlotanteTipoIngreso && (
-          <div
-            onClick={() => !creando && setMostrarFlotanteTipoIngreso(false)}
-            className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in"
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md bg-[#16161a] border border-white/15 rounded-3xl p-6 shadow-2xl space-y-5 text-white animate-scale-in"
-            >
-              <div className="text-center space-y-1.5">
-                <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 mx-auto flex items-center justify-center text-2xl">
-                  🚗
-                </div>
-                <h3 className="text-base sm:text-lg font-bold text-white">
-                  ¿Cómo ingresa el vehículo?
-                </h3>
-                <p className="text-xs text-zinc-400">
-                  Selecciona el módulo de atención para {vehiculoPlaca.trim().toUpperCase() || "esta orden"}:
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
-                {/* Opción Taller */}
-                <button
-                  type="button"
-                  disabled={creando}
-                  onClick={() => handleEjecutarCrearOrden("Taller")}
-                  className="group relative p-4 rounded-2xl bg-gradient-to-b from-blue-600/15 to-blue-900/10 hover:from-blue-600/25 hover:to-blue-900/20 border border-blue-500/30 hover:border-blue-400/60 transition-all flex flex-col items-center text-center gap-2.5 cursor-pointer active:scale-95 shadow-lg shadow-blue-950/40"
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
-                    🔧
-                  </div>
-                  <div>
-                    <span className="block font-bold text-sm text-white group-hover:text-blue-300 transition-colors">
-                      Taller
-                    </span>
-                    <span className="text-[11px] text-zinc-400 leading-tight block mt-0.5">
-                      Inspección, diagnóstico y reparación
-                    </span>
-                  </div>
-                </button>
-
-                {/* Opción Lubricentro */}
-                <button
-                  type="button"
-                  disabled={creando}
-                  onClick={() => handleEjecutarCrearOrden("Lubricentro")}
-                  className="group relative p-4 rounded-2xl bg-gradient-to-b from-amber-600/15 to-amber-900/10 hover:from-amber-600/25 hover:to-amber-900/20 border border-amber-500/30 hover:border-amber-400/60 transition-all flex flex-col items-center text-center gap-2.5 cursor-pointer active:scale-95 shadow-lg shadow-amber-950/40"
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-amber-600/20 border border-amber-500/40 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
-                    💧
-                  </div>
-                  <div>
-                    <span className="block font-bold text-sm text-white group-hover:text-amber-300 transition-colors">
-                      Lubricentro
-                    </span>
-                    <span className="text-[11px] text-zinc-400 leading-tight block mt-0.5">
-                      Cambio de aceite, filtros y fluidos
-                    </span>
-                  </div>
-                </button>
-              </div>
-
-              <div className="pt-2 flex justify-center">
-                <button
-                  type="button"
-                  disabled={creando}
-                  onClick={() => setMostrarFlotanteTipoIngreso(false)}
-                  className="px-4 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                >
-                  Volver
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
