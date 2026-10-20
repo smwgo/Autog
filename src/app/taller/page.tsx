@@ -935,6 +935,10 @@ export default function TallerPanel() {
   const [etapa7FirmaDataUrl, setEtapa7FirmaDataUrl] = useState<string | null>(null);
   const [etapa7FirmadoPor, setEtapa7FirmadoPor] = useState<string>("");
   const [guardandoEtapa7, setGuardandoEtapa7] = useState<boolean>(false);
+  const [modoFirma, setModoFirma] = useState<"ACEPTACION" | "ENTREGA">("ACEPTACION");
+  const [firmaAceptacionDataUrl, setFirmaAceptacionDataUrl] = useState<string | null>(null);
+  const [firmaEntregaDataUrl, setFirmaEntregaDataUrl] = useState<string | null>(null);
+  const [guardandoPasarPos, setGuardandoPasarPos] = useState<boolean>(false);
   const [copiadoLinkFirmaEtapa7, setCopiadoLinkFirmaEtapa7] = useState<boolean>(false);
   const canvasFirmaEtapa7Ref = useRef<HTMLCanvasElement | null>(null);
   const dibujandoFirmaEtapa7Ref = useRef<boolean>(false);
@@ -3234,6 +3238,103 @@ export default function TallerPanel() {
     );
   };
 
+  const handleGuardarFirmaActiva = async () => {
+    if (!ordenActiva) {
+      mostrarToast("No hay orden activa", "err");
+      return;
+    }
+    let firmaActual = etapa7FirmaDataUrl;
+    if (!firmaActual && canvasFirmaEtapa7Ref.current && tieneTrazosFirmaEtapa7Ref.current) {
+      firmaActual = canvasFirmaEtapa7Ref.current.toDataURL("image/png");
+      setEtapa7FirmaDataUrl(firmaActual);
+    }
+    if (!firmaActual) {
+      mostrarToast("Dibuja tu firma en el recuadro primero", "err");
+      return;
+    }
+
+    try {
+      setGuardandoEtapa7(true);
+      if (modoFirma === "ACEPTACION") {
+        setFirmaAceptacionDataUrl(firmaActual);
+        const res = await fetch("/api/taller/operacion", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "FIRMAR_PRESUPUESTO",
+            orderId: ordenActiva.id,
+            quoteSignatureUrl: firmaActual,
+            quoteSignedBy: ordenActiva.client || "Cliente",
+          }),
+        });
+        const data = await res.json();
+        if (data.success && data.activeOrder) {
+          setOrdenActiva(data.activeOrder);
+          setAutosEnPista((prev) =>
+            prev.map((o) => (o.id === data.activeOrder.id ? data.activeOrder : o))
+          );
+        }
+        mostrarToast("✓ Firma de aceptación guardada");
+      } else {
+        setFirmaEntregaDataUrl(firmaActual);
+        await sincronizarEtapa7EnNeon({
+          deliverySignatureUrl: firmaActual,
+          deliverySignedBy: ordenActiva.client || "Cliente",
+          deliveryStatus: "Firmado y Entregado",
+        });
+        mostrarToast("✓ Firma de entrega guardada");
+      }
+    } catch (err) {
+      console.error("Error guardando firma:", err);
+      mostrarToast("Error al guardar firma", "err");
+    } finally {
+      setGuardandoEtapa7(false);
+    }
+  };
+
+  const handlePasarAPosOrdenes = async () => {
+    if (!ordenActiva) {
+      mostrarToast("No hay orden activa para pasar a POS", "err");
+      return;
+    }
+    try {
+      setGuardandoPasarPos(true);
+      if (canvasFirmaEtapa7Ref.current && tieneTrazosFirmaEtapa7Ref.current) {
+        const dataUrl = canvasFirmaEtapa7Ref.current.toDataURL("image/png");
+        if (modoFirma === "ACEPTACION") {
+          await fetch("/api/taller/operacion", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "FIRMAR_PRESUPUESTO",
+              orderId: ordenActiva.id,
+              quoteSignatureUrl: dataUrl,
+              quoteSignedBy: ordenActiva.client || "Cliente",
+            }),
+          });
+        } else {
+          await fetch("/api/taller/operacion", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "GUARDAR_ETAPA_7_ENTREGA_FIRMA",
+              orderId: ordenActiva.id,
+              deliverySignatureUrl: dataUrl,
+              deliverySignedBy: ordenActiva.client || "Cliente",
+            }),
+          });
+        }
+      }
+      mostrarToast("✓ Orden lista. Abriendo Órdenes para cobro...");
+      router.push("/pos/ordenes");
+    } catch (err) {
+      console.error("Error al pasar a POS:", err);
+      mostrarToast("Error al pasar orden a POS", "err");
+    } finally {
+      setGuardandoPasarPos(false);
+    }
+  };
+
   const handleEnviarWhatsAppAceptacionEtapa7 = async () => {
     const telRaw =
       etapa6ClienteTelefono.trim() ||
@@ -4457,7 +4558,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               STEPPER DE 6 ICONOS TRANSPARENTES (GLASSMORPHISM)
               =================================================================== */}
           <div className="bg-white/[0.02] backdrop-blur-md border border-white/[0.08] p-2 rounded-2xl overflow-x-auto no-scrollbar [WebkitOverflowScrolling:touch]">
-            <div className="flex sm:grid sm:grid-cols-5 gap-2 min-w-max sm:min-w-0">
+            <div className="flex sm:grid sm:grid-cols-4 gap-2 min-w-max sm:min-w-0">
               {[
                 {
                   id: 1,
@@ -4487,17 +4588,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   ),
                 },
                 {
-                  id: 5,
-                  label: "4. Aviso",
-                  icon: (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
-                    </svg>
-                  ),
-                },
-                {
-                  id: 6,
-                  label: "5. Firma",
+                  id: 4,
+                  label: "4. Aviso y Firma",
                   icon: (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
@@ -5378,7 +5470,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   </button>
                   <button
                     type="button"
-                    onClick={() => setEtapaActiva(5)}
+                    onClick={() => setEtapaActiva(4)}
                     className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-normal cursor-pointer transition-colors"
                   >
                     Continuar
@@ -5395,279 +5487,133 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             )}
 
 
-            {/* ETAPA 5: ESTADO, AVISO AUTOMÁTICO Y PIN DE SEGUIMIENTO */}
-            {etapaActiva === 5 && (
+            {/* ETAPA 4: AVISO Y FIRMA + TRASPASO A POS / ÓRDENES */}
+            {etapaActiva === 4 && (
               <div className="w-full space-y-4 animate-fade-in">
-                <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-teal-400 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-teal-400" />
-                      Estado de la Orden y Aviso Automático al Cliente
-                    </span>
-                  </div>
-
-                  {/* Chips de los 5 Estados con Automatización Instantánea */}
-                  <div className="space-y-2">
-                    <span className="text-[11px] text-zinc-400 block font-medium">
-                      Selector rápido de los 5 estados (actualiza Neon y prepara el aviso de WhatsApp):
-                    </span>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                      {etapa6EstadosLista.slice(0, 5).map((st, idx) => {
-                        const sel =
-                          etapa6EstadoSeleccionado.toLowerCase() === st.name.toLowerCase() ||
-                          etapa6EstadoSeleccionado.toLowerCase().includes(st.name.toLowerCase().replace(/^\d+\s*/, ""));
-                        const estilo = getEstiloColorEstado(st.color);
-                        return (
-                          <button
-                            key={st.id || idx}
-                            type="button"
-                            onClick={() => handleSeleccionarEstadoEtapa6(st)}
-                            className={`p-3 rounded-2xl border text-xs font-semibold transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 active:scale-95 ${
-                              sel
-                                ? `${estilo.bg} ${estilo.border} ${estilo.text} ring-2 ring-white/20 shadow-lg scale-[1.02]`
-                                : "bg-white/[0.03] hover:bg-white/[0.07] border-white/10 text-zinc-400 hover:text-white"
-                            }`}
-                          >
-                            <div className="flex items-center gap-1.5">
-                              <span className={`w-2.5 h-2.5 rounded-full ${estilo.dot} ${sel ? "animate-pulse" : ""}`} />
-                              <span className="font-bold tracking-tight">{st.name}</span>
-                            </div>
-                            <span className="text-[10px] text-zinc-500 font-mono">{st.progress}%</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Botón Destacado de 1 Clic para WhatsApp */}
-                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <div className="text-xs text-left w-full sm:w-auto">
-                      <span className="font-bold text-emerald-300 block flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                        Aviso listo para enviar al cliente:
-                      </span>
-                      <span className="text-[11px] text-zinc-400">
-                        Estado: <strong className="text-zinc-200">{etapa6EstadoSeleccionado}</strong> • Destino: <strong className="text-zinc-200">{etapa6ClienteTelefono || ordenActiva?.clientPhone || "Teléfono del cliente"}</strong>
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleEnviarWhatsAppAvisoEtapa6}
-                      className="w-full sm:w-auto h-10 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 shrink-0"
-                    >
-                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
-                      </svg>
-                      <span>Enviar aviso por WhatsApp</span>
-                    </button>
-                  </div>
-
-                  {/* Tarjeta de Credenciales de Seguimiento (PIN + URL) */}
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-2">
-                    <div className="lg:col-span-5 p-4 rounded-xl bg-black/40 border border-white/10 space-y-3">
-                      <span className="text-xs font-semibold text-zinc-300 block">
-                        🔑 Credenciales de Seguimiento en Línea
-                      </span>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-zinc-400">Orden de Trabajo:</span>
-                        <strong className="text-white font-mono">#{ordenActiva?.orderNumber || "---"}</strong>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-zinc-400">PIN de Seguridad:</span>
-                        <div className="flex items-center gap-2">
-                          <strong className="text-emerald-400 font-mono text-sm">{etapa6TrackingPin}</strong>
-                          <button
-                            type="button"
-                            onClick={handleGenerarNuevoPinEtapa6}
-                            className="p-1 rounded bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs cursor-pointer"
-                            title="Regenerar PIN"
-                          >
-                            🔄
-                          </button>
-                        </div>
-                      </div>
-                      <div className="pt-1">
-                        <button
-                          type="button"
-                          onClick={handleCopiarLinkSeguimientoEtapa6}
-                          className="w-full h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer"
-                        >
-                          {copiadoLinkSeguimiento ? "✓ ¡Link de Seguimiento Copiado!" : "📋 Copiar Link de Seguimiento"}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Mensaje Autogenerado y Envíos 1-Clic */}
-                    <div className="lg:col-span-7 p-4 rounded-xl bg-black/40 border border-white/10 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-zinc-300">
-                          Mensaje Autogenerado para el Cliente:
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={handleEnviarWhatsAppAvisoEtapa6}
-                            className="h-8 px-3 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
-                          >
-                            <span>💬 Enviar WhatsApp</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleEnviarCorreoAvisoEtapa6}
-                            className="h-8 px-3 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
-                          >
-                            <span>✉️ Correo</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      <textarea
-                        rows={3}
-                        value={etapa6MensajeAviso}
-                        onChange={(e) => setEtapa6MensajeAviso(e.target.value)}
-                        className="w-full p-2.5 rounded-xl bg-black/60 border border-white/10 text-white text-xs focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setEtapaActiva(3)}
-                    className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
-                  >
-                    ← Anterior (Presupuesto)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEtapaActiva(6)}
-                    className="px-4 py-2 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 text-teal-300 text-xs font-semibold cursor-pointer"
-                  >
-                    Continuar a Firma y Entrega (Paso 6) →
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ETAPA 6: ENTREGA EN 3 PASOS + FIRMA EN PANTALLA O REMOTA */}
-            {etapaActiva === 6 && (
-              <div className="w-full space-y-4 animate-fade-in">
-                <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4">
-                  {/* Cabecera de 3 Pasos de Entrega */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-3">
+                <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4 shadow-xl">
+                  {/* Cabecera */}
+                  <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
                     <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-teal-400" />
-                      <span className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider">
-                        Entrega en 3 Pasos y Firma de Recepción
+                      <span className="text-base">📲</span>
+                      <h4 className="text-xs sm:text-sm font-normal text-white uppercase tracking-wider">
+                        Aviso y Firma
+                      </h4>
+                    </div>
+                    {ordenActiva && (
+                      <span className="font-mono text-xs text-zinc-400">
+                        {ordenActiva.plate ? `${ordenActiva.plate} • ` : ""}#{ordenActiva.orderNumber || ordenActiva.id}
                       </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-400">
-                      <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-zinc-300">1. Verificación</span>
-                      <span>→</span>
-                      <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-zinc-300">2. Informe</span>
-                      <span>→</span>
-                      <span className="px-2 py-0.5 rounded-md bg-teal-500/20 border border-teal-500/40 text-teal-300">3. Firma</span>
-                    </div>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-                    {/* PASO 1 Y 2: CHECKLIST + INFORME TÉCNICO AUTOGENERADO */}
-                    <div className="lg:col-span-7 space-y-4">
-                      {/* Paso 1: Checklist de Verificación de Entrega */}
-                      <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2.5">
-                        <span className="text-xs font-semibold text-zinc-200 block">
-                          Paso 1: Verificación de Entrega al Cliente
+                  {/* Contenido en 2 columnas */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    {/* Columna Izquierda: Estado y Notificación */}
+                    <div className="lg:col-span-5 space-y-3">
+                      {/* Estado */}
+                      <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2">
+                        <span className="text-xs font-normal text-zinc-300 block">
+                          Estado:
                         </span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                          {[
-                            { key: "vehiculoLimpio" as const, label: "Vehículo limpio (interior y exterior)" },
-                            { key: "trabajosVerificados" as const, label: "Niveles de fluidos y torque revisados" },
-                            { key: "pertenenciasEntregadas" as const, label: "Pertenencias del cliente devueltas" },
-                            { key: "repuestosMostrados" as const, label: "Prueba de ruta aprobada sin testigos" },
-                          ].map((chk) => {
-                            const val = Boolean(etapa7Checklist[chk.key]);
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                          {etapa6EstadosLista.slice(0, 5).map((st) => {
+                            const sel =
+                              etapa6EstadoSeleccionado.toLowerCase() === st.name.toLowerCase() ||
+                              etapa6EstadoSeleccionado.toLowerCase().includes(st.name.toLowerCase().replace(/^\d+\s*/, ""));
                             return (
-                              <label
-                                key={chk.key}
-                                className="p-2.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 flex items-center gap-2.5 cursor-pointer text-zinc-300 transition-all select-none"
+                              <button
+                                key={st.id}
+                                type="button"
+                                onClick={() => handleSeleccionarEstadoEtapa6(st)}
+                                className={`px-2 py-1.5 rounded-lg text-xs font-normal transition-all cursor-pointer text-center ${
+                                  sel
+                                    ? "bg-white/15 text-white border border-white/30 shadow-xs"
+                                    : "bg-white/[0.03] text-zinc-400 hover:text-white border border-white/5"
+                                }`}
                               >
-                                <input
-                                  type="checkbox"
-                                  checked={val}
-                                  onChange={(e) =>
-                                    setEtapa7Checklist({ ...etapa7Checklist, [chk.key]: e.target.checked })
-                                  }
-                                  className="w-4 h-4 rounded text-teal-500 bg-black/60 border-white/20 focus:ring-0 cursor-pointer"
-                                />
-                                <span className="text-[11px] font-medium leading-tight">{chk.label}</span>
-                              </label>
+                                {st.name}
+                              </button>
                             );
                           })}
                         </div>
                       </div>
 
-                      {/* Paso 2: Informe Técnico de la Orden */}
-                      <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-zinc-200">
-                            Paso 2: Informe Técnico de Trabajos
-                          </span>
+                      {/* Notificación rápida */}
+                      <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2">
+                        <span className="text-xs font-normal text-zinc-300 block">
+                          Aviso al cliente:
+                        </span>
+                        <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={handleAutogenerarInformeTecnico}
-                            className="px-2.5 py-1 rounded-lg bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 text-teal-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+                            onClick={handleEnviarWhatsAppAvisoEtapa6}
+                            className="flex-1 h-9 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-normal transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95"
                           >
-                            <span>✨ Autogenerar con Etapas Previas</span>
+                            <span>📲 WhatsApp</span>
                           </button>
-                        </div>
-
-                        <textarea
-                          rows={4}
-                          value={etapa7InformeTecnico}
-                          onChange={(e) => setEtapa7InformeTecnico(e.target.value)}
-                          placeholder="Resumen técnico de tareas ejecutadas, repuestos cambiados y recomendaciones de mantenimiento..."
-                          className="w-full p-3 rounded-xl bg-black/60 border border-white/10 text-white text-xs font-mono leading-relaxed focus:outline-none focus:border-teal-500/50"
-                        />
-
-                        <div className="flex items-center justify-between text-[11px] text-zinc-400">
-                          <span>Adjunto Cloudflare R2: {etapa7InformeAdjuntoUrl ? "✓ Adjuntado" : "Ninguno"}</span>
-                          <label className="text-teal-400 hover:text-teal-300 font-semibold cursor-pointer">
-                            <span>+ Adjuntar PDF/Archivo R2</span>
-                            <input
-                              type="file"
-                              accept=".pdf,image/*"
-                              onChange={handleSubirInformeTecnicoEtapa7}
-                              className="hidden"
-                            />
-                          </label>
+                          <button
+                            type="button"
+                            onClick={handleCopiarLinkSeguimientoEtapa6}
+                            className="h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 text-xs font-normal transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95"
+                            title="Copiar PIN de seguimiento"
+                          >
+                            <span>{copiadoLinkSeguimiento ? "✓ Copiado" : `PIN: ${etapa6TrackingPin}`}</span>
+                          </button>
                         </div>
                       </div>
                     </div>
 
-                    {/* PASO 3: FIRMA DIGITAL EN PANTALLA O REMOTA */}
-                    <div className="lg:col-span-5 space-y-4">
-                      {/* Lienzo Canvas Minimalista Táctil */}
-                      <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-zinc-200">
-                            Paso 3: Firma en Pantalla (Tablet / Celular)
-                          </span>
+                    {/* Columna Derecha: Doble Firma (Aceptación o Entrega) */}
+                    <div className="lg:col-span-7 space-y-3">
+                      <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-3">
+                        {/* Selector de Modo de Firma */}
+                        <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-2.5">
+                          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/5 border border-white/10">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setModoFirma("ACEPTACION");
+                                limpiarCanvasFirmaEtapa7();
+                              }}
+                              className={`px-3 py-1 rounded-md text-xs font-normal transition-all cursor-pointer ${
+                                modoFirma === "ACEPTACION"
+                                  ? "bg-blue-600 text-white shadow-xs"
+                                  : "text-zinc-400 hover:text-white"
+                              }`}
+                            >
+                              Firma Aceptación
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setModoFirma("ENTREGA");
+                                limpiarCanvasFirmaEtapa7();
+                              }}
+                              className={`px-3 py-1 rounded-md text-xs font-normal transition-all cursor-pointer ${
+                                modoFirma === "ENTREGA"
+                                  ? "bg-teal-600 text-white shadow-xs"
+                                  : "text-zinc-400 hover:text-white"
+                              }`}
+                            >
+                              Firma Entrega
+                            </button>
+                          </div>
+
                           <button
                             type="button"
                             onClick={limpiarCanvasFirmaEtapa7}
-                            className="text-[11px] text-zinc-400 hover:text-white px-2 py-0.5 rounded bg-white/5 transition-all cursor-pointer"
+                            className="text-[11px] text-zinc-400 hover:text-white px-2 py-0.5 rounded bg-white/5 cursor-pointer transition-colors"
                           >
                             Limpiar
                           </button>
                         </div>
 
-                        <div className="h-44 rounded-xl bg-[#0a0a0c] border border-white/10 relative overflow-hidden flex items-center justify-center">
+                        {/* Lienzo Canvas Minimalista Táctil */}
+                        <div className="h-40 rounded-xl bg-[#0a0a0c] border border-white/10 relative overflow-hidden flex items-center justify-center">
                           <canvas
                             ref={canvasFirmaEtapa7Ref}
-                            width={420}
-                            height={176}
+                            width={480}
+                            height={160}
                             onMouseDown={iniciarTrazoFirmaEtapa7}
                             onMouseMove={moverTrazoFirmaEtapa7}
                             onMouseUp={terminarTrazoFirmaEtapa7}
@@ -5679,62 +5625,61 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           />
                           {!tieneTrazosFirmaEtapa7Ref.current && (
                             <div className="absolute pointer-events-none text-zinc-600 text-xs font-mono">
-                              [Firma aquí con el dedo o puntero táctil]
+                              {modoFirma === "ACEPTACION"
+                                ? "[Firma de aceptación del presupuesto]"
+                                : "[Firma de entrega del vehículo]"}
                             </div>
                           )}
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => handleGuardarEtapa7EntregaFirma()}
-                          disabled={guardandoEtapa7}
-                          className="w-full h-11 rounded-xl bg-teal-500 hover:bg-teal-400 text-black text-xs sm:text-sm font-bold shadow-lg shadow-teal-500/20 transition-all cursor-pointer active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
-                        >
-                          <span>{guardandoEtapa7 ? "Guardando..." : "Guardar Entrega y Firma"}</span>
-                        </button>
-                      </div>
+                        {/* Acciones de Firma */}
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={handleGuardarFirmaActiva}
+                            disabled={guardandoEtapa7}
+                            className="h-9 px-4 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                          >
+                            <span>💾 {guardandoEtapa7 ? "Guardando..." : "Guardar Firma"}</span>
+                          </button>
 
-                      {/* Firma a Distancia (WhatsApp o Correo) */}
-                      <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-zinc-300">
-                            ¿Cliente no está en el taller?
-                          </span>
-                          <span className="text-[10px] text-teal-400 font-semibold uppercase">Firma a Distancia</span>
-                        </div>
-                        <p className="text-[11px] text-zinc-400">
-                          Envía el link al cliente para que revise el informe y firme desde su celular:
-                        </p>
-
-                        <div className="grid grid-cols-2 gap-2">
                           <button
                             type="button"
                             onClick={handleEnviarWhatsAppAceptacionEtapa7}
-                            className="h-9 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                            className="h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
                           >
-                            <span>📲 WhatsApp</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleCopiarLinkFirmaEtapa7}
-                            className="h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                          >
-                            <span>{copiadoLinkFirmaEtapa7 ? "✓ Copiado" : "📋 Copiar Link"}</span>
+                            <span>📲 Firma Remota</span>
                           </button>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center justify-start pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setEtapaActiva(5)}
-                    className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
-                  >
-                    Anterior
-                  </button>
+                  {/* Pie: Traspaso a POS / Órdenes */}
+                  <div className="pt-3 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="text-[11px] text-zinc-400 font-normal">
+                      <span>Aquí solo se genera la orden. El cobro y facturación se realiza en POS.</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setEtapaActiva(3)}
+                        className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-normal text-zinc-300 cursor-pointer transition-colors"
+                      >
+                        Anterior
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handlePasarAPosOrdenes}
+                        disabled={guardandoPasarPos}
+                        className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs sm:text-sm font-normal shadow-lg shadow-emerald-600/20 transition-all cursor-pointer flex items-center gap-2 active:scale-95 disabled:opacity-50"
+                      >
+                        <span>{guardandoPasarPos ? "Procesando..." : "🚀 Pasar a POS / Órdenes"}</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
