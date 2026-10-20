@@ -40,9 +40,11 @@ interface ActiveOrder {
   totalCount: number;
   generalCondition?: string;
   internalChat: ChatMessage[];
+  quoteStatus?: string;
   quoteSignatureUrl?: string;
   quoteSignedBy?: string;
   quoteSignedAt?: string;
+  deliveryStatus?: string;
   deliverySignatureUrl?: string;
   deliverySignedBy?: string;
   deliverySignedAt?: string;
@@ -134,6 +136,16 @@ export default function ClienteTallerPage() {
       }
     }
     cargar();
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/cliente/dashboard");
+        const data = await res.json();
+        if (data.success && data.activeOrder) {
+          setOrden(data.activeOrder);
+        }
+      } catch {}
+    }, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const etapaActualIdx = orden ? getEtapaIdx(orden.status) : 4;
@@ -505,6 +517,10 @@ export default function ClienteTallerPage() {
                           <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
                             ✓ Firmado
                           </span>
+                        ) : orden.quoteStatus === "Pendiente Firma en Panel Cliente" ? (
+                          <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-600 dark:text-purple-300 font-bold text-[10px] animate-pulse">
+                            📲 Firma Solicitada
+                          </span>
                         ) : (
                           <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold text-[10px]">
                             Pendiente
@@ -560,6 +576,10 @@ export default function ClienteTallerPage() {
                         {orden.deliverySignatureUrl ? (
                           <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
                             ✓ Conforme
+                          </span>
+                        ) : orden.deliveryStatus === "Pendiente Firma en Panel Cliente" ? (
+                          <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 font-bold text-[10px] animate-pulse">
+                            📲 Firma Solicitada
                           </span>
                         ) : (
                           <span className="px-2 py-0.5 rounded-full bg-slate-500/15 text-slate-500 dark:text-zinc-400 font-bold text-[10px]">

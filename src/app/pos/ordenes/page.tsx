@@ -26,6 +26,18 @@ interface OrderItem {
   billingStatus?: string;
 }
 
+function esOrdenEnHistorial(ord: OrderItem): boolean {
+  const st = (ord.status || "").trim().toLowerCase();
+  return (
+    st === "finalizado" ||
+    st === "terminado" ||
+    st === "entregado" ||
+    st === "entregada" ||
+    st === "05 entregada" ||
+    st === "historial"
+  );
+}
+
 function getEstadoSimplificado(ord: OrderItem) {
   const pagado =
     Boolean(ord.isBilled) ||
@@ -38,6 +50,13 @@ function getEstadoSimplificado(ord: OrderItem) {
       label: "Pagado",
       badge: "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10",
       dot: "bg-emerald-500",
+    };
+  }
+  if (esOrdenEnHistorial(ord)) {
+    return {
+      label: "Terminado",
+      badge: "border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10",
+      dot: "bg-purple-500",
     };
   }
   return {
@@ -67,10 +86,20 @@ export default function PosOrdenesPage() {
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [cargando, setCargando] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [seccionActiva, setSeccionActiva] = useState<"ACTIVAS" | "HISTORIAL">("ACTIVAS");
   const [filtroEstado, setFiltroEstado] = useState<string>("TODAS");
   const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
   const [guardandoId, setGuardandoId] = useState<string | null>(null);
   const [toastMensaje, setToastMensaje] = useState<{ tipo: "ok" | "err"; texto: string } | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("seccion") === "historial") {
+        setSeccionActiva("HISTORIAL");
+      }
+    }
+  }, []);
 
   const mostrarToast = (texto: string, tipo: "ok" | "err" = "ok") => {
     setToastMensaje({ tipo, texto });
@@ -174,8 +203,12 @@ export default function PosOrdenesPage() {
     }
   };
 
+  const ordenesActivasList = orders.filter((o) => !esOrdenEnHistorial(o));
+  const ordenesHistorialList = orders.filter((o) => esOrdenEnHistorial(o));
+  const baseSeccion = seccionActiva === "HISTORIAL" ? ordenesHistorialList : ordenesActivasList;
+
   // Filtrado de órdenes
-  const ordenesFiltradas = orders.filter((o) => {
+  const ordenesFiltradas = baseSeccion.filter((o) => {
     const isPagado =
       Boolean(o.isBilled) ||
       o.billingStatus?.toLowerCase() === "facturada" ||
@@ -199,8 +232,8 @@ export default function PosOrdenesPage() {
     return matchEstado && matchSearch;
   });
 
-  const totalOrdenes = orders.length;
-  const totalPagados = orders.filter(
+  const totalOrdenes = baseSeccion.length;
+  const totalPagados = baseSeccion.filter(
     (o) =>
       Boolean(o.isBilled) ||
       o.billingStatus?.toLowerCase() === "facturada" ||
@@ -243,13 +276,48 @@ export default function PosOrdenesPage() {
             <div>
               <div className="flex items-center gap-2.5">
                 <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-                  Órdenes
+                  {seccionActiva === "HISTORIAL" ? "Historial de Órdenes" : "Órdenes"}
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400">
                   {cargando ? "..." : totalOrdenes}
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* Selector de Sección: Órdenes Activas vs Historial de Órdenes */}
+          <div className="flex items-center p-1 rounded-2xl bg-zinc-200/70 dark:bg-zinc-900 border border-zinc-300/60 dark:border-zinc-800 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setSeccionActiva("ACTIVAS")}
+              className={`h-9 px-3.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                seccionActiva === "ACTIVAS"
+                  ? "bg-amber-500/15 border border-amber-500/35 text-amber-600 dark:text-amber-300 shadow-xs"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+              }`}
+            >
+              <span>🔧</span>
+              <span>Órdenes Activas</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[11px] bg-amber-500/15 text-amber-600 dark:text-amber-300">
+                {cargando ? "..." : ordenesActivasList.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSeccionActiva("HISTORIAL")}
+              className={`h-9 px-3.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                seccionActiva === "HISTORIAL"
+                  ? "bg-purple-500/15 border border-purple-500/35 text-purple-600 dark:text-purple-300 shadow-xs"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+              }`}
+            >
+              <span>📋</span>
+              <span>Historial de Órdenes</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[11px] bg-purple-500/15 text-purple-600 dark:text-purple-300">
+                {cargando ? "..." : ordenesHistorialList.length}
+              </span>
+            </button>
           </div>
         </div>
 

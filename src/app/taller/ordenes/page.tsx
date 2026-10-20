@@ -29,16 +29,39 @@ const STATUS_OPTIONS = [
   { label: "Reparando", value: "Reparando", color: "bg-blue-500", text: "text-blue-700 dark:text-blue-300", bg: "bg-blue-50 dark:bg-blue-500/10" },
   { label: "Espera de Repuestos", value: "Espera de Repuestos", color: "bg-rose-500", text: "text-rose-700 dark:text-rose-300", bg: "bg-rose-50 dark:bg-rose-500/10" },
   { label: "Listo para Entregar", value: "Listo para Entregar", color: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-300", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
+  { label: "Finalizado", value: "Finalizado", color: "bg-purple-500", text: "text-purple-700 dark:text-purple-300", bg: "bg-purple-50 dark:bg-purple-500/10" },
 ];
+
+function esOrdenEnHistorial(ord: OrderItem): boolean {
+  const st = (ord.status || "").trim().toLowerCase();
+  return (
+    st === "finalizado" ||
+    st === "terminado" ||
+    st === "entregado" ||
+    st === "entregada" ||
+    st === "05 entregada" ||
+    st === "historial"
+  );
+}
 
 export default function ActiveOrdersPage() {
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [seccionActiva, setSeccionActiva] = useState<"ACTIVAS" | "HISTORIAL">("ACTIVAS");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
   const [guardandoId, setGuardandoId] = useState<string | null>(null);
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("seccion") === "historial") {
+        setSeccionActiva("HISTORIAL");
+      }
+    }
+  }, []);
 
   // Cargar órdenes en tiempo real desde la base de datos
   const cargarOrdenes = useCallback(async () => {
@@ -145,6 +168,10 @@ export default function ActiveOrdersPage() {
     }
   };
 
+  const ordenesActivasList = orders.filter((o) => !esOrdenEnHistorial(o));
+  const ordenesHistorialList = orders.filter((o) => esOrdenEnHistorial(o));
+  const ordenesMostradas = seccionActiva === "HISTORIAL" ? ordenesHistorialList : ordenesActivasList;
+
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 pb-24 md:pb-0">
       <Header />
@@ -163,14 +190,43 @@ export default function ActiveOrdersPage() {
               </svg>
             </Link>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Órdenes
+              {seccionActiva === "HISTORIAL" ? "Historial de Órdenes" : "Órdenes"}
             </h1>
             <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
-              {cargando ? "..." : orders.length}
+              {cargando ? "..." : ordenesMostradas.length}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Selector de Sección: Órdenes Activas vs Historial de Órdenes */}
+            <div className="flex items-center p-1 rounded-xl bg-zinc-200/70 dark:bg-zinc-900 border border-zinc-300/60 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setSeccionActiva("ACTIVAS")}
+                className={`h-9 px-3 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  seccionActiva === "ACTIVAS"
+                    ? "bg-blue-500/15 border border-blue-500/35 text-blue-600 dark:text-blue-300"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                }`}
+              >
+                <span>🔧</span>
+                <span>Activas ({cargando ? "..." : ordenesActivasList.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSeccionActiva("HISTORIAL")}
+                className={`h-9 px-3 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  seccionActiva === "HISTORIAL"
+                    ? "bg-purple-500/15 border border-purple-500/35 text-purple-600 dark:text-purple-300"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                }`}
+              >
+                <span>📋</span>
+                <span>Historial de Órdenes ({cargando ? "..." : ordenesHistorialList.length})</span>
+              </button>
+            </div>
+
             <Link
               href="/pos/servicios"
               className="h-11 px-4 rounded-xl bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 text-sm font-semibold hover:bg-teal-100 dark:hover:bg-teal-500/20 transition-all flex items-center gap-2"
@@ -330,7 +386,7 @@ export default function ActiveOrdersPage() {
         {/* Orders Mobile Card View (md:hidden) adaptada al diseño de facturas */}
         {!cargando && (
           <div className="md:hidden space-y-3.5">
-            {orders.map((order) => (
+            {ordenesMostradas.map((order) => (
               <div
                 key={order.dbId || order.id}
                 className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 space-y-3 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
@@ -441,11 +497,11 @@ export default function ActiveOrdersPage() {
               </div>
             ))}
 
-            {orders.length === 0 && (
+            {ordenesMostradas.length === 0 && (
               <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-8 text-center shadow-sm">
                 <span className="text-4xl mb-3 block">🔍</span>
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">
-                  No se encontraron órdenes
+                  {seccionActiva === "HISTORIAL" ? "No hay órdenes en el historial" : "No se encontraron órdenes activas"}
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">
                   Intenta con otros términos o registra una nueva orden.
@@ -478,7 +534,7 @@ export default function ActiveOrdersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                  {orders.map((order) => (
+                  {ordenesMostradas.map((order) => (
                     <tr
                       key={order.dbId || order.id}
                       className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
@@ -596,12 +652,12 @@ export default function ActiveOrdersPage() {
                     </tr>
                   ))}
 
-                  {orders.length === 0 && (
+                  {ordenesMostradas.length === 0 && (
                     <tr>
                       <td colSpan={7} className="px-6 py-16 text-center">
                         <span className="text-4xl mb-3 block">🔍</span>
                         <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-1">
-                          No se encontraron órdenes
+                          {seccionActiva === "HISTORIAL" ? "No hay órdenes en el historial" : "No se encontraron órdenes activas"}
                         </h3>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">
                           Intenta con otros términos o registra una nueva orden.
@@ -620,8 +676,10 @@ export default function ActiveOrdersPage() {
             </div>
 
             <div className="px-6 py-3 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center text-xs text-zinc-500">
-              <span>Mostrando {orders.length} {orders.length === 1 ? "orden" : "órdenes"}</span>
-              <span className="font-semibold text-zinc-700 dark:text-zinc-300">Órdenes de Taller</span>
+              <span>Mostrando {ordenesMostradas.length} {ordenesMostradas.length === 1 ? "orden" : "órdenes"}</span>
+              <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                {seccionActiva === "HISTORIAL" ? "Historial de Órdenes" : "Órdenes de Taller"}
+              </span>
             </div>
           </div>
         )}

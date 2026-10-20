@@ -459,7 +459,7 @@ export async function GET(request: Request) {
             const activeOrdersRows: any[] = await prisma.$queryRawUnsafe(
               `SELECT * FROM "WorkshopOrder"
                WHERE UPPER("plate") = $1
-                 AND "status" NOT IN ('Entregado', 'ENTREGADO', 'Cancelado', 'CANCELADO')
+                 AND "status" NOT IN ('Entregado', 'ENTREGADO', '05 Entregada', 'Entregada', 'Finalizado', 'FINALIZADO', 'Terminado', 'TERMINADO', 'Historial', 'HISTORIAL', 'Cancelado', 'CANCELADO')
                ORDER BY "updatedAt" DESC LIMIT 1`,
               targetPlate
             );
@@ -544,7 +544,7 @@ export async function GET(request: Request) {
       const [ordersRows, products, services, employeesRows, customersRows] = (await Promise.all([
         prisma.$queryRawUnsafe(
           `SELECT * FROM "WorkshopOrder"
-           WHERE "status" NOT IN ('Entregado', 'ENTREGADO', 'Cancelado', 'CANCELADO')
+           WHERE "status" NOT IN ('Entregado', 'ENTREGADO', '05 Entregada', 'Entregada', 'Finalizado', 'FINALIZADO', 'Terminado', 'TERMINADO', 'Historial', 'HISTORIAL', 'Cancelado', 'CANCELADO')
            ORDER BY "updatedAt" DESC LIMIT 30`
         ),
         prisma.product.findMany({
@@ -2217,6 +2217,68 @@ export async function POST(request: Request) {
         });
       }
 
+      // ACCIÓN: SOLICITAR FIRMA REMOTA DIRECTO AL PANEL DEL CLIENTE
+      if (action === "SOLICITAR_FIRMA_REMOTA_PANEL_CLIENTE") {
+        const { orderId, tipoFirma = "ACEPTACION" } = body;
+        if (!orderId) {
+          return NextResponse.json({ success: false, error: "ID de orden requerido" }, { status: 400 });
+        }
+        const existingRows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopOrder" WHERE "id" = $1 OR "orderNumber" = $1 LIMIT 1`,
+          orderId
+        );
+        if (existingRows.length === 0) {
+          return NextResponse.json({ success: false, error: "Orden no encontrada" }, { status: 404 });
+        }
+        const current = existingRows[0];
+        const currentChat = safeParseJson<any[]>(current.internalChatJson, []);
+        const horaStr = new Date().toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" });
+        const etiquetaTipo = tipoFirma === "ENTREGA" ? "Entrega de Vehículo" : "Aceptación de Presupuesto";
+
+        const avisoChat = {
+          id: `firma-req-${Date.now()}`,
+          author: "Taller AutoG",
+          role: "Taller",
+          text: `📲 Firma remota habilitada en tu Panel Cliente: Por favor firma la ${etiquetaTipo} desde tu cuenta.`,
+          createdAt: horaStr,
+        };
+        const nextChat = [...currentChat, avisoChat];
+
+        if (tipoFirma === "ENTREGA") {
+          await prisma.$executeRawUnsafe(
+            `UPDATE "WorkshopOrder"
+             SET "deliveryStatus" = 'Pendiente Firma en Panel Cliente',
+                 "internalChatJson" = $2,
+                 "updatedAt" = NOW()
+             WHERE "id" = $1`,
+            current.id,
+            JSON.stringify(nextChat)
+          );
+        } else {
+          await prisma.$executeRawUnsafe(
+            `UPDATE "WorkshopOrder"
+             SET "quoteStatus" = 'Pendiente Firma en Panel Cliente',
+                 "internalChatJson" = $2,
+                 "updatedAt" = NOW()
+             WHERE "id" = $1`,
+            current.id,
+            JSON.stringify(nextChat)
+          );
+        }
+
+        const updatedRows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopOrder" WHERE "id" = $1`,
+          current.id
+        );
+        const mapped = mapOrderRow(updatedRows[0]);
+        return NextResponse.json({
+          success: true,
+          order: mapped,
+          activeOrder: mapped,
+          message: `Solicitud de firma de ${etiquetaTipo} habilitada en el Panel del Cliente.`,
+        });
+      }
+
       // ACCIÓN: REGISTRAR FIRMA DE ACEPTACIÓN DEL PRESUPUESTO
       if (action === "FIRMAR_PRESUPUESTO") {
         const { orderId, quoteSignatureUrl, quoteSignedBy } = body;
@@ -2588,7 +2650,7 @@ export async function POST(request: Request) {
         const existingOrders: any[] = await prisma.$queryRawUnsafe(
           `SELECT * FROM "WorkshopOrder"
            WHERE UPPER("plate") = $1
-             AND "status" NOT IN ('Entregado', 'ENTREGADO', 'Cancelado', 'CANCELADO')
+             AND "status" NOT IN ('Entregado', 'ENTREGADO', '05 Entregada', 'Entregada', 'Finalizado', 'FINALIZADO', 'Terminado', 'TERMINADO', 'Historial', 'HISTORIAL', 'Cancelado', 'CANCELADO')
            ORDER BY "updatedAt" DESC LIMIT 1`,
           vehicle.plate.toUpperCase()
         );
@@ -2865,7 +2927,7 @@ export async function POST(request: Request) {
       // ACCIÓN 5: ENVIAR A POS / CAJA + DESCUENTO DE STOCK + TIEMPOS + HISTORIAL
       // =========================================================================
       if (action === "ENVIAR_A_POS") {
-        const { orderId } = body;
+        const { orderId, esReenvio = false } = body;
         if (!orderId) {
           return NextResponse.json(
             { success: false, error: "ID de orden requerido." },
@@ -3023,7 +3085,9 @@ export async function POST(request: Request) {
           .findUnique({ where: { requestNumber } })
           .catch(() => null);
 
-        const posNotes = `Orden Taller #${order.orderNumber} | Estado: EN_CAJA | Empleados: ${empleadosTexto} | Placa: ${order.plate} | Km: ${order.mileage || "N/A"}`;
+        const posNotes = esReenvio
+          ? `[REENVÍO DESDE TALLER] Orden Taller #${order.orderNumber} | Estado: EN_CAJA | Empleados: ${empleadosTexto} | Placa: ${order.plate} | Km: ${order.mileage || "N/A"}`
+          : `Orden Taller #${order.orderNumber} | Estado: EN_CAJA | Empleados: ${empleadosTexto} | Placa: ${order.plate} | Km: ${order.mileage || "N/A"}`;
 
         let posRequest: any;
         if (existingReq) {
@@ -3194,7 +3258,136 @@ export async function POST(request: Request) {
           activeOrder: mapOrderRow(updatedRows[0]),
           posRequest,
           empleadosIntervinieron,
-          message: `Orden ${order.orderNumber} enviada a Oficina / Caja (Estado: EN_CAJA). Cronómetro detenido.`,
+          message: esReenvio
+            ? `Orden ${order.orderNumber} reenviada a POS para decisión de cobro.`
+            : `Orden ${order.orderNumber} enviada a Oficina / Caja (Estado: EN_CAJA). Cronómetro detenido.`,
+        });
+      }
+
+      // =========================================================================
+      // ACCIÓN 6: FINALIZAR TRABAJO Y PASAR A HISTORIAL DE ÓRDENES
+      // =========================================================================
+      if (action === "FINALIZAR_ORDEN_HISTORIAL") {
+        const { orderId } = body;
+        if (!orderId) {
+          return NextResponse.json(
+            { success: false, error: "ID de orden requerido." },
+            { status: 400 }
+          );
+        }
+
+        const rows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopOrder" WHERE "id" = $1 OR "orderNumber" = $1 LIMIT 1`,
+          orderId
+        );
+
+        if (rows.length === 0) {
+          return NextResponse.json(
+            { success: false, error: "Orden no encontrada." },
+            { status: 404 }
+          );
+        }
+
+        const order = mapOrderRow(rows[0]);
+        const completedItems = (order.items || []).map((it: any) => ({
+          ...it,
+          status: "Listo" as const,
+        }));
+        const serviceNames =
+          completedItems.length > 0
+            ? completedItems.map((i: any) => i.name)
+            : order.services || [];
+
+        const totalCalculated =
+          Number(order.totalCost) > 0
+            ? Number(order.totalCost)
+            : Number(
+                completedItems
+                  .reduce((acc: number, it: any) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1), 0)
+                  .toFixed(2)
+              );
+
+        const now = new Date();
+        const dateStr = now.toISOString().split("T")[0];
+        const allPhotos = [...(order.receptionPhotos || []), ...(order.evidencePhotos || [])];
+
+        const existingHist: any[] = ((await prisma
+          .$queryRawUnsafe(
+            `SELECT "id" FROM "WorkshopHistory" WHERE "orderNumber" = $1 LIMIT 1`,
+            order.orderNumber
+          )
+          .catch(() => [])) as any[]) || [];
+
+        if (existingHist.length > 0) {
+          await prisma
+            .$executeRawUnsafe(
+              `UPDATE "WorkshopHistory"
+               SET "servicesJson" = $2, "cost" = $3, "mechanic" = $4, "mileage" = $5, "nextOilChangeKm" = $6, "photosJson" = $7, "notes" = $8, "updatedAt" = NOW()
+               WHERE "id" = $1`,
+              existingHist[0].id,
+              JSON.stringify(serviceNames),
+              totalCalculated,
+              order.mechanic || "Taller",
+              order.mileage ? `${order.mileage.toLocaleString()} km` : "N/A",
+              order.nextOilChangeKm || null,
+              JSON.stringify(allPhotos),
+              order.notes || ""
+            )
+            .catch(() => {});
+        } else {
+          const hstId = "hst_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+          const serviceCode = `SRV-${Date.now().toString().slice(-5)}`;
+          await prisma
+            .$executeRawUnsafe(
+              `INSERT INTO "WorkshopHistory" (
+                "id", "serviceCode", "date", "vehicle", "plate", "client",
+                "servicesJson", "cost", "mechanic", "mileage", "nextOilChangeKm",
+                "photosJson", "notes", "orderNumber", "createdAt", "updatedAt"
+              ) VALUES (
+                $1, $2, $3, $4, $5, $6,
+                $7, $8, $9, $10, $11,
+                $12, $13, $14, NOW(), NOW()
+              )`,
+              hstId,
+              serviceCode,
+              dateStr,
+              order.vehicle,
+              (order.plate || "").toUpperCase(),
+              order.client,
+              JSON.stringify(serviceNames),
+              totalCalculated,
+              order.mechanic || "Taller",
+              order.mileage ? `${order.mileage.toLocaleString()} km` : "N/A",
+              order.nextOilChangeKm || null,
+              JSON.stringify(allPhotos),
+              order.notes || "",
+              order.orderNumber
+            )
+            .catch(() => {});
+        }
+
+        await prisma.$executeRawUnsafe(
+          `UPDATE "WorkshopOrder"
+           SET "status" = 'Finalizado',
+               "statusColor" = 'emerald',
+               "progress" = 100,
+               "totalCost" = $2,
+               "itemsJson" = $3,
+               "servicesJson" = $4,
+               "completedAt" = COALESCE("completedAt", NOW()),
+               "updatedAt" = NOW()
+           WHERE "id" = $1`,
+          order.id,
+          totalCalculated,
+          JSON.stringify(completedItems),
+          JSON.stringify(serviceNames)
+        );
+
+        return NextResponse.json({
+          success: true,
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          message: `Orden ${order.orderNumber} finalizada y movida al Historial de Órdenes.`,
         });
       }
 

@@ -4535,6 +4535,12 @@ export default function NuevaVentaPage() {
                               {item.requestNumber}
                             </span>
                             {renderOrigenBadge(item.type)}
+                            {item.notes?.includes("[REENVÍO DESDE TALLER]") && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-md font-semibold border flex items-center gap-1 bg-amber-500/15 border-amber-500/35 text-amber-600 dark:text-amber-300">
+                                <span>🔄</span>
+                                <span>Reenviado</span>
+                              </span>
+                            )}
                           </div>
                           <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-300">
                             {item.customerName || "Cliente"}

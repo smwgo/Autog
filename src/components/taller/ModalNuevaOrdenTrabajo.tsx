@@ -137,7 +137,7 @@ export default function ModalNuevaOrdenTrabajo({
       setListaClientes(clientesCatalogo);
     } else {
       fetch("/api/clientes")
-        .then((r) => r.json())
+        .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           if (d.success && Array.isArray(d.clientes)) {
             setListaClientes(d.clientes);

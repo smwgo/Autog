@@ -318,10 +318,12 @@ export default function InspeccionVehiculo({
     setImagenError(false);
   }, [vistaActiva, seccionActiva]);
 
-  // Sincronizar hallazgos locales cuando la orden activa cambie
+  // Sincronizar hallazgos locales cuando cambie la orden seleccionada
   useEffect(() => {
     if (ordenActiva?.inspectionFindings) {
       setHallazgos(ordenActiva.inspectionFindings);
+    } else {
+      setHallazgos([]);
     }
     if (ordenActiva?.receptionSignatureUrl) {
       setFirmaRecepcionUrl(ordenActiva.receptionSignatureUrl);
@@ -329,7 +331,7 @@ export default function InspeccionVehiculo({
     if ((ordenActiva as any)?.inspectionChecklist) {
       setEvaluacionesPlantilla((ordenActiva as any).inspectionChecklist);
     }
-  }, [ordenActiva]);
+  }, [ordenActiva?.id]);
 
   // Persistir hallazgos y evaluaciones en Neon DB
   const sincronizarHallazgosNeon = useCallback(
@@ -451,7 +453,7 @@ export default function InspeccionVehiculo({
       y: yPct,
       zona: `${vistaLabel}`,
       tipo: tipoDefault,
-      descripcion: `${tipoDefault} en ${vistaLabel} #${nuevoPinNumero}`,
+      descripcion: "",
       pinNumber: nuevoPinNumero,
     };
 
@@ -468,6 +470,7 @@ export default function InspeccionVehiculo({
   };
 
   const pinActual = hallazgos.find((h) => h.id === pinSeleccionadoId) || null;
+  const debounceSyncPinRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleGuardarDetallePin = (tipo: string, obs?: string) => {
     if (!pinSeleccionadoId) return;
@@ -476,13 +479,17 @@ export default function InspeccionVehiculo({
         return {
           ...h,
           tipo,
-          descripcion: obs !== undefined ? obs.trim() : h.descripcion,
+          descripcion: obs !== undefined ? obs : h.descripcion,
         };
       }
       return h;
     });
     setHallazgos(actualizados);
-    sincronizarHallazgosNeon(actualizados);
+
+    if (debounceSyncPinRef.current) clearTimeout(debounceSyncPinRef.current);
+    debounceSyncPinRef.current = setTimeout(() => {
+      sincronizarHallazgosNeon(actualizados);
+    }, 450);
   };
 
   const handleEliminarPin = async (id: string, e?: React.MouseEvent) => {
@@ -833,40 +840,42 @@ export default function InspeccionVehiculo({
       ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
     if (!SpeechRecognition) {
-      mostrarToast("Tu navegador no soporta reconocimiento de voz. Escribe la observación en el texto.", "err");
+      mostrarToast("Tu navegador no soporta dictado por voz. Escribe en el recuadro.", "err");
       return;
     }
 
     try {
+      const pinObjetivo = hallazgos.find((h) => h.id === targetPinId);
+      const textoPrevio = (observacionTexto || pinObjetivo?.descripcion || "").trim();
+
       const recognition = new SpeechRecognition();
       recognition.lang = "es-EC";
-      recognition.continuous = false;
+      recognition.continuous = true;
       recognition.interimResults = true;
 
       recognition.onstart = () => {
         setEscuchandoVoz(true);
-        mostrarToast("🎙 Escuchando... habla para describir el problema.");
+        mostrarToast("🎙 Grabando audio a texto... habla ahora.");
       };
 
       recognition.onresult = (event: any) => {
-        let transcript = "";
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          transcript += event.results[i][0].transcript;
+        let dictadoSesion = "";
+        for (let i = 0; i < event.results.length; ++i) {
+          dictadoSesion += event.results[i][0].transcript;
         }
-        if (transcript) {
-          setObservacionTexto((prev) => {
-            const base = prev.trim();
-            const nuevo = base ? `${base} ${transcript}`.trim() : transcript.trim();
-            const pinActual = hallazgos.find((h) => h.id === targetPinId);
-            handleGuardarDetallePin(pinActual?.tipo || tipoSeleccionado, nuevo);
-            return nuevo;
-          });
+        const dictadoLimpio = dictadoSesion.trim();
+        if (dictadoLimpio) {
+          const nuevoTexto = textoPrevio
+            ? `${textoPrevio} ${dictadoLimpio}`
+            : dictadoLimpio;
+          setObservacionTexto(nuevoTexto);
+          handleGuardarDetallePin(pinObjetivo?.tipo || tipoSeleccionado, nuevoTexto);
         }
       };
 
       recognition.onerror = (event: any) => {
         setEscuchandoVoz(false);
-        if (event.error !== "no-speech") {
+        if (event.error !== "no-speech" && event.error !== "aborted") {
           mostrarToast(`Micrófono: ${event.error}`, "err");
         }
       };
@@ -1194,12 +1203,12 @@ ${urlSeguimiento}`;
         >
           {/* Banner de modo colocación de nuevo Pin */}
           {modoColocandoPin && (
-            <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-2 rounded-xl bg-cyan-950/95 border border-cyan-400 text-cyan-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
-              <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-mono font-bold flex items-center justify-center text-[10px]">
+            <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-1.5 rounded-xl bg-cyan-950/95 border border-cyan-400 text-cyan-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-mono font-bold flex items-center justify-center text-[10px] shrink-0">
                   #{proximoPinNumero}
                 </span>
-                <span className="font-semibold text-[11px] sm:text-xs">Toca en el vehículo para ubicar el Pin #{proximoPinNumero}</span>
+                <span className="font-semibold text-xs truncate">Ubicar Pin #{proximoPinNumero}</span>
               </div>
               <button
                 type="button"
@@ -1207,7 +1216,7 @@ ${urlSeguimiento}`;
                   e.stopPropagation();
                   setModoColocandoPin(false);
                 }}
-                className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold cursor-pointer"
+                className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold cursor-pointer shrink-0"
               >
                 ✕ Cancelar
               </button>
@@ -1216,15 +1225,15 @@ ${urlSeguimiento}`;
 
           {/* Banner de reubicación de Pin existente */}
           {pinReubicandoId && (
-            <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-2 rounded-xl bg-amber-950/95 border border-amber-400 text-amber-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
-              <span className="font-semibold text-[11px] sm:text-xs">📍 Toca en el vehículo para reubicar este Pin</span>
+            <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-1.5 rounded-xl bg-amber-950/95 border border-amber-400 text-amber-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
+              <span className="font-semibold text-xs truncate">📍 Reubicar Pin</span>
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setPinReubicandoId(null);
                 }}
-                className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold cursor-pointer"
+                className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold cursor-pointer shrink-0"
               >
                 ✕ Cancelar
               </button>
@@ -1334,41 +1343,36 @@ ${urlSeguimiento}`;
         {/* BARRA INFERIOR DE CONTROL DE PINES: LISTA DE PINES EN ESTA VISTA + GENERAR SIGUIENTE */}
         <div className="mt-2.5 flex items-center justify-between gap-2 p-2 rounded-xl bg-white/[0.03] border border-white/10">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1">
-            <span className="text-[11px] text-zinc-400 font-semibold shrink-0">Pines:</span>
-            {pinsCarroceriaVista.length === 0 ? (
-              <span className="text-[11px] text-zinc-500 italic shrink-0">Sin pines en esta vista</span>
-            ) : (
-              pinsCarroceriaVista.map((p) => {
-                const activo = p.items.some((it) => it.id === pinSeleccionadoId);
-                return (
-                  <button
-                    key={`pin-pill-carroceria-${p.num}`}
-                    type="button"
-                    onClick={() => {
-                      const item = p.items.find((it) => it.id === pinSeleccionadoId) || p.items[0];
-                      setPinSeleccionadoId(item.id);
-                      setTipoSeleccionado(item.tipo || "Rayón");
-                      setObservacionTexto(item.descripcion || "");
-                      setPopoverAbierto(true);
-                      setModoColocandoPin(false);
-                      setPinReubicandoId(null);
-                    }}
-                    className={`h-7 px-2.5 rounded-lg border font-mono text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shrink-0 active:scale-95 ${
-                      activo
-                        ? "bg-rose-500 text-white border-rose-400 shadow-sm ring-1 ring-white/30"
-                        : "bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-zinc-300 hover:text-white"
-                    }`}
-                  >
-                    <span>#{p.num}</span>
-                    {p.items.length > 1 && (
-                      <span className="w-3.5 h-3.5 rounded-full bg-cyan-400 text-black text-[9px] font-black flex items-center justify-center">
-                        {p.items.length}
-                      </span>
-                    )}
-                  </button>
-                );
-              })
-            )}
+            {pinsCarroceriaVista.map((p) => {
+              const activo = p.items.some((it) => it.id === pinSeleccionadoId);
+              return (
+                <button
+                  key={`pin-pill-carroceria-${p.num}`}
+                  type="button"
+                  onClick={() => {
+                    const item = p.items.find((it) => it.id === pinSeleccionadoId) || p.items[0];
+                    setPinSeleccionadoId(item.id);
+                    setTipoSeleccionado(item.tipo || "Rayón");
+                    setObservacionTexto(item.descripcion || "");
+                    setPopoverAbierto(true);
+                    setModoColocandoPin(false);
+                    setPinReubicandoId(null);
+                  }}
+                  className={`h-7 px-2.5 rounded-lg border font-mono text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shrink-0 active:scale-95 ${
+                    activo
+                      ? "bg-rose-500 text-white border-rose-400 shadow-sm ring-1 ring-white/30"
+                      : "bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-zinc-300 hover:text-white"
+                  }`}
+                >
+                  <span>#{p.num}</span>
+                  {p.items.length > 1 && (
+                    <span className="w-3.5 h-3.5 rounded-full bg-cyan-400 text-black text-[9px] font-black flex items-center justify-center">
+                      {p.items.length}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           <button
@@ -1444,29 +1448,14 @@ ${urlSeguimiento}`;
 
         return (
           <>
-            {/* Cabecera del sistema */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-3">
-              <div>
-                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                  <span className="text-base">{sistemaActual.icon}</span>
-                  <span>{sistemaActual.name}</span>
-                </h3>
-                <p className="text-xs text-zinc-400 mt-0.5">{sistemaActual.description}</p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-zinc-400 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
-                  <span className="hidden sm:inline">Toca la imagen para marcar un hallazgo</span>
+            {cantPinesSis > 0 && (
+              <div className="flex items-center justify-end pb-1">
+                <span className="px-2.5 py-1 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-bold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" />
+                  {cantPinesSis} {cantPinesSis === 1 ? "hallazgo" : "hallazgos"}
                 </span>
-                {cantPinesSis > 0 && (
-                  <span className="px-2.5 py-1 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-bold flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-rose-500" />
-                    {cantPinesSis} {cantPinesSis === 1 ? "hallazgo" : "hallazgos"}
-                  </span>
-                )}
               </div>
-            </div>
+            )}
 
             {/* LIENZO 3D INTERACTIVO DEL SISTEMA (Tocar para marcar pines) */}
             <div
@@ -1481,12 +1470,12 @@ ${urlSeguimiento}`;
             >
               {/* Banner de modo colocación de nuevo Pin */}
               {modoColocandoPin && (
-                <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-2 rounded-xl bg-cyan-950/95 border border-cyan-400 text-cyan-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-mono font-bold flex items-center justify-center text-[10px]">
+                <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-1.5 rounded-xl bg-cyan-950/95 border border-cyan-400 text-cyan-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-mono font-bold flex items-center justify-center text-[10px] shrink-0">
                       #{proximoPinNumero}
                     </span>
-                    <span className="font-semibold text-[11px] sm:text-xs">Toca en el esquema para ubicar el Pin #{proximoPinNumero}</span>
+                    <span className="font-semibold text-xs truncate">Ubicar Pin #{proximoPinNumero}</span>
                   </div>
                   <button
                     type="button"
@@ -1494,7 +1483,7 @@ ${urlSeguimiento}`;
                       e.stopPropagation();
                       setModoColocandoPin(false);
                     }}
-                    className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold cursor-pointer"
+                    className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold cursor-pointer shrink-0"
                   >
                     ✕ Cancelar
                   </button>
@@ -1503,15 +1492,15 @@ ${urlSeguimiento}`;
 
               {/* Banner de reubicación de Pin existente */}
               {pinReubicandoId && (
-                <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-2 rounded-xl bg-amber-950/95 border border-amber-400 text-amber-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
-                  <span className="font-semibold text-[11px] sm:text-xs">📍 Toca en el esquema para reubicar este Pin</span>
+                <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-1.5 rounded-xl bg-amber-950/95 border border-amber-400 text-amber-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
+                  <span className="font-semibold text-xs truncate">📍 Reubicar Pin</span>
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setPinReubicandoId(null);
                     }}
-                    className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold cursor-pointer"
+                    className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold cursor-pointer shrink-0"
                   >
                     ✕ Cancelar
                   </button>
@@ -1623,41 +1612,36 @@ ${urlSeguimiento}`;
             {/* BARRA INFERIOR DE CONTROL DE PINES: LISTA DE PINES EN ESTE SISTEMA + GENERAR SIGUIENTE */}
             <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-white/[0.03] border border-white/10">
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1">
-                <span className="text-[11px] text-zinc-400 font-semibold shrink-0">Pines:</span>
-                {pinsSistemaActivo.length === 0 ? (
-                  <span className="text-[11px] text-zinc-500 italic shrink-0">Sin pines en este sistema</span>
-                ) : (
-                  pinsSistemaActivo.map((p) => {
-                    const activo = p.items.some((it) => it.id === pinSeleccionadoId);
-                    return (
-                      <button
-                        key={`pin-pill-sistema-${p.num}`}
-                        type="button"
-                        onClick={() => {
-                          const item = p.items.find((it) => it.id === pinSeleccionadoId) || p.items[0];
-                          setPinSeleccionadoId(item.id);
-                          setTipoSeleccionado(item.tipo || "Fuga");
-                          setObservacionTexto(item.descripcion || "");
-                          setPopoverAbierto(true);
-                          setModoColocandoPin(false);
-                          setPinReubicandoId(null);
-                        }}
-                        className={`h-7 px-2.5 rounded-lg border font-mono text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shrink-0 active:scale-95 ${
-                          activo
-                            ? "bg-rose-500 text-white border-rose-400 shadow-sm ring-1 ring-white/30"
-                            : "bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-zinc-300 hover:text-white"
-                        }`}
-                      >
-                        <span>#{p.num}</span>
-                        {p.items.length > 1 && (
-                          <span className="w-3.5 h-3.5 rounded-full bg-cyan-400 text-black text-[9px] font-black flex items-center justify-center">
-                            {p.items.length}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })
-                )}
+                {pinsSistemaActivo.map((p) => {
+                  const activo = p.items.some((it) => it.id === pinSeleccionadoId);
+                  return (
+                    <button
+                      key={`pin-pill-sistema-${p.num}`}
+                      type="button"
+                      onClick={() => {
+                        const item = p.items.find((it) => it.id === pinSeleccionadoId) || p.items[0];
+                        setPinSeleccionadoId(item.id);
+                        setTipoSeleccionado(item.tipo || "Fuga");
+                        setObservacionTexto(item.descripcion || "");
+                        setPopoverAbierto(true);
+                        setModoColocandoPin(false);
+                        setPinReubicandoId(null);
+                      }}
+                      className={`h-7 px-2.5 rounded-lg border font-mono text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shrink-0 active:scale-95 ${
+                        activo
+                          ? "bg-rose-500 text-white border-rose-400 shadow-sm ring-1 ring-white/30"
+                          : "bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-zinc-300 hover:text-white"
+                      }`}
+                    >
+                      <span>#{p.num}</span>
+                      {p.items.length > 1 && (
+                        <span className="w-3.5 h-3.5 rounded-full bg-cyan-400 text-black text-[9px] font-black flex items-center justify-center">
+                          {p.items.length}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
 
               <button

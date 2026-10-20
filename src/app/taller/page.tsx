@@ -211,7 +211,7 @@ export interface ServicePreset {
 const ESTADOS_ORDEN_DEFAULT: CustomOrderStatus[] = [
   { id: "st-1", name: "01 Pendiente", color: "amber", progress: 10 },
   { id: "st-2", name: "02 En Diagnóstico", color: "blue", progress: 30 },
-  { id: "st-3", name: "03 En Reparación", color: "sky", progress: 60 },
+  { id: "st-3", name: "03 En Reparación", color: "rose", progress: 60 },
   { id: "st-4", name: "04 Listo para Entrega", color: "emerald", progress: 90 },
   { id: "st-5", name: "05 Entregada", color: "purple", progress: 100 },
 ];
@@ -740,6 +740,44 @@ export default function TallerPanel() {
     mostrarToast(`Atendiendo a ${auto.client} (${auto.plate})`);
   };
 
+  // Marcar trabajo como terminado totalmente y enviarlo a Historial de Órdenes en Panel Órdenes
+  const handleFinalizarOrdenAHistorial = async (auto: UnifiedOrder, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+
+    setAutosEnPista((prev) => {
+      const restantes = prev.filter((o) => o.id !== auto.id);
+      if (ordenActiva?.id === auto.id) {
+        const siguiente = restantes[0] || null;
+        setOrdenActiva(siguiente);
+        setKmActualInput(siguiente?.mileage ? String(siguiente.mileage) : "");
+        setFotosRecepcion(siguiente?.receptionPhotos || []);
+        if (typeof window !== "undefined") {
+          try {
+            if (siguiente?.id) {
+              localStorage.setItem("taller_orden_activa_id", siguiente.id);
+            } else {
+              localStorage.removeItem("taller_orden_activa_id");
+            }
+          } catch {}
+        }
+      }
+      return restantes;
+    });
+
+    try {
+      await fetch("/api/taller/operacion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "FINALIZAR_ORDEN_HISTORIAL",
+          orderId: auto.id,
+        }),
+      });
+    } catch (err) {
+      console.error("Error al finalizar orden a historial:", err);
+    }
+  };
+
   const handleOrdenCreadaDesdeModal = (nuevaOrden: UnifiedOrder, cliente?: any, tipo?: "Taller" | "Lubricentro") => {
     setOrdenActiva(nuevaOrden);
     setAutosEnPista((prev) => [
@@ -1107,6 +1145,7 @@ export default function TallerPanel() {
   const [nowTick, setNowTick] = useState<number>(() => Date.now());
   const [toastMensaje, setToastMensaje] = useState<{ tipo: "ok" | "err"; texto: string } | null>(null);
   const [modalConfirmPos, setModalConfirmPos] = useState<any | null>(null);
+  const [modalYaPasadaPos, setModalYaPasadaPos] = useState(false);
 
   const fileInputRecepcionRef = useRef<HTMLInputElement | null>(null);
   const fileInputEvidenciaRef = useRef<HTMLInputElement | null>(null);
@@ -1153,6 +1192,10 @@ export default function TallerPanel() {
     try {
       setCargandoInicial(true);
       const res = await fetch("/api/taller/operacion");
+      if (!res.ok) {
+        console.warn(`Respuesta no exitosa al cargar taller (${res.status})`);
+        return;
+      }
       const data = await res.json();
       if (data.success) {
         const pista: UnifiedOrder[] = data.autosEnPista || [];
@@ -1167,13 +1210,22 @@ export default function TallerPanel() {
         }
         if (selectFirstIfNone && pista.length > 0) {
           setOrdenActiva((prev) => {
-            if (!prev) {
-              setFotosRecepcion(pista[0].receptionPhotos || []);
-              setKmActualInput(pista[0].mileage ? String(pista[0].mileage) : "");
-              return pista[0];
+            let targetOrder: UnifiedOrder | null = null;
+            if (typeof window !== "undefined") {
+              try {
+                const savedId = localStorage.getItem("taller_orden_activa_id");
+                if (savedId) {
+                  targetOrder = pista.find((o) => o.id === savedId) || null;
+                }
+              } catch {}
             }
-            const updated = pista.find((o) => o.id === prev.id || o.orderNumber === prev.orderNumber);
-            return updated || prev;
+            if (!targetOrder && prev) {
+              targetOrder = pista.find((o) => o.id === prev.id || o.orderNumber === prev.orderNumber) || prev;
+            }
+            const finalOrder = targetOrder || pista[0];
+            setFotosRecepcion(finalOrder.receptionPhotos || []);
+            setKmActualInput(finalOrder.mileage ? String(finalOrder.mileage) : "");
+            return finalOrder;
           });
         }
       }
@@ -1186,7 +1238,19 @@ export default function TallerPanel() {
 
   useEffect(() => {
     cargarOperacionInicial(true);
+    const retryTimer = setTimeout(() => {
+      cargarOperacionInicial(true);
+    }, 1500);
+    return () => clearTimeout(retryTimer);
   }, [cargarOperacionInicial]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && ordenActiva?.id) {
+      try {
+        localStorage.setItem("taller_orden_activa_id", ordenActiva.id);
+      } catch {}
+    }
+  }, [ordenActiva?.id]);
 
   // Búsqueda reactiva de clientes en Neon DB cuando el usuario escribe en Flotante 01
   useEffect(() => {
@@ -2807,14 +2871,68 @@ export default function TallerPanel() {
         etapa1Nombre ||
         "Estimado(a) Cliente";
       const ordNum = ordenActiva?.orderNumber || "OT-EN-CURSO";
+      const vehiculoDesc = ordenActiva?.vehicle || "su vehículo";
+      const placa = ordenActiva?.plate || "N/A";
       const pin = customPin || etapa6TrackingPin || ordenActiva?.trackingPin || "4821";
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const urlSeguimiento = `${origin}/taller/seguimiento?orden=${encodeURIComponent(
         ordNum
       )}&pin=${encodeURIComponent(pin)}`;
-      const nombreTaller = ordenActiva?.workshopName || "Taller Mecánico Especializado";
+      const nombreTaller = ordenActiva?.workshopName || "AutoG Taller Automotriz";
 
-      return `Hola ${clienteNom}, le informamos que su orden *#${ordNum}* cambió a estado: *${estadoNombre}*.\nSiga su orden en línea: ${urlSeguimiento}\nSi tiene consultas, contáctenos.\n${nombreTaller}`;
+      const stLower = estadoNombre.toLowerCase();
+
+      // 1. PENDIENTE
+      if (stLower.includes("pendiente") || stLower.includes("espera") || stLower.includes("recepc")) {
+        return `🚗 *${nombreTaller}*
+Hola *${clienteNom}*, su vehículo *${vehiculoDesc}* (Placa: *${placa}*) ingresó al taller.
+📋 *Orden:* #${ordNum}
+⏳ *Estado:* 🟡 *Pendiente de Revisión*
+🔗 *Seguimiento:* ${urlSeguimiento}`;
+      }
+
+      // 2. DIAGNÓSTICO
+      if (stLower.includes("diagn") || stLower.includes("evalua") || stLower.includes("revis")) {
+        return `🚗 *${nombreTaller}*
+Hola *${clienteNom}*, actualización de su vehículo *${vehiculoDesc}* (Placa: *${placa}*).
+📋 *Orden:* #${ordNum}
+🔍 *Estado:* 🔵 *En Diagnóstico Técnico*
+🔗 *Seguimiento:* ${urlSeguimiento}`;
+      }
+
+      // 3. REPARACIÓN
+      if (stLower.includes("repara") || stLower.includes("proceso") || stLower.includes("trabajando")) {
+        return `🚗 *${nombreTaller}*
+Hola *${clienteNom}*, actualización de su vehículo *${vehiculoDesc}* (Placa: *${placa}*).
+📋 *Orden:* #${ordNum}
+🛠️ *Estado:* 🔴 *En Reparación Activa*
+🔗 *Seguimiento:* ${urlSeguimiento}`;
+      }
+
+      // 4. ENTREGA
+      if (stLower.includes("listo") || (stLower.includes("entrega") && !stLower.includes("entregad"))) {
+        return `🚗 *${nombreTaller}*
+¡Hola *${clienteNom}*! Su vehículo *${vehiculoDesc}* (Placa: *${placa}*) está listo para retiro.
+📋 *Orden:* #${ordNum}
+✅ *Estado:* 🟢 *Listo para Entrega*
+🔗 *Detalles:* ${urlSeguimiento}`;
+      }
+
+      // 5. ENTREGADO
+      if (stLower.includes("entregad")) {
+        return `🚗 *${nombreTaller}*
+Hola *${clienteNom}*, su orden *#${ordNum}* ha finalizado.
+Vehículo *${vehiculoDesc}* (Placa: *${placa}*) entregado a satisfacción.
+🤝 *Estado:* 🟣 *Vehículo Entregado*
+⭐ ¡Gracias por su preferencia!`;
+      }
+
+      // Estado personalizado por defecto
+      return `🚗 *${nombreTaller}*
+Hola *${clienteNom}*, actualización de su vehículo *${vehiculoDesc}* (Placa: *${placa}*).
+📋 *Orden:* #${ordNum}
+📌 *Estado:* *${estadoNombre}*
+🔗 *Seguimiento:* ${urlSeguimiento}`;
     },
     [
       ordenActiva,
@@ -2825,7 +2943,7 @@ export default function TallerPanel() {
     ]
   );
 
-  const sincronizarEtapa6EnNeon = async (partial: {
+    const sincronizarEtapa6EnNeon = async (partial: {
     status?: string;
     statusColor?: CustomOrderStatus["color"];
     progress?: number;
@@ -2964,7 +3082,7 @@ export default function TallerPanel() {
     }
   };
 
-  // Aviso por WhatsApp en un clic
+  // Aviso por WhatsApp Web en un clic
   const handleEnviarWhatsAppAvisoEtapa6 = async () => {
     const telRaw =
       etapa6ClienteTelefono.trim() ||
@@ -2986,17 +3104,30 @@ export default function TallerPanel() {
       });
     }
 
-    const phoneFormatted = digits
-      ? digits.startsWith("593") || digits.length > 10
-        ? digits
-        : `593${digits.replace(/^0/, "")}`
-      : "";
+    let phoneFormatted = digits;
+    if (digits.length === 10 && digits.startsWith("0")) {
+      phoneFormatted = `593${digits.slice(1)}`;
+    } else if (digits.length === 9 && digits.startsWith("9")) {
+      phoneFormatted = `593${digits}`;
+    }
 
-    const waUrl = phoneFormatted
-      ? `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(texto)}`
-      : `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    const isMobile =
+      typeof navigator !== "undefined" &&
+      /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    let waUrl = "";
+    if (phoneFormatted) {
+      waUrl = isMobile
+        ? `https://api.whatsapp.com/send?phone=${phoneFormatted}&text=${encodeURIComponent(texto)}`
+        : `https://web.whatsapp.com/send?phone=${phoneFormatted}&text=${encodeURIComponent(texto)}`;
+    } else {
+      waUrl = isMobile
+        ? `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`
+        : `https://web.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
+    }
 
     window.open(waUrl, "_blank");
+    mostrarToast("Abriendo WhatsApp Web con el mensaje prediseñado...");
   };
 
   // Aviso por Correo en un clic
@@ -3323,9 +3454,19 @@ export default function TallerPanel() {
     }
   };
 
-  const handlePasarAPosOrdenes = async () => {
+  const handlePasarAPosOrdenes = async (esReenvio: boolean = false) => {
     if (!ordenActiva) {
       mostrarToast("No hay orden activa para pasar a POS", "err");
+      return;
+    }
+    const ordenYaEnPos = Boolean(
+      ordenActiva.posRequestId ||
+      ordenActiva.status === "EN_CAJA" ||
+      ordenActiva.status?.toLowerCase().includes("caja")
+    );
+
+    if (ordenYaEnPos && !esReenvio) {
+      setModalYaPasadaPos(true);
       return;
     }
     try {
@@ -3356,8 +3497,26 @@ export default function TallerPanel() {
           });
         }
       }
-      mostrarToast("✓ Orden lista. Abriendo Órdenes para cobro...");
-      router.push("/pos/ordenes");
+
+      const resPos = await fetch("/api/taller/operacion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "ENVIAR_A_POS",
+          orderId: ordenActiva.id,
+          esReenvio,
+        }),
+      });
+      const dataPos = await resPos.json().catch(() => null);
+      if (dataPos?.success && dataPos.activeOrder) {
+        setOrdenActiva(dataPos.activeOrder);
+        setAutosEnPista((prev) =>
+          prev.map((o) => (o.id === dataPos.activeOrder.id ? dataPos.activeOrder : o))
+        );
+      }
+
+      // Mostrar flotante de éxito manteniendo al usuario en este mismo panel de Taller
+      setModalConfirmPos(dataPos?.activeOrder || ordenActiva);
     } catch (err) {
       console.error("Error al pasar a POS:", err);
       mostrarToast("Error al pasar orden a POS", "err");
@@ -3367,39 +3526,66 @@ export default function TallerPanel() {
   };
 
   const handleEnviarWhatsAppAceptacionEtapa7 = async () => {
-    const telRaw =
-      etapa6ClienteTelefono.trim() ||
-      ordenActiva?.clientPhone ||
-      clienteEncontrado?.phone ||
-      clienteSeleccionadoEtapa1?.phone ||
-      etapa1Telefono ||
-      "";
-    const digits = telRaw.replace(/\D/g, "");
-    const clienteNom = ordenActiva?.client || "Cliente";
-    const vehDesc = ordenActiva?.vehicle || "su vehículo";
-    const placa = ordenActiva?.plate || "";
-    const ordNum = ordenActiva?.orderNumber || "OT";
-
-    if (ordenActiva) {
-      await sincronizarEtapa7EnNeon({
-        deliveryStatus: "Enviado para Firma Remota",
+    if (!ordenActiva) return;
+    try {
+      setGuardandoEtapa7(true);
+      const res = await fetch("/api/taller/operacion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "SOLICITAR_FIRMA_REMOTA_PANEL_CLIENTE",
+          orderId: ordenActiva.id,
+          tipoFirma: modoFirma,
+        }),
       });
+      const data = await res.json();
+      if (data.success && data.activeOrder) {
+        setOrdenActiva(data.activeOrder);
+        setAutosEnPista((prev) =>
+          prev.map((o) => (o.id === data.activeOrder.id ? data.activeOrder : o))
+        );
+        setCopiadoLinkFirmaEtapa7(true);
+        setTimeout(() => setCopiadoLinkFirmaEtapa7(false), 4000);
+      }
+    } catch (err) {
+      console.error("Error habilitando firma remota en Panel Cliente:", err);
+    } finally {
+      setGuardandoEtapa7(false);
     }
-
-    const msg = `Hola *${clienteNom}*, tu vehículo *${vehDesc}* (${placa}) con Orden *#${ordNum}* está listo para su entrega.\n\n✍️ *Revisa el informe técnico y firma la recepción desde tu celular aquí:*\n${linkFirmaRemotaEtapa7}`;
-    const phoneFormatted = digits
-      ? digits.startsWith("593") || digits.length > 10
-        ? digits
-        : `593${digits.replace(/^0/, "")}`
-      : "";
-
-    window.open(
-      phoneFormatted
-        ? `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(msg)}`
-        : `https://wa.me/?text=${encodeURIComponent(msg)}`,
-      "_blank"
-    );
   };
+
+  // Sincronización en tiempo real en Etapa 4 para reflejar cuando el cliente firme desde su Panel Cliente
+  useEffect(() => {
+    if (etapaActiva !== 4 || !ordenActiva?.id) return;
+    const pollTimer = setInterval(async () => {
+      try {
+        const res = await fetch("/api/taller/operacion");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success && Array.isArray(data.autosEnPista)) {
+          const fresh = data.autosEnPista.find((o: UnifiedOrder) => o.id === ordenActiva.id);
+          if (
+            fresh &&
+            (fresh.quoteSignatureUrl !== ordenActiva.quoteSignatureUrl ||
+              fresh.deliverySignatureUrl !== ordenActiva.deliverySignatureUrl ||
+              fresh.deliveryStatus !== ordenActiva.deliveryStatus ||
+              fresh.quoteStatus !== ordenActiva.quoteStatus)
+          ) {
+            setOrdenActiva(fresh);
+            setAutosEnPista(data.autosEnPista);
+          }
+        }
+      } catch {}
+    }, 4000);
+    return () => clearInterval(pollTimer);
+  }, [
+    etapaActiva,
+    ordenActiva?.id,
+    ordenActiva?.quoteSignatureUrl,
+    ordenActiva?.deliverySignatureUrl,
+    ordenActiva?.deliveryStatus,
+    ordenActiva?.quoteStatus,
+  ]);
 
   // Autogeneración del Informe Técnico en base a trabajos ejecutados en etapas previas
   const handleAutogenerarInformeTecnico = () => {
@@ -3773,31 +3959,31 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    if (fotosRecepcion.length >= 4) {
-      mostrarToast("Máximo 4 fotos de recepción permitidas", "err");
+    if (fotosRecepcion.length >= 5) {
+      mostrarToast("Máximo 5 fotos iniciales permitidas (5/5)", "err");
+      if (fileInputRecepcionRef.current) fileInputRecepcionRef.current.value = "";
       return;
     }
 
     const archivosSeleccionados = Array.from(files);
     if (fileInputRecepcionRef.current) fileInputRecepcionRef.current.value = "";
 
-    // Desliza inmediatamente a la Vista 2 (Servicios del Empleado) sin bloquear la pantalla
-    setPasoDeslizable(1);
-    mostrarToast("Subiendo foto(s) a Cloudflare R2 en segundo plano...");
+    mostrarToast("Subiendo foto(s) a Cloudflare R2...");
 
-    // Subida asíncrona en segundo plano (non-blocking)
+    // Subida asíncrona en segundo plano (non-blocking) sin forzar cambio de paso
     void (async () => {
       try {
         setSubiendoFotoRecepcion(true);
         const nuevosUrls: string[] = [];
-        const limite = Math.min(archivosSeleccionados.length, 4 - fotosRecepcion.length);
+        const espacioDisponible = 5 - fotosRecepcion.length;
+        const limite = Math.min(archivosSeleccionados.length, espacioDisponible);
 
         for (let i = 0; i < limite; i++) {
           const url = await subirArchivoACloudflareR2(archivosSeleccionados[i], "taller_recepcion");
           if (url) nuevosUrls.push(url);
         }
 
-        const actualizadas = [...fotosRecepcion, ...nuevosUrls].slice(0, 4);
+        const actualizadas = [...fotosRecepcion, ...nuevosUrls].slice(0, 5);
         setFotosRecepcion(actualizadas);
 
         if (ordenActiva) {
@@ -3806,13 +3992,25 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             mileage: kmActualInput ? parseInt(kmActualInput, 10) : ordenActiva.mileage,
           });
         }
-        mostrarToast("Foto(s) almacenadas en Cloudflare R2");
+        mostrarToast(`Fotos iniciales guardadas (${actualizadas.length}/5)`);
       } catch (err: any) {
         mostrarToast(err.message || "Error al subir foto a R2", "err");
       } finally {
         setSubiendoFotoRecepcion(false);
       }
     })();
+  };
+
+  const handleEliminarFotoRecepcion = async (indexAEliminar: number) => {
+    const actualizadas = fotosRecepcion.filter((_, idx) => idx !== indexAEliminar);
+    setFotosRecepcion(actualizadas);
+    if (ordenActiva) {
+      await sincronizarOrdenEnNeon({
+        receptionPhotos: actualizadas,
+        mileage: kmActualInput ? parseInt(kmActualInput, 10) : ordenActiva.mileage,
+      });
+    }
+    mostrarToast(`Foto eliminada (${actualizadas.length}/5)`);
   };
 
   const handleSubirFotoEvidencia = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -4515,7 +4713,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 )}
 
                 {/* Vista completa: siempre visible en desktop (sm:), y en móvil si mostrarCabeceraMovil es true */}
-                <div className={`${mostrarCabeceraMovil ? "flex" : "hidden sm:flex"} items-center justify-between gap-2.5 sm:gap-4`}>
+                <div className={`${mostrarCabeceraMovil ? "flex" : "hidden"} sm:flex items-center justify-between gap-2.5 sm:gap-4`}>
                   {/* Lado izquierdo: Placa + Vehículo + Cliente */}
                   <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                     {/* Placa Destacada */}
@@ -4585,7 +4783,43 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   </div>
                 </div>
               </>
-            ) : null}
+            ) : (
+              <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-white/[0.02] border border-white/5 text-xs text-zinc-400">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🚗</span>
+                  <span className="text-zinc-300 font-medium">
+                    {cargandoInicial
+                      ? "Cargando datos del vehículo..."
+                      : autosEnPista.length > 0
+                      ? `Hay ${autosEnPista.length} vehículos en pista. Selecciona uno para gestionar:`
+                      : "No hay vehículos en pista en este momento."}
+                  </span>
+                </div>
+                {autosEnPista.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const auto = autosEnPista[0];
+                      setOrdenActiva(auto);
+                      setFotosRecepcion(auto.receptionPhotos || []);
+                      setKmActualInput(auto.mileage ? String(auto.mileage) : "");
+                    }}
+                    className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold cursor-pointer active:scale-95 transition-all text-xs flex items-center gap-1.5 shadow-md shadow-blue-600/30"
+                  >
+                    <span>Cargar {autosEnPista[0].plate}</span>
+                    <span className="text-zinc-300 font-normal">({autosEnPista[0].vehicle})</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setMostrarModalNuevaOrden(true)}
+                    className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold cursor-pointer text-xs"
+                  >
+                    + Nueva Orden
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* VISTAS SEGÚN EL SELECTOR: LUBRICENTRO O TALLER */}
@@ -4826,39 +5060,79 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       </div>
                     </div>
 
-                    {/* Cámara y Fotos Cloudflare R2 */}
+                    {/* Cámara y Fotos Cloudflare R2 (Hasta 5 fotos) */}
                     <div className="lg:col-span-5 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-zinc-300">Fotos Iniciales</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-zinc-300">Fotos Iniciales</span>
+                          <span
+                            className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                              fotosRecepcion.length >= 5
+                                ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                                : "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                            }`}
+                          >
+                            {fotosRecepcion.length} / 5
+                          </span>
+                        </div>
                         {subiendoFotoRecepcion && (
-                          <span className="text-xs text-blue-400 animate-pulse font-mono">Subiendo...</span>
+                          <span className="text-xs text-blue-400 animate-pulse font-mono">Subiendo a R2...</span>
                         )}
                       </div>
 
-                      <label className="border-2 border-dashed border-white/10 hover:border-white/20 rounded-xl p-4 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all bg-black/20">
-                        <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
-                        </svg>
-                        <span className="text-xs text-zinc-300 font-medium">Tomar foto / adjuntar</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          onChange={handleSubirFotoRecepcion}
-                          className="hidden"
-                        />
-                      </label>
+                      {fotosRecepcion.length < 5 ? (
+                        <label className="border-2 border-dashed border-white/10 hover:border-white/20 rounded-xl p-4 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all bg-black/20 group">
+                          <svg className="w-6 h-6 text-zinc-400 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                          </svg>
+                          <span className="text-xs text-zinc-300 font-medium group-hover:text-white transition-colors">Tomar foto / adjuntar</span>
+                          <span className="text-[10px] text-zinc-500">Hasta 5 fotos del vehículo</span>
+                          <input
+                            ref={fileInputRecepcionRef}
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleSubirFotoRecepcion}
+                            className="hidden"
+                          />
+                        </label>
+                      ) : (
+                        <div className="border border-emerald-500/25 bg-emerald-500/5 rounded-xl p-3 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold">✓</span>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-semibold text-zinc-200">5 fotos cargadas (máximo alcanzado)</span>
+                              <span className="text-[10px] text-zinc-400">Elimina una foto abajo si deseas reemplazarla</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       {fotosRecepcion.length > 0 && (
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 pt-1">
                           {fotosRecepcion.map((url, i) => (
-                            <img
+                            <div
                               key={i}
-                              src={url}
-                              alt="Foto R2"
-                              className="w-full h-16 object-cover rounded-lg border border-white/10"
-                            />
+                              className="relative group rounded-xl overflow-hidden border border-white/10 aspect-video bg-black/40 shadow-sm"
+                            >
+                              <img
+                                src={url}
+                                alt={`Foto Inicial ${i + 1}`}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleEliminarFotoRecepcion(i)}
+                                title="Eliminar foto"
+                                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/80 hover:bg-rose-600 text-white flex items-center justify-center text-[10px] font-bold border border-white/20 transition-all cursor-pointer shadow-md"
+                              >
+                                ✕
+                              </button>
+                              <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded-md bg-black/80 backdrop-blur-sm text-[9px] font-mono font-bold text-zinc-200 border border-white/10">
+                                #{i + 1}
+                              </span>
+                            </div>
                           ))}
                         </div>
                       )}
@@ -5573,7 +5847,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     </div>
                     {ordenActiva && (
                       <span className="font-mono text-xs text-zinc-400">
-                        {ordenActiva.plate ? `${ordenActiva.plate} • ` : ""}#{ordenActiva.orderNumber || ordenActiva.id}
+                        {ordenActiva.plate ? `Placa: ${ordenActiva.plate} • ` : ""}Orden #{String(ordenActiva.orderNumber || ordenActiva.id).replace(/^OT-\d{4}-/i, "")}
                       </span>
                     )}
                   </div>
@@ -5588,19 +5862,28 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           Estado:
                         </span>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                          {etapa6EstadosLista.slice(0, 5).map((st) => {
+                          {etapa6EstadosLista.slice(0, 5).map((st, idx) => {
                             const sel =
                               etapa6EstadoSeleccionado.toLowerCase() === st.name.toLowerCase() ||
                               etapa6EstadoSeleccionado.toLowerCase().includes(st.name.toLowerCase().replace(/^\d+\s*/, ""));
+
+                            const coloresActivoPorIndice = [
+                              "bg-amber-500/25 text-amber-200 border-amber-400/60 ring-1 ring-amber-400/40 font-semibold shadow-sm",
+                              "bg-blue-500/25 text-blue-200 border-blue-400/60 ring-1 ring-blue-400/40 font-semibold shadow-sm",
+                              "bg-rose-500/25 text-rose-200 border-rose-400/60 ring-1 ring-rose-400/40 font-semibold shadow-sm",
+                              "bg-emerald-500/25 text-emerald-200 border-emerald-400/60 ring-1 ring-emerald-400/40 font-semibold shadow-sm",
+                              "bg-purple-500/25 text-purple-200 border-purple-400/60 ring-1 ring-purple-400/40 font-semibold shadow-sm",
+                            ];
+                            const estiloActivo = coloresActivoPorIndice[idx % coloresActivoPorIndice.length];
+                            const estiloPlomo = "bg-white/[0.03] hover:bg-white/[0.07] text-zinc-400 hover:text-zinc-200 border-white/10";
+
                             return (
                               <button
                                 key={st.id}
                                 type="button"
                                 onClick={() => handleSeleccionarEstadoEtapa6(st)}
-                                className={`px-2 py-1.5 rounded-lg text-xs font-normal transition-all cursor-pointer text-center ${
-                                  sel
-                                    ? "bg-white/15 text-white border border-white/30 shadow-xs"
-                                    : "bg-white/[0.03] text-zinc-400 hover:text-white border border-white/5"
+                                className={`px-2 py-1.5 rounded-lg text-xs border transition-all cursor-pointer text-center active:scale-95 ${
+                                  sel ? estiloActivo : estiloPlomo
                                 }`}
                               >
                                 {st.name}
@@ -5615,23 +5898,17 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                         <span className="text-xs font-normal text-zinc-300 block">
                           Aviso:
                         </span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={handleEnviarWhatsAppAvisoEtapa6}
-                            className="flex-1 h-9 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-normal transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95"
-                          >
-                            <span>WhatsApp</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleCopiarLinkSeguimientoEtapa6}
-                            className="h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 text-xs font-normal transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95"
-                            title="Copiar PIN de seguimiento"
-                          >
-                            <span>{copiadoLinkSeguimiento ? "✓ Copiado" : `PIN: ${etapa6TrackingPin}`}</span>
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={handleEnviarWhatsAppAvisoEtapa6}
+                          className="w-full h-9 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 shadow-sm"
+                          title="Abrir WhatsApp Web con mensaje prediseñado según el estado actual"
+                        >
+                          <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                          </svg>
+                          <span>WhatsApp</span>
+                        </button>
                       </div>
                     </div>
 
@@ -5680,49 +5957,91 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           </button>
                         </div>
 
-                        {/* Lienzo Canvas Minimalista Táctil */}
-                        <div className="h-40 rounded-xl bg-[#0a0a0c] border border-white/10 relative overflow-hidden flex items-center justify-center">
-                          <canvas
-                            ref={canvasFirmaEtapa7Ref}
-                            width={480}
-                            height={160}
-                            onMouseDown={iniciarTrazoFirmaEtapa7}
-                            onMouseMove={moverTrazoFirmaEtapa7}
-                            onMouseUp={terminarTrazoFirmaEtapa7}
-                            onMouseLeave={terminarTrazoFirmaEtapa7}
-                            onTouchStart={iniciarTrazoFirmaEtapa7}
-                            onTouchMove={moverTrazoFirmaEtapa7}
-                            onTouchEnd={terminarTrazoFirmaEtapa7}
-                            className="w-full h-full cursor-crosshair touch-none select-none"
-                          />
-                          {!tieneTrazosFirmaEtapa7Ref.current && (
-                            <div className="absolute pointer-events-none text-zinc-600 text-xs font-mono">
-                              {modoFirma === "ACEPTACION"
-                                ? "[Firma presupuesto]"
-                                : "[Firma entrega]"}
-                            </div>
-                          )}
-                        </div>
+                        {/* Lienzo Canvas Minimalista Táctil o Firma recibida desde Panel Cliente */}
+                        {(() => {
+                          const firmaGuardadaUrl =
+                            modoFirma === "ACEPTACION"
+                              ? ordenActiva?.quoteSignatureUrl
+                              : ordenActiva?.deliverySignatureUrl;
+                          const firmaSolicitadaPanel =
+                            modoFirma === "ACEPTACION"
+                              ? ordenActiva?.quoteStatus === "Pendiente Firma en Panel Cliente"
+                              : ordenActiva?.deliveryStatus === "Pendiente Firma en Panel Cliente";
 
-                        {/* Acciones de Firma */}
-                        <div className="flex items-center justify-between gap-2 pt-1">
-                          <button
-                            type="button"
-                            onClick={handleGuardarFirmaActiva}
-                            disabled={guardandoEtapa7}
-                            className="h-9 px-4 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
-                          >
-                            <span>💾 {guardandoEtapa7 ? "Guardando..." : "Guardar"}</span>
-                          </button>
+                          return (
+                            <>
+                              <div className="h-40 rounded-xl bg-[#0a0a0c] border border-white/10 relative overflow-hidden flex items-center justify-center">
+                                {firmaGuardadaUrl && !tieneTrazosFirmaEtapa7Ref.current ? (
+                                  <div className="w-full h-full flex flex-col items-center justify-center p-2 bg-white/95 relative">
+                                    <img
+                                      src={firmaGuardadaUrl}
+                                      alt="Firma del Cliente"
+                                      className="max-h-28 max-w-full object-contain"
+                                    />
+                                    <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 text-[10px] font-bold">
+                                      ✓ Firmado por Cliente
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <canvas
+                                      ref={canvasFirmaEtapa7Ref}
+                                      width={480}
+                                      height={160}
+                                      onMouseDown={iniciarTrazoFirmaEtapa7}
+                                      onMouseMove={moverTrazoFirmaEtapa7}
+                                      onMouseUp={terminarTrazoFirmaEtapa7}
+                                      onMouseLeave={terminarTrazoFirmaEtapa7}
+                                      onTouchStart={iniciarTrazoFirmaEtapa7}
+                                      onTouchMove={moverTrazoFirmaEtapa7}
+                                      onTouchEnd={terminarTrazoFirmaEtapa7}
+                                      className="w-full h-full cursor-crosshair touch-none select-none"
+                                    />
+                                    {!tieneTrazosFirmaEtapa7Ref.current && (
+                                      <div className="absolute pointer-events-none text-zinc-500 text-xs font-mono text-center px-3">
+                                        {firmaSolicitadaPanel
+                                          ? "📲 Esperando firma del cliente en su Panel Cliente..."
+                                          : modoFirma === "ACEPTACION"
+                                          ? "[Firma presupuesto]"
+                                          : "[Firma entrega]"}
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </div>
 
-                          <button
-                            type="button"
-                            onClick={handleEnviarWhatsAppAceptacionEtapa7}
-                            className="h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
-                          >
-                            <span>📲 Firma remota</span>
-                          </button>
-                        </div>
+                              {/* Acciones de Firma */}
+                              <div className="flex items-center justify-between gap-2 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={handleGuardarFirmaActiva}
+                                  disabled={guardandoEtapa7}
+                                  className="h-9 px-4 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                                >
+                                  <span>💾 {guardandoEtapa7 ? "Guardando..." : "Guardar"}</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={handleEnviarWhatsAppAceptacionEtapa7}
+                                  disabled={guardandoEtapa7}
+                                  className={`h-9 px-3 rounded-xl border text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
+                                    copiadoLinkFirmaEtapa7 || firmaSolicitadaPanel
+                                      ? "bg-blue-500/20 border-blue-500/40 text-blue-300"
+                                      : "bg-white/5 hover:bg-white/10 border-white/10 text-zinc-300"
+                                  }`}
+                                  title="Habilita la firma remota directamente en el Panel del Cliente (/cliente/taller)"
+                                >
+                                  <span>
+                                    {copiadoLinkFirmaEtapa7 || firmaSolicitadaPanel
+                                      ? "✓ En Panel Cliente"
+                                      : "📲 Firma remota"}
+                                  </span>
+                                </button>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -5744,11 +6063,21 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
                       <button
                         type="button"
-                        onClick={handlePasarAPosOrdenes}
+                        onClick={() => handlePasarAPosOrdenes(false)}
                         disabled={guardandoPasarPos}
-                        className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs sm:text-sm font-normal shadow-lg shadow-emerald-600/20 transition-all cursor-pointer flex items-center gap-2 active:scale-95 disabled:opacity-50"
+                        className={`px-4 py-2 rounded-xl text-xs font-normal backdrop-blur-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50 ${
+                          ordenActiva && (ordenActiva.posRequestId || ordenActiva.status === "EN_CAJA" || ordenActiva.status?.toLowerCase().includes("caja"))
+                            ? "bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300"
+                            : "bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300"
+                        }`}
                       >
-                        <span>{guardandoPasarPos ? "Procesando..." : "🚀 Pasar a POS"}</span>
+                        <span>
+                          {guardandoPasarPos
+                            ? "Procesando..."
+                            : ordenActiva && (ordenActiva.posRequestId || ordenActiva.status === "EN_CAJA" || ordenActiva.status?.toLowerCase().includes("caja"))
+                            ? "✓ Pasada a POS"
+                            : "🚀 Pasar a POS"}
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -6134,34 +6463,37 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
       )}
 
       {/* =====================================================================
-          MODAL CONFIRMACIÓN DE ENVÍO A OFICINA / CAJA POS
+          MODAL FLOTANTE CONFIRMACIÓN DE ENVÍO A POS (SE MANTIENE EN EL PANEL)
           ===================================================================== */}
       {modalConfirmPos && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#111113] border border-white/10 rounded-2xl max-w-md w-full p-6 space-y-4 text-center shadow-2xl">
+        <div
+          onClick={() => setModalConfirmPos(null)}
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#111113] border border-white/10 rounded-2xl max-w-sm w-full p-6 space-y-4 text-center shadow-2xl"
+          >
             <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center justify-center mx-auto text-xl font-bold">
               ✓
             </div>
-            <h3 className="text-lg font-semibold text-white">
-              Enviado a Oficina / Listo para Caja
+            <h3 className="text-base sm:text-lg font-semibold text-white">
+              Se ha enviado la orden con éxito
             </h3>
             <p className="text-xs text-zinc-400 leading-relaxed">
-              El cronómetro se ha detenido, el estado en Neon cambió a <strong>EN_CAJA</strong> y los servicios realizados, repuestos utilizados y empleados asignados ya están disponibles en el <strong>POS de Oficina</strong>.
+              Placa <strong className="text-zinc-200 font-mono">{ordenActiva?.plate}</strong> • Orden{" "}
+              <strong className="text-emerald-400 font-mono">
+                #{String(ordenActiva?.orderNumber || "").replace(/^OT-\d{4}-/i, "")}
+              </strong>{" "}
+              transferida a POS.
             </p>
-            <div className="flex gap-2.5 pt-2">
+            <div className="pt-1">
               <button
                 type="button"
                 onClick={() => setModalConfirmPos(null)}
-                className="flex-1 h-11 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 text-xs font-semibold cursor-pointer"
+                className="w-full h-10 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 text-xs font-semibold cursor-pointer transition-all active:scale-95"
               >
-                Seguir en Pista
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push("/pos/venta")}
-                className="flex-1 h-11 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold cursor-pointer"
-              >
-                Abrir POS de Oficina →
+                Aceptar
               </button>
             </div>
           </div>
@@ -6169,6 +6501,68 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
       )}
 
       
+      
+
+      {/* Modal de Advertencia: Orden Ya Pasada a POS */}
+      {modalYaPasadaPos && ordenActiva && (
+        <div
+          onClick={() => setModalYaPasadaPos(false)}
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#111113] border border-amber-500/30 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl"
+          >
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-300 flex items-center justify-center text-xl shrink-0">
+                ⚠️
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-white">
+                  Esta orden ya se pasó a POS
+                </h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Placa <strong className="text-zinc-200 font-mono">{ordenActiva.plate}</strong> • Orden{" "}
+                  <strong className="text-amber-400 font-mono">
+                    #{String(ordenActiva.orderNumber || "").replace(/^OT-\d{4}-/i, "")}
+                  </strong>
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/10 space-y-2 text-xs text-zinc-300 leading-relaxed">
+              <p>
+                La orden ya fue enviada a Oficina / Caja. En POS deben aceptarla para realizar el cobro.
+              </p>
+              <p className="text-zinc-400">
+                Si agregaste o modificaste trabajos o repuestos y deseas mandarla otra vez, se enviará a POS para que en Caja decidan si la vuelven a aceptar.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setModalYaPasadaPos(false)}
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-medium text-zinc-300 transition-colors cursor-pointer"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setModalYaPasadaPos(false);
+                  await handlePasarAPosOrdenes(true);
+                }}
+                disabled={guardandoPasarPos}
+                className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+              >
+                <span>🚀 Reenviar a POS</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* =====================================================================
           MODAL DE IMPRESIÓN Y EMISIÓN DE DOCUMENTOS (PDF, TICKET, ETIQUETA QR)
           ===================================================================== */}
@@ -6422,9 +6816,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   <h3 className="text-sm sm:text-base font-bold text-white">
                     Clientes en Atención ({autosEnPista.length})
                   </h3>
-                  <p className="text-[11px] text-zinc-400">
-                    Selecciona para ver en pantalla o pausa el trabajo para seguir con otro
-                  </p>
                 </div>
               </div>
 
@@ -6474,55 +6865,41 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     >
                       <div className="space-y-1.5 min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="px-2.5 py-0.5 rounded-lg bg-blue-500/15 border border-blue-500/30 font-mono text-xs font-bold text-blue-300">
-                            {auto.plate}
+                          <span className="px-2.5 py-0.5 rounded-lg bg-blue-500/15 border border-blue-500/30 font-mono text-xs font-normal text-blue-300">
+                            Placa: {auto.plate}
                           </span>
-                          <span className="text-[11px] font-mono text-zinc-400">
-                            #{auto.orderNumber}
+                          <span className="text-[11px] font-mono text-zinc-400 font-normal">
+                            Orden: {auto.orderNumber.startsWith("#") ? auto.orderNumber : `#${auto.orderNumber}`}
                           </span>
 
-                          {esActivo && (
-                            <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold">
-                              ✓ En pantalla
-                            </span>
-                          )}
 
-                          {estaPausado ? (
-                            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold flex items-center gap-1">
+                          {estaPausado && (
+                            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-normal flex items-center gap-1">
                               <span>⏸</span>
                               <span>Pausado</span>
                             </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
-                              <span>🟢</span>
-                              <span>En atención</span>
-                            </span>
                           )}
-
-                          <span className="px-2 py-0.5 rounded-lg bg-black/60 border border-white/10 font-mono text-[11px] text-emerald-400 font-bold ml-auto sm:ml-0">
-                            ⏱ {formatElapsedTime(auto.startedAt, auto.completedAt, nowTick)}
-                          </span>
                         </div>
 
-                        <p className="text-sm font-semibold text-white truncate">
+                        <p className="text-sm font-normal text-white truncate">
                           {auto.vehicle}
                         </p>
-                        <p className="text-xs text-zinc-400 truncate">
-                          Cliente: <span className="text-zinc-200 font-medium">{auto.client}</span>
+                        <p className="text-sm text-zinc-300 font-normal truncate">
+                          Cliente: <span className="text-zinc-100 font-normal">{auto.client}</span>
                           {auto.items?.length > 0 && (
-                            <span className="ml-2 text-zinc-500">
+                            <span className="ml-2 text-zinc-400 font-normal">
                               • {auto.items.length} {auto.items.length === 1 ? "servicio" : "servicios"}
                             </span>
                           )}
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5 w-full sm:w-auto justify-end">
+                      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 self-end sm:self-center pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5 w-full sm:w-auto justify-end flex-wrap">
                         {estaPausado ? (
                           <button
                             type="button"
                             onClick={(e) => handleReanudarOrden(auto, e)}
-                            className="h-8 px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                            className="h-8 px-2.5 sm:px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
                             title="Reanudar trabajo en este auto"
                           >
                             <span>▶</span>
@@ -6532,7 +6909,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           <button
                             type="button"
                             onClick={(e) => handlePausarOrden(auto, e)}
-                            className="h-8 px-3 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                            className="h-8 px-2.5 sm:px-3 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
                             title="Pausar trabajo para seguir con otro"
                           >
                             <span>⏸</span>
@@ -6543,7 +6920,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                         <button
                           type="button"
                           onClick={() => handleSeleccionarAutoYVolver(auto)}
-                          className={`h-8 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                          className={`h-8 px-3 sm:px-3.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
                             esActivo
                               ? "bg-white/10 hover:bg-white/15 text-white"
                               : "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30"
@@ -6551,6 +6928,15 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                         >
                           <span>{esActivo ? "Volver" : "Trabajar"}</span>
                           <span>→</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => handleFinalizarOrdenAHistorial(auto, e)}
+                          className="w-8 h-8 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/35 flex items-center justify-center transition-all cursor-pointer active:scale-90 text-sm font-bold shadow-sm"
+                          title="Marcar como terminado"
+                        >
+                          <span>✓</span>
                         </button>
                       </div>
                     </div>
@@ -6560,10 +6946,12 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-white/10 bg-black/40 flex items-center justify-between">
-              <span className="text-xs text-zinc-500">
-                Total en pista: <strong>{autosEnPista.length}</strong>
-              </span>
+            <div className="p-4 border-t border-white/10 bg-black/40 flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-zinc-500">
+                  Total en pista: <strong>{autosEnPista.length}</strong>
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => {
