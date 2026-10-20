@@ -372,69 +372,14 @@ export default function LubricentroExpress({
 
 
       {/* =====================================================================
-          1. CABECERA: PLACA + CÁLCULO AUTOMÁTICO DE PRÓXIMO CAMBIO
+          1. CABECERA: KILOMETRAJE + CÁLCULO AUTOMÁTICO DE PRÓXIMO CAMBIO
           ===================================================================== */}
       <section className="bg-white/[0.03] border border-white/10 backdrop-blur-md rounded-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-32 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
-          {/* Placa y Vehículo */}
-          <div className="lg:col-span-5 space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
-                </svg>
-                <span>Placa o Cédula</span>
-                {buscandoVehiculo && (
-                  <span className="text-[10px] text-blue-400 animate-pulse font-normal">Buscando en Neon...</span>
-                )}
-              </label>
-
-              {clienteEncontrado && (
-                <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                  Registrado en Neon
-                </span>
-              )}
-            </div>
-
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={placa}
-                onChange={(e) => handleCambioPlaca(e.target.value)}
-                placeholder="ABC-1234"
-                className="w-40 sm:w-44 h-11 px-3 rounded-xl bg-black/40 border border-white/10 font-mono text-base font-bold text-blue-300 tracking-wider focus:outline-none focus:border-blue-500 uppercase placeholder:text-zinc-600 shadow-inner"
-              />
-              <input
-                type="text"
-                value={clienteNombre}
-                onChange={(e) => setClienteNombre(e.target.value)}
-                placeholder="Nombre del Cliente"
-                className="flex-1 h-11 px-3 rounded-xl bg-black/40 border border-white/10 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500 placeholder:text-zinc-600 shadow-inner"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={vehiculoMarcaModelo}
-                onChange={(e) => setVehiculoMarcaModelo(e.target.value)}
-                placeholder="Marca y Modelo (ej: Toyota Hilux)"
-                className="flex-1 h-8 px-3 rounded-lg bg-black/30 border border-white/10 text-xs text-zinc-300 focus:outline-none focus:border-blue-500 placeholder:text-zinc-600"
-              />
-              <input
-                type="text"
-                value={clienteTelefono}
-                onChange={(e) => setClienteTelefono(e.target.value)}
-                placeholder="Teléfono WhatsApp"
-                className="w-36 h-8 px-3 rounded-lg bg-black/30 border border-white/10 text-xs text-zinc-300 focus:outline-none focus:border-blue-500 placeholder:text-zinc-600"
-              />
-            </div>
-          </div>
-
           {/* Kilometraje Actual e Intervalo de Próximo Cambio */}
-          <div className="lg:col-span-4 space-y-2">
+          <div className="lg:col-span-7 space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
                 <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -490,7 +435,7 @@ export default function LubricentroExpress({
           </div>
 
           {/* Tarjeta Visual: Etiqueta Próximo Cambio Calculada */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-5">
             <div className="p-3.5 rounded-xl bg-gradient-to-br from-amber-500/10 via-black/40 to-blue-500/10 border border-amber-500/30 text-center space-y-1.5 shadow-lg relative">
               <div className="text-[10px] font-bold uppercase tracking-widest text-amber-300/80 flex items-center justify-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />

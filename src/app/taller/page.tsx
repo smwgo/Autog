@@ -740,7 +740,7 @@ export default function TallerPanel() {
     mostrarToast(`Atendiendo a ${auto.client} (${auto.plate})`);
   };
 
-  const handleOrdenCreadaDesdeModal = (nuevaOrden: UnifiedOrder, cliente?: any) => {
+  const handleOrdenCreadaDesdeModal = (nuevaOrden: UnifiedOrder, cliente?: any, tipo?: "Taller" | "Lubricentro") => {
     setOrdenActiva(nuevaOrden);
     setAutosEnPista((prev) => [
       nuevaOrden,
@@ -754,10 +754,13 @@ export default function TallerPanel() {
     }
     // Si la orden se creó como Lubricentro, abrir directamente la vista express
     if (
+      tipo === "Lubricentro" ||
       nuevaOrden?.notes?.includes("[Lubricentro]") ||
       (nuevaOrden as any)?.motivoIngreso?.includes("[Lubricentro]")
     ) {
       setModuloTaller("lubricentro");
+    } else {
+      setModuloTaller("taller");
     }
     setEtapaActiva(1);
   };
@@ -4343,18 +4346,17 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
       <main className="flex-grow p-4 sm:p-6 md:p-8 max-w-[1440px] mx-auto w-full space-y-6">
         {/* ===================================================================
-            CABECERA RESPONSIVA: EN MÓVIL 1 SOLA LÍNEA (SIN "TALLER"), EN DESKTOP 2 FILAS
+            CABECERA PRINCIPAL: VOLVER + BOTONES (+ NUEVA ORDEN Y LISTA AUTOS) EN LA MISMA LÍNEA
             =================================================================== */}
-        
-        {/* VISTA MÓVIL (sm:hidden): Todos los botones en una sola fila compacta, sin el título blanco "Taller" */}
-        <div className="flex sm:hidden items-center justify-between gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+        <div className="flex items-center justify-between gap-3 py-1">
+          {/* Botón Volver */}
           <Link
             href="/"
             aria-label="Volver"
-            className="w-9 h-9 rounded-full bg-[#111113] hover:bg-[#161618] border border-white/10 text-zinc-200 transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-sm"
+            className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#111113] hover:bg-[#161618] border border-white/10 text-zinc-200 transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-sm"
           >
             <svg
-              className="w-4 h-4"
+              className="w-4 h-4 sm:w-5 sm:h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -4366,199 +4368,23 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             </svg>
           </Link>
 
-          {/* Selector Taller / Lubricentro en móvil */}
-          <div className="flex items-center p-0.5 rounded-xl bg-white/[0.03] border border-white/10 gap-0.5 shrink-0">
+          {/* En la misma línea: + Nueva Orden y Lista de Autos en atención */}
+          <div className="flex items-center gap-2 sm:gap-2.5">
             <button
               type="button"
-              onClick={() => setModuloTaller("taller")}
-              className={`h-8 px-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                moduloTaller === "taller"
-                  ? "bg-blue-600 border border-blue-400/40 text-white shadow-md shadow-blue-600/30"
-                  : "text-zinc-400 hover:text-white"
-              }`}
+              onClick={() => setMostrarModalNuevaOrden(true)}
+              className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-blue-600/25 active:scale-95 shrink-0"
+              title="Abrir formulario de Nueva Orden de Trabajo"
             >
-              <svg
-                className="w-3.5 h-3.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.5}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.07a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091.455.087.935-.012 1.39"
-                />
-              </svg>
-              <span>Taller</span>
+              <span className="text-sm sm:text-base font-bold leading-none">+</span>
+              <span>Nueva Orden</span>
             </button>
-
-            <button
-              type="button"
-              onClick={() => setModuloTaller("lubricentro")}
-              className={`h-8 px-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                moduloTaller === "lubricentro"
-                  ? "bg-amber-600 border border-amber-400/40 text-white shadow-md shadow-amber-600/30"
-                  : "text-zinc-400 hover:text-white"
-              }`}
-            >
-              <svg
-                className="w-3.5 h-3.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.5}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z"
-                />
-              </svg>
-              <span>Lubricentro</span>
-            </button>
-          </div>
-
-          {/* Botón Lista Autos en atención */}
-          <button
-            type="button"
-            onClick={() => setMostrarModalAutosAtencion(true)}
-            className="h-8 px-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 active:scale-95"
-            title="Ver clientes y autos en atención"
-          >
-            <svg
-              className="w-3.5 h-3.5 text-zinc-300"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
-              />
-            </svg>
-            {autosEnPista.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold">
-                {autosEnPista.length}
-              </span>
-            )}
-          </button>
-
-          {/* Botón Nueva Orden */}
-          <button
-            type="button"
-            onClick={() => setMostrarModalNuevaOrden(true)}
-            className="h-8 px-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-md shadow-blue-600/25 shrink-0 active:scale-95"
-            title="Nueva Orden"
-          >
-            <span className="text-sm font-bold leading-none">+</span>
-            <span>Nueva Orden</span>
-          </button>
-        </div>
-
-        {/* VISTA DESKTOP / TABLET (hidden sm:block): 2 filas con el título "Taller" en blanco */}
-        <div className="hidden sm:block space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <Link
-                href="/"
-                aria-label="Volver"
-                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#111113] hover:bg-[#161618] border border-white/10 text-zinc-200 transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-sm"
-              >
-                <svg
-                  className="w-5 h-5 sm:w-6 sm:h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth="2.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M19 12H5M12 19l-7-7 7-7" />
-                </svg>
-              </Link>
-              <div>
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-white">
-                  Taller
-                </h1>
-              </div>
-            </div>
-
-            {/* Botones de Cabecera: Nueva Orden */}
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setMostrarModalNuevaOrden(true)}
-                className="h-9 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-blue-600/25 active:scale-95"
-                title="Abrir formulario de Nueva Orden de Trabajo"
-              >
-                <span className="text-sm font-bold leading-none">+</span>
-                <span>Nueva Orden</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Selector de módulo + botón de lista en desktop */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center p-1 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md shadow-xl gap-1">
-              <button
-                type="button"
-                onClick={() => setModuloTaller("taller")}
-                className={`h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${
-                  moduloTaller === "taller"
-                    ? "bg-blue-600 border border-blue-400/40 text-white shadow-lg shadow-blue-600/30 scale-[1.01]"
-                    : "text-zinc-400 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.07a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091.455.087.935-.012 1.39"
-                  />
-                </svg>
-                <span>Taller</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setModuloTaller("lubricentro")}
-                className={`h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2 ${
-                  moduloTaller === "lubricentro"
-                    ? "bg-amber-600 border border-amber-400/40 text-white shadow-lg shadow-amber-600/30 scale-[1.01]"
-                    : "text-zinc-400 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z"
-                  />
-                </svg>
-                <span>Lubricentro</span>
-              </button>
-            </div>
 
             <button
               type="button"
               onClick={() => setMostrarModalAutosAtencion(true)}
-              className="h-9 sm:h-10 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:border-white/20 active:scale-95"
-              title="Ver todos los clientes en atención / pausar o continuar trabajos"
+              className="h-9 sm:h-10 px-3 sm:px-3.5 rounded-xl bg-[#111113] hover:bg-white/[0.08] border border-white/15 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-sm hover:border-white/25 active:scale-95 shrink-0"
+              title="Ver clientes y autos en atención"
             >
               <svg
                 className="w-4 h-4 text-zinc-300"
@@ -4574,7 +4400,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 />
               </svg>
               {autosEnPista.length > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] sm:text-xs font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-bold font-mono">
                   {autosEnPista.length}
                 </span>
               )}
