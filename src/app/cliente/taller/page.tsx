@@ -40,7 +40,12 @@ interface ActiveOrder {
   totalCount: number;
   generalCondition?: string;
   internalChat: ChatMessage[];
+  quoteSignatureUrl?: string;
+  quoteSignedBy?: string;
+  quoteSignedAt?: string;
   deliverySignatureUrl?: string;
+  deliverySignedBy?: string;
+  deliverySignedAt?: string;
 }
 
 const ETAPAS_PROCESO = [
@@ -67,6 +72,7 @@ export default function ClienteTallerPage() {
   const [orden, setOrden] = useState<ActiveOrder | null>(null);
   const [modalVoyEnCamino, setModalVoyEnCamino] = useState(false);
   const [modalFirma, setModalFirma] = useState(false);
+  const [tipoFirmaModal, setTipoFirmaModal] = useState<"PRESUPUESTO" | "ENTREGA">("ENTREGA");
   const [etaMinutos, setEtaMinutos] = useState(15);
   const [notaCamino, setNotaCamino] = useState("");
   const [enviandoCamino, setEnviandoCamino] = useState(false);
@@ -228,11 +234,12 @@ export default function ClienteTallerPage() {
     try {
       setGuardandoFirma(true);
       const dataUrl = canvas.toDataURL("image/png");
+      const isPresupuesto = tipoFirmaModal === "PRESUPUESTO";
       const res = await fetch("/api/cliente/dashboard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "FIRMAR_RECEPCION",
+          action: isPresupuesto ? "FIRMAR_PRESUPUESTO" : "FIRMAR_RECEPCION",
           orderId: orden.id,
           signatureUrl: dataUrl,
           signerName: orden.client,
@@ -240,9 +247,26 @@ export default function ClienteTallerPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setOrden((prev) => (prev ? { ...prev, deliverySignatureUrl: dataUrl } : null));
+        setOrden((prev) =>
+          prev
+            ? {
+                ...prev,
+                quoteSignatureUrl: isPresupuesto ? dataUrl : prev.quoteSignatureUrl,
+                quoteSignedBy: isPresupuesto ? orden.client : prev.quoteSignedBy,
+                quoteSignedAt: isPresupuesto ? new Date().toISOString() : prev.quoteSignedAt,
+                deliverySignatureUrl: !isPresupuesto ? dataUrl : prev.deliverySignatureUrl,
+                deliverySignedBy: !isPresupuesto ? orden.client : prev.deliverySignedBy,
+                deliverySignedAt: !isPresupuesto ? new Date().toISOString() : prev.deliverySignedAt,
+              }
+            : null
+        );
         setModalFirma(false);
-        setToastMensaje({ tipo: "success", texto: "Firma registrada exitosamente." });
+        setToastMensaje({
+          tipo: "success",
+          texto: isPresupuesto
+            ? "Firma de aprobación de presupuesto registrada exitosamente."
+            : "Firma de recepción registrada exitosamente.",
+        });
         setTimeout(() => setToastMensaje(null), 5000);
       }
     } finally {
@@ -451,19 +475,138 @@ export default function ClienteTallerPage() {
                 </div>
 
                 <div className="pt-2 flex items-center justify-between text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setModalFirma(true)}
-                    className="text-blue-600 dark:text-blue-400 font-bold hover:underline"
-                  >
-                    {orden.deliverySignatureUrl ? "✓ Recepción firmada" : "✍️ Firmar recepción"}
-                  </button>
+                  <span className="text-slate-500 dark:text-zinc-400">Comprobantes y facturación</span>
                   <Link
                     href="/cliente/facturas"
-                    className="text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white font-medium"
+                    className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
                   >
                     Ver comprobantes →
                   </Link>
+                </div>
+              </div>
+
+              {/* FIRMAS DIGITALES DE LA ORDEN (PRESUPUESTO Y ENTREGA) */}
+              <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xs p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>✍️</span>
+                    <span>Firmas Digitales</span>
+                  </h2>
+                  <span className="text-[11px] text-slate-400">Aceptación y entrega</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Firma 1: Aceptación del Presupuesto */}
+                  <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 flex flex-col justify-between gap-2.5">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">1. Aceptación Presupuesto</span>
+                        {orden.quoteSignatureUrl ? (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
+                            ✓ Firmado
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold text-[10px]">
+                            Pendiente
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                        {orden.quoteSignatureUrl
+                          ? `Aprobado por ${orden.quoteSignedBy || orden.client || "Cliente"}`
+                          : "Autoriza los repuestos y mano de obra cotizados."}
+                      </p>
+                    </div>
+
+                    {orden.quoteSignatureUrl ? (
+                      <div className="space-y-1.5">
+                        <div className="bg-white dark:bg-zinc-950 p-2 rounded-lg border border-slate-200 dark:border-zinc-700/60 flex items-center justify-center">
+                          <img
+                            src={orden.quoteSignatureUrl}
+                            alt="Firma Aceptación Presupuesto"
+                            className="max-h-12 max-w-full object-contain filter dark:invert"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTipoFirmaModal("PRESUPUESTO");
+                            setModalFirma(true);
+                          }}
+                          className="w-full text-center text-[10px] text-blue-600 dark:text-blue-400 font-medium hover:underline cursor-pointer"
+                        >
+                          Actualizar firma
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTipoFirmaModal("PRESUPUESTO");
+                          setModalFirma(true);
+                        }}
+                        className="w-full py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                      >
+                        ✍️ Firmar Presupuesto
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Firma 2: Entrega y Recepción Conforme */}
+                  <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-800/60 flex flex-col justify-between gap-2.5">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">2. Entrega del Vehículo</span>
+                        {orden.deliverySignatureUrl ? (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
+                            ✓ Conforme
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full bg-slate-500/15 text-slate-500 dark:text-zinc-400 font-bold text-[10px]">
+                            Pendiente
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                        {orden.deliverySignatureUrl
+                          ? `Recibido conforme por ${orden.deliverySignedBy || orden.client || "Cliente"}`
+                          : "Firma de conformidad al retirar el vehículo."}
+                      </p>
+                    </div>
+
+                    {orden.deliverySignatureUrl ? (
+                      <div className="space-y-1.5">
+                        <div className="bg-white dark:bg-zinc-950 p-2 rounded-lg border border-slate-200 dark:border-zinc-700/60 flex items-center justify-center">
+                          <img
+                            src={orden.deliverySignatureUrl}
+                            alt="Firma Entrega"
+                            className="max-h-12 max-w-full object-contain filter dark:invert"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTipoFirmaModal("ENTREGA");
+                            setModalFirma(true);
+                          }}
+                          className="w-full text-center text-[10px] text-blue-600 dark:text-blue-400 font-medium hover:underline cursor-pointer"
+                        >
+                          Actualizar firma
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTipoFirmaModal("ENTREGA");
+                          setModalFirma(true);
+                        }}
+                        className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                      >
+                        ✍️ Firmar Recepción
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -575,7 +718,18 @@ export default function ClienteTallerPage() {
       {modalFirma && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl border border-slate-200 dark:border-zinc-800 shadow-2xl p-6 space-y-4">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">Firma de Recepción</h3>
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                {tipoFirmaModal === "PRESUPUESTO"
+                  ? "Firma de Aceptación del Presupuesto"
+                  : "Firma de Entrega y Recepción Conforme"}
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                {tipoFirmaModal === "PRESUPUESTO"
+                  ? "Autorizo el presupuesto y los servicios detallados para mi vehículo."
+                  : "Confirmo la recepción de mi vehículo y conformidad con los servicios realizados."}
+              </p>
+            </div>
             <div className="border border-slate-300 dark:border-zinc-700 rounded-2xl bg-white overflow-hidden">
               <canvas
                 ref={canvasRef}
@@ -591,16 +745,37 @@ export default function ClienteTallerPage() {
               />
             </div>
             <div className="flex justify-between items-center text-xs">
-              <button onClick={() => {
-                const canvas = canvasRef.current;
-                if (!canvas) return;
-                const ctx = canvas.getContext("2d");
-                ctx?.clearRect(0, 0, canvas.width, canvas.height);
-                setTieneFirma(false);
-              }} className="text-slate-500">Borrar</button>
+              <button
+                type="button"
+                onClick={() => {
+                  const canvas = canvasRef.current;
+                  if (!canvas) return;
+                  const ctx = canvas.getContext("2d");
+                  ctx?.clearRect(0, 0, canvas.width, canvas.height);
+                  setTieneFirma(false);
+                }}
+                className="text-slate-500 hover:text-slate-800 dark:hover:text-zinc-200 cursor-pointer"
+              >
+                Borrar
+              </button>
               <div className="flex gap-2">
-                <button onClick={() => setModalFirma(false)} className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700">Cerrar</button>
-                <button onClick={handleGuardarFirma} disabled={guardandoFirma || !tieneFirma} className="px-4 py-1.5 rounded-xl bg-blue-600 text-white font-bold disabled:opacity-40">
+                <button
+                  type="button"
+                  onClick={() => setModalFirma(false)}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800"
+                >
+                  Cerrar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGuardarFirma}
+                  disabled={guardandoFirma || !tieneFirma}
+                  className={`px-4 py-1.5 rounded-xl text-white font-bold disabled:opacity-40 cursor-pointer ${
+                    tipoFirmaModal === "PRESUPUESTO"
+                      ? "bg-purple-600 hover:bg-purple-700"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                >
                   {guardandoFirma ? "Guardando..." : "Guardar Firma"}
                 </button>
               </div>

@@ -47,6 +47,21 @@ function getEstadoSimplificado(ord: OrderItem) {
   };
 }
 
+function formatNumeroOrden(numStr?: string, fallbackIdx?: number) {
+  if (!numStr) return "#001";
+  const clean = numStr.replace(/^#/, "").trim();
+  if (/^\d+$/.test(clean)) {
+    return `#${clean.padStart(3, "0")}`;
+  }
+  const match = clean.match(/(?:OT-)?(?:20\d{2}-)?(\d+)$/i);
+  if (match && match[1]) {
+    const n = parseInt(match[1], 10);
+    if (n < 1000) return `#${String(n).padStart(3, "0")}`;
+    return typeof fallbackIdx === "number" ? `#${String(fallbackIdx + 1).padStart(3, "0")}` : "#001";
+  }
+  return typeof fallbackIdx === "number" ? `#${String(fallbackIdx + 1).padStart(3, "0")}` : "#001";
+}
+
 export default function PosOrdenesPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<OrderItem[]>([]);
@@ -388,7 +403,7 @@ export default function PosOrdenesPage() {
           <div className="space-y-4">
             {/* Vista Móvil (Lista Compacta) */}
             <div className="md:hidden space-y-2.5">
-              {ordenesFiltradas.map((ord) => {
+              {ordenesFiltradas.map((ord, idx) => {
                 return (
                   <div
                     key={ord.id || ord.dbId}
@@ -396,27 +411,29 @@ export default function PosOrdenesPage() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/30">
-                          🚗
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/30">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.125-.504 1.125-1.125V14.25m-17.25 0h17.25M3.75 14.25l2.25-6.75h12l2.25 6.75" />
+                          </svg>
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                            <p className="font-normal text-sm text-zinc-900 dark:text-zinc-100 truncate">
                               {ord.vehicle}
                             </p>
-                            <span className="font-mono text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
-                              #{ord.orderNumber}
+                            <span className="font-mono text-[11px] font-normal text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
+                              {formatNumeroOrden(ord.orderNumber, idx)}
                             </span>
                           </div>
                           <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
-                            <span className="font-semibold text-zinc-700 dark:text-zinc-300">{ord.plate}</span>
+                            <span className="font-normal text-zinc-700 dark:text-zinc-300">{ord.plate}</span>
                             <span> • {ord.client}</span>
                           </p>
                         </div>
                       </div>
 
                       <div className="text-right shrink-0">
-                        <p className="font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                        <p className="font-normal text-sm text-emerald-600 dark:text-emerald-400">
                           ${Number(ord.totalCost || 0).toFixed(2)}
                         </p>
                       </div>
@@ -426,7 +443,7 @@ export default function PosOrdenesPage() {
                       {(() => {
                         const estadoCfg = getEstadoSimplificado(ord);
                         return (
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${estadoCfg.badge}`}>
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-normal border ${estadoCfg.badge}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${estadoCfg.dot}`} />
                             {estadoCfg.label}
                           </span>
@@ -435,10 +452,12 @@ export default function PosOrdenesPage() {
 
                       <Link
                         href={`/pos/ordenes/detalle?id=${encodeURIComponent(ord.orderNumber || ord.id || ord.dbId || "")}`}
-                        className="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center text-xs font-bold transition-all shrink-0 active:scale-95 shadow-xs cursor-pointer"
+                        className="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-xs cursor-pointer"
                         title="Ver Orden Completa"
                       >
-                        📋
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                        </svg>
                       </Link>
                     </div>
                   </div>
@@ -453,7 +472,7 @@ export default function PosOrdenesPage() {
                   <thead className="bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider font-semibold">
                     <tr>
                       <th className="py-2.5 px-4">Orden / Vehículo</th>
-                      <th className="py-2.5 px-4">Placa & Servicios</th>
+                      <th className="py-2.5 px-4">Placa</th>
                       <th className="py-2.5 px-4">Cliente</th>
                       <th className="py-2.5 px-4">Total</th>
                       <th className="py-2.5 px-4">Estado</th>
@@ -461,7 +480,7 @@ export default function PosOrdenesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                    {ordenesFiltradas.map((ord) => {
+                    {ordenesFiltradas.map((ord, idx) => {
                       const estadoCfg = getEstadoSimplificado(ord);
 
                       return (
@@ -472,60 +491,48 @@ export default function PosOrdenesPage() {
                           {/* Orden / Vehículo con avatar estilo Clientes */}
                           <td className="py-2.5 px-4 whitespace-nowrap">
                             <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30">
-                                🚗
+                              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.125-.504 1.125-1.125V14.25m-17.25 0h17.25M3.75 14.25l2.25-6.75h12l2.25 6.75" />
+                                </svg>
                               </div>
                               <div className="min-w-0">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">
+                                  <span className="font-normal text-zinc-900 dark:text-zinc-100 text-sm">
                                     {ord.vehicle}
                                   </span>
-                                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                                    #{ord.orderNumber}
+                                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded font-normal uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                    {formatNumeroOrden(ord.orderNumber, idx)}
                                   </span>
                                 </div>
                               </div>
                             </div>
                           </td>
 
-                          {/* Placa & Servicios (estilo badge vehículo de Clientes) */}
+                          {/* Placa */}
                           <td className="py-2.5 px-4 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700">
-                                {ord.plate}
-                              </span>
-                              {ord.services && ord.services[0] && (
-                                <span className="text-xs text-zinc-500 dark:text-zinc-400 truncate max-w-[180px]" title={ord.services.join(", ")}>
-                                  {ord.services[0]}
-                                </span>
-                              )}
-                            </div>
+                            <span className="font-mono text-xs font-normal px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700">
+                              {ord.plate}
+                            </span>
                           </td>
 
-                          {/* Cliente & Mecánico en línea compacta */}
+                          {/* Cliente */}
                           <td className="py-2.5 px-4 whitespace-nowrap">
-                            <div className="text-sm">
-                              <span className="font-medium text-zinc-900 dark:text-zinc-100">
-                                {ord.client}
-                              </span>
-                              {ord.mechanic && (
-                                <span className="text-xs text-zinc-400 dark:text-zinc-500 ml-1.5" title={`Mecánico: ${ord.mechanic}`}>
-                                  • {ord.mechanic.split(" ")[0]}
-                                </span>
-                              )}
-                            </div>
+                            <span className="font-normal text-sm text-zinc-900 dark:text-zinc-100">
+                              {ord.client}
+                            </span>
                           </td>
 
                           {/* Total Estimado */}
                           <td className="py-2.5 px-4 whitespace-nowrap">
-                            <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                            <span className="font-normal text-sm text-emerald-600 dark:text-emerald-400">
                               ${Number(ord.totalCost || 0).toFixed(2)}
                             </span>
                           </td>
 
                           {/* Estado Simplificado: Pagado o En Orden */}
                           <td className="py-2.5 px-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${estadoCfg.badge}`}>
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-normal border ${estadoCfg.badge}`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${estadoCfg.dot}`} />
                               {estadoCfg.label}
                             </span>
@@ -536,10 +543,12 @@ export default function PosOrdenesPage() {
                             <div className="flex items-center justify-end">
                               <Link
                                 href={`/pos/ordenes/detalle?id=${encodeURIComponent(ord.orderNumber || ord.id || ord.dbId || "")}`}
-                                className="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center text-xs font-bold transition-all shrink-0 active:scale-95 shadow-xs cursor-pointer"
+                                className="w-8 h-8 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-xs cursor-pointer"
                                 title="Ver Orden Completa"
                               >
-                                📋
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                                </svg>
                               </Link>
                             </div>
                           </td>

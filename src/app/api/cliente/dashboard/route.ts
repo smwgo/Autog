@@ -228,6 +228,9 @@ export async function GET(req: Request) {
         paymentGatewayUrl: o.paymentGatewayUrl,
         quoteNumber: o.quoteNumber,
         quoteStatus: o.quoteStatus,
+        quoteSignatureUrl: o.quoteSignatureUrl || null,
+        quoteSignedBy: o.quoteSignedBy || "",
+        quoteSignedAt: o.quoteSignedAt || null,
         deliverySignatureUrl: o.deliverySignatureUrl,
         deliverySignedBy: o.deliverySignedBy,
         deliverySignedAt: o.deliverySignedAt,
@@ -1037,6 +1040,32 @@ export async function POST(req: Request) {
       return NextResponse.json({
         success: true,
         message: "Recepción y conformidad firmada exitosamente.",
+      });
+    }
+
+    // ACCIÓN: FIRMAR ACEPTACIÓN DE PRESUPUESTO DESDE EL PANEL DEL CLIENTE
+    if (action === "FIRMAR_PRESUPUESTO") {
+      if (!signatureUrl) {
+        return NextResponse.json({ success: false, error: "Se requiere la firma digital del presupuesto." }, { status: 400 });
+      }
+
+      await prisma.$executeRawUnsafe(
+        `UPDATE "WorkshopOrder" 
+         SET "quoteSignatureUrl" = $1, 
+             "quoteSignedBy" = $2, 
+             "quoteSignedAt" = NOW(), 
+             "quoteStatus" = 'Aprobado por Cliente',
+             "hasPriceAuthorized" = true,
+             "updatedAt" = NOW() 
+         WHERE "id" = $3`,
+        signatureUrl,
+        signerName || order.client,
+        orderId
+      );
+
+      return NextResponse.json({
+        success: true,
+        message: "Aceptación de presupuesto firmada exitosamente.",
       });
     }
 

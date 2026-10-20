@@ -1,10 +1,13 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import type { UnifiedOrder, InspectionFinding } from "@/app/taller/page";
+import type { UnifiedOrder, InspectionFinding, OrderItem, FindingItemLink } from "@/app/taller/page";
+import { DetallePinModerno } from "./DetallePinModerno";
 
 export interface InspeccionVehiculoProps {
   ordenActiva: UnifiedOrder | null;
+  productosCatalogo?: any[];
+  serviciosCatalogo?: any[];
   onUpdateOrden?: (updated: UnifiedOrder) => void;
   onGenerarPdf?: () => void;
   onContinuar?: () => void;
@@ -42,14 +45,14 @@ export interface SeccionInspeccionConfig {
 export const SISTEMAS_INSPECCION: SeccionInspeccionConfig[] = [
   {
     id: "carroceria",
-    name: "Carrocería (5 Vistas)",
+    name: "Carrocería",
     shortName: "Carrocería",
     icon: "🚗",
     description: "Inspección exterior en 5 planos vectoriales con registro de daños y fotos",
   },
   {
     id: "motor",
-    name: "Motor y Componentes",
+    name: "Motor",
     shortName: "Motor",
     icon: "⚙️",
     description: "Fugas de fluidos, refrigeración, correas, soportes y encendido",
@@ -66,7 +69,7 @@ export const SISTEMAS_INSPECCION: SeccionInspeccionConfig[] = [
   },
   {
     id: "frenos",
-    name: "Sistema de Frenos",
+    name: "Frenos",
     shortName: "Frenos",
     icon: "🛑",
     description: "Pastillas, discos, tambores, cañerías hidráulicas y pedal",
@@ -82,7 +85,7 @@ export const SISTEMAS_INSPECCION: SeccionInspeccionConfig[] = [
   },
   {
     id: "suspension",
-    name: "Suspensión y Dirección",
+    name: "Suspensión",
     shortName: "Suspensión",
     icon: "🔩",
     description: "Amortiguadores, rótulas, bujes, terminales y dirección",
@@ -98,7 +101,7 @@ export const SISTEMAS_INSPECCION: SeccionInspeccionConfig[] = [
   },
   {
     id: "electrico",
-    name: "Sistema Eléctrico y Batería",
+    name: "Eléctrico",
     shortName: "Eléctrico",
     icon: "⚡",
     description: "Batería, alternador, luces, arranque y testigos de tablero",
@@ -142,6 +145,8 @@ const CHIPS_HALLAZGO_MECANICO = [
 
 export default function InspeccionVehiculo({
   ordenActiva,
+  productosCatalogo = [],
+  serviciosCatalogo = [],
   onUpdateOrden,
   onGenerarPdf,
   onContinuar,
@@ -154,13 +159,23 @@ export default function InspeccionVehiculo({
   );
   const [pinSeleccionadoId, setPinSeleccionadoId] = useState<string | null>(null);
 
-  // Estados para popover del pin activo
+  // Estados para popover y detalle multimedia del pin activo
   const [popoverAbierto, setPopoverAbierto] = useState(false);
   const [tipoSeleccionado, setTipoSeleccionado] = useState("Rayón");
   const [observacionTexto, setObservacionTexto] = useState("");
   const [subiendoFotoPin, setSubiendoFotoPin] = useState(false);
   const [escuchandoVoz, setEscuchandoVoz] = useState(false);
+  const [reproduciendoAudio, setReproduciendoAudio] = useState(false);
   const recognitionRef = useRef<any>(null);
+
+  // Cleanup de audio Text-to-Speech
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   // Estados para Sistemas de Inspección Total del Vehículo
   const [seccionActiva, setSeccionActiva] = useState<SeccionInspeccionId>("carroceria");
@@ -324,16 +339,242 @@ export default function InspeccionVehiculo({
     sincronizarHallazgosNeon(actualizados);
   };
 
-  const handleEliminarPin = (id: string, e?: React.MouseEvent) => {
+  const handleEliminarPin = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    const actualizados = hallazgos.filter((h) => h.id !== id);
+    const pinAEliminar = hallazgos.find((h) => h.id === id);
+    if (!pinAEliminar) return;
+
+    const mismoNumero = pinAEliminar.pinNumber || 1;
+    // Eliminar todos los hallazgos que correspondan a este mismo pin y vista
+    const pinsAEliminar = hallazgos.filter(
+      (h) => (h.pinNumber || 1) === mismoNumero && h.vista === pinAEliminar.vista
+    );
+    const actualizados = hallazgos.filter(
+      (h) => !((h.pinNumber || 1) === mismoNumero && h.vista === pinAEliminar.vista)
+    );
+
     setHallazgos(actualizados);
-    if (pinSeleccionadoId === id) {
-      setPinSeleccionadoId(null);
-      setPopoverAbierto(false);
-    }
+    setPinSeleccionadoId(null);
+    setPopoverAbierto(false);
     sincronizarHallazgosNeon(actualizados);
-    mostrarToast("Pin eliminado de la inspección.");
+
+    // Si los hallazgos tenían ítems vinculados, removerlos de ordenActiva.items para mantener sincronía
+    if (ordenActiva && onUpdateOrden) {
+      const linkedIds = new Set(pinsAEliminar.flatMap((p) => (p.linkedItems || []).map((it) => it.id)));
+      const categoriaPrefix = `Inspección - Pin #${mismoNumero}`;
+
+      const itemsRestantes = (ordenActiva.items || []).filter(
+        (it) => !linkedIds.has(it.id) && !it.category?.startsWith(categoriaPrefix)
+      );
+
+      if (itemsRestantes.length !== (ordenActiva.items || []).length) {
+        const nuevoTotalCost = itemsRestantes.reduce((sum, it) => sum + ((Number(it.price) || 0) * (Number(it.qty) || 1)), 0);
+        const ordenActualizada: UnifiedOrder = {
+          ...ordenActiva,
+          inspectionFindings: actualizados,
+          items: itemsRestantes,
+          totalCost: nuevoTotalCost,
+        };
+        onUpdateOrden(ordenActualizada);
+
+        try {
+          await fetch("/api/taller/operacion", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "GUARDAR_ETAPA_4_PRESUPUESTO",
+              orderId: ordenActiva.id,
+              items: itemsRestantes,
+              totalCost: nuevoTotalCost,
+            }),
+          });
+        } catch (err) {
+          console.error("Error al sincronizar presupuesto al eliminar pin:", err);
+        }
+      }
+    }
+
+    mostrarToast(`Pin #${mismoNumero} eliminado.`);
+  };
+
+  const handleEliminarHallazgoEspecifico = (hallazgoId: string) => {
+    const pinAEliminar = hallazgos.find((h) => h.id === hallazgoId);
+    if (!pinAEliminar) return;
+
+    const actualizados = hallazgos.filter((h) => h.id !== hallazgoId);
+    setHallazgos(actualizados);
+    sincronizarHallazgosNeon(actualizados);
+
+    if (pinSeleccionadoId === hallazgoId) {
+      const hermano = actualizados.find(
+        (h) => (h.pinNumber || 1) === (pinAEliminar.pinNumber || 1) && h.vista === pinAEliminar.vista
+      );
+      if (hermano) {
+        setPinSeleccionadoId(hermano.id);
+        setTipoSeleccionado(hermano.tipo);
+        setObservacionTexto(hermano.descripcion || "");
+      } else {
+        setPinSeleccionadoId(null);
+        setPopoverAbierto(false);
+      }
+    }
+
+    mostrarToast("Daño removido de este pin.");
+  };
+
+  // REPRODUCIR AUDIO (TEXTO A VOZ / TTS)
+  const handleReproducirAudioTexto = (texto: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      mostrarToast("Tu navegador no soporta síntesis de voz.", "err");
+      return;
+    }
+
+    if (reproduciendoAudio) {
+      window.speechSynthesis.cancel();
+      setReproduciendoAudio(false);
+      return;
+    }
+
+    const textoLimpio = texto?.trim();
+    if (!textoLimpio) {
+      mostrarToast("No hay texto para reproducir en este pin.", "err");
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(textoLimpio);
+    utterance.lang = "es-EC";
+    utterance.rate = 1.0;
+    utterance.onstart = () => setReproduciendoAudio(true);
+    utterance.onend = () => setReproduciendoAudio(false);
+    utterance.onerror = () => setReproduciendoAudio(false);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // VINCULAR SERVICIO O PRODUCTO AL PIN Y PROPUESTA DETALLADA (PRESUPUESTO)
+  const handleAgregarItemPin = async (
+    targetPinId: string,
+    itemData: { name: string; price: number; type: "SERVICE" | "PART"; qty: number }
+  ) => {
+    const pin = hallazgos.find((h) => h.id === targetPinId);
+    if (!pin) return;
+
+    const itemLink: FindingItemLink = {
+      id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: itemData.name,
+      price: itemData.price,
+      type: itemData.type,
+      qty: itemData.qty,
+    };
+
+    // 1. Guardar en los ítems vinculados del pin
+    const itemsActuales = pin.linkedItems || [];
+    const actualizadosPin = [...itemsActuales, itemLink];
+    const nuevosHallazgos = hallazgos.map((h) => {
+      if (h.id === targetPinId) {
+        return { ...h, linkedItems: actualizadosPin };
+      }
+      return h;
+    });
+    setHallazgos(nuevosHallazgos);
+    sincronizarHallazgosNeon(nuevosHallazgos);
+
+    // 2. Sincronizar hacia ordenActiva.items (Presupuesto)
+    if (ordenActiva && onUpdateOrden) {
+      const itemsOrden = ordenActiva.items ? [...ordenActiva.items] : [];
+      const itemExistenteIndex = itemsOrden.findIndex((it) => it.id === itemLink.id);
+
+      const nuevoOrderItem: OrderItem = {
+        id: itemLink.id,
+        code: `PIN-${pin.pinNumber || 1}-${Date.now().toString(36).slice(-4)}`,
+        type: itemLink.type,
+        name: itemLink.name,
+        category: `Inspección - Pin #${pin.pinNumber || 1} (${pin.vistaLabel || pin.vista})`,
+        qty: itemLink.qty,
+        price: itemLink.price,
+        status: "Pendiente",
+      };
+
+      if (itemExistenteIndex >= 0) {
+        itemsOrden[itemExistenteIndex] = nuevoOrderItem;
+      } else {
+        itemsOrden.push(nuevoOrderItem);
+      }
+
+      const nuevoTotalCost = itemsOrden.reduce((sum, it) => sum + ((Number(it.price) || 0) * (Number(it.qty) || 1)), 0);
+      const ordenActualizada: UnifiedOrder = {
+        ...ordenActiva,
+        inspectionFindings: nuevosHallazgos,
+        items: itemsOrden,
+        totalCost: nuevoTotalCost,
+      };
+
+      onUpdateOrden(ordenActualizada);
+
+      // Persistir presupuesto en Neon DB
+      try {
+        await fetch("/api/taller/operacion", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "GUARDAR_ETAPA_4_PRESUPUESTO",
+            orderId: ordenActiva.id,
+            items: itemsOrden,
+            totalCost: nuevoTotalCost,
+          }),
+        });
+      } catch (err) {
+        console.error("Error al persistir ítem en presupuesto:", err);
+      }
+    }
+
+    mostrarToast(`✓ "${itemLink.name}" añadido a la propuesta/presupuesto.`);
+  };
+
+  const handleEliminarItemPin = async (targetPinId: string, itemId: string) => {
+    const pin = hallazgos.find((h) => h.id === targetPinId);
+    if (!pin) return;
+
+    const itemsActuales = pin.linkedItems || [];
+    const actualizadosPin = itemsActuales.filter((it) => it.id !== itemId);
+    const nuevosHallazgos = hallazgos.map((h) => {
+      if (h.id === targetPinId) {
+        return { ...h, linkedItems: actualizadosPin };
+      }
+      return h;
+    });
+    setHallazgos(nuevosHallazgos);
+    sincronizarHallazgosNeon(nuevosHallazgos);
+
+    // Sincronizar remoción en ordenActiva.items
+    if (ordenActiva && onUpdateOrden) {
+      const itemsOrden = (ordenActiva.items || []).filter((it) => it.id !== itemId);
+      const nuevoTotalCost = itemsOrden.reduce((sum, it) => sum + ((Number(it.price) || 0) * (Number(it.qty) || 1)), 0);
+      const ordenActualizada: UnifiedOrder = {
+        ...ordenActiva,
+        inspectionFindings: nuevosHallazgos,
+        items: itemsOrden,
+        totalCost: nuevoTotalCost,
+      };
+      onUpdateOrden(ordenActualizada);
+
+      try {
+        await fetch("/api/taller/operacion", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "GUARDAR_ETAPA_4_PRESUPUESTO",
+            orderId: ordenActiva.id,
+            items: itemsOrden,
+            totalCost: nuevoTotalCost,
+          }),
+        });
+      } catch (err) {
+        console.error("Error al eliminar ítem de presupuesto:", err);
+      }
+    }
+
+    mostrarToast("Ítem removido de la propuesta.");
   };
 
   // 2. FOTOS COMO EVIDENCIA EN CLOUDFLARE R2 (HASTA 3 FOTOS POR PIN)
@@ -513,15 +754,15 @@ export default function InspeccionVehiculo({
     handleGuardarDetallePin(nuevoTipoStr, observacionTexto !== "" ? observacionTexto : pin.descripcion);
   };
 
-  // GENERAR OTRO HALLAZGO / PROBLEMA EN EL MISMO PUNTO
+  // GENERAR OTRO HALLAZGO EN EL MISMO PIN (MISMO NÚMERO, NO INCREMENTA)
   const handleDuplicarPin = (pinOriginal: InspectionFinding) => {
-    const nuevoPinNumero = hallazgos.length + 1;
+    const mismoPinNumero = pinOriginal.pinNumber || 1;
     const nuevoHallazgo: InspectionFinding = {
       ...pinOriginal,
       id: `pin_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      pinNumber: nuevoPinNumero,
-      x: Math.min(94, Math.max(6, pinOriginal.x + (Math.random() * 4 - 2))),
-      y: Math.min(94, Math.max(6, pinOriginal.y + (Math.random() * 4 - 2))),
+      pinNumber: mismoPinNumero,
+      x: pinOriginal.x,
+      y: pinOriginal.y,
       descripcion: "",
       photoUrl: undefined,
       photoUrls: [],
@@ -532,7 +773,7 @@ export default function InspeccionVehiculo({
     setTipoSeleccionado(nuevoHallazgo.tipo);
     setObservacionTexto("");
     sincronizarHallazgosNeon(actualizados);
-    mostrarToast(`✓ Nuevo hallazgo #${nuevoPinNumero} generado en esta misma zona.`);
+    mostrarToast(`✓ Nuevo hallazgo añadido al mismo Pin #${mismoPinNumero}.`);
   };
 
   // 3. SELECCIÓN DE SISTEMAS Y EVALUACIÓN
@@ -672,18 +913,6 @@ ${urlSeguimiento}`;
             );
           })}
         </div>
-
-        {/* BOTÓN MINIMALISTA CON ICONO TRANSPARENTE: "PDF DE INSPECCIÓN" */}
-        <button
-          type="button"
-          onClick={() => setModalPdfAbierto(true)}
-          className="h-10 px-3.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer active:scale-95 shadow-sm ml-auto shrink-0"
-        >
-          <svg className="w-4 h-4 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-          </svg>
-          <span>PDF de Inspección</span>
-        </button>
       </div>
 
       {/* ===================================================================
@@ -845,217 +1074,89 @@ ${urlSeguimiento}`;
             </div>
           )}
 
-          {/* PINES CIRCULARES ROJOS NUMERADOS */}
-          {hallazgos
-            .filter((h) => h.vista === vistaActiva)
-            .map((h) => {
-              const esActivo = h.id === pinSeleccionadoId;
+          {/* PINES CIRCULARES ROJOS NUMERADOS (AGRUPADOS POR NÚMERO PARA NO DUPLICAR PINES ENCIMADOS) */}
+          {(() => {
+            const hallazgosVista = hallazgos.filter((h) => h.vista === vistaActiva);
+            const mapaPines = new Map<number, InspectionFinding[]>();
+            hallazgosVista.forEach((h) => {
+              const num = h.pinNumber || 1;
+              if (!mapaPines.has(num)) mapaPines.set(num, []);
+              mapaPines.get(num)!.push(h);
+            });
+
+            return Array.from(mapaPines.entries()).map(([pNum, items]) => {
+              const primerItem = items[0];
+              const esActivo = items.some((it) => it.id === pinSeleccionadoId);
+              const cantDanos = items.length;
+
               return (
                 <div
-                  key={h.id}
+                  key={`pin-carroceria-${pNum}`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setPinSeleccionadoId(h.id);
-                    setTipoSeleccionado(h.tipo || "Rayón");
-                    setObservacionTexto(h.descripcion || "");
+                    const itemSeleccionar = items.find((it) => it.id === pinSeleccionadoId) || primerItem;
+                    setPinSeleccionadoId(itemSeleccionar.id);
+                    setTipoSeleccionado(itemSeleccionar.tipo || "Rayón");
+                    setObservacionTexto(itemSeleccionar.descripcion || "");
                     setPopoverAbierto(true);
                   }}
-                  style={{ left: `${h.x}%`, top: `${h.y}%` }}
+                  style={{ left: `${primerItem.x}%`, top: `${primerItem.y}%` }}
                   className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center font-mono text-xs font-bold text-white shadow-xl border-2 transition-all cursor-pointer z-20 ${
                     esActivo
                       ? "bg-rose-500 border-white ring-4 ring-rose-500/50 scale-125 animate-pulse"
                       : "bg-rose-600 hover:bg-rose-500 border-white/90 ring-2 ring-rose-500/30 hover:scale-110"
                   }`}
-                  title={`Pin #${h.pinNumber || 1}: ${h.tipo}`}
+                  title={`Pin #${pNum} (${cantDanos} ${cantDanos === 1 ? "daño" : "daños"})`}
                 >
-                  {h.pinNumber || "!"}
+                  <span>{pNum}</span>
+                  {cantDanos > 1 && (
+                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-cyan-400 text-black text-[9px] font-black flex items-center justify-center shadow-md border border-black/30">
+                      {cantDanos}
+                    </span>
+                  )}
                 </div>
               );
-            })}
+            });
+          })()}
         </div>
 
-        {/* POPOVER MINIMALISTA DEL PIN ACTIVO */}
+        {/* DETALLE MODERNO DEL PIN ACTIVO (Audio voz bidireccional, fotos R2 y cotización de servicios/productos) */}
         {popoverAbierto && pinActual && (
-          <div className="mt-3 p-3.5 sm:p-4 rounded-xl bg-white/[0.04] backdrop-blur-xl border border-white/10 shadow-2xl space-y-3 animate-fade-in">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-2">
-              <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-rose-500 text-white font-mono text-[11px] font-bold flex items-center justify-center shrink-0">
-                  {pinActual.pinNumber || 1}
-                </span>
-                <span className="text-xs font-bold text-white uppercase tracking-wider">
-                  Detalle del Daño (Pin #{pinActual.pinNumber || 1})
-                </span>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleDuplicarPin(pinActual)}
-                  className="px-2.5 py-1 sm:py-0.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-medium cursor-pointer min-h-[36px] sm:min-h-0 flex items-center justify-center"
-                  title="Generar otro hallazgo en este mismo punto"
-                >
-                  + Otro hallazgo
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => handleEliminarPin(pinActual.id, e)}
-                  className="px-2.5 py-1 sm:py-0.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-medium cursor-pointer min-h-[36px] sm:min-h-0 flex items-center justify-center"
-                >
-                  Eliminar Pin ✕
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPopoverAbierto(false)}
-                  className="text-zinc-400 hover:text-white text-xs px-2.5 py-1 sm:py-0.5 rounded-lg bg-white/5 cursor-pointer min-h-[36px] sm:min-h-0 flex items-center justify-center"
-                >
-                  Cerrar
-                </button>
-              </div>
-            </div>
-
-            {/* Chips de tipo de daño (soporta combinar varios o 1 toque) */}
-            <div className="space-y-1.5">
-              <span className="text-[11px] text-zinc-400 font-medium block">
-                Tipo de daño (toca para seleccionar o combinar):
-              </span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {CHIPS_HALLAZGO.map((chip) => {
-                  const tipos = (pinActual.tipo || tipoSeleccionado || "").split(", ").map((t) => t.trim());
-                  const sel = tipos.includes(chip.id);
-                  return (
-                    <button
-                      key={chip.id}
-                      type="button"
-                      onClick={() => handleToggleTipoPin(pinActual.id, chip.id)}
-                      className={`h-9 rounded-xl border text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 ${
-                        sel
-                          ? `${chip.color} ring-1 ring-white/30 font-bold shadow-md`
-                          : "bg-white/[0.02] hover:bg-white/[0.06] border-white/5 text-zinc-400 hover:text-zinc-200"
-                      }`}
-                    >
-                      {sel && <span>✓</span>}
-                      <span>{chip.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Observación con Micrófono (Voz a Texto) + Icono Cámara (Hasta 3 fotos) */}
-            <div className="space-y-2 pt-1">
-              <div className="flex items-center gap-2">
-                {/* Input de texto para escribir el problema */}
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    value={observacionTexto !== "" ? observacionTexto : (pinActual.descripcion || "")}
-                    onChange={(e) => {
-                      setObservacionTexto(e.target.value);
-                      handleGuardarDetallePin(pinActual.tipo, e.target.value);
-                    }}
-                    placeholder={
-                      escuchandoVoz
-                        ? "🎙 Escuchando... habla para describir el problema..."
-                        : "Describe el problema o usa el micrófono al lado..."
-                    }
-                    className={`w-full h-10 pl-3 pr-10 rounded-xl bg-black/60 border text-white text-base sm:text-xs transition-all focus:outline-none ${
-                      escuchandoVoz
-                        ? "border-rose-500 ring-2 ring-rose-500/40 placeholder:text-rose-400"
-                        : "border-white/10 focus:border-purple-500/50"
-                    }`}
-                  />
-                  {/* Icono de Micrófono para Grabar Audio -> Texto */}
-                  <button
-                    type="button"
-                    onClick={() => handleToggleVozPin(pinActual.id)}
-                    className={`absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
-                      escuchandoVoz
-                        ? "bg-rose-500 text-white animate-pulse shadow-md shadow-rose-500/50"
-                        : "text-zinc-400 hover:text-white hover:bg-white/10"
-                    }`}
-                    title={escuchandoVoz ? "Detener dictado por voz" : "Dictar audio (se convierte en texto)"}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v7.5a3 3 0 0 1-3 3Z" />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Icono Cámara para subir hasta 3 fotos */}
-                {(() => {
-                  const fotos = pinActual.photoUrls || (pinActual.photoUrl ? [pinActual.photoUrl] : []);
-                  const maxAlcanzado = fotos.length >= 3;
-                  return (
-                    <label
-                      className={`h-10 px-3 rounded-xl border flex items-center gap-1.5 transition-all shrink-0 cursor-pointer ${
-                        maxAlcanzado
-                          ? "bg-white/[0.02] border-white/5 text-zinc-500 cursor-not-allowed"
-                          : "bg-cyan-500/15 hover:bg-cyan-500/25 border-cyan-500/30 text-cyan-300 active:scale-95 shadow-sm"
-                      }`}
-                      title={maxAlcanzado ? "Máximo 3 fotos subidas" : "Subir foto de evidencia (hasta 3 fotos)"}
-                    >
-                      <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
-                      </svg>
-                      <span className="text-xs font-semibold">
-                        {subiendoFotoPin ? "..." : `${fotos.length}/3`}
-                      </span>
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        capture="environment"
-                        disabled={maxAlcanzado || subiendoFotoPin}
-                        onChange={(e) => handleSubirFotosPinR2(e, pinActual.id)}
-                        className="hidden"
-                      />
-                    </label>
-                  );
-                })()}
-              </div>
-
-              {/* Galería de hasta 3 fotos con miniatura y botón eliminar ✕ */}
-              {(() => {
-                const fotos = pinActual.photoUrls || (pinActual.photoUrl ? [pinActual.photoUrl] : []);
-                if (fotos.length === 0) return null;
-                return (
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <span className="text-[11px] text-zinc-400 font-medium">Fotos ({fotos.length}/3):</span>
-                    {fotos.map((url, idx) => (
-                      <div key={idx} className="relative group w-12 h-12 rounded-xl overflow-hidden border border-white/20 shrink-0 bg-black shadow-sm">
-                        <img src={url} alt={`Evidencia #${idx + 1}`} className="w-full h-full object-cover" />
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                          title="Ver en tamaño completo"
-                        >
-                          <span className="text-[10px] text-white">🔍</span>
-                        </a>
-                        <button
-                          type="button"
-                          onClick={(e) => handleEliminarFotoPin(pinActual.id, idx, e)}
-                          className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white text-[9px] font-bold flex items-center justify-center cursor-pointer shadow"
-                          title="Eliminar foto"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-
-            {pinActual.capturedAt && (
-              <div className="text-[10px] text-cyan-300 font-mono flex items-center gap-1.5 pt-0.5">
-                <span>⏱ Foto R2 con fecha y hora:</span>
-                <strong>{pinActual.capturedAt}</strong>
-              </div>
-            )}
-          </div>
+          <DetallePinModerno
+            pin={pinActual}
+            chipsTipos={CHIPS_HALLAZGO}
+            tipoSeleccionado={tipoSeleccionado}
+            onToggleTipo={(tipoId) => handleToggleTipoPin(pinActual.id, tipoId)}
+            observacionTexto={observacionTexto}
+            onChangeObservacion={(texto) => {
+              setObservacionTexto(texto);
+              handleGuardarDetallePin(pinActual.tipo, texto);
+            }}
+            escuchandoVoz={escuchandoVoz}
+            onToggleVoz={() => handleToggleVozPin(pinActual.id)}
+            reproduciendoAudio={reproduciendoAudio}
+            onReproducirAudio={handleReproducirAudioTexto}
+            subiendoFotos={subiendoFotoPin}
+            onSubirFotos={(e) => handleSubirFotosPinR2(e, pinActual.id)}
+            onEliminarFoto={(idx, e) => handleEliminarFotoPin(pinActual.id, idx, e)}
+            productosCatalogo={productosCatalogo}
+            serviciosCatalogo={serviciosCatalogo}
+            onAgregarItemPin={(item) => handleAgregarItemPin(pinActual.id, item)}
+            onEliminarItemPin={(itemId) => handleEliminarItemPin(pinActual.id, itemId)}
+            onDuplicarPin={() => handleDuplicarPin(pinActual)}
+            onEliminarPin={() => handleEliminarPin(pinActual.id)}
+            onCerrar={() => setPopoverAbierto(false)}
+            hallazgosDelMismoPin={hallazgos}
+            onSeleccionarHallazgoPin={(hId) => {
+              const hObj = hallazgos.find((h) => h.id === hId);
+              if (hObj) {
+                setPinSeleccionadoId(hObj.id);
+                setTipoSeleccionado(hObj.tipo);
+                setObservacionTexto(hObj.descripcion || "");
+              }
+            }}
+            onEliminarHallazgoEspecifico={handleEliminarHallazgoEspecifico}
+          />
         )}
       </div>
     </div>
@@ -1157,217 +1258,89 @@ ${urlSeguimiento}`;
                 </div>
               )}
 
-              {/* PINES CIRCULARES NUMERADOS EN EL SISTEMA MECÁNICO */}
-              {hallazgos
-                .filter((h) => h.vista === seccionActiva)
-                .map((h) => {
-                  const esActivo = h.id === pinSeleccionadoId;
+              {/* PINES CIRCULARES NUMERADOS EN EL SISTEMA MECÁNICO (AGRUPADOS POR NÚMERO) */}
+              {(() => {
+                const hallazgosMecanicos = hallazgos.filter((h) => h.vista === seccionActiva);
+                const mapaPinesMec = new Map<number, InspectionFinding[]>();
+                hallazgosMecanicos.forEach((h) => {
+                  const num = h.pinNumber || 1;
+                  if (!mapaPinesMec.has(num)) mapaPinesMec.set(num, []);
+                  mapaPinesMec.get(num)!.push(h);
+                });
+
+                return Array.from(mapaPinesMec.entries()).map(([pNum, items]) => {
+                  const primerItem = items[0];
+                  const esActivo = items.some((it) => it.id === pinSeleccionadoId);
+                  const cantDanos = items.length;
+
                   return (
                     <div
-                      key={h.id}
+                      key={`pin-mecanico-${pNum}`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setPinSeleccionadoId(h.id);
-                        setTipoSeleccionado(h.tipo || "Fuga");
-                        setObservacionTexto(h.descripcion || "");
+                        const itemSeleccionar = items.find((it) => it.id === pinSeleccionadoId) || primerItem;
+                        setPinSeleccionadoId(itemSeleccionar.id);
+                        setTipoSeleccionado(itemSeleccionar.tipo || "Fuga");
+                        setObservacionTexto(itemSeleccionar.descripcion || "");
                         setPopoverAbierto(true);
                       }}
-                      style={{ left: `${h.x}%`, top: `${h.y}%` }}
+                      style={{ left: `${primerItem.x}%`, top: `${primerItem.y}%` }}
                       className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center font-mono text-xs font-bold text-white shadow-xl border-2 transition-all cursor-pointer z-20 ${
                         esActivo
                           ? "bg-rose-500 border-white ring-4 ring-rose-500/50 scale-125 animate-pulse"
                           : "bg-rose-600 hover:bg-rose-500 border-white/90 ring-2 ring-rose-500/30 hover:scale-110"
                       }`}
-                      title={`Pin #${h.pinNumber || 1}: ${h.tipo}`}
+                      title={`Pin #${pNum} (${cantDanos} ${cantDanos === 1 ? "daño" : "daños"})`}
                     >
-                      {h.pinNumber || "!"}
+                      <span>{pNum}</span>
+                      {cantDanos > 1 && (
+                        <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-cyan-400 text-black text-[9px] font-black flex items-center justify-center shadow-md border border-black/30">
+                          {cantDanos}
+                        </span>
+                      )}
                     </div>
                   );
-                })}
+                });
+              })()}
             </div>
 
-            {/* POPOVER PARA PINES DEL SISTEMA MECÁNICO */}
+            {/* DETALLE MODERNO PARA PINES DEL SISTEMA MECÁNICO */}
             {popoverAbierto && pinActual && pinActual.vista === seccionActiva && (
-              <div className="p-3.5 sm:p-4 rounded-xl bg-white/[0.04] backdrop-blur-xl border border-white/10 shadow-2xl space-y-3 animate-fade-in">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-rose-500 text-white font-mono text-[11px] font-bold flex items-center justify-center shrink-0">
-                      {pinActual.pinNumber || 1}
-                    </span>
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">
-                      Detalle del Hallazgo en {sistemaActual.name} (Pin #{pinActual.pinNumber || 1})
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleDuplicarPin(pinActual)}
-                      className="px-2.5 py-1 sm:py-0.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-xs font-medium cursor-pointer min-h-[36px] sm:min-h-0 flex items-center justify-center"
-                      title="Generar otro hallazgo en este mismo punto"
-                    >
-                      + Otro hallazgo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => handleEliminarPin(pinActual.id, e)}
-                      className="px-2.5 py-1 sm:py-0.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-medium cursor-pointer min-h-[36px] sm:min-h-0 flex items-center justify-center"
-                    >
-                      Eliminar Pin ✕
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPopoverAbierto(false)}
-                      className="text-zinc-400 hover:text-white text-xs px-2.5 py-1 sm:py-0.5 rounded-lg bg-white/5 cursor-pointer min-h-[36px] sm:min-h-0 flex items-center justify-center"
-                    >
-                      Cerrar
-                    </button>
-                  </div>
-                </div>
-
-                {/* Chips de tipo de hallazgo (soporta combinar varios o 1 toque) */}
-                <div className="space-y-1.5">
-                  <span className="text-[11px] text-zinc-400 font-medium block">
-                    Tipo de hallazgo / anomalía (toca para seleccionar o combinar):
-                  </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-                    {CHIPS_HALLAZGO_MECANICO.map((chip) => {
-                      const tipos = (pinActual.tipo || tipoSeleccionado || "").split(", ").map((t) => t.trim());
-                      const sel = tipos.includes(chip.id);
-                      return (
-                        <button
-                          key={chip.id}
-                          type="button"
-                          onClick={() => handleToggleTipoPin(pinActual.id, chip.id)}
-                          className={`h-9 rounded-xl border text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 ${
-                            sel
-                              ? `${chip.color} ring-1 ring-white/30 font-bold shadow-md`
-                              : "bg-white/[0.02] hover:bg-white/[0.06] border-white/5 text-zinc-400 hover:text-zinc-200"
-                          }`}
-                        >
-                          {sel && <span>✓</span>}
-                          <span>{chip.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Observación con Micrófono (Voz a Texto) + Icono Cámara (Hasta 3 fotos) */}
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center gap-2">
-                    {/* Input de texto para escribir el problema */}
-                    <div className="relative flex-1">
-                      <input
-                        type="text"
-                        value={observacionTexto !== "" ? observacionTexto : (pinActual.descripcion || "")}
-                        onChange={(e) => {
-                          setObservacionTexto(e.target.value);
-                          handleGuardarDetallePin(pinActual.tipo, e.target.value);
-                        }}
-                        placeholder={
-                          escuchandoVoz
-                            ? "🎙 Escuchando... habla para describir el problema..."
-                            : "Describe el problema o usa el micrófono al lado..."
-                        }
-                        className={`w-full h-10 pl-3 pr-10 rounded-xl bg-black/60 border text-white text-base sm:text-xs transition-all focus:outline-none ${
-                          escuchandoVoz
-                            ? "border-rose-500 ring-2 ring-rose-500/40 placeholder:text-rose-400"
-                            : "border-white/10 focus:border-purple-500/50"
-                        }`}
-                      />
-                      {/* Icono de Micrófono para Grabar Audio -> Texto */}
-                      <button
-                        type="button"
-                        onClick={() => handleToggleVozPin(pinActual.id)}
-                        className={`absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
-                          escuchandoVoz
-                            ? "bg-rose-500 text-white animate-pulse shadow-md shadow-rose-500/50"
-                            : "text-zinc-400 hover:text-white hover:bg-white/10"
-                        }`}
-                        title={escuchandoVoz ? "Detener dictado por voz" : "Dictar audio (se convierte en texto)"}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v7.5a3 3 0 0 1-3 3Z" />
-                        </svg>
-                      </button>
-                    </div>
-
-                    {/* Icono Cámara para subir hasta 3 fotos */}
-                    {(() => {
-                      const fotos = pinActual.photoUrls || (pinActual.photoUrl ? [pinActual.photoUrl] : []);
-                      const maxAlcanzado = fotos.length >= 3;
-                      return (
-                        <label
-                          className={`h-10 px-3 rounded-xl border flex items-center gap-1.5 transition-all shrink-0 cursor-pointer ${
-                            maxAlcanzado
-                              ? "bg-white/[0.02] border-white/5 text-zinc-500 cursor-not-allowed"
-                              : "bg-cyan-500/15 hover:bg-cyan-500/25 border-cyan-500/30 text-cyan-300 active:scale-95 shadow-sm"
-                          }`}
-                          title={maxAlcanzado ? "Máximo 3 fotos subidas" : "Subir foto de evidencia (hasta 3 fotos)"}
-                        >
-                          <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
-                          </svg>
-                          <span className="text-xs font-semibold">
-                            {subiendoFotoPin ? "..." : `${fotos.length}/3`}
-                          </span>
-                          <input
-                            type="file"
-                            multiple
-                            accept="image/*"
-                            capture="environment"
-                            disabled={maxAlcanzado || subiendoFotoPin}
-                            onChange={(e) => handleSubirFotosPinR2(e, pinActual.id)}
-                            className="hidden"
-                          />
-                        </label>
-                      );
-                    })()}
-                  </div>
-
-                  {/* Galería de hasta 3 fotos con miniatura y botón eliminar ✕ */}
-                  {(() => {
-                    const fotos = pinActual.photoUrls || (pinActual.photoUrl ? [pinActual.photoUrl] : []);
-                    if (fotos.length === 0) return null;
-                    return (
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
-                        <span className="text-[11px] text-zinc-400 font-medium">Fotos ({fotos.length}/3):</span>
-                        {fotos.map((url, idx) => (
-                          <div key={idx} className="relative group w-12 h-12 rounded-xl overflow-hidden border border-white/20 shrink-0 bg-black shadow-sm">
-                            <img src={url} alt={`Evidencia #${idx + 1}`} className="w-full h-full object-cover" />
-                            <a
-                              href={url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                              title="Ver en tamaño completo"
-                            >
-                              <span className="text-[10px] text-white">🔍</span>
-                            </a>
-                            <button
-                              type="button"
-                              onClick={(e) => handleEliminarFotoPin(pinActual.id, idx, e)}
-                              className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white text-[9px] font-bold flex items-center justify-center cursor-pointer shadow"
-                              title="Eliminar foto"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {pinActual.capturedAt && (
-                  <div className="text-[10px] text-cyan-300 font-mono flex items-center gap-1.5 pt-0.5">
-                    <span>⏱ Foto R2 con fecha y hora:</span>
-                    <strong>{pinActual.capturedAt}</strong>
-                  </div>
-                )}
-              </div>
+              <DetallePinModerno
+                pin={pinActual}
+                chipsTipos={CHIPS_HALLAZGO_MECANICO}
+                tipoSeleccionado={tipoSeleccionado}
+                onToggleTipo={(tipoId) => handleToggleTipoPin(pinActual.id, tipoId)}
+                observacionTexto={observacionTexto}
+                onChangeObservacion={(texto) => {
+                  setObservacionTexto(texto);
+                  handleGuardarDetallePin(pinActual.tipo, texto);
+                }}
+                escuchandoVoz={escuchandoVoz}
+                onToggleVoz={() => handleToggleVozPin(pinActual.id)}
+                reproduciendoAudio={reproduciendoAudio}
+                onReproducirAudio={handleReproducirAudioTexto}
+                subiendoFotos={subiendoFotoPin}
+                onSubirFotos={(e) => handleSubirFotosPinR2(e, pinActual.id)}
+                onEliminarFoto={(idx, e) => handleEliminarFotoPin(pinActual.id, idx, e)}
+                productosCatalogo={productosCatalogo}
+                serviciosCatalogo={serviciosCatalogo}
+                onAgregarItemPin={(item) => handleAgregarItemPin(pinActual.id, item)}
+                onEliminarItemPin={(itemId) => handleEliminarItemPin(pinActual.id, itemId)}
+                onDuplicarPin={() => handleDuplicarPin(pinActual)}
+                onEliminarPin={() => handleEliminarPin(pinActual.id)}
+                onCerrar={() => setPopoverAbierto(false)}
+                hallazgosDelMismoPin={hallazgos}
+                onSeleccionarHallazgoPin={(hId) => {
+                  const hObj = hallazgos.find((h) => h.id === hId);
+                  if (hObj) {
+                    setPinSeleccionadoId(hObj.id);
+                    setTipoSeleccionado(hObj.tipo);
+                    setObservacionTexto(hObj.descripcion || "");
+                  }
+                }}
+                onEliminarHallazgoEspecifico={handleEliminarHallazgoEspecifico}
+              />
             )}
 
 

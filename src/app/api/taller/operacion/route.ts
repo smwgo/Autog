@@ -47,6 +47,9 @@ async function ensureTallerSchema() {
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "lastNotifiedChannel" TEXT`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "deliveryChecklistJson" TEXT DEFAULT '{}'`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "technicalReportText" TEXT`,
+      `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "quoteSignatureUrl" TEXT`,
+      `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "quoteSignedBy" TEXT`,
+      `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "quoteSignedAt" TIMESTAMP(3)`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "technicalReportUrl" TEXT`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "deliverySignatureUrl" TEXT`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "deliverySignedBy" TEXT`,
@@ -230,6 +233,9 @@ function mapOrderRow(r: any) {
     deliveryChecklist,
     technicalReportText: r.technicalReportText || "",
     technicalReportUrl: r.technicalReportUrl || null,
+    quoteSignatureUrl: r.quoteSignatureUrl || null,
+    quoteSignedBy: r.quoteSignedBy || "",
+    quoteSignedAt: r.quoteSignedAt || null,
     deliverySignatureUrl: r.deliverySignatureUrl || null,
     deliverySignedBy: r.deliverySignedBy || "",
     deliverySignedAt: r.deliverySignedAt || null,
@@ -2208,6 +2214,49 @@ export async function POST(request: Request) {
           message: hasSignature
             ? `Recepción de entrega firmada por ${nextSignedBy}.`
             : `Detalle de entrega e informe técnico actualizados.`,
+        });
+      }
+
+      // ACCIÓN: REGISTRAR FIRMA DE ACEPTACIÓN DEL PRESUPUESTO
+      if (action === "FIRMAR_PRESUPUESTO") {
+        const { orderId, quoteSignatureUrl, quoteSignedBy } = body;
+        if (!orderId) {
+          return NextResponse.json({ success: false, error: "ID de orden requerido" }, { status: 400 });
+        }
+        const existingRows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopOrder" WHERE "id" = $1 OR "orderNumber" = $1 LIMIT 1`,
+          orderId
+        );
+        if (existingRows.length === 0) {
+          return NextResponse.json({ success: false, error: "Orden no encontrada" }, { status: 404 });
+        }
+        const current = existingRows[0];
+        const nextSignedBy = quoteSignedBy ? String(quoteSignedBy).trim() : current.client || "Cliente";
+
+        await prisma.$executeRawUnsafe(
+          `UPDATE "WorkshopOrder"
+           SET "quoteSignatureUrl" = $2,
+               "quoteSignedBy" = $3,
+               "quoteSignedAt" = NOW(),
+               "quoteStatus" = 'Aprobado',
+               "hasPriceAuthorized" = true,
+               "updatedAt" = NOW()
+           WHERE "id" = $1`,
+          current.id,
+          quoteSignatureUrl || null,
+          nextSignedBy
+        );
+
+        const updatedRows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopOrder" WHERE "id" = $1`,
+          current.id
+        );
+        const mapped = mapOrderRow(updatedRows[0]);
+        return NextResponse.json({
+          success: true,
+          order: mapped,
+          activeOrder: mapped,
+          message: "Firma de aceptación del presupuesto registrada exitosamente.",
         });
       }
 

@@ -259,7 +259,7 @@ function DetalleOrdenContent() {
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-                  Orden #{order.orderNumber}
+                  Orden #{order.orderNumber?.replace(/^#/, "") || "001"}
                 </h1>
                 {/* ETIQUETA PRINCIPAL: PAGADO O EN ORDEN */}
                 {order.isBilled ? (

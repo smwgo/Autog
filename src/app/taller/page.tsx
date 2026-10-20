@@ -7,6 +7,7 @@ import { Header } from "@/components/Header";
 import { TallerMobileNav } from "@/components/TallerMobileNav";
 import InspeccionVehiculo from "@/components/taller/InspeccionVehiculo";
 import ModalNuevaOrdenTrabajo from "@/components/taller/ModalNuevaOrdenTrabajo";
+import ModalPresupuestoPdf from "@/components/taller/ModalPresupuestoPdf";
 import LubricentroExpress from "./components/LubricentroExpress";
 
 // ============================================================================
@@ -82,6 +83,8 @@ export interface UnifiedOrder {
   technicalReportUrl?: string | null;
   deliverySignatureUrl?: string | null;
   deliverySignedBy?: string;
+  quoteSignatureUrl?: string | null;
+  quoteSignedBy?: string;
   deliverySignedAt?: string | null;
   deliveryStatus?: string;
   receptionSignatureUrl?: string | null;
@@ -156,6 +159,14 @@ export interface TechnicianHourEntry {
   date: string;
 }
 
+export interface FindingItemLink {
+  id: string;
+  name: string;
+  price: number;
+  type: "SERVICE" | "PART";
+  qty: number;
+}
+
 export interface InspectionFinding {
   id: string;
   vista: "frontal" | "trasera" | "lateral_izq" | "lateral_der" | "superior" | "motor" | "frenos" | "suspension" | "electrico" | string;
@@ -170,6 +181,7 @@ export interface InspectionFinding {
   photoUrls?: string[];
   capturedAt?: string;
   severidad?: "LEVE" | "MODERADO" | "GRAVE" | string;
+  linkedItems?: FindingItemLink[];
 }
 
 export interface InventoryProduct {
@@ -420,11 +432,11 @@ const SERVICE_CARDS = [
       </svg>
     ),
     presets: [
-      { code: "DIA-001", name: "Escáner computarizado OBD2", price: 20.0, subCategory: "Diagnóstico" },
-      { code: "DIA-002", name: "Diagnóstico Check Engine y borrado de fallas", price: 18.0, subCategory: "Diagnóstico" },
-      { code: "DIA-003", name: "Prueba de compresión de cilindros", price: 25.0, subCategory: "Diagnóstico" },
-      { code: "DIA-004", name: "Diagnóstico de fuga de compresión / vacío", price: 20.0, subCategory: "Diagnóstico" },
-      { code: "DIA-005", name: "Inspección técnica general / Pre-compra", price: 30.0, subCategory: "Diagnóstico" },
+      { code: "DIA-001", name: "Escáner", price: 20.0, subCategory: "Diagnóstico" },
+      { code: "DIA-002", name: "Diagnóstico", price: 18.0, subCategory: "Diagnóstico" },
+      { code: "DIA-003", name: "Compresión", price: 25.0, subCategory: "Diagnóstico" },
+      { code: "DIA-004", name: "Vacío", price: 20.0, subCategory: "Diagnóstico" },
+      { code: "DIA-005", name: "Inspección", price: 30.0, subCategory: "Diagnóstico" },
     ] as ServicePreset[],
   },
   {
@@ -439,12 +451,12 @@ const SERVICE_CARDS = [
       </svg>
     ),
     presets: [
-      { code: "MAN-001", name: "Afinamiento electrónico de motor", price: 35.0, subCategory: "Afinamiento" },
-      { code: "MAN-002", name: "Limpieza por ultrasonido de inyectores", price: 30.0, subCategory: "Afinamiento" },
-      { code: "MAN-003", name: "Limpieza y calibración cuerpo aceleración", price: 20.0, subCategory: "Afinamiento" },
-      { code: "MAN-004", name: "Calibración y cambio de bujías", price: 18.0, subCategory: "Afinamiento" },
-      { code: "MAN-005", name: "Mantenimiento preventivo por kilometraje", price: 40.0, subCategory: "General" },
-      { code: "MAN-006", name: "Cambio de filtros (aire y combustible)", price: 15.0, subCategory: "General" },
+      { code: "MAN-001", name: "Afinamiento", price: 35.0, subCategory: "Afinamiento" },
+      { code: "MAN-002", name: "Inyectores", price: 30.0, subCategory: "Afinamiento" },
+      { code: "MAN-003", name: "Aceleración", price: 20.0, subCategory: "Afinamiento" },
+      { code: "MAN-004", name: "Bujías", price: 18.0, subCategory: "Afinamiento" },
+      { code: "MAN-005", name: "Mantenimiento", price: 40.0, subCategory: "General" },
+      { code: "MAN-006", name: "Filtros", price: 15.0, subCategory: "General" },
     ] as ServicePreset[],
   },
   {
@@ -462,12 +474,12 @@ const SERVICE_CARDS = [
       </svg>
     ),
     presets: [
-      { code: "FRE-001", name: "Cambio de pastillas de freno", price: 25.0, subCategory: "Frenos" },
-      { code: "FRE-002", name: "Rectificado de discos de freno (par)", price: 30.0, subCategory: "Frenos" },
-      { code: "FRE-003", name: "Cambio y regulación de zapatas / tambor", price: 28.0, subCategory: "Frenos" },
-      { code: "FRE-004", name: "Purga y cambio de líquido de frenos", price: 18.0, subCategory: "Frenos" },
-      { code: "FRE-005", name: "Mantenimiento integral de 4 frenos", price: 45.0, subCategory: "Frenos" },
-      { code: "FRE-006", name: "Reparación de caliper / cilindro de freno", price: 35.0, subCategory: "Frenos" },
+      { code: "FRE-001", name: "Pastillas", price: 25.0, subCategory: "Frenos" },
+      { code: "FRE-002", name: "Discos", price: 30.0, subCategory: "Frenos" },
+      { code: "FRE-003", name: "Zapatas", price: 28.0, subCategory: "Frenos" },
+      { code: "FRE-004", name: "Líquido", price: 18.0, subCategory: "Frenos" },
+      { code: "FRE-005", name: "Frenos", price: 45.0, subCategory: "Frenos" },
+      { code: "FRE-006", name: "Caliper", price: 35.0, subCategory: "Frenos" },
     ] as ServicePreset[],
   },
   {
@@ -844,6 +856,15 @@ export default function TallerPanel() {
   const [etapa4ManualTipo, setEtapa4ManualTipo] = useState<"SERVICE" | "PART">("SERVICE");
   const [guardandoEtapa4, setGuardandoEtapa4] = useState(false);
   const [copiadoLinkPresupuesto, setCopiadoLinkPresupuesto] = useState(false);
+  const [modalPresupuestoPdfAbierto, setModalPresupuestoPdfAbierto] = useState(false);
+  const [pinCotizandoId, setPinCotizandoId] = useState<string | null>(null);
+  const [cotizarPinNombre, setCotizarPinNombre] = useState("");
+  const [cotizarPinPrecio, setCotizarPinPrecio] = useState("");
+  const [cotizarPinTipo, setCotizarPinTipo] = useState<"SERVICE" | "PART">("SERVICE");
+  const [cotizarBuscadorFiltro, setCotizarBuscadorFiltro] = useState<"ALL" | "SERVICE" | "PART">("ALL");
+  const [dropdownBuscadorPinAbierto, setDropdownBuscadorPinAbierto] = useState(false);
+  const [dropdownCatalogoAbierto, setDropdownCatalogoAbierto] = useState(false);
+  const [etapa4FiltroTipo, setEtapa4FiltroTipo] = useState<"ALL" | "SERVICE" | "PART">("ALL");
 
   // ==========================================================================
   // FLOTANTE 05 - ETAPA 5: REPARACIÓN
@@ -2007,6 +2028,66 @@ export default function TallerPanel() {
     return lista;
   }, [serviciosDb]);
 
+  // Catálogo combinado de Servicios y Repuestos para el buscador inteligente de cotización de hallazgos
+  const catalogoItemsCotizar = useMemo(() => {
+    const lista: { name: string; price: number; type: "SERVICE" | "PART"; category: string }[] = [];
+    const vistos = new Set<string>();
+
+    SERVICE_CARDS.forEach((card) => {
+      card.presets.forEach((p) => {
+        const key = p.name.toLowerCase().trim();
+        if (!vistos.has(key)) {
+          vistos.add(key);
+          lista.push({
+            name: p.name,
+            price: Number(p.price) || 20,
+            type: card.id === "repuestos" ? "PART" : "SERVICE",
+            category: card.title,
+          });
+        }
+      });
+    });
+
+    const repuestosComunes = [
+      { name: "Pintura", price: 40, category: "Pintura" },
+      { name: "Masilla", price: 15, category: "Carrocería" },
+      { name: "Desabollado", price: 35, category: "Carrocería" },
+      { name: "Pulido", price: 15, category: "Carrocería" },
+      { name: "Enderezada", price: 45, category: "Carrocería" },
+      { name: "Inspección", price: 30, category: "Diagnóstico" },
+      { name: "Escáner", price: 20, category: "Diagnóstico" },
+      { name: "Aceite", price: 38, category: "Lubricantes" },
+      { name: "Filtro", price: 10, category: "Filtros" },
+      { name: "Pastillas", price: 35, category: "Frenos" },
+      { name: "Discos", price: 65, category: "Frenos" },
+      { name: "Líquido", price: 8, category: "Frenos" },
+      { name: "Amortiguadores", price: 95, category: "Suspensión" },
+      { name: "Bujías", price: 32, category: "Encendido" },
+      { name: "Batería", price: 85, category: "Eléctrico" },
+      { name: "Refrigerante", price: 15, category: "Fluidos" },
+      { name: "Bandeja", price: 45, category: "Suspensión" },
+      { name: "Terminal", price: 18, category: "Dirección" },
+      { name: "Foco", price: 8, category: "Iluminación" },
+      { name: "Alineación", price: 25, category: "Dirección" },
+      { name: "Balanceo", price: 18, category: "Dirección" },
+      { name: "Lavado", price: 15, category: "Limpieza" },];
+
+    repuestosComunes.forEach((r) => {
+      const key = r.name.toLowerCase().trim();
+      if (!vistos.has(key)) {
+        vistos.add(key);
+        lista.push({
+          name: r.name,
+          price: r.price,
+          type: "PART",
+          category: r.category,
+        });
+      }
+    });
+
+    return lista;
+  }, []);
+
   // Cálculos al instante de Subtotal, Descuento, Impuestos (IVA) y Total en Etapa 4
   const calculosPresupuestoEtapa4 = useMemo(() => {
     const subtotal = etapa4Items.reduce(
@@ -2116,6 +2197,71 @@ export default function TallerPanel() {
     setEtapa4Items((prev) => [...prev, nuevo]);
     setEtapa4ManualNombre("");
     setEtapa4ManualPrecio("");
+  };
+
+  const handleCotizarPin = async (
+    pin: InspectionFinding,
+    nombreItem: string,
+    precioItem: number,
+    tipoItem: "SERVICE" | "PART"
+  ) => {
+    if (!ordenActiva || !nombreItem.trim()) return;
+    const nuevo: OrderItem = {
+      id: `pin-cot-${pin.pinNumber || 1}-${Date.now()}`,
+      type: tipoItem,
+      category: `Inspección - Pin #${pin.pinNumber || 1} (${pin.vistaLabel || pin.vista})`,
+      code: `PIN-${pin.pinNumber || 1}-${Math.floor(100 + Math.random() * 900)}`,
+      name: nombreItem.trim(),
+      price: Math.max(0, precioItem),
+      qty: 1,
+      status: "Pendiente",
+      empleado_id: empleadoLogueado.id,
+      empleado_nombre: empleadoLogueado.nombre,
+    };
+
+    const nuevosItems = [...(ordenActiva.items || []), nuevo];
+    setOrdenActiva({ ...ordenActiva, items: nuevosItems });
+    setEtapa4Items(nuevosItems);
+    await sincronizarOrdenEnNeon({ items: nuevosItems });
+    setPinCotizandoId(null);
+    setCotizarPinNombre("");
+    setCotizarPinPrecio("");
+    mostrarToast(`✓ "${nombreItem}" añadido a la cotización`);
+  };
+
+  const handleAgregarItemPresupuesto = async (item: {
+    name: string;
+    price: number;
+    type: "SERVICE" | "PART";
+    category?: string;
+    code?: string;
+    productId?: string;
+  }) => {
+    if (!ordenActiva) {
+      mostrarToast("Primero selecciona un auto en pista o busca una placa arriba", "err");
+      return;
+    }
+    const nuevo: OrderItem = {
+      id: `cot-${item.type === "PART" ? "part" : "srv"}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      type: item.type,
+      category: item.category || (item.type === "PART" ? "Repuestos e Insumos" : "Servicios"),
+      code: item.code || `${item.type === "PART" ? "REP" : "SRV"}-${Math.floor(100 + Math.random() * 900)}`,
+      name: item.name.trim(),
+      price: Math.max(0, Number(item.price) || 0),
+      qty: 1,
+      status: "Pendiente",
+      productId: item.productId,
+      empleado_id: empleadoLogueado.id,
+      empleado_nombre: empleadoLogueado.nombre,
+    };
+    const nuevosItems = [...(ordenActiva.items || []), nuevo];
+    setEtapa4Items(nuevosItems);
+    setOrdenActiva((prevOrd) => (prevOrd ? { ...prevOrd, items: nuevosItems } : prevOrd));
+    setAutosEnPista((prev) =>
+      prev.map((o) => (o.id === ordenActiva.id ? { ...o, items: nuevosItems } : o))
+    );
+    await sincronizarOrdenEnNeon({ items: nuevosItems });
+    mostrarToast(`✓ "${item.name}" añadido al presupuesto`);
   };
 
   const handleCopiarLinkPresupuesto = async () => {
@@ -3163,13 +3309,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
   const handleGuardarEtapa7EntregaFirma = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!ordenActiva) {
-      setEtapaActiva(7);
       return;
     }
     const updated = await sincronizarEtapa7EnNeon();
     if (updated) {
       mostrarToast(`Entrega y firma guardadas para #${updated.orderNumber}.`);
-      setEtapaActiva(7); // Desliza automáticamente a Etapa 08 para Oficina/Caja
     }
   };
 
@@ -4313,7 +4457,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               STEPPER DE 6 ICONOS TRANSPARENTES (GLASSMORPHISM)
               =================================================================== */}
           <div className="bg-white/[0.02] backdrop-blur-md border border-white/[0.08] p-2 rounded-2xl overflow-x-auto no-scrollbar [WebkitOverflowScrolling:touch]">
-            <div className="flex sm:grid sm:grid-cols-6 gap-2 min-w-max sm:min-w-0">
+            <div className="flex sm:grid sm:grid-cols-5 gap-2 min-w-max sm:min-w-0">
               {[
                 {
                   id: 1,
@@ -4360,15 +4504,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     </svg>
                   ),
                 },
-                {
-                  id: 7,
-                  label: "6. Cobro/Doc",
-                  icon: (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v-.75A.75.75 0 0 1 3 4.5h.75m0 0a9.006 9.006 0 0 1 16.5 0m0 0h.75a.75.75 0 0 1 .75.75V6m0 0h-.75a.75.75 0 0 1-.75-.75V4.5m0 10.5v.75c0 .414.336.75.75.75h.75m0 0v-.75a.75.75 0 0 0-.75-.75h-.75m-15 0H3a.75.75 0 0 0-.75.75v.75m0 0h.75a.75.75 0 0 0 .75-.75v-.75" />
-                    </svg>
-                  ),
-                },
               ].map((step) => {
                 const active = etapaActiva === step.id;
                 return (
@@ -4399,117 +4534,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             {/* ETAPA 1: INGRESO (CHECK TÁCTIL + FOTOS R2) */}
             {etapaActiva === 1 && (
               <div className="w-full space-y-4 animate-fade-in">
-                {!ordenActiva ? (
-                  <form onSubmit={handleCrearOrdenEtapa1} className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-blue-400" />
-                        Ingreso Rápido de Cliente y Vehículo
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                      <div>
-                        <label className="text-[11px] text-zinc-400 font-medium block mb-1">Nombre del Cliente *</label>
-                        <input
-                          type="text"
-                          required
-                          value={etapa1Nombre}
-                          onChange={(e) => setEtapa1Nombre(e.target.value)}
-                          placeholder="Nombre completo"
-                          className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] text-zinc-400 font-medium block mb-1">Cédula / RUT / RUC</label>
-                        <input
-                          type="text"
-                          value={etapa1Ruc}
-                          onChange={(e) => setEtapa1Ruc(e.target.value)}
-                          placeholder="Identificación"
-                          className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] text-zinc-400 font-medium block mb-1">Teléfono / WhatsApp *</label>
-                        <input
-                          type="text"
-                          required
-                          value={etapa1Telefono}
-                          onChange={(e) => setEtapa1Telefono(e.target.value)}
-                          placeholder="+56 9..."
-                          className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] text-zinc-400 font-medium block mb-1">Correo Electrónico</label>
-                        <input
-                          type="email"
-                          value={etapa1Email}
-                          onChange={(e) => setEtapa1Email(e.target.value)}
-                          placeholder="cliente@correo.com"
-                          className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] text-zinc-400 font-medium block mb-1">Placa / Patente *</label>
-                        <input
-                          type="text"
-                          required
-                          value={etapa1PlacaOpcional}
-                          onChange={(e) => setEtapa1PlacaOpcional(e.target.value.toUpperCase())}
-                          placeholder="ABC-123"
-                          className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white font-mono font-bold uppercase text-xs focus:outline-none focus:border-emerald-500/60"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] text-zinc-400 font-medium block mb-1">Marca / Modelo *</label>
-                        <input
-                          type="text"
-                          required
-                          value={etapa2Marca}
-                          onChange={(e) => setEtapa2Marca(e.target.value)}
-                          placeholder="Toyota Corolla"
-                          className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] text-zinc-400 font-medium block mb-1">Técnico Asignado</label>
-                        <select
-                          value={etapa1Tecnico}
-                          onChange={(e) => setEtapa1Tecnico(e.target.value)}
-                          className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
-                        >
-                          <option value="">Seleccionar técnico...</option>
-                          {mecanicos.map((emp) => (
-                            <option key={emp} value={emp}>{emp}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-[11px] text-zinc-400 font-medium block mb-1">Motivo de Ingreso</label>
-                        <input
-                          type="text"
-                          value={etapa1MotivoIngreso}
-                          onChange={(e) => setEtapa1MotivoIngreso(e.target.value)}
-                          placeholder="Mantenimiento preventivo..."
-                          className="w-full h-10 px-3 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none focus:border-blue-500/60"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end pt-2">
-                      <button
-                        type="submit"
-                        disabled={creandoOrdenEtapa1}
-                        className="h-10 px-6 rounded-xl bg-blue-500/25 hover:bg-blue-500/35 border border-blue-500/50 text-blue-200 text-xs font-semibold transition-all cursor-pointer"
-                      >
-                        {creandoOrdenEtapa1 ? "Iniciando orden..." : "▶ Iniciar Orden e Ingresar"}
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                     {/* Controles de Combustible, Km e Inventario */}
                     <div className="lg:col-span-7 space-y-4">
                       <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
@@ -4675,7 +4700,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       )}
                     </div>
                   </div>
-                )}
 
                 <div className="flex items-center justify-end pt-2">
                   <button
@@ -4694,6 +4718,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               <div className="w-full space-y-4 animate-fade-in">
                 <InspeccionVehiculo
                   ordenActiva={ordenActiva}
+                  productosCatalogo={productosInventario}
+                  serviciosCatalogo={serviciosDb}
                   onUpdateOrden={(updated) => {
                     setOrdenActiva(updated);
                     setAutosEnPista((prev) =>
@@ -4708,137 +4734,663 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               </div>
             )}
 
-            {/* ETAPA 3: CATÁLOGO / PRESUPUESTO (EMPLEADO vs OFICINA) */}
+            {/* ETAPA 3: CATÁLOGO / PRESUPUESTO (HALLAZGOS POR SECCIÓN + SERVICIOS/REPUESTOS + DESCARGA PDF) */}
             {etapaActiva === 3 && (
-              <div className="w-full space-y-4 animate-fade-in">
-                {/* Banner de Lógica de Roles (Solo si está en Modo Oficina) */}
-                {rolUsuario === "OFICINA" && (
-                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-200 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                      <span>Modo Oficina: Precios unitarios, descuentos e impuestos activos.</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={handleCopiarLinkPresupuesto}
-                        className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-semibold text-white transition-all cursor-pointer"
-                      >
-                        {copiadoLinkPresupuesto ? "✓ Copiado" : "Copiar Link"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleEnviarWhatsAppPresupuesto}
-                        className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-[11px] font-semibold text-emerald-300 transition-all cursor-pointer"
-                      >
-                        📲 WhatsApp
-                      </button>
-                    </div>
-                  </div>
-                )}
+              <div className="w-full space-y-5 animate-fade-in">
 
-                {/* Tarjetas Rápidas de Servicios Minimalistas con Glassmorphism */}
-                <div className="space-y-2">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    {SERVICE_CARDS.map((card) => {
-                      const firstPreset = card.presets[0] || {
-                        code: `${card.id.toUpperCase()}-001`,
-                        name: card.title,
-                        price: 25.0,
-                        subCategory: card.title,
-                      };
-                      return (
-                        <div
-                          key={card.id}
-                          onClick={() => handleToggleServicioPreset(card.title, firstPreset)}
-                          className="p-3 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] backdrop-blur-md border border-white/[0.08] transition-all cursor-pointer active:scale-95 space-y-2 group"
+
+                {/* 2. LISTA DE TODO LO QUE SE ESCOGIÓ EN LA INSPECCIÓN (ORDENADO POR SECCIÓN) */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4 shadow-xl">
+                  <div className="flex items-center gap-2 border-b border-white/[0.08] pb-2.5">
+                    <span className="text-base">🔍</span>
+                    <h4 className="text-xs sm:text-sm font-normal text-white uppercase tracking-wider">
+                      Inspección
+                    </h4>
+                  </div>
+
+                  {(!ordenActiva?.inspectionFindings || ordenActiva.inspectionFindings.length === 0) ? (
+                    <div className="py-6 text-center space-y-2 bg-black/30 rounded-xl border border-dashed border-white/10 p-4">
+                      <p className="text-xs text-zinc-400">
+                        No se han marcado hallazgos en la inspección todavía.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setEtapaActiva(2)}
+                        className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs font-semibold cursor-pointer"
+                      >
+                        ← Ir a Marcar Inspección (Paso 2)
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {(() => {
+                        const hallazgos = ordenActiva.inspectionFindings;
+                        const secciones = [
+                          {
+                            id: "carroceria",
+                            nombre: "Carrocería",
+                            icon: "🚗",
+                            color: "border-blue-500/30 bg-blue-500/10 text-blue-300",
+                            items: hallazgos.filter((h) =>
+                              ["frontal", "trasera", "lateral_izq", "lateral_der", "superior"].includes(h.vista)
+                            ),
+                            presetsCotizar: [
+                              { name: "Enderezada y desabollado", price: 35, type: "SERVICE" as const },
+                              { name: "Pintura y acabado por paño", price: 60, type: "SERVICE" as const },
+                              { name: "Pulido y desmanchado de rayón", price: 15, type: "SERVICE" as const },
+                              { name: "Fondo primer y masilla", price: 12, type: "PART" as const },
+                            ],
+                          },
+                          {
+                            id: "motor",
+                            nombre: "Motor",
+                            icon: "⚙️",
+                            color: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+                            items: hallazgos.filter((h) => h.vista === "motor"),
+                            presetsCotizar: [
+                              { name: "Corrección de fuga y cambio de sello", price: 30, type: "SERVICE" as const },
+                              { name: "Aceite de motor sintético", price: 38, type: "PART" as const },
+                              { name: "Filtro de aceite / combustible", price: 10, type: "PART" as const },
+                            ],
+                          },
+                          {
+                            id: "frenos",
+                            nombre: "Frenos",
+                            icon: "🛑",
+                            color: "border-rose-500/30 bg-rose-500/10 text-rose-300",
+                            items: hallazgos.filter((h) => h.vista === "frenos"),
+                            presetsCotizar: [
+                              { name: "Pastillas", price: 15, type: "SERVICE" as const },
+                              { name: "Juego de pastillas de freno", price: 35, type: "PART" as const },
+                              { name: "Líquido de frenos DOT 4", price: 9, type: "PART" as const },
+                              { name: "Rectificación de discos", price: 20, type: "SERVICE" as const },
+                            ],
+                          },
+                          {
+                            id: "suspension",
+                            nombre: "Suspensión",
+                            icon: "🔩",
+                            color: "border-purple-500/30 bg-purple-500/10 text-purple-300",
+                            items: hallazgos.filter((h) => h.vista === "suspension"),
+                            presetsCotizar: [
+                              { name: "Cambio de amortiguadores delanteros", price: 25, type: "SERVICE" as const },
+                              { name: "Amortiguador de recambio", price: 55, type: "PART" as const },
+                              { name: "Cambio de bujes y terminales", price: 20, type: "SERVICE" as const },
+                            ],
+                          },
+                          {
+                            id: "electrico",
+                            nombre: "Eléctrico",
+                            icon: "⚡",
+                            color: "border-yellow-500/30 bg-yellow-500/10 text-yellow-300",
+                            items: hallazgos.filter((h) => h.vista === "electrico"),
+                            presetsCotizar: [
+                              { name: "Diagnóstico eléctrico y escáner", price: 25, type: "SERVICE" as const },
+                              { name: "Batería automotriz nueva", price: 85, type: "PART" as const },
+                              { name: "Cambio de foco / lámpara", price: 8, type: "PART" as const },
+                            ],
+                          },
+                        ];
+
+                        return secciones
+                          .filter((sec) => sec.items.length > 0)
+                          .map((sec) => (
+                            <div
+                              key={sec.id}
+                              className="rounded-xl bg-black/40 border border-white/10 overflow-hidden space-y-2 p-3 sm:p-3.5"
+                            >
+                              <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-base">{sec.icon}</span>
+                                  <span className="text-xs sm:text-sm font-bold text-white">
+                                    {sec.nombre}
+                                  </span>
+                                </div>
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${sec.color}`}>
+                                  {sec.items.length} {sec.items.length === 1 ? "hallazgo" : "hallazgos"}
+                                </span>
+                              </div>
+
+                              <div className="space-y-3 pt-1">
+                                {sec.items.map((pin) => {
+                                  const fotosPin = pin.photoUrls || (pin.photoUrl ? [pin.photoUrl] : []);
+                                  const categoriaPinPrefix = `Inspección - Pin #${pin.pinNumber || 1}`;
+                                  const itemsCotizadosPin = (ordenActiva.items || []).filter((it) =>
+                                    it.category?.startsWith(categoriaPinPrefix)
+                                  );
+
+                                  const estaCotizando = pinCotizandoId === pin.id;
+
+                                  return (
+                                    <div
+                                      key={pin.id}
+                                      className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2.5"
+                                    >
+                                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <span className="w-5 h-5 rounded-full bg-rose-500 text-white font-mono text-[10px] font-bold flex items-center justify-center shrink-0">
+                                            #{pin.pinNumber || 1}
+                                          </span>
+                                          <span className="text-xs font-bold text-white">
+                                            {pin.tipo}
+                                          </span>
+                                          <span className="text-[10px] text-zinc-400 bg-white/5 px-2 py-0.5 rounded">
+                                            {pin.vistaLabel || pin.vista}
+                                          </span>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              if (estaCotizando) {
+                                                setPinCotizandoId(null);
+                                              } else {
+                                                setPinCotizandoId(pin.id);
+                                                setCotizarPinNombre(pin.tipo ? pin.tipo.trim().split(/[\s/]+/)[0] : "Reparación");
+                                                setCotizarPinPrecio("25");
+                                                setCotizarPinTipo("SERVICE");
+                                              }
+                                            }}
+                                            className="px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 active:scale-95"
+                                          >
+                                            <span>{estaCotizando ? "✕ Cancelar" : "+ Cotizar"}</span>
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      {/* Descripción y fotos de evidencia */}
+                                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                                        {pin.descripcion ? (
+                                          <p className="text-zinc-300 text-xs italic pl-7 flex-1">
+                                            &quot;{pin.descripcion}&quot;
+                                          </p>
+                                        ) : (
+                                          <span className="text-zinc-500 text-[11px] italic pl-7">
+                                            Sin observación escrita.
+                                          </span>
+                                        )}
+
+                                        {fotosPin.length > 0 && (
+                                          <div className="flex items-center gap-1.5 shrink-0 pl-7 sm:pl-0">
+                                            <span className="text-[10px] text-zinc-500 font-mono">
+                                              Evidencia ({fotosPin.length}/3):
+                                            </span>
+                                            {fotosPin.map((url, fIdx) => (
+                                              <a
+                                                key={fIdx}
+                                                href={url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="w-8 h-8 rounded-lg overflow-hidden border border-white/20 bg-black block group relative"
+                                                title="Ver foto en tamaño completo"
+                                              >
+                                                <img
+                                                  src={url}
+                                                  alt="Evidencia"
+                                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                                                />
+                                              </a>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Lista de trabajos ya cotizados para este pin específico */}
+                                      {itemsCotizadosPin.length > 0 && (
+                                        <div className="pl-7 flex flex-wrap items-center gap-2 pt-1 border-t border-white/5">
+                                          <span className="text-[10px] text-zinc-400 font-medium">Cotizado:</span>
+                                          {itemsCotizadosPin.map((it) => (
+                                            <span
+                                              key={it.id}
+                                              className="px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-medium flex items-center gap-1.5"
+                                            >
+                                              <span>{it.name ? (it.name.trim().toLowerCase().startsWith("fondo") ? "Masilla" : it.name.trim().split(/[\s/]+/)[0]) : "Ítem"}</span>
+                                              <span className="font-mono font-bold">${Number(it.price).toFixed(2)}</span>
+                                              <button
+                                                type="button"
+                                                onClick={() => handleEliminarItemEtapa4(it.id)}
+                                                className="text-emerald-400 hover:text-rose-400 font-bold text-xs ml-1 cursor-pointer"
+                                                title="Quitar ítem"
+                                              >
+                                                ✕
+                                              </button>
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+
+                                      {/* Formulario / Selector rápido inline cuando se pulsa + Cotizar Solución */}
+                                      {estaCotizando && (
+                                        <div className="mt-2 p-2.5 rounded-xl bg-black/60 border border-cyan-500/30 animate-fade-in pl-7">
+                                          {/* Fila única minimalista y moderna: Buscador interactivo + Campo Valor ($) + Botón Sumar */}
+                                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 relative">
+                                            {/* Input Buscador con dropdown flotante */}
+                                            <div className="relative flex-1 min-w-[200px]">
+                                              <input
+                                                type="text"
+                                                value={cotizarPinNombre}
+                                                onChange={(e) => {
+                                                  setCotizarPinNombre(e.target.value);
+                                                  setDropdownBuscadorPinAbierto(true);
+                                                }}
+                                                onFocus={() => setDropdownBuscadorPinAbierto(true)}
+                                                placeholder="🔍 Buscar o escribir servicio / repuesto..."
+                                                className="w-full h-8 pl-3 pr-7 rounded-lg bg-black border border-cyan-500/30 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-cyan-400"
+                                              />
+                                              {cotizarPinNombre && (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    setCotizarPinNombre("");
+                                                    setDropdownBuscadorPinAbierto(false);
+                                                  }}
+                                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white text-xs font-bold"
+                                                >
+                                                  ✕
+                                                </button>
+                                              )}
+
+                                              {/* Dropdown de catálogo flotante al buscar */}
+                                              {dropdownBuscadorPinAbierto && (
+                                                <div className="absolute left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto rounded-xl bg-[#0c0d12] border border-cyan-500/30 shadow-2xl z-50 divide-y divide-white/5">
+                                                  {(() => {
+                                                    const query = cotizarPinNombre.toLowerCase().trim();
+                                                    const filtrados = catalogoItemsCotizar.filter((item) => {
+                                                      if (!query) return true;
+                                                      return (
+                                                        item.name.toLowerCase().includes(query) ||
+                                                        item.category.toLowerCase().includes(query)
+                                                      );
+                                                    });
+
+                                                    if (filtrados.length === 0) {
+                                                      return (
+                                                        <div className="p-2.5 text-center text-xs text-zinc-500 italic">
+                                                          No hay coincidencias. Puedes escribir la descripción manualmente.
+                                                        </div>
+                                                      );
+                                                    }
+
+                                                    return filtrados.slice(0, 10).map((item, idx) => (
+                                                      <div
+                                                        key={idx}
+                                                        onMouseDown={() => {
+                                                          setCotizarPinNombre(item.name);
+                                                          setCotizarPinTipo(item.type);
+                                                          setCotizarPinPrecio(item.price.toString());
+                                                          setDropdownBuscadorPinAbierto(false);
+                                                        }}
+                                                        className="p-2 hover:bg-cyan-500/15 cursor-pointer flex items-center justify-between gap-2 transition-colors"
+                                                      >
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                          <span className="text-xs">{item.type === "PART" ? "📦" : "🛠️"}</span>
+                                                          <div className="min-w-0">
+                                                            <span className="text-xs font-semibold text-white truncate block">{item.name}</span>
+                                                            <span className="text-[10px] text-zinc-400 block truncate">{item.category}</span>
+                                                          </div>
+                                                        </div>
+                                                        <span className="font-mono font-bold text-xs text-emerald-400 shrink-0">
+                                                          ${Number(item.price).toFixed(2)}
+                                                        </span>
+                                                      </div>
+                                                    ));
+                                                  })()}
+                                                </div>
+                                              )}
+                                            </div>
+
+                                            {/* Campo Valor */}
+                                            <div className="relative w-full sm:w-32 shrink-0">
+                                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 text-xs font-semibold">Valor $</span>
+                                              <input
+                                                type="number"
+                                                step="0.01"
+                                                value={cotizarPinPrecio}
+                                                onChange={(e) => setCotizarPinPrecio(e.target.value)}
+                                                placeholder="0.00"
+                                                className="w-full h-8 pl-16 pr-2 rounded-lg bg-black border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-cyan-500/50"
+                                              />
+                                            </div>
+
+                                            {/* Botón Sumar */}
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                const p = parseFloat(cotizarPinPrecio) || 0;
+                                                handleCotizarPin(pin, cotizarPinNombre, p, cotizarPinTipo);
+                                                setDropdownBuscadorPinAbierto(false);
+                                              }}
+                                              className="h-8 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer active:scale-95 shrink-0 flex items-center justify-center gap-1 shadow-md shadow-emerald-600/20"
+                                            >
+                                              <span>+</span>
+                                              <span>Sumar</span>
+                                            </button>
+                                          </div>
+                                        </div>                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ));
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. AL FINAL: TIENDA */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3.5 shadow-xl">
+                  <div className="flex items-center gap-2 border-b border-white/[0.08] pb-2.5">
+                    <span className="text-base">🏪</span>
+                    <h4 className="text-xs sm:text-sm font-normal text-white uppercase tracking-wider">
+                      Tienda
+                    </h4>
+                  </div>
+
+                  {/* Filtros de Tipo y Buscador Principal */}
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setEtapa4FiltroTipo("ALL")}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                            etapa4FiltroTipo === "ALL"
+                              ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
+                              : "bg-white/5 text-zinc-400 hover:text-white border border-transparent"
+                          }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="p-2 rounded-xl bg-white/5">{card.icon}</div>
-                            <span className="text-[10px] text-zinc-500 group-hover:text-zinc-300 font-semibold">+ Sumar</span>
-                          </div>
-                          <div>
-                            <div className="text-xs font-semibold text-white leading-tight">{card.title}</div>
-                            <div className="text-[10px] text-zinc-400 truncate">{firstPreset.name}</div>
-                          </div>
+                          Todos
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEtapa4FiltroTipo("SERVICE")}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                            etapa4FiltroTipo === "SERVICE"
+                              ? "bg-purple-500/20 text-purple-300 border border-purple-500/40"
+                              : "bg-white/5 text-zinc-400 hover:text-white border border-transparent"
+                          }`}
+                        >
+                          <span>🛠️</span>
+                          <span>Servicios</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEtapa4FiltroTipo("PART")}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                            etapa4FiltroTipo === "PART"
+                              ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                              : "bg-white/5 text-zinc-400 hover:text-white border border-transparent"
+                          }`}
+                        >
+                          <span>📦</span>
+                          <span>Repuestos</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Input Buscador interactivo */}
+                    <div className="relative">
+                      <div className="relative flex items-center">
+                        <span className="absolute left-3 text-zinc-400 text-sm pointer-events-none">🔍</span>
+                        <input
+                          type="text"
+                          value={etapa4BusquedaCatalogo}
+                          onChange={(e) => {
+                            setEtapa4BusquedaCatalogo(e.target.value);
+                            setDropdownCatalogoAbierto(true);
+                          }}
+                          onFocus={() => setDropdownCatalogoAbierto(true)}
+                          placeholder="Buscar..."
+                          className="w-full h-10 pl-9 pr-8 rounded-xl bg-black/60 border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-cyan-500/50 transition-colors"
+                        />
+                        {etapa4BusquedaCatalogo && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEtapa4BusquedaCatalogo("");
+                              setDropdownCatalogoAbierto(false);
+                            }}
+                            className="absolute right-3 text-zinc-400 hover:text-white text-xs font-bold"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Dropdown o Lista interactiva con los resultados */}
+                      {dropdownCatalogoAbierto && etapa4BusquedaCatalogo.trim().length > 0 && (
+                        <div className="absolute left-0 right-0 top-full mt-1.5 max-h-64 overflow-y-auto rounded-xl bg-[#0c0d12] border border-cyan-500/30 shadow-2xl z-50 divide-y divide-white/5">
+                          {(() => {
+                            const query = etapa4BusquedaCatalogo.toLowerCase().trim();
+                            const filtrados = catalogoItemsCotizar.filter((item) => {
+                              if (etapa4FiltroTipo === "SERVICE" && item.type !== "SERVICE") return false;
+                              if (etapa4FiltroTipo === "PART" && item.type !== "PART") return false;
+                              if (!query) return true;
+                              return (
+                                item.name.toLowerCase().includes(query) ||
+                                (item.category && item.category.toLowerCase().includes(query)) ||
+                                (item as any).code && (item as any).code.toLowerCase().includes(query)
+                              );
+                            });
+
+                            if (filtrados.length === 0) {
+                              return (
+                                <div className="p-4 text-center text-xs text-zinc-500 italic">
+                                  No hay coincidencias en tu catálogo para &quot;{etapa4BusquedaCatalogo}&quot;.
+                                </div>
+                              );
+                            }
+
+                            return filtrados.slice(0, 15).map((item, idx) => (
+                              <div
+                                key={idx}
+                                onClick={() => {
+                                  handleAgregarItemPresupuesto(item);
+                                  setDropdownCatalogoAbierto(false);
+                                }}
+                                className="p-2.5 hover:bg-cyan-500/15 cursor-pointer flex items-center justify-between gap-3 transition-colors group"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div
+                                    className={`p-1.5 rounded-lg text-sm shrink-0 ${
+                                      item.type === "PART"
+                                        ? "bg-amber-500/15 text-amber-300"
+                                        : "bg-purple-500/15 text-purple-300"
+                                    }`}
+                                  >
+                                    {item.type === "PART" ? "📦" : "🛠️"}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span className="text-xs font-semibold text-white group-hover:text-cyan-300 truncate block">
+                                      {item.name}
+                                    </span>
+                                    <span className="text-[10px] text-zinc-400 block truncate">
+                                      {item.category} {(item as any).brand ? `• ${(item as any).brand}` : ""} {(item as any).stock !== undefined ? `• Stock: ${(item as any).stock}` : ""}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="font-mono font-bold text-xs text-emerald-400">
+                                    ${Number(item.price).toFixed(2)}
+                                  </span>
+                                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-colors">
+                                    + Sumar
+                                  </span>
+                                </div>
+                              </div>
+                            ));
+                          })()}
                         </div>
-                      );
-                    })}
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Lista de Ítems en la Orden */}
-                <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-zinc-200">
-                      Servicios y Repuestos en la Orden ({ordenActiva?.items.length || 0})
-                    </span>
-                    {rolUsuario === "OFICINA" && (
-                      <span className="text-xs font-mono font-bold text-emerald-400">
-                        Total: ${calculosPresupuestoEtapa4.total.toFixed(2)}
-                      </span>
-                    )}
+                {/* 4. RESUMEN Y CONSOLIDADO DE PRESUPUESTO CON TOTAL Y DESCARGA EN PDF */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4 shadow-xl">
+                  <div className="flex items-center gap-2 border-b border-white/[0.08] pb-3">
+                    <span className="text-base">💼</span>
+                    <h4 className="text-xs sm:text-sm font-normal text-white uppercase tracking-wider">
+                      Propuesta
+                    </h4>
                   </div>
 
-                  {!ordenActiva || ordenActiva.items.length === 0 ? (
-                    <div className="py-6 text-center text-xs text-zinc-500 italic">
-                      No hay servicios añadidos todavía. Toca una tarjeta rápida de arriba.
+                  {!ordenActiva || (ordenActiva.items.length === 0 && etapa4Items.length === 0) ? (
+                    <div className="py-6 text-center text-xs text-zinc-500 italic bg-black/20 rounded-xl border border-dashed border-white/5">
+                      No hay servicios ni repuestos añadidos todavía.
                     </div>
-                  ) : (
-                    <div className="divide-y divide-white/5">
-                      {ordenActiva.items.map((it) => (
-                        <div key={it.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
-                          <div className="space-y-0.5">
-                            <span className="font-semibold text-white block">{it.name}</span>
-                            <span className="text-[10px] text-zinc-400">
-                              Asignado: {it.empleado_nombre || it.empleado_id || "Taller general"} • Estado: {it.status}
+                  ) : (() => {
+                    const allItems = etapa4Items.length > 0 ? etapa4Items : (ordenActiva?.items || []);
+                    const itemsInspeccion = allItems.filter(it => 
+                      it.id.startsWith("pin-cot-") || (it.category && it.category.toLowerCase().includes("inspección"))
+                    );
+                    const itemsTienda = allItems.filter(it => 
+                      !it.id.startsWith("pin-cot-") && (!it.category || !it.category.toLowerCase().includes("inspección"))
+                    );
+
+                    const renderItemRow = (it: OrderItem) => {
+                      const esInspeccion = it.id.startsWith("pin-cot-") || (it.category && it.category.toLowerCase().includes("inspección"));
+                      const textoOrigenCorto = esInspeccion
+                        ? (it.category || "Inspección").replace(/^Inspección\s*[-–]\s*/i, "").replace(/[()]/g, "")
+                        : (it.category || "Tienda");
+
+                      return (
+                        <div key={it.id} className="py-3 flex items-center justify-between gap-3">
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <span className="font-normal text-white text-sm sm:text-base block truncate">
+                              {it.name}
                             </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-zinc-400 font-medium truncate">
+                                {textoOrigenCorto}
+                              </span>
+                            </div>
                           </div>
 
-                          <div className="flex items-center gap-3">
-                            {/* Si es oficina, mostrar precio unitario */}
-                            {rolUsuario === "OFICINA" && (
-                              <span className="font-mono text-zinc-300">
-                                ${(it.price || 0).toFixed(2)}
-                              </span>
-                            )}
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span className="font-mono text-emerald-400 font-bold text-sm sm:text-base">
+                              ${(Number(it.price) || 0).toFixed(2)}
+                            </span>
                             <button
                               type="button"
                               onClick={() => handleCiclarEstadoItem(it.id)}
-                              className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-[10px] text-zinc-300 cursor-pointer"
+                              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer transition-colors"
                             >
                               {it.status}
                             </button>
                             <button
                               type="button"
                               onClick={() => handleEliminarItemEtapa4(it.id)}
-                              className="text-zinc-500 hover:text-rose-400 text-xs cursor-pointer"
+                              className="text-zinc-500 hover:text-rose-400 text-sm cursor-pointer p-1.5 transition-colors"
+                              title="Eliminar de la orden"
                             >
                               ✕
                             </button>
                           </div>
                         </div>
-                      ))}
+                      );
+                    };
+
+                    return (
+                      <div className="space-y-3.5">
+                        {itemsInspeccion.length > 0 && (
+                          <div className="space-y-1.5 bg-black/25 p-3.5 rounded-xl border border-white/5">
+                            <div className="flex items-center justify-between px-1 pb-1.5 border-b border-purple-500/20">
+                              <span className="text-xs font-normal text-purple-300 uppercase tracking-wider">
+                                Inspección
+                              </span>
+                              <span className="text-xs text-purple-400/80 font-mono font-semibold">
+                                {itemsInspeccion.length}
+                              </span>
+                            </div>
+                            <div className="divide-y divide-white/5">
+                              {itemsInspeccion.map(renderItemRow)}
+                            </div>
+                          </div>
+                        )}
+
+                        {itemsTienda.length > 0 && (
+                          <div className="space-y-1.5 bg-black/25 p-3.5 rounded-xl border border-white/5">
+                            <div className="flex items-center justify-between px-1 pb-1.5 border-b border-cyan-500/20">
+                              <span className="text-xs font-normal text-cyan-300 uppercase tracking-wider">
+                                Tienda
+                              </span>
+                              <span className="text-xs text-cyan-400/80 font-mono font-semibold">
+                                {itemsTienda.length}
+                              </span>
+                            </div>
+                            <div className="divide-y divide-white/5">
+                              {itemsTienda.map(renderItemRow)}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Cuadro de Totales */}
+                  {ordenActiva && ordenActiva.items.length > 0 && (
+                    <div className="pt-3 border-t border-white/[0.08] flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => setModalPresupuestoPdfAbierto(true)}
+                          className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-600/30 active:scale-95"
+                        >
+                          <span>🖨️</span>
+                          <span>Descargar PDF</span>
+                        </button>
+                      </div>
+                      <div className="w-full sm:w-64 bg-black/50 p-3.5 rounded-xl border border-white/10 space-y-1.5 font-mono">
+                        <div className="flex justify-between text-zinc-300 text-xs sm:text-sm font-normal">
+                          <span>Subtotal:</span>
+                          <span>${calculosPresupuestoEtapa4.subtotal.toFixed(2)}</span>
+                        </div>
+                        {calculosPresupuestoEtapa4.discountAmount > 0 && (
+                          <div className="flex justify-between text-emerald-400 text-xs sm:text-sm font-normal">
+                            <span>Descuento:</span>
+                            <span>-${calculosPresupuestoEtapa4.discountAmount.toFixed(2)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-zinc-300 text-xs sm:text-sm font-normal">
+                          <span>IVA ({calculosPresupuestoEtapa4.taxRateNum}%):</span>
+                          <span>${calculosPresupuestoEtapa4.taxAmount.toFixed(2)}</span>
+                        </div>
+                        <div className="border-t border-white/10 pt-1.5 flex justify-between text-sm sm:text-base font-normal text-white">
+                          <span>TOTAL:</span>
+                          <span className="text-emerald-400 font-normal">${calculosPresupuestoEtapa4.total.toFixed(2)}</span>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
 
+                {/* Navegación entre pasos */}
                 <div className="flex items-center justify-between pt-2">
                   <button
                     type="button"
                     onClick={() => setEtapaActiva(2)}
-                    className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-normal text-zinc-300 cursor-pointer transition-colors"
                   >
-                    ← Anterior (Inspección)
+                    Anterior
                   </button>
                   <button
                     type="button"
                     onClick={() => setEtapaActiva(5)}
-                    className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-semibold cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-normal cursor-pointer transition-colors"
                   >
-                    Continuar a Aviso y Estado (Paso 4) →
+                    Continuar
                   </button>
                 </div>
+
+                {/* MODAL OFICIAL PARA DESCARGAR EL PRESUPUESTO EN PDF */}
+                <ModalPresupuestoPdf
+                  abierto={modalPresupuestoPdfAbierto}
+                  onCerrar={() => setModalPresupuestoPdfAbierto(false)}
+                  orden={ordenActiva}
+                />
               </div>
             )}
 
@@ -5138,7 +5690,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           disabled={guardandoEtapa7}
                           className="w-full h-11 rounded-xl bg-teal-500 hover:bg-teal-400 text-black text-xs sm:text-sm font-bold shadow-lg shadow-teal-500/20 transition-all cursor-pointer active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                         >
-                          <span>{guardandoEtapa7 ? "Guardando..." : "Guardar y Pasar a Caja (Paso 7) →"}</span>
+                          <span>{guardandoEtapa7 ? "Guardando..." : "Guardar Entrega y Firma"}</span>
                         </button>
                       </div>
 
@@ -5175,264 +5727,13 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-2">
+                <div className="flex items-center justify-start pt-2">
                   <button
                     type="button"
                     onClick={() => setEtapaActiva(5)}
                     className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
                   >
-                    ← Anterior (Aviso)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEtapaActiva(7)}
-                    className="px-4 py-2 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 text-teal-300 text-xs font-semibold cursor-pointer"
-                  >
-                    Siguiente: Cobro y Documentos (Paso 7) →
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ETAPA 7: COBRO CONECTADO AL POS DE OFICINA + DOCUMENTOS */}
-            {etapaActiva === 7 && (
-              <div className="w-full space-y-4 animate-fade-in">
-                <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-5">
-                  {/* SECCIÓN 1: CONEXIÓN DIRECTA CON EL MÓDULO POS DE OFICINA */}
-                  <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/25 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                        <h3 className="text-sm sm:text-base font-bold text-white">
-                          Conexión Directa con POS de Oficina (/pos/venta)
-                        </h3>
-                      </div>
-                      <p className="text-xs text-zinc-300 max-w-xl">
-                        Los servicios y repuestos registrados en garaje se transfieren a la caja de oficina con precios editables para el cobro oficial, sincronizando inventario y evitando cajas paralelas.
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        disabled={enviandoAPos || !ordenActiva}
-                        onClick={() => ordenActiva && handleEnviarAPosCaja(ordenActiva)}
-                        className="h-11 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs sm:text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all cursor-pointer active:scale-95 disabled:opacity-50 flex items-center gap-2"
-                      >
-                        <span>🚀</span>
-                        <span>
-                          {enviandoAPos
-                            ? "Transfiriendo..."
-                            : ordenActiva?.status === "EN_CAJA"
-                            ? "✓ En Oficina / Listo para Caja"
-                            : "Enviar a Oficina / Listo para Caja"}
-                        </span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => router.push("/pos/venta")}
-                        className="h-11 px-4 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
-                      >
-                        <span>Abrir POS →</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* SECCIÓN 2: ABONOS, PAGOS PARCIALES/TOTALES Y SALDO EN VIVO */}
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-                    {/* Tarjetas de Saldos en Vivo */}
-                    <div className="lg:col-span-5 space-y-3">
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-1 text-center">
-                          <span className="text-[10px] text-zinc-400 block uppercase font-medium">Total Orden</span>
-                          <strong className="text-white text-sm font-mono block">
-                            ${(Number(ordenActiva?.totalCost) || Number(calculosPresupuestoEtapa4.total) || 0).toFixed(2)}
-                          </strong>
-                        </div>
-                        <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-1 text-center">
-                          <span className="text-[10px] text-zinc-400 block uppercase font-medium">Abonado</span>
-                          <strong className="text-emerald-400 text-sm font-mono block">
-                            ${(ordenActiva?.totalPaid || 0).toFixed(2)}
-                          </strong>
-                        </div>
-                        <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-1 text-center">
-                          <span className="text-[10px] text-zinc-400 block uppercase font-medium">Saldo Pendiente</span>
-                          <strong className="text-amber-400 text-sm font-mono block">
-                            ${(ordenActiva?.balanceDue !== undefined ? ordenActiva.balanceDue : Math.max(0, (Number(ordenActiva?.totalCost) || Number(calculosPresupuestoEtapa4.total) || 0) - (ordenActiva?.totalPaid || 0))).toFixed(2)}
-                          </strong>
-                        </div>
-                      </div>
-
-                      {/* Historial de Abonos Registrados */}
-                      <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2">
-                        <span className="text-xs font-semibold text-zinc-300 block">
-                          Abonos y Pagos Registrados ({(ordenActiva?.payments || []).length})
-                        </span>
-                        <div className="max-h-36 overflow-y-auto space-y-1.5 divide-y divide-white/5 text-xs">
-                          {(ordenActiva?.payments || []).length === 0 ? (
-                            <div className="text-center py-4 text-zinc-500 italic text-[11px]">
-                              Sin abonos previos. Registra uno al lado.
-                            </div>
-                          ) : (
-                            ordenActiva?.payments?.map((p) => (
-                              <div key={p.id} className="pt-1.5 flex items-center justify-between text-zinc-300">
-                                <div>
-                                  <strong className="text-white font-medium">{p.method}</strong>
-                                  <span className="text-[10px] text-zinc-500 block">{p.reference} • {p.date}</span>
-                                </div>
-                                <span className="font-mono font-bold text-emerald-400">+${Number(p.amount).toFixed(2)}</span>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Formulario de Registro Rápido de Abonos / Pasarela */}
-                    <div className="lg:col-span-7 p-4 rounded-xl bg-black/40 border border-white/10 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-zinc-200">
-                          Registrar Abono o Pago Inmediato
-                        </span>
-                        <span className="text-[11px] text-zinc-400">Actualiza saldo automáticamente</span>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-[11px] text-zinc-400 block mb-1">Monto del Abono ($) *</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={etapa8AbonoMonto}
-                            onChange={(e) => setEtapa8AbonoMonto(e.target.value)}
-                            placeholder="0.00"
-                            className="w-full h-10 px-3 rounded-xl bg-black/60 border border-white/10 text-white font-mono text-sm focus:outline-none focus:border-emerald-500/60"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[11px] text-zinc-400 block mb-1">Forma de Pago *</label>
-                          <select
-                            value={etapa8AbonoMetodo}
-                            onChange={(e) => setEtapa8AbonoMetodo(e.target.value as any)}
-                            className="w-full h-10 px-3 rounded-xl bg-black/60 border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500/60"
-                          >
-                            <option value="EFECTIVO">💵 Efectivo</option>
-                            <option value="TARJETA">💳 Tarjeta de Débito / Crédito</option>
-                            <option value="TRANSFERENCIA">🏦 Transferencia Bancaria</option>
-                            <option value="LINK_PAGO">🔗 Link de Pago Web (Pasarela)</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                        <input
-                          type="text"
-                          value={etapa8AbonoReferencia}
-                          onChange={(e) => setEtapa8AbonoReferencia(e.target.value)}
-                          placeholder="Referencia / N° Comprobante / Voucher..."
-                          className="flex-1 h-10 px-3 rounded-xl bg-black/60 border border-white/10 text-white text-xs focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          disabled={etapa8RegistrandoPago || !etapa8AbonoMonto}
-                          onClick={() => handleRegistrarAbonoPagoEtapa8()}
-                          className="h-10 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-                        >
-                          {etapa8RegistrandoPago ? "Guardando..." : "+ Registrar Abono"}
-                        </button>
-                      </div>
-
-                      {etapa8AbonoMetodo === "LINK_PAGO" && (
-                        <div className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs flex items-center justify-between text-blue-200">
-                          <span>Pasarela activa: Link de pago web para el cliente.</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (ordenActiva) {
-                                const url = `${window.location.origin}/taller/seguimiento?orden=${ordenActiva.orderNumber}&pin=${etapa6TrackingPin}&pago=1`;
-                                navigator.clipboard.writeText(url);
-                                mostrarToast("Link de pago copiado");
-                              }
-                            }}
-                            className="px-2.5 py-1 rounded-md bg-blue-500/20 hover:bg-blue-500/30 text-[11px] font-semibold text-blue-300 cursor-pointer"
-                          >
-                            Copiar Link de Pago Web
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* SECCIÓN 3: BARRA FINAL DE 3 BOTONES CON ICONOS TRANSPARENTES SUAVES */}
-                  <div className="space-y-2 pt-2 border-t border-white/5">
-                    <span className="text-xs font-semibold text-zinc-300 block">
-                      Emisión de Documentos en 1 Clic:
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      {/* Botón 1: Descargar / Imprimir Orden en PDF */}
-                      <button
-                        type="button"
-                        onClick={() => setModalImpresionDoc("PDF")}
-                        className="h-14 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] backdrop-blur-md border border-white/[0.08] text-xs font-semibold text-zinc-200 hover:text-white flex items-center justify-center gap-3 transition-all cursor-pointer active:scale-95 shadow-sm group"
-                      >
-                        <div className="p-2 rounded-xl bg-white/5 group-hover:bg-white/10 transition-colors">
-                          <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                          </svg>
-                        </div>
-                        <div className="text-left">
-                          <span className="block font-bold">1. Orden en PDF con Logo</span>
-                          <span className="text-[10px] text-zinc-400">Reporte oficial con firma</span>
-                        </div>
-                      </button>
-
-                      {/* Botón 2: Imprimir Ticket Térmico 80mm/58mm */}
-                      <button
-                        type="button"
-                        onClick={() => setModalImpresionDoc("TICKET")}
-                        className="h-14 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] backdrop-blur-md border border-white/[0.08] text-xs font-semibold text-zinc-200 hover:text-white flex items-center justify-center gap-3 transition-all cursor-pointer active:scale-95 shadow-sm group"
-                      >
-                        <div className="p-2 rounded-xl bg-white/5 group-hover:bg-white/10 transition-colors">
-                          <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.656" />
-                          </svg>
-                        </div>
-                        <div className="text-left">
-                          <span className="block font-bold">2. Ticket Térmico</span>
-                          <span className="text-[10px] text-zinc-400">POS 80mm / 58mm</span>
-                        </div>
-                      </button>
-
-                      {/* Botón 3: Imprimir Etiqueta con Código QR */}
-                      <button
-                        type="button"
-                        onClick={() => setModalImpresionDoc("ETIQUETA_QR")}
-                        className="h-14 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] backdrop-blur-md border border-white/[0.08] text-xs font-semibold text-zinc-200 hover:text-white flex items-center justify-center gap-3 transition-all cursor-pointer active:scale-95 shadow-sm group"
-                      >
-                        <div className="p-2 rounded-xl bg-white/5 group-hover:bg-white/10 transition-colors">
-                          <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 14.625h3v3h-3zM18 18h3v3h-3zM18 13.5h3v1.5H18zM13.5 19.5h1.5v3h-1.5z" />
-                          </svg>
-                        </div>
-                        <div className="text-left">
-                          <span className="block font-bold">3. Etiqueta con QR</span>
-                          <span className="text-[10px] text-zinc-400">Para llave y parabrisas</span>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setEtapaActiva(6)}
-                    className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
-                  >
-                    ← Anterior (Firma)
+                    Anterior
                   </button>
                 </div>
               </div>
