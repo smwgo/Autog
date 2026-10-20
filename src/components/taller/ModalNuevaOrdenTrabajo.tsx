@@ -337,10 +337,10 @@ export default function ModalNuevaOrdenTrabajo({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-3xl lg:max-w-4xl bg-[#141417] text-white border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col min-h-[520px] max-h-[90vh]"
+        className="w-full max-w-3xl lg:max-w-4xl bg-[#141417] text-white border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] transition-all"
       >
         {/* Cabecera Superior: Título + Stepper Deslizable + Botón X */}
-        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-black/20">
+        <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-white/10 flex items-center justify-between bg-black/20">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-2xl bg-blue-600/20 border border-blue-500/30 text-blue-400 flex items-center justify-center font-bold text-sm">
               OT
@@ -431,7 +431,7 @@ export default function ModalNuevaOrdenTrabajo({
         </div>
 
         {/* Contenido Principal con Contenedor Deslizable */}
-        <div className="flex-1 overflow-y-auto p-6 sm:p-7 space-y-5">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-5">
           {/* =================================================================
               PASO 1: BUSCADOR Y SELECCIÓN DE CLIENTE (O FORMULARIO COMPLETO)
               ================================================================= */}
@@ -1351,7 +1351,7 @@ export default function ModalNuevaOrdenTrabajo({
         </div>
 
         {/* Pie Inferior: Cancelar + Navegación + Crear Orden */}
-        <div className="px-6 py-4 border-t border-white/10 flex items-center justify-between bg-black/30">
+        <div className="px-4 py-3 sm:px-6 sm:py-4 border-t border-white/10 flex items-center justify-between bg-black/30">
           <button
             type="button"
             onClick={onClose}
