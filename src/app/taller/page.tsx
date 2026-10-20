@@ -9,6 +9,7 @@ import InspeccionVehiculo from "@/components/taller/InspeccionVehiculo";
 import ModalNuevaOrdenTrabajo from "@/components/taller/ModalNuevaOrdenTrabajo";
 import ModalPresupuestoPdf from "@/components/taller/ModalPresupuestoPdf";
 import LubricentroExpress from "./components/LubricentroExpress";
+import { getClientActiveBranch, getClientUserBranch } from "@/lib/branch";
 
 // ============================================================================
 // INTERFACES Y TIPOS OPERATIVOS
@@ -95,6 +96,8 @@ export interface UnifiedOrder {
   paymentGatewayUrl?: string;
   posRequestId?: string | null;
   stockDeducted?: boolean;
+  branch?: string;
+  transferredFrom?: string | null;
 }
 
 export interface DeliveryChecklistData {
@@ -778,6 +781,27 @@ export default function TallerPanel() {
     }
   };
 
+  // Transferir orden de trabajo entre Principal y Sucursal
+  const handleTransferirOrdenSucursal = async (auto: UnifiedOrder, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    try {
+      const res = await fetch("/api/taller/operacion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "TRANSFERIR_ORDEN_SUCURSAL",
+          orderId: auto.id,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await cargarOperacionInicial(true);
+      }
+    } catch (err) {
+      console.error("Error al transferir orden entre sedes:", err);
+    }
+  };
+
   const handleOrdenCreadaDesdeModal = (nuevaOrden: UnifiedOrder, cliente?: any, tipo?: "Taller" | "Lubricentro") => {
     setOrdenActiva(nuevaOrden);
     setAutosEnPista((prev) => [
@@ -1191,7 +1215,9 @@ export default function TallerPanel() {
   const cargarOperacionInicial = useCallback(async (selectFirstIfNone = true) => {
     try {
       setCargandoInicial(true);
-      const res = await fetch("/api/taller/operacion");
+      const uBranch = getClientUserBranch();
+      const sActiva = getClientActiveBranch("/taller");
+      const res = await fetch(`/api/taller/operacion?sede=${sActiva}&userBranch=${uBranch}`);
       if (!res.ok) {
         console.warn(`Respuesta no exitosa al cargar taller (${res.status})`);
         return;
@@ -1220,13 +1246,15 @@ export default function TallerPanel() {
               } catch {}
             }
             if (!targetOrder && prev) {
-              targetOrder = pista.find((o) => o.id === prev.id || o.orderNumber === prev.orderNumber) || prev;
+              targetOrder = pista.find((o) => o.id === prev.id || o.orderNumber === prev.orderNumber) || null;
             }
             const finalOrder = targetOrder || pista[0];
             setFotosRecepcion(finalOrder.receptionPhotos || []);
             setKmActualInput(finalOrder.mileage ? String(finalOrder.mileage) : "");
             return finalOrder;
           });
+        } else if (selectFirstIfNone && pista.length === 0) {
+          setOrdenActiva(null);
         }
       }
     } catch (err) {
@@ -1241,7 +1269,12 @@ export default function TallerPanel() {
     const retryTimer = setTimeout(() => {
       cargarOperacionInicial(true);
     }, 1500);
-    return () => clearTimeout(retryTimer);
+    const handleBranchChange = () => cargarOperacionInicial(true);
+    window.addEventListener("autog-branch-change", handleBranchChange);
+    return () => {
+      clearTimeout(retryTimer);
+      window.removeEventListener("autog-branch-change", handleBranchChange);
+    };
   }, [cargarOperacionInicial]);
 
   useEffect(() => {
@@ -6944,7 +6977,15 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           <span className="text-[11px] font-mono text-zinc-400 font-normal">
                             Orden: {auto.orderNumber.startsWith("#") ? auto.orderNumber : `#${auto.orderNumber}`}
                           </span>
-
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              auto.branch === "SUCURSAL"
+                                ? "bg-amber-500/20 text-amber-300 border-amber-500/35"
+                                : "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                            }`}
+                          >
+                            {auto.branch === "SUCURSAL" ? "Sucursal" : "Principal"}
+                          </span>
 
                           {estaPausado && (
                             <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-normal flex items-center gap-1">
@@ -6989,6 +7030,20 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                             <span>Pausar</span>
                           </button>
                         )}
+
+                        <button
+                          type="button"
+                          onClick={(e) => handleTransferirOrdenSucursal(auto, e)}
+                          className={`h-8 px-2.5 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer border ${
+                            auto.branch === "SUCURSAL"
+                              ? "bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border-amber-500/35"
+                              : "bg-white/5 hover:bg-amber-500/20 text-zinc-300 hover:text-amber-300 border-white/10 hover:border-amber-500/35"
+                          }`}
+                          title={auto.branch === "SUCURSAL" ? "Transferir este trabajo a Principal" : "Transferir este trabajo a Sucursal"}
+                        >
+                          <span>⇄</span>
+                          <span>{auto.branch === "SUCURSAL" ? "Principal" : "Sucursal"}</span>
+                        </button>
 
                         <button
                           type="button"

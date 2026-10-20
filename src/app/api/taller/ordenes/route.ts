@@ -29,8 +29,13 @@ export async function GET(request: Request) {
     const estado = searchParams.get("estado");
     const busqueda = searchParams.get("busqueda");
     const idParam = searchParams.get("id") || searchParams.get("orderNumber");
+    const sede = (searchParams.get("sede") || "PRINCIPAL").toUpperCase();
+    const userBranch = (searchParams.get("userBranch") || "PRINCIPAL").toUpperCase();
 
     return await withRetry(async () => {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "branch" TEXT DEFAULT 'PRINCIPAL'`).catch(() => {});
+      await prisma.$executeRawUnsafe(`ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "transferredFrom" TEXT`).catch(() => {});
+
       let query = 'SELECT * FROM "WorkshopOrder" WHERE 1=1';
       const params: any[] = [];
       let pIdx = 1;
@@ -56,6 +61,17 @@ export async function GET(request: Request) {
 
       const rows: any = await prisma.$queryRawUnsafe(query, ...params);
 
+      // Filtrar por jerarquía Principal + Sucursal si no es consulta por id específico
+      const filteredRows = idParam
+        ? rows
+        : rows.filter((r: any) => {
+            const orderBranch = (r.branch || "PRINCIPAL").toUpperCase();
+            if (userBranch === "SUCURSAL") return orderBranch === "SUCURSAL";
+            if (sede === "SUCURSAL") return orderBranch === "SUCURSAL";
+            if (sede === "PRINCIPAL") return orderBranch === "PRINCIPAL";
+            return true;
+          });
+
       // Consultar facturas para verificar estado de facturación de cada orden
       let invoiceByOrder = new Map<string, any>();
       try {
@@ -72,7 +88,7 @@ export async function GET(request: Request) {
       }
 
       // Mapear campos para la UI
-      const orders = rows.map((r: any) => {
+      const orders = filteredRows.map((r: any) => {
         let services: string[] = [];
         try {
           services = r.servicesJson ? JSON.parse(r.servicesJson) : [];
@@ -154,6 +170,8 @@ export async function GET(request: Request) {
           quoteStatus: r.quoteStatus,
           notes: r.notes,
           totalCost: r.totalCost ? Number(r.totalCost) : 0,
+          branch: r.branch || "PRINCIPAL",
+          transferredFrom: r.transferredFrom || null,
           isBilled,
           billingStatus,
           invoiceInfo: linkedInvoice
@@ -299,7 +317,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, status, progress, mechanic, notes, billingStatus, isBilled } = body;
+    const { id, action, targetBranch, status, progress, mechanic, notes, billingStatus, isBilled } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -309,6 +327,62 @@ export async function PUT(request: Request) {
     }
 
     return await withRetry(async () => {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "branch" TEXT DEFAULT 'PRINCIPAL'`).catch(() => {});
+      await prisma.$executeRawUnsafe(`ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "transferredFrom" TEXT`).catch(() => {});
+
+      if (action === "TRANSFERIR_SUCURSAL") {
+        const ordRows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopOrder" WHERE id = $1 OR "orderNumber" = $1 LIMIT 1`,
+          id
+        );
+        if (!ordRows || ordRows.length === 0) {
+          return NextResponse.json(
+            { success: false, error: "Orden no encontrada." },
+            { status: 404 }
+          );
+        }
+        const ord = ordRows[0];
+        const currentBranch = (ord.branch || "PRINCIPAL").toUpperCase();
+        const destBranch = targetBranch
+          ? String(targetBranch).toUpperCase() === "SUCURSAL"
+            ? "SUCURSAL"
+            : "PRINCIPAL"
+          : currentBranch === "SUCURSAL"
+          ? "PRINCIPAL"
+          : "SUCURSAL";
+
+        await prisma.$executeRawUnsafe(
+          `UPDATE "WorkshopOrder"
+           SET "branch" = $2,
+               "transferredFrom" = $3,
+               "updatedAt" = NOW()
+           WHERE "id" = $1`,
+          ord.id,
+          destBranch,
+          currentBranch
+        );
+
+        if (destBranch === "SUCURSAL") {
+          if (ord.customerId) {
+            await prisma.$executeRawUnsafe(
+              `UPDATE "Customer" SET "assignedToSucursal" = true WHERE "id" = $1`,
+              ord.customerId
+            ).catch(() => {});
+          } else if (ord.client) {
+            await prisma.$executeRawUnsafe(
+              `UPDATE "Customer" SET "assignedToSucursal" = true WHERE LOWER("name") = LOWER($1)`,
+              ord.client
+            ).catch(() => {});
+          }
+        }
+
+        return NextResponse.json({
+          success: true,
+          branch: destBranch,
+          message: `Orden ${ord.orderNumber} transferida a ${destBranch === "SUCURSAL" ? "Sucursal" : "Principal"} exitosamente.`,
+        });
+      }
+
       let deliveryStatusVal: string | null = null;
       if (billingStatus === "Facturada" || isBilled === true) {
         deliveryStatusVal = "Facturado";

@@ -1,12 +1,34 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+let customerBranchSchemaEnsured = false;
+
+async function ensureCustomerBranchSchema() {
+  if (customerBranchSchemaEnsured) return;
+  try {
+    await prisma
+      .$executeRawUnsafe(
+        `ALTER TABLE "Customer" ADD COLUMN IF NOT EXISTS "branch" TEXT NOT NULL DEFAULT 'PRINCIPAL'`
+      )
+      .catch(() => {});
+    await prisma
+      .$executeRawUnsafe(
+        `ALTER TABLE "Customer" ADD COLUMN IF NOT EXISTS "assignedToSucursal" BOOLEAN NOT NULL DEFAULT false`
+      )
+      .catch(() => {});
+    customerBranchSchemaEnsured = true;
+  } catch {}
+}
+
 // GET: Consultar clientes y estadísticas en Neon
 export async function GET(request: Request) {
   try {
+    await ensureCustomerBranchSchema();
     const { searchParams } = new URL(request.url);
     const busqueda = searchParams.get("busqueda")?.trim().toLowerCase() || "";
     const filtro = searchParams.get("filtro") || "todos";
+    const sedeParam = (searchParams.get("sede") || "").toUpperCase();
+    const userBranchParam = (searchParams.get("userBranch") || "PRINCIPAL").toUpperCase();
 
     const where: any = {};
 
@@ -35,7 +57,7 @@ export async function GET(request: Request) {
     }
 
     // Traer clientes filtrados en PostgreSQL con límite controlado
-    const customers = await prisma.customer.findMany({
+    const rawCustomers = await prisma.customer.findMany({
       where,
       include: {
         vehicles: true,
@@ -45,6 +67,42 @@ export async function GET(request: Request) {
       },
       take: 200,
     });
+
+    // Consultar branch y assignedToSucursal directo de Neon para máxima compatibilidad
+    const branchRows = (await prisma
+      .$queryRawUnsafe(`SELECT "id", "branch", "assignedToSucursal" FROM "Customer"`)
+      .catch(() => [])) as any[];
+    const branchMap = new Map<string, { branch: string; assignedToSucursal: boolean }>();
+    branchRows.forEach((r) => {
+      branchMap.set(r.id, {
+        branch: r.branch || "PRINCIPAL",
+        assignedToSucursal: Boolean(r.assignedToSucursal),
+      });
+    });
+
+    const customers = rawCustomers
+      .map((c) => {
+        const bInfo = branchMap.get(c.id) || { branch: "PRINCIPAL", assignedToSucursal: false };
+        return {
+          ...c,
+          branch: bInfo.branch,
+          assignedToSucursal: bInfo.assignedToSucursal,
+        };
+      })
+      .filter((c) => {
+        // Regla estricta: si el operador es de SUCURSAL, solo puede ver clientes de SUCURSAL o asignados a SUCURSAL
+        if (userBranchParam === "SUCURSAL") {
+          return c.branch === "SUCURSAL" || c.assignedToSucursal === true;
+        }
+        // Si el operador es de PRINCIPAL y filtró específicamente por SUCURSAL o PRINCIPAL
+        if (sedeParam === "SUCURSAL") {
+          return c.branch === "SUCURSAL" || c.assignedToSucursal === true;
+        }
+        if (sedeParam === "PRINCIPAL") {
+          return c.branch === "PRINCIPAL";
+        }
+        return true;
+      });
 
     // Calcular visitas al taller por placa para cada vehículo
     const allPlates = customers.flatMap((c) => c.vehicles.map((v) => v.plate.trim())).filter(Boolean);
@@ -169,6 +227,14 @@ export async function POST(request: Request) {
 
     // Si incluyó datos de vehículo
     const tieneVehiculo = placa && placa.trim().length > 0;
+    const branchOrigen =
+      String(body.branch || "PRINCIPAL").toUpperCase() === "SUCURSAL"
+        ? "SUCURSAL"
+        : "PRINCIPAL";
+    const asignadoSucursal =
+      branchOrigen === "SUCURSAL" || Boolean(body.assignedToSucursal);
+
+    await ensureCustomerBranchSchema();
 
     const clienteCreado = await prisma.customer.create({
       data: {
@@ -202,9 +268,22 @@ export async function POST(request: Request) {
       },
     });
 
+    await prisma
+      .$executeRawUnsafe(
+        `UPDATE "Customer" SET "branch" = $2, "assignedToSucursal" = $3 WHERE "id" = $1`,
+        clienteCreado.id,
+        branchOrigen,
+        asignadoSucursal
+      )
+      .catch(() => {});
+
     return NextResponse.json({
       success: true,
-      cliente: clienteCreado,
+      cliente: {
+        ...clienteCreado,
+        branch: branchOrigen,
+        assignedToSucursal: asignadoSucursal,
+      },
     }, { status: 201 });
   } catch (error: any) {
     console.error("Error al registrar cliente en Neon:", error);
@@ -267,12 +346,16 @@ export async function DELETE(request: Request) {
   }
 }
 
-// PUT: Actualizar cliente
+// PUT: Actualizar cliente o transferir/asignar a Sucursal
 export async function PUT(request: Request) {
   try {
+    await ensureCustomerBranchSchema();
     const body = await request.json();
     const {
       id,
+      action,
+      assignedToSucursal,
+      branch,
       name,
       type,
       phone,
@@ -291,6 +374,31 @@ export async function PUT(request: Request) {
 
     if (!id) {
       return NextResponse.json({ success: false, error: "ID requerido para actualizar" }, { status: 400 });
+    }
+
+    if (action === "TRANSFERIR_SUCURSAL") {
+      const targetAssigned = Boolean(assignedToSucursal);
+      const targetBranch = branch ? String(branch).toUpperCase() : undefined;
+      if (targetBranch) {
+        await prisma.$executeRawUnsafe(
+          `UPDATE "Customer" SET "assignedToSucursal" = $2, "branch" = $3, "updatedAt" = NOW() WHERE "id" = $1`,
+          id,
+          targetAssigned,
+          targetBranch
+        );
+      } else {
+        await prisma.$executeRawUnsafe(
+          `UPDATE "Customer" SET "assignedToSucursal" = $2, "updatedAt" = NOW() WHERE "id" = $1`,
+          id,
+          targetAssigned
+        );
+      }
+      return NextResponse.json({
+        success: true,
+        id,
+        assignedToSucursal: targetAssigned,
+        branch: targetBranch,
+      });
     }
 
     const updateData: any = {

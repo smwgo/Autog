@@ -661,24 +661,27 @@ enum RouteStopStatus {
 }
 
 model Customer {
-  id             String          @id @default(cuid())
-  identification String          @unique
-  name           String
-  type           String          @default("Personal")
-  phone          String
-  email          String?
-  address        String?
-  vip            Boolean         @default(false)
-  notes          String?
-  lastVisit      DateTime?       @default(now())
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  vehicles       Vehicle[]
-  sales          Sale[]
-  workshopOrders WorkshopOrder[]
+  id                 String          @id @default(cuid())
+  identification     String          @unique
+  name               String
+  type               String          @default("Personal")
+  phone              String
+  email              String?
+  address            String?
+  vip                Boolean         @default(false)
+  notes              String?
+  branch             String          @default("PRINCIPAL")
+  assignedToSucursal Boolean         @default(false)
+  lastVisit          DateTime?       @default(now())
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  vehicles           Vehicle[]
+  sales              Sale[]
+  workshopOrders     WorkshopOrder[]
 
   @@index([identification])
   @@index([name])
+  @@index([branch])
 }
 
 model Vehicle {
@@ -898,6 +901,8 @@ model WorkshopOrder {
   paymentGatewayUrl       String?
   posRequestId            String?
   stockDeducted           Boolean   @default(false)
+  branch                  String    @default("PRINCIPAL")
+  transferredFrom         String?
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
   customer            Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)

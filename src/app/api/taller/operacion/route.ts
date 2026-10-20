@@ -59,6 +59,10 @@ async function ensureTallerSchema() {
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "paymentGatewayUrl" TEXT`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "posRequestId" TEXT`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "stockDeducted" BOOLEAN DEFAULT false`,
+      `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "branch" TEXT DEFAULT 'PRINCIPAL'`,
+      `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "transferredFrom" TEXT`,
+      `ALTER TABLE "Customer" ADD COLUMN IF NOT EXISTS "branch" TEXT DEFAULT 'PRINCIPAL'`,
+      `ALTER TABLE "Customer" ADD COLUMN IF NOT EXISTS "assignedToSucursal" BOOLEAN DEFAULT false`,
       `ALTER TABLE "WorkshopHistory" ADD COLUMN IF NOT EXISTS "nextOilChangeKm" INTEGER`,
       `ALTER TABLE "WorkshopHistory" ADD COLUMN IF NOT EXISTS "photosJson" TEXT DEFAULT '[]'`,
     ];
@@ -277,6 +281,8 @@ function mapOrderRow(r: any) {
     quoteApprovedAt: r.quoteApprovedAt || null,
     posRequestId: r.posRequestId || null,
     stockDeducted: Boolean(r.stockDeducted),
+    branch: r.branch || "PRINCIPAL",
+    transferredFrom: r.transferredFrom || null,
     updatedAt: r.updatedAt,
   };
 }
@@ -290,6 +296,8 @@ export async function GET(request: Request) {
     const quoteTokenParam = (searchParams.get("quoteToken") || "").trim();
     const trackingOrderParam = (searchParams.get("trackingOrder") || "").trim();
     const trackingPinParam = (searchParams.get("trackingPin") || "").trim();
+    const sedeParam = (searchParams.get("sede") || "PRINCIPAL").toUpperCase();
+    const userBranchParam = (searchParams.get("userBranch") || "PRINCIPAL").toUpperCase();
 
     return await withRetry(async () => {
       await ensureTallerSchema();
@@ -518,34 +526,53 @@ export async function GET(request: Request) {
       // 2.5 Búsqueda de clientes para Flotante 01 (Etapa 1: Cliente - por nombre, RUC/RUT, teléfono o correo)
       const searchCustomerRaw = (searchParams.get("searchCustomer") || "").trim();
       if (searchCustomerRaw) {
-        const customersFound = await prisma.customer.findMany({
-          where: {
-            OR: [
-              { name: { contains: searchCustomerRaw, mode: "insensitive" } },
-              { identification: { contains: searchCustomerRaw, mode: "insensitive" } },
-              { phone: { contains: searchCustomerRaw, mode: "insensitive" } },
-              { email: { contains: searchCustomerRaw, mode: "insensitive" } },
-            ],
-          },
-          include: {
-            vehicles: true,
-          },
-          orderBy: { updatedAt: "desc" },
-          take: 15,
-        });
+        const [customersFound, custBranchRows] = await Promise.all([
+          prisma.customer.findMany({
+            where: {
+              OR: [
+                { name: { contains: searchCustomerRaw, mode: "insensitive" } },
+                { identification: { contains: searchCustomerRaw, mode: "insensitive" } },
+                { phone: { contains: searchCustomerRaw, mode: "insensitive" } },
+                { email: { contains: searchCustomerRaw, mode: "insensitive" } },
+              ],
+            },
+            include: {
+              vehicles: true,
+            },
+            orderBy: { updatedAt: "desc" },
+            take: 15,
+          }),
+          prisma.$queryRawUnsafe(`SELECT "id", COALESCE("branch", 'PRINCIPAL') AS "branch", COALESCE("assignedToSucursal", false) AS "assignedToSucursal" FROM "Customer"`).catch(() => []) as Promise<any[]>,
+        ]);
+
+        const branchMap = new Map<string, { branch: string; assignedToSucursal: boolean }>();
+        for (const r of custBranchRows) {
+          branchMap.set(r.id, { branch: r.branch || "PRINCIPAL", assignedToSucursal: Boolean(r.assignedToSucursal) });
+        }
+
+        const enriched = customersFound.map((c: any) => ({
+          ...c,
+          branch: branchMap.get(c.id)?.branch || "PRINCIPAL",
+          assignedToSucursal: branchMap.get(c.id)?.assignedToSucursal || false,
+        }));
+
+        const filteredCust =
+          userBranchParam === "SUCURSAL" || sedeParam === "SUCURSAL"
+            ? enriched.filter((c: any) => c.branch === "SUCURSAL" || Boolean(c.assignedToSucursal))
+            : enriched;
 
         return NextResponse.json({
           success: true,
-          clientes: customersFound,
+          clientes: filteredCust,
         });
       }
 
       // 3. Carga inicial del Panel Taller: Autos en Pista + Repuestos (Oficina) + Servicios + Mecánicos + Clientes
-      const [ordersRows, products, services, employeesRows, customersRows] = (await Promise.all([
+      const [ordersRows, products, services, employeesRows, customersRows, custBranchRows] = (await Promise.all([
         prisma.$queryRawUnsafe(
           `SELECT * FROM "WorkshopOrder"
            WHERE "status" NOT IN ('Entregado', 'ENTREGADO', '05 Entregada', 'Entregada', 'Finalizado', 'FINALIZADO', 'Terminado', 'TERMINADO', 'Historial', 'HISTORIAL', 'Cancelado', 'CANCELADO')
-           ORDER BY "updatedAt" DESC LIMIT 30`
+           ORDER BY "updatedAt" DESC LIMIT 50`
         ),
         prisma.product.findMany({
           orderBy: { name: "asc" },
@@ -559,9 +586,35 @@ export async function GET(request: Request) {
             take: 100,
           })
           .catch(() => []),
-      ])) as [any[], any[], any[], any[], any[]];
+        prisma.$queryRawUnsafe(`SELECT "id", COALESCE("branch", 'PRINCIPAL') AS "branch", COALESCE("assignedToSucursal", false) AS "assignedToSucursal" FROM "Customer"`).catch(() => []),
+      ])) as [any[], any[], any[], any[], any[], any[]];
 
-      const autosEnPista = ordersRows.map(mapOrderRow);
+      const allAutosEnPista = ordersRows.map(mapOrderRow);
+      const autosEnPista = allAutosEnPista.filter((o: any) => {
+        const orderBranch = (o.branch || "PRINCIPAL").toUpperCase();
+        if (userBranchParam === "SUCURSAL") return orderBranch === "SUCURSAL";
+        if (sedeParam === "SUCURSAL") return orderBranch === "SUCURSAL";
+        if (sedeParam === "PRINCIPAL") return orderBranch === "PRINCIPAL";
+        return true;
+      });
+
+      const custBranchMap = new Map<string, { branch: string; assignedToSucursal: boolean }>();
+      for (const r of custBranchRows) {
+        custBranchMap.set(r.id, { branch: r.branch || "PRINCIPAL", assignedToSucursal: Boolean(r.assignedToSucursal) });
+      }
+
+      const allClientes = customersRows.map((c: any) => ({
+        ...c,
+        branch: custBranchMap.get(c.id)?.branch || "PRINCIPAL",
+        assignedToSucursal: custBranchMap.get(c.id)?.assignedToSucursal || false,
+      }));
+
+      const clientesFiltrados =
+        userBranchParam === "SUCURSAL" || sedeParam === "SUCURSAL"
+          ? allClientes.filter((c: any) => c.branch === "SUCURSAL" || Boolean(c.assignedToSucursal))
+          : sedeParam === "PRINCIPAL"
+          ? allClientes.filter((c: any) => c.branch === "PRINCIPAL")
+          : allClientes;
 
       let finalEmployeesRows = employeesRows;
       if (finalEmployeesRows.length === 0) {
@@ -597,7 +650,7 @@ export async function GET(request: Request) {
       return NextResponse.json({
         success: true,
         autosEnPista,
-        clientes: customersRows,
+        clientes: clientesFiltrados,
         productos: products.map((p: any) => ({
           id: p.id,
           code: p.code,
@@ -1050,19 +1103,21 @@ export async function POST(request: Request) {
           .filter(Boolean)
           .join(" | ");
 
+        const orderBranch = body.branch === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL";
+
         await prisma.$executeRawUnsafe(
           `INSERT INTO "WorkshopOrder" (
             "id", "orderNumber", "customerId", "vehicleId", "vehicle", "plate",
             "client", "clientPhone", "clientIdDoc", "mechanic", "status", "progress",
             "mileage", "nextOilChangeKm", "servicesJson", "itemsJson",
             "receptionPhotosJson", "evidencePhotosJson", "notes", "estimatedOut",
-            "totalCost", "dateIn", "createdAt", "updatedAt"
+            "totalCost", "branch", "dateIn", "createdAt", "updatedAt"
           ) VALUES (
             $1, $2, $3, $4, $5, $6,
             $7, $8, $9, $10, 'En Pista', 10,
             $11, $12, '[]', '[]',
             '[]', '[]', $13, 'Hoy',
-            0, NOW(), NOW(), NOW()
+            0, $14, NOW(), NOW(), NOW()
           )`,
           orderId,
           orderNumber,
@@ -1076,7 +1131,8 @@ export async function POST(request: Request) {
           mechanic || "Hernan Marquez",
           kmNum || null,
           nextOilKm,
-          notesFormatted
+          notesFormatted,
+          orderBranch
         );
 
         const createdRows: any[] = await prisma.$queryRawUnsafe(
@@ -2565,19 +2621,21 @@ export async function POST(request: Request) {
         const vehicleTitle = `${marca.trim()} ${modelo.trim()} ${yearNum}`;
         const nextOilKm = kmNum > 0 ? kmNum + 5000 : null;
 
+        const orderBranch = body.branch === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL";
+
         await prisma.$executeRawUnsafe(
           `INSERT INTO "WorkshopOrder" (
             "id", "orderNumber", "customerId", "vehicleId", "vehicle", "plate",
             "client", "clientPhone", "clientIdDoc", "mechanic", "status", "progress",
             "mileage", "nextOilChangeKm", "servicesJson", "itemsJson",
             "receptionPhotosJson", "evidencePhotosJson", "notes", "estimatedOut",
-            "totalCost", "dateIn", "createdAt", "updatedAt"
+            "totalCost", "branch", "dateIn", "createdAt", "updatedAt"
           ) VALUES (
             $1, $2, $3, $4, $5, $6,
             $7, $8, $9, $10, 'En Pista', 10,
             $11, $12, '[]', '[]',
             $13, '[]', $14, 'Hoy',
-            0, NOW(), NOW(), NOW()
+            0, $15, NOW(), NOW(), NOW()
           )`,
           orderId,
           orderNumber,
@@ -2592,7 +2650,8 @@ export async function POST(request: Request) {
           kmNum,
           nextOilKm,
           photosJsonStr,
-          `Ingreso Express (${tipoVehiculo}). Kilometraje: ${kmNum} km.`
+          `Ingreso Express (${tipoVehiculo}). Kilometraje: ${kmNum} km.`,
+          orderBranch
         );
 
         const createdRows: any[] = await prisma.$queryRawUnsafe(
@@ -3453,6 +3512,89 @@ export async function POST(request: Request) {
           deletedId: existing[0].id,
           orderNumber: existing[0].orderNumber,
           message: `Orden ${existing[0].orderNumber} eliminada de Neon PostgreSQL.`,
+        });
+      }
+
+      // =========================================================================
+      // ACCIÓN 8: TRANSFERIR ORDEN DE TRABAJO ENTRE PRINCIPAL Y SUCURSAL
+      // =========================================================================
+      if (action === "TRANSFERIR_ORDEN_SUCURSAL") {
+        const { orderId, targetBranch } = body;
+        if (!orderId) {
+          return NextResponse.json(
+            { success: false, error: "ID de orden requerido." },
+            { status: 400 }
+          );
+        }
+
+        const existingRows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopOrder" WHERE "id" = $1 OR "orderNumber" = $1 LIMIT 1`,
+          orderId
+        );
+
+        if (existingRows.length === 0) {
+          return NextResponse.json(
+            { success: false, error: "Orden no encontrada." },
+            { status: 404 }
+          );
+        }
+
+        const current = existingRows[0];
+        const currentBranch = (current.branch || "PRINCIPAL").toUpperCase();
+        const destBranch = targetBranch
+          ? String(targetBranch).toUpperCase() === "SUCURSAL"
+            ? "SUCURSAL"
+            : "PRINCIPAL"
+          : currentBranch === "SUCURSAL"
+          ? "PRINCIPAL"
+          : "SUCURSAL";
+
+        const historyArr = safeParseJson<any[]>(current.statusHistoryJson, []);
+        historyArr.unshift({
+          status: `Transferida a ${destBranch === "SUCURSAL" ? "Sucursal" : "Principal"}`,
+          color: destBranch === "SUCURSAL" ? "amber" : "blue",
+          timestamp: new Date().toISOString(),
+          channel: "Sistema Sedes",
+        });
+
+        await prisma.$executeRawUnsafe(
+          `UPDATE "WorkshopOrder"
+           SET "branch" = $2,
+               "transferredFrom" = $3,
+               "statusHistoryJson" = $4,
+               "updatedAt" = NOW()
+           WHERE "id" = $1`,
+          current.id,
+          destBranch,
+          currentBranch,
+          JSON.stringify(historyArr)
+        );
+
+        // Si se transfiere a SUCURSAL, habilitar automáticamente al cliente en Sucursal
+        if (destBranch === "SUCURSAL") {
+          if (current.customerId) {
+            await prisma.$executeRawUnsafe(
+              `UPDATE "Customer" SET "assignedToSucursal" = true WHERE "id" = $1`,
+              current.customerId
+            ).catch(() => {});
+          } else if (current.client) {
+            await prisma.$executeRawUnsafe(
+              `UPDATE "Customer" SET "assignedToSucursal" = true WHERE LOWER("name") = LOWER($1)`,
+              current.client
+            ).catch(() => {});
+          }
+        }
+
+        const updatedRows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopOrder" WHERE "id" = $1`,
+          current.id
+        );
+
+        return NextResponse.json({
+          success: true,
+          activeOrder: mapOrderRow(updatedRows[0]),
+          branch: destBranch,
+          message: `Orden ${current.orderNumber} transferida a ${destBranch === "SUCURSAL" ? "Sucursal" : "Principal"} exitosamente.`,
         });
       }
 

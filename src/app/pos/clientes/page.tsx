@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { getClientActiveBranch, getClientUserBranch, SedeType, FiltroSedeType } from "@/lib/branch";
 
 interface Vehicle {
   id: string;
@@ -28,6 +29,8 @@ interface Customer {
   vip: boolean;
   notes?: string | null;
   lastVisit?: string | null;
+  branch?: string;
+  assignedToSucursal?: boolean;
   createdAt: string;
   vehicles: Vehicle[];
 }
@@ -46,10 +49,13 @@ export default function GestionClientes() {
     totalNuevos: 0,
   });
 
-  // Eliminación y Toast
+  // Eliminación, Transferencia y Toast
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
+  const [transfiriendoId, setTransfiriendoId] = useState<string | null>(null);
   const [clienteAEliminar, setClienteAEliminar] = useState<{ id: string; name: string } | null>(null);
   const [toast, setToast] = useState<{ tipo: "exito" | "error"; texto: string } | null>(null);
+  const [userBranch, setUserBranch] = useState<SedeType>("PRINCIPAL");
+  const [sedeActiva, setSedeActiva] = useState<FiltroSedeType>("PRINCIPAL");
 
   const mostrarToast = (texto: string, tipo: "exito" | "error" = "exito") => {
     setToast({ tipo, texto });
@@ -77,6 +83,7 @@ export default function GestionClientes() {
 
     if (filtro === "persona" || filtro === "personal") return c.type === "Personal" || c.type === "Persona";
     if (filtro === "empresa") return c.type === "Empresa";
+    if (filtro === "sucursal") return c.branch === "SUCURSAL" || Boolean(c.assignedToSucursal);
 
     return true;
   });
@@ -85,7 +92,12 @@ export default function GestionClientes() {
     try {
       setCargando(true);
       setError(null);
-      const res = await fetch("/api/clientes");
+      const uBranch = getClientUserBranch();
+      const sActiva = getClientActiveBranch("/pos/clientes");
+      setUserBranch(uBranch);
+      setSedeActiva(sActiva);
+
+      const res = await fetch(`/api/clientes?sede=${sActiva}&userBranch=${uBranch}`);
       const data = await res.json();
 
       if (!res.ok || !data.success) {
@@ -106,7 +118,44 @@ export default function GestionClientes() {
 
   useEffect(() => {
     cargarClientes();
+    const handleBranchChange = () => cargarClientes();
+    window.addEventListener("autog-branch-change", handleBranchChange);
+    return () => window.removeEventListener("autog-branch-change", handleBranchChange);
   }, [cargarClientes]);
+
+  const handleTransferirSucursal = async (cliente: Customer) => {
+    try {
+      setTransfiriendoId(cliente.id);
+      const nuevoEstado = !cliente.assignedToSucursal;
+      const res = await fetch("/api/clientes", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: cliente.id,
+          action: "TRANSFERIR_SUCURSAL",
+          assignedToSucursal: nuevoEstado,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        mostrarToast(data.error || "No se pudo transferir cliente.", "error");
+        return;
+      }
+      setTodosClientes((prev) =>
+        prev.map((c) => (c.id === cliente.id ? { ...c, assignedToSucursal: nuevoEstado } : c))
+      );
+      mostrarToast(
+        nuevoEstado
+          ? `Cliente "${cliente.name}" compartido/transferido a Sucursal`
+          : `Cliente "${cliente.name}" exclusivo de Principal`,
+        "exito"
+      );
+    } catch (err: any) {
+      mostrarToast("Error al transferir cliente: " + err.message, "error");
+    } finally {
+      setTransfiriendoId(null);
+    }
+  };
 
   const solicitarEliminar = (id: string, name: string) => {
     setClienteAEliminar({ id, name });
@@ -303,7 +352,7 @@ export default function GestionClientes() {
               onClick={() => setFiltroMenuAbierto(!filtroMenuAbierto)}
               className="w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
             >
-              <span>{filtro === "persona" ? "Persona" : filtro === "empresa" ? "Empresa" : "Todos"}</span>
+              <span>{filtro === "persona" ? "Persona" : filtro === "empresa" ? "Empresa" : filtro === "sucursal" ? "En Sucursal" : "Todos"}</span>
               <svg className={`w-4 h-4 text-zinc-400 transition-transform ${filtroMenuAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
               </svg>
@@ -320,6 +369,7 @@ export default function GestionClientes() {
                     { id: "todos", label: "Todos" },
                     { id: "persona", label: "Persona" },
                     { id: "empresa", label: "Empresa" },
+                    { id: "sucursal", label: "En Sucursal ⇄" },
                   ].map((opcion) => (
                     <button
                       key={opcion.id}
@@ -391,6 +441,19 @@ export default function GestionClientes() {
                           <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
                             {row.type === 'Empresa' ? 'Empresa' : 'Persona'}
                           </span>
+                          {row.branch === "SUCURSAL" ? (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                              Sucursal
+                            </span>
+                          ) : row.assignedToSucursal ? (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30">
+                              ⇄ Sucursal
+                            </span>
+                          ) : (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                              Principal
+                            </span>
+                          )}
                           {row.vip && <span title="Cliente VIP" className="text-xs">⭐</span>}
                         </div>
                         {row.identification && !row.identification.startsWith("CLI-") && (
@@ -403,6 +466,21 @@ export default function GestionClientes() {
 
                     {/* Acciones Rápidas */}
                     <div className="flex items-center gap-1.5 shrink-0">
+                      {userBranch === "PRINCIPAL" && row.branch !== "SUCURSAL" && (
+                        <button
+                          type="button"
+                          onClick={() => handleTransferirSucursal(row)}
+                          disabled={transfiriendoId === row.id}
+                          title={row.assignedToSucursal ? "Quitar acceso a Sucursal" : "Asignar / Transferir cliente a Sucursal"}
+                          className={`h-10 px-2.5 rounded-xl flex items-center justify-center text-xs font-bold active:scale-95 transition-all cursor-pointer border ${
+                            row.assignedToSucursal
+                              ? "bg-purple-600 text-white border-purple-500 shadow-xs"
+                              : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:text-purple-600"
+                          }`}
+                        >
+                          ⇄
+                        </button>
+                      )}
                       <Link
                         href={`/pos/clientes/nuevo?id=${row.id}`}
                         className="w-10 h-10 rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all shadow-xs cursor-pointer"
@@ -538,6 +616,19 @@ export default function GestionClientes() {
                               <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
                                 {row.type === 'Empresa' ? 'Empresa' : 'Persona'}
                               </span>
+                              {row.branch === "SUCURSAL" ? (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                                  Sucursal
+                                </span>
+                              ) : row.assignedToSucursal ? (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30">
+                                  ⇄ Sucursal
+                                </span>
+                              ) : (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                  Principal
+                                </span>
+                              )}
                               {row.vip && (
                                 <span title="Cliente VIP" className="text-xs">⭐</span>
                               )}
@@ -608,6 +699,21 @@ export default function GestionClientes() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {userBranch === "PRINCIPAL" && row.branch !== "SUCURSAL" && (
+                            <button
+                              type="button"
+                              onClick={() => handleTransferirSucursal(row)}
+                              disabled={transfiriendoId === row.id}
+                              title={row.assignedToSucursal ? "Quitar acceso a Sucursal" : "Asignar / Transferir cliente a Sucursal"}
+                              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 border ${
+                                row.assignedToSucursal
+                                  ? "bg-purple-600 text-white border-purple-500 shadow-xs"
+                                  : "text-zinc-500 hover:text-purple-600 bg-zinc-50 dark:bg-zinc-800/60 hover:bg-purple-50 dark:hover:bg-purple-500/10 border-zinc-200 dark:border-zinc-700"
+                              }`}
+                            >
+                              <span>⇄ Sucursal</span>
+                            </button>
+                          )}
                           {/* Editar en Formulario no flotante */}
                           <Link 
                             href={`/pos/clientes/nuevo?id=${row.id}`}

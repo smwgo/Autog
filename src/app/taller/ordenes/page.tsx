@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { TallerMobileNav } from "@/components/TallerMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { getClientActiveBranch, getClientUserBranch, SedeType } from "@/lib/branch";
 
 interface OrderItem {
   id: string;
@@ -22,6 +23,8 @@ interface OrderItem {
   services: string[];
   notes?: string;
   totalCost?: number;
+  branch?: string;
+  transferredFrom?: string | null;
 }
 
 const STATUS_OPTIONS = [
@@ -53,6 +56,8 @@ export default function ActiveOrdersPage() {
   const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
   const [guardandoId, setGuardandoId] = useState<string | null>(null);
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
+  const [transfiriendoId, setTransfiriendoId] = useState<string | null>(null);
+  const [userBranch, setUserBranch] = useState<SedeType>("PRINCIPAL");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -67,9 +72,15 @@ export default function ActiveOrdersPage() {
   const cargarOrdenes = useCallback(async () => {
     try {
       setCargando(true);
+      const uBranch = getClientUserBranch();
+      const sActiva = getClientActiveBranch("/taller/ordenes");
+      setUserBranch(uBranch);
+
       const params = new URLSearchParams();
       if (filterStatus) params.set("estado", filterStatus);
       if (searchTerm.trim()) params.set("busqueda", searchTerm.trim());
+      params.set("sede", sActiva);
+      params.set("userBranch", uBranch);
 
       const res = await fetch(`/api/taller/ordenes?${params.toString()}`, { cache: "no-store" });
       const data = await res.json();
@@ -86,7 +97,34 @@ export default function ActiveOrdersPage() {
 
   useEffect(() => {
     cargarOrdenes();
+    const handleBranchChange = () => cargarOrdenes();
+    window.addEventListener("autog-branch-change", handleBranchChange);
+    return () => window.removeEventListener("autog-branch-change", handleBranchChange);
   }, [cargarOrdenes]);
+
+  const handleTransferirOrden = async (order: OrderItem) => {
+    const idTarget = order.dbId || order.id;
+    try {
+      setTransfiriendoId(idTarget);
+      const res = await fetch("/api/taller/ordenes", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: idTarget,
+          action: "TRANSFERIR_SUCURSAL",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Error al transferir orden");
+      }
+      await cargarOrdenes();
+    } catch (err: any) {
+      alert(err.message || "No se pudo transferir la orden.");
+    } finally {
+      setTransfiriendoId(null);
+    }
+  };
 
   // Actualizar estado de una orden (CRUD - Update)
   const handleCambiarEstado = async (orderId: string, nuevoEstado: string) => {
@@ -398,9 +436,20 @@ export default function ActiveOrdersPage() {
                       🚗
                     </div>
                     <div className="min-w-0">
-                      <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
-                        {order.vehicle}
-                      </p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                          {order.vehicle}
+                        </p>
+                        {order.branch === "SUCURSAL" ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                            Sucursal
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                            Principal
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
                         <span className="font-semibold text-blue-600 dark:text-blue-400">#{order.id}</span>
                         <span> • {order.plate}</span>
@@ -409,8 +458,21 @@ export default function ActiveOrdersPage() {
                     </div>
                   </div>
 
-                  {/* Botón táctil eliminar */}
+                  {/* Botón táctil transferir y eliminar */}
                   <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleTransferirOrden(order)}
+                      disabled={transfiriendoId === (order.dbId || order.id)}
+                      title={order.branch === "SUCURSAL" ? "Transferir trabajo a Principal" : "Transferir trabajo a Sucursal"}
+                      className={`h-11 px-2.5 rounded-xl flex items-center justify-center text-xs font-bold active:scale-95 transition-all cursor-pointer border ${
+                        order.branch === "SUCURSAL"
+                          ? "bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30"
+                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:text-amber-600"
+                      }`}
+                    >
+                      ⇄
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleEliminarOrden(order.dbId || order.id, order.id)}
@@ -541,13 +603,22 @@ export default function ActiveOrdersPage() {
                     >
                       {/* Orden & Vehículo */}
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
                             #{order.id}
                           </span>
                           <span className="text-xs font-mono font-bold bg-zinc-200 dark:bg-zinc-800 px-2 py-0.5 rounded text-zinc-800 dark:text-zinc-200">
                             {order.plate}
                           </span>
+                          {order.branch === "SUCURSAL" ? (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                              Sucursal
+                            </span>
+                          ) : (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                              Principal
+                            </span>
+                          )}
                         </div>
                         <div className="font-bold text-zinc-900 dark:text-white text-sm">
                           {order.vehicle}
@@ -629,6 +700,19 @@ export default function ActiveOrdersPage() {
                       {/* Acciones */}
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleTransferirOrden(order)}
+                            disabled={transfiriendoId === (order.dbId || order.id)}
+                            title={order.branch === "SUCURSAL" ? "Transferir trabajo a Principal" : "Transferir trabajo a Sucursal"}
+                            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 active:scale-95 cursor-pointer border ${
+                              order.branch === "SUCURSAL"
+                                ? "bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30 hover:bg-amber-500/25"
+                                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:text-amber-600"
+                            }`}
+                          >
+                            <span>⇄ {order.branch === "SUCURSAL" ? "Principal" : "Sucursal"}</span>
+                          </button>
                           <Link
                             href={`/pos/venta?placa=${encodeURIComponent(order.plate)}`}
                             className="bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 px-3 py-1.5 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1 active:scale-95"

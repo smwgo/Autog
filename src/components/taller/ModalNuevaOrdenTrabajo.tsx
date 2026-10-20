@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { getClientActiveBranch } from "@/lib/branch";
 
 export interface ModalNuevaOrdenProps {
   isOpen: boolean;
@@ -304,6 +305,7 @@ export default function ModalNuevaOrdenTrabajo({
           marca: vehiculoMarca.trim() || "Vehículo",
           modelo: vehiculoModelo.trim() || "General",
           kilometraje: vehiculoKm ? parseInt(vehiculoKm, 10) : undefined,
+          branch: getClientActiveBranch("/taller") === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL",
         }),
       });
 

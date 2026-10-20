@@ -25,7 +25,7 @@ function NuevoUsuarioContent() {
   const [email, setEmail] = useState("");
   const [pinCode, setPinCode] = useState("1234");
   const [role, setRole] = useState("Especialista");
-  const [branch, setBranch] = useState("Sede Principal");
+  const [branch, setBranch] = useState("Principal");
   const [status, setStatus] = useState("Activo");
 
   // Paso 2: Accesos a Paneles (Oficina, POS, Taller / Garaje)
@@ -369,15 +369,16 @@ function NuevoUsuarioContent() {
 
                       <div>
                         <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                          Sucursal
+                          Sede / Sucursal Asignada
                         </label>
-                        <input
-                          type="text"
-                          placeholder="Sede Principal"
-                          value={branch}
+                        <select
+                          value={branch.toLowerCase().includes("sucursal") ? "Sucursal" : "Principal"}
                           onChange={(e) => setBranch(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
-                        />
+                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm text-white outline-none focus:border-blue-500 transition-colors cursor-pointer"
+                        >
+                          <option value="Principal">🏢 Principal (Matriz)</option>
+                          <option value="Sucursal">🏪 Sucursal</option>
+                        </select>
                       </div>
                     </div>
                   </div>

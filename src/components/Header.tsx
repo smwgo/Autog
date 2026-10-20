@@ -1,11 +1,42 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import {
+  FiltroSedeType,
+  SedeType,
+  getClientActiveBranch,
+  getClientUserBranch,
+  setClientActiveBranch,
+  setClientUserBranch,
+} from "@/lib/branch";
 
 export function Header() {
+  const pathname = usePathname() || "";
   const [isDark, setIsDark] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showBranchMenu, setShowBranchMenu] = useState(false);
+  const [userBranch, setUserBranchState] = useState<SedeType>("PRINCIPAL");
+  const [activeBranch, setActiveBranchState] = useState<FiltroSedeType>("PRINCIPAL");
+
+  const isInternalPanel =
+    pathname.startsWith("/gerencia") ||
+    pathname.startsWith("/oficina") ||
+    pathname.startsWith("/pos") ||
+    pathname.startsWith("/taller");
+  const isGerenciaOrOficina =
+    pathname.startsWith("/gerencia") || pathname.startsWith("/oficina");
+
+  useEffect(() => {
+    const syncBranch = () => {
+      setUserBranchState(getClientUserBranch());
+      setActiveBranchState(getClientActiveBranch(pathname));
+    };
+    syncBranch();
+    window.addEventListener("autog-branch-change", syncBranch);
+    return () => window.removeEventListener("autog-branch-change", syncBranch);
+  }, [pathname]);
   const [notifications, setNotifications] = useState([
     { id: 1, text: "Bienvenido a AutoG. Completa tu perfil para más beneficios.", date: "Justo ahora", read: false },
     { id: 2, text: "Tienes un 10% de descuento en tu primer servicio.", date: "Hace 2h", read: false }
@@ -71,6 +102,149 @@ export function Header() {
         </Link>
         <div className="hidden md:flex gap-6"></div>
         <div className="flex items-center gap-2 sm:gap-5 text-zinc-600 dark:text-zinc-300">
+          {isInternalPanel && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowBranchMenu(!showBranchMenu)}
+                className="h-9 px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 hover:border-blue-500/60 text-xs font-semibold text-zinc-700 dark:text-zinc-200 flex items-center gap-1.5 transition-all cursor-pointer"
+                title="Sede Activa"
+              >
+                <span>
+                  {activeBranch === "AMBOS"
+                    ? "🌐"
+                    : activeBranch === "SUCURSAL"
+                    ? "🏪"
+                    : "🏢"}
+                </span>
+                <span>
+                  {activeBranch === "AMBOS"
+                    ? "Ambos"
+                    : activeBranch === "SUCURSAL"
+                    ? "Sucursal"
+                    : "Principal"}
+                </span>
+                {!isGerenciaOrOficina && userBranch === "SUCURSAL" ? (
+                  <span className="text-[10px] text-amber-500 font-bold" title="Restringido a Sucursal">
+                    🔒
+                  </span>
+                ) : (
+                  <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                )}
+              </button>
+
+              {showBranchMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowBranchMenu(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-60 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 overflow-hidden p-2 space-y-1">
+                    <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                      {isGerenciaOrOficina
+                        ? "Vista Gerencia / Oficina"
+                        : userBranch === "PRINCIPAL"
+                        ? "Sede Operativa (Acceso Total)"
+                        : "Sede Asignada (Solo Sucursal)"}
+                    </div>
+
+                    {isGerenciaOrOficina && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setClientActiveBranch("AMBOS");
+                          setShowBranchMenu(false);
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl text-left text-xs font-semibold flex items-center justify-between cursor-pointer transition-colors ${
+                          activeBranch === "AMBOS"
+                            ? "bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400"
+                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                        }`}
+                      >
+                        <span>🌐 Ambos (Principal + Sucursal)</span>
+                        {activeBranch === "AMBOS" && <span>✓</span>}
+                      </button>
+                    )}
+
+                    {(isGerenciaOrOficina || userBranch === "PRINCIPAL") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setClientActiveBranch("PRINCIPAL");
+                          setShowBranchMenu(false);
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl text-left text-xs font-semibold flex items-center justify-between cursor-pointer transition-colors ${
+                          activeBranch === "PRINCIPAL"
+                            ? "bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400"
+                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                        }`}
+                      >
+                        <span>🏢 Principal (Matriz)</span>
+                        {activeBranch === "PRINCIPAL" && <span>✓</span>}
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setClientActiveBranch("SUCURSAL");
+                        setShowBranchMenu(false);
+                      }}
+                      className={`w-full px-3 py-2 rounded-xl text-left text-xs font-semibold flex items-center justify-between cursor-pointer transition-colors ${
+                        activeBranch === "SUCURSAL"
+                          ? "bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400"
+                          : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                      }`}
+                    >
+                      <span>🏪 Sucursal</span>
+                      {activeBranch === "SUCURSAL" && <span>✓</span>}
+                    </button>
+
+                    <div className="border-t border-zinc-100 dark:border-zinc-800 pt-1.5 mt-1.5">
+                      <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                        Simular Perfil de Usuario
+                      </div>
+                      <div className="grid grid-cols-2 gap-1 px-1 pb-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setClientUserBranch("PRINCIPAL");
+                            setClientActiveBranch("PRINCIPAL");
+                            setShowBranchMenu(false);
+                          }}
+                          className={`py-1.5 rounded-lg text-[11px] font-bold border cursor-pointer transition-all ${
+                            userBranch === "PRINCIPAL"
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border-zinc-200 dark:border-zinc-700"
+                          }`}
+                        >
+                          Soy Principal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setClientUserBranch("SUCURSAL");
+                            setClientActiveBranch("SUCURSAL");
+                            setShowBranchMenu(false);
+                          }}
+                          className={`py-1.5 rounded-lg text-[11px] font-bold border cursor-pointer transition-all ${
+                            userBranch === "SUCURSAL"
+                              ? "bg-amber-600 text-white border-amber-600"
+                              : "bg-zinc-50 dark:bg-zinc-800 text-zinc-500 border-zinc-200 dark:border-zinc-700"
+                          }`}
+                        >
+                          Soy Sucursal 🔒
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           <button onClick={toggleTheme} aria-label="Toggle Theme" className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:text-blue-600 transition-colors">
             {isDark ? (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>

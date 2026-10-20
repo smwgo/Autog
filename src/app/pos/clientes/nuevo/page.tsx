@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
+import { getClientActiveBranch } from "@/lib/branch";
 
 function NuevoClienteContent() {
   const router = useRouter();
@@ -90,6 +91,8 @@ function NuevoClienteContent() {
       setGuardando(true);
       setErrorMsg(null);
 
+      const sedeActual = getClientActiveBranch("/pos/clientes") === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL";
+
       const payload: any = {
         id: editId || undefined,
         name: nombre.trim(),
@@ -105,6 +108,7 @@ function NuevoClienteContent() {
         address: direccion.trim() || undefined,
         esVip,
         vip: esVip,
+        branch: sedeActual,
       };
 
       if (asociarVehiculo && placa.trim()) {
