@@ -143,6 +143,63 @@ const CHIPS_HALLAZGO_MECANICO = [
   { id: "Sensor/Falla", label: "Sensor/Falla", color: "bg-purple-500/20 text-purple-300 border-purple-500/40" },
 ];
 
+const VISTAS_CARROCERIA: { id: VistaVehiculoId; label: string; icon: React.ReactNode }[] = [
+  {
+    id: "frontal",
+    label: "1. Frontal",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 14.25l2.25-6.75h12l2.25 6.75M3.75 14.25h16.5M3.75 14.25v4.5h16.5v-4.5" />
+        <circle cx="7.5" cy="16.5" r="1.5" />
+        <circle cx="16.5" cy="16.5" r="1.5" />
+      </svg>
+    ),
+  },
+  {
+    id: "trasera",
+    label: "2. Trasera",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l1.5-6h13.5l1.5 6M3.75 13.5h16.5M3.75 13.5v5.25h16.5V13.5" />
+        <rect x="7" y="15" width="10" height="2" rx="1" />
+      </svg>
+    ),
+  },
+  {
+    id: "lateral_izq",
+    label: "3. Lat. Izq",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l2.25-4.5h10.5l4.5 4.5v3h-18v-3Z" />
+        <circle cx="6" cy="18.75" r="2.25" />
+        <circle cx="16" cy="18.75" r="2.25" />
+      </svg>
+    ),
+  },
+  {
+    id: "lateral_der",
+    label: "4. Lat. Der",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 15.75l-2.25-4.5H9l-4.5 4.5v3h18v-3Z" />
+        <circle cx="8" cy="18.75" r="2.25" />
+        <circle cx="18" cy="18.75" r="2.25" />
+      </svg>
+    ),
+  },
+  {
+    id: "superior",
+    label: "5. Superior",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+        <rect x="6" y="3" width="12" height="18" rx="4" strokeLinecap="round" strokeLinejoin="round" />
+        <line x1="6" y1="8" x2="18" y2="8" strokeLinecap="round" />
+        <line x1="6" y1="16" x2="18" y2="16" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+];
+
 export default function InspeccionVehiculo({
   ordenActiva,
   productosCatalogo = [],
@@ -154,6 +211,37 @@ export default function InspeccionVehiculo({
   mostrarToast = (msg) => console.log(msg),
 }: InspeccionVehiculoProps) {
   const [vistaActiva, setVistaActiva] = useState<VistaVehiculoId>("frontal");
+  const vistaCarouselRef = useRef<HTMLDivElement | null>(null);
+  const scrollTimeoutVistaRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleVistaScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (typeof window !== "undefined" && window.innerWidth >= 640) return;
+    const container = e.currentTarget;
+    if (scrollTimeoutVistaRef.current) clearTimeout(scrollTimeoutVistaRef.current);
+    scrollTimeoutVistaRef.current = setTimeout(() => {
+      const width = container.clientWidth;
+      if (width > 0) {
+        const pageIndex = Math.round(container.scrollLeft / width);
+        const targetVista = VISTAS_CARROCERIA[pageIndex];
+        if (targetVista && targetVista.id !== vistaActiva) {
+          setVistaActiva(targetVista.id);
+          setPinSeleccionadoId(null);
+          setPopoverAbierto(false);
+        }
+      }
+    }, 80);
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 640 && vistaCarouselRef.current) {
+      const container = vistaCarouselRef.current;
+      const el = document.getElementById(`vista-tab-${vistaActiva}`);
+      if (el) {
+        const targetLeft = el.offsetLeft - container.offsetLeft;
+        container.scrollTo({ left: targetLeft, behavior: "smooth" });
+      }
+    }
+  }, [vistaActiva]);
   const [hallazgos, setHallazgos] = useState<InspectionFinding[]>(
     ordenActiva?.inspectionFindings || []
   );
@@ -179,6 +267,36 @@ export default function InspeccionVehiculo({
 
   // Estados para Sistemas de Inspección Total del Vehículo
   const [seccionActiva, setSeccionActiva] = useState<SeccionInspeccionId>("carroceria");
+  const seccionCarouselRef = useRef<HTMLDivElement | null>(null);
+  const scrollTimeoutSeccionRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleSeccionScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (typeof window !== "undefined" && window.innerWidth >= 640) return;
+    const container = e.currentTarget;
+    if (scrollTimeoutSeccionRef.current) clearTimeout(scrollTimeoutSeccionRef.current);
+    scrollTimeoutSeccionRef.current = setTimeout(() => {
+      const width = container.clientWidth;
+      if (width > 0) {
+        const pageIndex = Math.round(container.scrollLeft / width);
+        const targetSis = SISTEMAS_INSPECCION[pageIndex];
+        if (targetSis && targetSis.id !== seccionActiva) {
+          setSeccionActiva(targetSis.id);
+        }
+      }
+    }, 80);
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 640 && seccionCarouselRef.current) {
+      const container = seccionCarouselRef.current;
+      const el = document.getElementById(`seccion-tab-${seccionActiva}`);
+      if (el) {
+        const targetLeft = el.offsetLeft - container.offsetLeft;
+        container.scrollTo({ left: targetLeft, behavior: "smooth" });
+      }
+    }
+  }, [seccionActiva]);
+
   const [evaluacionesPlantilla, setEvaluacionesPlantilla] = useState<Record<string, any>>({});
 
   // Modal de PDF y Envío WhatsApp de Inspección
@@ -868,8 +986,12 @@ ${urlSeguimiento}`;
       {/* ===================================================================
           BARRA DE SISTEMAS DEL VEHÍCULO: INSPECCIÓN TOTAL (5 SISTEMAS)
           =================================================================== */}
-      <div className="flex items-center justify-between gap-2.5 pb-2 border-b border-white/10 overflow-x-auto no-scrollbar [WebkitOverflowScrolling:touch]">
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      <div className="space-y-1.5 pb-2 border-b border-white/10">
+        <div
+          ref={seccionCarouselRef}
+          onScroll={handleSeccionScroll}
+          className="flex sm:grid sm:grid-cols-5 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
+        >
           {SISTEMAS_INSPECCION.map((sis) => {
             const active = seccionActiva === sis.id;
             let badge = null;
@@ -898,20 +1020,36 @@ ${urlSeguimiento}`;
             return (
               <button
                 key={sis.id}
+                id={`seccion-tab-${sis.id}`}
                 type="button"
                 onClick={() => setSeccionActiva(sis.id)}
-                className={`h-10 px-3 sm:px-4 rounded-xl border flex items-center gap-2 transition-all cursor-pointer text-xs font-medium shrink-0 active:scale-95 ${
+                className={`h-11 sm:h-10 px-3 sm:px-4 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer text-sm sm:text-xs font-semibold shrink-0 active:scale-95 w-full min-w-full sm:min-w-0 sm:w-auto snap-center ${
                   active
                     ? "bg-purple-500/20 border-purple-500/40 text-purple-200 shadow-md shadow-purple-500/10"
                     : "bg-white/[0.02] hover:bg-white/[0.05] border-white/5 text-zinc-400 hover:text-zinc-200"
                 }`}
               >
-                <span className="text-sm">{sis.icon}</span>
+                <span className="text-base sm:text-sm">{sis.icon}</span>
                 <span>{sis.shortName}</span>
                 {badge}
               </button>
             );
           })}
+        </div>
+
+        {/* Puntos de paginación solo en móvil para ver la sección y deslizar */}
+        <div className="flex sm:hidden items-center justify-center gap-1.5 pt-0.5">
+          {SISTEMAS_INSPECCION.map((sis) => (
+            <button
+              key={sis.id}
+              type="button"
+              onClick={() => setSeccionActiva(sis.id)}
+              aria-label={`Ir a ${sis.shortName}`}
+              className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                seccionActiva === sis.id ? "w-5 bg-purple-500" : "w-1.5 bg-white/20"
+              }`}
+            />
+          ))}
         </div>
       </div>
 
@@ -924,66 +1062,46 @@ ${urlSeguimiento}`;
       {/* ===================================================================
           1. ESQUEMA INTERACTIVO EN 5 VISTAS CON PINES NUMERADOS (1, 2, 3...)
           =================================================================== */}
-      <div className="flex sm:grid sm:grid-cols-5 gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar [WebkitOverflowScrolling:touch] pb-1">
-        {[
-          {
-            id: "frontal" as const,
-            label: "1. Frontal",
-            icon: (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 14.25l2.25-6.75h12l2.25 6.75M3.75 14.25h16.5M3.75 14.25v4.5h16.5v-4.5" />
-                <circle cx="7.5" cy="16.5" r="1.5" />
-                <circle cx="16.5" cy="16.5" r="1.5" />
-              </svg>
-            ),
-          },
-          {
-            id: "trasera" as const,
-            label: "2. Trasera",
-            icon: (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l1.5-6h13.5l1.5 6M3.75 13.5h16.5M3.75 13.5v5.25h16.5V13.5" />
-                <rect x="7" y="15" width="10" height="2" rx="1" />
-              </svg>
-            ),
-          },
-          {
-            id: "lateral_izq" as const,
-            label: "3. Lat. Izq",
-            icon: (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l2.25-4.5h10.5l4.5 4.5v3h-18v-3Z" />
-                <circle cx="6" cy="18.75" r="2.25" />
-                <circle cx="16" cy="18.75" r="2.25" />
-              </svg>
-            ),
-          },
-          {
-            id: "lateral_der" as const,
-            label: "4. Lat. Der",
-            icon: (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 15.75l-2.25-4.5H9l-4.5 4.5v3h18v-3Z" />
-                <circle cx="8" cy="18.75" r="2.25" />
-                <circle cx="18" cy="18.75" r="2.25" />
-              </svg>
-            ),
-          },
-          {
-            id: "superior" as const,
-            label: "5. Superior",
-            icon: (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                <rect x="6" y="3" width="12" height="18" rx="4" strokeLinecap="round" strokeLinejoin="round" />
-                <line x1="6" y1="8" x2="18" y2="8" strokeLinecap="round" />
-                <line x1="6" y1="16" x2="18" y2="16" strokeLinecap="round" />
-              </svg>
-            ),
-          },
-        ].map((v) => {
-          const active = vistaActiva === v.id;
-          const cantVista = hallazgos.filter((h) => h.vista === v.id).length;
-          return (
+      <div className="space-y-1.5 pb-1">
+        <div
+          ref={vistaCarouselRef}
+          onScroll={handleVistaScroll}
+          className="flex sm:grid sm:grid-cols-5 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
+        >
+          {VISTAS_CARROCERIA.map((v) => {
+            const active = vistaActiva === v.id;
+            const cantVista = hallazgos.filter((h) => h.vista === v.id).length;
+            return (
+              <button
+                key={v.id}
+                id={`vista-tab-${v.id}`}
+                type="button"
+                onClick={() => {
+                  setVistaActiva(v.id);
+                  setPinSeleccionadoId(null);
+                  setPopoverAbierto(false);
+                }}
+                className={`h-11 sm:h-12 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shrink-0 px-3 sm:px-0 w-full min-w-full sm:min-w-0 sm:w-auto snap-center ${
+                  active
+                    ? "bg-purple-500/20 border-purple-500/40 text-purple-300 shadow-md shadow-purple-500/10"
+                    : "bg-white/[0.02] hover:bg-white/[0.05] border-white/5 text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                <div className="p-1 rounded-md bg-white/5">{v.icon}</div>
+                <span className="text-sm sm:text-xs font-semibold">{v.label}</span>
+                {cantVista > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+                    {cantVista}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Puntos de paginación solo en móvil para ver la vista y deslizar */}
+        <div className="flex sm:hidden items-center justify-center gap-1.5 pt-0.5">
+          {VISTAS_CARROCERIA.map((v) => (
             <button
               key={v.id}
               type="button"
@@ -992,22 +1110,13 @@ ${urlSeguimiento}`;
                 setPinSeleccionadoId(null);
                 setPopoverAbierto(false);
               }}
-              className={`h-11 sm:h-12 rounded-xl border flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 transition-all cursor-pointer active:scale-95 shrink-0 px-3 sm:px-0 min-w-[85px] sm:min-w-0 ${
-                active
-                  ? "bg-purple-500/20 border-purple-500/40 text-purple-300 shadow-md shadow-purple-500/10"
-                  : "bg-white/[0.02] hover:bg-white/[0.05] border-white/5 text-zinc-400 hover:text-zinc-200"
+              aria-label={`Ir a ${v.label}`}
+              className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                vistaActiva === v.id ? "w-5 bg-purple-500" : "w-1.5 bg-white/20"
               }`}
-            >
-              <div className="p-1 rounded-md bg-white/5">{v.icon}</div>
-              <span className="text-[10px] sm:text-xs font-semibold">{v.label}</span>
-              {cantVista > 0 && (
-                <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
-                  {cantVista}
-                </span>
-              )}
-            </button>
-          );
-        })}
+            />
+          ))}
+        </div>
       </div>
 
       {/* LIENZO DEL VEHÍCULO CON PINES NUMERADOS */}
