@@ -4518,14 +4518,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     </span>
                     <span className="text-zinc-600">•</span>
                     {ordenActiva.status === "Pausada" ? (
-                      <span className="text-amber-400 flex items-center gap-1 font-normal">
-                        <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-                        <span>En Pausa</span>
+                      <span className="text-amber-400 flex items-center gap-1.5 font-normal" title="En Pausa">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+                        <span className="hidden sm:inline">En Pausa</span>
                       </span>
                     ) : (
-                      <span className="text-emerald-400 flex items-center gap-1 font-normal">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                        <span>Trabajando</span>
+                      <span className="text-emerald-400 flex items-center gap-1.5 font-normal" title="Trabajando">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                        <span className="hidden sm:inline">Trabajando</span>
                       </span>
                     )}
                   </div>
