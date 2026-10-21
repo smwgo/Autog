@@ -2485,7 +2485,7 @@ export default function ModalNuevaOrdenTrabajo({
                       aria-label="Crear nuevo cliente"
                       className="h-11 px-2.5 sm:px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-blue-600/25 active:scale-95 text-xs font-semibold min-h-[44px]"
                     >
-                      <svg className="w-4 h-4 shrink-0 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
                         <line x1="19" x2="19" y1="8" y2="14" />
@@ -4725,7 +4725,7 @@ export default function ModalNuevaOrdenTrabajo({
               <button
                 type="button"
                 onClick={() => router.push("/taller")}
-                className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-200/60 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.10] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-medium transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 min-h-[44px]"
+                className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white dark:text-white text-xs sm:text-sm font-medium transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 min-h-[44px]"
               >
                 <span>←</span>
                 <span>Volver</span>
