@@ -2,6 +2,19 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { getClientActiveBranch } from "@/lib/branch";
+import {
+  MULTIMEDIA_CONFIG,
+  comprimirImagenEnNavegador,
+  subirEvidenciaSegura,
+  eliminarEvidenciaSegura,
+  UploadProgressInfo,
+} from "@/lib/storage-client";
+import {
+  VoiceNoteRecord,
+  TranscriptionStatus,
+  BrowserSpeechRecognitionProvider,
+  getBestSupportedAudioMimeType,
+} from "@/lib/transcription";
 
 export interface ModalNuevaOrdenProps {
   isOpen: boolean;
@@ -270,9 +283,25 @@ export default function ModalNuevaOrdenTrabajo({
     "Extintor",
     "Repuesto",
     "Matrícula",
+    "Herramientas",
+    "Antena",
+    "Documentos",
   ]);
   const [itemManualInventario, setItemManualInventario] = useState("");
   const [fotosIniciales, setFotosIniciales] = useState<string[]>([]);
+  const [evidenciasMetadata, setEvidenciasMetadata] = useState<
+    Array<{
+      url: string;
+      key: string;
+      evidenceId: string;
+      tipo: "foto" | "video" | "audio";
+      fileSizeBytes: number;
+      mimeType: string;
+      durationSeconds?: number;
+      transcriptionText?: string;
+      clientTempId: string;
+    }>
+  >([]);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
   const fileInputFotosRef = useRef<HTMLInputElement | null>(null);
 
@@ -294,12 +323,237 @@ export default function ModalNuevaOrdenTrabajo({
     setItemManualInventario("");
   };
 
+  // =========================================================================
+  // MULTIMEDIA: FOTOS, VIDEO CLIP CORTO Y NOTA DE VOZ
+  // =========================================================================
+  const [panelMultimedia, setPanelMultimedia] = useState<"foto" | "video" | "audio" | null>(null);
+  const [videosIniciales, setVideosIniciales] = useState<Array<{ url: string; duracion?: number; nombre?: string }>>([]);
+  const [notasVozIniciales, setNotasVozIniciales] = useState<VoiceNoteRecord[]>([]);
+  const [progresoSubida, setProgresoSubida] = useState<UploadProgressInfo | null>(null);
+  const [fotoEnZoom, setFotoEnZoom] = useState<string | null>(null);
+
+  // Cámara para fotos
+  const [camaraFotoActiva, setCamaraFotoActiva] = useState(false);
+  const camaraFotoStreamRef = useRef<MediaStream | null>(null);
+  const camaraFotoVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Video
+  const [grabandoVideo, setGrabandoVideo] = useState(false);
+  const [subiendoVideo, setSubiendoVideo] = useState(false);
+  const [segundosVideo, setSegundosVideo] = useState(0);
+  const [videoBlobTemp, setVideoBlobTemp] = useState<Blob | null>(null);
+  const [videoUrlTemp, setVideoUrlTemp] = useState<string | null>(null);
+  const [duracionVideoTemp, setDuracionVideoTemp] = useState(0);
+  const videoStreamRef = useRef<MediaStream | null>(null);
+  const videoElementRef = useRef<HTMLVideoElement | null>(null);
+  const videoRecorderRef = useRef<MediaRecorder | null>(null);
+  const videoChunksRef = useRef<Blob[]>([]);
+  const videoTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputVideoRef = useRef<HTMLInputElement | null>(null);
+
+  // Audio / Nota de voz
+  const [grabandoAudio, setGrabandoAudio] = useState(false);
+  const [subiendoAudio, setSubiendoAudio] = useState(false);
+  const [segundosAudio, setSegundosAudio] = useState(0);
+  const [audioBlobTemp, setAudioBlobTemp] = useState<Blob | null>(null);
+  const [audioUrlTemp, setAudioUrlTemp] = useState<string | null>(null);
+  const [transcripcionVoz, setTranscripcionVoz] = useState("");
+  const [transcripcionOriginal, setTranscripcionOriginal] = useState("");
+  const [estadoTranscripcion, setEstadoTranscripcion] = useState<TranscriptionStatus>("no_disponible");
+  const [errorSubidaAudio, setErrorSubidaAudio] = useState<string | null>(null);
+  const [audioPermisoError, setAudioPermisoError] = useState<string | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
+  const audioRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const speechRecognitionRef = useRef<any>(null);
+
+  const detenerTracksMedia = () => {
+    if (videoTimerRef.current) clearInterval(videoTimerRef.current);
+    if (audioTimerRef.current) clearInterval(audioTimerRef.current);
+
+    if (camaraFotoStreamRef.current) {
+      camaraFotoStreamRef.current.getTracks().forEach((t) => t.stop());
+      camaraFotoStreamRef.current = null;
+    }
+    setCamaraFotoActiva(false);
+
+    if (videoStreamRef.current) {
+      videoStreamRef.current.getTracks().forEach((t) => t.stop());
+      videoStreamRef.current = null;
+    }
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach((t) => t.stop());
+      audioStreamRef.current = null;
+    }
+    if (speechRecognitionRef.current) {
+      try {
+        speechRecognitionRef.current.stop();
+      } catch {}
+      speechRecognitionRef.current = null;
+    }
+
+    setGrabandoVideo(false);
+    setGrabandoAudio(false);
+
+    if (videoUrlTemp) {
+      try {
+        URL.revokeObjectURL(videoUrlTemp);
+      } catch {}
+      setVideoUrlTemp(null);
+    }
+    setVideoBlobTemp(null);
+
+    if (audioUrlTemp) {
+      try {
+        URL.revokeObjectURL(audioUrlTemp);
+      } catch {}
+      setAudioUrlTemp(null);
+    }
+    setAudioBlobTemp(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      detenerTracksMedia();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (grabandoVideo && videoElementRef.current && videoStreamRef.current) {
+      videoElementRef.current.srcObject = videoStreamRef.current;
+      videoElementRef.current.play().catch(() => {});
+    }
+  }, [grabandoVideo]);
+
+  useEffect(() => {
+    if (camaraFotoActiva && camaraFotoVideoRef.current && camaraFotoStreamRef.current) {
+      camaraFotoVideoRef.current.srcObject = camaraFotoStreamRef.current;
+      camaraFotoVideoRef.current.play().catch(() => {});
+    }
+  }, [camaraFotoActiva]);
+
+  const irAPaso = (nuevoPaso: 1 | 2 | 3 | 4) => {
+    if (pasoActivo === 3 && nuevoPaso !== 3) {
+      if (
+        subiendoFoto ||
+        grabandoVideo ||
+        subiendoVideo ||
+        grabandoAudio ||
+        subiendoAudio ||
+        camaraFotoActiva
+      ) {
+        mostrarToast(
+          "Hay una captura, grabación o subida de evidencia en curso. Espera o finalízala antes de continuar.",
+          "err"
+        );
+        return;
+      }
+      detenerTracksMedia();
+    }
+    setPasoActivo(nuevoPaso);
+  };
+
+  // =========================================================================
+  // FOTOGRAFÍAS: CÁMARA DIRECTA, COMPRESIÓN Y SUBIDA SEGURA R2
+  // =========================================================================
+  const iniciarCamaraFoto = async () => {
+    try {
+      if (fotosIniciales.length >= MULTIMEDIA_CONFIG.MAX_PHOTOS) {
+        mostrarToast(`Límite de ${MULTIMEDIA_CONFIG.MAX_PHOTOS} fotografías alcanzado (5/5)`, "err");
+        return;
+      }
+      detenerTracksMedia();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: MULTIMEDIA_CONFIG.VIDEO_TARGET_WIDTH },
+          height: { ideal: MULTIMEDIA_CONFIG.VIDEO_TARGET_HEIGHT },
+        },
+      });
+      camaraFotoStreamRef.current = stream;
+      setCamaraFotoActiva(true);
+    } catch (err: any) {
+      mostrarToast(
+        "No se pudo acceder a la cámara en el navegador. Puedes adjuntar fotos desde archivos.",
+        "err"
+      );
+    }
+  };
+
+  const detenerCamaraFoto = () => {
+    if (camaraFotoStreamRef.current) {
+      camaraFotoStreamRef.current.getTracks().forEach((t) => t.stop());
+      camaraFotoStreamRef.current = null;
+    }
+    setCamaraFotoActiva(false);
+  };
+
+  const capturarFotoDesdeCamara = async () => {
+    const video = camaraFotoVideoRef.current;
+    if (!video) return;
+
+    try {
+      setSubiendoFoto(true);
+      setProgresoSubida({ percent: 20, status: "Capturando fotograma de alta nitidez..." });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth || MULTIMEDIA_CONFIG.VIDEO_TARGET_WIDTH;
+      canvas.height = video.videoHeight || MULTIMEDIA_CONFIG.VIDEO_TARGET_HEIGHT;
+      const ctx = canvas.getContext("2d", { alpha: false });
+      if (!ctx) throw new Error("No se pudo inicializar lienzo gráfico.");
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", MULTIMEDIA_CONFIG.PHOTO_QUALITY)
+      );
+
+      if (!blob) throw new Error("Fallo al procesar captura fotográfica.");
+
+      setProgresoSubida({ percent: 45, status: "Optimizando compresión de imagen..." });
+      const { file: optimizada } = await comprimirImagenEnNavegador(blob);
+
+      const res = await subirEvidenciaSegura({
+        archivo: optimizada,
+        tipo: "foto",
+        carpeta: "taller_recepcion",
+        nombreArchivo: `foto_${Date.now()}.jpg`,
+        plate: vehiculoPlaca.trim().toUpperCase() || undefined,
+        uploadedBy: ingresadoPor.trim() || empleadoLogueado.nombre,
+        branch: getClientActiveBranch("/taller") === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL",
+        onProgress: (p) => setProgresoSubida(p),
+      });
+
+      setFotosIniciales((prev) => [...prev, res.url].slice(0, MULTIMEDIA_CONFIG.MAX_PHOTOS));
+      setEvidenciasMetadata((prev) => [
+        ...prev,
+        {
+          url: res.url,
+          key: res.key,
+          evidenceId: res.evidenceId,
+          tipo: "foto",
+          fileSizeBytes: res.fileSizeBytes,
+          mimeType: res.mimeType,
+          clientTempId: res.clientTempId,
+        },
+      ]);
+      mostrarToast("Fotografía guardada y respaldada en Cloudflare R2", "ok");
+      detenerCamaraFoto();
+    } catch (err: any) {
+      mostrarToast(err?.message || "Error al capturar fotografía", "err");
+    } finally {
+      setSubiendoFoto(false);
+      setProgresoSubida(null);
+    }
+  };
+
   const handleSubirFotosIniciales = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    if (fotosIniciales.length >= 5) {
-      mostrarToast("Máximo 5 fotos iniciales permitidas (5/5)", "err");
+    if (fotosIniciales.length >= MULTIMEDIA_CONFIG.MAX_PHOTOS) {
+      mostrarToast(`Máximo ${MULTIMEDIA_CONFIG.MAX_PHOTOS} fotos iniciales permitidas (5/5)`, "err");
       if (fileInputFotosRef.current) fileInputFotosRef.current.value = "";
       return;
     }
@@ -309,41 +563,577 @@ export default function ModalNuevaOrdenTrabajo({
 
     try {
       setSubiendoFoto(true);
-      const espacio = 5 - fotosIniciales.length;
+      const espacio = MULTIMEDIA_CONFIG.MAX_PHOTOS - fotosIniciales.length;
       const aSubir = archivos.slice(0, espacio);
 
-      for (const f of aSubir) {
-        try {
-          const formData = new FormData();
-          formData.append("file", f);
-          formData.append("folder", "taller_recepcion");
+      for (let i = 0; i < aSubir.length; i++) {
+        const f = aSubir[i];
+        setProgresoSubida({
+          percent: Math.round(((i + 1) / aSubir.length) * 20),
+          status: `Comprimiendo imagen ${i + 1} de ${aSubir.length}...`,
+        });
 
-          const res = await fetch("/api/storage/upload", {
-            method: "POST",
-            body: formData,
-          });
-          const data = await res.json();
-          if (data.success && data.url) {
-            setFotosIniciales((prev) => [...prev, data.url].slice(0, 5));
-            continue;
-          }
-        } catch {
-          // Si Cloudflare R2 no responde o falla, guardar como data URL local para previsualizar
-        }
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          if (ev.target?.result) {
-            setFotosIniciales((prev) => [...prev, ev.target!.result as string].slice(0, 5));
-          }
-        };
-        reader.readAsDataURL(f);
+        // Compresión en navegador conservando nitidez de daños
+        const { file: optimizada } = await comprimirImagenEnNavegador(f);
+
+        const res = await subirEvidenciaSegura({
+          archivo: optimizada,
+          tipo: "foto",
+          carpeta: "taller_recepcion",
+          nombreArchivo: f.name,
+          plate: vehiculoPlaca.trim().toUpperCase() || undefined,
+          uploadedBy: ingresadoPor.trim() || empleadoLogueado.nombre,
+          branch: getClientActiveBranch("/taller") === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL",
+          onProgress: (p) => setProgresoSubida(p),
+        });
+
+        setFotosIniciales((prev) => [...prev, res.url].slice(0, MULTIMEDIA_CONFIG.MAX_PHOTOS));
+        setEvidenciasMetadata((prev) => [
+          ...prev,
+          {
+            url: res.url,
+            key: res.key,
+            evidenceId: res.evidenceId,
+            tipo: "foto",
+            fileSizeBytes: res.fileSizeBytes,
+            mimeType: res.mimeType,
+            clientTempId: res.clientTempId,
+          },
+        ]);
       }
-      mostrarToast("Foto(s) iniciales cargadas correctamente");
-    } catch {
-      mostrarToast("Error al procesar foto", "err");
+
+      mostrarToast("Fotografías guardadas en Cloudflare R2", "ok");
+    } catch (err: any) {
+      mostrarToast(err?.message || "Error al procesar fotografías", "err");
     } finally {
       setSubiendoFoto(false);
+      setProgresoSubida(null);
     }
+  };
+
+  // Eliminación coordinada de evidencias entre UI, Cloudflare R2 y Neon DB
+  const handleEliminarFoto = async (indexAEliminar: number) => {
+    const urlAEliminar = fotosIniciales[indexAEliminar];
+    setFotosIniciales((prev) => prev.filter((_, idx) => idx !== indexAEliminar));
+    const targetMeta = evidenciasMetadata.find((e) => e.url === urlAEliminar);
+    if (targetMeta) {
+      setEvidenciasMetadata((prev) => prev.filter((e) => e.url !== urlAEliminar));
+      try {
+        await eliminarEvidenciaSegura({
+          evidenceId: targetMeta.evidenceId,
+          key: targetMeta.key,
+          motivo: "Fotografía descartada por el técnico en recepción",
+        });
+      } catch (err) {
+        console.warn("Aviso al eliminar evidencia física de R2:", err);
+      }
+    }
+  };
+
+  const handleEliminarVideo = async (indexAEliminar: number) => {
+    const vidAEliminar = videosIniciales[indexAEliminar];
+    setVideosIniciales((prev) => prev.filter((_, idx) => idx !== indexAEliminar));
+    const targetMeta = evidenciasMetadata.find((e) => e.url === vidAEliminar?.url);
+    if (targetMeta) {
+      setEvidenciasMetadata((prev) => prev.filter((e) => e.url !== vidAEliminar.url));
+      try {
+        await eliminarEvidenciaSegura({
+          evidenceId: targetMeta.evidenceId,
+          key: targetMeta.key,
+          motivo: "Clip de video descartado por el técnico",
+        });
+      } catch (err) {
+        console.warn("Aviso al eliminar video de R2:", err);
+      }
+    }
+  };
+
+  const handleEliminarAudio = async (indexAEliminar: number) => {
+    const audioAEliminar = notasVozIniciales[indexAEliminar];
+    const targetUrl = (audioAEliminar as any)?.audioUrl || (audioAEliminar as any)?.url;
+    setNotasVozIniciales((prev) => prev.filter((_, idx) => idx !== indexAEliminar));
+    const targetMeta = evidenciasMetadata.find(
+      (e) => e.url === targetUrl || e.evidenceId === (audioAEliminar as any)?.id
+    );
+    if (targetMeta) {
+      setEvidenciasMetadata((prev) =>
+        prev.filter((e) => e.url !== targetUrl && e.evidenceId !== (audioAEliminar as any)?.id)
+      );
+      try {
+        await eliminarEvidenciaSegura({
+          evidenceId: targetMeta.evidenceId,
+          key: targetMeta.key,
+          motivo: "Nota de voz descartada por el técnico",
+        });
+      } catch (err) {
+        console.warn("Aviso al eliminar nota de voz de R2:", err);
+      }
+    }
+  };
+
+  // =========================================================================
+  // VIDEO DE INGRESO: 720p, MÁX 20s, VISTA PREVIA Y SUBIDA SEGURA
+  // =========================================================================
+  const iniciarGrabacionVideo = async () => {
+    try {
+      if (videosIniciales.length >= MULTIMEDIA_CONFIG.MAX_VIDEO_CLIPS) {
+        mostrarToast(`Máximo ${MULTIMEDIA_CONFIG.MAX_VIDEO_CLIPS} clips de video permitidos`, "err");
+        return;
+      }
+
+      detenerTracksMedia();
+
+      // Configuración 720p con framerate moderado
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: MULTIMEDIA_CONFIG.VIDEO_TARGET_WIDTH },
+          height: { ideal: MULTIMEDIA_CONFIG.VIDEO_TARGET_HEIGHT },
+          frameRate: { ideal: MULTIMEDIA_CONFIG.VIDEO_TARGET_FRAMERATE, max: 30 },
+        },
+        audio: true,
+      });
+      videoStreamRef.current = stream;
+
+      const mimeTypes = [
+        "video/webm;codecs=vp8,opus",
+        "video/webm;codecs=vp9,opus",
+        "video/webm",
+        "video/mp4",
+      ];
+      const selectedMime = mimeTypes.find((t) => MediaRecorder.isTypeSupported(t)) || "";
+
+      const options: MediaRecorderOptions = {
+        videoBitsPerSecond: MULTIMEDIA_CONFIG.VIDEO_BITRATE_BPS,
+      };
+      if (selectedMime) options.mimeType = selectedMime;
+
+      const recorder = new MediaRecorder(stream, options);
+      videoRecorderRef.current = recorder;
+      videoChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          videoChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const videoBlob = new Blob(videoChunksRef.current, {
+          type: recorder.mimeType || "video/webm",
+        });
+        setVideoBlobTemp(videoBlob);
+        const url = URL.createObjectURL(videoBlob);
+        setVideoUrlTemp(url);
+
+        // Liberar cámara inmediatamente para que el usuario previsualice tranquilo
+        if (videoStreamRef.current) {
+          videoStreamRef.current.getTracks().forEach((t) => t.stop());
+          videoStreamRef.current = null;
+        }
+      };
+
+      recorder.start();
+      setGrabandoVideo(true);
+      setSegundosVideo(0);
+      setDuracionVideoTemp(0);
+
+      videoTimerRef.current = setInterval(() => {
+        setSegundosVideo((prev) => {
+          const next = prev + 1;
+          setDuracionVideoTemp(next);
+          if (next >= MULTIMEDIA_CONFIG.MAX_VIDEO_DURATION_SECONDS) {
+            detenerGrabacionVideo();
+            return MULTIMEDIA_CONFIG.MAX_VIDEO_DURATION_SECONDS;
+          }
+          return next;
+        });
+      }, 1000);
+    } catch (err: any) {
+      mostrarToast(
+        err?.message ||
+          "No se pudo acceder a la cámara. Puedes adjuntar un archivo de video compatible.",
+        "err"
+      );
+    }
+  };
+
+  const detenerGrabacionVideo = () => {
+    if (videoTimerRef.current) clearInterval(videoTimerRef.current);
+    if (videoRecorderRef.current && videoRecorderRef.current.state !== "inactive") {
+      videoRecorderRef.current.stop();
+    }
+    setGrabandoVideo(false);
+  };
+
+  const descartarYGrabarDeNuevo = () => {
+    if (videoUrlTemp) {
+      try {
+        URL.revokeObjectURL(videoUrlTemp);
+      } catch {}
+      setVideoUrlTemp(null);
+    }
+    setVideoBlobTemp(null);
+    setSegundosVideo(0);
+    setDuracionVideoTemp(0);
+    iniciarGrabacionVideo();
+  };
+
+  const cancelarVideoTemp = () => {
+    if (videoUrlTemp) {
+      try {
+        URL.revokeObjectURL(videoUrlTemp);
+      } catch {}
+      setVideoUrlTemp(null);
+    }
+    setVideoBlobTemp(null);
+    detenerTracksMedia();
+    setPanelMultimedia(null);
+  };
+
+  const guardarVideoConfirmado = async () => {
+    if (!videoBlobTemp) return;
+    try {
+      setSubiendoVideo(true);
+      const duracion = duracionVideoTemp || segundosVideo || 1;
+      const res = await subirEvidenciaSegura({
+        archivo: videoBlobTemp,
+        tipo: "video",
+        carpeta: "taller_video",
+        nombreArchivo: `clip_${Date.now()}.webm`,
+        durationSeconds: duracion,
+        plate: vehiculoPlaca.trim().toUpperCase() || undefined,
+        uploadedBy: ingresadoPor.trim() || empleadoLogueado.nombre,
+        branch: getClientActiveBranch("/taller") === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL",
+        onProgress: (p) => setProgresoSubida(p),
+      });
+
+      setVideosIniciales((prev) => [
+        ...prev,
+        { url: res.url, duracion, nombre: `Clip (${duracion}s)` },
+      ]);
+      setEvidenciasMetadata((prev) => [
+        ...prev,
+        {
+          url: res.url,
+          key: res.key,
+          evidenceId: res.evidenceId,
+          tipo: "video",
+          fileSizeBytes: res.fileSizeBytes,
+          mimeType: res.mimeType,
+          durationSeconds: duracion,
+          clientTempId: res.clientTempId,
+        },
+      ]);
+      mostrarToast("Clip de video guardado y respaldado en Cloudflare R2", "ok");
+
+      if (videoUrlTemp) {
+        try {
+          URL.revokeObjectURL(videoUrlTemp);
+        } catch {}
+        setVideoUrlTemp(null);
+      }
+      setVideoBlobTemp(null);
+      setPanelMultimedia(null);
+    } catch (err: any) {
+      mostrarToast(err?.message || "Error al subir video a Cloudflare R2", "err");
+    } finally {
+      setSubiendoVideo(false);
+      setProgresoSubida(null);
+    }
+  };
+
+  const handleSubirArchivoVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (fileInputVideoRef.current) fileInputVideoRef.current.value = "";
+    if (videosIniciales.length >= MULTIMEDIA_CONFIG.MAX_VIDEO_CLIPS) {
+      mostrarToast(`Máximo ${MULTIMEDIA_CONFIG.MAX_VIDEO_CLIPS} videos permitidos`, "err");
+      return;
+    }
+    try {
+      setSubiendoVideo(true);
+      const res = await subirEvidenciaSegura({
+        archivo: file,
+        tipo: "video",
+        carpeta: "taller_video",
+        nombreArchivo: file.name,
+        plate: vehiculoPlaca.trim().toUpperCase() || undefined,
+        uploadedBy: ingresadoPor.trim() || empleadoLogueado.nombre,
+        branch: getClientActiveBranch("/taller") === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL",
+        onProgress: (p) => setProgresoSubida(p),
+      });
+
+      setVideosIniciales((prev) => [...prev, { url: res.url, nombre: file.name }]);
+      setEvidenciasMetadata((prev) => [
+        ...prev,
+        {
+          url: res.url,
+          key: res.key,
+          evidenceId: res.evidenceId,
+          tipo: "video",
+          fileSizeBytes: res.fileSizeBytes,
+          mimeType: res.mimeType,
+          clientTempId: res.clientTempId,
+        },
+      ]);
+      mostrarToast("Video cargado y respaldado en Cloudflare R2", "ok");
+      setPanelMultimedia(null);
+    } catch (err: any) {
+      mostrarToast(err?.message || "Error al subir video", "err");
+    } finally {
+      setSubiendoVideo(false);
+      setProgresoSubida(null);
+    }
+  };
+
+  // =========================================================================
+  // NOTA DE VOZ: GRABACIÓN NATIVA, RECONOCIMIENTO DESACOPLADO Y SUBIDA SEGURA R2
+  // =========================================================================
+  const iniciarGrabacionAudio = async () => {
+    try {
+      setAudioPermisoError(null);
+      setErrorSubidaAudio(null);
+      detenerTracksMedia();
+
+      // Solicitar acceso al micrófono con cancelación de eco y ruido
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+      audioStreamRef.current = stream;
+
+      const selectedMime = getBestSupportedAudioMimeType();
+      const options: MediaRecorderOptions = {
+        audioBitsPerSecond: 64000,
+      };
+      if (selectedMime) options.mimeType = selectedMime;
+
+      const recorder = new MediaRecorder(stream, options);
+      audioRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: recorder.mimeType || selectedMime || "audio/webm",
+        });
+        setAudioBlobTemp(audioBlob);
+        const url = URL.createObjectURL(audioBlob);
+        setAudioUrlTemp(url);
+
+        // Liberar el micrófono inmediatamente para optimizar recursos
+        if (audioStreamRef.current) {
+          audioStreamRef.current.getTracks().forEach((t) => t.stop());
+          audioStreamRef.current = null;
+        }
+      };
+
+      recorder.start();
+      setGrabandoAudio(true);
+      setSegundosAudio(0);
+      setTranscripcionVoz("");
+      setTranscripcionOriginal("");
+      setEstadoTranscripcion("pendiente");
+
+      // Temporizador de 60 segundos por nota de voz (límite configurable)
+      audioTimerRef.current = setInterval(() => {
+        setSegundosAudio((prev) => {
+          const next = prev + 1;
+          if (next >= MULTIMEDIA_CONFIG.MAX_AUDIO_DURATION_SECONDS) {
+            detenerGrabacionAudio();
+            return MULTIMEDIA_CONFIG.MAX_AUDIO_DURATION_SECONDS;
+          }
+          return next;
+        });
+      }, 1000);
+
+      // Web Speech API como proveedor de dictado desacoplado y seguro
+      const speechProvider = new BrowserSpeechRecognitionProvider();
+      if (speechProvider.isSupported()) {
+        const liveRec = speechProvider.startLiveRecognition(
+          (text, isFinal) => {
+            if (text.trim()) {
+              setTranscripcionVoz(text.trim());
+              setTranscripcionOriginal(text.trim());
+              setEstadoTranscripcion(isFinal ? "lista" : "pendiente");
+            }
+          },
+          (err) => {
+            console.warn("Aviso en reconocimiento de voz:", err);
+            setEstadoTranscripcion((prev) => (prev === "lista" ? "lista" : "error"));
+          }
+        );
+        speechRecognitionRef.current = liveRec;
+      } else {
+        setEstadoTranscripcion("no_disponible");
+      }
+    } catch (err: any) {
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        setAudioPermisoError(
+          "Permiso de micrófono no concedido. Habilita el acceso al micrófono en los permisos de tu navegador para registrar notas de voz."
+        );
+        mostrarToast("Permiso de micrófono denegado", "err");
+      } else {
+        setAudioPermisoError(
+          "No se pudo acceder al micrófono: " + (err?.message || "Dispositivo no disponible")
+        );
+        mostrarToast(err?.message || "Error al acceder al micrófono", "err");
+      }
+      setGrabandoAudio(false);
+    }
+  };
+
+  const detenerGrabacionAudio = () => {
+    if (audioTimerRef.current) clearInterval(audioTimerRef.current);
+    if (audioRecorderRef.current && audioRecorderRef.current.state !== "inactive") {
+      audioRecorderRef.current.stop();
+    }
+    if (speechRecognitionRef.current) {
+      try {
+        speechRecognitionRef.current.stop();
+      } catch {}
+      speechRecognitionRef.current = null;
+    }
+    setGrabandoAudio(false);
+    setEstadoTranscripcion((prev) => {
+      if (prev === "pendiente") {
+        return transcripcionVoz.trim() ? "lista" : "no_disponible";
+      }
+      return prev;
+    });
+  };
+
+  const descartarYGrabarVoz = () => {
+    if (audioUrlTemp) {
+      try {
+        URL.revokeObjectURL(audioUrlTemp);
+      } catch {}
+      setAudioUrlTemp(null);
+    }
+    setAudioBlobTemp(null);
+    setTranscripcionVoz("");
+    setTranscripcionOriginal("");
+    setSegundosAudio(0);
+    setErrorSubidaAudio(null);
+    iniciarGrabacionAudio();
+  };
+
+  const guardarNotaVoz = async () => {
+    if (!audioBlobTemp) return;
+    try {
+      setSubiendoAudio(true);
+      setErrorSubidaAudio(null);
+
+      const mime = audioBlobTemp.type || "audio/webm";
+      const ext = mime.includes("mp4") ? "mp4" : mime.includes("ogg") ? "ogg" : "webm";
+      const fileName = `voice_${Date.now()}.${ext}`;
+
+      // Subida segura al bucket de Cloudflare R2
+      const res = await subirEvidenciaSegura({
+        archivo: audioBlobTemp,
+        tipo: "audio",
+        carpeta: "taller_audio",
+        nombreArchivo: fileName,
+        plate: vehiculoPlaca.trim().toUpperCase() || undefined,
+        uploadedBy: ingresadoPor.trim() || empleadoLogueado.nombre,
+        branch: getClientActiveBranch("/taller") === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL",
+        onProgress: (p) => setProgresoSubida(p),
+      });
+
+      const duracion = segundosAudio || 1;
+      const textoFinal = transcripcionVoz.trim();
+
+      // Determinar estado de la transcripción
+      let estadoFinal: TranscriptionStatus = estadoTranscripcion;
+      if (textoFinal && transcripcionOriginal && textoFinal !== transcripcionOriginal) {
+        estadoFinal = "corregida";
+      } else if (textoFinal && estadoTranscripcion === "no_disponible") {
+        estadoFinal = "manual";
+      } else if (!textoFinal) {
+        estadoFinal = "no_disponible";
+      }
+
+      // Registro estructurado vinculado a orden y vehículo
+      const nuevaNota: VoiceNoteRecord = {
+        id: "vn_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        plate: vehiculoPlaca.trim().toUpperCase() || undefined,
+        audioUrl: res.url,
+        storageKey: res.key,
+        durationSeconds: duracion,
+        mimeType: mime,
+        fileSize: audioBlobTemp.size,
+        text: textoFinal,
+        transcriptionStatus: estadoFinal,
+        provider: estadoFinal === "manual" ? "manual" : "browser-speech-api",
+        author: ingresadoPor || empleadoLogueado.nombre,
+        authorId: empleadoLogueado.id,
+        createdAt: new Date().toISOString(),
+      };
+
+      setNotasVozIniciales((prev) => [...prev, nuevaNota]);
+
+      // Si hay transcripción, agregar referencia al motivo de ingreso
+      if (textoFinal) {
+        setMotivoIngreso((prev) => {
+          const limpio = prev.trim();
+          return limpio
+            ? `${limpio}\n[Nota de voz]: "${textoFinal}"`
+            : `[Nota de voz]: "${textoFinal}"`;
+        });
+      }
+
+      mostrarToast("Nota de voz y transcripción guardadas correctamente", "ok");
+
+      // Liberar objeto URL de memoria
+      if (audioUrlTemp) {
+        try {
+          URL.revokeObjectURL(audioUrlTemp);
+        } catch {}
+        setAudioUrlTemp(null);
+      }
+      setAudioBlobTemp(null);
+      setTranscripcionVoz("");
+      setTranscripcionOriginal("");
+      setErrorSubidaAudio(null);
+      setPanelMultimedia(null);
+    } catch (err: any) {
+      setErrorSubidaAudio(
+        err?.message || "Error al subir el archivo a Cloudflare R2. Puedes reintentar."
+      );
+      mostrarToast(
+        err?.message || "Fallo en la subida a Cloudflare R2. Pulsa Reintentar.",
+        "err"
+      );
+    } finally {
+      setSubiendoAudio(false);
+      setProgresoSubida(null);
+    }
+  };
+
+  const descartarNotaVozTemp = () => {
+    detenerTracksMedia();
+    setAudioBlobTemp(null);
+    if (audioUrlTemp) {
+      try {
+        URL.revokeObjectURL(audioUrlTemp);
+      } catch {}
+      setAudioUrlTemp(null);
+    }
+    setTranscripcionVoz("");
+    setTranscripcionOriginal("");
+    setSegundosAudio(0);
+    setErrorSubidaAudio(null);
+    setAudioPermisoError(null);
+    setPanelMultimedia(null);
   };
 
   const [ingresadoPor, setIngresadoPor] = useState(empleadoLogueado.nombre || "Hernan Marquez");
@@ -1100,7 +1890,12 @@ export default function ModalNuevaOrdenTrabajo({
     setInventarioTrae(["Gata", "Llave", "Repuesto", "Matrícula"]);
     setItemManualInventario("");
     setFotosIniciales([]);
+    setEvidenciasMetadata([]);
     setSubiendoFoto(false);
+    setVideosIniciales([]);
+    setNotasVozIniciales([]);
+    setPanelMultimedia(null);
+    detenerTracksMedia();
     setIngresadoPor(empleadoLogueado.nombre || "Hernan Marquez");
     setAsignacionesTecnicos([
       {
@@ -1172,7 +1967,13 @@ export default function ModalNuevaOrdenTrabajo({
           kilometraje: vehiculoKm ? parseInt(vehiculoKm, 10) : undefined,
           fuelLevel: nivelCombustible,
           receptionInventory: inventarioTrae,
-          receptionPhotos: fotosIniciales,
+          receptionPhotos: [
+            ...fotosIniciales,
+            ...videosIniciales.map((v) => v.url),
+            ...notasVozIniciales.map((a) => a.audioUrl || (a as any).url),
+          ],
+          voiceNotes: notasVozIniciales,
+          evidences: evidenciasMetadata,
           branch: getClientActiveBranch("/taller") === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL",
         }),
       });
@@ -1245,7 +2046,7 @@ export default function ModalNuevaOrdenTrabajo({
             <div className="hidden sm:flex items-center gap-1.5 p-1 rounded-2xl bg-white/[0.03] border border-white/10 text-xs">
               <button
                 type="button"
-                onClick={() => setPasoActivo(1)}
+                onClick={() => irAPaso(1)}
                 className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                   pasoActivo === 1
                     ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
@@ -1264,7 +2065,7 @@ export default function ModalNuevaOrdenTrabajo({
 
               <button
                 type="button"
-                onClick={() => tieneCliente && setPasoActivo(2)}
+                onClick={() => tieneCliente && irAPaso(2)}
                 disabled={!tieneCliente}
                 className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
                   pasoActivo === 2
@@ -1286,7 +2087,7 @@ export default function ModalNuevaOrdenTrabajo({
 
               <button
                 type="button"
-                onClick={() => tieneCliente && tieneVehiculo && setPasoActivo(3)}
+                onClick={() => tieneCliente && tieneVehiculo && irAPaso(3)}
                 disabled={!tieneCliente || !tieneVehiculo}
                 className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
                   pasoActivo === 3
@@ -1306,7 +2107,7 @@ export default function ModalNuevaOrdenTrabajo({
 
               <button
                 type="button"
-                onClick={() => tieneCliente && tieneVehiculo && setPasoActivo(4)}
+                onClick={() => tieneCliente && tieneVehiculo && irAPaso(4)}
                 disabled={!tieneCliente || !tieneVehiculo}
                 className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
                   pasoActivo === 4
@@ -2319,6 +3120,9 @@ export default function ModalNuevaOrdenTrabajo({
                           "Extintor",
                           "Repuesto",
                           "Matrícula",
+                          "Herramientas",
+                          "Antena",
+                          "Documentos",
                         ].includes(item);
                         return (
                           <button
@@ -2378,78 +3182,801 @@ export default function ModalNuevaOrdenTrabajo({
                   </div>
                 </div>
 
-                {/* Columna Derecha: Fotos Iniciales */}
-                <div className="lg:col-span-5 p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between pb-3">
+                {/* Columna Derecha: Evidencias Multimedia (Foto, Video, Nota de Voz) */}
+                <div className="lg:col-span-5 p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3 flex flex-col justify-between transition-all hover:border-white/15">
+                  <div className="space-y-3">
+                    {/* Cabecera de la sección multimedia */}
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-zinc-300">Fotos Iniciales</span>
-                        <span
-                          className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
-                            fotosIniciales.length >= 5
-                              ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
-                              : "bg-blue-500/15 text-blue-300 border-blue-500/30"
-                          }`}
-                        >
-                          {fotosIniciales.length} / 5
+                        <div className="w-7 h-7 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold text-zinc-200 block">Evidencias Multimedia</span>
+                          <span className="text-[10px] text-zinc-500">Fotos, video y notas de voz</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-mono text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
+                          {fotosIniciales.length} fotos {videosIniciales.length > 0 && `• ${videosIniciales.length} vid`} {notasVozIniciales.length > 0 && `• ${notasVozIniciales.length} voz`}
                         </span>
                       </div>
-                      {subiendoFoto && (
-                        <span className="text-xs text-blue-400 animate-pulse font-mono">Cargando...</span>
-                      )}
                     </div>
 
-                    {fotosIniciales.length < 5 ? (
-                      <label className="border-2 border-dashed border-white/10 hover:border-white/20 rounded-xl p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all bg-black/20 group">
-                        <svg className="w-7 h-7 text-zinc-400 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    {/* Barra de 3 Acciones Discretas */}
+                    <div className="grid grid-cols-3 gap-1.5 p-1 bg-black/40 rounded-xl border border-white/5">
+                      <button
+                        type="button"
+                        onClick={() => setPanelMultimedia((curr) => (curr === "foto" ? null : "foto"))}
+                        className={`py-1.5 px-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          panelMultimedia === "foto"
+                            ? "bg-sky-500/20 text-sky-300 border border-sky-500/30"
+                            : "text-zinc-300 hover:text-white hover:bg-white/5"
+                        }`}
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                          <circle cx="12" cy="13" r="3" />
                         </svg>
-                        <span className="text-xs text-zinc-300 font-medium group-hover:text-white transition-colors">Tomar foto / adjuntar</span>
-                        <span className="text-[10px] text-zinc-500">Hasta 5 fotos del vehículo</span>
-                        <input
-                          ref={fileInputFotosRef}
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          onChange={handleSubirFotosIniciales}
-                          className="hidden"
-                        />
-                      </label>
-                    ) : (
-                      <div className="border border-emerald-500/25 bg-emerald-500/5 rounded-xl p-3 flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold">✓</span>
-                          <span className="text-xs font-semibold text-zinc-200">5 fotos cargadas (máximo alcanzado)</span>
+                        <span>Foto</span>
+                        {fotosIniciales.length > 0 && (
+                          <span className="w-4 h-4 rounded-full bg-sky-500/30 text-sky-200 text-[9px] font-bold flex items-center justify-center">
+                            {fotosIniciales.length}
+                          </span>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (grabandoAudio) detenerGrabacionAudio();
+                          setPanelMultimedia((curr) => (curr === "video" ? null : "video"));
+                        }}
+                        className={`py-1.5 px-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          panelMultimedia === "video"
+                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                            : "text-zinc-300 hover:text-white hover:bg-white/5"
+                        }`}
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
+                        </svg>
+                        <span>Video</span>
+                        {videosIniciales.length > 0 && (
+                          <span className="w-4 h-4 rounded-full bg-amber-500/30 text-amber-200 text-[9px] font-bold flex items-center justify-center">
+                            {videosIniciales.length}
+                          </span>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (grabandoVideo) detenerGrabacionVideo();
+                          setPanelMultimedia((curr) => (curr === "audio" ? null : "audio"));
+                        }}
+                        className={`py-1.5 px-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          panelMultimedia === "audio"
+                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                            : "text-zinc-300 hover:text-white hover:bg-white/5"
+                        }`}
+                        title="Nota de voz con dictado y almacenamiento en Cloudflare R2"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15a3 3 0 0 1-3-3V6a3 3 0 0 1 6 0v6a3 3 0 0 1-3 3Z" />
+                        </svg>
+                        <span>Nota de voz</span>
+                        {notasVozIniciales.length > 0 && (
+                          <span className="w-4 h-4 rounded-full bg-emerald-500/30 text-emerald-200 text-[9px] font-bold flex items-center justify-center">
+                            {notasVozIniciales.length}
+                          </span>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Estados de carga / subida con barra de progreso real */}
+                    {(subiendoFoto || subiendoVideo || subiendoAudio) && (
+                      <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs space-y-1.5 animate-fade-in">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="flex items-center gap-1.5 truncate">
+                            <span className="w-2.5 h-2.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin shrink-0" />
+                            <span className="truncate">{progresoSubida?.status || "Guardando en Cloudflare R2..."}</span>
+                          </span>
+                          <span className="font-mono font-bold shrink-0">{progresoSubida?.percent || 60}%</span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full bg-black/40 overflow-hidden">
+                          <div
+                            className="h-full bg-blue-500 transition-all duration-300 rounded-full"
+                            style={{ width: `${progresoSubida?.percent || 60}%` }}
+                          />
                         </div>
                       </div>
                     )}
-                  </div>
 
-                  {fotosIniciales.length > 0 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 pt-2 border-t border-white/5">
-                      {fotosIniciales.map((url, i) => (
-                        <div
-                          key={i}
-                          className="relative group rounded-xl overflow-hidden border border-white/10 aspect-video bg-black/40 shadow-sm"
-                        >
-                          <img
-                            src={url}
-                            alt={`Foto Inicial ${i + 1}`}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
+                    {/* PANEL CONTEXTUAL 1: FOTO */}
+                    {panelMultimedia === "foto" && (
+                      <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-2.5 animate-fade-in">
+                        <div className="flex items-center justify-between text-xs pb-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-zinc-200 font-medium">Fotografías del vehículo</span>
+                            <span className="text-[10px] text-zinc-500">
+                              ({fotosIniciales.length}/{MULTIMEDIA_CONFIG.MAX_PHOTOS})
+                            </span>
+                          </div>
                           <button
                             type="button"
-                            onClick={() => setFotosIniciales((prev) => prev.filter((_, idx) => idx !== i))}
-                            title="Eliminar foto"
-                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/80 hover:bg-rose-600 text-white flex items-center justify-center text-[10px] font-bold border border-white/20 transition-all cursor-pointer shadow-md"
+                            onClick={() => {
+                              detenerCamaraFoto();
+                              setPanelMultimedia(null);
+                            }}
+                            className="text-zinc-400 hover:text-white text-xs px-1.5 py-0.5 rounded cursor-pointer"
                           >
                             ✕
                           </button>
                         </div>
-                      ))}
-                    </div>
-                  )}
+
+                        {camaraFotoActiva ? (
+                          <div className="space-y-2">
+                            <div className="relative rounded-xl overflow-hidden aspect-video bg-black border border-sky-500/40 shadow-inner">
+                              <video
+                                ref={camaraFotoVideoRef}
+                                autoPlay
+                                playsInline
+                                muted
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/70 border border-sky-500/40 text-sky-300 text-[10px] font-mono">
+                                <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+                                <span>Cámara en vivo</span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-1">
+                              <button
+                                type="button"
+                                onClick={detenerCamaraFoto}
+                                disabled={subiendoFoto}
+                                className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs cursor-pointer"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={capturarFotoDesdeCamara}
+                                disabled={subiendoFoto}
+                                className="px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-md shadow-sky-600/30 disabled:opacity-50"
+                              >
+                                <span>📸</span>
+                                <span>Capturar foto</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : fotosIniciales.length < MULTIMEDIA_CONFIG.MAX_PHOTOS ? (
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={iniciarCamaraFoto}
+                                className="p-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-200 text-xs font-medium transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group"
+                              >
+                                <svg
+                                  className="w-5 h-5 text-sky-400 group-hover:scale-110 transition-transform"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                  strokeWidth={1.75}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"
+                                  />
+                                  <circle cx="12" cy="13" r="3" />
+                                </svg>
+                                <span>Tomar con cámara</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => fileInputFotosRef.current?.click()}
+                                className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-medium transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group"
+                              >
+                                <svg
+                                  className="w-5 h-5 text-zinc-400 group-hover:scale-110 transition-transform"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                  strokeWidth={1.75}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
+                                  />
+                                </svg>
+                                <span>Adjuntar imágenes</span>
+                              </button>
+                            </div>
+
+                            <p className="text-[10px] text-zinc-500 text-center">
+                              Compresión inteligente activada (preserva rayones, placas y daños)
+                            </p>
+
+                            <input
+                              ref={fileInputFotosRef}
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={handleSubirFotosIniciales}
+                              className="hidden"
+                            />
+                          </div>
+                        ) : (
+                          <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center justify-between">
+                            <span>Límite de {MULTIMEDIA_CONFIG.MAX_PHOTOS} fotos alcanzado</span>
+                            <span className="font-mono font-bold">5/5</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* PANEL CONTEXTUAL 2: VIDEO */}
+                    {panelMultimedia === "video" && (
+                      <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-2.5 animate-fade-in">
+                        <div className="flex items-center justify-between text-xs pb-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-zinc-200 font-medium">Video de ingreso</span>
+                            <span className="text-[10px] text-zinc-400">
+                              (720p • Máx. {MULTIMEDIA_CONFIG.MAX_VIDEO_DURATION_SECONDS}s)
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={cancelarVideoTemp}
+                            className="text-zinc-400 hover:text-white text-xs px-1.5 py-0.5 rounded cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        {grabandoVideo ? (
+                          <div className="space-y-2">
+                            <div className="relative rounded-xl overflow-hidden aspect-video bg-black border border-amber-500/40 shadow-inner">
+                              <video
+                                ref={videoElementRef}
+                                autoPlay
+                                playsInline
+                                muted
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/80 border border-red-500/40 text-red-400 text-[11px] font-mono font-bold">
+                                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+                                <span>
+                                  REC {segundosVideo < 10 ? `00:0${segundosVideo}` : `00:${segundosVideo}`} / 00:
+                                  {MULTIMEDIA_CONFIG.MAX_VIDEO_DURATION_SECONDS}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-1">
+                              <button
+                                type="button"
+                                onClick={cancelarVideoTemp}
+                                className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs cursor-pointer"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={detenerGrabacionVideo}
+                                className="px-4 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-md shadow-red-600/30"
+                              >
+                                <span>■ Finalizar clip</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : videoUrlTemp ? (
+                          /* Vista previa antes de guardar con las 3 acciones: Grabar de nuevo, Cancelar y Guardar */
+                          <div className="space-y-2.5 animate-fade-in">
+                            <div className="relative rounded-xl overflow-hidden aspect-video bg-black border border-white/20 shadow-lg">
+                              <video
+                                src={videoUrlTemp}
+                                controls
+                                playsInline
+                                className="w-full h-full object-contain"
+                              />
+                              <div className="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-black/80 border border-white/15 text-white text-[11px] font-mono">
+                                Clip grabado: {duracionVideoTemp} seg
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-1 gap-2">
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={descartarYGrabarDeNuevo}
+                                  disabled={subiendoVideo}
+                                  className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs cursor-pointer transition-all active:scale-95 flex items-center gap-1"
+                                >
+                                  <span>🔄</span>
+                                  <span>Grabar de nuevo</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={cancelarVideoTemp}
+                                  disabled={subiendoVideo}
+                                  className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs cursor-pointer"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={guardarVideoConfirmado}
+                                disabled={subiendoVideo}
+                                className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all cursor-pointer active:scale-95 shadow-md shadow-emerald-600/30 flex items-center gap-1.5 disabled:opacity-50"
+                              >
+                                <span>✓</span>
+                                <span>Guardar</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={iniciarGrabacionVideo}
+                                className="p-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-200 text-xs font-medium transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group"
+                              >
+                                <span className="w-3.5 h-3.5 rounded-full bg-red-500 shadow-sm shadow-red-500/50 group-hover:scale-110 transition-transform" />
+                                <span>Grabar video</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => fileInputVideoRef.current?.click()}
+                                className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-medium transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group"
+                              >
+                                <svg
+                                  className="w-5 h-5 text-zinc-400 group-hover:scale-110 transition-transform"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                  strokeWidth={1.75}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
+                                  />
+                                </svg>
+                                <span>Adjuntar video</span>
+                              </button>
+                            </div>
+                            <input
+                              ref={fileInputVideoRef}
+                              type="file"
+                              accept="video/mp4,video/webm,video/quicktime"
+                              onChange={handleSubirArchivoVideo}
+                              className="hidden"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* PANEL CONTEXTUAL 3: NOTA DE VOZ */}
+                    {panelMultimedia === "audio" && (
+                      <div className="p-3.5 rounded-2xl bg-black/50 border border-emerald-500/30 space-y-3 animate-fade-in shadow-xl">
+                        <div className="flex items-center justify-between text-xs pb-1 border-b border-white/10">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            <span className="text-zinc-100 font-semibold">Nota de voz</span>
+                            <span className="text-[10px] text-zinc-400 font-mono">
+                              (Máx {MULTIMEDIA_CONFIG.MAX_AUDIO_DURATION_SECONDS}s)
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={descartarNotaVozTemp}
+                            className="w-6 h-6 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs flex items-center justify-center cursor-pointer transition-colors"
+                            title="Cerrar panel"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        {/* Aviso si el navegador no tiene permisos de micrófono */}
+                        {audioPermisoError && (
+                          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs space-y-2">
+                            <div className="flex items-start gap-2">
+                              <span className="text-base shrink-0">⚠️</span>
+                              <p className="leading-relaxed">{audioPermisoError}</p>
+                            </div>
+                            <div className="flex justify-end">
+                              <button
+                                type="button"
+                                onClick={iniciarGrabacionAudio}
+                                className="px-3 py-1 rounded-lg bg-rose-500/30 hover:bg-rose-500/50 text-white font-medium text-[11px] cursor-pointer"
+                              >
+                                Reintentar acceso
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {grabandoAudio ? (
+                          <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-3">
+                            {/* Indicador de grabación y duración */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 text-emerald-400 text-xs font-semibold">
+                                <span className="w-3 h-3 rounded-full bg-red-500 animate-ping" />
+                                <span>Grabando audio...</span>
+                              </div>
+                              <span className="text-xs font-mono font-bold text-emerald-300 bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                                00:{segundosAudio < 10 ? `0${segundosAudio}` : segundosAudio} / 01:00
+                              </span>
+                            </div>
+
+                            {/* Barra de progreso de tiempo restante (máx 60s) */}
+                            <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-emerald-400 transition-all duration-300 rounded-full"
+                                style={{
+                                  width: `${Math.min(100, (segundosAudio / MULTIMEDIA_CONFIG.MAX_AUDIO_DURATION_SECONDS) * 100)}%`,
+                                }}
+                              />
+                            </div>
+
+                            {/* Vista previa de transcripción en vivo */}
+                            <div className="p-2.5 rounded-xl bg-black/60 border border-white/5 space-y-1">
+                              <span className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold block">
+                                Transcripción en tiempo real:
+                              </span>
+                              {transcripcionVoz ? (
+                                <p className="text-xs text-zinc-200 italic leading-relaxed">
+                                  "{transcripcionVoz}"
+                                </p>
+                              ) : (
+                                <p className="text-[11px] text-zinc-500 italic">
+                                  Habla al micrófono para registrar el dictado...
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Botón Detener */}
+                            <div className="flex justify-end pt-1">
+                              <button
+                                type="button"
+                                onClick={detenerGrabacionAudio}
+                                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shadow-lg shadow-red-600/30 active:scale-95"
+                              >
+                                <span>■</span>
+                                <span>Detener grabación</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : audioUrlTemp ? (
+                          /* Estado con audio listo: Reproductor, Transcripción editable, Volver a grabar, Cancelar y Guardar */
+                          <div className="space-y-3 p-3 rounded-xl bg-white/[0.02] border border-white/10">
+                            {/* Reproductor de audio original */}
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between text-[11px]">
+                                <span className="text-zinc-300 font-medium flex items-center gap-1.5">
+                                  <span>🔊</span>
+                                  <span>Audio capturado ({segundosAudio}s)</span>
+                                </span>
+                                <span className="text-[10px] text-zinc-500 font-mono">
+                                  {audioBlobTemp?.type || "audio/webm"}
+                                </span>
+                              </div>
+                              <audio
+                                src={audioUrlTemp}
+                                controls
+                                className="w-full h-9 rounded-lg"
+                                preload="metadata"
+                              />
+                            </div>
+
+                            {/* Estado de Transcripción */}
+                            <div className="flex items-center justify-between pt-1">
+                              <label className="text-[11px] font-semibold text-zinc-300 block">
+                                Transcripción de la nota:
+                              </label>
+                              <div className="text-[10px] font-mono px-2 py-0.5 rounded-full border">
+                                {estadoTranscripcion === "lista" && (
+                                  <span className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
+                                    ✓ Transcripción lista
+                                  </span>
+                                )}
+                                {estadoTranscripcion === "pendiente" && (
+                                  <span className="text-amber-400 border-amber-500/30 bg-amber-500/10">
+                                    ⏳ Procesando...
+                                  </span>
+                                )}
+                                {estadoTranscripcion === "error" && (
+                                  <span className="text-rose-400 border-rose-500/30 bg-rose-500/10">
+                                    ⚠️ Error al transcribir
+                                  </span>
+                                )}
+                                {estadoTranscripcion === "no_disponible" && (
+                                  <span className="text-zinc-400 border-white/10 bg-white/5">
+                                    ✏️ Entrada manual
+                                  </span>
+                                )}
+                                {transcripcionVoz !== transcripcionOriginal &&
+                                  transcripcionOriginal.length > 0 && (
+                                    <span className="text-sky-300 border-sky-500/30 bg-sky-500/10 ml-1">
+                                      ✎ Modificado
+                                    </span>
+                                  )}
+                              </div>
+                            </div>
+
+                            {/* Campo editable con la transcripción */}
+                            <textarea
+                              rows={3}
+                              value={transcripcionVoz}
+                              onChange={(e) => setTranscripcionVoz(e.target.value)}
+                              placeholder="Escribe o corrige lo expresado por el cliente o técnico..."
+                              className="w-full p-2.5 rounded-xl bg-black/50 border border-white/15 focus:border-emerald-500 text-white text-xs placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition-all"
+                            />
+
+                            {/* Alerta si falló la subida para permitir reintento sin perder el audio grabado */}
+                            {errorSubidaAudio && (
+                              <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between gap-2">
+                                <span className="truncate">⚠️ {errorSubidaAudio}</span>
+                                <span className="text-[10px] text-zinc-400 shrink-0">
+                                  El audio sigue en memoria
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Botones: Volver a grabar, Cancelar y Guardar (con reintento si falló) */}
+                            <div className="flex items-center justify-between pt-1 gap-2">
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={descartarYGrabarVoz}
+                                  disabled={subiendoAudio}
+                                  className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs cursor-pointer transition-all active:scale-95 flex items-center gap-1 disabled:opacity-50"
+                                  title="Descartar y comenzar una nueva grabación"
+                                >
+                                  <span>🔄</span>
+                                  <span>Volver a grabar</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={descartarNotaVozTemp}
+                                  disabled={subiendoAudio}
+                                  className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs cursor-pointer disabled:opacity-50"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={guardarNotaVoz}
+                                disabled={subiendoAudio}
+                                className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-md shadow-emerald-600/30 flex items-center gap-1.5 disabled:opacity-50"
+                              >
+                                {subiendoAudio ? (
+                                  <>
+                                    <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    <span>Guardando en R2...</span>
+                                  </>
+                                ) : errorSubidaAudio ? (
+                                  <>
+                                    <span>↻</span>
+                                    <span>Reintentar guardar</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>✓</span>
+                                    <span>Guardar nota</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          /* Estado inicial: Botón Grabar con límite configurable de 60s */
+                          <div className="space-y-2 py-2">
+                            <button
+                              type="button"
+                              onClick={iniciarGrabacionAudio}
+                              className="w-full py-3 px-4 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-200 text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 group shadow-sm"
+                            >
+                              <span className="w-3 h-3 rounded-full bg-emerald-400 group-hover:scale-125 transition-transform" />
+                              <span>Grabar nota de voz (Micrófono)</span>
+                            </button>
+                            <p className="text-[10px] text-zinc-500 text-center">
+                              Graba hasta 60 segundos con transcripción automática al texto de la orden.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Galería de Evidencias Capturadas (Fotos, Videos, Notas de Voz) */}
+                  <div className="space-y-2 pt-2 border-t border-white/5">
+                    {fotosIniciales.length === 0 && videosIniciales.length === 0 && notasVozIniciales.length === 0 ? (
+                      <p className="text-[11px] text-zinc-500 text-center py-3">
+                        Sin evidencias registradas. Selecciona <strong className="text-zinc-400">Foto</strong>, <strong className="text-zinc-400">Video</strong> o <strong className="text-zinc-400">Voz</strong> para adjuntar.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {/* Miniaturas de Fotos con visualizador ampliado */}
+                        {fotosIniciales.length > 0 && (
+                          <div className="grid grid-cols-5 gap-1.5">
+                            {fotosIniciales.map((url, i) => (
+                              <div
+                                key={i}
+                                className="relative group rounded-lg overflow-hidden border border-white/10 aspect-video bg-black/40 shadow-sm cursor-pointer"
+                                onClick={() => setFotoEnZoom(url)}
+                                title="Clic para ampliar detalle"
+                              >
+                                <img
+                                  src={url}
+                                  alt={`Foto ${i + 1}`}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                />
+                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white pointer-events-none">
+                                  <svg className="w-4 h-4 drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607ZM10.5 7.5v6m3-3h-6" />
+                                  </svg>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEliminarFoto(i);
+                                  }}
+                                  title="Eliminar foto"
+                                  className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/80 hover:bg-rose-600 text-white flex items-center justify-center text-[8px] font-bold border border-white/20 transition-all cursor-pointer shadow-md z-10"
+                                >
+                                  ✕
+                                </button>
+                                <span className="absolute bottom-0.5 left-0.5 px-1 rounded bg-black/70 text-[8px] font-mono text-zinc-300">
+                                  #{i + 1}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Chips de Videos y Notas de Voz */}
+                        <div className="space-y-1.5">
+                          {videosIniciales.map((vid, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs"
+                            >
+                              <div className="flex items-center gap-2 truncate">
+                                <span className="text-sm">📹</span>
+                                <span className="text-amber-200 font-medium truncate">
+                                  {vid.nombre || `Clip de video ${idx + 1}`}
+                                </span>
+                                {vid.duracion && (
+                                  <span className="text-[10px] font-mono text-amber-400/80 bg-amber-500/20 px-1.5 py-0.5 rounded">
+                                    {vid.duracion}s
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleEliminarVideo(idx)}
+                                className="w-5 h-5 rounded-full bg-white/5 hover:bg-red-500/30 text-zinc-400 hover:text-red-300 text-[10px] flex items-center justify-center cursor-pointer ml-2"
+                                title="Eliminar clip"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+
+                          {notasVozIniciales.map((audio, idx) => (
+                            <div
+                              key={audio.id || idx}
+                              className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-xs space-y-2 shadow-sm"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm">🎙️</span>
+                                  <span className="text-emerald-200 font-bold">
+                                    Nota de voz #{idx + 1}
+                                  </span>
+                                  <span className="text-[10px] font-mono text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                                    {audio.durationSeconds}s
+                                  </span>
+                                  <span className="text-[10px] text-zinc-400">
+                                    por {audio.author || "Técnico"}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-black/40 text-emerald-300 border border-emerald-500/30">
+                                    {audio.transcriptionStatus === "corregida"
+                                      ? "Corregida"
+                                      : audio.transcriptionStatus === "lista"
+                                      ? "Lista"
+                                      : audio.transcriptionStatus === "manual"
+                                      ? "Manual"
+                                      : "Voz"}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEliminarAudio(idx)}
+                                    className="w-5 h-5 rounded-full bg-white/5 hover:bg-red-500/30 text-zinc-400 hover:text-red-300 text-[10px] flex items-center justify-center cursor-pointer transition-colors"
+                                    title="Eliminar nota"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Reproductor de audio */}
+                              {audio.audioUrl && (
+                                <audio
+                                  src={audio.audioUrl}
+                                  controls
+                                  className="w-full h-7 rounded"
+                                  preload="none"
+                                />
+                              )}
+
+                              {/* Texto transcrito o manual */}
+                              {audio.text ? (
+                                <div className="p-2 rounded-xl bg-black/40 border border-white/5">
+                                  <p className="text-[11px] text-zinc-200 italic leading-relaxed">
+                                    "{audio.text}"
+                                  </p>
+                                </div>
+                              ) : (
+                                <p className="text-[10px] text-zinc-500 italic pl-1">
+                                  (Audio sin transcripción de texto)
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Modal Lightbox para visualización de foto ampliada */}
+                    {fotoEnZoom && (
+                      <div
+                        className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 animate-fade-in"
+                        onClick={() => setFotoEnZoom(null)}
+                      >
+                        <div
+                          className="relative max-w-4xl max-h-[85vh] w-full flex flex-col items-center"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="w-full flex justify-between items-center pb-2 text-white text-xs">
+                            <span className="font-semibold text-zinc-300">
+                              Detalle fotográfico de recepción (inspección de daños)
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setFotoEnZoom(null)}
+                              className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs cursor-pointer transition-colors"
+                            >
+                              Cerrar ✕
+                            </button>
+                          </div>
+                          <img
+                            src={fotoEnZoom}
+                            alt="Evidencia ampliada"
+                            className="max-h-[75vh] w-auto max-w-full rounded-xl object-contain border border-white/15 shadow-2xl"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -2524,7 +4051,7 @@ export default function ModalNuevaOrdenTrabajo({
               <div className="pt-1 flex justify-end">
                 <button
                   type="button"
-                  onClick={() => setPasoActivo(4)}
+                  onClick={() => irAPaso(4)}
                   className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 shadow-lg shadow-blue-600/30 active:scale-95"
                 >
                   <span>Continuar a Orden (Asignar Técnicos)</span>
@@ -2552,7 +4079,7 @@ export default function ModalNuevaOrdenTrabajo({
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={() => setPasoActivo(1)}
+                      onClick={() => irAPaso(1)}
                       title="Editar cliente"
                       className="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] text-zinc-300 hover:text-white cursor-pointer transition-colors"
                     >
@@ -2560,7 +4087,7 @@ export default function ModalNuevaOrdenTrabajo({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setPasoActivo(2)}
+                      onClick={() => irAPaso(2)}
                       title="Editar vehículo"
                       className="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] text-zinc-300 hover:text-white cursor-pointer transition-colors"
                     >
@@ -2568,7 +4095,7 @@ export default function ModalNuevaOrdenTrabajo({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setPasoActivo(3)}
+                      onClick={() => irAPaso(3)}
                       title="Editar motivo/ingreso"
                       className="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] text-zinc-300 hover:text-white cursor-pointer transition-colors"
                     >
@@ -3160,7 +4687,16 @@ export default function ModalNuevaOrdenTrabajo({
           ) : pasoActivo > 1 ? (
             <button
               type="button"
-              onClick={() => setPasoActivo((p) => ((p - 1) as 1 | 2 | 3 | 4))}
+              onClick={() => {
+                if (pasoActivo === 3) {
+                  if (subiendoFoto || grabandoVideo || subiendoVideo || grabandoAudio || subiendoAudio) {
+                    mostrarToast("Hay una grabación o subida en curso. Finalízala o cancélala antes de retroceder.", "err");
+                    return;
+                  }
+                  detenerTracksMedia();
+                }
+                setPasoActivo((p) => ((p - 1) as 1 | 2 | 3 | 4));
+              }}
               className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
             >
               <span>←</span>
@@ -3201,15 +4737,19 @@ export default function ModalNuevaOrdenTrabajo({
                       mostrarToast("Selecciona o ingresa un cliente primero", "err");
                       return;
                     }
-                    setPasoActivo(2);
+                    irAPaso(2);
                   } else if (pasoActivo === 2) {
                     if (!tieneVehiculo) {
                       mostrarToast("Ingresa la placa del vehículo", "err");
                       return;
                     }
-                    setPasoActivo(3);
+                    irAPaso(3);
                   } else if (pasoActivo === 3) {
-                    setPasoActivo(4);
+                    if (subiendoFoto || grabandoVideo || subiendoVideo || grabandoAudio || subiendoAudio) {
+                      mostrarToast("Hay una grabación o subida multimedia en curso. Espera o finalízala antes de continuar.", "err");
+                      return;
+                    }
+                    irAPaso(4);
                   }
                 }}
                 className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-lg shadow-blue-600/30 active:scale-95"

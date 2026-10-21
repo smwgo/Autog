@@ -1,5 +1,5 @@
 import "server-only";
-import { uploadToR2, getSignedDownloadUrl, deleteFromR2 } from "@/lib/r2";
+import { uploadToR2, getSignedDownloadUrl, deleteFromR2, checkObjectExistsInR2 } from "@/lib/r2";
 
 /**
  * Capa de abstracción para almacenamiento de archivos (PDF, XML, Imágenes)
@@ -36,6 +36,16 @@ export class StorageService {
     expiresIn: number = 300
   ): Promise<string> {
     return await getSignedDownloadUrl(key, expiresIn);
+  }
+
+  /**
+   * Verifica la existencia física y metadatos de un objeto en Cloudflare R2
+   */
+  static async checkObjectExists(
+    bucket: string,
+    key: string
+  ): Promise<{ exists: boolean; size?: number; mimeType?: string }> {
+    return await checkObjectExistsInR2(key);
   }
 
   /**

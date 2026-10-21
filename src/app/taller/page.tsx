@@ -10,6 +10,7 @@ import ModalNuevaOrdenTrabajo from "@/components/taller/ModalNuevaOrdenTrabajo";
 import ModalPresupuestoPdf from "@/components/taller/ModalPresupuestoPdf";
 import LubricentroExpress from "./components/LubricentroExpress";
 import { getClientActiveBranch, getClientUserBranch } from "@/lib/branch";
+import { VoiceNoteRecord } from "@/lib/transcription";
 
 // ============================================================================
 // INTERFACES Y TIPOS OPERATIVOS
@@ -53,6 +54,7 @@ export interface UnifiedOrder {
   items: OrderItem[];
   receptionPhotos: string[];
   evidencePhotos: string[];
+  voiceNotes?: VoiceNoteRecord[];
   notes: string;
   dateIn: string;
   startedAt: string | null;
@@ -4832,8 +4834,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             =================================================================== */}
         <section className="bg-[#111113]/90 rounded-2xl border border-white/[0.08] p-4 sm:p-6 shadow-2xl space-y-5 overflow-hidden">
           {/* Cabecera del Auto Seleccionado + Información Rápida (para Taller y Lubricentro) */}
-          <div className="pb-3 border-b border-white/[0.08]">
-            {ordenActiva ? (
+          {ordenActiva && (
+            <div className="pb-3 border-b border-white/[0.08]">
               <>
                 {/* Pestaña colapsada solo en móvil para volver a aparecer */}
                 {!mostrarCabeceraMovil && (
@@ -4929,45 +4931,54 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     </button>
                   </div>
                 </div>
-              </>
-            ) : (
-              <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-white/[0.02] border border-white/5 text-xs text-zinc-400">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">🚗</span>
-                  <span className="text-zinc-300 font-medium">
-                    {cargandoInicial
-                      ? "Cargando datos del vehículo..."
-                      : autosEnPista.length > 0
-                      ? `Hay ${autosEnPista.length} vehículos en pista. Selecciona uno para gestionar:`
-                      : "No hay vehículos en pista en este momento."}
-                  </span>
-                </div>
-                {autosEnPista.length > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const auto = autosEnPista[0];
-                      setOrdenActiva(auto);
-                      setFotosRecepcion(auto.receptionPhotos || []);
-                      setKmActualInput(auto.mileage ? String(auto.mileage) : "");
-                    }}
-                    className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold cursor-pointer active:scale-95 transition-all text-xs flex items-center gap-1.5 shadow-md shadow-blue-600/30"
-                  >
-                    <span>Cargar {autosEnPista[0].plate}</span>
-                    <span className="text-zinc-300 font-normal">({autosEnPista[0].vehicle})</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setMostrarModalNuevaOrden(true)}
-                    className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold cursor-pointer text-xs"
-                  >
-                    + Nueva Orden
-                  </button>
+
+                {/* Registro sencillo de Notas de Voz vinculadas a la Orden */}
+                {Array.isArray(ordenActiva.voiceNotes) && ordenActiva.voiceNotes.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-white/[0.08] space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                        <span className="text-sm">🎙️</span>
+                        <span>Notas de voz del ingreso ({ordenActiva.voiceNotes.length})</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {ordenActiva.voiceNotes.map((vn, i) => (
+                        <div
+                          key={vn.id || i}
+                          className="p-3 rounded-xl bg-black/40 border border-emerald-500/20 space-y-2 text-xs shadow-sm"
+                        >
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-emerald-300 font-bold flex items-center gap-1.5">
+                              <span>Nota #{i + 1}</span>
+                              <span className="font-mono text-[10px] text-emerald-400/80 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                                {vn.durationSeconds}s
+                              </span>
+                            </span>
+                            <span className="text-[10px] text-zinc-400 font-mono">
+                              {vn.createdAt ? new Date(vn.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Ingreso"} • {vn.author || "Técnico"}
+                            </span>
+                          </div>
+                          {vn.text && (
+                            <p className="text-[11px] text-zinc-200 italic leading-relaxed bg-white/[0.02] p-2 rounded-lg border border-white/5">
+                              "{vn.text}"
+                            </p>
+                          )}
+                          {vn.audioUrl && (
+                            <audio
+                              src={vn.audioUrl}
+                              controls
+                              className="w-full h-7 rounded"
+                              preload="none"
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
-              </div>
-            )}
-          </div>
+              </>
+            </div>
+          )}
 
           {/* VISTAS SEGÚN EL SELECTOR: TALLER, LUBRICENTRO, CAR WASH O TECNICENTRO */}
           {moduloTaller !== "taller" ? (

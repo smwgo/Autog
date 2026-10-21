@@ -87,6 +87,60 @@ export async function GET(request: Request) {
         console.warn("Aviso al consultar facturas de clientes:", invErr);
       }
 
+      // Consultar evidencias multimedia estructuradas desde Neon DB
+      let evidencesByOrder = new Map<string, any[]>();
+      try {
+        const orderIds = filteredRows.map((r: any) => r.id);
+        const orderNumbers = filteredRows.map((r: any) => r.orderNumber);
+        const allKeys = [...new Set([...orderIds, ...orderNumbers])].filter(Boolean);
+
+        if (allKeys.length > 0) {
+          const evidenceRows: any[] = await prisma.$queryRawUnsafe(
+            `SELECT * FROM "WorkshopEvidence" 
+             WHERE ("orderId" = ANY($1::text[]) OR "orderNumber" = ANY($1::text[]))
+               AND "uploadStatus" = 'COMPLETED'
+             ORDER BY "createdAt" ASC`,
+            allKeys
+          );
+
+          evidenceRows.forEach((ev: any) => {
+            const mappedEv = {
+              id: ev.id,
+              orderId: ev.orderId,
+              orderNumber: ev.orderNumber,
+              vehicleId: ev.vehicleId,
+              plate: ev.plate,
+              type: ev.type,
+              r2Key: ev.r2Key,
+              mimeType: ev.mimeType,
+              fileSizeBytes: Number(ev.fileSizeBytes || 0),
+              durationSeconds: ev.durationSeconds ? Number(ev.durationSeconds) : null,
+              transcriptionText: ev.transcriptionText,
+              uploadStatus: ev.uploadStatus,
+              transcriptionStatus: ev.transcriptionStatus,
+              uploadedBy: ev.uploadedBy,
+              url: `/api/storage/download?key=${encodeURIComponent(ev.r2Key)}`,
+              createdAt: ev.createdAt ? new Date(ev.createdAt).toISOString() : null,
+            };
+
+            if (ev.orderId) {
+              const list = evidencesByOrder.get(ev.orderId) || [];
+              list.push(mappedEv);
+              evidencesByOrder.set(ev.orderId, list);
+            }
+            if (ev.orderNumber) {
+              const list = evidencesByOrder.get(ev.orderNumber) || [];
+              if (!list.some((x: any) => x.id === ev.id)) {
+                list.push(mappedEv);
+                evidencesByOrder.set(ev.orderNumber, list);
+              }
+            }
+          });
+        }
+      } catch (evErr) {
+        console.warn("Aviso al consultar evidencias en ordenes:", evErr);
+      }
+
       // Mapear campos para la UI
       const orders = filteredRows.map((r: any) => {
         let services: string[] = [];
@@ -118,6 +172,12 @@ export async function GET(request: Request) {
         try {
           payments = r.paymentsJson ? JSON.parse(r.paymentsJson) : [];
         } catch {}
+
+        const evidences = evidencesByOrder.get(r.id) || evidencesByOrder.get(r.orderNumber) || [];
+        const mergedReceptionPhotos =
+          receptionPhotos.length > 0
+            ? receptionPhotos
+            : evidences.filter((e: any) => e.type === "image").map((e: any) => e.url);
 
         const linkedInvoice = invoiceByOrder.get(r.orderNumber) || invoiceByOrder.get(r.id);
         const st = (r.status || "").toLowerCase();
@@ -160,7 +220,8 @@ export async function GET(request: Request) {
           items,
           inspectionFindings,
           receptionInventory,
-          receptionPhotos,
+          receptionPhotos: mergedReceptionPhotos,
+          evidences,
           payments,
           mileage: r.mileage,
           fuelLevel: r.fuelLevel,

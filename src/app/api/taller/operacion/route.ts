@@ -25,6 +25,7 @@ async function ensureTallerSchema() {
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "itemsJson" TEXT DEFAULT '[]'`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "receptionPhotosJson" TEXT DEFAULT '[]'`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "evidencePhotosJson" TEXT DEFAULT '[]'`,
+      `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "voiceNotesJson" TEXT DEFAULT '[]'`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "startedAt" TIMESTAMP(3)`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "completedAt" TIMESTAMP(3)`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "durationMinutes" INTEGER DEFAULT 0`,
@@ -65,6 +66,34 @@ async function ensureTallerSchema() {
       `ALTER TABLE "Customer" ADD COLUMN IF NOT EXISTS "assignedToSucursal" BOOLEAN DEFAULT false`,
       `ALTER TABLE "WorkshopHistory" ADD COLUMN IF NOT EXISTS "nextOilChangeKm" INTEGER`,
       `ALTER TABLE "WorkshopHistory" ADD COLUMN IF NOT EXISTS "photosJson" TEXT DEFAULT '[]'`,
+      `CREATE TABLE IF NOT EXISTS "WorkshopEvidence" (
+        "id" TEXT PRIMARY KEY,
+        "orderId" TEXT,
+        "orderNumber" TEXT,
+        "vehicleId" TEXT,
+        "plate" TEXT,
+        "type" TEXT NOT NULL,
+        "r2Key" TEXT NOT NULL,
+        "mimeType" TEXT NOT NULL,
+        "fileSizeBytes" INTEGER NOT NULL DEFAULT 0,
+        "durationSeconds" INTEGER,
+        "transcriptionText" TEXT,
+        "uploadStatus" TEXT NOT NULL DEFAULT 'COMPLETED',
+        "transcriptionStatus" TEXT NOT NULL DEFAULT 'NOT_APPLICABLE',
+        "uploadedBy" TEXT,
+        "clientTempId" TEXT,
+        "branch" TEXT DEFAULT 'PRINCIPAL',
+        "metadataJson" TEXT DEFAULT '{}',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )`,
+      `CREATE INDEX IF NOT EXISTS "WorkshopEvidence_orderId_idx" ON "WorkshopEvidence"("orderId")`,
+      `CREATE INDEX IF NOT EXISTS "WorkshopEvidence_orderNumber_idx" ON "WorkshopEvidence"("orderNumber")`,
+      `CREATE INDEX IF NOT EXISTS "WorkshopEvidence_vehicleId_idx" ON "WorkshopEvidence"("vehicleId")`,
+      `CREATE INDEX IF NOT EXISTS "WorkshopEvidence_plate_idx" ON "WorkshopEvidence"("plate")`,
+      `CREATE INDEX IF NOT EXISTS "WorkshopEvidence_r2Key_idx" ON "WorkshopEvidence"("r2Key")`,
+      `CREATE INDEX IF NOT EXISTS "WorkshopEvidence_uploadStatus_idx" ON "WorkshopEvidence"("uploadStatus")`,
+      `CREATE INDEX IF NOT EXISTS "WorkshopEvidence_clientTempId_idx" ON "WorkshopEvidence"("clientTempId")`,
     ];
 
     for (const sql of statements) {
@@ -177,6 +206,7 @@ function mapOrderRow(r: any) {
 
   const receptionPhotos = safeParseJson<string[]>(r.receptionPhotosJson, []);
   const evidencePhotos = safeParseJson<string[]>(r.evidencePhotosJson, []);
+  const voiceNotes = safeParseJson<any[]>(r.voiceNotesJson, []);
   const receptionInventory = safeParseJson<string[]>(r.receptionInventoryJson, []);
   const inspectionFindings = safeParseJson<any[]>(r.inspectionFindingsJson, []);
   const rawAssignedTechs = safeParseJson<any[]>(r.assignedTechniciansJson, []);
@@ -293,6 +323,7 @@ function mapOrderRow(r: any) {
     services: items.map((i: any) => i.name),
     receptionPhotos,
     evidencePhotos,
+    voiceNotes,
     notes: r.notes || "",
     dateIn: r.dateIn,
     startedAt: r.startedAt || null,
@@ -1065,6 +1096,7 @@ export async function POST(request: Request) {
           fuelLevel = "1/2",
           receptionInventory = [],
           receptionPhotos = [],
+          voiceNotes = [],
         } = body;
 
         if (!nombres || !String(nombres).trim()) {
@@ -1179,6 +1211,7 @@ export async function POST(request: Request) {
 
         const jsonInventario = JSON.stringify(Array.isArray(receptionInventory) ? receptionInventory : []);
         const jsonFotos = JSON.stringify(Array.isArray(receptionPhotos) ? receptionPhotos : []);
+        const jsonVoiceNotes = JSON.stringify(Array.isArray(voiceNotes) ? voiceNotes : []);
 
         await prisma.$executeRawUnsafe(
           `INSERT INTO "WorkshopOrder" (
@@ -1186,15 +1219,15 @@ export async function POST(request: Request) {
             "client", "clientPhone", "clientIdDoc", "mechanic", "status", "progress",
             "mileage", "nextOilChangeKm", "fuelLevel", "receptionInventoryJson",
             "servicesJson", "itemsJson",
-            "receptionPhotosJson", "evidencePhotosJson", "notes", "estimatedOut",
+            "receptionPhotosJson", "evidencePhotosJson", "voiceNotesJson", "notes", "estimatedOut",
             "totalCost", "branch", "dateIn", "createdAt", "updatedAt"
           ) VALUES (
             $1, $2, $3, $4, $5, $6,
             $7, $8, $9, $10, 'En Pista', 10,
             $11, $12, $13, $14,
             '[]', '[]',
-            $15, '[]', $16, 'Hoy',
-            0, $17, NOW(), NOW(), NOW()
+            $15, '[]', $16, $17, 'Hoy',
+            0, $18, NOW(), NOW(), NOW()
           )`,
           orderId,
           orderNumber,
@@ -1211,9 +1244,57 @@ export async function POST(request: Request) {
           fuelLevel || "1/2",
           jsonInventario,
           jsonFotos,
+          jsonVoiceNotes,
           notesFormatted,
           orderBranch
         );
+
+        // Vincular evidencias multimedia a la nueva orden de trabajo en Neon DB
+        try {
+          const incomingEvidences: any[] = Array.isArray(body.evidences) ? body.evidences : [];
+          for (const ev of incomingEvidences) {
+            const evRef = ev.evidenceId || ev.id || ev.clientTempId || ev.key;
+            if (evRef) {
+              await prisma.$executeRawUnsafe(
+                `UPDATE "WorkshopEvidence"
+                 SET "orderId" = $1, 
+                     "orderNumber" = $2, 
+                     "vehicleId" = COALESCE("vehicleId", $3), 
+                     "plate" = COALESCE("plate", $4),
+                     "updatedAt" = NOW()
+                 WHERE "id" = $5 OR "clientTempId" = $5 OR "r2Key" = $5`,
+                orderId,
+                orderNumber,
+                vehicle?.id || null,
+                finalPlate,
+                evRef
+              );
+            }
+          }
+
+          if (Array.isArray(receptionPhotos) && receptionPhotos.length > 0) {
+            for (const fotoItem of receptionPhotos) {
+              const urlStr = typeof fotoItem === "string" ? fotoItem : fotoItem?.url;
+              if (urlStr && urlStr.includes("key=")) {
+                const matchedKey = new URL(urlStr, "http://localhost").searchParams.get("key");
+                if (matchedKey) {
+                  await prisma.$executeRawUnsafe(
+                    `UPDATE "WorkshopEvidence"
+                     SET "orderId" = $1, "orderNumber" = $2, "vehicleId" = COALESCE("vehicleId", $3), "plate" = COALESCE("plate", $4), "updatedAt" = NOW()
+                     WHERE "r2Key" = $5`,
+                    orderId,
+                    orderNumber,
+                    vehicle?.id || null,
+                    finalPlate,
+                    matchedKey
+                  );
+                }
+              }
+            }
+          }
+        } catch (linkEvErr) {
+          console.warn("Aviso al vincular evidencias a la orden creada:", linkEvErr);
+        }
 
         const createdRows: any[] = await prisma.$queryRawUnsafe(
           `SELECT * FROM "WorkshopOrder" WHERE "id" = $1`,
@@ -2734,6 +2815,53 @@ export async function POST(request: Request) {
           orderBranch
         );
 
+        // Vincular evidencias multimedia a la nueva orden de trabajo en Neon DB
+        try {
+          const incomingEvidences: any[] = Array.isArray(body.evidences) ? body.evidences : [];
+          for (const ev of incomingEvidences) {
+            const evRef = ev.evidenceId || ev.id || ev.clientTempId || ev.key;
+            if (evRef) {
+              await prisma.$executeRawUnsafe(
+                `UPDATE "WorkshopEvidence"
+                 SET "orderId" = $1, 
+                     "orderNumber" = $2, 
+                     "vehicleId" = COALESCE("vehicleId", $3), 
+                     "plate" = COALESCE("plate", $4),
+                     "updatedAt" = NOW()
+                 WHERE "id" = $5 OR "clientTempId" = $5 OR "r2Key" = $5`,
+                orderId,
+                orderNumber,
+                vehicle?.id || null,
+                cleanPlate,
+                evRef
+              );
+            }
+          }
+
+          if (Array.isArray(receptionPhotos) && receptionPhotos.length > 0) {
+            for (const fotoItem of receptionPhotos) {
+              const urlStr = typeof fotoItem === "string" ? fotoItem : fotoItem?.url;
+              if (urlStr && urlStr.includes("key=")) {
+                const matchedKey = new URL(urlStr, "http://localhost").searchParams.get("key");
+                if (matchedKey) {
+                  await prisma.$executeRawUnsafe(
+                    `UPDATE "WorkshopEvidence"
+                     SET "orderId" = $1, "orderNumber" = $2, "vehicleId" = COALESCE("vehicleId", $3), "plate" = COALESCE("plate", $4), "updatedAt" = NOW()
+                     WHERE "r2Key" = $5`,
+                    orderId,
+                    orderNumber,
+                    vehicle?.id || null,
+                    cleanPlate,
+                    matchedKey
+                  );
+                }
+              }
+            }
+          }
+        } catch (linkEvErr) {
+          console.warn("Aviso al vincular evidencias a la orden creada:", linkEvErr);
+        }
+
         const createdRows: any[] = await prisma.$queryRawUnsafe(
           `SELECT * FROM "WorkshopOrder" WHERE "id" = $1`,
           orderId
@@ -3026,6 +3154,14 @@ export async function POST(request: Request) {
           Boolean(startTimer),
           JSON.stringify(finalReceptionInventory)
         );
+
+        if (body.voiceNotes && Array.isArray(body.voiceNotes)) {
+          await prisma.$executeRawUnsafe(
+            `UPDATE "WorkshopOrder" SET "voiceNotesJson" = $2 WHERE "id" = $1`,
+            current.id,
+            JSON.stringify(body.voiceNotes)
+          ).catch(() => {});
+        }
 
         // Sincronizar kilometraje y fotos con el expediente del vehículo (Oficina / Clientes)
         if (current.plate) {

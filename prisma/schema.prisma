@@ -702,6 +702,7 @@ model Vehicle {
   updatedAt            DateTime        @updatedAt
   customer             Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
   workshopOrders       WorkshopOrder[]
+  evidences            WorkshopEvidence[]
 
   @@index([customerId])
   @@index([plate])
@@ -907,12 +908,46 @@ model WorkshopOrder {
   updatedAt               DateTime  @updatedAt
   customer            Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
   vehicleRef          Vehicle?  @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  evidences           WorkshopEvidence[]
 
   @@index([orderNumber])
   @@index([plate])
   @@index([status])
   @@index([customerId])
   @@index([vehicleId])
+}
+
+model WorkshopEvidence {
+  id                  String         @id @default(cuid())
+  orderId             String?
+  orderNumber         String?
+  vehicleId           String?
+  plate               String?
+  type                String         // 'image' | 'video' | 'audio'
+  r2Key               String
+  mimeType            String
+  fileSizeBytes       Int            @default(0)
+  durationSeconds     Int?
+  transcriptionText   String?
+  uploadStatus        String         @default("COMPLETED") // PENDING, COMPLETED, FAILED, DELETE_FAILED
+  transcriptionStatus String         @default("NOT_APPLICABLE") // NOT_APPLICABLE, PENDING, COMPLETED, FAILED
+  uploadedBy          String?
+  clientTempId        String?
+  branch              String?        @default("PRINCIPAL")
+  metadataJson        String?        @default("{}")
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  order               WorkshopOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  vehicle             Vehicle?       @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([orderNumber])
+  @@index([vehicleId])
+  @@index([plate])
+  @@index([r2Key])
+  @@index([type])
+  @@index([uploadStatus])
+  @@index([clientTempId])
 }
 
 model WorkshopInspection {

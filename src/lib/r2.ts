@@ -4,6 +4,7 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  HeadObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import crypto from "crypto";
@@ -19,6 +20,9 @@ export const ALLOWED_MIME_TYPES = [
   "audio/ogg",
   "audio/mpeg",
   "audio/wav",
+  "video/webm",
+  "video/mp4",
+  "video/quicktime",
   "application/pdf",
   "text/xml",
   "application/xml",
@@ -26,7 +30,7 @@ export const ALLOWED_MIME_TYPES = [
 
 export type AllowedMimeType = typeof ALLOWED_MIME_TYPES[number];
 
-export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+export const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB
 
 // Extension map by MIME type
 const MIME_TO_EXT: Record<string, string> = {
@@ -39,6 +43,9 @@ const MIME_TO_EXT: Record<string, string> = {
   "audio/ogg": "ogg",
   "audio/mpeg": "mp3",
   "audio/wav": "wav",
+  "video/webm": "webm",
+  "video/mp4": "mp4",
+  "video/quicktime": "mov",
   "application/pdf": "pdf",
   "text/xml": "xml",
   "application/xml": "xml",
@@ -199,6 +206,47 @@ export async function getSignedUploadUrl({
   const publicUrl = publicDomain ? `https://${publicDomain}/${key}` : uploadUrl.split("?")[0];
 
   return { uploadUrl, key, publicUrl };
+}
+
+/**
+ * Check if an object exists in Cloudflare R2 and retrieve its size and MIME type
+ */
+export async function checkObjectExistsInR2(key: string): Promise<{
+  exists: boolean;
+  size?: number;
+  mimeType?: string;
+  eTag?: string;
+}> {
+  if (!isR2Configured()) {
+    return { exists: false };
+  }
+  try {
+    const client = getR2Client();
+    const bucketName = process.env.R2_BUCKET_NAME || "autotech-storage";
+    const safeKey = key.replace(/\.\./g, "");
+    const head = await client.send(
+      new HeadObjectCommand({
+        Bucket: bucketName,
+        Key: safeKey,
+      })
+    );
+    return {
+      exists: true,
+      size: head.ContentLength,
+      mimeType: head.ContentType,
+      eTag: head.ETag,
+    };
+  } catch (err: any) {
+    if (
+      err?.$metadata?.httpStatusCode === 404 ||
+      err?.name === "NotFound" ||
+      err?.code === "NotFound"
+    ) {
+      return { exists: false };
+    }
+    console.warn("Error al verificar existencia de objeto en R2:", err);
+    throw err;
+  }
 }
 
 /**
