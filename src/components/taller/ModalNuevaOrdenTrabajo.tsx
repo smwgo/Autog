@@ -2081,8 +2081,8 @@ export default function ModalNuevaOrdenTrabajo({
               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl bg-blue-600/15 border border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs sm:text-sm shrink-0">
                 OT
               </div>
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="font-mono font-bold text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 tracking-wide shrink-0">
+              <div className="flex flex-col items-start min-w-0 leading-tight">
+                <span className="font-mono font-bold text-xs sm:text-sm text-zinc-700 dark:text-zinc-200 tracking-wide shrink-0">
                   #{correlativoOrden}
                 </span>
                 {(asignacionesTecnicos?.[0]?.nombre || empleadoLogueado?.nombre) && (
@@ -2093,7 +2093,7 @@ export default function ModalNuevaOrdenTrabajo({
                       )
                     }
                     title="Clic para alternar etiqueta de rol (Mecánico / Asesor)"
-                    className="inline-flex items-center gap-1 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[11px] sm:text-xs font-semibold cursor-pointer select-none truncate max-w-[140px] sm:max-w-none"
+                    className="mt-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[10px] sm:text-[11px] font-semibold cursor-pointer select-none truncate max-w-[150px] sm:max-w-none"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                     <span className="text-emerald-600 dark:text-emerald-300 font-medium shrink-0">{etiquetaRolCabecera}:</span>
