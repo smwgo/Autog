@@ -2051,40 +2051,42 @@ export default function ModalNuevaOrdenTrabajo({
       onClick={(e) => e.stopPropagation()}
       className={
         isPageMode
-          ? "w-full space-y-3 sm:space-y-4 animate-fade-in"
-          : "w-full h-[100dvh] sm:h-auto sm:max-w-3xl lg:max-w-4xl bg-white dark:bg-[#141417] text-zinc-900 dark:text-white border-0 sm:border border-zinc-200 dark:border-white/10 rounded-none sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[100dvh] sm:max-h-[90vh] transition-all pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
+          ? "w-full rounded-3xl bg-white dark:bg-[#0c0c0e] border border-zinc-200/80 dark:border-white/[0.08] shadow-xl overflow-hidden flex flex-col divide-y divide-zinc-200/80 dark:divide-white/[0.08] animate-fade-in"
+          : "w-full h-[100dvh] sm:h-auto sm:max-w-3xl lg:max-w-4xl bg-white dark:bg-[#0c0c0e] text-zinc-900 dark:text-white border-0 sm:border border-zinc-200/80 dark:border-white/[0.08] rounded-none sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[100dvh] sm:max-h-[90vh] transition-all pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] divide-y divide-zinc-200/80 dark:divide-white/[0.08]"
       }
     >
         {/* Cabecera Superior: Título + Stepper */}
         <div
           className={
             isPageMode
-              ? "p-3 sm:p-4 rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 shadow-xs flex flex-col gap-2"
-              : "px-3.5 py-2.5 sm:px-6 sm:py-3.5 border-b border-zinc-200 dark:border-white/10 bg-zinc-50/90 dark:bg-black/30 backdrop-blur-md shrink-0"
+              ? "p-4 sm:p-5 bg-zinc-50/70 dark:bg-white/[0.02] flex flex-col gap-3 shrink-0"
+              : "px-4 py-3 sm:px-6 sm:py-4 bg-zinc-50/70 dark:bg-white/[0.02] flex flex-col gap-2.5 shrink-0"
           }
         >
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
               {isPageMode && (
                 <button
                   type="button"
                   onClick={() => router.push("/taller")}
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-white/10 transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-xs cursor-pointer"
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-zinc-200/60 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.10] text-zinc-700 dark:text-zinc-300 transition-all flex items-center justify-center shrink-0 active:scale-95 cursor-pointer"
                   title="Volver a Taller"
                 >
-                  <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                  <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
                     <path d="M19 12H5M12 19l-7-7 7-7" />
                   </svg>
                 </button>
               )}
 
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl bg-blue-600/15 border border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs sm:text-sm shrink-0">
-                OT
-              </div>
               <div className="flex flex-col items-start min-w-0 leading-tight">
-                <span className="font-mono font-bold text-xs sm:text-sm text-zinc-700 dark:text-zinc-200 tracking-wide shrink-0">
-                  #{correlativoOrden}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                    Orden
+                  </span>
+                  <span className="font-mono font-bold text-sm sm:text-base text-zinc-900 dark:text-white tracking-tight">
+                    #{correlativoOrden}
+                  </span>
+                </div>
                 {(asignacionesTecnicos?.[0]?.nombre || empleadoLogueado?.nombre) && (
                   <span
                     onClick={() =>
@@ -2093,96 +2095,57 @@ export default function ModalNuevaOrdenTrabajo({
                       )
                     }
                     title="Clic para alternar etiqueta de rol (Mecánico / Asesor)"
-                    className="mt-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[10px] sm:text-[11px] font-semibold cursor-pointer select-none truncate max-w-[150px] sm:max-w-none"
+                    className="mt-0.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 text-emerald-700 dark:text-emerald-400 text-[10px] sm:text-[11px] font-medium cursor-pointer select-none transition-colors"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                    <span className="text-emerald-600 dark:text-emerald-300 font-medium shrink-0">{etiquetaRolCabecera}:</span>
-                    <strong className="text-zinc-900 dark:text-white font-semibold truncate">{asignacionesTecnicos?.[0]?.nombre || empleadoLogueado?.nombre}</strong>
+                    <span className="opacity-80">{etiquetaRolCabecera}:</span>
+                    <strong className="font-semibold text-zinc-900 dark:text-zinc-200 truncate max-w-[150px] sm:max-w-none">
+                      {asignacionesTecnicos?.[0]?.nombre || empleadoLogueado?.nombre}
+                    </strong>
                   </span>
                 )}
               </div>
             </div>
 
             {/* Stepper Deslizable en Escritorio / Tablet (>= md) */}
-            <div className="hidden md:flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-100 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 text-xs">
-              <button
-                type="button"
-                onClick={() => irAPaso(1)}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  pasoActivo === 1
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
-                    : tieneCliente
-                    ? "text-emerald-600 dark:text-emerald-400 hover:text-blue-600 dark:hover:text-white"
-                    : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-                }`}
-              >
-                <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
-                  {tieneCliente ? "✓" : "1"}
-                </span>
-                <span>1. Cliente</span>
-              </button>
-
-              <span className="text-zinc-400 dark:text-zinc-600">→</span>
-
-              <button
-                type="button"
-                onClick={() => tieneCliente && irAPaso(2)}
-                disabled={!tieneCliente}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
-                  pasoActivo === 2
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 cursor-pointer"
-                    : tieneVehiculo
-                    ? "text-emerald-600 dark:text-emerald-400 hover:text-blue-600 dark:hover:text-white cursor-pointer"
-                    : tieneCliente
-                    ? "text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-white cursor-pointer"
-                    : "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
-                }`}
-              >
-                <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
-                  {tieneVehiculo ? "✓" : "2"}
-                </span>
-                <span>2. Vehículo</span>
-              </button>
-
-              <span className="text-zinc-400 dark:text-zinc-600">→</span>
-
-              <button
-                type="button"
-                onClick={() => tieneCliente && tieneVehiculo && irAPaso(3)}
-                disabled={!tieneCliente || !tieneVehiculo}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
-                  pasoActivo === 3
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 cursor-pointer"
-                    : tieneCliente && tieneVehiculo
-                    ? (motivoIngreso.trim() ? "text-emerald-600 dark:text-emerald-400 hover:text-blue-600 dark:hover:text-white cursor-pointer" : "text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-white cursor-pointer")
-                    : "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
-                }`}
-              >
-                <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
-                  {motivoIngreso.trim() ? "✓" : "3"}
-                </span>
-                <span>3. Ingreso</span>
-              </button>
-
-              <span className="text-zinc-400 dark:text-zinc-600">→</span>
-
-              <button
-                type="button"
-                onClick={() => tieneCliente && tieneVehiculo && irAPaso(4)}
-                disabled={!tieneCliente || !tieneVehiculo}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
-                  pasoActivo === 4
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 cursor-pointer"
-                    : tieneCliente && tieneVehiculo
-                    ? "text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-white cursor-pointer"
-                    : "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
-                }`}
-              >
-                <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
-                  4
-                </span>
-                <span>4. Orden</span>
-              </button>
+            <div className="hidden md:flex items-center gap-1 p-1 rounded-xl bg-zinc-200/60 dark:bg-white/[0.04] text-xs">
+              {[
+                { id: 1, label: "Cliente", req: tieneCliente, active: pasoActivo === 1, disabled: false },
+                { id: 2, label: "Vehículo", req: tieneVehiculo, active: pasoActivo === 2, disabled: !tieneCliente },
+                { id: 3, label: "Ingreso", req: Boolean(motivoIngreso.trim()), active: pasoActivo === 3, disabled: !tieneCliente || !tieneVehiculo },
+                { id: 4, label: "Orden", req: false, active: pasoActivo === 4, disabled: !tieneCliente || !tieneVehiculo },
+              ].map((step, idx) => (
+                <React.Fragment key={step.id}>
+                  {idx > 0 && <span className="text-zinc-300 dark:text-zinc-700 text-xs px-0.5 select-none">›</span>}
+                  <button
+                    type="button"
+                    disabled={step.disabled}
+                    onClick={() => irAPaso(step.id as any)}
+                    className={`px-3 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 cursor-pointer ${
+                      step.active
+                        ? "bg-blue-600 text-white font-semibold shadow-xs"
+                        : step.req
+                        ? "text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-zinc-200/60 dark:hover:bg-white/5 font-medium"
+                        : step.disabled
+                        ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-white/5 font-medium"
+                    }`}
+                  >
+                    <span
+                      className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                        step.active
+                          ? "bg-white/20 text-white"
+                          : step.req
+                          ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                          : "bg-black/10 dark:bg-white/10"
+                      }`}
+                    >
+                      {step.req ? "✓" : step.id}
+                    </span>
+                    <span>{step.label}</span>
+                  </button>
+                </React.Fragment>
+              ))}
             </div>
 
             {/* Botón X para cerrar (solo en modo modal flotante) */}
@@ -2190,7 +2153,7 @@ export default function ModalNuevaOrdenTrabajo({
               <button
                 type="button"
                 onClick={handleCancelarSinGuardar}
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer text-sm shrink-0 min-h-[36px] min-w-[36px]"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-zinc-200/60 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer text-sm shrink-0 min-h-[36px] min-w-[36px]"
                 title="Cerrar sin guardar"
               >
                 ✕
@@ -2199,7 +2162,7 @@ export default function ModalNuevaOrdenTrabajo({
           </div>
 
           {/* Stepper Móvil Compacto e Interactivo (< md) */}
-          <div className="grid grid-cols-4 gap-1 sm:gap-1.5 mt-2 pt-2 border-t border-zinc-200/60 dark:border-white/5 md:hidden">
+          <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-zinc-200/60 dark:border-white/[0.06] md:hidden">
             {[
               { id: 1, label: "Cliente", req: tieneCliente },
               { id: 2, label: "Vehículo", req: tieneVehiculo },
@@ -2218,15 +2181,15 @@ export default function ModalNuevaOrdenTrabajo({
                     else if (st.id === 3 && tieneCliente && tieneVehiculo) irAPaso(3);
                     else if (st.id === 4 && tieneCliente && tieneVehiculo) irAPaso(4);
                   }}
-                  className={`py-1.5 px-1 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer min-h-[36px] active:scale-95 ${
+                  className={`py-1.5 px-1 rounded-xl text-[11px] transition-all flex items-center justify-center gap-1 cursor-pointer min-h-[36px] active:scale-95 ${
                     activo
-                      ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-500/30"
+                      ? "bg-blue-600 text-white font-semibold shadow-xs"
                       : completado
-                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30"
-                      : "bg-zinc-100 dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400"
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-medium"
+                      : "bg-zinc-100 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 font-normal"
                   }`}
                 >
-                  <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] bg-black/10 dark:bg-white/20 shrink-0">
+                  <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] bg-black/10 dark:bg-white/10 shrink-0 font-bold">
                     {completado ? "✓" : st.id}
                   </span>
                   <span className="truncate">{st.label}</span>
@@ -2240,8 +2203,8 @@ export default function ModalNuevaOrdenTrabajo({
         <div
           className={
             isPageMode
-              ? "p-4 sm:p-6 rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 shadow-xs space-y-4 sm:space-y-5"
-              : "flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-5"
+              ? "p-4 sm:p-6 lg:p-7 space-y-5 min-h-[360px]"
+              : "flex-1 overflow-y-auto p-4 sm:p-6 lg:p-7 space-y-5"
           }
         >
           {/* Input oculto para Cámara Nativa de iOS (Apple) y Android */}
@@ -2459,16 +2422,16 @@ export default function ModalNuevaOrdenTrabajo({
                       onFocus={() => {
                         if (busquedaCliente.trim()) setMostrarDropdownClientes(true);
                       }}
-                      placeholder="Buscar cliente, cédula, matrícula o WhatsApp..."
-                      className="w-full h-12 pl-11 pr-24 rounded-2xl bg-zinc-100 dark:bg-black/40 border border-zinc-300 dark:border-white/15 focus:border-blue-500 text-zinc-900 dark:text-white text-base sm:text-sm placeholder:text-zinc-500 focus:outline-none transition-all shadow-inner"
+                      placeholder="Buscar por cliente, cédula, matrícula o WhatsApp..."
+                      className="w-full h-12 pl-11 pr-24 rounded-2xl bg-zinc-100/90 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/[0.08] focus:border-blue-500 dark:focus:border-blue-500 text-zinc-900 dark:text-white text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all shadow-xs"
                       autoFocus
                     />
                     <svg
-                      className="w-5 h-5 text-zinc-400 absolute left-3.5 top-3.5"
+                      className="w-4 h-4 text-zinc-400 absolute left-4 top-4"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
-                      strokeWidth={1.5}
+                      strokeWidth={2}
                     >
                       <path
                         strokeLinecap="round"
@@ -2484,27 +2447,28 @@ export default function ModalNuevaOrdenTrabajo({
                           setBusquedaCliente("");
                           setClienteSeleccionado(null);
                         }}
-                        className="absolute right-3 top-3 px-2 py-1 rounded-lg bg-zinc-200 dark:bg-white/5 hover:bg-zinc-300 dark:hover:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs cursor-pointer"
+                        className="absolute right-3 top-2.5 px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-white/10 hover:bg-zinc-300 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-300 text-xs font-medium cursor-pointer transition-colors"
                       >
                         Limpiar
                       </button>
                     )}
                   </div>
 
-                  {/* Tres botones debajo del buscador: solo iconos */}
-                  <div className="grid grid-cols-3 gap-2 mt-2.5">
+                  {/* Tres botones de acción rápida con estética moderna y minimalista */}
+                  <div className="grid grid-cols-3 gap-2 sm:gap-2.5 mt-2.5">
                     {/* Botón Consumidor */}
                     <button
                       type="button"
                       onClick={handleSeleccionarConsumidorFinal}
                       title="Consumidor Final (trabajo rápido sin registro nominal)"
                       aria-label="Consumidor Final"
-                      className="h-11 px-2 sm:px-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] border border-zinc-300 dark:border-white/15 text-zinc-800 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 min-h-[44px]"
+                      className="h-11 px-2.5 sm:px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200 dark:border-white/[0.08] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95 text-xs font-medium min-h-[44px]"
                     >
-                      <svg className="w-5 h-5 text-zinc-600 dark:text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <svg className="w-4 h-4 shrink-0 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
                         <circle cx="12" cy="7" r="4" />
                       </svg>
+                      <span className="truncate">Consumidor</span>
                     </button>
 
                     {/* Botón Escanear */}
@@ -2513,12 +2477,13 @@ export default function ModalNuevaOrdenTrabajo({
                       onClick={abrirEscanerMatricula}
                       title="Escanear matrícula con cámara (Apple iOS / Android)"
                       aria-label="Escanear Matrícula"
-                      className="h-11 px-2 sm:px-3 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 dark:bg-emerald-600/20 dark:hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 min-h-[44px]"
+                      className="h-11 px-2.5 sm:px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95 text-xs font-semibold min-h-[44px]"
                     >
-                      <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <svg className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
                         <circle cx="12" cy="13" r="3" />
                       </svg>
+                      <span className="truncate">Escanear</span>
                     </button>
 
                     {/* Botón Nuevo */}
@@ -2527,14 +2492,15 @@ export default function ModalNuevaOrdenTrabajo({
                       onClick={handleIniciarNuevoCliente}
                       title="Crear nuevo cliente"
                       aria-label="Crear nuevo cliente"
-                      className="h-11 px-2 sm:px-3 rounded-2xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white flex items-center justify-center transition-all cursor-pointer shadow-md shadow-blue-600/30 active:scale-95 min-h-[44px]"
+                      className="h-11 px-2.5 sm:px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-blue-600/25 active:scale-95 text-xs font-semibold min-h-[44px]"
                     >
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <svg className="w-4 h-4 shrink-0 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
                         <line x1="19" x2="19" y1="8" y2="14" />
                         <line x1="22" x2="16" y1="11" y2="11" />
                       </svg>
+                      <span className="truncate">Nuevo</span>
                     </button>
                   </div>
 
@@ -4732,8 +4698,8 @@ export default function ModalNuevaOrdenTrabajo({
         <div
           className={
             isPageMode
-              ? "p-3 sm:p-4 rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 shadow-xs flex items-center justify-between gap-2"
-              : "px-3.5 py-3 sm:px-6 sm:py-4 border-t border-zinc-200 dark:border-white/10 flex items-center justify-between gap-2 bg-zinc-50 dark:bg-black/30"
+              ? "p-3.5 sm:p-5 bg-zinc-50/70 dark:bg-white/[0.02] flex items-center justify-between gap-3 shrink-0"
+              : "px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between gap-3 bg-zinc-50/70 dark:bg-white/[0.02] shrink-0"
           }
         >
           <div className="flex items-center gap-2 min-w-0">
@@ -4741,7 +4707,7 @@ export default function ModalNuevaOrdenTrabajo({
               <button
                 type="button"
                 onClick={() => setMostrarFormNuevoCliente(false)}
-                className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 min-h-[44px]"
+                className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-200/60 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.10] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-medium transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 min-h-[44px]"
               >
                 <span>←</span>
                 <span>Atrás</span>
@@ -4759,7 +4725,7 @@ export default function ModalNuevaOrdenTrabajo({
                   }
                   setPasoActivo((p) => ((p - 1) as 1 | 2 | 3 | 4));
                 }}
-                className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 min-h-[44px]"
+                className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-200/60 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.10] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-medium transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 min-h-[44px]"
               >
                 <span>←</span>
                 <span>Atrás</span>
@@ -4768,7 +4734,7 @@ export default function ModalNuevaOrdenTrabajo({
               <button
                 type="button"
                 onClick={() => router.push("/taller")}
-                className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 min-h-[44px]"
+                className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-200/60 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.10] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-medium transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 min-h-[44px]"
               >
                 <span>←</span>
                 <span>Volver</span>
@@ -4778,7 +4744,7 @@ export default function ModalNuevaOrdenTrabajo({
                 type="button"
                 onClick={handleCancelarSinGuardar}
                 disabled={creando}
-                className="hidden sm:inline-flex px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer active:scale-95 disabled:opacity-50 min-h-[44px] shrink-0"
+                className="hidden sm:inline-flex px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-200/60 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-medium transition-all cursor-pointer active:scale-95 disabled:opacity-50 min-h-[44px] shrink-0"
               >
                 Cancelar
               </button>
@@ -4788,7 +4754,7 @@ export default function ModalNuevaOrdenTrabajo({
             {fechaHoraRecepcion && (
               <span
                 title="Fecha y hora de recepción"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-zinc-100 dark:bg-white/[0.04] border border-zinc-300 dark:border-white/10 text-zinc-600 dark:text-zinc-300 text-[11px] sm:text-xs font-mono min-w-0"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-200/50 dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 text-[11px] sm:text-xs font-mono min-w-0"
               >
                 <svg className="w-3.5 h-3.5 text-zinc-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                   <circle cx="12" cy="12" r="9" />
@@ -4824,7 +4790,7 @@ export default function ModalNuevaOrdenTrabajo({
                     irAPaso(4);
                   }
                 }}
-                className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-lg shadow-blue-600/30 active:scale-95 min-h-[44px]"
+                className="px-4 py-2 sm:px-6 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-600/25 active:scale-95 min-h-[44px]"
               >
                 <span>Siguiente</span>
                 <span>→</span>
@@ -4834,7 +4800,7 @@ export default function ModalNuevaOrdenTrabajo({
                 type="button"
                 onClick={handleCrearOrdenFinal}
                 disabled={creando}
-                className="px-4 py-2 sm:px-6 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-lg shadow-blue-600/30 active:scale-95 disabled:opacity-50 flex items-center gap-2 min-h-[44px]"
+                className="px-4 py-2 sm:px-6 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-md shadow-blue-600/30 active:scale-95 disabled:opacity-50 flex items-center gap-2 min-h-[44px]"
               >
                 {creando ? (
                   <>

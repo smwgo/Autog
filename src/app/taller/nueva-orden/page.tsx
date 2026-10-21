@@ -12,10 +12,10 @@ function NuevaOrdenContent() {
   const cliente = searchParams.get("cliente") || "";
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white font-sans pb-28 md:pb-12 selection:bg-blue-500/30">
+    <div className="flex flex-col min-h-screen bg-zinc-100/60 dark:bg-[#070709] text-zinc-900 dark:text-white font-sans pb-28 md:pb-12 selection:bg-blue-500/30">
       <Header />
 
-      <main className="max-w-5xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6">
+      <main className="max-w-4xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-7">
         <ModalNuevaOrdenTrabajo
           isOpen={true}
           isPageMode={true}
