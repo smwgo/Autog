@@ -13,6 +13,7 @@ export interface LubricentroExpressProps {
   onOrdenCreada?: (orden: any) => void;
   onCambiarATaller?: () => void;
   ordenActiva?: any;
+  modoEspecialidad?: "lubricentro" | "carwash" | "tecnicentro";
 }
 
 export interface ServicioExpressItem {
@@ -71,11 +72,12 @@ export default function LubricentroExpress({
   mostrarToast,
   onOrdenCreada,
   ordenActiva,
+  modoEspecialidad = "lubricentro",
 }: LubricentroExpressProps) {
   // =========================================================================
-  // STEPPER DE 4 ETAPAS (IDÉNTICO A TALLER: 1. Ingreso, 2. Lubricación, 3. Presupuesto, 4. Firma)
+  // STEPPER DE 3 ETAPAS (1. Lubricación, 2. Presupuesto, 3. Firma)
   // =========================================================================
-  const [etapaActiva, setEtapaActiva] = useState<number>(1);
+  const [etapaActiva, setEtapaActiva] = useState<number>(2);
   const stepperCarouselRef = useRef<HTMLDivElement | null>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -87,7 +89,7 @@ export default function LubricentroExpress({
       const width = container.clientWidth;
       if (width > 0) {
         const pageIndex = Math.round(container.scrollLeft / width);
-        const steps = [1, 2, 3, 4];
+        const steps = [2, 3, 4];
         const targetStep = steps[pageIndex];
         if (targetStep && targetStep !== etapaActiva) {
           setEtapaActiva(targetStep);
@@ -110,14 +112,15 @@ export default function LubricentroExpress({
   // =========================================================================
   // ETAPA 1: INGRESO LUBRICENTRO (NIVEL ACEITE, KM, PRÓXIMO CAMBIO, CHECKLIST, FOTOS R2)
   // =========================================================================
+  const [nivelCombustible, setNivelCombustible] = useState<string>("1/2");
   const [nivelAceiteIngreso, setNivelAceiteIngreso] = useState<string>("Normal");
   const [kmActual, setKmActual] = useState<string>("");
   const [intervaloAceite, setIntervaloAceite] = useState<number>(5000);
   const [checklistIngreso, setChecklistIngreso] = useState<string[]>([
-    "Tapón cárter",
-    "Bayoneta",
-    "Tapa aceite",
-    "Sin fugas",
+    "Gata",
+    "Llave",
+    "Repuesto",
+    "Matrícula",
   ]);
   const [itemManualIngreso, setItemManualIngreso] = useState<string>("");
   const [fotosRecepcion, setFotosRecepcion] = useState<string[]>([]);
@@ -129,7 +132,23 @@ export default function LubricentroExpress({
   // =========================================================================
   const [estacionActiva, setEstacionActiva] = useState<
     "lubricantes" | "filtros" | "llantas" | "baterias" | "lavado"
-  >("lubricantes");
+  >(
+    modoEspecialidad === "carwash"
+      ? "lavado"
+      : modoEspecialidad === "tecnicentro"
+      ? "llantas"
+      : "lubricantes"
+  );
+
+  useEffect(() => {
+    if (modoEspecialidad === "carwash") {
+      setEstacionActiva("lavado");
+    } else if (modoEspecialidad === "tecnicentro") {
+      setEstacionActiva("llantas");
+    } else {
+      setEstacionActiva("lubricantes");
+    }
+  }, [modoEspecialidad]);
   const [viscosidad, setViscosidad] = useState<string>("10W-30");
   const [tipoBase, setTipoBase] = useState<string>("Semi-Sintético");
   const [galonesAceite, setGalonesAceite] = useState<number>(1);
@@ -170,7 +189,7 @@ export default function LubricentroExpress({
       setKmActual(String(ordenActiva.mileage));
     }
     if (ordenActiva.fuelLevel) {
-      setNivelAceiteIngreso(ordenActiva.fuelLevel);
+      setNivelCombustible(ordenActiva.fuelLevel);
     }
     if (Array.isArray(ordenActiva.receptionInventory) && ordenActiva.receptionInventory.length > 0) {
       setChecklistIngreso(ordenActiva.receptionInventory);
@@ -749,27 +768,23 @@ export default function LubricentroExpress({
   return (
     <div className="space-y-5 animate-fade-in text-white">
       {/* ===================================================================
-          STEPPER: IDÉNTICO A TALLER (CARRUSEL EN MÓVIL Y 4 COLUMNAS EN DESKTOP)
+          STEPPER: 3 ETAPAS (1. Lubricación, 2. Presupuesto, 3. Firma)
           =================================================================== */}
       <div className="bg-white/[0.02] backdrop-blur-md border border-white/[0.08] p-1.5 sm:p-2 rounded-2xl space-y-1.5">
         <div
           ref={stepperCarouselRef}
           onScroll={handleStepperScroll}
-          className="flex sm:grid sm:grid-cols-4 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
+          className="flex sm:grid sm:grid-cols-3 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
         >
           {[
             {
-              id: 1,
-              label: "1. Ingreso",
-              icon: (
-                <svg className="w-6 h-6 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.125-.504 1.125-1.125V14.25m-17.25 0h17.25M3.75 14.25l2.25-6.75h12l2.25 6.75" />
-                </svg>
-              ),
-            },
-            {
               id: 2,
-              label: "2. Lubricación",
+              label:
+                modoEspecialidad === "carwash"
+                  ? "1. Car Wash"
+                  : modoEspecialidad === "tecnicentro"
+                  ? "1. Tecnicentro"
+                  : "1. Lubricación",
               icon: (
                 <svg className="w-6 h-6 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
@@ -778,7 +793,7 @@ export default function LubricentroExpress({
             },
             {
               id: 3,
-              label: "3. Presupuesto",
+              label: "2. Presupuesto",
               icon: (
                 <svg className="w-6 h-6 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
@@ -787,7 +802,7 @@ export default function LubricentroExpress({
             },
             {
               id: 4,
-              label: "4. Firma",
+              label: "3. Firma",
               icon: (
                 <svg className="w-6 h-6 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
@@ -819,7 +834,7 @@ export default function LubricentroExpress({
 
         {/* Puntos de paginación solo en móvil */}
         <div className="flex sm:hidden items-center justify-center gap-1.5 pt-1">
-          {[1, 2, 3, 4].map((id) => (
+          {[2, 3, 4].map((id) => (
             <button
               key={id}
               type="button"
@@ -833,280 +848,7 @@ export default function LubricentroExpress({
         </div>
       </div>
 
-      {/* ===================================================================
-          ETAPA 1: INGRESO (NIVEL DE ACEITE, KM, PRÓXIMO CAMBIO, REVISIÓN Y FOTOS R2)
-          =================================================================== */}
-      {etapaActiva === 1 && (
-        <div className="w-full space-y-4 animate-fade-in">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            {/* Controles de Nivel de Aceite, Km, Próximo Cambio y Revisión */}
-            <div className="lg:col-span-7 space-y-4">
-              {/* Nivel de Aceite en Varilla / Bayoneta */}
-              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-zinc-300">🛢️ Nivel de Aceite</span>
-                  <span className="text-xs font-mono text-amber-400 font-bold">
-                    {nivelAceiteIngreso}
-                  </span>
-                </div>
-                <div className="grid grid-cols-5 gap-1.5">
-                  {["Bajo", "1/4", "1/2", "3/4", "Normal"].map((lvl) => {
-                    const sel = nivelAceiteIngreso === lvl;
-                    return (
-                      <button
-                        key={lvl}
-                        type="button"
-                        onClick={() => {
-                          setNivelAceiteIngreso(lvl);
-                          void sincronizarOrdenLubricentro({ fuelLevel: lvl });
-                        }}
-                        className={`h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                          sel
-                            ? "bg-amber-500/20 border border-amber-500/50 text-amber-300"
-                            : "bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 text-zinc-400"
-                        }`}
-                      >
-                        {lvl}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
 
-              {/* Kilometraje Actual + Próximo Cambio + Checklist de Revisión */}
-              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-semibold text-zinc-300">Kilometraje Actual</span>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      value={kmActual}
-                      onChange={(e) => setKmActual(e.target.value)}
-                      onBlur={() => {
-                        const kmNum = parseInt(kmActual.replace(/[^0-9]/g, ""), 10) || null;
-                        void sincronizarOrdenLubricentro({
-                          mileage: kmNum,
-                          nextOilChangeKm: kmNum ? kmNum + intervaloAceite : null,
-                        });
-                      }}
-                      placeholder="Ej: 85400"
-                      className="h-8 w-32 px-3 rounded-lg bg-black/50 border border-white/10 text-white text-xs font-mono text-right focus:outline-none focus:border-amber-500/50"
-                    />
-                  </div>
-                </div>
-
-                {/* Intervalo y Próximo Cambio de Aceite */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-white/5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-zinc-400">Intervalo:</span>
-                    {[
-                      { label: "+3k", valor: 3000 },
-                      { label: "+5k", valor: 5000 },
-                      { label: "+8k", valor: 8000 },
-                      { label: "+10k", valor: 10000 },
-                    ].map((it) => (
-                      <button
-                        key={it.valor}
-                        type="button"
-                        onClick={() => {
-                          setIntervaloAceite(it.valor);
-                          const kmNum = parseInt(String(kmActual).replace(/[^0-9]/g, ""), 10) || ordenActiva?.mileage || null;
-                          if (ordenActiva && kmNum) {
-                            void sincronizarOrdenLubricentro({
-                              mileage: kmNum,
-                              nextOilChangeKm: kmNum + it.valor,
-                            });
-                          }
-                        }}
-                        className={`px-2 py-0.5 rounded-lg text-[11px] font-mono font-bold transition-all cursor-pointer border ${
-                          intervaloAceite === it.valor
-                            ? "bg-amber-500/20 border-amber-500/50 text-amber-300"
-                            : "bg-white/[0.02] border-white/5 text-zinc-400 hover:text-white"
-                        }`}
-                      >
-                        {it.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="text-xs font-mono">
-                    <span className="text-zinc-400">Próximo cambio: </span>
-                    <strong className="text-emerald-400">
-                      {kmProximoCambio ? `${kmProximoCambio.toLocaleString()} km` : "—"}
-                    </strong>
-                  </div>
-                </div>
-
-                {/* Checklist corto de Revisión de Lubricentro */}
-                <div className="space-y-2 pt-1 border-t border-white/5">
-                  <span className="text-[11px] text-zinc-400 block font-medium">
-                    Revisión de ingreso:
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {Array.from(
-                      new Set([
-                        "Tapón cárter",
-                        "Bayoneta",
-                        "Tapa aceite",
-                        "Filtro aceite",
-                        "Filtro aire",
-                        "Refrigerante",
-                        "Sin fugas",
-                        ...checklistIngreso,
-                      ])
-                    ).map((item) => {
-                      const sel = checklistIngreso.includes(item);
-                      return (
-                        <button
-                          key={item}
-                          type="button"
-                          onClick={() => handleToggleChecklistIngreso(item)}
-                          className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
-                            sel
-                              ? "bg-amber-500/20 border border-amber-500/40 text-amber-300"
-                              : "bg-white/[0.02] border border-white/5 text-zinc-400 hover:text-zinc-200"
-                          }`}
-                        >
-                          <span>{sel ? "✓" : "+"}</span>
-                          <span>{item}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex items-center gap-1.5 pt-1">
-                    <input
-                      type="text"
-                      value={itemManualIngreso}
-                      onChange={(e) => setItemManualIngreso(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleAgregarChecklistManual();
-                        }
-                      }}
-                      placeholder="Nuevo ítem..."
-                      className="h-8 flex-1 px-3 rounded-lg bg-black/40 border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/60"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAgregarChecklistManual}
-                      disabled={!itemManualIngreso.trim()}
-                      className="h-8 px-3 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 disabled:opacity-40 text-xs font-semibold transition-all cursor-pointer"
-                    >
-                      + Agregar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Fotos Iniciales Cloudflare R2 (Hasta 5 fotos - idéntico a Taller) */}
-            <div className="lg:col-span-5 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-zinc-300">Fotos Iniciales</span>
-                  <span
-                    className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
-                      fotosRecepcion.length >= 5
-                        ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
-                        : "bg-blue-500/15 text-blue-300 border-blue-500/30"
-                    }`}
-                  >
-                    {fotosRecepcion.length} / 5
-                  </span>
-                </div>
-                {subiendoFotoRecepcion && (
-                  <span className="text-xs text-amber-400 animate-pulse font-mono">
-                    Subiendo a R2...
-                  </span>
-                )}
-              </div>
-
-              {fotosRecepcion.length < 5 ? (
-                <label className="border-2 border-dashed border-white/10 hover:border-white/20 rounded-xl p-4 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all bg-black/20 group">
-                  <svg className="w-6 h-6 text-zinc-400 group-hover:text-amber-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
-                  </svg>
-                  <span className="text-xs text-zinc-300 font-medium group-hover:text-white transition-colors">
-                    Tomar foto / adjuntar
-                  </span>
-                  <span className="text-[10px] text-zinc-500">Hasta 5 fotos del vehículo</span>
-                  <input
-                    ref={fileInputRecepcionRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleSubirFotoRecepcion}
-                    className="hidden"
-                  />
-                </label>
-              ) : (
-                <div className="border border-emerald-500/25 bg-emerald-500/5 rounded-xl p-3 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold">
-                      ✓
-                    </span>
-                    <span className="text-xs font-semibold text-zinc-200">
-                      5 fotos cargadas
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {fotosRecepcion.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 pt-1">
-                  {fotosRecepcion.map((url, i) => (
-                    <div
-                      key={i}
-                      className="relative group rounded-xl overflow-hidden border border-white/10 aspect-video bg-black/40 shadow-sm"
-                    >
-                      <img
-                        src={url}
-                        alt={`Foto ${i + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleEliminarFotoRecepcion(i)}
-                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/80 hover:bg-rose-600 text-white flex items-center justify-center text-[10px] font-bold border border-white/20 cursor-pointer"
-                      >
-                        ✕
-                      </button>
-                      <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded-md bg-black/80 text-[9px] font-mono font-bold text-zinc-200 border border-white/10">
-                        #{i + 1}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                if (ordenActiva) {
-                  const kmNum = parseInt(String(kmActual).replace(/[^0-9]/g, ""), 10) || ordenActiva.mileage || null;
-                  void sincronizarOrdenLubricentro({
-                    fuelLevel: nivelAceiteIngreso,
-                    mileage: kmNum,
-                    nextOilChangeKm: kmNum ? kmNum + intervaloAceite : ordenActiva.nextOilChangeKm || null,
-                    receptionInventory: checklistIngreso,
-                    receptionPhotos: fotosRecepcion,
-                  });
-                }
-                setEtapaActiva(2);
-              }}
-              className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-semibold cursor-pointer"
-            >
-              Siguiente →
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* ===================================================================
           ETAPA 2: LUBRICACIÓN Y SERVICIOS EXPRESS (5 ESTACIONES DE 1 TOQUE)
@@ -1565,14 +1307,7 @@ export default function LubricentroExpress({
           )}
 
           {/* Navegación Etapa 2 */}
-          <div className="flex items-center justify-between pt-2">
-            <button
-              type="button"
-              onClick={() => setEtapaActiva(1)}
-              className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-normal text-zinc-300 cursor-pointer"
-            >
-              Anterior
-            </button>
+          <div className="flex items-center justify-end pt-2">
             <button
               type="button"
               onClick={() => setEtapaActiva(3)}

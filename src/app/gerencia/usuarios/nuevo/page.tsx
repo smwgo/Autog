@@ -125,22 +125,22 @@ function NuevoUsuarioContent() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-950 text-white font-sans selection:bg-blue-600 selection:text-white pb-24 md:pb-0">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white font-sans selection:bg-blue-600 selection:text-white pb-24 md:pb-0">
       <Header />
 
       <main className="flex-grow flex items-start sm:items-center justify-center p-3 sm:p-6 md:p-12 relative overflow-y-auto pb-12 sm:pb-8">
         {/* Glow de fondo ambiental sutil en celeste/azul idéntico a Nuevo Cliente en POS */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] sm:w-[800px] h-[250px] sm:h-[450px] bg-blue-600/15 blur-[100px] sm:blur-[140px] pointer-events-none rounded-full" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] sm:w-[800px] h-[250px] sm:h-[450px] bg-blue-600/10 dark:bg-blue-600/15 blur-[100px] sm:blur-[140px] pointer-events-none rounded-full" />
 
         {/* Card Contenedor Estilo Onboarding */}
-        <div className="relative w-full max-w-4xl lg:max-w-5xl bg-zinc-900/95 border border-zinc-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-8 md:p-12 shadow-2xl backdrop-blur-xl my-2 sm:my-auto">
+        <div className="relative w-full max-w-4xl lg:max-w-5xl bg-white dark:bg-zinc-900/95 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-8 md:p-12 shadow-xl dark:shadow-2xl backdrop-blur-xl my-2 sm:my-auto text-zinc-900 dark:text-white">
           {/* Header Superior */}
           <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
             <div className="flex items-center gap-3">
               {paso === 1 ? (
                 <Link
                   href="/gerencia/usuarios"
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-400 hover:text-white bg-zinc-800/50 hover:bg-zinc-800 active:scale-95 transition-all"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 active:scale-95 transition-all"
                   title="Volver a Usuarios"
                   aria-label="Volver"
                 >
@@ -152,7 +152,7 @@ function NuevoUsuarioContent() {
                 <button
                   type="button"
                   onClick={() => setPaso(1)}
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-400 hover:text-white bg-zinc-800/50 hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer"
                   title="Volver al paso anterior"
                   aria-label="Volver al paso anterior"
                 >
@@ -161,7 +161,7 @@ function NuevoUsuarioContent() {
                   </svg>
                 </button>
               )}
-              <h1 className="text-base sm:text-xl font-medium text-white tracking-tight">
+              <h1 className="text-base sm:text-xl font-bold text-zinc-900 dark:text-white tracking-tight">
                 {editId
                   ? paso === 1
                     ? "Editar Usuario"
@@ -174,7 +174,7 @@ function NuevoUsuarioContent() {
 
             <Link
               href="/gerencia/usuarios"
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-400 hover:text-white bg-zinc-800/50 hover:bg-zinc-800 active:scale-95 transition-all"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 active:scale-95 transition-all"
               title="Cerrar y volver a Usuarios"
             >
               ✕
@@ -187,18 +187,18 @@ function NuevoUsuarioContent() {
               <div className="h-1.5 flex-1 rounded-full bg-blue-600 transition-all duration-300" />
               <div
                 className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-                  paso === 2 ? "bg-blue-600" : "bg-zinc-800"
+                  paso === 2 ? "bg-blue-600" : "bg-zinc-200 dark:bg-zinc-800"
                 }`}
               />
             </div>
-            <span className="text-xs font-mono text-zinc-400 shrink-0 font-medium">
+            <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400 shrink-0 font-medium">
               {paso} de 2
             </span>
           </div>
 
           {/* Mensaje de error si ocurre */}
           {errorMsg && (
-            <div className="mb-4 sm:mb-6 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-red-950/50 border border-red-800/60 text-red-300 text-xs sm:text-sm flex items-center gap-2">
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 text-xs sm:text-sm flex items-center gap-2">
               <span>⚠️</span>
               <span>{errorMsg}</span>
             </div>
@@ -207,7 +207,7 @@ function NuevoUsuarioContent() {
           {cargando ? (
             <div className="py-20 text-center">
               <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-zinc-400 text-sm">Cargando datos del usuario...</p>
+              <p className="text-zinc-500 dark:text-zinc-400 text-sm">Cargando datos del usuario...</p>
             </div>
           ) : (
             <>
@@ -215,7 +215,7 @@ function NuevoUsuarioContent() {
               {paso === 1 && (
                 <form onSubmit={handleSiguiente} className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
                   <div>
-                    <p className="text-xs sm:text-sm font-semibold text-zinc-200 mb-2.5 sm:mb-3">
+                    <p className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-2.5 sm:mb-3">
                       Perfil
                     </p>
 
@@ -228,22 +228,22 @@ function NuevoUsuarioContent() {
                         }}
                         className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border text-left flex items-center gap-2.5 sm:gap-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
                           tipoPerfil === "Operador"
-                            ? "bg-blue-500/10 border-blue-500 text-white shadow-md shadow-blue-500/10 ring-1 ring-blue-500/30"
-                            : "bg-white/[0.03] hover:bg-white/[0.06] border-white/10 hover:border-white/20 text-zinc-300"
+                            ? "bg-blue-50 dark:bg-blue-500/10 border-blue-500 text-blue-900 dark:text-white shadow-md shadow-blue-500/10 ring-1 ring-blue-500/30"
+                            : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 text-zinc-700 dark:text-zinc-300"
                         }`}
                       >
                         <div
                           className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center transition-colors shrink-0 ${
                             tipoPerfil === "Operador"
-                              ? "bg-blue-500/20 text-blue-400"
-                              : "bg-white/[0.05] text-zinc-400"
+                              ? "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
+                              : "bg-zinc-200/70 dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-400"
                           }`}
                         >
                           <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
                         </div>
-                        <span className="font-medium text-xs sm:text-sm text-white">Operador / Técnico</span>
+                        <span className="font-semibold text-xs sm:text-sm text-zinc-900 dark:text-white">Operador / Técnico</span>
                       </button>
 
                       <button
@@ -257,22 +257,22 @@ function NuevoUsuarioContent() {
                         }}
                         className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border text-left flex items-center gap-2.5 sm:gap-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
                           tipoPerfil === "Administrador"
-                            ? "bg-blue-500/10 border-blue-500 text-white shadow-md shadow-blue-500/10 ring-1 ring-blue-500/30"
-                            : "bg-white/[0.03] hover:bg-white/[0.06] border-white/10 hover:border-white/20 text-zinc-300"
+                            ? "bg-blue-50 dark:bg-blue-500/10 border-blue-500 text-blue-900 dark:text-white shadow-md shadow-blue-500/10 ring-1 ring-blue-500/30"
+                            : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 text-zinc-700 dark:text-zinc-300"
                         }`}
                       >
                         <div
                           className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center transition-colors shrink-0 ${
                             tipoPerfil === "Administrador"
-                              ? "bg-blue-500/20 text-blue-400"
-                              : "bg-white/[0.05] text-zinc-400"
+                              ? "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
+                              : "bg-zinc-200/70 dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-400"
                           }`}
                         >
                           <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                           </svg>
                         </div>
-                        <span className="font-medium text-xs sm:text-sm text-white">Administrador</span>
+                        <span className="font-semibold text-xs sm:text-sm text-zinc-900 dark:text-white">Administrador</span>
                       </button>
                     </div>
                   </div>
@@ -281,7 +281,7 @@ function NuevoUsuarioContent() {
                   <div className="space-y-3.5 sm:space-y-4 pt-1">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                           Cédula / Identificación
                         </label>
                         <input
@@ -290,12 +290,12 @@ function NuevoUsuarioContent() {
                           placeholder="0912345678"
                           value={identificacion}
                           onChange={(e) => setIdentificacion(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors font-mono"
+                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors font-mono"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                           WhatsApp
                         </label>
                         <input
@@ -304,13 +304,13 @@ function NuevoUsuarioContent() {
                           placeholder="0991234567"
                           value={telefono}
                           onChange={(e) => setTelefono(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors font-mono"
+                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors font-mono"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                      <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                         Nombres y Apellidos *
                       </label>
                       <input
@@ -319,13 +319,13 @@ function NuevoUsuarioContent() {
                         placeholder="Carlos Rodríguez"
                         value={nombre}
                         onChange={(e) => setNombre(e.target.value)}
-                        className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                        className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
                       />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                           Correo Electrónico *
                         </label>
                         <input
@@ -334,12 +334,12 @@ function NuevoUsuarioContent() {
                           placeholder="usuario@autog.com"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                           PIN / Clave de Acceso *
                         </label>
                         <input
@@ -348,14 +348,14 @@ function NuevoUsuarioContent() {
                           placeholder="4821"
                           value={pinCode}
                           onChange={(e) => setPinCode(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors font-mono"
+                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors font-mono"
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                           Cargo / Rol
                         </label>
                         <input
@@ -363,18 +363,18 @@ function NuevoUsuarioContent() {
                           placeholder="Ej: Jefe de Taller, Cajera POS, Contabilidad..."
                           value={role}
                           onChange={(e) => setRole(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm text-white placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                           Sede / Sucursal Asignada
                         </label>
                         <select
                           value={branch.toLowerCase().includes("sucursal") ? "Sucursal" : "Principal"}
                           onChange={(e) => setBranch(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-sm text-white outline-none focus:border-blue-500 transition-colors cursor-pointer"
+                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white outline-none focus:border-blue-500 transition-colors cursor-pointer"
                         >
                           <option value="Principal">🏢 Principal (Matriz)</option>
                           <option value="Sucursal">🏪 Sucursal</option>
@@ -384,8 +384,8 @@ function NuevoUsuarioContent() {
                   </div>
 
                   {/* Barra Inferior */}
-                  <div className="pt-5 sm:pt-6 border-t border-zinc-800/80 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 sm:gap-4">
-                    <span className="text-xs text-zinc-500 text-center sm:text-left">
+                  <div className="pt-5 sm:pt-6 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 sm:gap-4">
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400 text-center sm:text-left">
                       {editId ? "Paso 1: Modifica los datos del usuario" : "Paso 1: Datos principales del usuario"}
                     </span>
 
@@ -404,7 +404,7 @@ function NuevoUsuarioContent() {
               {paso === 2 && (
                 <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
                   <div>
-                    <p className="text-xs sm:text-sm font-semibold text-zinc-200 mb-2.5 sm:mb-3">
+                    <p className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-2.5 sm:mb-3">
                       Selecciona a qué paneles de la aplicación tendrá acceso este usuario:
                     </p>
 
@@ -415,16 +415,16 @@ function NuevoUsuarioContent() {
                         onClick={() => setAccessOficina(!accessOficina)}
                         className={`p-4 sm:p-5 rounded-xl sm:rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
                           accessOficina
-                            ? "bg-blue-500/15 border-blue-500 text-white shadow-md shadow-blue-500/10 ring-1 ring-blue-500/30"
-                            : "bg-white/[0.03] hover:bg-white/[0.06] border-white/10 hover:border-white/20 text-zinc-300"
+                            ? "bg-blue-50 dark:bg-blue-500/15 border-blue-500 text-blue-900 dark:text-white shadow-md shadow-blue-500/10 ring-1 ring-blue-500/30"
+                            : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 text-zinc-700 dark:text-zinc-300"
                         }`}
                       >
                         <div className="flex items-center justify-between w-full">
                           <div
                             className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-colors shrink-0 ${
                               accessOficina
-                                ? "bg-blue-500/20 text-blue-400"
-                                : "bg-white/[0.05] text-zinc-400"
+                                ? "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
+                                : "bg-zinc-200/70 dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-400"
                             }`}
                           >
                             🏢
@@ -433,15 +433,15 @@ function NuevoUsuarioContent() {
                             className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
                               accessOficina
                                 ? "bg-blue-600 text-white"
-                                : "bg-zinc-800 text-zinc-400"
+                                : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
                             }`}
                           >
                             {accessOficina ? "✓ Activo" : "Sin acceso"}
                           </span>
                         </div>
                         <div>
-                          <p className="font-bold text-sm sm:text-base text-white">Oficina</p>
-                          <p className="text-xs text-zinc-400 mt-0.5">
+                          <p className="font-bold text-sm sm:text-base text-zinc-900 dark:text-white">Oficina</p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                             Compras, proveedores, facturación y contabilidad
                           </p>
                         </div>
@@ -453,16 +453,16 @@ function NuevoUsuarioContent() {
                         onClick={() => setAccessPos(!accessPos)}
                         className={`p-4 sm:p-5 rounded-xl sm:rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
                           accessPos
-                            ? "bg-emerald-500/15 border-emerald-500 text-white shadow-md shadow-emerald-500/10 ring-1 ring-emerald-500/30"
-                            : "bg-white/[0.03] hover:bg-white/[0.06] border-white/10 hover:border-white/20 text-zinc-300"
+                            ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-500 text-emerald-900 dark:text-white shadow-md shadow-emerald-500/10 ring-1 ring-emerald-500/30"
+                            : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 text-zinc-700 dark:text-zinc-300"
                         }`}
                       >
                         <div className="flex items-center justify-between w-full">
                           <div
                             className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-colors shrink-0 ${
                               accessPos
-                                ? "bg-emerald-500/20 text-emerald-400"
-                                : "bg-white/[0.05] text-zinc-400"
+                                ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                                : "bg-zinc-200/70 dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-400"
                             }`}
                           >
                             🛒
@@ -471,15 +471,15 @@ function NuevoUsuarioContent() {
                             className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
                               accessPos
                                 ? "bg-emerald-600 text-white"
-                                : "bg-zinc-800 text-zinc-400"
+                                : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
                             }`}
                           >
                             {accessPos ? "✓ Activo" : "Sin acceso"}
                           </span>
                         </div>
                         <div>
-                          <p className="font-bold text-sm sm:text-base text-white">POS</p>
-                          <p className="text-xs text-zinc-400 mt-0.5">
+                          <p className="font-bold text-sm sm:text-base text-zinc-900 dark:text-white">POS</p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                             Punto de venta, caja, despacho y clientes
                           </p>
                         </div>
@@ -491,16 +491,16 @@ function NuevoUsuarioContent() {
                         onClick={() => setAccessTaller(!accessTaller)}
                         className={`p-4 sm:p-5 rounded-xl sm:rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
                           accessTaller
-                            ? "bg-amber-500/15 border-amber-500 text-white shadow-md shadow-amber-500/10 ring-1 ring-amber-500/30"
-                            : "bg-white/[0.03] hover:bg-white/[0.06] border-white/10 hover:border-white/20 text-zinc-300"
+                            ? "bg-amber-50 dark:bg-amber-500/15 border-amber-500 text-amber-900 dark:text-white shadow-md shadow-amber-500/10 ring-1 ring-amber-500/30"
+                            : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 text-zinc-700 dark:text-zinc-300"
                         }`}
                       >
                         <div className="flex items-center justify-between w-full">
                           <div
                             className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-colors shrink-0 ${
                               accessTaller
-                                ? "bg-amber-500/20 text-amber-400"
-                                : "bg-white/[0.05] text-zinc-400"
+                                ? "bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400"
+                                : "bg-zinc-200/70 dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-400"
                             }`}
                           >
                             🔧
@@ -509,15 +509,15 @@ function NuevoUsuarioContent() {
                             className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
                               accessTaller
                                 ? "bg-amber-600 text-white"
-                                : "bg-zinc-800 text-zinc-400"
+                                : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
                             }`}
                           >
                             {accessTaller ? "✓ Activo" : "Sin acceso"}
                           </span>
                         </div>
                         <div>
-                          <p className="font-bold text-sm sm:text-base text-white">Taller / Garaje</p>
-                          <p className="text-xs text-zinc-400 mt-0.5">
+                          <p className="font-bold text-sm sm:text-base text-zinc-900 dark:text-white">Taller / Garaje</p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                             Recepción, inspección, lubricentro y órdenes
                           </p>
                         </div>
@@ -526,16 +526,16 @@ function NuevoUsuarioContent() {
                   </div>
 
                   {/* Estado de Cuenta y Resumen */}
-                  <div className="space-y-3.5 sm:space-y-4 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-zinc-950/60 border border-zinc-800/80 animate-in fade-in duration-200">
+                  <div className="space-y-3.5 sm:space-y-4 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800/80 animate-in fade-in duration-200">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                           Estado del Usuario
                         </label>
                         <select
                           value={status}
                           onChange={(e) => setStatus(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3 rounded-xl border border-zinc-800 bg-zinc-900 text-base sm:text-sm text-white outline-none focus:border-blue-500 transition-colors cursor-pointer"
+                          className="w-full h-11 sm:h-12 px-3 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white outline-none focus:border-blue-500 transition-colors cursor-pointer"
                         >
                           <option value="Activo">Activo (Con acceso habilitado)</option>
                           <option value="Suspendido">Suspendido (Acceso bloqueado)</option>
@@ -543,12 +543,12 @@ function NuevoUsuarioContent() {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                           Resumen de Credenciales
                         </label>
-                        <div className="h-11 sm:h-12 px-3.5 rounded-xl border border-zinc-800 bg-zinc-900/60 flex items-center justify-between text-xs">
-                          <span className="text-zinc-300 truncate">{email || "Sin correo"}</span>
-                          <span className="font-mono font-bold text-blue-400 shrink-0 ml-2">
+                        <div className="h-11 sm:h-12 px-3.5 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 flex items-center justify-between text-xs">
+                          <span className="text-zinc-600 dark:text-zinc-300 truncate">{email || "Sin correo"}</span>
+                          <span className="font-mono font-bold text-blue-600 dark:text-blue-400 shrink-0 ml-2">
                             PIN: {pinCode}
                           </span>
                         </div>
@@ -557,11 +557,11 @@ function NuevoUsuarioContent() {
                   </div>
 
                   {/* Barra Inferior */}
-                  <div className="pt-5 sm:pt-6 border-t border-zinc-800/80 flex flex-col-reverse sm:flex-row items-center justify-between gap-2.5 sm:gap-4">
+                  <div className="pt-5 sm:pt-6 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-col-reverse sm:flex-row items-center justify-between gap-2.5 sm:gap-4">
                     <button
                       type="button"
                       onClick={() => setPaso(1)}
-                      className="w-full sm:w-auto h-11 sm:h-12 px-5 rounded-xl border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800/50 text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                      className="w-full sm:w-auto h-11 sm:h-12 px-5 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-transparent text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/50 text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-sm"
                     >
                       <span>&larr;</span>
                       <span>Atrás</span>

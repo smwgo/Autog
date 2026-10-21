@@ -674,11 +674,11 @@ export default function TallerPanel() {
   ]);
   const [cargandoInicial, setCargandoInicial] = useState(true);
 
-  // SELECTOR SUPERIOR 2 EN 1: TALLER MECÁNICO VS LUBRICENTRO & EXPRESS
-  const [moduloTaller, setModuloTaller] = useState<"taller" | "lubricentro">("taller");
+  // SELECTOR SUPERIOR 4 EN 1: TALLER MECÁNICO, LUBRICENTRO, CAR WASH Y TECNICENTRO
+  const [moduloTaller, setModuloTaller] = useState<"taller" | "lubricentro" | "carwash" | "tecnicentro">("taller");
 
-  // FLOTANTE DE INICIO AL LOGUEARSE O ENTRAR (NUEVA ORDEN DE TRABAJO)
-  const [mostrarModalNuevaOrden, setMostrarModalNuevaOrden] = useState(true);
+  // FLOTANTE NUEVA ORDEN DE TRABAJO (SOLO SE ABRE AL PULSAR BOTÓN NUEVA ORDEN)
+  const [mostrarModalNuevaOrden, setMostrarModalNuevaOrden] = useState(false);
   // MODAL / LISTA DE CLIENTES Y AUTOS EN ATENCIÓN (PAUSAR, CAMBIAR, CONTINUAR)
   const [mostrarModalAutosAtencion, setMostrarModalAutosAtencion] = useState(false);
 
@@ -802,7 +802,11 @@ export default function TallerPanel() {
     }
   };
 
-  const handleOrdenCreadaDesdeModal = (nuevaOrden: UnifiedOrder, cliente?: any, tipo?: "Taller" | "Lubricentro") => {
+  const handleOrdenCreadaDesdeModal = (
+    nuevaOrden: UnifiedOrder,
+    cliente?: any,
+    tipo?: "Taller" | "Lubricentro" | "Lavado"
+  ) => {
     setOrdenActiva(nuevaOrden);
     setAutosEnPista((prev) => [
       nuevaOrden,
@@ -814,17 +818,39 @@ export default function TallerPanel() {
         ...prev.filter((c) => c.id !== cliente.id),
       ]);
     }
-    // Si la orden se creó como Lubricentro, abrir directamente la vista express
+
+    // Sincronizar campos de ingreso táctil en el panel principal
+    if (nuevaOrden.fuelLevel) {
+      setEtapa2NivelCombustible(nuevaOrden.fuelLevel);
+    }
+    if (nuevaOrden.mileage) {
+      setEtapa2Kilometraje(String(nuevaOrden.mileage));
+      setKmActualInput(String(nuevaOrden.mileage));
+    }
+    if (Array.isArray(nuevaOrden.receptionInventory)) {
+      setEtapa2InventarioTrae(nuevaOrden.receptionInventory);
+    }
+    if (Array.isArray(nuevaOrden.receptionPhotos)) {
+      setFotosRecepcion(nuevaOrden.receptionPhotos);
+    }
+
+    // Si la orden se creó como Lubricentro o Lavado, abrir directamente su categoría
     if (
       tipo === "Lubricentro" ||
       nuevaOrden?.notes?.includes("[Lubricentro]") ||
       (nuevaOrden as any)?.motivoIngreso?.includes("[Lubricentro]")
     ) {
       setModuloTaller("lubricentro");
+    } else if (
+      tipo === "Lavado" ||
+      nuevaOrden?.notes?.includes("[Lavado]") ||
+      (nuevaOrden as any)?.motivoIngreso?.includes("[Lavado]")
+    ) {
+      setModuloTaller("carwash");
     } else {
       setModuloTaller("taller");
     }
-    setEtapaActiva(1);
+    setEtapaActiva(2);
   };
 
   // ==========================================================================
@@ -1037,8 +1063,8 @@ export default function TallerPanel() {
   const [regKilometraje, setRegKilometraje] = useState("");
   const [guardandoExpress, setGuardandoExpress] = useState(false);
 
-  // Flujo Deslizable Automático de 7 Etapas (Slide-Over Carousel)
-  const [etapaActiva, setEtapaActiva] = useState<number>(1);
+  // Flujo Deslizable Automático de 3 Etapas (Inspección, Presupuesto, Firma)
+  const [etapaActiva, setEtapaActiva] = useState<number>(2);
   const [mostrarCabeceraMovil, setMostrarCabeceraMovil] = useState(true);
   const stepperCarouselRef = useRef<HTMLDivElement | null>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -1051,7 +1077,7 @@ export default function TallerPanel() {
       const width = container.clientWidth;
       if (width > 0) {
         const pageIndex = Math.round(container.scrollLeft / width);
-        const steps = [1, 2, 3, 4];
+        const steps = [2, 3, 4];
         const targetStep = steps[pageIndex];
         if (targetStep && targetStep !== etapaActiva) {
           setEtapaActiva(targetStep);
@@ -4474,11 +4500,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
         setModalConfirmPos(data.posRequest || data.activeOrder);
         mostrarToast(`Orden #${ord.orderNumber} (${ord.plate}) enviada a Oficina / Lista para Caja`);
-
-        // Al completar la orden, volver a disparar el flotante para registrar al siguiente cliente
-        setTimeout(() => {
-          setMostrarModalNuevaOrden(true);
-        }, 1200);
       } else {
         mostrarToast(data.error || "No se pudo enviar la orden a Oficina / POS", "err");
       }
@@ -4657,7 +4678,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               </svg>
             </Link>
 
-            {/* SELECTOR SUPERIOR 2 EN 1: [ 🔧 ] [ 💧 ] en móvil (solo icono) y con texto en desktop */}
+            {/* SELECTOR SUPERIOR 4 EN 1: Taller, Lubricentro, Car Wash y Tecnicentro */}
             <div className="flex items-center p-0.5 sm:p-1 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md shadow-xl gap-0.5 sm:gap-1 shrink-0">
               <button
                 type="button"
@@ -4709,6 +4730,56 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   />
                 </svg>
                 <span className="hidden sm:inline">Lubricentro</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setModuloTaller("carwash")}
+                className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  moduloTaller === "carwash"
+                    ? "bg-cyan-600 border border-cyan-400/40 text-white shadow-lg shadow-cyan-600/30 scale-[1.01]"
+                    : "text-zinc-400 hover:text-white hover:bg-white/5"
+                }`}
+                title="Car Wash & Detailing"
+              >
+                <svg
+                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.75}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"
+                  />
+                </svg>
+                <span className="hidden sm:inline">Car Wash</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setModuloTaller("tecnicentro")}
+                className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  moduloTaller === "tecnicentro"
+                    ? "bg-emerald-600 border border-emerald-400/40 text-white shadow-lg shadow-emerald-600/30 scale-[1.01]"
+                    : "text-zinc-400 hover:text-white hover:bg-white/5"
+                }`}
+                title="Tecnicentro (Llantas, Alineación, Balanceo y Baterías)"
+              >
+                <svg
+                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.75}
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <circle cx="12" cy="12" r="3" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v6m0 6v6M3 12h6m6 0h6" />
+                </svg>
+                <span className="hidden sm:inline">Tecnicentro</span>
               </button>
             </div>
           </div>
@@ -4898,8 +4969,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             )}
           </div>
 
-          {/* VISTAS SEGÚN EL SELECTOR: LUBRICENTRO O TALLER */}
-          {moduloTaller === "lubricentro" ? (
+          {/* VISTAS SEGÚN EL SELECTOR: TALLER, LUBRICENTRO, CAR WASH O TECNICENTRO */}
+          {moduloTaller !== "taller" ? (
             <LubricentroExpress
               empleadoLogueado={empleadoLogueado}
               mecanicos={mecanicos}
@@ -4908,6 +4979,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               serviciosCatalogo={serviciosDb}
               mostrarToast={mostrarToast}
               ordenActiva={ordenActiva}
+              modoEspecialidad={moduloTaller}
               onOrdenCreada={(orden) => {
                 setAutosEnPista((prev) => [orden, ...prev.filter((o) => o.id !== orden.id)]);
                 setOrdenActiva(orden);
@@ -4918,28 +4990,18 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             <>
 
           {/* ===================================================================
-              STEPPER: EN MÓVIL 1 BOTÓN CUBRE TODO EL ANCHO Y SE DESLIZA CON EL DEDO (CAROUSEL)
-              EN DESKTOP: GRID DE 4 COLUMNAS (GLASSMORPHISM)
+              STEPPER: 3 PASOS EN TALLER (1. INSPECCIÓN, 2. PRESUPUESTO, 3. FIRMA)
               =================================================================== */}
           <div className="bg-white/[0.02] backdrop-blur-md border border-white/[0.08] p-1.5 sm:p-2 rounded-2xl space-y-1.5">
             <div
               ref={stepperCarouselRef}
               onScroll={handleStepperScroll}
-              className="flex sm:grid sm:grid-cols-4 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
+              className="flex sm:grid sm:grid-cols-3 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
             >
               {[
                 {
-                  id: 1,
-                  label: "1. Ingreso",
-                  icon: (
-                    <svg className="w-6 h-6 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.125-.504 1.125-1.125V14.25m-17.25 0h17.25M3.75 14.25l2.25-6.75h12l2.25 6.75" />
-                    </svg>
-                  ),
-                },
-                {
                   id: 2,
-                  label: "2. Inspección",
+                  label: "1. Inspección",
                   icon: (
                     <svg className="w-6 h-6 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -4948,7 +5010,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 },
                 {
                   id: 3,
-                  label: "3. Presupuesto",
+                  label: "2. Presupuesto",
                   icon: (
                     <svg className="w-6 h-6 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
@@ -4957,7 +5019,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 },
                 {
                   id: 4,
-                  label: "4. Firma",
+                  label: "3. Firma",
                   icon: (
                     <svg className="w-6 h-6 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
@@ -4989,7 +5051,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
             {/* Puntos de paginación solo en móvil para ver el paso y deslizar */}
             <div className="flex sm:hidden items-center justify-center gap-1.5 pt-1">
-              {[1, 2, 3, 4].map((id) => (
+              {[2, 3, 4].map((id) => (
                 <button
                   key={id}
                   type="button"
@@ -5007,256 +5069,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               VISTA DE CADA ETAPA ACTIVA (ALTURA DINÁMICA SIN ESPACIOS VACÍOS)
               =================================================================== */}
           <div className="w-full">
-            {/* ETAPA 1: INGRESO (CHECK TÁCTIL + FOTOS R2) */}
-            {etapaActiva === 1 && (
-              <div className="w-full space-y-4 animate-fade-in">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                    {/* Controles de Combustible, Km e Inventario */}
-                    <div className="lg:col-span-7 space-y-4">
-                      <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-zinc-300">⛽ Combustible</span>
-                          <span className="text-xs font-mono text-emerald-400 font-bold">{etapa2NivelCombustible || "1/2"}</span>
-                        </div>
-                        <div className="grid grid-cols-5 gap-1.5">
-                          {["E", "1/4", "1/2", "3/4", "F"].map((lvl) => {
-                            const sel = (etapa2NivelCombustible || "1/2").startsWith(lvl.split(" ")[0]);
-                            return (
-                              <button
-                                key={lvl}
-                                type="button"
-                                onClick={() => {
-                                  const nuevoNivel = lvl.split(" ")[0];
-                                  setEtapa2NivelCombustible(nuevoNivel);
-                                  if (ordenActiva) {
-                                    void sincronizarOrdenEnNeon({ fuelLevel: nuevoNivel });
-                                  }
-                                }}
-                                className={`h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                                  sel
-                                    ? "bg-emerald-500/20 border border-emerald-500/50 text-emerald-300"
-                                    : "bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 text-zinc-400"
-                                }`}
-                              >
-                                {lvl.split(" ")[0]}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-zinc-300">Kilometraje</span>
-                          <input
-                            type="number"
-                            value={etapa2Kilometraje}
-                            onChange={(e) => setEtapa2Kilometraje(e.target.value)}
-                            onBlur={() => {
-                              if (!ordenActiva) return;
-                              const kmNum = parseInt(String(etapa2Kilometraje).replace(/[^0-9]/g, ""), 10) || null;
-                              void sincronizarOrdenEnNeon({
-                                mileage: kmNum,
-                                nextOilChangeKm: kmNum ? kmNum + 5000 : null,
-                              });
-                            }}
-                            placeholder="Ej: 85400"
-                            className="h-8 w-32 px-3 rounded-lg bg-black/50 border border-white/10 text-white text-xs font-mono text-right"
-                          />
-                        </div>
-                        <div className="space-y-2 pt-1">
-                          <span className="text-[11px] text-zinc-400 block font-medium">Inventario:</span>
-                          
-                          {/* Tags con una sola palabra */}
-                          <div className="flex flex-wrap gap-1.5">
-                            {Array.from(
-                              new Set([
-                                "Gata",
-                                "Llave",
-                                "Triángulos",
-                                "Botiquín",
-                                "Extintor",
-                                "Repuesto",
-                                "Matrícula",
-                                ...etapa2InventarioTrae,
-                              ])
-                            ).map((item) => {
-                              const sel = etapa2InventarioTrae.includes(item);
-                              const esManual = ![
-                                "Gata",
-                                "Llave",
-                                "Triángulos",
-                                "Botiquín",
-                                "Extintor",
-                                "Repuesto",
-                                "Matrícula",
-                              ].includes(item);
-                              return (
-                                <button
-                                  key={item}
-                                  type="button"
-                                  onClick={() => handleToggleInventarioEtapa2(item)}
-                                  className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
-                                    sel
-                                      ? "bg-blue-500/20 border border-blue-500/40 text-blue-300"
-                                      : "bg-white/[0.02] border border-white/5 text-zinc-400 hover:text-zinc-200"
-                                  }`}
-                                >
-                                  <span>{sel ? "✓" : "+"}</span>
-                                  <span>{item}</span>
-                                  {esManual && (
-                                    <span
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const filtrada = etapa2InventarioTrae.filter((i) => i !== item);
-                                        setEtapa2InventarioTrae(filtrada);
-                                        if (ordenActiva) {
-                                          void sincronizarOrdenEnNeon({ receptionInventory: filtrada });
-                                        }
-                                      }}
-                                      className="text-zinc-500 hover:text-red-400 ml-0.5 text-[10px]"
-                                      title="Quitar ítem"
-                                    >
-                                      ✕
-                                    </span>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          {/* Campo para ingresar ítems manualmente */}
-                          <div className="flex items-center gap-1.5 pt-1">
-                            <input
-                              type="text"
-                              value={itemManualInventario}
-                              onChange={(e) => setItemManualInventario(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  handleAgregarItemManualInventario();
-                                }
-                              }}
-                              placeholder="Nuevo ítem..."
-                              className="h-8 flex-1 px-3 rounded-lg bg-black/40 border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-blue-500/60"
-                            />
-                            <button
-                              type="button"
-                              onClick={handleAgregarItemManualInventario}
-                              disabled={!itemManualInventario.trim()}
-                              className="h-8 px-3 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 disabled:opacity-40 text-xs font-semibold transition-all cursor-pointer"
-                            >
-                              + Agregar
-                            </button>
-                          </div>
-
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Cámara y Fotos Cloudflare R2 (Hasta 5 fotos) */}
-                    <div className="lg:col-span-5 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-zinc-300">Fotos Iniciales</span>
-                          <span
-                            className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
-                              fotosRecepcion.length >= 5
-                                ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
-                                : "bg-blue-500/15 text-blue-300 border-blue-500/30"
-                            }`}
-                          >
-                            {fotosRecepcion.length} / 5
-                          </span>
-                        </div>
-                        {subiendoFotoRecepcion && (
-                          <span className="text-xs text-blue-400 animate-pulse font-mono">Subiendo a R2...</span>
-                        )}
-                      </div>
-
-                      {fotosRecepcion.length < 5 ? (
-                        <label className="border-2 border-dashed border-white/10 hover:border-white/20 rounded-xl p-4 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all bg-black/20 group">
-                          <svg className="w-6 h-6 text-zinc-400 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
-                          </svg>
-                          <span className="text-xs text-zinc-300 font-medium group-hover:text-white transition-colors">Tomar foto / adjuntar</span>
-                          <span className="text-[10px] text-zinc-500">Hasta 5 fotos del vehículo</span>
-                          <input
-                            ref={fileInputRecepcionRef}
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={handleSubirFotoRecepcion}
-                            className="hidden"
-                          />
-                        </label>
-                      ) : (
-                        <div className="border border-emerald-500/25 bg-emerald-500/5 rounded-xl p-3 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold">✓</span>
-                            <div className="flex flex-col">
-                              <span className="text-xs font-semibold text-zinc-200">5 fotos cargadas (máximo alcanzado)</span>
-                              <span className="text-[10px] text-zinc-400">Elimina una foto abajo si deseas reemplazarla</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {fotosRecepcion.length > 0 && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 pt-1">
-                          {fotosRecepcion.map((url, i) => (
-                            <div
-                              key={i}
-                              className="relative group rounded-xl overflow-hidden border border-white/10 aspect-video bg-black/40 shadow-sm"
-                            >
-                              <img
-                                src={url}
-                                alt={`Foto Inicial ${i + 1}`}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleEliminarFotoRecepcion(i)}
-                                title="Eliminar foto"
-                                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/80 hover:bg-rose-600 text-white flex items-center justify-center text-[10px] font-bold border border-white/20 transition-all cursor-pointer shadow-md"
-                              >
-                                ✕
-                              </button>
-                              <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded-md bg-black/80 backdrop-blur-sm text-[9px] font-mono font-bold text-zinc-200 border border-white/10">
-                                #{i + 1}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                <div className="flex items-center justify-end pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (ordenActiva) {
-                        const kmNum = parseInt(String(etapa2Kilometraje).replace(/[^0-9]/g, ""), 10) || ordenActiva.mileage || null;
-                        void sincronizarOrdenEnNeon({
-                          fuelLevel: etapa2NivelCombustible || "1/2",
-                          mileage: kmNum,
-                          nextOilChangeKm: kmNum ? kmNum + 5000 : ordenActiva.nextOilChangeKm || null,
-                          receptionInventory: etapa2InventarioTrae,
-                          receptionPhotos: fotosRecepcion,
-                        });
-                      }
-                      setEtapaActiva(2);
-                    }}
-                    className="px-4 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs font-semibold cursor-pointer"
-                  >
-                    Siguiente →
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* ETAPA 2: INSPECCIÓN (5 VISTAS + PINES NUMERADOS + R2) */}
             {etapaActiva === 2 && (
               <div className="w-full space-y-4 animate-fade-in">
@@ -5271,7 +5083,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     );
                   }}
                   onGenerarPdf={handleGenerarPdfInspeccion}
-                  onVolver={() => setEtapaActiva(1)}
+                  onVolver={() => {}}
                   onContinuar={() => setEtapaActiva(3)}
                   mostrarToast={mostrarToast}
                 />

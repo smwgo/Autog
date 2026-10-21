@@ -6,12 +6,204 @@ import { getClientActiveBranch } from "@/lib/branch";
 export interface ModalNuevaOrdenProps {
   isOpen: boolean;
   onClose: () => void;
-  empleadoLogueado: { id: string; nombre: string };
+  empleadoLogueado: { id: string; nombre: string; rol?: string };
   mecanicos: string[];
   clientesCatalogo: any[];
-  onOrdenCreada: (nuevaOrden: any, cliente?: any, tipo?: "Taller" | "Lubricentro") => void;
+  onOrdenCreada: (nuevaOrden: any, cliente?: any, tipo?: "Taller" | "Lubricentro" | "Lavado") => void;
   mostrarToast: (msg: string, tipo?: "ok" | "err") => void;
 }
+
+// Catálogo de Marcas y Modelos populares en la región
+const CATALOGO_VEHICULOS: Record<string, { modelos: string[]; tipo?: string }> = {
+  Toyota: {
+    modelos: ["Hilux", "Fortuner", "Corolla", "RAV4", "Yaris", "Land Cruiser", "Prado", "4Runner", "Rush", "Prius", "Avanza", "Tacoma", "Hiace"],
+    tipo: "Camioneta",
+  },
+  Chevrolet: {
+    modelos: ["D-Max", "Sail", "Aveo", "Tracker", "Captiva", "Spark", "Onix", "Grand Vitara", "Trailblazer", "Silverado", "Tahoe", "Colorado", "Cruze"],
+    tipo: "Auto",
+  },
+  Hyundai: {
+    modelos: ["Tucson", "Santa Fe", "Accent", "Elantra", "Creta", "Grand i10", "H-1", "Kona", "Venue", "Staria", "Sonata"],
+    tipo: "SUV",
+  },
+  Kia: {
+    modelos: ["Sportage", "Rio", "Picanto", "Seltos", "Cerato", "Sorento", "Soluto", "Sonet", "Carnival", "K3", "Stonic"],
+    tipo: "SUV",
+  },
+  Nissan: {
+    modelos: ["Frontier", "Sentra", "Versa", "Qashqai", "X-Trail", "Kicks", "March", "Tiida", "Pathfinder", "Patrol", "Navara"],
+    tipo: "Camioneta",
+  },
+  Ford: {
+    modelos: ["Ranger", "F-150", "Explorer", "Escape", "EcoSport", "Fiesta", "Focus", "Everest", "Bronco", "Edge"],
+    tipo: "Camioneta",
+  },
+  Volkswagen: {
+    modelos: ["Amarok", "Gol", "Polo", "Golf", "Tiguan", "T-Cross", "Taos", "Jetta", "Saveiro", "Virtus", "Voyage"],
+    tipo: "Auto",
+  },
+  Mazda: {
+    modelos: ["BT-50", "Mazda 2", "Mazda 3", "Mazda 6", "CX-3", "CX-30", "CX-5", "CX-9", "CX-50"],
+    tipo: "SUV",
+  },
+  Renault: {
+    modelos: ["Duster", "Logan", "Sandero", "Stepway", "Koleos", "Kwid", "Oroch", "Master", "Captur"],
+    tipo: "SUV",
+  },
+  Suzuki: {
+    modelos: ["Grand Vitara", "Vitara", "Jimny", "Swift", "S-Cross", "Alto", "Celerio", "Baleno", "Ertiga", "Dzire"],
+    tipo: "SUV",
+  },
+  Mitsubishi: {
+    modelos: ["L200", "Montero", "Outlander", "ASX", "Eclipse Cross", "Mirage", "Sportero", "Pajero"],
+    tipo: "Camioneta",
+  },
+  "Great Wall": {
+    modelos: ["Poer", "Wingle 5", "Wingle 7", "Haval H6", "Haval Jolion", "Haval H2", "M4"],
+    tipo: "Camioneta",
+  },
+  Chery: {
+    modelos: ["Tiggo 2", "Tiggo 4", "Tiggo 7 Pro", "Tiggo 8 Pro", "Arrizo 5"],
+    tipo: "SUV",
+  },
+  JAC: {
+    modelos: ["T6", "T8", "T8 Pro", "JS2", "JS3", "JS4", "JS8"],
+    tipo: "Camioneta",
+  },
+  Honda: {
+    modelos: ["CR-V", "Civic", "HR-V", "Accord", "Pilot", "Fit", "WR-V"],
+    tipo: "SUV",
+  },
+  Peugeot: {
+    modelos: ["208", "2008", "3008", "5008", "Partner", "308", "Boxer"],
+    tipo: "Auto",
+  },
+  Jeep: {
+    modelos: ["Grand Cherokee", "Wrangler", "Compass", "Renegade", "Gladiator", "Cherokee"],
+    tipo: "SUV",
+  },
+  BMW: {
+    modelos: ["Serie 1", "Serie 3", "Serie 5", "X1", "X3", "X5", "X6"],
+    tipo: "Auto",
+  },
+  "Mercedes-Benz": {
+    modelos: ["Clase A", "Clase C", "Clase E", "GLA", "GLC", "GLE", "Sprinter"],
+    tipo: "Auto",
+  },
+  Audi: {
+    modelos: ["A3", "A4", "A6", "Q3", "Q5", "Q7", "Q8"],
+    tipo: "Auto",
+  },
+  Hino: {
+    modelos: ["Dutro", "Serie 300", "Serie 500", "FC", "GD", "GH"],
+    tipo: "Camión",
+  },
+  Isuzu: {
+    modelos: ["D-Max", "NPR", "NKR", "NNR", "FVR", "Forward"],
+    tipo: "Camión",
+  },
+  Yamaha: {
+    modelos: ["FZ 2.0", "Crypton", "XTZ 125", "XTZ 250", "MT-03", "MT-07", "NMAX", "BWS"],
+    tipo: "Moto",
+  },
+  Bajaj: {
+    modelos: ["Pulsar NS200", "Pulsar 150", "Discover 125", "Boxer 150", "Dominar 400", "Torito"],
+    tipo: "Moto",
+  },
+};
+
+const detectarCarroceria = (modelo: string, marca: string): string => {
+  const m = modelo.toLowerCase();
+  const mc = marca.toLowerCase();
+  if (
+    m.includes("hilux") ||
+    m.includes("d-max") ||
+    m.includes("ranger") ||
+    m.includes("f-150") ||
+    m.includes("poer") ||
+    m.includes("wingle") ||
+    m.includes("l200") ||
+    m.includes("frontier") ||
+    m.includes("silverado") ||
+    m.includes("colorado") ||
+    m.includes("bt-50") ||
+    m.includes("amarok") ||
+    m.includes("saveiro") ||
+    m.includes("oroch") ||
+    m.includes("gladiator") ||
+    m.includes("t6") ||
+    m.includes("t8")
+  ) {
+    return "Camioneta";
+  }
+  if (
+    m.includes("tucson") ||
+    m.includes("sportage") ||
+    m.includes("rav4") ||
+    m.includes("duster") ||
+    m.includes("tracker") ||
+    m.includes("captiva") ||
+    m.includes("tiggo") ||
+    m.includes("seltos") ||
+    m.includes("creta") ||
+    m.includes("kicks") ||
+    m.includes("x-trail") ||
+    m.includes("qashqai") ||
+    m.includes("explorer") ||
+    m.includes("escape") ||
+    m.includes("ecosport") ||
+    m.includes("cr-v") ||
+    m.includes("hr-v") ||
+    m.includes("cx-5") ||
+    m.includes("cx-30") ||
+    m.includes("tiguan") ||
+    m.includes("t-cross") ||
+    m.includes("vitara") ||
+    m.includes("jimny") ||
+    m.includes("grand cherokee") ||
+    m.includes("wrangler") ||
+    m.includes("compass") ||
+    m.includes("prado") ||
+    m.includes("fortuner") ||
+    m.includes("4runner") ||
+    m.includes("santa fe") ||
+    m.includes("sorento")
+  ) {
+    return "SUV";
+  }
+  if (
+    m.includes("pulsar") ||
+    m.includes("fz") ||
+    m.includes("xtz") ||
+    m.includes("crypton") ||
+    m.includes("tornado") ||
+    m.includes("mt-") ||
+    m.includes("nmax") ||
+    m.includes("bws") ||
+    m.includes("dominar") ||
+    m.includes("boxer") ||
+    m.includes("discover") ||
+    mc.includes("moto") ||
+    mc.includes("bajaj") ||
+    mc.includes("yamaha")
+  ) {
+    return "Moto";
+  }
+  if (
+    m.includes("dutro") ||
+    m.includes("serie 500") ||
+    m.includes("npr") ||
+    m.includes("nkr") ||
+    m.includes("hino") ||
+    m.includes("fvr") ||
+    mc.includes("hino") ||
+    mc.includes("isuzu")
+  ) {
+    return "Camión";
+  }
+  return "Auto";
+};
 
 export default function ModalNuevaOrdenTrabajo({
   isOpen,
@@ -22,8 +214,8 @@ export default function ModalNuevaOrdenTrabajo({
   onOrdenCreada,
   mostrarToast,
 }: ModalNuevaOrdenProps) {
-  // Stepper deslizable: 1 = Cliente, 2 = Vehículo, 3 = Orden
-  const [pasoActivo, setPasoActivo] = useState<1 | 2 | 3>(1);
+  // Stepper deslizable: 1 = Cliente, 2 = Vehículo, 3 = Ingreso, 4 = Orden
+  const [pasoActivo, setPasoActivo] = useState<1 | 2 | 3 | 4>(1);
 
   // =========================================================================
   // PASO 1: CLIENTE
@@ -40,6 +232,7 @@ export default function ModalNuevaOrdenTrabajo({
   const [nuevoClienteTelefono, setNuevoClienteTelefono] = useState("");
   const [nuevoClienteEmail, setNuevoClienteEmail] = useState("");
   const [nuevoClienteDireccion, setNuevoClienteDireccion] = useState("");
+  const [guardandoCliente, setGuardandoCliente] = useState(false);
 
   // =========================================================================
   // PASO 2: VEHÍCULO
@@ -53,10 +246,106 @@ export default function ModalNuevaOrdenTrabajo({
   const [vehiculoTipo, setVehiculoTipo] = useState("Auto");
   const [mostrarFormNuevoVehiculo, setMostrarFormNuevoVehiculo] = useState(false);
 
+  // Selector flotante para Marca y Modelo
+  const [mostrarFlotanteVehiculo, setMostrarFlotanteVehiculo] = useState(false);
+  const [tabFlotanteVehiculo, setTabFlotanteVehiculo] = useState<"marca" | "modelo">("marca");
+  const [busquedaFlotanteVehiculo, setBusquedaFlotanteVehiculo] = useState("");
+
   // =========================================================================
-  // PASO 3: DATOS DE LA ORDEN
+  // PASO 3 & 4: INGRESO DETALLADO Y ORDEN (COMBUSTIBLE, INVENTARIO, FOTOS, TÉCNICOS)
   // =========================================================================
-  const [tipoIngreso, setTipoIngreso] = useState<"Taller" | "Lubricentro">("Taller");
+  const [tipoIngreso, setTipoIngreso] = useState<"Taller" | "Lubricentro" | "Lavado">("Taller");
+  const [nivelCombustible, setNivelCombustible] = useState<"E" | "1/4" | "1/2" | "3/4" | "F">("1/2");
+  const [inventarioTrae, setInventarioTrae] = useState<string[]>([
+    "Gata",
+    "Llave",
+    "Repuesto",
+    "Matrícula",
+  ]);
+  const [listaItemsInventario, setListaItemsInventario] = useState<string[]>([
+    "Gata",
+    "Llave",
+    "Triángulos",
+    "Botiquín",
+    "Extintor",
+    "Repuesto",
+    "Matrícula",
+  ]);
+  const [itemManualInventario, setItemManualInventario] = useState("");
+  const [fotosIniciales, setFotosIniciales] = useState<string[]>([]);
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const fileInputFotosRef = useRef<HTMLInputElement | null>(null);
+
+  const toggleInventario = (item: string) => {
+    setInventarioTrae((prev) =>
+      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
+    );
+  };
+
+  const agregarItemManual = () => {
+    const nuevo = itemManualInventario.trim();
+    if (!nuevo) return;
+    if (!listaItemsInventario.includes(nuevo)) {
+      setListaItemsInventario((prev) => [...prev, nuevo]);
+    }
+    if (!inventarioTrae.includes(nuevo)) {
+      setInventarioTrae((prev) => [...prev, nuevo]);
+    }
+    setItemManualInventario("");
+  };
+
+  const handleSubirFotosIniciales = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    if (fotosIniciales.length >= 5) {
+      mostrarToast("Máximo 5 fotos iniciales permitidas (5/5)", "err");
+      if (fileInputFotosRef.current) fileInputFotosRef.current.value = "";
+      return;
+    }
+
+    const archivos = Array.from(files);
+    if (fileInputFotosRef.current) fileInputFotosRef.current.value = "";
+
+    try {
+      setSubiendoFoto(true);
+      const espacio = 5 - fotosIniciales.length;
+      const aSubir = archivos.slice(0, espacio);
+
+      for (const f of aSubir) {
+        try {
+          const formData = new FormData();
+          formData.append("file", f);
+          formData.append("folder", "taller_recepcion");
+
+          const res = await fetch("/api/storage/upload", {
+            method: "POST",
+            body: formData,
+          });
+          const data = await res.json();
+          if (data.success && data.url) {
+            setFotosIniciales((prev) => [...prev, data.url].slice(0, 5));
+            continue;
+          }
+        } catch {
+          // Si Cloudflare R2 no responde o falla, guardar como data URL local para previsualizar
+        }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          if (ev.target?.result) {
+            setFotosIniciales((prev) => [...prev, ev.target!.result as string].slice(0, 5));
+          }
+        };
+        reader.readAsDataURL(f);
+      }
+      mostrarToast("Foto(s) iniciales cargadas correctamente");
+    } catch {
+      mostrarToast("Error al procesar foto", "err");
+    } finally {
+      setSubiendoFoto(false);
+    }
+  };
+
   const [ingresadoPor, setIngresadoPor] = useState(empleadoLogueado.nombre || "Hernan Marquez");
   const [asignacionesTecnicos, setAsignacionesTecnicos] = useState<
     { id: string; nombre: string; tarea: string }[]
@@ -79,8 +368,427 @@ export default function ModalNuevaOrdenTrabajo({
   const dropdownTecnicoRef = useRef<HTMLDivElement | null>(null);
   const [mostrarDropdownTecnicos, setMostrarDropdownTecnicos] = useState(false);
 
-  // Sincronizar el usuario logueado
+  // =========================================================================
+  // ESCÁNER DE MATRÍCULA (APPLE iOS / ANDROID / CÁMARA WEB + OCR + NEON DB)
+  // =========================================================================
+  const [mostrarEscanerMatricula, setMostrarEscanerMatricula] = useState(false);
+  const [camaraActiva, setCamaraActiva] = useState(false);
+  const [errorCamara, setErrorCamara] = useState<string | null>(null);
+  const [procesandoOcr, setProcesandoOcr] = useState(false);
+  const [estadoEscaneo, setEstadoEscaneo] = useState<string>("");
+  const [placaDetectadaInput, setPlacaDetectadaInput] = useState<string>("");
+  const [previewImagenUrl, setPreviewImagenUrl] = useState<string | null>(null);
+  const [matriculaEscaneadaInfo, setMatriculaEscaneadaInfo] = useState<{
+    placa: string;
+    existe: boolean;
+    clienteNombre?: string;
+    vehiculoTexto?: string;
+  } | null>(null);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const inputFotoNativaRef = useRef<HTMLInputElement | null>(null);
+
+  const detenerCamara = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setCamaraActiva(false);
+  };
+
   useEffect(() => {
+    if (!isOpen || !mostrarEscanerMatricula) {
+      detenerCamara();
+    }
+    return () => {
+      detenerCamara();
+    };
+  }, [isOpen, mostrarEscanerMatricula]);
+
+  const iniciarCamaraEnVivo = async () => {
+    setErrorCamara(null);
+    setPreviewImagenUrl(null);
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setErrorCamara("Usa el botón 'Cámara del Celular' para tomar la foto de la matrícula.");
+      return;
+    }
+    try {
+      detenerCamara();
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+      streamRef.current = mediaStream;
+      setCamaraActiva(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+          videoRef.current.setAttribute("playsinline", "true");
+          videoRef.current.setAttribute("webkit-playsinline", "true");
+          videoRef.current.play().catch(() => {});
+        }
+      }, 60);
+    } catch {
+      setCamaraActiva(false);
+      setErrorCamara("Permiso de cámara en vivo no disponible. Pulsa 'Cámara del Celular' abajo.");
+    }
+  };
+
+  const abrirEscanerMatricula = () => {
+    setPlacaDetectadaInput("");
+    setEstadoEscaneo("");
+    setPreviewImagenUrl(null);
+    setErrorCamara(null);
+    setMostrarEscanerMatricula(true);
+    iniciarCamaraEnVivo();
+  };
+
+  // Normaliza y formatea una cadena de placa (ej. ABC1234 -> ABC-1234)
+  const formatearPlacaDetectada = (raw: string): string => {
+    const clean = raw.toUpperCase().replace(/[^A-Z0-9-]/g, "").replace(/^-+|-+$/g, "");
+    const alnum = clean.replace(/[^A-Z0-9]/g, "");
+    const matchLetrasNum = alnum.match(/^([A-Z]{2,4})(\d{2,4}[A-Z]?)$/);
+    if (matchLetrasNum) {
+      return `${matchLetrasNum[1]}-${matchLetrasNum[2]}`;
+    }
+    return clean || alnum;
+  };
+
+  // Extrae el texto de la matrícula comparando con catálogo y patrones de placas
+  const extraerPlacaDeTextoOcr = (textoCrudo: string): string => {
+    const upper = (textoCrudo || "").toUpperCase();
+    const lineas = upper
+      .split(/[\r\n]+/)
+      .map((l) => l.replace(/[^A-Z0-9\s-]/g, " ").trim())
+      .filter(Boolean);
+
+    const textoSinSimbolos = upper.replace(/[^A-Z0-9]/g, "");
+
+    // 1. Verificar si alguna placa ya registrada en listaClientes aparece en la lectura OCR
+    for (const c of listaClientes || []) {
+      for (const v of c.vehicles || []) {
+        const pOriginal = String(v.plate || "").trim().toUpperCase();
+        const pAlnum = pOriginal.replace(/[^A-Z0-9]/g, "");
+        if (pAlnum.length >= 5 && textoSinSimbolos.includes(pAlnum)) {
+          return pOriginal;
+        }
+      }
+    }
+
+    // 2. Buscar patrones estándar de matrículas (AAA-1234, AAA-123, AA-1234, AAAA-12, A1B-234)
+    const patrones = [
+      /\b([A-Z]{3})[\s-]*(\d{3,4}[A-Z]?)\b/,
+      /\b([A-Z]{2})[\s-]*(\d{4})\b/,
+      /\b([A-Z]{4})[\s-]*(\d{2,3})\b/,
+      /\b([A-Z]\d[A-Z])[\s-]*(\d{3})\b/,
+      /\b(\d{3,4})[\s-]*([A-Z]{2,3})\b/,
+    ];
+
+    for (const linea of [upper, ...lineas]) {
+      for (const regex of patrones) {
+        const m = linea.match(regex);
+        if (m && m[1] && m[2]) {
+          return `${m[1]}-${m[2]}`;
+        }
+      }
+    }
+
+    // 3. Buscar secuencias pegadas en bloques alfanuméricos de 5 a 8 caracteres con letras y números
+    const tokens = upper.replace(/[^A-Z0-9\s-]/g, " ").split(/\s+/).filter(Boolean);
+    for (const tk of tokens) {
+      const alnum = tk.replace(/[^A-Z0-9]/g, "");
+      if (alnum.length >= 5 && alnum.length <= 8 && /[A-Z]{2,}/.test(alnum) && /\d{2,}/.test(alnum)) {
+        return formatearPlacaDetectada(alnum);
+      }
+    }
+
+    return "";
+  };
+
+  // Verifica en Neon PostgreSQL y en el catálogo si la matrícula existe o si debe abrir formulario nuevo
+  const verificarYAplicarMatricula = async (placaRaw: string) => {
+    const placaLimpia = formatearPlacaDetectada(placaRaw);
+    const alnumBuscado = placaLimpia.replace(/[^A-Z0-9]/g, "");
+    if (!alnumBuscado || alnumBuscado.length < 3) {
+      mostrarToast("Ingresa o escanea una matrícula válida", "err");
+      return;
+    }
+
+    try {
+      setProcesandoOcr(true);
+      setEstadoEscaneo(`Verificando matrícula ${placaLimpia} en base de datos...`);
+
+      // 1. Buscar primero en el catálogo local cargado
+      let clienteHallado: any = null;
+      let vehiculoHallado: any = null;
+
+      for (const c of listaClientes || []) {
+        const vMatch = (c.vehicles || []).find(
+          (v: any) => String(v.plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "") === alnumBuscado
+        );
+        if (vMatch) {
+          clienteHallado = c;
+          vehiculoHallado = vMatch;
+          break;
+        }
+      }
+
+      // 2. Consultar en tiempo real a Neon PostgreSQL (/api/taller/operacion?query=...)
+      if (!clienteHallado || !vehiculoHallado) {
+        const res = await fetch(`/api/taller/operacion?query=${encodeURIComponent(placaLimpia)}`);
+        const data = await res.json().catch(() => null);
+        if (data?.success && data?.found && data?.customer) {
+          // Verificar que realmente coincida por vehículo/placa
+          const vehiculosCliente = Array.isArray(data.customer.vehicles)
+            ? data.customer.vehicles
+            : data.vehicle
+            ? [data.vehicle]
+            : [];
+          const vExacto =
+            vehiculosCliente.find(
+              (v: any) => String(v.plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "") === alnumBuscado
+            ) || data.vehicle;
+
+          if (vExacto) {
+            clienteHallado = {
+              ...data.customer,
+              vehicles: vehiculosCliente.length > 0 ? vehiculosCliente : [vExacto],
+            };
+            vehiculoHallado = vExacto;
+
+            // Actualizar catálogo local para futuras búsquedas
+            setListaClientes((prev) => {
+              const existe = prev.some((item) => item.id === clienteHallado.id);
+              return existe ? prev : [clienteHallado, ...prev];
+            });
+          }
+        }
+      }
+
+      detenerCamara();
+      setMostrarEscanerMatricula(false);
+
+      // CASO A: LA MATRÍCULA YA EXISTE EN NEON -> Cargar cliente + vehículo y avanzar
+      if (clienteHallado && vehiculoHallado) {
+        const placaReal = (vehiculoHallado.plate || placaLimpia).toUpperCase();
+        setClienteSeleccionado(clienteHallado);
+        setBusquedaCliente(clienteHallado.name || "");
+        setEmailContacto(clienteHallado.email || "");
+        setMostrarDropdownClientes(false);
+        setMostrarFormNuevoCliente(false);
+
+        setVehiculoSeleccionadoId(vehiculoHallado.id || "0");
+        setVehiculoPlaca(placaReal);
+        setVehiculoMarca(vehiculoHallado.brand || "");
+        setVehiculoModelo(vehiculoHallado.model || "");
+        setVehiculoKm(vehiculoHallado.mileage ? String(vehiculoHallado.mileage) : "");
+        setMostrarFormNuevoVehiculo(false);
+
+        setMatriculaEscaneadaInfo({
+          placa: placaReal,
+          existe: true,
+          clienteNombre: clienteHallado.name,
+          vehiculoTexto: [vehiculoHallado.brand, vehiculoHallado.model].filter(Boolean).join(" ") || "Vehículo registrado",
+        });
+
+        mostrarToast(
+          `Matrícula ${placaReal} detectada: ${clienteHallado.name} (${[vehiculoHallado.brand, vehiculoHallado.model].filter(Boolean).join(" ") || "Registrado"})`,
+          "ok"
+        );
+        setPasoActivo(3);
+        return;
+      }
+
+      // CASO B: LA MATRÍCULA NO EXISTE -> Pre-llenar placa y abrir formularios de cliente y vehículo
+      setVehiculoSeleccionadoId("NUEVO");
+      setVehiculoPlaca(placaLimpia);
+      setVehiculoMarca("");
+      setVehiculoModelo("");
+      setVehiculoKm("");
+      setMostrarFormNuevoVehiculo(true);
+
+      setMatriculaEscaneadaInfo({
+        placa: placaLimpia,
+        existe: false,
+      });
+
+      if (clienteSeleccionado) {
+        // Si ya había elegido un cliente antes de escanear, ir directo al paso 2 con la placa lista
+        setPasoActivo(2);
+        mostrarToast(
+          `Matrícula ${placaLimpia} no registrada. Completa los datos del nuevo vehículo.`,
+          "ok"
+        );
+      } else {
+        // Abrir formulario de Nuevo Cliente en Paso 1 y dejar placa lista para Paso 2
+        setMostrarDropdownClientes(false);
+        setMostrarFormNuevoCliente(true);
+        setPasoActivo(1);
+        mostrarToast(
+          `Matrícula ${placaLimpia} nueva. Llena los datos del cliente y del vehículo.`,
+          "ok"
+        );
+      }
+    } catch {
+      mostrarToast("Error al verificar la matrícula en la base de datos", "err");
+    } finally {
+      setProcesandoOcr(false);
+      setEstadoEscaneo("");
+    }
+  };
+
+  // Procesa un Canvas con mejora de contraste y ejecuta Tesseract OCR
+  const procesarCanvasConOcr = async (canvasSource: HTMLCanvasElement) => {
+    try {
+      setProcesandoOcr(true);
+      setEstadoEscaneo("Leyendo caracteres de la matrícula...");
+
+      // Crear versión mejorada en alto contraste para optimizar lectura en placas metálicas/reflectivas
+      const workCanvas = document.createElement("canvas");
+      workCanvas.width = canvasSource.width;
+      workCanvas.height = canvasSource.height;
+      const ctx = workCanvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(canvasSource, 0, 0);
+        const imgData = ctx.getImageData(0, 0, workCanvas.width, workCanvas.height);
+        const d = imgData.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+          // Aumentar contraste alrededor del punto medio
+          const contrasted = Math.max(0, Math.min(255, (gray - 128) * 1.65 + 128));
+          d[i] = contrasted;
+          d[i + 1] = contrasted;
+          d[i + 2] = contrasted;
+        }
+        ctx.putImageData(imgData, 0, 0);
+      }
+
+      const { recognize } = await import("tesseract.js");
+      const result = await recognize(workCanvas, "eng");
+      const textoLeido = result?.data?.text || "";
+      const placaExtraida = extraerPlacaDeTextoOcr(textoLeido);
+
+      if (placaExtraida) {
+        setPlacaDetectadaInput(placaExtraida);
+        await verificarYAplicarMatricula(placaExtraida);
+      } else {
+        setEstadoEscaneo(
+          "No se distinguió nítidamente la matrícula. Intenta acercar más la cámara o escríbela abajo."
+        );
+      }
+    } catch {
+      setEstadoEscaneo("No se pudo procesar la imagen automáticamente. Ingresa o confirma la placa abajo.");
+    } finally {
+      setProcesandoOcr(false);
+    }
+  };
+
+  // Capturar fotograma desde la cámara en vivo (iOS Safari / Android Chrome)
+  const capturarDesdeVideoEnVivo = async () => {
+    const video = videoRef.current;
+    if (!video || video.videoWidth === 0 || video.videoHeight === 0) {
+      inputFotoNativaRef.current?.click();
+      return;
+    }
+
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+
+    // Recortar la franja central donde se ubica el recuadro guía de matrícula
+    const cropW = Math.round(vw * 0.84);
+    const cropH = Math.round(vh * 0.45);
+    const cropX = Math.round((vw - cropW) / 2);
+    const cropY = Math.round((vh - cropH) / 2);
+
+    const canvas = document.createElement("canvas");
+    const targetWidth = Math.min(1000, cropW);
+    const scale = targetWidth / cropW;
+    canvas.width = targetWidth;
+    canvas.height = Math.round(cropH * scale);
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
+
+    setPreviewImagenUrl(canvas.toDataURL("image/jpeg", 0.9));
+    await procesarCanvasConOcr(canvas);
+  };
+
+  // Procesar foto tomada desde cámara nativa de iPhone / Android (<input capture="environment">)
+  const handleFotoNativaCapturada = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || "");
+      if (!dataUrl) return;
+      setPreviewImagenUrl(dataUrl);
+
+      const img = new Image();
+      img.onload = async () => {
+        const maxDim = 1100;
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        await procesarCanvasConOcr(canvas);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const [etiquetaRolCabecera, setEtiquetaRolCabecera] = useState<"Mecánico" | "Asesor">("Mecánico");
+  const [correlativoOrden, setCorrelativoOrden] = useState<string>("00001");
+  const [fechaHoraRecepcion, setFechaHoraRecepcion] = useState<string>("");
+
+  // Reloj automático en tiempo real para la etiqueta de Hora de Recepción (Formato: Martes 25 Dic, 2026 • 20:38)
+  useEffect(() => {
+    if (!isOpen) return;
+    const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    const mesesCortos = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    const actualizarReloj = () => {
+      const ahora = new Date();
+      const diaTexto = diasSemana[ahora.getDay()];
+      const diaNum = ahora.getDate();
+      const mesTexto = mesesCortos[ahora.getMonth()];
+      const anio = ahora.getFullYear();
+      const hora = ahora.toLocaleTimeString("es-ES", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      setFechaHoraRecepcion(`${diaTexto} ${diaNum} ${mesTexto}, ${anio} • ${hora}`);
+    };
+    actualizarReloj();
+    const timer = setInterval(actualizarReloj, 15000);
+    return () => clearInterval(timer);
+  }, [isOpen]);
+
+  // Sincronizar el usuario logueado, su etiqueta de rol (Asesor o Mecánico) y el código correlativo de OT
+  useEffect(() => {
+    if (isOpen) {
+      fetch("/api/taller/operacion?nextCorrelative=true")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d?.success && d?.correlative) {
+            setCorrelativoOrden(String(d.correlative));
+          }
+        })
+        .catch(() => {});
+    }
     if (empleadoLogueado?.nombre) {
       setIngresadoPor(empleadoLogueado.nombre);
       setAsignacionesTecnicos((prev) => {
@@ -95,6 +803,30 @@ export default function ModalNuevaOrdenTrabajo({
         }
         return prev;
       });
+    }
+    const rolLower = (empleadoLogueado?.rol || "").toLowerCase();
+    if (
+      rolLower.includes("asesor") ||
+      rolLower.includes("recep") ||
+      rolLower.includes("oficina") ||
+      rolLower.includes("admin")
+    ) {
+      setEtiquetaRolCabecera("Asesor");
+    } else if (empleadoLogueado?.rol) {
+      setEtiquetaRolCabecera("Mecánico");
+    } else if (typeof window !== "undefined") {
+      try {
+        const up = JSON.parse(localStorage.getItem("user_profile") || "null");
+        const upRole = String(up?.role || up?.rol || "").toLowerCase();
+        if (
+          upRole.includes("asesor") ||
+          upRole.includes("recep") ||
+          upRole.includes("oficina") ||
+          upRole.includes("admin")
+        ) {
+          setEtiquetaRolCabecera("Asesor");
+        }
+      } catch {}
     }
   }, [empleadoLogueado, isOpen]);
 
@@ -117,7 +849,7 @@ export default function ModalNuevaOrdenTrabajo({
     return listaMecanicosUnica.filter((m) => m.toLowerCase().includes(q));
   }, [listaMecanicosUnica, busquedaTecnico]);
 
-  // Cerrar dropdown de clientes y técnicos al hacer clic fuera
+  // Cerrar dropdowns al hacer clic fuera
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -130,6 +862,56 @@ export default function ModalNuevaOrdenTrabajo({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const abrirFlotanteVehiculo = (tab: "marca" | "modelo" = "marca") => {
+    setTabFlotanteVehiculo(tab);
+    setBusquedaFlotanteVehiculo("");
+    setMostrarFlotanteVehiculo(true);
+  };
+
+  // Marcas para el flotante
+  const marcasFlotante = useMemo(() => {
+    const q = busquedaFlotanteVehiculo.trim().toLowerCase();
+    const todas = Object.keys(CATALOGO_VEHICULOS);
+    if (!q) return todas;
+    return todas.filter((m) => m.toLowerCase().includes(q));
+  }, [busquedaFlotanteVehiculo]);
+
+  // Modelos para el flotante (filtrados por la marca seleccionada)
+  const modelosFlotante = useMemo(() => {
+    const q = busquedaFlotanteVehiculo.trim().toLowerCase();
+    const marcaKey = Object.keys(CATALOGO_VEHICULOS).find(
+      (m) => m.toLowerCase() === vehiculoMarca.trim().toLowerCase()
+    );
+    let pool: string[] = [];
+    if (marcaKey) {
+      pool = CATALOGO_VEHICULOS[marcaKey].modelos;
+    } else {
+      pool = Array.from(new Set(Object.values(CATALOGO_VEHICULOS).flatMap((v) => v.modelos)));
+    }
+    if (!q) return pool;
+    return pool.filter((mod) => mod.toLowerCase().includes(q));
+  }, [vehiculoMarca, busquedaFlotanteVehiculo]);
+
+  const seleccionarMarcaFlotante = (marca: string) => {
+    setVehiculoMarca(marca);
+    const infoMarca = CATALOGO_VEHICULOS[marca];
+    if (infoMarca?.tipo && vehiculoTipo === "Auto") {
+      setVehiculoTipo(infoMarca.tipo);
+    }
+    // Pasar a escoger el modelo
+    setTabFlotanteVehiculo("modelo");
+    setBusquedaFlotanteVehiculo("");
+  };
+
+  const seleccionarModeloFlotante = (modelo: string) => {
+    setVehiculoModelo(modelo);
+    const tipoDetectado = detectarCarroceria(modelo, vehiculoMarca);
+    if (tipoDetectado) {
+      setVehiculoTipo(tipoDetectado);
+    }
+    setMostrarFlotanteVehiculo(false);
+  };
 
   const [listaClientes, setListaClientes] = useState<any[]>(clientesCatalogo || []);
 
@@ -164,15 +946,37 @@ export default function ModalNuevaOrdenTrabajo({
 
   // Al elegir un cliente del catálogo (estilo POS)
   const handleSeleccionarCliente = (c: any) => {
+    const qPrevio = busquedaCliente.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
     setClienteSeleccionado(c);
     setMostrarDropdownClientes(false);
     setMostrarFormNuevoCliente(false);
     setBusquedaCliente(c.name || "");
     setEmailContacto(c.email || "");
 
-    // Si tiene vehículos asociados en Neon, precargar el primero
+    // Si acaba de escanear una matrícula NUEVA que no existe en BD, mantener esa placa lista en Paso 2
+    if (matriculaEscaneadaInfo && !matriculaEscaneadaInfo.existe && matriculaEscaneadaInfo.placa) {
+      setVehiculoSeleccionadoId("NUEVO");
+      setVehiculoPlaca(matriculaEscaneadaInfo.placa);
+      setVehiculoMarca("");
+      setVehiculoModelo("");
+      setVehiculoKm("");
+      setMostrarFormNuevoVehiculo(true);
+      setPasoActivo(2);
+      return;
+    }
+
+    // Si tiene vehículos asociados en Neon, precargar el que coincida con la búsqueda o el primero
     if (Array.isArray(c.vehicles) && c.vehicles.length > 0) {
-      const v = c.vehicles[0];
+      const vehiculoCoincidente =
+        qPrevio.length >= 3
+          ? c.vehicles.find((vh: any) =>
+              String(vh.plate || "")
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, "")
+                .includes(qPrevio)
+            )
+          : null;
+      const v = vehiculoCoincidente || c.vehicles[0];
       setVehiculoSeleccionadoId(v.id || "0");
       setVehiculoPlaca(v.plate || "");
       setVehiculoMarca(v.brand || "");
@@ -204,6 +1008,54 @@ export default function ModalNuevaOrdenTrabajo({
     setNuevoClienteDireccion("");
   };
 
+  // Validar datos del cliente nuevo en memoria y pasar al paso de vehículo (solo se guarda en BD al completar la orden)
+  const handleGuardarClienteYPasarVehiculo = async () => {
+    if (!nuevoClienteNombre.trim()) {
+      mostrarToast(
+        tipoCliente === "Empresa"
+          ? "Ingresa la razón social de la empresa"
+          : "Ingresa los nombres y apellidos del cliente",
+        "err"
+      );
+      return;
+    }
+
+    setPasoActivo(2);
+  };
+
+  // Al elegir Consumidor Final para trabajos rápidos sin registro nominal
+  const handleSeleccionarConsumidorFinal = () => {
+    const cfExistente = (listaClientes || []).find(
+      (c) =>
+        String(c.identification || "").trim() === "9999999999" ||
+        String(c.name || "").trim().toLowerCase() === "consumidor final"
+    );
+    const consumidorFinalObj = cfExistente || {
+      id: undefined,
+      name: "Consumidor Final",
+      identification: "9999999999",
+      phone: "S/N",
+      email: "",
+      type: "Personal",
+      vehicles: [],
+    };
+
+    setClienteSeleccionado(consumidorFinalObj);
+    setBusquedaCliente("Consumidor Final");
+    setEmailContacto("");
+    setMostrarDropdownClientes(false);
+    setMostrarFormNuevoCliente(false);
+
+    // En Consumidor Final abrir directo el ingreso rápido de placa/vehículo
+    setVehiculoSeleccionadoId("NUEVO");
+    if (matriculaEscaneadaInfo && !matriculaEscaneadaInfo.existe && matriculaEscaneadaInfo.placa) {
+      setVehiculoPlaca(matriculaEscaneadaInfo.placa);
+    }
+    setMostrarFormNuevoVehiculo(true);
+    mostrarToast("👤 Consumidor Final seleccionado", "ok");
+    setPasoActivo(2);
+  };
+
   // Al elegir un vehículo existente del cliente
   const handleSeleccionarVehiculo = (v: any) => {
     setVehiculoSeleccionadoId(v.id);
@@ -217,6 +1069,12 @@ export default function ModalNuevaOrdenTrabajo({
   };
 
   const resetFormularioCompleto = () => {
+    detenerCamara();
+    setMostrarEscanerMatricula(false);
+    setMatriculaEscaneadaInfo(null);
+    setPlacaDetectadaInput("");
+    setPreviewImagenUrl(null);
+    setEstadoEscaneo("");
     setPasoActivo(1);
     setTipoCliente("Persona");
     setBusquedaCliente("");
@@ -238,6 +1096,11 @@ export default function ModalNuevaOrdenTrabajo({
     setEmailContacto("");
     setMotivoIngreso("");
     setTipoIngreso("Taller");
+    setNivelCombustible("1/2");
+    setInventarioTrae(["Gata", "Llave", "Repuesto", "Matrícula"]);
+    setItemManualInventario("");
+    setFotosIniciales([]);
+    setSubiendoFoto(false);
     setIngresadoPor(empleadoLogueado.nombre || "Hernan Marquez");
     setAsignacionesTecnicos([
       {
@@ -283,6 +1146,8 @@ export default function ModalNuevaOrdenTrabajo({
       const motivoFinal =
         tipoIngreso === "Lubricentro"
           ? `[Lubricentro] ${motivoIngreso.trim() || "Mantenimiento y lubricación"}`
+          : tipoIngreso === "Lavado"
+          ? `[Lavado] ${motivoIngreso.trim() || "Lavado y detallado general"}`
           : (motivoIngreso.trim() || "Ingreso a taller");
 
       const res = await fetch("/api/taller/operacion", {
@@ -305,6 +1170,9 @@ export default function ModalNuevaOrdenTrabajo({
           marca: vehiculoMarca.trim() || "Vehículo",
           modelo: vehiculoModelo.trim() || "General",
           kilometraje: vehiculoKm ? parseInt(vehiculoKm, 10) : undefined,
+          fuelLevel: nivelCombustible,
+          receptionInventory: inventarioTrae,
+          receptionPhotos: fotosIniciales,
           branch: getClientActiveBranch("/taller") === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL",
         }),
       });
@@ -327,6 +1195,12 @@ export default function ModalNuevaOrdenTrabajo({
     }
   };
 
+  // Si se cierra o cancela sin completar el Paso 3, el número de orden y datos temporales se descartan y NO se guardan
+  const handleCancelarSinGuardar = () => {
+    resetFormularioCompleto();
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   const tieneCliente = Boolean(clienteSeleccionado || nuevoClienteNombre.trim());
@@ -334,7 +1208,7 @@ export default function ModalNuevaOrdenTrabajo({
 
   return (
     <div
-      onClick={onClose}
+      onClick={handleCancelarSinGuardar}
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-fade-in"
     >
       <div
@@ -342,225 +1216,488 @@ export default function ModalNuevaOrdenTrabajo({
         className="w-full max-w-3xl lg:max-w-4xl bg-[#141417] text-white border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] transition-all"
       >
         {/* Cabecera Superior: Título + Stepper Deslizable + Botón X */}
-        <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-white/10 flex items-center justify-between bg-black/20">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-blue-600/20 border border-blue-500/30 text-blue-400 flex items-center justify-center font-bold text-sm">
-              OT
-            </div>
-            <div>
+        <div className="px-4 pt-3 pb-2.5 sm:px-6 sm:pt-4 sm:pb-3 border-b border-white/10 bg-black/20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <div className="w-9 h-9 rounded-2xl bg-blue-600/20 border border-blue-500/30 text-blue-400 flex items-center justify-center font-bold text-sm shrink-0">
+                OT
+              </div>
               <div className="flex flex-wrap items-center gap-2">
                 {(asignacionesTecnicos?.[0]?.nombre || empleadoLogueado?.nombre) && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm font-semibold">
+                  <span
+                    onClick={() =>
+                      setEtiquetaRolCabecera((prev) =>
+                        prev === "Mecánico" ? "Asesor" : "Mecánico"
+                      )
+                    }
+                    title="Clic para alternar etiqueta de rol (Mecánico / Asesor)"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm font-semibold cursor-pointer select-none"
+                  >
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-emerald-300 font-medium">{etiquetaRolCabecera}:</span>
                     <strong className="text-white font-semibold">{asignacionesTecnicos?.[0]?.nombre || empleadoLogueado?.nombre}</strong>
                   </span>
                 )}
               </div>
             </div>
+
+            {/* Stepper Deslizable Horizontal (1. Cliente -> 2. Vehículo -> 3. Ingreso -> 4. Orden) */}
+            <div className="hidden sm:flex items-center gap-1.5 p-1 rounded-2xl bg-white/[0.03] border border-white/10 text-xs">
+              <button
+                type="button"
+                onClick={() => setPasoActivo(1)}
+                className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  pasoActivo === 1
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
+                    : tieneCliente
+                    ? "text-emerald-400 hover:text-white"
+                    : "text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
+                  {tieneCliente ? "✓" : "1"}
+                </span>
+                <span>1. Cliente</span>
+              </button>
+
+              <span className="text-zinc-600">→</span>
+
+              <button
+                type="button"
+                onClick={() => tieneCliente && setPasoActivo(2)}
+                disabled={!tieneCliente}
+                className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
+                  pasoActivo === 2
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 cursor-pointer"
+                    : tieneVehiculo
+                    ? "text-emerald-400 hover:text-white cursor-pointer"
+                    : tieneCliente
+                    ? "text-zinc-300 hover:text-white cursor-pointer"
+                    : "text-zinc-600 cursor-not-allowed"
+                }`}
+              >
+                <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
+                  {tieneVehiculo ? "✓" : "2"}
+                </span>
+                <span>2. Vehículo</span>
+              </button>
+
+              <span className="text-zinc-600">→</span>
+
+              <button
+                type="button"
+                onClick={() => tieneCliente && tieneVehiculo && setPasoActivo(3)}
+                disabled={!tieneCliente || !tieneVehiculo}
+                className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
+                  pasoActivo === 3
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 cursor-pointer"
+                    : tieneCliente && tieneVehiculo
+                    ? (motivoIngreso.trim() ? "text-emerald-400 hover:text-white cursor-pointer" : "text-zinc-300 hover:text-white cursor-pointer")
+                    : "text-zinc-600 cursor-not-allowed"
+                }`}
+              >
+                <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
+                  {motivoIngreso.trim() ? "✓" : "3"}
+                </span>
+                <span>3. Ingreso</span>
+              </button>
+
+              <span className="text-zinc-600">→</span>
+
+              <button
+                type="button"
+                onClick={() => tieneCliente && tieneVehiculo && setPasoActivo(4)}
+                disabled={!tieneCliente || !tieneVehiculo}
+                className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
+                  pasoActivo === 4
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 cursor-pointer"
+                    : tieneCliente && tieneVehiculo
+                    ? "text-zinc-300 hover:text-white cursor-pointer"
+                    : "text-zinc-600 cursor-not-allowed"
+                }`}
+              >
+                <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
+                  4
+                </span>
+                <span>4. Orden</span>
+              </button>
+            </div>
+
+            {/* Botón X para cerrar sin llenar */}
+            <button
+              type="button"
+              onClick={handleCancelarSinGuardar}
+              className="w-9 h-9 rounded-2xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition-all cursor-pointer text-sm"
+              title="Cerrar sin guardar"
+            >
+              ✕
+            </button>
           </div>
 
-          {/* Stepper Deslizable Horizontal */}
-          <div className="hidden sm:flex items-center gap-1.5 p-1 rounded-2xl bg-white/[0.03] border border-white/10 text-xs">
-            <button
-              type="button"
-              onClick={() => setPasoActivo(1)}
-              className={`px-3 py-1.5 rounded-xl font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                pasoActivo === 1
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
-                  : tieneCliente
-                  ? "text-emerald-400 hover:text-white"
-                  : "text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
-                {tieneCliente ? "✓" : "1"}
-              </span>
-              <span>1. Cliente</span>
-            </button>
-
-            <span className="text-zinc-600">→</span>
-
-            <button
-              type="button"
-              onClick={() => tieneCliente && setPasoActivo(2)}
-              disabled={!tieneCliente}
-              className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
-                pasoActivo === 2
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 cursor-pointer"
-                  : tieneVehiculo
-                  ? "text-emerald-400 hover:text-white cursor-pointer"
-                  : tieneCliente
-                  ? "text-zinc-300 hover:text-white cursor-pointer"
-                  : "text-zinc-600 cursor-not-allowed"
-              }`}
-            >
-              <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
-                {tieneVehiculo ? "✓" : "2"}
-              </span>
-              <span>2. Vehículo</span>
-            </button>
-
-            <span className="text-zinc-600">→</span>
-
-            <button
-              type="button"
-              onClick={() => tieneCliente && tieneVehiculo && setPasoActivo(3)}
-              disabled={!tieneCliente || !tieneVehiculo}
-              className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
-                pasoActivo === 3
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/30 cursor-pointer"
-                  : tieneCliente && tieneVehiculo
-                  ? "text-zinc-300 hover:text-white cursor-pointer"
-                  : "text-zinc-600 cursor-not-allowed"
-              }`}
-            >
-              <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
-                3
-              </span>
-              <span>3. Orden</span>
-            </button>
+          <div className="mt-2.5 pl-12">
+            <span className="font-mono font-normal text-xs text-zinc-400 tracking-wide whitespace-nowrap block">
+              OT #{correlativoOrden}
+            </span>
           </div>
-
-          {/* Botón X para cerrar sin llenar */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-9 h-9 rounded-2xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition-all cursor-pointer text-sm"
-            title="Cerrar y ver panel de taller"
-          >
-            ✕
-          </button>
         </div>
 
         {/* Contenido Principal con Contenedor Deslizable */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-5">
+          {/* Input oculto para Cámara Nativa de iOS (Apple) y Android */}
+          <input
+            ref={inputFotoNativaRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleFotoNativaCapturada}
+            className="hidden"
+          />
+
+          {/* =================================================================
+              ESCÁNER DE MATRÍCULA EN VIVO (APPLE iOS / ANDROID)
+              ================================================================= */}
+          {mostrarEscanerMatricula && (
+            <div className="p-4 sm:p-5 rounded-3xl bg-[#18181d] border border-emerald-500/40 shadow-2xl space-y-4 animate-fade-in">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <circle cx="12" cy="13" r="3" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold text-white">
+                      Escanear Matrícula del Vehículo
+                    </h4>
+                    <p className="text-[11px] text-zinc-400">
+                      Compatible con Apple (iPhone/iPad) y Android • Detecta si existe o abre registro
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    detenerCamara();
+                    setMostrarEscanerMatricula(false);
+                  }}
+                  className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Visor de Cámara o Vista Previa de Captura */}
+              <div className="relative w-full h-52 sm:h-60 rounded-2xl bg-black overflow-hidden border border-white/15 flex items-center justify-center">
+                {previewImagenUrl ? (
+                  <img
+                    src={previewImagenUrl}
+                    alt="Captura de matrícula"
+                    className="w-full h-full object-contain"
+                  />
+                ) : camaraActiva ? (
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="text-center p-4 space-y-2">
+                    <p className="text-xs text-zinc-300 font-medium">
+                      {errorCamara || "Iniciando cámara trasera del dispositivo..."}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => inputFotoNativaRef.current?.click()}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-black font-bold text-xs cursor-pointer shadow-md"
+                    >
+                      📱 Abrir Cámara de Apple / Android
+                    </button>
+                  </div>
+                )}
+
+                {/* Recuadro guía de enfoque de matrícula */}
+                {(camaraActiva || previewImagenUrl) && (
+                  <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-4">
+                    <div className="w-4/5 max-w-xs h-20 sm:h-24 rounded-2xl border-2 border-emerald-400/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] relative flex items-center justify-center">
+                      <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-300/80 bg-black/60 px-2 py-0.5 rounded">
+                        ENFOCA LA MATRÍCULA AQUÍ
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {procesandoOcr && (
+                  <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex flex-col items-center justify-center gap-2 p-4 text-center">
+                    <div className="w-7 h-7 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
+                    <span className="text-xs font-semibold text-emerald-300">
+                      {estadoEscaneo || "Detectando matrícula..."}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Botones de Captura para Celular (En Vivo + Cámara Nativa iOS/Android) */}
+              <div className="flex flex-wrap items-center gap-2">
+                {camaraActiva && !previewImagenUrl && (
+                  <button
+                    type="button"
+                    disabled={procesandoOcr}
+                    onClick={capturarDesdeVideoEnVivo}
+                    className="flex-1 h-11 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/20 transition-all"
+                  >
+                    <span>📸</span>
+                    <span>Capturar Matrícula</span>
+                  </button>
+                )}
+
+                {previewImagenUrl && (
+                  <button
+                    type="button"
+                    disabled={procesandoOcr}
+                    onClick={iniciarCamaraEnVivo}
+                    className="h-11 px-3.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>↺</span>
+                    <span>Repetir</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  disabled={procesandoOcr}
+                  onClick={() => inputFotoNativaRef.current?.click()}
+                  className="h-11 px-4 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+                >
+                  <span>📱</span>
+                  <span>Cámara Celular / Foto</span>
+                </button>
+              </div>
+
+              {estadoEscaneo && !procesandoOcr && (
+                <p className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/25 rounded-xl px-3 py-2">
+                  {estadoEscaneo}
+                </p>
+              )}
+
+              {/* Confirmación / Lectura rápida de la matrícula detectada */}
+              <div className="pt-1 border-t border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={placaDetectadaInput}
+                    onChange={(e) => setPlacaDetectadaInput(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        verificarYAplicarMatricula(placaDetectadaInput);
+                      }
+                    }}
+                    placeholder="Matrícula detectada (ej. ABC-1234)..."
+                    className="w-full h-11 px-3.5 rounded-xl bg-black/50 border border-white/15 focus:border-emerald-500 text-white font-mono font-bold uppercase text-sm tracking-wider focus:outline-none"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={procesandoOcr || !placaDetectadaInput.trim()}
+                  onClick={() => verificarYAplicarMatricula(placaDetectadaInput)}
+                  className="h-11 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-black font-bold text-xs sm:text-sm cursor-pointer transition-all flex items-center justify-center gap-1.5 shrink-0"
+                >
+                  <span>Verificar Matrícula</span>
+                  <span>→</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Banner informativo cuando se escaneó una matrícula nueva que no estaba en BD */}
+          {matriculaEscaneadaInfo && !matriculaEscaneadaInfo.existe && (
+            <div className="px-3.5 py-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2 text-xs animate-fade-in">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-0.5 rounded-lg bg-emerald-500 text-black font-mono font-bold text-xs">
+                  {matriculaEscaneadaInfo.placa}
+                </span>
+                <span className="text-emerald-200 font-medium">
+                  Matrícula nueva detectada • Completa los datos del cliente y del vehículo
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMatriculaEscaneadaInfo(null)}
+                className="text-zinc-400 hover:text-white text-xs px-1.5 cursor-pointer"
+                title="Quitar aviso"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           {/* =================================================================
               PASO 1: BUSCADOR Y SELECCIÓN DE CLIENTE (O FORMULARIO COMPLETO)
               ================================================================= */}
           {pasoActivo === 1 && (
             <div className="space-y-5 animate-fade-in">
 
-              {/* Barra de Búsqueda Inteligente con Dropdown */}
-              <div className="relative" ref={dropdownRef}>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      value={busquedaCliente}
-                      onChange={(e) => {
-                        setBusquedaCliente(e.target.value);
-                        setMostrarDropdownClientes(true);
-                        if (clienteSeleccionado && e.target.value !== clienteSeleccionado.name) {
-                          setClienteSeleccionado(null);
-                        }
-                      }}
-                      onFocus={() => {
-                        if (busquedaCliente.trim()) setMostrarDropdownClientes(true);
-                      }}
-                      placeholder="Buscar cliente, cédula o WhatsApp..."
-                      className="w-full h-12 pl-11 pr-24 rounded-2xl bg-black/40 border border-white/15 focus:border-blue-500 text-white text-sm placeholder:text-zinc-500 focus:outline-none transition-all shadow-inner"
-                      autoFocus
-                    />
-                    <svg
-                      className="w-5 h-5 text-zinc-400 absolute left-3.5 top-3.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-                      />
-                    </svg>
-
-                    {busquedaCliente && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setBusquedaCliente("");
-                          setClienteSeleccionado(null);
+              {/* Barra de Búsqueda Inteligente con Dropdown + Escáner de Matrícula (Oculta al registrar nuevo cliente) */}
+              {!mostrarFormNuevoCliente && (
+                <div className="relative" ref={dropdownRef}>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={busquedaCliente}
+                        onChange={(e) => {
+                          setBusquedaCliente(e.target.value);
+                          setMostrarDropdownClientes(true);
+                          if (clienteSeleccionado && e.target.value !== clienteSeleccionado.name) {
+                            setClienteSeleccionado(null);
+                          }
                         }}
-                        className="absolute right-3 top-3 px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs cursor-pointer"
+                        onFocus={() => {
+                          if (busquedaCliente.trim()) setMostrarDropdownClientes(true);
+                        }}
+                        placeholder="Buscar cliente, cédula, matrícula o WhatsApp..."
+                        className="w-full h-12 pl-11 pr-24 rounded-2xl bg-black/40 border border-white/15 focus:border-blue-500 text-white text-sm placeholder:text-zinc-500 focus:outline-none transition-all shadow-inner"
+                        autoFocus
+                      />
+                      <svg
+                        className="w-5 h-5 text-zinc-400 absolute left-3.5 top-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
                       >
-                        Limpiar
-                      </button>
-                    )}
-                  </div>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+                        />
+                      </svg>
 
-                  <button
-                    type="button"
-                    onClick={handleIniciarNuevoCliente}
-                    className="h-12 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center gap-1.5 shrink-0 transition-all cursor-pointer shadow-md shadow-blue-600/30"
-                  >
-                    <span className="text-sm font-bold">+</span>
-                    <span>Nuevo</span>
-                  </button>
-                </div>
-
-                {/* Lista de Coincidencias al Escribir */}
-                {busquedaCliente.trim().length > 0 && !clienteSeleccionado && (
-                  <div className="mt-3 bg-[#18181c] border border-white/15 rounded-2xl shadow-xl p-2 space-y-2">
-                    {/* Botón destacado siempre visible arriba SIN DESLIZAR */}
-                    <div
-                      onClick={handleIniciarNuevoCliente}
-                      className="p-2.5 sm:p-3 rounded-xl bg-blue-600/15 hover:bg-blue-600/25 text-blue-200 border border-blue-500/30 cursor-pointer transition-all flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-lg bg-blue-500/30 flex items-center justify-center text-sm font-bold text-blue-300">
-                          +
-                        </span>
-                        <span className="text-xs sm:text-sm font-semibold">
-                          Nuevo cliente
-                        </span>
-                      </div>
-                      <span className="text-xs text-blue-400 font-medium">Crear →</span>
+                      {busquedaCliente && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBusquedaCliente("");
+                            setClienteSeleccionado(null);
+                          }}
+                          className="absolute right-3 top-3 px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs cursor-pointer"
+                        >
+                          Limpiar
+                        </button>
+                      )}
                     </div>
 
-                    {/* Scroll únicamente para los resultados existentes */}
-                    {clientesFiltrados.length > 0 ? (
-                      <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1">
-                        {clientesFiltrados.map((c) => (
-                          <div
-                            key={c.id}
-                            onClick={() => handleSeleccionarCliente(c)}
-                            className="p-3 rounded-xl hover:bg-white/10 cursor-pointer transition-all flex items-center justify-between gap-3 group bg-white/[0.02]"
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-300 font-bold flex items-center justify-center text-sm shrink-0 border border-blue-500/30 group-hover:scale-105 transition-transform">
-                                {(c.name || "C").charAt(0).toUpperCase()}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold text-white truncate">{c.name}</p>
-                                <div className="flex flex-wrap items-center gap-x-2 text-xs text-zinc-400">
-                                  {c.identification && (
-                                    <span className="font-mono text-zinc-300">{c.identification}</span>
-                                  )}
-                                  {c.phone && <span>• WhatsApp: {c.phone}</span>}
-                                  {c.email && (
-                                    <span className="truncate max-w-[160px]"> • {c.email}</span>
-                                  )}
+                    {/* Botón Consumidor Final (Solo icono) */}
+                    <button
+                      type="button"
+                      onClick={handleSeleccionarConsumidorFinal}
+                      title="Consumidor Final (trabajo rápido sin registro nominal)"
+                      aria-label="Consumidor Final"
+                      className="w-12 h-12 rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 text-zinc-300 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95"
+                    >
+                      <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                    </button>
+
+                    {/* Botón Escanear Matrícula (Solo icono) */}
+                    <button
+                      type="button"
+                      onClick={abrirEscanerMatricula}
+                      title="Escanear matrícula con cámara (Apple / Android)"
+                      aria-label="Escanear matrícula con cámara"
+                      className="w-12 h-12 rounded-2xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-400 hover:text-emerald-300 flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-md shadow-emerald-600/10 hover:scale-105 active:scale-95"
+                    >
+                      <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                        <circle cx="12" cy="13" r="3" />
+                      </svg>
+                    </button>
+
+                    {/* Botón Nuevo Cliente (Solo icono) */}
+                    <button
+                      type="button"
+                      onClick={handleIniciarNuevoCliente}
+                      title="Crear nuevo cliente"
+                      aria-label="Crear nuevo cliente"
+                      className="w-12 h-12 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-md shadow-blue-600/30 hover:scale-105 active:scale-95"
+                    >
+                      <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <line x1="19" x2="19" y1="8" y2="14" />
+                        <line x1="22" x2="16" y1="11" y2="11" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Lista de Coincidencias al Escribir */}
+                  {busquedaCliente.trim().length > 0 && !clienteSeleccionado && (
+                    <div className="mt-3 bg-[#18181c] border border-white/15 rounded-2xl shadow-xl p-2 space-y-2">
+                      {/* Botón destacado siempre visible arriba SIN DESLIZAR */}
+                      <div
+                        onClick={handleIniciarNuevoCliente}
+                        className="p-2.5 sm:p-3 rounded-xl bg-blue-600/15 hover:bg-blue-600/25 text-blue-200 border border-blue-500/30 cursor-pointer transition-all flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-lg bg-blue-500/30 flex items-center justify-center text-sm font-bold text-blue-300">
+                            +
+                          </span>
+                          <span className="text-xs sm:text-sm font-semibold">
+                            Nuevo cliente
+                          </span>
+                        </div>
+                        <span className="text-xs text-blue-400 font-medium">Crear →</span>
+                      </div>
+
+                      {/* Scroll únicamente para los resultados existentes */}
+                      {clientesFiltrados.length > 0 ? (
+                        <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1">
+                          {clientesFiltrados.map((c) => (
+                            <div
+                              key={c.id}
+                              onClick={() => handleSeleccionarCliente(c)}
+                              className="p-3 rounded-xl hover:bg-white/10 cursor-pointer transition-all flex items-center justify-between gap-3 group bg-white/[0.02]"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-300 font-bold flex items-center justify-center text-sm shrink-0 border border-blue-500/30 group-hover:scale-105 transition-transform">
+                                  {(c.name || "C").charAt(0).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-white truncate">{c.name}</p>
+                                  <div className="flex flex-wrap items-center gap-x-2 text-xs text-zinc-400">
+                                    {c.identification && (
+                                      <span className="font-mono text-zinc-300">{c.identification}</span>
+                                    )}
+                                    {c.phone && <span>• WhatsApp: {c.phone}</span>}
+                                    {c.email && (
+                                      <span className="truncate max-w-[160px]"> • {c.email}</span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
 
-                            <div className="text-right shrink-0">
-                              <span className="text-[11px] px-2.5 py-1 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 font-semibold">
-                                {c.vehicles?.length || 0} auto(s)
-                              </span>
+                              <div className="text-right shrink-0">
+                                <span className="text-[11px] px-2.5 py-1 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 font-semibold">
+                                  {c.vehicles?.length || 0} auto(s)
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-2.5 text-center text-xs text-zinc-400">
-                        Sin resultados
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-2.5 text-center text-xs text-zinc-400">
+                          Sin resultados
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Si ya seleccionó un cliente existente (Card Resumen estilo POS) */}
               {clienteSeleccionado && !mostrarFormNuevoCliente && (
@@ -630,57 +1767,96 @@ export default function ModalNuevaOrdenTrabajo({
                     <button
                       type="button"
                       onClick={() => setMostrarFormNuevoCliente(false)}
-                      className="text-xs text-zinc-400 hover:text-white"
+                      className="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 cursor-pointer px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
                     >
-                      Volver
+                      <span>←</span>
+                      <span>Atrás</span>
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs">
+                  {/* Selector de Tipo: Solo Iconos */}
+                  <div>
+                    <label className="text-zinc-400 text-xs font-normal block mb-2">
+                      Tipo de Cliente: <span className="text-zinc-200 font-normal">{tipoCliente === "Empresa" ? "Empresa (RUC)" : "Persona (Cédula)"}</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setTipoCliente("Persona")}
+                        title="Persona (Particular / Cédula)"
+                        className={`h-11 rounded-2xl border flex items-center justify-center transition-all cursor-pointer active:scale-[0.98] ${
+                          tipoCliente === "Persona"
+                            ? "bg-blue-600/20 border-blue-500 text-blue-400 shadow-md shadow-blue-500/10 ring-1 ring-blue-500/30"
+                            : "bg-white/[0.03] hover:bg-white/[0.06] border-white/10 text-zinc-400 hover:text-zinc-200"
+                        }`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setTipoCliente("Empresa")}
+                        title="Empresa (Corporativo / RUC)"
+                        className={`h-11 rounded-2xl border flex items-center justify-center transition-all cursor-pointer active:scale-[0.98] ${
+                          tipoCliente === "Empresa"
+                            ? "bg-blue-600/20 border-blue-500 text-blue-400 shadow-md shadow-blue-500/10 ring-1 ring-blue-500/30"
+                            : "bg-white/[0.03] hover:bg-white/[0.06] border-white/10 text-zinc-400 hover:text-zinc-200"
+                        }`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs pt-1">
                     <div className="sm:col-span-2">
-                      <label className="text-zinc-300 font-semibold block mb-1">
-                        Nombre Completo o Razón Social *
+                      <label className="text-zinc-400 font-normal block mb-1">
+                        {tipoCliente === "Empresa" ? "Razón Social *" : "Nombres y Apellidos *"}
                       </label>
                       <input
                         type="text"
                         value={nuevoClienteNombre}
                         onChange={(e) => setNuevoClienteNombre(e.target.value)}
-                        placeholder="Ej: Camila Soto Riquelme"
+                        placeholder={tipoCliente === "Empresa" ? "Ej: Transportes Andinos S.A." : "Ej: Juan Carlos Pérez"}
                         className="w-full h-10 px-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-blue-500 text-white text-xs focus:outline-none"
                         required
                       />
                     </div>
 
                     <div className="col-span-1">
-                      <label className="text-zinc-300 font-semibold block mb-1">
-                        Cédula / RUC / RUT *
+                      <label className="text-zinc-400 font-normal block mb-1">
+                        {tipoCliente === "Empresa" ? "RUC *" : "Cédula *"}
                       </label>
                       <input
                         type="text"
                         value={nuevoClienteIdentificacion}
                         onChange={(e) => setNuevoClienteIdentificacion(e.target.value)}
-                        placeholder="Ej: 17945320-4"
+                        placeholder={tipoCliente === "Empresa" ? "Ej: 1790012345001" : "Ej: 0912345678"}
                         className="w-full h-10 px-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-blue-500 text-white font-mono text-xs focus:outline-none"
                         required
                       />
                     </div>
 
                     <div className="col-span-1">
-                      <label className="text-zinc-300 font-semibold block mb-1">
+                      <label className="text-zinc-400 font-normal block mb-1">
                         Teléfono / WhatsApp *
                       </label>
                       <input
                         type="tel"
                         value={nuevoClienteTelefono}
                         onChange={(e) => setNuevoClienteTelefono(e.target.value)}
-                        placeholder="Ej: +56 9 3322 1100"
+                        placeholder="Ej: 0991234567"
                         className="w-full h-10 px-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-blue-500 text-white text-xs focus:outline-none"
                         required
                       />
                     </div>
 
                     <div className="col-span-1">
-                      <label className="text-zinc-300 font-semibold block mb-1">
+                      <label className="text-zinc-400 font-normal block mb-1">
                         Correo Electrónico
                       </label>
                       <input
@@ -696,14 +1872,14 @@ export default function ModalNuevaOrdenTrabajo({
                     </div>
 
                     <div className="col-span-1 sm:col-span-2 lg:col-span-1">
-                      <label className="text-zinc-300 font-semibold block mb-1">
+                      <label className="text-zinc-400 font-normal block mb-1">
                         Dirección (Opcional)
                       </label>
                       <input
                         type="text"
                         value={nuevoClienteDireccion}
                         onChange={(e) => setNuevoClienteDireccion(e.target.value)}
-                        placeholder="Ciudad o sector"
+                        placeholder="Av. Principal y Secundaria"
                         className="w-full h-10 px-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-blue-500 text-white text-xs focus:outline-none"
                       />
                     </div>
@@ -712,16 +1888,11 @@ export default function ModalNuevaOrdenTrabajo({
                   <div className="flex justify-end pt-2">
                     <button
                       type="button"
-                      onClick={() => {
-                        if (!nuevoClienteNombre.trim()) {
-                          mostrarToast("Ingresa el nombre del cliente", "err");
-                          return;
-                        }
-                        setPasoActivo(2);
-                      }}
-                      className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-600/30"
+                      onClick={handleGuardarClienteYPasarVehiculo}
+                      disabled={guardandoCliente}
+                      className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-600/30 disabled:opacity-50"
                     >
-                      <span>Guardar Cliente y Pasar al Vehículo</span>
+                      <span>{guardandoCliente ? "Guardando..." : "Guardar / Vehículo"}</span>
                       <span>→</span>
                     </button>
                   </div>
@@ -869,48 +2040,89 @@ export default function ModalNuevaOrdenTrabajo({
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                     <div className="col-span-1">
-                      <label className="text-zinc-300 font-semibold block mb-1">
+                      <label className="text-zinc-400 font-normal block mb-1">
                         Placa *
                       </label>
-                      <input
-                        type="text"
-                        value={vehiculoPlaca}
-                        onChange={(e) => setVehiculoPlaca(e.target.value.toUpperCase())}
-                        placeholder="Ej: ABC-1234"
-                        className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/15 focus:border-emerald-500 text-white font-mono font-bold uppercase text-sm tracking-wider focus:outline-none"
-                        required
-                        autoFocus
-                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={vehiculoPlaca}
+                          onChange={(e) => setVehiculoPlaca(e.target.value.toUpperCase())}
+                          placeholder="Ej: ABC-1234"
+                          className="w-full h-11 pl-3.5 pr-9 rounded-xl bg-black/40 border border-white/15 focus:border-emerald-500 text-white font-mono font-bold uppercase text-sm tracking-wider focus:outline-none"
+                          required
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={abrirEscanerMatricula}
+                          title="Escanear matrícula con cámara"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-400 flex items-center justify-center cursor-pointer transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <circle cx="12" cy="13" r="3" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
 
+                    {/* Marca con apertura de selector flotante */}
                     <div className="col-span-1">
-                      <label className="text-zinc-300 font-semibold block mb-1">
+                      <label className="text-zinc-400 font-normal block mb-1">
                         Marca
                       </label>
-                      <input
-                        type="text"
-                        value={vehiculoMarca}
-                        onChange={(e) => setVehiculoMarca(e.target.value)}
-                        placeholder="Ej: Toyota"
-                        className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-emerald-500 text-white text-xs sm:text-sm focus:outline-none"
-                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={vehiculoMarca}
+                          onChange={(e) => setVehiculoMarca(e.target.value)}
+                          onClick={() => abrirFlotanteVehiculo("marca")}
+                          placeholder="Ej: Toyota"
+                          className="w-full h-11 pl-3.5 pr-8 rounded-xl bg-black/40 border border-white/10 hover:border-emerald-500/50 focus:border-emerald-500 text-white text-xs sm:text-sm focus:outline-none transition-all cursor-pointer"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => abrirFlotanteVehiculo("marca")}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-1 cursor-pointer"
+                          title="Abrir selector flotante de marcas"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
 
+                    {/* Modelo con apertura de selector flotante */}
                     <div className="col-span-1">
-                      <label className="text-zinc-300 font-semibold block mb-1">
+                      <label className="text-zinc-400 font-normal block mb-1">
                         Modelo
                       </label>
-                      <input
-                        type="text"
-                        value={vehiculoModelo}
-                        onChange={(e) => setVehiculoModelo(e.target.value)}
-                        placeholder="Ej: Hilux"
-                        className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-emerald-500 text-white text-xs sm:text-sm focus:outline-none"
-                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={vehiculoModelo}
+                          onChange={(e) => setVehiculoModelo(e.target.value)}
+                          onClick={() => abrirFlotanteVehiculo("modelo")}
+                          placeholder="Ej: Hilux"
+                          className="w-full h-11 pl-3.5 pr-8 rounded-xl bg-black/40 border border-white/10 hover:border-emerald-500/50 focus:border-emerald-500 text-white text-xs sm:text-sm focus:outline-none transition-all cursor-pointer"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => abrirFlotanteVehiculo("modelo")}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-1 cursor-pointer"
+                          title="Abrir selector flotante de modelos"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
 
                     <div className="col-span-1">
-                      <label className="text-zinc-300 font-semibold block mb-1">
+                      <label className="text-zinc-400 font-normal block mb-1">
                         Kilometraje (Km)
                       </label>
                       <input
@@ -925,7 +2137,7 @@ export default function ModalNuevaOrdenTrabajo({
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs pt-1">
                     <div className="col-span-1">
-                      <label className="text-zinc-300 font-semibold block mb-1">
+                      <label className="text-zinc-400 font-normal block mb-1">
                         Año
                       </label>
                       <input
@@ -938,7 +2150,7 @@ export default function ModalNuevaOrdenTrabajo({
                     </div>
 
                     <div className="col-span-1">
-                      <label className="text-zinc-300 font-semibold block mb-1">
+                      <label className="text-zinc-400 font-normal block mb-1">
                         Tipo de Carrocería
                       </label>
                       <select
@@ -978,60 +2190,428 @@ export default function ModalNuevaOrdenTrabajo({
           )}
 
           {/* =================================================================
-              PASO 3: DATOS DE LA ORDEN (RESPONSABLES, MOTIVO Y CONFIRMACIÓN)
+              PASO 3: INGRESO (TIPO DE SERVICIO, RECEPCIÓN Y MOTIVO DE INGRESO)
               ================================================================= */}
           {pasoActivo === 3 && (
             <div className="space-y-5 animate-fade-in">
-              {/* Tarjeta Resumen de Cliente + Vehículo */}
-              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center text-lg shrink-0 border border-blue-500/20">
-                    🚗
+
+              {/* Grid Principal de Ingreso: Combustible, Kilometraje, Inventario y Fotos Iniciales */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                {/* Columna Izquierda: Combustible + Kilometraje + Inventario */}
+                <div className="lg:col-span-7 space-y-4">
+                  {/* Card 1: Combustible */}
+                  <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-sm">
+                          ⛽
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold text-zinc-200 block">Nivel de Combustible</span>
+                          <span className="text-[10px] text-zinc-500">Tanque actual del vehículo</span>
+                        </div>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
+                        {nivelCombustible}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
+                      {(["E", "1/4", "1/2", "3/4", "F"] as const).map((lvl) => {
+                        const sel = nivelCombustible === lvl;
+                        return (
+                          <button
+                            key={lvl}
+                            type="button"
+                            onClick={() => setNivelCombustible(lvl)}
+                            className={`h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                              sel
+                                ? "bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 shadow-sm shadow-emerald-500/10"
+                                : "bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 text-zinc-400"
+                            }`}
+                          >
+                            {lvl}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <span className="text-zinc-100 font-normal block text-sm truncate">
-                      {vehiculoMarca || "Vehículo"} {vehiculoModelo} {vehiculoPlaca ? `(${vehiculoPlaca})` : ""}
-                    </span>
-                    <span className="text-zinc-400 font-normal block truncate">
-                      Cliente: <span className="text-zinc-200">{clienteSeleccionado?.name || nuevoClienteNombre}</span>
-                    </span>
+
+                  {/* Card 2: Kilometraje (Sección separada, minimalista y moderna) */}
+                  <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3 transition-all hover:border-white/15">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold text-zinc-200 block">Kilometraje</span>
+                          <span className="text-[10px] text-zinc-500">Lectura actual del odómetro</span>
+                        </div>
+                      </div>
+                      {vehiculoKm && (
+                        <span className="text-xs font-mono font-bold text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2.5 py-0.5 rounded-full">
+                          {Number(vehiculoKm).toLocaleString()} KM
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="relative flex items-center rounded-xl bg-black/40 border border-white/10 focus-within:border-sky-500/60 focus-within:ring-2 focus-within:ring-sky-500/15 transition-all">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={vehiculoKm}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, "");
+                          setVehiculoKm(val);
+                        }}
+                        placeholder="Ej: 85400"
+                        className="w-full h-11 pl-4 pr-16 bg-transparent text-white font-mono text-base font-semibold tracking-wider placeholder:text-zinc-600 focus:outline-none"
+                      />
+                      <div className="absolute right-2.5 flex items-center gap-1.5">
+                        {vehiculoKm && (
+                          <button
+                            type="button"
+                            onClick={() => setVehiculoKm("")}
+                            className="w-5 h-5 rounded-md bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center text-[10px] transition-colors cursor-pointer"
+                            title="Limpiar"
+                          >
+                            ✕
+                          </button>
+                        )}
+                        <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400 bg-white/5 px-2 py-1 rounded-md border border-white/10 pointer-events-none">
+                          KM
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 3: Inventario (Sección separada) */}
+                  <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3 transition-all hover:border-white/15">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold text-zinc-200 block">Inventario de Recepción</span>
+                          <span className="text-[10px] text-zinc-500">Accesorios que ingresan en el auto</span>
+                        </div>
+                      </div>
+                      <span className="text-xs text-zinc-400 font-mono px-2 py-0.5 rounded-full bg-white/5 border border-white/5">
+                        {inventarioTrae.length} ítems
+                      </span>
+                    </div>
+
+                    {/* Tags con una sola palabra */}
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {listaItemsInventario.map((item) => {
+                        const sel = inventarioTrae.includes(item);
+                        const esManual = ![
+                          "Gata",
+                          "Llave",
+                          "Triángulos",
+                          "Botiquín",
+                          "Extintor",
+                          "Repuesto",
+                          "Matrícula",
+                        ].includes(item);
+                        return (
+                          <button
+                            key={item}
+                            type="button"
+                            onClick={() => toggleInventario(item)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                              sel
+                                ? "bg-blue-500/20 border border-blue-500/40 text-blue-300 shadow-sm shadow-blue-500/10"
+                                : "bg-white/[0.02] border border-white/5 text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]"
+                            }`}
+                          >
+                            <span>{sel ? "✓" : "+"}</span>
+                            <span>{item}</span>
+                            {esManual && (
+                              <span
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setInventarioTrae((prev) => prev.filter((i) => i !== item));
+                                  setListaItemsInventario((prev) => prev.filter((i) => i !== item));
+                                }}
+                                className="text-zinc-500 hover:text-red-400 ml-0.5 text-[10px]"
+                                title="Quitar ítem"
+                              >
+                                ✕
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Campo para ingresar ítems manualmente */}
+                    <div className="flex items-center gap-2 pt-1.5">
+                      <input
+                        type="text"
+                        value={itemManualInventario}
+                        onChange={(e) => setItemManualInventario(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            agregarItemManual();
+                          }
+                        }}
+                        placeholder="Nuevo ítem..."
+                        className="h-9 flex-1 px-3 rounded-xl bg-black/40 border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/20"
+                      />
+                      <button
+                        type="button"
+                        onClick={agregarItemManual}
+                        disabled={!itemManualInventario.trim()}
+                        className="h-9 px-3.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 disabled:opacity-40 text-xs font-semibold transition-all cursor-pointer active:scale-95"
+                      >
+                        + Agregar
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPasoActivo(2)}
-                    title="Cambiar auto"
-                    aria-label="Cambiar auto"
-                    className="w-8 h-8 rounded-xl bg-white/5 hover:bg-emerald-500/15 border border-white/10 hover:border-emerald-500/40 text-zinc-400 hover:text-emerald-400 flex items-center justify-center transition-all cursor-pointer shadow-xs"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
-                      <circle cx="7" cy="17" r="2" />
-                      <path d="M9 17h6" />
-                      <circle cx="17" cy="17" r="2" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPasoActivo(1)}
-                    title="Cambiar cliente"
-                    aria-label="Cambiar cliente"
-                    className="w-8 h-8 rounded-xl bg-white/5 hover:bg-blue-500/15 border border-white/10 hover:border-blue-500/40 text-zinc-400 hover:text-blue-400 flex items-center justify-center transition-all cursor-pointer shadow-xs"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </button>
+                {/* Columna Derecha: Fotos Iniciales */}
+                <div className="lg:col-span-5 p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-zinc-300">Fotos Iniciales</span>
+                        <span
+                          className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                            fotosIniciales.length >= 5
+                              ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                              : "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                          }`}
+                        >
+                          {fotosIniciales.length} / 5
+                        </span>
+                      </div>
+                      {subiendoFoto && (
+                        <span className="text-xs text-blue-400 animate-pulse font-mono">Cargando...</span>
+                      )}
+                    </div>
+
+                    {fotosIniciales.length < 5 ? (
+                      <label className="border-2 border-dashed border-white/10 hover:border-white/20 rounded-xl p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all bg-black/20 group">
+                        <svg className="w-7 h-7 text-zinc-400 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                        </svg>
+                        <span className="text-xs text-zinc-300 font-medium group-hover:text-white transition-colors">Tomar foto / adjuntar</span>
+                        <span className="text-[10px] text-zinc-500">Hasta 5 fotos del vehículo</span>
+                        <input
+                          ref={fileInputFotosRef}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleSubirFotosIniciales}
+                          className="hidden"
+                        />
+                      </label>
+                    ) : (
+                      <div className="border border-emerald-500/25 bg-emerald-500/5 rounded-xl p-3 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold">✓</span>
+                          <span className="text-xs font-semibold text-zinc-200">5 fotos cargadas (máximo alcanzado)</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {fotosIniciales.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 pt-2 border-t border-white/5">
+                      {fotosIniciales.map((url, i) => (
+                        <div
+                          key={i}
+                          className="relative group rounded-xl overflow-hidden border border-white/10 aspect-video bg-black/40 shadow-sm"
+                        >
+                          <img
+                            src={url}
+                            alt={`Foto Inicial ${i + 1}`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setFotosIniciales((prev) => prev.filter((_, idx) => idx !== i))}
+                            title="Eliminar foto"
+                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/80 hover:bg-rose-600 text-white flex items-center justify-center text-[10px] font-bold border border-white/20 transition-all cursor-pointer shadow-md"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Motivo de Ingreso / Trabajo Solicitado */}
+              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-zinc-300">
+                    Motivo de Ingreso / Trabajo Solicitado
+                  </label>
+                  <span className="text-[11px] text-zinc-500">Detalla qué solicita el cliente</span>
+                </div>
+
+                <textarea
+                  rows={2}
+                  value={motivoIngreso}
+                  onChange={(e) => setMotivoIngreso(e.target.value)}
+                  placeholder={
+                    tipoIngreso === "Lubricentro"
+                      ? "Ej: Cambio de aceite 10W-30 sintético + filtro de aceite y filtro de aire..."
+                      : tipoIngreso === "Lavado"
+                      ? "Ej: Lavado express exterior + aspirado y limpieza profunda de interiores..."
+                      : "Ej: Ruido al frenar, cambio de pastillas y revisión de suspensión delantera..."
+                  }
+                  className="w-full p-3 rounded-xl bg-black/40 border border-white/15 focus:border-blue-500 text-white text-xs sm:text-sm focus:outline-none resize-none leading-relaxed"
+                />
+
+                {/* Sugerencias Rápidas de Motivo */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {(tipoIngreso === "Lubricentro"
+                    ? [
+                        "Cambio de Aceite y Filtro",
+                        "Cambio de Filtro de Aire",
+                        "Filtro de Cabina / A/C",
+                        "Chequeo de Niveles de Fluidos",
+                        "Engrase General",
+                        "Líquido de Frenos",
+                      ]
+                    : tipoIngreso === "Lavado"
+                    ? [
+                        "Lavado Completo Exterior + Interior",
+                        "Lavado de Motor",
+                        "Encerado y Pulido",
+                        "Desinfección de Cabina",
+                        "Limpieza de Tapicería",
+                      ]
+                    : [
+                        "Mantenimiento Preventivo",
+                        "Revisión y Cambio de Frenos",
+                        "Diagnóstico de Motor (Check Engine)",
+                        "Ruido en Suspensión",
+                        "Falla en Batería / Carga",
+                        "Alineación y Balanceo",
+                      ]
+                  ).map((sug) => (
+                    <button
+                      key={sug}
+                      type="button"
+                      onClick={() => {
+                        setMotivoIngreso((prev) =>
+                          prev ? `${prev}, ${sug}` : sug
+                        );
+                      }}
+                      className="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] text-zinc-300 hover:text-white transition-all cursor-pointer"
+                    >
+                      + {sug}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Botón para continuar al Paso 4 */}
+              <div className="pt-1 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setPasoActivo(4)}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 shadow-lg shadow-blue-600/30 active:scale-95"
+                >
+                  <span>Continuar a Orden (Asignar Técnicos)</span>
+                  <span>→</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* =================================================================
+              PASO 4: ORDEN (ASIGNACIÓN DE TÉCNICOS, DETALLES FINALES Y CREAR)
+              ================================================================= */}
+          {pasoActivo === 4 && (
+            <div className="space-y-5 animate-fade-in">
+              {/* Tarjeta Resumen Consolidada de Cliente, Auto e Ingreso */}
+              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <span className="font-bold text-white uppercase text-[11px] tracking-wider">
+                      Resumen del Servicio ({tipoIngreso})
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setPasoActivo(1)}
+                      title="Editar cliente"
+                      className="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] text-zinc-300 hover:text-white cursor-pointer transition-colors"
+                    >
+                      👤 Cliente
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPasoActivo(2)}
+                      title="Editar vehículo"
+                      className="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] text-zinc-300 hover:text-white cursor-pointer transition-colors"
+                    >
+                      🚗 Auto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPasoActivo(3)}
+                      title="Editar motivo/ingreso"
+                      className="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] text-zinc-300 hover:text-white cursor-pointer transition-colors"
+                    >
+                      📝 Ingreso
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <span className="text-zinc-500 text-[11px] block">Cliente</span>
+                    <strong className="text-white text-xs block truncate">
+                      {clienteSeleccionado?.name || nuevoClienteNombre || "Consumidor Final"}
+                    </strong>
+                    <span className="text-zinc-400 text-[11px] block">
+                      {clienteSeleccionado?.identification || nuevoClienteIdentificacion || "Sin cédula/RUC"}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-zinc-500 text-[11px] block">Vehículo</span>
+                    <strong className="text-white text-xs block truncate">
+                      {vehiculoMarca || "Vehículo"} {vehiculoModelo}
+                    </strong>
+                    <span className="text-emerald-400 font-mono text-[11px] font-bold block">
+                      {vehiculoPlaca || "SIN PLACA"} {vehiculoKm ? `• ${vehiculoKm} Km` : ""}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-zinc-500 text-[11px] block">Motivo / Trabajo</span>
+                    <p className="text-zinc-300 text-[11px] line-clamp-2">
+                      {motivoIngreso || "Ingreso a revisión / servicio"}
+                    </p>
+                  </div>
                 </div>
               </div>
 
               {/* Formulario de Asignación de Técnicos */}
               <div className="space-y-2 text-xs">
                 <div className="flex items-center justify-between">
-                  <label className="block text-zinc-300 font-semibold text-xs flex items-center gap-2">
-                    <span>Técnico</span>
+                  <label className="block text-zinc-400 font-normal text-xs flex items-center gap-2">
+                    <span>Técnicos Asignados</span>
                     {asignacionesTecnicos.length > 0 && (
                       <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-bold border border-blue-500/30">
                         {asignacionesTecnicos.length}
@@ -1113,258 +2693,506 @@ export default function ModalNuevaOrdenTrabajo({
                 )}
               </div>
 
-              {/* FLOTANTE / MODAL DE ASIGNACIÓN DE TÉCNICO Y TAREA */}
-              {mostrarFlotanteAsignar && (
-                <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-                  <div className="w-full max-w-md bg-[#16161a] border border-white/15 rounded-3xl shadow-2xl p-5 space-y-4 animate-scale-in">
-                    <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="w-8 h-8 rounded-xl bg-blue-600/20 text-blue-300 flex items-center justify-center font-bold text-sm border border-blue-500/30">
-                          👷
-                        </span>
-                        <div>
-                          <h4 className="text-sm font-bold text-white">Asignar Técnico</h4>
-                        </div>
-                      </div>
+              {/* Email para Notificaciones / Presupuesto */}
+              <div className="space-y-1.5 text-xs">
+                <label className="text-zinc-400 font-normal block">
+                  Email para envío de presupuesto y orden digital (Opcional)
+                </label>
+                <input
+                  type="email"
+                  value={emailContacto}
+                  onChange={(e) => setEmailContacto(e.target.value)}
+                  placeholder="cliente@ejemplo.com"
+                  className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-blue-500 text-white text-xs sm:text-sm focus:outline-none"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* FLOTANTE / MODAL DE ASIGNACIÓN DE TÉCNICO Y TAREA */}
+          {mostrarFlotanteAsignar && (
+            <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+              <div className="w-full max-w-md bg-[#16161a] border border-white/15 rounded-3xl shadow-2xl p-5 space-y-4 animate-scale-in">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-xl bg-blue-600/20 text-blue-300 flex items-center justify-center font-bold text-sm border border-blue-500/30">
+                      👷
+                    </span>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Asignar Técnico</h4>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMostrarFlotanteAsignar(false)}
+                    className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center text-xs"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Seleccionar Empleado con Buscador Dropdown */}
+                <div className="space-y-1.5 relative" ref={dropdownTecnicoRef}>
+                  <label className="block text-zinc-400 font-normal text-xs">
+                    Técnico:
+                  </label>
+
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={busquedaTecnico}
+                      onChange={(e) => {
+                        setBusquedaTecnico(e.target.value);
+                        setMostrarDropdownTecnicos(true);
+                      }}
+                      onFocus={() => {
+                        setMostrarDropdownTecnicos(true);
+                      }}
+                      placeholder="Buscar..."
+                      className="w-full h-11 pl-10 pr-16 rounded-xl bg-black/40 border border-white/15 focus:border-blue-500 text-white text-xs sm:text-sm placeholder:text-zinc-500 focus:outline-none transition-all cursor-text"
+                    />
+                    <svg
+                      className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      />
+                    </svg>
+
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      {busquedaTecnico && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBusquedaTecnico("");
+                            setFlotanteTecnicoSeleccionado("");
+                            setMostrarDropdownTecnicos(true);
+                          }}
+                          className="text-zinc-400 hover:text-white cursor-pointer p-1 text-xs"
+                          title="Borrar nombre"
+                        >
+                          ✕
+                        </button>
+                      )}
                       <button
                         type="button"
-                        onClick={() => setMostrarFlotanteAsignar(false)}
-                        className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center text-xs"
+                        onClick={() => setMostrarDropdownTecnicos((prev) => !prev)}
+                        className="text-zinc-400 hover:text-white cursor-pointer p-1"
                       >
-                        ✕
-                      </button>
-                    </div>
-
-                    {/* Seleccionar Empleado con Buscador Dropdown */}
-                    <div className="space-y-1.5 relative" ref={dropdownTecnicoRef}>
-                      <label className="block text-zinc-300 font-semibold text-xs">
-                        Técnico:
-                      </label>
-
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={busquedaTecnico}
-                          onChange={(e) => {
-                            setBusquedaTecnico(e.target.value);
-                            setMostrarDropdownTecnicos(true);
-                          }}
-                          onFocus={() => {
-                            setMostrarDropdownTecnicos(true);
-                          }}
-                          placeholder="Buscar..."
-                          className="w-full h-11 pl-10 pr-16 rounded-xl bg-black/40 border border-white/15 focus:border-blue-500 text-white text-xs sm:text-sm placeholder:text-zinc-500 focus:outline-none transition-all cursor-text"
-                        />
                         <svg
-                          className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                          className={`w-4 h-4 transition-transform ${mostrarDropdownTecnicos ? "rotate-180" : ""}`}
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                          />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
+                      </button>
+                    </div>
+                  </div>
 
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                          {busquedaTecnico && (
+                  {/* Dropdown flotante con los técnicos */}
+                  {mostrarDropdownTecnicos && (
+                    <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#16161b] border border-white/15 rounded-2xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto">
+                      {mecanicosFiltrados.length > 0 ? (
+                        <div className="p-1 space-y-0.5">
+                          {mecanicosFiltrados.map((m) => {
+                            const seleccionado = flotanteTecnicoSeleccionado.trim().toLowerCase() === m.trim().toLowerCase();
+                            return (
+                              <div
+                                key={m}
+                                onClick={() => {
+                                  setFlotanteTecnicoSeleccionado(m);
+                                  setBusquedaTecnico(m);
+                                  setMostrarDropdownTecnicos(false);
+                                }}
+                                className={`px-3 py-2.5 rounded-xl text-xs font-medium cursor-pointer flex items-center justify-between transition-colors ${
+                                  seleccionado
+                                    ? "bg-blue-600 text-white font-semibold"
+                                    : "text-zinc-200 hover:bg-white/[0.08]"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 truncate">
+                                  <span className={`w-2 h-2 rounded-full shrink-0 ${seleccionado ? "bg-white" : "bg-emerald-400"}`} />
+                                  <span className="truncate">{m}</span>
+                                </div>
+                                {seleccionado && <span className="text-xs">✓</span>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="p-4 text-center space-y-2">
+                          <p className="text-xs text-zinc-400">No se encontró "{busquedaTecnico}"</p>
+                          {busquedaTecnico.trim() && (
                             <button
                               type="button"
                               onClick={() => {
-                                setBusquedaTecnico("");
-                                setFlotanteTecnicoSeleccionado("");
-                                setMostrarDropdownTecnicos(true);
+                                setFlotanteTecnicoSeleccionado(busquedaTecnico.trim());
+                                setBusquedaTecnico(busquedaTecnico.trim());
+                                setMostrarDropdownTecnicos(false);
                               }}
-                              className="text-zinc-400 hover:text-white cursor-pointer p-1 text-xs"
-                              title="Borrar nombre"
+                              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold cursor-pointer"
                             >
-                              ✕
+                              Usar "{busquedaTecnico.trim()}"
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => setMostrarDropdownTecnicos((prev) => !prev)}
-                            className="text-zinc-400 hover:text-white cursor-pointer p-1"
-                          >
-                            <svg
-                              className={`w-4 h-4 transition-transform ${mostrarDropdownTecnicos ? "rotate-180" : ""}`}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Dropdown flotante con los técnicos */}
-                      {mostrarDropdownTecnicos && (
-                        <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#16161b] border border-white/15 rounded-2xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto">
-                          {mecanicosFiltrados.length > 0 ? (
-                            <div className="p-1 space-y-0.5">
-                              {mecanicosFiltrados.map((m) => {
-                                const seleccionado = flotanteTecnicoSeleccionado.trim().toLowerCase() === m.trim().toLowerCase();
-                                return (
-                                  <div
-                                    key={m}
-                                    onClick={() => {
-                                      setFlotanteTecnicoSeleccionado(m);
-                                      setBusquedaTecnico(m);
-                                      setMostrarDropdownTecnicos(false);
-                                    }}
-                                    className={`px-3 py-2.5 rounded-xl text-xs font-medium cursor-pointer flex items-center justify-between transition-colors ${
-                                      seleccionado
-                                        ? "bg-blue-600 text-white font-semibold"
-                                        : "text-zinc-200 hover:bg-white/[0.08]"
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-2 truncate">
-                                      <span className={`w-2 h-2 rounded-full shrink-0 ${seleccionado ? "bg-white" : "bg-emerald-400"}`} />
-                                      <span className="truncate">{m}</span>
-                                    </div>
-                                    {seleccionado && <span className="text-xs">✓</span>}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <div className="p-4 text-center space-y-2">
-                              <p className="text-xs text-zinc-400">No se encontró "{busquedaTecnico}"</p>
-                              {busquedaTecnico.trim() && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setFlotanteTecnicoSeleccionado(busquedaTecnico.trim());
-                                    setBusquedaTecnico(busquedaTecnico.trim());
-                                    setMostrarDropdownTecnicos(false);
-                                  }}
-                                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold cursor-pointer"
-                                >
-                                  Usar "{busquedaTecnico.trim()}"
-                                </button>
-                              )}
-                            </div>
                           )}
                         </div>
                       )}
                     </div>
+                  )}
+                </div>
 
-                    {/* Qué va a hacer */}
-                    <div className="space-y-1.5">
-                      <label className="block text-zinc-300 font-semibold text-xs">
-                        Labor:
-                      </label>
-                      <input
-                        type="text"
-                        value={flotanteTarea}
-                        onChange={(e) => setFlotanteTarea(e.target.value)}
-                        placeholder="Labor..."
-                        className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-blue-500 text-white text-xs sm:text-sm focus:outline-none"
-                        autoFocus
-                      />
+                {/* Qué va a hacer */}
+                <div className="space-y-1.5">
+                  <label className="block text-zinc-400 font-normal text-xs">
+                    Labor:
+                  </label>
+                  <input
+                    type="text"
+                    value={flotanteTarea}
+                    onChange={(e) => setFlotanteTarea(e.target.value)}
+                    placeholder="Labor..."
+                    className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-blue-500 text-white text-xs sm:text-sm focus:outline-none"
+                    autoFocus
+                  />
 
-                      {/* Sugerencias Rápidas de Tarea */}
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {(tipoIngreso === "Lubricentro"
-                          ? [
-                              { nombre: "Aceite", color: "bg-blue-500/10 border-blue-500/20 text-blue-300 hover:bg-blue-500/20" },
-                              { nombre: "Filtros", color: "bg-emerald-500/10 border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20" },
-                              { nombre: "Fluidos", color: "bg-cyan-500/10 border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/20" },
-                              { nombre: "Frenos", color: "bg-rose-500/10 border-rose-500/20 text-rose-300 hover:bg-rose-500/20" },
-                              { nombre: "Batería", color: "bg-amber-500/10 border-amber-500/20 text-amber-300 hover:bg-amber-500/20" },
-                              { nombre: "Engrase", color: "bg-purple-500/10 border-purple-500/20 text-purple-300 hover:bg-purple-500/20" },
-                            ]
-                          : [
-                              { nombre: "Diagnóstico", color: "bg-blue-500/10 border-blue-500/20 text-blue-300 hover:bg-blue-500/20" },
-                              { nombre: "Mantenimiento", color: "bg-emerald-500/10 border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20" },
-                              { nombre: "Frenos", color: "bg-rose-500/10 border-rose-500/20 text-rose-300 hover:bg-rose-500/20" },
-                              { nombre: "Motor", color: "bg-amber-500/10 border-amber-500/20 text-amber-300 hover:bg-amber-500/20" },
-                              { nombre: "Suspensión", color: "bg-purple-500/10 border-purple-500/20 text-purple-300 hover:bg-purple-500/20" },
-                              { nombre: "Eléctrico", color: "bg-cyan-500/10 border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/20" },
-                            ]
-                        ).map((sug) => (
-                          <button
-                            key={sug.nombre}
-                            type="button"
-                            onClick={() => setFlotanteTarea(sug.nombre)}
-                            className={`px-2.5 py-1 rounded-xl border text-xs font-normal transition-all cursor-pointer ${sug.color}`}
-                          >
-                            {sug.nombre}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Botón Guardar Asignación */}
-                    <div className="pt-2 flex items-center justify-end gap-2 border-t border-white/10">
+                  {/* Sugerencias Rápidas de Tarea */}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {(tipoIngreso === "Lubricentro"
+                      ? [
+                          { nombre: "Aceite", color: "bg-blue-500/10 border-blue-500/20 text-blue-300 hover:bg-blue-500/20" },
+                          { nombre: "Filtros", color: "bg-emerald-500/10 border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20" },
+                          { nombre: "Fluidos", color: "bg-cyan-500/10 border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/20" },
+                          { nombre: "Frenos", color: "bg-rose-500/10 border-rose-500/20 text-rose-300 hover:bg-rose-500/20" },
+                          { nombre: "Batería", color: "bg-amber-500/10 border-amber-500/20 text-amber-300 hover:bg-amber-500/20" },
+                          { nombre: "Engrase", color: "bg-purple-500/10 border-purple-500/20 text-purple-300 hover:bg-purple-500/20" },
+                        ]
+                      : [
+                          { nombre: "Diagnóstico", color: "bg-blue-500/10 border-blue-500/20 text-blue-300 hover:bg-blue-500/20" },
+                          { nombre: "Mantenimiento", color: "bg-emerald-500/10 border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20" },
+                          { nombre: "Frenos", color: "bg-rose-500/10 border-rose-500/20 text-rose-300 hover:bg-rose-500/20" },
+                          { nombre: "Motor", color: "bg-amber-500/10 border-amber-500/20 text-amber-300 hover:bg-amber-500/20" },
+                          { nombre: "Suspensión", color: "bg-purple-500/10 border-purple-500/20 text-purple-300 hover:bg-purple-500/20" },
+                          { nombre: "Eléctrico", color: "bg-cyan-500/10 border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/20" },
+                        ]
+                    ).map((sug) => (
                       <button
+                        key={sug.nombre}
                         type="button"
-                        onClick={() => setMostrarFlotanteAsignar(false)}
-                        className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
+                        onClick={() => setFlotanteTarea(sug.nombre)}
+                        className={`px-2.5 py-1 rounded-xl border text-xs font-normal transition-all cursor-pointer ${sug.color}`}
                       >
-                        Cancelar
+                        {sug.nombre}
                       </button>
-                      <button
-                        type="button"
-                        disabled={!flotanteTecnicoSeleccionado.trim() && !busquedaTecnico.trim()}
-                        onClick={() => {
-                          const tecnicoFinal = flotanteTecnicoSeleccionado.trim() || busquedaTecnico.trim();
-                          if (!tecnicoFinal) return;
-                          const nuevaAsig = {
-                            id: `asig-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-                            nombre: tecnicoFinal,
-                            tarea:
-                              flotanteTarea.trim() ||
-                              (tipoIngreso === "Lubricentro"
-                                ? "Servicio de lubricación"
-                                : "Diagnóstico y reparación"),
-                          };
-                          setAsignacionesTecnicos((prev) => [
-                            ...prev.filter((a) => a.nombre !== tecnicoFinal),
-                            nuevaAsig,
-                          ]);
-                          setMostrarFlotanteAsignar(false);
-                        }}
-                        className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-blue-600/30"
-                      >
-                        Registrar Asignación
-                      </button>
-                    </div>
+                    ))}
                   </div>
                 </div>
-              )}
 
-                {/* Motivo de ingreso */}
-                <div>
-                  <textarea
-                    rows={3}
-                    value={motivoIngreso}
-                    onChange={(e) => setMotivoIngreso(e.target.value)}
-                    placeholder="Motivo de ingreso..."
-                    className="w-full p-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-blue-500 text-white text-xs sm:text-sm focus:outline-none resize-none"
-                  />
+                {/* Botón Guardar Asignación */}
+                <div className="pt-2 flex items-center justify-end gap-2 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setMostrarFlotanteAsignar(false)}
+                    className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!flotanteTecnicoSeleccionado.trim() && !busquedaTecnico.trim()}
+                    onClick={() => {
+                      const tecnicoFinal = flotanteTecnicoSeleccionado.trim() || busquedaTecnico.trim();
+                      if (!tecnicoFinal) return;
+                      const nuevaAsig = {
+                        id: `asig-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                        nombre: tecnicoFinal,
+                        tarea:
+                          flotanteTarea.trim() ||
+                          (tipoIngreso === "Lubricentro"
+                            ? "Servicio de lubricación"
+                            : "Diagnóstico y reparación"),
+                      };
+                      setAsignacionesTecnicos((prev) => [
+                        ...prev.filter((a) => a.nombre !== tecnicoFinal),
+                        nuevaAsig,
+                      ]);
+                      setMostrarFlotanteAsignar(false);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-blue-600/30"
+                  >
+                    Registrar Asignación
+                  </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* FLOTANTE / MODAL DE SELECCIÓN DE MARCA Y MODELO */}
+          {mostrarFlotanteVehiculo && (
+            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+              <div className="w-full max-w-lg bg-[#16161b] border border-white/15 rounded-3xl shadow-2xl p-5 sm:p-6 space-y-4 animate-scale-in max-h-[90vh] flex flex-col">
+                {/* Header del flotante */}
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold text-base border border-emerald-500/30">
+                      🚗
+                    </span>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">
+                        {tabFlotanteVehiculo === "marca"
+                          ? "Escoger Marca del Vehículo"
+                          : `Escoger Modelo (${vehiculoMarca || "General"})`}
+                      </h4>
+                      <p className="text-xs text-zinc-400 font-normal">
+                        {tabFlotanteVehiculo === "marca"
+                          ? "Selecciona una marca del catálogo o escribe para buscar"
+                          : `Modelos disponibles para ${vehiculoMarca || "el vehículo"}`}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMostrarFlotanteVehiculo(false)}
+                    className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Tabs Marca / Modelo */}
+                <div className="grid grid-cols-2 gap-2 bg-black/40 p-1 rounded-2xl border border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTabFlotanteVehiculo("marca");
+                      setBusquedaFlotanteVehiculo("");
+                    }}
+                    className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      tabFlotanteVehiculo === "marca"
+                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
+                        : "text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    <span>1. Marca</span>
+                    {vehiculoMarca && <span className="opacity-80 font-normal truncate max-w-[90px]">({vehiculoMarca})</span>}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTabFlotanteVehiculo("modelo");
+                      setBusquedaFlotanteVehiculo("");
+                    }}
+                    className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      tabFlotanteVehiculo === "modelo"
+                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
+                        : "text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    <span>2. Modelo</span>
+                    {vehiculoModelo && <span className="opacity-80 font-normal truncate max-w-[90px]">({vehiculoModelo})</span>}
+                  </button>
+                </div>
+
+                {/* Buscador */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={busquedaFlotanteVehiculo}
+                    onChange={(e) => setBusquedaFlotanteVehiculo(e.target.value)}
+                    placeholder={
+                      tabFlotanteVehiculo === "marca"
+                        ? "Buscar marca (Ej: Toyota, Chevrolet, Kia, Nissan...)"
+                        : `Buscar modelo de ${vehiculoMarca || "vehículo"}...`
+                    }
+                    className="w-full h-11 pl-10 pr-20 rounded-2xl bg-black/40 border border-white/15 focus:border-emerald-500 text-white text-xs sm:text-sm placeholder:text-zinc-500 focus:outline-none transition-all"
+                    autoFocus
+                  />
+                  <svg
+                    className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  {busquedaFlotanteVehiculo && (
+                    <button
+                      type="button"
+                      onClick={() => setBusquedaFlotanteVehiculo("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded-lg bg-white/10 text-zinc-300 hover:text-white cursor-pointer"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+
+                {/* Lista con scroll de marcas o modelos */}
+                <div className="flex-1 overflow-y-auto max-h-72 space-y-2 pr-1">
+                  {tabFlotanteVehiculo === "marca" ? (
+                    <>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {marcasFlotante.map((marca) => {
+                          const activo = vehiculoMarca.trim().toLowerCase() === marca.toLowerCase();
+                          return (
+                            <button
+                              key={marca}
+                              type="button"
+                              onClick={() => seleccionarMarcaFlotante(marca)}
+                              className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex items-center justify-between ${
+                                activo
+                                  ? "bg-emerald-600/20 border-emerald-500 text-emerald-300 font-semibold ring-1 ring-emerald-500/30"
+                                  : "bg-white/[0.03] hover:bg-white/[0.08] border-white/10 text-zinc-200 hover:text-white"
+                              }`}
+                            >
+                              <span className="text-xs truncate">{marca}</span>
+                              {activo ? (
+                                <span className="text-emerald-400 text-xs">✓</span>
+                              ) : (
+                                <span className="text-zinc-500 text-[10px]">→</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {busquedaFlotanteVehiculo.trim() && !marcasFlotante.some(m => m.toLowerCase() === busquedaFlotanteVehiculo.trim().toLowerCase()) && (
+                        <div className="pt-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => seleccionarMarcaFlotante(busquedaFlotanteVehiculo.trim())}
+                            className="px-4 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold cursor-pointer transition-all"
+                          >
+                            Usar marca personalizada: &ldquo;{busquedaFlotanteVehiculo.trim()}&rdquo; →
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {modelosFlotante.map((modelo) => {
+                          const activo = vehiculoModelo.trim().toLowerCase() === modelo.toLowerCase();
+                          return (
+                            <button
+                              key={modelo}
+                              type="button"
+                              onClick={() => seleccionarModeloFlotante(modelo)}
+                              className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex items-center justify-between ${
+                                activo
+                                  ? "bg-emerald-600/20 border-emerald-500 text-emerald-300 font-semibold ring-1 ring-emerald-500/30"
+                                  : "bg-white/[0.03] hover:bg-white/[0.08] border-white/10 text-zinc-200 hover:text-white"
+                              }`}
+                            >
+                              <span className="text-xs truncate">{modelo}</span>
+                              {activo && <span className="text-emerald-400 text-xs">✓</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {busquedaFlotanteVehiculo.trim() && !modelosFlotante.some(m => m.toLowerCase() === busquedaFlotanteVehiculo.trim().toLowerCase()) && (
+                        <div className="pt-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => seleccionarModeloFlotante(busquedaFlotanteVehiculo.trim())}
+                            className="px-4 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold cursor-pointer transition-all"
+                          >
+                            Usar modelo personalizado: &ldquo;{busquedaFlotanteVehiculo.trim()}&rdquo; ✓
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Footer del flotante */}
+                <div className="flex items-center justify-between border-t border-white/10 pt-3">
+                  {tabFlotanteVehiculo === "modelo" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTabFlotanteVehiculo("marca");
+                        setBusquedaFlotanteVehiculo("");
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs cursor-pointer flex items-center gap-1"
+                    >
+                      <span>←</span>
+                      <span>Volver a Marcas</span>
+                    </button>
+                  ) : (
+                    <span className="text-[11px] text-zinc-500 font-normal">
+                      {marcasFlotante.length} marcas en catálogo
+                    </span>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setMostrarFlotanteVehiculo(false)}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-emerald-600/30"
+                  >
+                    Listo
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Pie Inferior: Cancelar + Navegación + Crear Orden */}
+        {/* Pie Inferior: Cancelar / Atrás + Navegación + Crear Orden */}
         <div className="px-4 py-3 sm:px-6 sm:py-4 border-t border-white/10 flex items-center justify-between bg-black/30">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={creando}
-            className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-          >
-            Cancelar
-          </button>
+          {mostrarFormNuevoCliente ? (
+            <button
+              type="button"
+              onClick={() => setMostrarFormNuevoCliente(false)}
+              className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
+            >
+              <span>←</span>
+              <span>Atrás</span>
+            </button>
+          ) : pasoActivo > 1 ? (
+            <button
+              type="button"
+              onClick={() => setPasoActivo((p) => ((p - 1) as 1 | 2 | 3 | 4))}
+              className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
+            >
+              <span>←</span>
+              <span>Atrás</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleCancelarSinGuardar}
+              disabled={creando}
+              className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+          )}
+
+          {/* Etiqueta de Hora de recepción en el centro inferior */}
+          {fechaHoraRecepcion && (
+            <span
+              title="Fecha y hora de recepción"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-zinc-300 text-[11px] sm:text-xs font-mono whitespace-nowrap"
+            >
+              <svg className="w-3.5 h-3.5 text-zinc-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                <circle cx="12" cy="12" r="9" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" />
+              </svg>
+              <span>{fechaHoraRecepcion}</span>
+            </span>
+          )}
 
           <div className="flex items-center gap-3">
-            {pasoActivo < 3 ? (
+            {pasoActivo < 4 ? (
               <button
                 type="button"
                 onClick={() => {
@@ -1380,6 +3208,8 @@ export default function ModalNuevaOrdenTrabajo({
                       return;
                     }
                     setPasoActivo(3);
+                  } else if (pasoActivo === 3) {
+                    setPasoActivo(4);
                   }
                 }}
                 className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-lg shadow-blue-600/30 active:scale-95"

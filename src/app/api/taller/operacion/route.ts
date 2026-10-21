@@ -106,6 +106,36 @@ function computeOrderPin(r: any): string {
   return String(1000 + Math.abs(hash));
 }
 
+async function getNextOrderCorrelative(): Promise<string> {
+  try {
+    const [ordersCount, historyCount, recentOrders] = await Promise.all([
+      prisma.workshopOrder.count().catch(() => 0),
+      prisma.workshopHistory.count().catch(() => 0),
+      prisma.workshopOrder
+        .findMany({
+          select: { orderNumber: true },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        })
+        .catch(() => []),
+    ]);
+    let maxCorrelativo = ordersCount + historyCount;
+    for (const r of recentOrders) {
+      const m = String(r.orderNumber || "").match(/(?:^|#|-)0*(\d{1,5})$/);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (!isNaN(n) && n < 1000 && n > maxCorrelativo) {
+          maxCorrelativo = n;
+        }
+      }
+    }
+    const nextNum = Math.max(1, maxCorrelativo + 1);
+    return String(nextNum).padStart(5, "0");
+  } catch {
+    return "00001";
+  }
+}
+
 function inferStatusColor(status: string, explicitColor?: string | null): string {
   if (explicitColor && explicitColor.trim()) return explicitColor.trim();
   const s = (status || "").toLowerCase();
@@ -372,6 +402,16 @@ export async function GET(request: Request) {
         });
       }
 
+      // 0.9 Consulta de código correlativo siguiente para nueva OT
+      if (searchParams.get("nextCorrelative") === "true") {
+        const correlative = await getNextOrderCorrelative();
+        return NextResponse.json({
+          success: true,
+          correlative,
+          formatted: `OT #${correlative}`,
+        });
+      }
+
       // 1. Consulta específica de historial por placa
       if (plateParam && searchParams.get("historial") === "true") {
         const [historyRows, orderRows] = (await Promise.all([
@@ -412,9 +452,10 @@ export async function GET(request: Request) {
       // 2. Búsqueda rápida por Placa o Cédula/RUC/Nombre
       if (queryRaw) {
         const cleanQ = queryRaw.toUpperCase();
+        const alnumQ = cleanQ.replace(/[^A-Z0-9]/g, "");
 
-        // Buscar primero vehículo por placa exacta o parcial
-        const vehiclesFound: any[] = await prisma.vehicle.findMany({
+        // Buscar primero vehículo por placa exacta, parcial o normalizada sin guiones/espacios
+        let vehiclesFound: any[] = await prisma.vehicle.findMany({
           where: {
             OR: [
               { plate: { equals: cleanQ, mode: "insensitive" } },
@@ -429,6 +470,33 @@ export async function GET(request: Request) {
           },
           take: 5,
         });
+
+        if (vehiclesFound.length === 0 && alnumQ.length >= 4) {
+          const rawNormalizedIds = (await prisma
+            .$queryRawUnsafe(
+              `SELECT "id" FROM "Vehicle"
+               WHERE REGEXP_REPLACE(UPPER("plate"), '[^A-Z0-9]', '', 'g') = $1
+                  OR REGEXP_REPLACE(UPPER("plate"), '[^A-Z0-9]', '', 'g') LIKE $2
+               LIMIT 5`,
+              alnumQ,
+              `%${alnumQ}%`
+            )
+            .catch(() => [])) as any[];
+
+          if (rawNormalizedIds.length > 0) {
+            vehiclesFound = await prisma.vehicle.findMany({
+              where: {
+                id: { in: rawNormalizedIds.map((r) => r.id) },
+              },
+              include: {
+                customer: {
+                  include: { vehicles: true },
+                },
+              },
+              take: 5,
+            });
+          }
+        }
 
         let matchedVehicle: any = vehiclesFound[0] || null;
         let matchedCustomer: any = matchedVehicle?.customer || null;
@@ -994,6 +1062,9 @@ export async function POST(request: Request) {
           marca,
           modelo,
           kilometraje,
+          fuelLevel = "1/2",
+          receptionInventory = [],
+          receptionPhotos = [],
         } = body;
 
         if (!nombres || !String(nombres).trim()) {
@@ -1082,7 +1153,8 @@ export async function POST(request: Request) {
 
         const orderId =
           "ord_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
-        const orderNumber = `OT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        const correlativeCode = await getNextOrderCorrelative();
+        const orderNumber = `OT #${correlativeCode}`;
 
         const finalPlate = vehicle?.plate || cleanPlateInput || `SIN-PLACA-${orderNumber.slice(-4)}`;
         const finalVehicleTitle = vehicle
@@ -1105,19 +1177,24 @@ export async function POST(request: Request) {
 
         const orderBranch = body.branch === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL";
 
+        const jsonInventario = JSON.stringify(Array.isArray(receptionInventory) ? receptionInventory : []);
+        const jsonFotos = JSON.stringify(Array.isArray(receptionPhotos) ? receptionPhotos : []);
+
         await prisma.$executeRawUnsafe(
           `INSERT INTO "WorkshopOrder" (
             "id", "orderNumber", "customerId", "vehicleId", "vehicle", "plate",
             "client", "clientPhone", "clientIdDoc", "mechanic", "status", "progress",
-            "mileage", "nextOilChangeKm", "servicesJson", "itemsJson",
+            "mileage", "nextOilChangeKm", "fuelLevel", "receptionInventoryJson",
+            "servicesJson", "itemsJson",
             "receptionPhotosJson", "evidencePhotosJson", "notes", "estimatedOut",
             "totalCost", "branch", "dateIn", "createdAt", "updatedAt"
           ) VALUES (
             $1, $2, $3, $4, $5, $6,
             $7, $8, $9, $10, 'En Pista', 10,
-            $11, $12, '[]', '[]',
-            '[]', '[]', $13, 'Hoy',
-            0, $14, NOW(), NOW(), NOW()
+            $11, $12, $13, $14,
+            '[]', '[]',
+            $15, '[]', $16, 'Hoy',
+            0, $17, NOW(), NOW(), NOW()
           )`,
           orderId,
           orderNumber,
@@ -1131,6 +1208,9 @@ export async function POST(request: Request) {
           mechanic || "Hernan Marquez",
           kmNum || null,
           nextOilKm,
+          fuelLevel || "1/2",
+          jsonInventario,
+          jsonFotos,
           notesFormatted,
           orderBranch
         );

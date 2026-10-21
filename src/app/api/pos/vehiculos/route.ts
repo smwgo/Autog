@@ -324,23 +324,92 @@ export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
+    const plateParam = searchParams.get("plate");
 
-    if (!id) {
+    if (!id && !plateParam) {
       return NextResponse.json(
-        { success: false, error: "ID de vehículo requerido." },
+        { success: false, error: "ID o placa de vehículo requerido." },
         { status: 400 }
       );
     }
 
-    if (!id.startsWith("taller-")) {
-      await prisma.vehicle.delete({
-        where: { id },
-      });
+    let plate = (plateParam || "").trim().toUpperCase();
+
+    // Si viene ID virtual tipo taller-XXXXXX
+    if (id?.startsWith("taller-")) {
+      const extracted = id.replace("taller-", "").trim().toUpperCase();
+      if (!plate) plate = extracted;
+    } else if (id && !plate) {
+      try {
+        const v = await prisma.vehicle.findUnique({
+          where: { id },
+          select: { plate: true },
+        });
+        if (v?.plate) {
+          plate = v.plate.trim().toUpperCase();
+        }
+      } catch (err) {
+        console.warn("No se pudo obtener placa por ID:", err);
+      }
+    }
+
+    // 1. Eliminar de prisma.vehicle por ID
+    if (id && !id.startsWith("taller-")) {
+      await prisma.vehicle
+        .deleteMany({
+          where: { id },
+        })
+        .catch((e) => console.warn("Error delete vehicle by id:", e));
+    }
+
+    // 2. Si tenemos la placa, eliminar de todas las tablas en Neon
+    if (plate) {
+      await prisma.vehicle
+        .deleteMany({
+          where: { plate: { equals: plate, mode: "insensitive" } },
+        })
+        .catch((e) => console.warn("Error delete vehicle by plate:", e));
+
+      await prisma.workshopOrder
+        .deleteMany({
+          where: { plate: { equals: plate, mode: "insensitive" } },
+        })
+        .catch((e) => console.warn("Error delete workshopOrder by plate:", e));
+
+      await prisma.workshopInspection
+        .deleteMany({
+          where: { plate: { equals: plate, mode: "insensitive" } },
+        })
+        .catch(() => {});
+
+      await prisma.workshopTask
+        .deleteMany({
+          where: { plate: { equals: plate, mode: "insensitive" } },
+        })
+        .catch(() => {});
+
+      await prisma.workshopHistory
+        .deleteMany({
+          where: { plate: { equals: plate, mode: "insensitive" } },
+        })
+        .catch(() => {});
+
+      await prisma.clientAppointment
+        .deleteMany({
+          where: { plate: { equals: plate, mode: "insensitive" } },
+        })
+        .catch(() => {});
+
+      await prisma.clientQuote
+        .deleteMany({
+          where: { plate: { equals: plate, mode: "insensitive" } },
+        })
+        .catch(() => {});
     }
 
     return NextResponse.json({
       success: true,
-      message: "Vehículo eliminado con éxito.",
+      message: `Vehículo ${plate || id} eliminado con éxito de Neon PostgreSQL.`,
     });
   } catch (error: any) {
     console.error("Error al eliminar vehículo:", error);
@@ -350,3 +419,4 @@ export async function DELETE(request: Request) {
     );
   }
 }
+

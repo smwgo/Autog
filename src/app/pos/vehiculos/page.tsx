@@ -189,12 +189,15 @@ export default function PosVehiculosPage() {
     if (!vehiculoAEliminar) return;
     try {
       setEliminando(true);
-      const res = await fetch(`/api/pos/vehiculos?id=${encodeURIComponent(vehiculoAEliminar.id)}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `/api/pos/vehiculos?id=${encodeURIComponent(vehiculoAEliminar.id)}&plate=${encodeURIComponent(vehiculoAEliminar.plate)}`,
+        {
+          method: "DELETE",
+        }
+      );
       const data = await res.json();
       if (res.ok && data.success) {
-        setMensajeExito(`Vehículo ${vehiculoAEliminar.plate} eliminado.`);
+        setMensajeExito(`Vehículo ${vehiculoAEliminar.plate} eliminado exitosamente de Neon.`);
         setTimeout(() => setMensajeExito(null), 3500);
         setVehiculoAEliminar(null);
         if (vehiculoDetalle?.id === vehiculoAEliminar.id) {
@@ -249,6 +252,10 @@ export default function PosVehiculosPage() {
               </h1>
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 shrink-0">
                 {vehicles.length}
+              </span>
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Neon DB Conectado
               </span>
             </div>
 
@@ -735,6 +742,19 @@ export default function PosVehiculosPage() {
                   <span>🔧</span>
                   <span>Abrir en Taller</span>
                 </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const toDelete = vehiculoDetalle;
+                    setVehiculoDetalle(null);
+                    setVehiculoAEliminar(toDelete);
+                  }}
+                  className="px-3 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs border border-rose-500/20 active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                  title="Eliminar este vehículo de Neon"
+                >
+                  <span>🗑️</span>
+                  <span>Eliminar</span>
+                </button>
               </div>
             </div>
           </div>
@@ -933,19 +953,24 @@ export default function PosVehiculosPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4">
               <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto text-2xl">
-                ⚠️
+                🗑️
               </div>
               <div>
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
                   ¿Eliminar Vehículo?
                 </h3>
-                <p className="text-xs text-zinc-500 mt-1">
-                  Se retirará el vehículo con placa{" "}
-                  <span className="font-mono font-bold text-indigo-600">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  Se eliminará definitivamente de la base de datos <strong className="text-zinc-800 dark:text-zinc-200">Neon</strong> el vehículo con placa{" "}
+                  <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
                     {vehiculoAEliminar.plate}
                   </span>{" "}
                   ({vehiculoAEliminar.brand} {vehiculoAEliminar.model}).
                 </p>
+                {vehiculoAEliminar.tallerVisits > 0 && (
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 p-2 rounded-xl border border-amber-500/20 mt-2 text-left">
+                    ⚠️ Incluye {vehiculoAEliminar.tallerVisits} {vehiculoAEliminar.tallerVisits === 1 ? 'visita/orden registrada' : 'visitas/órdenes registradas'} en taller que también se limpiarán de Neon.
+                  </p>
+                )}
               </div>
 
               <div className="flex gap-2 pt-2">
@@ -966,7 +991,7 @@ export default function PosVehiculosPage() {
                   {eliminando ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <span>Eliminar</span>
+                    <span>Eliminar Definitivamente</span>
                   )}
                 </button>
               </div>
