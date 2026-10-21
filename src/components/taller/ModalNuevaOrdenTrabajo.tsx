@@ -2047,14 +2047,15 @@ export default function ModalNuevaOrdenTrabajo({
   const tieneVehiculo = Boolean(vehiculoPlaca.trim());
 
   const cardContent = (
-    <div
-      onClick={(e) => e.stopPropagation()}
-      className={
-        isPageMode
-          ? "w-full rounded-3xl bg-white dark:bg-[#0c0c0e] border border-zinc-200/80 dark:border-white/[0.08] shadow-xl overflow-hidden flex flex-col divide-y divide-zinc-200/80 dark:divide-white/[0.08] animate-fade-in"
-          : "w-full h-[100dvh] sm:h-auto sm:max-w-3xl lg:max-w-4xl bg-white dark:bg-[#0c0c0e] text-zinc-900 dark:text-white border-0 sm:border border-zinc-200/80 dark:border-white/[0.08] rounded-none sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[100dvh] sm:max-h-[90vh] transition-all pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] divide-y divide-zinc-200/80 dark:divide-white/[0.08]"
-      }
-    >
+    <div className="w-full flex flex-col">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className={
+          isPageMode
+            ? "w-full rounded-3xl bg-white dark:bg-[#0c0c0e] border border-zinc-200/80 dark:border-white/[0.08] shadow-xl overflow-hidden flex flex-col divide-y divide-zinc-200/80 dark:divide-white/[0.08] animate-fade-in"
+            : "w-full h-[100dvh] sm:h-auto sm:max-w-3xl lg:max-w-4xl bg-white dark:bg-[#0c0c0e] text-zinc-900 dark:text-white border-0 sm:border border-zinc-200/80 dark:border-white/[0.08] rounded-none sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[100dvh] sm:max-h-[90vh] transition-all pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] divide-y divide-zinc-200/80 dark:divide-white/[0.08]"
+        }
+      >
         {/* Cabecera Superior: Título + Stepper */}
         <div
           className={
@@ -2078,12 +2079,12 @@ export default function ModalNuevaOrdenTrabajo({
                 </button>
               )}
 
-              <div className="flex flex-col items-start min-w-0 leading-tight">
+              <div className="flex flex-col items-start min-w-0 leading-snug">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                     Orden
                   </span>
-                  <span className="font-mono font-bold text-sm sm:text-base text-zinc-900 dark:text-white tracking-tight">
+                  <span className="font-mono font-bold text-base sm:text-lg md:text-xl text-zinc-900 dark:text-white tracking-tight">
                     #{correlativoOrden}
                   </span>
                 </div>
@@ -2095,11 +2096,11 @@ export default function ModalNuevaOrdenTrabajo({
                       )
                     }
                     title="Clic para alternar etiqueta de rol (Mecánico / Asesor)"
-                    className="mt-0.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 text-emerald-700 dark:text-emerald-400 text-[10px] sm:text-[11px] font-medium cursor-pointer select-none transition-colors"
+                    className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 text-emerald-700 dark:text-emerald-400 text-xs sm:text-xs md:text-[12px] font-medium cursor-pointer select-none transition-colors"
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                     <span className="opacity-80">{etiquetaRolCabecera}:</span>
-                    <strong className="font-semibold text-zinc-900 dark:text-zinc-200 truncate max-w-[150px] sm:max-w-none">
+                    <strong className="font-bold text-zinc-900 dark:text-zinc-100 truncate max-w-[200px] sm:max-w-none">
                       {asignacionesTecnicos?.[0]?.nombre || empleadoLogueado?.nombre}
                     </strong>
                   </span>
@@ -2107,46 +2108,66 @@ export default function ModalNuevaOrdenTrabajo({
               </div>
             </div>
 
-            {/* Stepper Deslizable en Escritorio / Tablet (>= md) */}
-            <div className="hidden md:flex items-center gap-1 p-1 rounded-xl bg-zinc-200/60 dark:bg-white/[0.04] text-xs">
-              {[
-                { id: 1, label: "Cliente", req: tieneCliente, active: pasoActivo === 1, disabled: false },
-                { id: 2, label: "Vehículo", req: tieneVehiculo, active: pasoActivo === 2, disabled: !tieneCliente },
-                { id: 3, label: "Ingreso", req: Boolean(motivoIngreso.trim()), active: pasoActivo === 3, disabled: !tieneCliente || !tieneVehiculo },
-                { id: 4, label: "Orden", req: false, active: pasoActivo === 4, disabled: !tieneCliente || !tieneVehiculo },
-              ].map((step, idx) => (
-                <React.Fragment key={step.id}>
-                  {idx > 0 && <span className="text-zinc-300 dark:text-zinc-700 text-xs px-0.5 select-none">›</span>}
-                  <button
-                    type="button"
-                    disabled={step.disabled}
-                    onClick={() => irAPaso(step.id as any)}
-                    className={`px-3 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 cursor-pointer ${
-                      step.active
-                        ? "bg-blue-600 text-white font-semibold shadow-xs"
-                        : step.req
-                        ? "text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-zinc-200/60 dark:hover:bg-white/5 font-medium"
-                        : step.disabled
-                        ? "text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
-                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-white/5 font-medium"
-                    }`}
-                  >
-                    <span
-                      className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                        step.active
-                          ? "bg-white/20 text-white"
-                          : step.req
-                          ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                          : "bg-black/10 dark:bg-white/10"
-                      }`}
+            {/* Etiqueta única del paso activo (suave y transparente, color diferente por paso: 1=azul, 2=verde, 3=ámbar, 4=púrpura) */}
+            {(() => {
+              const pasoConfig: Record<
+                number,
+                { nombre: string; pill: string; circle: string }
+              > = {
+                1: {
+                  nombre: "Cliente",
+                  pill: "bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/30 text-sky-700 dark:text-sky-300",
+                  circle: "bg-sky-500 text-white",
+                },
+                2: {
+                  nombre: "Vehículo",
+                  pill: "bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/30 text-emerald-700 dark:text-emerald-300",
+                  circle: "bg-emerald-500 text-white",
+                },
+                3: {
+                  nombre: "Ingreso",
+                  pill: "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/30 text-amber-700 dark:text-amber-300",
+                  circle: "bg-amber-500 text-white",
+                },
+                4: {
+                  nombre: "Orden",
+                  pill: "bg-purple-500/15 hover:bg-purple-500/25 border-purple-500/30 text-purple-700 dark:text-purple-300",
+                  circle: "bg-purple-500 text-white",
+                },
+              };
+              const actual = pasoConfig[pasoActivo] || pasoConfig[1];
+
+              return (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {pasoActivo > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => irAPaso((pasoActivo - 1) as any)}
+                      className={`h-8 sm:h-9 px-3 sm:px-3.5 rounded-xl border font-bold text-xs sm:text-sm flex items-center gap-2 select-none transition-all cursor-pointer active:scale-95 animate-fade-in ${actual.pill}`}
+                      title="Paso actual. Clic para volver al paso anterior."
                     >
-                      {step.req ? "✓" : step.id}
-                    </span>
-                    <span>{step.label}</span>
-                  </button>
-                </React.Fragment>
-              ))}
-            </div>
+                      <span
+                        className={`w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black shrink-0 shadow-xs ${actual.circle}`}
+                      >
+                        {pasoActivo}
+                      </span>
+                      <span className="font-bold">{actual.nombre}</span>
+                    </button>
+                  ) : (
+                    <div
+                      className={`h-8 sm:h-9 px-3 sm:px-3.5 rounded-xl border font-bold text-xs sm:text-sm flex items-center gap-2 select-none transition-all animate-fade-in ${actual.pill}`}
+                    >
+                      <span
+                        className={`w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black shrink-0 shadow-xs ${actual.circle}`}
+                      >
+                        1
+                      </span>
+                      <span className="font-bold">{actual.nombre}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Botón X para cerrar (solo en modo modal flotante) */}
             {!isPageMode && (
@@ -2159,43 +2180,6 @@ export default function ModalNuevaOrdenTrabajo({
                 ✕
               </button>
             )}
-          </div>
-
-          {/* Stepper Móvil Compacto e Interactivo (< md) */}
-          <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-zinc-200/60 dark:border-white/[0.06] md:hidden">
-            {[
-              { id: 1, label: "Cliente", req: tieneCliente },
-              { id: 2, label: "Vehículo", req: tieneVehiculo },
-              { id: 3, label: "Ingreso", req: Boolean(motivoIngreso.trim()) },
-              { id: 4, label: "Orden", req: false },
-            ].map((st) => {
-              const activo = pasoActivo === st.id;
-              const completado = st.req;
-              return (
-                <button
-                  key={st.id}
-                  type="button"
-                  onClick={() => {
-                    if (st.id === 1) irAPaso(1);
-                    else if (st.id === 2 && tieneCliente) irAPaso(2);
-                    else if (st.id === 3 && tieneCliente && tieneVehiculo) irAPaso(3);
-                    else if (st.id === 4 && tieneCliente && tieneVehiculo) irAPaso(4);
-                  }}
-                  className={`py-1.5 px-1 rounded-xl text-[11px] transition-all flex items-center justify-center gap-1 cursor-pointer min-h-[36px] active:scale-95 ${
-                    activo
-                      ? "bg-blue-600 text-white font-semibold shadow-xs"
-                      : completado
-                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-medium"
-                      : "bg-zinc-100 dark:bg-white/[0.03] text-zinc-500 dark:text-zinc-400 font-normal"
-                  }`}
-                >
-                  <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] bg-black/10 dark:bg-white/10 shrink-0 font-bold">
-                    {completado ? "✓" : st.id}
-                  </span>
-                  <span className="truncate">{st.label}</span>
-                </button>
-              );
-            })}
           </div>
         </div>
 
@@ -2383,14 +2367,14 @@ export default function ModalNuevaOrdenTrabajo({
                 <span className="px-2 py-0.5 rounded-lg bg-emerald-500 text-black font-mono font-bold text-xs">
                   {matriculaEscaneadaInfo.placa}
                 </span>
-                <span className="text-emerald-200 font-medium">
+                <span className="text-emerald-800 dark:text-emerald-200 font-medium">
                   Matrícula nueva detectada • Completa los datos del cliente y del vehículo
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setMatriculaEscaneadaInfo(null)}
-                className="text-zinc-400 hover:text-white text-xs px-1.5 cursor-pointer"
+                className="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white text-xs px-1.5 cursor-pointer"
                 title="Quitar aviso"
               >
                 ✕
@@ -2506,21 +2490,21 @@ export default function ModalNuevaOrdenTrabajo({
 
                   {/* Lista de Coincidencias al Escribir */}
                   {busquedaCliente.trim().length > 0 && !clienteSeleccionado && (
-                    <div className="mt-3 bg-[#18181c] border border-white/15 rounded-2xl shadow-xl p-2 space-y-2">
+                    <div className="mt-3 bg-white dark:bg-[#18181c] border border-zinc-200 dark:border-white/15 rounded-2xl shadow-xl p-2 space-y-2">
                       {/* Botón destacado siempre visible arriba SIN DESLIZAR */}
                       <div
                         onClick={handleIniciarNuevoCliente}
-                        className="p-2.5 sm:p-3 rounded-xl bg-blue-600/15 hover:bg-blue-600/25 text-blue-200 border border-blue-500/30 cursor-pointer transition-all flex items-center justify-between"
+                        className="p-2.5 sm:p-3 rounded-xl bg-blue-50 dark:bg-blue-600/15 hover:bg-blue-100 dark:hover:bg-blue-600/25 text-blue-700 dark:text-blue-200 border border-blue-200 dark:border-blue-500/30 cursor-pointer transition-all flex items-center justify-between"
                       >
                         <div className="flex items-center gap-2">
-                          <span className="w-6 h-6 rounded-lg bg-blue-500/30 flex items-center justify-center text-sm font-bold text-blue-300">
+                          <span className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center text-sm font-bold shadow-xs">
                             +
                           </span>
                           <span className="text-xs sm:text-sm font-semibold">
                             Nuevo cliente
                           </span>
                         </div>
-                        <span className="text-xs text-blue-400 font-medium">Crear →</span>
+                        <span className="text-xs text-blue-600 dark:text-blue-400 font-semibold">Crear →</span>
                       </div>
 
                       {/* Scroll únicamente para los resultados existentes */}
@@ -2530,17 +2514,17 @@ export default function ModalNuevaOrdenTrabajo({
                             <div
                               key={c.id}
                               onClick={() => handleSeleccionarCliente(c)}
-                              className="p-3 rounded-xl hover:bg-white/10 cursor-pointer transition-all flex items-center justify-between gap-3 group bg-white/[0.02]"
+                              className="p-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-white/10 cursor-pointer transition-all flex items-center justify-between gap-3 group bg-zinc-50/70 dark:bg-white/[0.02] border border-zinc-200/60 dark:border-white/5"
                             >
                               <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-300 font-bold flex items-center justify-center text-sm shrink-0 border border-blue-500/30 group-hover:scale-105 transition-transform">
+                                <div className="w-10 h-10 rounded-2xl bg-blue-500/15 text-blue-700 dark:text-blue-300 font-bold flex items-center justify-center text-sm shrink-0 border border-blue-500/25 group-hover:scale-105 transition-transform">
                                   {(c.name || "C").charAt(0).toUpperCase()}
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="text-sm font-semibold text-white truncate">{c.name}</p>
-                                  <div className="flex flex-wrap items-center gap-x-2 text-xs text-zinc-400">
+                                  <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{c.name}</p>
+                                  <div className="flex flex-wrap items-center gap-x-2 text-xs text-zinc-600 dark:text-zinc-400 font-medium">
                                     {c.identification && (
-                                      <span className="font-mono text-zinc-300">{c.identification}</span>
+                                      <span className="font-mono text-zinc-800 dark:text-zinc-300 font-bold">{c.identification}</span>
                                     )}
                                     {c.phone && <span>• WhatsApp: {c.phone}</span>}
                                     {c.email && (
@@ -2551,7 +2535,7 @@ export default function ModalNuevaOrdenTrabajo({
                               </div>
 
                               <div className="text-right shrink-0">
-                                <span className="text-[11px] px-2.5 py-1 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 font-semibold">
+                                <span className="text-[11px] px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 font-semibold">
                                   {c.vehicles?.length || 0} auto(s)
                                 </span>
                               </div>
@@ -2559,7 +2543,7 @@ export default function ModalNuevaOrdenTrabajo({
                           ))}
                         </div>
                       ) : (
-                        <div className="p-2.5 text-center text-xs text-zinc-400">
+                        <div className="p-3 text-center text-xs text-zinc-600 dark:text-zinc-400 font-medium">
                           Sin resultados
                         </div>
                       )}
@@ -2570,23 +2554,23 @@ export default function ModalNuevaOrdenTrabajo({
 
               {/* Si ya seleccionó un cliente existente (Card Resumen estilo POS) */}
               {clienteSeleccionado && !mostrarFormNuevoCliente && (
-                <div className="p-4 rounded-2xl bg-blue-600/[0.08] border border-blue-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in">
+                <div className="p-4 rounded-2xl bg-blue-50/80 dark:bg-blue-600/[0.08] border border-blue-200 dark:border-blue-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in shadow-xs">
                   <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-bold flex items-center justify-center text-lg shadow-md shadow-blue-600/30">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-bold flex items-center justify-center text-lg shadow-md shadow-blue-600/30 shrink-0">
                       {(clienteSeleccionado.name || "C").charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm sm:text-base font-bold text-white">
+                        <span className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
                           {clienteSeleccionado.name}
                         </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-medium">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 font-bold">
                           ✓ Seleccionado
                         </span>
                       </div>
-                      <div className="flex flex-wrap items-center gap-x-3 text-xs text-zinc-400 mt-0.5">
+                      <div className="flex flex-wrap items-center gap-x-3 text-xs text-zinc-600 dark:text-zinc-400 font-medium mt-0.5">
                         {clienteSeleccionado.identification && (
-                          <span className="font-mono text-zinc-300">
+                          <span className="font-mono text-zinc-800 dark:text-zinc-300 font-bold">
                             Doc: {clienteSeleccionado.identification}
                           </span>
                         )}
@@ -2607,14 +2591,14 @@ export default function ModalNuevaOrdenTrabajo({
                         setClienteSeleccionado(null);
                         setBusquedaCliente("");
                       }}
-                      className="h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
+                      className="h-9 px-3 rounded-xl bg-zinc-200/80 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-xs text-zinc-800 dark:text-zinc-200 font-medium cursor-pointer transition-colors"
                     >
                       Cambiar
                     </button>
                     <button
                       type="button"
                       onClick={() => setPasoActivo(2)}
-                      className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-600/30"
+                      className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-600/30 active:scale-95"
                     >
                       <span>Continuar al Vehículo</span>
                       <span>→</span>
@@ -2625,18 +2609,18 @@ export default function ModalNuevaOrdenTrabajo({
 
               {/* Formulario Completo de Cliente Nuevo (Mismo formato que el módulo Clientes) */}
               {mostrarFormNuevoCliente && (
-                <div className="p-5 rounded-3xl bg-white/[0.02] border border-blue-500/30 space-y-4 animate-fade-in">
-                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                <div className="p-5 rounded-3xl bg-zinc-50/80 dark:bg-white/[0.02] border border-zinc-200 dark:border-blue-500/30 space-y-4 animate-fade-in shadow-xs">
+                  <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/5 pb-2">
                     <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
-                      <h4 className="text-sm font-bold text-white">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                      <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
                         Nuevo Cliente
                       </h4>
                     </div>
                     <button
                       type="button"
                       onClick={() => setMostrarFormNuevoCliente(false)}
-                      className="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 cursor-pointer px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                      className="text-xs text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1.5 cursor-pointer px-2.5 py-1 rounded-lg bg-zinc-200/70 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 transition-colors font-medium"
                     >
                       <span>←</span>
                       <span>Atrás</span>
@@ -2645,8 +2629,8 @@ export default function ModalNuevaOrdenTrabajo({
 
                   {/* Selector de Tipo: Solo Iconos */}
                   <div>
-                    <label className="text-zinc-400 text-xs font-normal block mb-2">
-                      Tipo de Cliente: <span className="text-zinc-200 font-normal">{tipoCliente === "Empresa" ? "Empresa (RUC)" : "Persona (Cédula)"}</span>
+                    <label className="text-zinc-700 dark:text-zinc-300 text-xs font-semibold block mb-2">
+                      Tipo de Cliente: <span className="text-zinc-900 dark:text-zinc-200 font-bold">{tipoCliente === "Empresa" ? "Empresa (RUC)" : "Persona (Cédula)"}</span>
                     </label>
                     <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                       <button
@@ -2655,8 +2639,8 @@ export default function ModalNuevaOrdenTrabajo({
                         title="Persona (Particular / Cédula)"
                         className={`h-11 rounded-2xl border flex items-center justify-center transition-all cursor-pointer active:scale-[0.98] ${
                           tipoCliente === "Persona"
-                            ? "bg-blue-600/20 border-blue-500 text-blue-400 shadow-md shadow-blue-500/10 ring-1 ring-blue-500/30"
-                            : "bg-white/[0.03] hover:bg-white/[0.06] border-white/10 text-zinc-400 hover:text-zinc-200"
+                            ? "bg-blue-600/15 border-blue-500 text-blue-700 dark:text-blue-400 shadow-xs ring-1 ring-blue-500/30 font-bold"
+                            : "bg-white dark:bg-white/[0.03] hover:bg-zinc-100 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
                         }`}
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2670,8 +2654,8 @@ export default function ModalNuevaOrdenTrabajo({
                         title="Empresa (Corporativo / RUC)"
                         className={`h-11 rounded-2xl border flex items-center justify-center transition-all cursor-pointer active:scale-[0.98] ${
                           tipoCliente === "Empresa"
-                            ? "bg-blue-600/20 border-blue-500 text-blue-400 shadow-md shadow-blue-500/10 ring-1 ring-blue-500/30"
-                            : "bg-white/[0.03] hover:bg-white/[0.06] border-white/10 text-zinc-400 hover:text-zinc-200"
+                            ? "bg-blue-600/15 border-blue-500 text-blue-700 dark:text-blue-400 shadow-xs ring-1 ring-blue-500/30 font-bold"
+                            : "bg-white dark:bg-white/[0.03] hover:bg-zinc-100 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
                         }`}
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2683,7 +2667,7 @@ export default function ModalNuevaOrdenTrabajo({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs pt-1">
                     <div className="sm:col-span-2">
-                      <label className="text-zinc-400 font-normal block mb-1">
+                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
                         {tipoCliente === "Empresa" ? "Razón Social *" : "Nombres y Apellidos *"}
                       </label>
                       <input
@@ -2691,13 +2675,13 @@ export default function ModalNuevaOrdenTrabajo({
                         value={nuevoClienteNombre}
                         onChange={(e) => setNuevoClienteNombre(e.target.value)}
                         placeholder={tipoCliente === "Empresa" ? "Ej: Transportes Andinos S.A." : "Ej: Juan Carlos Pérez"}
-                        className="w-full h-10 px-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-blue-500 text-white text-xs focus:outline-none"
+                        className="w-full h-10 px-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 focus:border-blue-500 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-xs focus:outline-none shadow-xs"
                         required
                       />
                     </div>
 
                     <div className="col-span-1">
-                      <label className="text-zinc-400 font-normal block mb-1">
+                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
                         {tipoCliente === "Empresa" ? "RUC *" : "Cédula *"}
                       </label>
                       <input
@@ -2705,13 +2689,13 @@ export default function ModalNuevaOrdenTrabajo({
                         value={nuevoClienteIdentificacion}
                         onChange={(e) => setNuevoClienteIdentificacion(e.target.value)}
                         placeholder={tipoCliente === "Empresa" ? "Ej: 1790012345001" : "Ej: 0912345678"}
-                        className="w-full h-10 px-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-blue-500 text-white font-mono text-xs focus:outline-none"
+                        className="w-full h-10 px-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 focus:border-blue-500 text-zinc-900 dark:text-white font-mono placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-xs focus:outline-none shadow-xs"
                         required
                       />
                     </div>
 
                     <div className="col-span-1">
-                      <label className="text-zinc-400 font-normal block mb-1">
+                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
                         Teléfono / WhatsApp *
                       </label>
                       <input
@@ -2719,13 +2703,13 @@ export default function ModalNuevaOrdenTrabajo({
                         value={nuevoClienteTelefono}
                         onChange={(e) => setNuevoClienteTelefono(e.target.value)}
                         placeholder="Ej: 0991234567"
-                        className="w-full h-10 px-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-blue-500 text-white text-xs focus:outline-none"
+                        className="w-full h-10 px-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 focus:border-blue-500 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-xs focus:outline-none shadow-xs"
                         required
                       />
                     </div>
 
                     <div className="col-span-1">
-                      <label className="text-zinc-400 font-normal block mb-1">
+                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
                         Correo Electrónico
                       </label>
                       <input
@@ -2736,12 +2720,12 @@ export default function ModalNuevaOrdenTrabajo({
                           setEmailContacto(e.target.value);
                         }}
                         placeholder="correo@ejemplo.com"
-                        className="w-full h-10 px-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-blue-500 text-white text-xs focus:outline-none"
+                        className="w-full h-10 px-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 focus:border-blue-500 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-xs focus:outline-none shadow-xs"
                       />
                     </div>
 
                     <div className="col-span-1 sm:col-span-2 lg:col-span-1">
-                      <label className="text-zinc-400 font-normal block mb-1">
+                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
                         Dirección (Opcional)
                       </label>
                       <input
@@ -2749,7 +2733,7 @@ export default function ModalNuevaOrdenTrabajo({
                         value={nuevoClienteDireccion}
                         onChange={(e) => setNuevoClienteDireccion(e.target.value)}
                         placeholder="Av. Principal y Secundaria"
-                        className="w-full h-10 px-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-blue-500 text-white text-xs focus:outline-none"
+                        className="w-full h-10 px-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 focus:border-blue-500 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-xs focus:outline-none shadow-xs"
                       />
                     </div>
                   </div>
@@ -2788,17 +2772,17 @@ export default function ModalNuevaOrdenTrabajo({
                           className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                             seleccionado
                               ? "bg-emerald-600/15 border-emerald-500 shadow-md ring-1 ring-emerald-500/50"
-                              : "bg-white/[0.03] hover:bg-white/[0.07] border-white/10"
+                              : "bg-zinc-50/80 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] border-zinc-200 dark:border-white/10"
                           }`}
                         >
                           <div className="space-y-1">
-                            <p className="text-sm font-normal text-zinc-100 leading-tight">
+                            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-tight">
                               {[v.brand, v.model].filter(Boolean).join(" ")
                                 ? `${[v.brand, v.model].filter(Boolean).join(" ")} ${v.year ? `(${v.year})` : ""}`.trim()
                                 : v.plate}
                             </p>
                             <div>
-                              <span className="px-2 py-0.5 rounded-lg bg-black/60 border border-white/10 font-mono text-xs font-bold text-zinc-200 inline-block">
+                              <span className="px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-black/60 border border-zinc-300 dark:border-white/10 font-mono text-xs font-bold text-zinc-900 dark:text-zinc-200 inline-block">
                                 {v.plate}
                               </span>
                             </div>
@@ -2810,7 +2794,7 @@ export default function ModalNuevaOrdenTrabajo({
                                 ✓
                               </span>
                             ) : (
-                              <span className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-zinc-300">
+                              <span className="px-3 py-1.5 rounded-xl bg-zinc-200/60 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
                                 Elegir →
                               </span>
                             )}
@@ -2830,7 +2814,7 @@ export default function ModalNuevaOrdenTrabajo({
                         setVehiculoKm("");
                         setMostrarFormNuevoVehiculo(true);
                       }}
-                      className="p-4 rounded-2xl border border-dashed border-white/15 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all cursor-pointer flex items-center justify-center gap-2 text-xs font-medium text-zinc-400 hover:text-emerald-400 min-h-[72px]"
+                      className="p-4 rounded-2xl border border-dashed border-zinc-300 dark:border-white/15 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all cursor-pointer flex items-center justify-center gap-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 min-h-[72px]"
                     >
                       <span className="text-base font-bold">+</span>
                       <span>Registrar otro vehículo</span>
@@ -2841,10 +2825,10 @@ export default function ModalNuevaOrdenTrabajo({
 
               {/* Formulario de Vehículo (Si es nuevo o el cliente no tenía vehículos) */}
               {(mostrarFormNuevoVehiculo || !clienteSeleccionado?.vehicles?.length) && (
-                <div className="p-5 rounded-3xl bg-white/[0.02] border border-white/10 space-y-4 animate-fade-in">
-                  <div className="flex items-center justify-between border-b border-zinc-200/60 dark:border-white/5 pb-2">
+                <div className="p-5 rounded-3xl bg-zinc-50/80 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-4 animate-fade-in shadow-xs">
+                  <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/5 pb-2">
                     <div className="flex items-center gap-1.5 text-xs">
-                      <span className="text-zinc-500 dark:text-zinc-400 font-normal">Cliente:</span>
+                      <span className="text-zinc-600 dark:text-zinc-400 font-semibold">Cliente:</span>
                       <strong className="font-bold text-zinc-900 dark:text-zinc-100">
                         {clienteSeleccionado?.name || nuevoClienteNombre || "Consumidor Final"}
                       </strong>
@@ -2853,7 +2837,7 @@ export default function ModalNuevaOrdenTrabajo({
                       <button
                         type="button"
                         onClick={() => setMostrarFormNuevoVehiculo(false)}
-                        className="text-xs text-zinc-400 hover:text-white cursor-pointer"
+                        className="text-xs text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white font-medium cursor-pointer"
                       >
                         Ver guardados
                       </button>
@@ -2862,7 +2846,7 @@ export default function ModalNuevaOrdenTrabajo({
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                     <div className="col-span-1">
-                      <label className="text-zinc-400 font-normal block mb-1">
+                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
                         Placa *
                       </label>
                       <div className="relative">
@@ -2871,7 +2855,7 @@ export default function ModalNuevaOrdenTrabajo({
                           value={vehiculoPlaca}
                           onChange={(e) => setVehiculoPlaca(e.target.value.toUpperCase())}
                           placeholder="Ej: ABC-1234"
-                          className="w-full h-11 pl-3.5 pr-9 rounded-xl bg-black/40 border border-white/15 focus:border-emerald-500 text-white font-mono font-bold uppercase text-sm tracking-wider focus:outline-none"
+                          className="w-full h-11 pl-3.5 pr-9 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white font-mono font-bold uppercase text-sm tracking-wider placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none shadow-xs"
                           required
                           autoFocus
                         />
@@ -2879,7 +2863,7 @@ export default function ModalNuevaOrdenTrabajo({
                           type="button"
                           onClick={abrirEscanerMatricula}
                           title="Escanear matrícula con cámara"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-400 flex items-center justify-center cursor-pointer transition-colors"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center cursor-pointer transition-colors"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -2891,7 +2875,7 @@ export default function ModalNuevaOrdenTrabajo({
 
                     {/* Marca con apertura de selector flotante */}
                     <div className="col-span-1">
-                      <label className="text-zinc-400 font-normal block mb-1">
+                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
                         Marca
                       </label>
                       <div className="relative">
@@ -2901,12 +2885,12 @@ export default function ModalNuevaOrdenTrabajo({
                           onChange={(e) => setVehiculoMarca(e.target.value)}
                           onClick={() => abrirFlotanteVehiculo("marca")}
                           placeholder="Ej: Toyota"
-                          className="w-full h-11 pl-3.5 pr-8 rounded-xl bg-black/40 border border-white/10 hover:border-emerald-500/50 focus:border-emerald-500 text-white text-xs sm:text-sm focus:outline-none transition-all cursor-pointer"
+                          className="w-full h-11 pl-3.5 pr-8 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 hover:border-emerald-500/50 focus:border-emerald-500 text-zinc-900 dark:text-white text-xs sm:text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all cursor-pointer shadow-xs"
                         />
                         <button
                           type="button"
                           onClick={() => abrirFlotanteVehiculo("marca")}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-1 cursor-pointer"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white p-1 cursor-pointer"
                           title="Abrir selector flotante de marcas"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2918,7 +2902,7 @@ export default function ModalNuevaOrdenTrabajo({
 
                     {/* Modelo con apertura de selector flotante */}
                     <div className="col-span-1">
-                      <label className="text-zinc-400 font-normal block mb-1">
+                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
                         Modelo
                       </label>
                       <div className="relative">
@@ -2928,12 +2912,12 @@ export default function ModalNuevaOrdenTrabajo({
                           onChange={(e) => setVehiculoModelo(e.target.value)}
                           onClick={() => abrirFlotanteVehiculo("modelo")}
                           placeholder="Ej: Hilux"
-                          className="w-full h-11 pl-3.5 pr-8 rounded-xl bg-black/40 border border-white/10 hover:border-emerald-500/50 focus:border-emerald-500 text-white text-xs sm:text-sm focus:outline-none transition-all cursor-pointer"
+                          className="w-full h-11 pl-3.5 pr-8 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 hover:border-emerald-500/50 focus:border-emerald-500 text-zinc-900 dark:text-white text-xs sm:text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all cursor-pointer shadow-xs"
                         />
                         <button
                           type="button"
                           onClick={() => abrirFlotanteVehiculo("modelo")}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-1 cursor-pointer"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white p-1 cursor-pointer"
                           title="Abrir selector flotante de modelos"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2944,7 +2928,7 @@ export default function ModalNuevaOrdenTrabajo({
                     </div>
 
                     <div className="col-span-1">
-                      <label className="text-zinc-400 font-normal block mb-1">
+                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
                         Kilometraje (Km)
                       </label>
                       <input
@@ -2952,14 +2936,14 @@ export default function ModalNuevaOrdenTrabajo({
                         value={vehiculoKm}
                         onChange={(e) => setVehiculoKm(e.target.value)}
                         placeholder="Ej: 48500"
-                        className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-emerald-500 text-white font-mono text-xs sm:text-sm focus:outline-none"
+                        className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 focus:border-emerald-500 text-zinc-900 dark:text-white font-mono text-xs sm:text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none shadow-xs"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs pt-1">
                     <div className="col-span-1">
-                      <label className="text-zinc-400 font-normal block mb-1">
+                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
                         Año
                       </label>
                       <input
@@ -2967,18 +2951,18 @@ export default function ModalNuevaOrdenTrabajo({
                         value={vehiculoAnio}
                         onChange={(e) => setVehiculoAnio(e.target.value)}
                         placeholder="2024"
-                        className="w-full h-10 px-3.5 rounded-xl bg-black/40 border border-white/10 text-white text-xs focus:outline-none"
+                        className="w-full h-10 px-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 focus:border-emerald-500 text-zinc-900 dark:text-white text-xs placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none shadow-xs"
                       />
                     </div>
 
                     <div className="col-span-1">
-                      <label className="text-zinc-400 font-normal block mb-1">
+                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
                         Tipo de Carrocería
                       </label>
                       <select
                         value={vehiculoTipo}
                         onChange={(e) => setVehiculoTipo(e.target.value)}
-                        className="w-full h-10 px-3 rounded-xl bg-[#1c1c21] border border-white/10 text-white text-xs focus:outline-none cursor-pointer"
+                        className="w-full h-10 px-3 rounded-xl bg-white dark:bg-[#1c1c21] border border-zinc-300 dark:border-white/10 text-zinc-900 dark:text-white text-xs focus:outline-none cursor-pointer shadow-xs"
                       >
                         <option value="Auto">Auto / Sedán</option>
                         <option value="SUV">SUV</option>
@@ -3022,18 +3006,18 @@ export default function ModalNuevaOrdenTrabajo({
                 {/* Columna Izquierda: Combustible + Kilometraje + Inventario */}
                 <div className="lg:col-span-7 space-y-4">
                   {/* Card 1: Combustible */}
-                  <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
+                  <div className="p-4 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 shadow-xs">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-sm">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-sm">
                           ⛽
                         </div>
                         <div>
-                          <span className="text-xs font-semibold text-zinc-200 block">Nivel de Combustible</span>
-                          <span className="text-[10px] text-zinc-500">Tanque actual del vehículo</span>
+                          <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-200 block">Nivel de Combustible</span>
+                          <span className="text-[10px] text-zinc-600 dark:text-zinc-400 font-medium">Tanque actual del vehículo</span>
                         </div>
                       </div>
-                      <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
+                      <span className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
                         {nivelCombustible}
                       </span>
                     </div>
@@ -3048,8 +3032,8 @@ export default function ModalNuevaOrdenTrabajo({
                             onClick={() => setNivelCombustible(lvl)}
                             className={`h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                               sel
-                                ? "bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 shadow-sm shadow-emerald-500/10"
-                                : "bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 text-zinc-400"
+                                ? "bg-emerald-500/20 border border-emerald-500/50 text-emerald-700 dark:text-emerald-300 shadow-sm shadow-emerald-500/10"
+                                : "bg-white dark:bg-white/[0.02] hover:bg-zinc-100 dark:hover:bg-white/[0.06] border border-zinc-200 dark:border-white/5 text-zinc-700 dark:text-zinc-400"
                             }`}
                           >
                             {lvl}
@@ -3060,27 +3044,27 @@ export default function ModalNuevaOrdenTrabajo({
                   </div>
 
                   {/* Card 2: Kilometraje (Sección separada, minimalista y moderna) */}
-                  <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3 transition-all hover:border-white/15">
+                  <div className="p-4 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 transition-all hover:border-zinc-300 dark:hover:border-white/15 shadow-xs">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                        <div className="w-7 h-7 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-600 dark:text-sky-400">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" />
                           </svg>
                         </div>
                         <div>
-                          <span className="text-xs font-semibold text-zinc-200 block">Kilometraje</span>
-                          <span className="text-[10px] text-zinc-500">Lectura actual del odómetro</span>
+                          <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-200 block">Kilometraje</span>
+                          <span className="text-[10px] text-zinc-600 dark:text-zinc-400 font-medium">Lectura actual del odómetro</span>
                         </div>
                       </div>
                       {vehiculoKm && (
-                        <span className="text-xs font-mono font-bold text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2.5 py-0.5 rounded-full">
+                        <span className="text-xs font-mono font-bold text-sky-700 dark:text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2.5 py-0.5 rounded-full">
                           {Number(vehiculoKm).toLocaleString()} KM
                         </span>
                       )}
                     </div>
 
-                    <div className="relative flex items-center rounded-xl bg-black/40 border border-white/10 focus-within:border-sky-500/60 focus-within:ring-2 focus-within:ring-sky-500/15 transition-all">
+                    <div className="relative flex items-center rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 focus-within:border-sky-500/60 focus-within:ring-2 focus-within:ring-sky-500/15 transition-all shadow-xs">
                       <input
                         type="text"
                         inputMode="numeric"
@@ -3090,20 +3074,20 @@ export default function ModalNuevaOrdenTrabajo({
                           setVehiculoKm(val);
                         }}
                         placeholder="Ej: 85400"
-                        className="w-full h-11 pl-4 pr-16 bg-transparent text-white font-mono text-base font-semibold tracking-wider placeholder:text-zinc-600 focus:outline-none"
+                        className="w-full h-11 pl-4 pr-16 bg-transparent text-zinc-900 dark:text-white font-mono text-base font-semibold tracking-wider placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none"
                       />
                       <div className="absolute right-2.5 flex items-center gap-1.5">
                         {vehiculoKm && (
                           <button
                             type="button"
                             onClick={() => setVehiculoKm("")}
-                            className="w-5 h-5 rounded-md bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center text-[10px] transition-colors cursor-pointer"
+                            className="w-5 h-5 rounded-md bg-zinc-200/60 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center text-[10px] transition-colors cursor-pointer"
                             title="Limpiar"
                           >
                             ✕
                           </button>
                         )}
-                        <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400 bg-white/5 px-2 py-1 rounded-md border border-white/10 pointer-events-none">
+                        <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-400 bg-zinc-100 dark:bg-white/5 px-2 py-1 rounded-md border border-zinc-200 dark:border-white/10 pointer-events-none">
                           KM
                         </span>
                       </div>
@@ -3111,20 +3095,20 @@ export default function ModalNuevaOrdenTrabajo({
                   </div>
 
                   {/* Card 3: Inventario (Sección separada) */}
-                  <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3 transition-all hover:border-white/15">
+                  <div className="p-4 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 transition-all hover:border-zinc-300 dark:hover:border-white/15 shadow-xs">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                        <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
                           </svg>
                         </div>
                         <div>
-                          <span className="text-xs font-semibold text-zinc-200 block">Inventario de Recepción</span>
-                          <span className="text-[10px] text-zinc-500">Accesorios que ingresan en el auto</span>
+                          <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-200 block">Inventario de Recepción</span>
+                          <span className="text-[10px] text-zinc-600 dark:text-zinc-400 font-medium">Accesorios que ingresan en el auto</span>
                         </div>
                       </div>
-                      <span className="text-xs text-zinc-400 font-mono px-2 py-0.5 rounded-full bg-white/5 border border-white/5">
+                      <span className="text-xs text-zinc-600 dark:text-zinc-400 font-mono px-2 py-0.5 rounded-full bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-white/5">
                         {inventarioTrae.length} ítems
                       </span>
                     </div>
@@ -3150,10 +3134,10 @@ export default function ModalNuevaOrdenTrabajo({
                             key={item}
                             type="button"
                             onClick={() => toggleInventario(item)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                               sel
-                                ? "bg-blue-500/20 border border-blue-500/40 text-blue-300 shadow-sm shadow-blue-500/10"
-                                : "bg-white/[0.02] border border-white/5 text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]"
+                                ? "bg-blue-600/15 border border-blue-500/40 text-blue-700 dark:text-blue-300 shadow-xs"
+                                : "bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.05]"
                             }`}
                           >
                             <span>{sel ? "✓" : "+"}</span>
@@ -3165,7 +3149,7 @@ export default function ModalNuevaOrdenTrabajo({
                                   setInventarioTrae((prev) => prev.filter((i) => i !== item));
                                   setListaItemsInventario((prev) => prev.filter((i) => i !== item));
                                 }}
-                                className="text-zinc-500 hover:text-red-400 ml-0.5 text-[10px]"
+                                className="text-zinc-500 hover:text-red-500 ml-0.5 text-[10px]"
                                 title="Quitar ítem"
                               >
                                 ✕
@@ -3189,13 +3173,13 @@ export default function ModalNuevaOrdenTrabajo({
                           }
                         }}
                         placeholder="Nuevo ítem..."
-                        className="h-9 flex-1 px-3 rounded-xl bg-black/40 border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/20"
+                        className="h-9 flex-1 px-3 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 text-zinc-900 dark:text-white text-xs placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/20 shadow-xs"
                       />
                       <button
                         type="button"
                         onClick={agregarItemManual}
                         disabled={!itemManualInventario.trim()}
-                        className="h-9 px-3.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 disabled:opacity-40 text-xs font-semibold transition-all cursor-pointer active:scale-95"
+                        className="h-9 px-3.5 rounded-xl bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/40 text-blue-700 dark:text-blue-300 disabled:opacity-40 text-xs font-semibold transition-all cursor-pointer active:scale-95"
                       >
                         + Agregar
                       </button>
@@ -3204,37 +3188,37 @@ export default function ModalNuevaOrdenTrabajo({
                 </div>
 
                 {/* Columna Derecha: Evidencias Multimedia (Foto, Video, Nota de Voz) */}
-                <div className="lg:col-span-5 p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3 flex flex-col justify-between transition-all hover:border-white/15">
+                <div className="lg:col-span-5 p-4 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 flex flex-col justify-between transition-all hover:border-zinc-300 dark:hover:border-white/15 shadow-xs">
                   <div className="space-y-3">
                     {/* Cabecera de la sección multimedia */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                        <div className="w-7 h-7 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-600 dark:text-sky-400">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
                           </svg>
                         </div>
                         <div>
-                          <span className="text-xs font-semibold text-zinc-200 block">Evidencias Multimedia</span>
-                          <span className="text-[10px] text-zinc-500">Fotos, video y notas de voz</span>
+                          <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-200 block">Evidencias Multimedia</span>
+                          <span className="text-[10px] text-zinc-600 dark:text-zinc-400 font-medium">Fotos, video y notas de voz</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-mono text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] font-mono text-zinc-600 dark:text-zinc-400 bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 px-2 py-0.5 rounded-full">
                           {fotosIniciales.length} fotos {videosIniciales.length > 0 && `• ${videosIniciales.length} vid`} {notasVozIniciales.length > 0 && `• ${notasVozIniciales.length} voz`}
                         </span>
                       </div>
                     </div>
 
                     {/* Barra de 3 Acciones Discretas */}
-                    <div className="grid grid-cols-3 gap-1.5 p-1 bg-black/40 rounded-xl border border-white/5">
+                    <div className="grid grid-cols-3 gap-1.5 p-1 bg-zinc-200/60 dark:bg-black/40 rounded-xl border border-zinc-200 dark:border-white/5">
                       <button
                         type="button"
                         onClick={() => setPanelMultimedia((curr) => (curr === "foto" ? null : "foto"))}
                         className={`py-1.5 px-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                           panelMultimedia === "foto"
-                            ? "bg-sky-500/20 text-sky-300 border border-sky-500/30"
-                            : "text-zinc-300 hover:text-white hover:bg-white/5"
+                            ? "bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30"
+                            : "text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-white/5"
                         }`}
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
@@ -3243,7 +3227,7 @@ export default function ModalNuevaOrdenTrabajo({
                         </svg>
                         <span>Foto</span>
                         {fotosIniciales.length > 0 && (
-                          <span className="w-4 h-4 rounded-full bg-sky-500/30 text-sky-200 text-[9px] font-bold flex items-center justify-center">
+                          <span className="w-4 h-4 rounded-full bg-sky-500/30 text-sky-800 dark:text-sky-200 text-[9px] font-bold flex items-center justify-center">
                             {fotosIniciales.length}
                           </span>
                         )}
@@ -3257,8 +3241,8 @@ export default function ModalNuevaOrdenTrabajo({
                         }}
                         className={`py-1.5 px-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                           panelMultimedia === "video"
-                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                            : "text-zinc-300 hover:text-white hover:bg-white/5"
+                            ? "bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30"
+                            : "text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-white/5"
                         }`}
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
@@ -3266,7 +3250,7 @@ export default function ModalNuevaOrdenTrabajo({
                         </svg>
                         <span>Video</span>
                         {videosIniciales.length > 0 && (
-                          <span className="w-4 h-4 rounded-full bg-amber-500/30 text-amber-200 text-[9px] font-bold flex items-center justify-center">
+                          <span className="w-4 h-4 rounded-full bg-amber-500/30 text-amber-800 dark:text-amber-200 text-[9px] font-bold flex items-center justify-center">
                             {videosIniciales.length}
                           </span>
                         )}
@@ -3280,8 +3264,8 @@ export default function ModalNuevaOrdenTrabajo({
                         }}
                         className={`py-1.5 px-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                           panelMultimedia === "audio"
-                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                            : "text-zinc-300 hover:text-white hover:bg-white/5"
+                            ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                            : "text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-white/5"
                         }`}
                         title="Nota de voz con dictado y almacenamiento en Cloudflare R2"
                       >
@@ -3290,7 +3274,7 @@ export default function ModalNuevaOrdenTrabajo({
                         </svg>
                         <span>Nota de voz</span>
                         {notasVozIniciales.length > 0 && (
-                          <span className="w-4 h-4 rounded-full bg-emerald-500/30 text-emerald-200 text-[9px] font-bold flex items-center justify-center">
+                          <span className="w-4 h-4 rounded-full bg-emerald-500/30 text-emerald-800 dark:text-emerald-200 text-[9px] font-bold flex items-center justify-center">
                             {notasVozIniciales.length}
                           </span>
                         )}
@@ -3299,15 +3283,15 @@ export default function ModalNuevaOrdenTrabajo({
 
                     {/* Estados de carga / subida con barra de progreso real */}
                     {(subiendoFoto || subiendoVideo || subiendoAudio) && (
-                      <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs space-y-1.5 animate-fade-in">
+                      <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs space-y-1.5 animate-fade-in">
                         <div className="flex items-center justify-between text-[11px]">
                           <span className="flex items-center gap-1.5 truncate">
-                            <span className="w-2.5 h-2.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin shrink-0" />
+                            <span className="w-2.5 h-2.5 border-2 border-blue-600 dark:border-blue-400 border-t-transparent rounded-full animate-spin shrink-0" />
                             <span className="truncate">{progresoSubida?.status || "Guardando en Cloudflare R2..."}</span>
                           </span>
                           <span className="font-mono font-bold shrink-0">{progresoSubida?.percent || 60}%</span>
                         </div>
-                        <div className="w-full h-1.5 rounded-full bg-black/40 overflow-hidden">
+                        <div className="w-full h-1.5 rounded-full bg-zinc-200 dark:bg-black/40 overflow-hidden">
                           <div
                             className="h-full bg-blue-500 transition-all duration-300 rounded-full"
                             style={{ width: `${progresoSubida?.percent || 60}%` }}
@@ -3318,11 +3302,11 @@ export default function ModalNuevaOrdenTrabajo({
 
                     {/* PANEL CONTEXTUAL 1: FOTO */}
                     {panelMultimedia === "foto" && (
-                      <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-2.5 animate-fade-in">
+                      <div className="p-3 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 space-y-2.5 animate-fade-in shadow-xs">
                         <div className="flex items-center justify-between text-xs pb-1">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-zinc-200 font-medium">Fotografías del vehículo</span>
-                            <span className="text-[10px] text-zinc-500">
+                            <span className="text-zinc-900 dark:text-zinc-200 font-semibold">Fotografías del vehículo</span>
+                            <span className="text-[10px] text-zinc-600 dark:text-zinc-500 font-medium">
                               ({fotosIniciales.length}/{MULTIMEDIA_CONFIG.MAX_PHOTOS})
                             </span>
                           </div>
@@ -3332,7 +3316,7 @@ export default function ModalNuevaOrdenTrabajo({
                               detenerCamaraFoto();
                               setPanelMultimedia(null);
                             }}
-                            className="text-zinc-400 hover:text-white text-xs px-1.5 py-0.5 rounded cursor-pointer"
+                            className="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white text-xs px-1.5 py-0.5 rounded cursor-pointer"
                           >
                             ✕
                           </button>
@@ -3359,7 +3343,7 @@ export default function ModalNuevaOrdenTrabajo({
                                 type="button"
                                 onClick={detenerCamaraFoto}
                                 disabled={subiendoFoto}
-                                className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs cursor-pointer"
+                                className="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white text-xs cursor-pointer font-medium"
                               >
                                 Cancelar
                               </button>
@@ -3380,10 +3364,10 @@ export default function ModalNuevaOrdenTrabajo({
                               <button
                                 type="button"
                                 onClick={iniciarCamaraFoto}
-                                className="p-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-200 text-xs font-medium transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group"
+                                className="p-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-700 dark:text-sky-200 text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group"
                               >
                                 <svg
-                                  className="w-5 h-5 text-sky-400 group-hover:scale-110 transition-transform"
+                                  className="w-5 h-5 text-sky-600 dark:text-sky-400 group-hover:scale-110 transition-transform"
                                   fill="none"
                                   stroke="currentColor"
                                   viewBox="0 0 24 24"
@@ -3402,10 +3386,10 @@ export default function ModalNuevaOrdenTrabajo({
                               <button
                                 type="button"
                                 onClick={() => fileInputFotosRef.current?.click()}
-                                className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-medium transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group"
+                                className="p-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group"
                               >
                                 <svg
-                                  className="w-5 h-5 text-zinc-400 group-hover:scale-110 transition-transform"
+                                  className="w-5 h-5 text-zinc-500 dark:text-zinc-400 group-hover:scale-110 transition-transform"
                                   fill="none"
                                   stroke="currentColor"
                                   viewBox="0 0 24 24"
@@ -3421,7 +3405,7 @@ export default function ModalNuevaOrdenTrabajo({
                               </button>
                             </div>
 
-                            <p className="text-[10px] text-zinc-500 text-center">
+                            <p className="text-[10px] text-zinc-600 dark:text-zinc-500 text-center font-medium">
                               Compresión inteligente activada (preserva rayones, placas y daños)
                             </p>
 
@@ -3435,7 +3419,7 @@ export default function ModalNuevaOrdenTrabajo({
                             />
                           </div>
                         ) : (
-                          <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center justify-between">
+                          <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between">
                             <span>Límite de {MULTIMEDIA_CONFIG.MAX_PHOTOS} fotos alcanzado</span>
                             <span className="font-mono font-bold">5/5</span>
                           </div>
@@ -3445,18 +3429,18 @@ export default function ModalNuevaOrdenTrabajo({
 
                     {/* PANEL CONTEXTUAL 2: VIDEO */}
                     {panelMultimedia === "video" && (
-                      <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-2.5 animate-fade-in">
+                      <div className="p-3 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 space-y-2.5 animate-fade-in shadow-xs">
                         <div className="flex items-center justify-between text-xs pb-1">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-zinc-200 font-medium">Video de ingreso</span>
-                            <span className="text-[10px] text-zinc-400">
+                            <span className="text-zinc-900 dark:text-zinc-200 font-semibold">Video de ingreso</span>
+                            <span className="text-[10px] text-zinc-600 dark:text-zinc-400 font-medium">
                               (720p • Máx. {MULTIMEDIA_CONFIG.MAX_VIDEO_DURATION_SECONDS}s)
                             </span>
                           </div>
                           <button
                             type="button"
                             onClick={cancelarVideoTemp}
-                            className="text-zinc-400 hover:text-white text-xs px-1.5 py-0.5 rounded cursor-pointer"
+                            className="text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white text-xs px-1.5 py-0.5 rounded cursor-pointer"
                           >
                             ✕
                           </button>
@@ -3485,7 +3469,7 @@ export default function ModalNuevaOrdenTrabajo({
                               <button
                                 type="button"
                                 onClick={cancelarVideoTemp}
-                                className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs cursor-pointer"
+                                className="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white text-xs cursor-pointer font-medium"
                               >
                                 Cancelar
                               </button>
@@ -3519,7 +3503,7 @@ export default function ModalNuevaOrdenTrabajo({
                                   type="button"
                                   onClick={descartarYGrabarDeNuevo}
                                   disabled={subiendoVideo}
-                                  className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs cursor-pointer transition-all active:scale-95 flex items-center gap-1"
+                                  className="px-2.5 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs cursor-pointer transition-all active:scale-95 flex items-center gap-1 font-medium"
                                 >
                                   <span>🔄</span>
                                   <span>Grabar de nuevo</span>
@@ -3528,7 +3512,7 @@ export default function ModalNuevaOrdenTrabajo({
                                   type="button"
                                   onClick={cancelarVideoTemp}
                                   disabled={subiendoVideo}
-                                  className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs cursor-pointer"
+                                  className="px-2.5 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white text-xs cursor-pointer font-medium"
                                 >
                                   Cancelar
                                 </button>
@@ -3551,7 +3535,7 @@ export default function ModalNuevaOrdenTrabajo({
                               <button
                                 type="button"
                                 onClick={iniciarGrabacionVideo}
-                                className="p-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-200 text-xs font-medium transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group"
+                                className="p-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-700 dark:text-amber-200 text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group"
                               >
                                 <span className="w-3.5 h-3.5 rounded-full bg-red-500 shadow-sm shadow-red-500/50 group-hover:scale-110 transition-transform" />
                                 <span>Grabar video</span>
@@ -3559,10 +3543,10 @@ export default function ModalNuevaOrdenTrabajo({
                               <button
                                 type="button"
                                 onClick={() => fileInputVideoRef.current?.click()}
-                                className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-xs font-medium transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group"
+                                className="p-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 group"
                               >
                                 <svg
-                                  className="w-5 h-5 text-zinc-400 group-hover:scale-110 transition-transform"
+                                  className="w-5 h-5 text-zinc-500 dark:text-zinc-400 group-hover:scale-110 transition-transform"
                                   fill="none"
                                   stroke="currentColor"
                                   viewBox="0 0 24 24"
@@ -3591,19 +3575,19 @@ export default function ModalNuevaOrdenTrabajo({
 
                     {/* PANEL CONTEXTUAL 3: NOTA DE VOZ */}
                     {panelMultimedia === "audio" && (
-                      <div className="p-3.5 rounded-2xl bg-black/50 border border-emerald-500/30 space-y-3 animate-fade-in shadow-xl">
-                        <div className="flex items-center justify-between text-xs pb-1 border-b border-white/10">
+                      <div className="p-3.5 rounded-2xl bg-white dark:bg-black/50 border border-emerald-500/30 space-y-3 animate-fade-in shadow-xl">
+                        <div className="flex items-center justify-between text-xs pb-1 border-b border-zinc-200 dark:border-white/10">
                           <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                            <span className="text-zinc-100 font-semibold">Nota de voz</span>
-                            <span className="text-[10px] text-zinc-400 font-mono">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-zinc-900 dark:text-zinc-100 font-semibold">Nota de voz</span>
+                            <span className="text-[10px] text-zinc-600 dark:text-zinc-400 font-mono font-medium">
                               (Máx {MULTIMEDIA_CONFIG.MAX_AUDIO_DURATION_SECONDS}s)
                             </span>
                           </div>
                           <button
                             type="button"
                             onClick={descartarNotaVozTemp}
-                            className="w-6 h-6 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs flex items-center justify-center cursor-pointer transition-colors"
+                            className="w-6 h-6 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white text-xs flex items-center justify-center cursor-pointer transition-colors"
                             title="Cerrar panel"
                           >
                             ✕
@@ -3612,7 +3596,7 @@ export default function ModalNuevaOrdenTrabajo({
 
                         {/* Aviso si el navegador no tiene permisos de micrófono */}
                         {audioPermisoError && (
-                          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs space-y-2">
+                          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs space-y-2">
                             <div className="flex items-start gap-2">
                               <span className="text-base shrink-0">⚠️</span>
                               <p className="leading-relaxed">{audioPermisoError}</p>
@@ -3621,7 +3605,7 @@ export default function ModalNuevaOrdenTrabajo({
                               <button
                                 type="button"
                                 onClick={iniciarGrabacionAudio}
-                                className="px-3 py-1 rounded-lg bg-rose-500/30 hover:bg-rose-500/50 text-white font-medium text-[11px] cursor-pointer"
+                                className="px-3 py-1 rounded-lg bg-rose-500/30 hover:bg-rose-500/50 text-rose-900 dark:text-white font-semibold text-[11px] cursor-pointer"
                               >
                                 Reintentar acceso
                               </button>
@@ -3633,19 +3617,19 @@ export default function ModalNuevaOrdenTrabajo({
                           <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-3">
                             {/* Indicador de grabación y duración */}
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2 text-emerald-400 text-xs font-semibold">
+                              <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
                                 <span className="w-3 h-3 rounded-full bg-red-500 animate-ping" />
                                 <span>Grabando audio...</span>
                               </div>
-                              <span className="text-xs font-mono font-bold text-emerald-300 bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                              <span className="text-xs font-mono font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
                                 00:{segundosAudio < 10 ? `0${segundosAudio}` : segundosAudio} / 01:00
                               </span>
                             </div>
 
                             {/* Barra de progreso de tiempo restante (máx 60s) */}
-                            <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden">
+                            <div className="w-full h-1.5 bg-zinc-200 dark:bg-black/40 rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-emerald-400 transition-all duration-300 rounded-full"
+                                className="h-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-300 rounded-full"
                                 style={{
                                   width: `${Math.min(100, (segundosAudio / MULTIMEDIA_CONFIG.MAX_AUDIO_DURATION_SECONDS) * 100)}%`,
                                 }}
@@ -3653,12 +3637,12 @@ export default function ModalNuevaOrdenTrabajo({
                             </div>
 
                             {/* Vista previa de transcripción en vivo */}
-                            <div className="p-2.5 rounded-xl bg-black/60 border border-white/5 space-y-1">
-                              <span className="text-[10px] text-zinc-400 uppercase tracking-wider font-semibold block">
+                            <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-black/60 border border-zinc-200 dark:border-white/5 space-y-1">
+                              <span className="text-[10px] text-zinc-600 dark:text-zinc-400 uppercase tracking-wider font-semibold block">
                                 Transcripción en tiempo real:
                               </span>
                               {transcripcionVoz ? (
-                                <p className="text-xs text-zinc-200 italic leading-relaxed">
+                                <p className="text-xs text-zinc-800 dark:text-zinc-200 italic leading-relaxed">
                                   "{transcripcionVoz}"
                                 </p>
                               ) : (
@@ -3682,11 +3666,11 @@ export default function ModalNuevaOrdenTrabajo({
                           </div>
                         ) : audioUrlTemp ? (
                           /* Estado con audio listo: Reproductor, Transcripción editable, Volver a grabar, Cancelar y Guardar */
-                          <div className="space-y-3 p-3 rounded-xl bg-white/[0.02] border border-white/10">
+                          <div className="space-y-3 p-3 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10">
                             {/* Reproductor de audio original */}
                             <div className="space-y-1.5">
                               <div className="flex items-center justify-between text-[11px]">
-                                <span className="text-zinc-300 font-medium flex items-center gap-1.5">
+                                <span className="text-zinc-800 dark:text-zinc-300 font-semibold flex items-center gap-1.5">
                                   <span>🔊</span>
                                   <span>Audio capturado ({segundosAudio}s)</span>
                                 </span>
@@ -3704,33 +3688,33 @@ export default function ModalNuevaOrdenTrabajo({
 
                             {/* Estado de Transcripción */}
                             <div className="flex items-center justify-between pt-1">
-                              <label className="text-[11px] font-semibold text-zinc-300 block">
+                              <label className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-300 block">
                                 Transcripción de la nota:
                               </label>
                               <div className="text-[10px] font-mono px-2 py-0.5 rounded-full border">
                                 {estadoTranscripcion === "lista" && (
-                                  <span className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
+                                  <span className="text-emerald-700 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
                                     ✓ Transcripción lista
                                   </span>
                                 )}
                                 {estadoTranscripcion === "pendiente" && (
-                                  <span className="text-amber-400 border-amber-500/30 bg-amber-500/10">
+                                  <span className="text-amber-700 dark:text-amber-400 border-amber-500/30 bg-amber-500/10">
                                     ⏳ Procesando...
                                   </span>
                                 )}
                                 {estadoTranscripcion === "error" && (
-                                  <span className="text-rose-400 border-rose-500/30 bg-rose-500/10">
+                                  <span className="text-rose-700 dark:text-rose-400 border-rose-500/30 bg-rose-500/10">
                                     ⚠️ Error al transcribir
                                   </span>
                                 )}
                                 {estadoTranscripcion === "no_disponible" && (
-                                  <span className="text-zinc-400 border-white/10 bg-white/5">
+                                  <span className="text-zinc-600 dark:text-zinc-400 border-zinc-300 dark:border-white/10 bg-zinc-100 dark:bg-white/5">
                                     ✏️ Entrada manual
                                   </span>
                                 )}
                                 {transcripcionVoz !== transcripcionOriginal &&
                                   transcripcionOriginal.length > 0 && (
-                                    <span className="text-sky-300 border-sky-500/30 bg-sky-500/10 ml-1">
+                                    <span className="text-sky-700 dark:text-sky-300 border-sky-500/30 bg-sky-500/10 ml-1">
                                       ✎ Modificado
                                     </span>
                                   )}
@@ -3743,14 +3727,14 @@ export default function ModalNuevaOrdenTrabajo({
                               value={transcripcionVoz}
                               onChange={(e) => setTranscripcionVoz(e.target.value)}
                               placeholder="Escribe o corrige lo expresado por el cliente o técnico..."
-                              className="w-full p-2.5 rounded-xl bg-black/50 border border-white/15 focus:border-emerald-500 text-white text-xs placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition-all"
+                              className="w-full p-2.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-xs placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition-all shadow-xs"
                             />
 
                             {/* Alerta si falló la subida para permitir reintento sin perder el audio grabado */}
                             {errorSubidaAudio && (
-                              <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between gap-2">
+                              <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between gap-2">
                                 <span className="truncate">⚠️ {errorSubidaAudio}</span>
-                                <span className="text-[10px] text-zinc-400 shrink-0">
+                                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 shrink-0">
                                   El audio sigue en memoria
                                 </span>
                               </div>
@@ -3763,7 +3747,7 @@ export default function ModalNuevaOrdenTrabajo({
                                   type="button"
                                   onClick={descartarYGrabarVoz}
                                   disabled={subiendoAudio}
-                                  className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs cursor-pointer transition-all active:scale-95 flex items-center gap-1 disabled:opacity-50"
+                                  className="px-2.5 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs cursor-pointer transition-all active:scale-95 flex items-center gap-1 disabled:opacity-50 font-medium"
                                   title="Descartar y comenzar una nueva grabación"
                                 >
                                   <span>🔄</span>
@@ -3773,7 +3757,7 @@ export default function ModalNuevaOrdenTrabajo({
                                   type="button"
                                   onClick={descartarNotaVozTemp}
                                   disabled={subiendoAudio}
-                                  className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs cursor-pointer disabled:opacity-50"
+                                  className="px-2.5 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white text-xs cursor-pointer disabled:opacity-50 font-medium"
                                 >
                                   Cancelar
                                 </button>
@@ -3810,12 +3794,12 @@ export default function ModalNuevaOrdenTrabajo({
                             <button
                               type="button"
                               onClick={iniciarGrabacionAudio}
-                              className="w-full py-3 px-4 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-200 text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 group shadow-sm"
+                              className="w-full py-3 px-4 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-700 dark:text-emerald-200 text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 group shadow-xs"
                             >
-                              <span className="w-3 h-3 rounded-full bg-emerald-400 group-hover:scale-125 transition-transform" />
+                              <span className="w-3 h-3 rounded-full bg-emerald-500 group-hover:scale-125 transition-transform" />
                               <span>Grabar nota de voz (Micrófono)</span>
                             </button>
-                            <p className="text-[10px] text-zinc-500 text-center">
+                            <p className="text-[10px] text-zinc-600 dark:text-zinc-500 text-center font-medium">
                               Graba hasta 60 segundos con transcripción automática al texto de la orden.
                             </p>
                           </div>
@@ -3825,10 +3809,10 @@ export default function ModalNuevaOrdenTrabajo({
                   </div>
 
                   {/* Galería de Evidencias Capturadas (Fotos, Videos, Notas de Voz) */}
-                  <div className="space-y-2 pt-2 border-t border-white/5">
+                  <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-white/5">
                     {fotosIniciales.length === 0 && videosIniciales.length === 0 && notasVozIniciales.length === 0 ? (
-                      <p className="text-[11px] text-zinc-500 text-center py-3">
-                        Sin evidencias registradas. Selecciona <strong className="text-zinc-400">Foto</strong>, <strong className="text-zinc-400">Video</strong> o <strong className="text-zinc-400">Voz</strong> para adjuntar.
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-500 text-center py-3 font-medium">
+                        Sin evidencias registradas. Selecciona <strong className="text-zinc-900 dark:text-zinc-300 font-semibold">Foto</strong>, <strong className="text-zinc-900 dark:text-zinc-300 font-semibold">Video</strong> o <strong className="text-zinc-900 dark:text-zinc-300 font-semibold">Voz</strong> para adjuntar.
                       </p>
                     ) : (
                       <div className="space-y-2">
@@ -3838,7 +3822,7 @@ export default function ModalNuevaOrdenTrabajo({
                             {fotosIniciales.map((url, i) => (
                               <div
                                 key={i}
-                                className="relative group rounded-lg overflow-hidden border border-white/10 aspect-video bg-black/40 shadow-sm cursor-pointer"
+                                className="relative group rounded-lg overflow-hidden border border-zinc-200 dark:border-white/10 aspect-video bg-zinc-100 dark:bg-black/40 shadow-xs cursor-pointer"
                                 onClick={() => setFotoEnZoom(url)}
                                 title="Clic para ampliar detalle"
                               >
@@ -3880,11 +3864,11 @@ export default function ModalNuevaOrdenTrabajo({
                             >
                               <div className="flex items-center gap-2 truncate">
                                 <span className="text-sm">📹</span>
-                                <span className="text-amber-200 font-medium truncate">
+                                <span className="text-amber-800 dark:text-amber-200 font-semibold truncate">
                                   {vid.nombre || `Clip de video ${idx + 1}`}
                                 </span>
                                 {vid.duracion && (
-                                  <span className="text-[10px] font-mono text-amber-400/80 bg-amber-500/20 px-1.5 py-0.5 rounded">
+                                  <span className="text-[10px] font-mono text-amber-800 dark:text-amber-400/80 bg-amber-500/20 px-1.5 py-0.5 rounded font-bold">
                                     {vid.duracion}s
                                   </span>
                                 )}
@@ -3892,7 +3876,7 @@ export default function ModalNuevaOrdenTrabajo({
                               <button
                                 type="button"
                                 onClick={() => handleEliminarVideo(idx)}
-                                className="w-5 h-5 rounded-full bg-white/5 hover:bg-red-500/30 text-zinc-400 hover:text-red-300 text-[10px] flex items-center justify-center cursor-pointer ml-2"
+                                className="w-5 h-5 rounded-full bg-zinc-200/60 dark:bg-white/5 hover:bg-red-500/30 text-zinc-600 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-300 text-[10px] flex items-center justify-center cursor-pointer ml-2"
                                 title="Eliminar clip"
                               >
                                 ✕
@@ -3903,23 +3887,23 @@ export default function ModalNuevaOrdenTrabajo({
                           {notasVozIniciales.map((audio, idx) => (
                             <div
                               key={audio.id || idx}
-                              className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-xs space-y-2 shadow-sm"
+                              className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-xs space-y-2 shadow-xs"
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="text-sm">🎙️</span>
-                                  <span className="text-emerald-200 font-bold">
+                                  <span className="text-emerald-800 dark:text-emerald-200 font-bold">
                                     Nota de voz #{idx + 1}
                                   </span>
-                                  <span className="text-[10px] font-mono text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                                  <span className="text-[10px] font-mono font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30">
                                     {audio.durationSeconds}s
                                   </span>
-                                  <span className="text-[10px] text-zinc-400">
+                                  <span className="text-[10px] text-zinc-600 dark:text-zinc-400 font-medium">
                                     por {audio.author || "Técnico"}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-black/40 text-emerald-300 border border-emerald-500/30">
+                                  <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30">
                                     {audio.transcriptionStatus === "corregida"
                                       ? "Corregida"
                                       : audio.transcriptionStatus === "lista"
@@ -3931,7 +3915,7 @@ export default function ModalNuevaOrdenTrabajo({
                                   <button
                                     type="button"
                                     onClick={() => handleEliminarAudio(idx)}
-                                    className="w-5 h-5 rounded-full bg-white/5 hover:bg-red-500/30 text-zinc-400 hover:text-red-300 text-[10px] flex items-center justify-center cursor-pointer transition-colors"
+                                    className="w-5 h-5 rounded-full bg-zinc-200/60 dark:bg-white/5 hover:bg-red-500/30 text-zinc-600 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-300 text-[10px] flex items-center justify-center cursor-pointer transition-colors"
                                     title="Eliminar nota"
                                   >
                                     ✕
@@ -3951,8 +3935,8 @@ export default function ModalNuevaOrdenTrabajo({
 
                               {/* Texto transcrito o manual */}
                               {audio.text ? (
-                                <div className="p-2 rounded-xl bg-black/40 border border-white/5">
-                                  <p className="text-[11px] text-zinc-200 italic leading-relaxed">
+                                <div className="p-2 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/5">
+                                  <p className="text-[11px] text-zinc-800 dark:text-zinc-200 italic leading-relaxed">
                                     "{audio.text}"
                                   </p>
                                 </div>
@@ -3978,7 +3962,7 @@ export default function ModalNuevaOrdenTrabajo({
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="w-full flex justify-between items-center pb-2 text-white text-xs">
-                            <span className="font-semibold text-zinc-300">
+                            <span className="font-semibold text-zinc-200">
                               Detalle fotográfico de recepción (inspección de daños)
                             </span>
                             <button
@@ -4002,12 +3986,12 @@ export default function ModalNuevaOrdenTrabajo({
               </div>
 
               {/* Motivo de Ingreso / Trabajo Solicitado */}
-              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2 text-xs">
+              <div className="p-4 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-2 text-xs shadow-xs">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-zinc-300">
+                  <label className="text-xs font-semibold text-zinc-900 dark:text-zinc-300">
                     Motivo de Ingreso / Trabajo Solicitado
                   </label>
-                  <span className="text-[11px] text-zinc-500">Detalla qué solicita el cliente</span>
+                  <span className="text-[11px] text-zinc-600 dark:text-zinc-400 font-medium">Detalla qué solicita el cliente</span>
                 </div>
 
                 <textarea
@@ -4021,7 +4005,7 @@ export default function ModalNuevaOrdenTrabajo({
                       ? "Ej: Lavado express exterior + aspirado y limpieza profunda de interiores..."
                       : "Ej: Ruido al frenar, cambio de pastillas y revisión de suspensión delantera..."
                   }
-                  className="w-full p-3 rounded-xl bg-black/40 border border-white/15 focus:border-blue-500 text-white text-xs sm:text-sm focus:outline-none resize-none leading-relaxed"
+                  className="w-full p-3 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/15 focus:border-blue-500 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-xs sm:text-sm focus:outline-none resize-none leading-relaxed shadow-xs"
                 />
 
                 {/* Sugerencias Rápidas de Motivo */}
@@ -4060,7 +4044,7 @@ export default function ModalNuevaOrdenTrabajo({
                           prev ? `${prev}, ${sug}` : sug
                         );
                       }}
-                      className="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] text-zinc-300 hover:text-white transition-all cursor-pointer"
+                      className="px-2.5 py-1 rounded-xl bg-white dark:bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-[11px] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer font-medium shadow-xs"
                     >
                       + {sug}
                     </button>
@@ -4088,11 +4072,11 @@ export default function ModalNuevaOrdenTrabajo({
           {pasoActivo === 4 && (
             <div className="space-y-5 animate-fade-in">
               {/* Tarjeta Resumen Consolidada de Cliente, Auto e Ingreso */}
-              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3 text-xs">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+              <div className="p-4 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 text-xs shadow-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-white/10 pb-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                    <span className="font-bold text-white uppercase text-[11px] tracking-wider">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400" />
+                    <span className="font-bold text-zinc-900 dark:text-white uppercase text-[11px] tracking-wider">
                       Resumen del Servicio ({tipoIngreso})
                     </span>
                   </div>
@@ -4102,7 +4086,7 @@ export default function ModalNuevaOrdenTrabajo({
                       type="button"
                       onClick={() => irAPaso(1)}
                       title="Editar cliente"
-                      className="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] text-zinc-300 hover:text-white cursor-pointer transition-colors"
+                      className="px-2 py-0.5 rounded-lg bg-zinc-200/70 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-[10px] font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white cursor-pointer transition-colors"
                     >
                       👤 Cliente
                     </button>
@@ -4110,7 +4094,7 @@ export default function ModalNuevaOrdenTrabajo({
                       type="button"
                       onClick={() => irAPaso(2)}
                       title="Editar vehículo"
-                      className="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] text-zinc-300 hover:text-white cursor-pointer transition-colors"
+                      className="px-2 py-0.5 rounded-lg bg-zinc-200/70 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-[10px] font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white cursor-pointer transition-colors"
                     >
                       🚗 Auto
                     </button>
@@ -4118,7 +4102,7 @@ export default function ModalNuevaOrdenTrabajo({
                       type="button"
                       onClick={() => irAPaso(3)}
                       title="Editar motivo/ingreso"
-                      className="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] text-zinc-300 hover:text-white cursor-pointer transition-colors"
+                      className="px-2 py-0.5 rounded-lg bg-zinc-200/70 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-[10px] font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white cursor-pointer transition-colors"
                     >
                       📝 Ingreso
                     </button>
@@ -4127,28 +4111,28 @@ export default function ModalNuevaOrdenTrabajo({
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <span className="text-zinc-500 text-[11px] block">Cliente</span>
-                    <strong className="text-white text-xs block truncate">
+                    <span className="text-zinc-600 dark:text-zinc-500 text-[11px] font-medium block">Cliente</span>
+                    <strong className="text-zinc-900 dark:text-white text-xs block truncate">
                       {clienteSeleccionado?.name || nuevoClienteNombre || "Consumidor Final"}
                     </strong>
-                    <span className="text-zinc-400 text-[11px] block">
+                    <span className="text-zinc-600 dark:text-zinc-400 text-[11px] block">
                       {clienteSeleccionado?.identification || nuevoClienteIdentificacion || "Sin cédula/RUC"}
                     </span>
                   </div>
 
                   <div>
-                    <span className="text-zinc-500 text-[11px] block">Vehículo</span>
-                    <strong className="text-white text-xs block truncate">
+                    <span className="text-zinc-600 dark:text-zinc-500 text-[11px] font-medium block">Vehículo</span>
+                    <strong className="text-zinc-900 dark:text-white text-xs block truncate">
                       {vehiculoMarca || "Vehículo"} {vehiculoModelo}
                     </strong>
-                    <span className="text-emerald-400 font-mono text-[11px] font-bold block">
+                    <span className="text-emerald-700 dark:text-emerald-400 font-mono text-[11px] font-bold block">
                       {vehiculoPlaca || "SIN PLACA"} {vehiculoKm ? `• ${vehiculoKm} Km` : ""}
                     </span>
                   </div>
 
                   <div>
-                    <span className="text-zinc-500 text-[11px] block">Motivo / Trabajo</span>
-                    <p className="text-zinc-300 text-[11px] line-clamp-2">
+                    <span className="text-zinc-600 dark:text-zinc-500 text-[11px] font-medium block">Motivo / Trabajo</span>
+                    <p className="text-zinc-800 dark:text-zinc-300 text-[11px] line-clamp-2">
                       {motivoIngreso || "Ingreso a revisión / servicio"}
                     </p>
                   </div>
@@ -4158,10 +4142,10 @@ export default function ModalNuevaOrdenTrabajo({
               {/* Formulario de Asignación de Técnicos */}
               <div className="space-y-2 text-xs">
                 <div className="flex items-center justify-between">
-                  <label className="block text-zinc-400 font-normal text-xs flex items-center gap-2">
+                  <label className="block text-zinc-700 dark:text-zinc-300 font-semibold text-xs flex items-center gap-2">
                     <span>Técnicos Asignados</span>
                     {asignacionesTecnicos.length > 0 && (
-                      <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-bold border border-blue-500/30">
+                      <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 text-[10px] font-bold border border-blue-500/30">
                         {asignacionesTecnicos.length}
                       </span>
                     )}
@@ -4189,7 +4173,7 @@ export default function ModalNuevaOrdenTrabajo({
 
                 {/* Tarjetas de Técnicos Asignados y Qué van a hacer */}
                 {asignacionesTecnicos.length === 0 ? (
-                  <div className="p-4 rounded-2xl bg-white/[0.02] border border-dashed border-white/10 text-center text-xs text-zinc-400 space-y-2">
+                  <div className="p-4 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.02] border border-dashed border-zinc-300 dark:border-white/10 text-center text-xs text-zinc-600 dark:text-zinc-400 font-medium space-y-2">
                     <p>No hay técnicos asignados aún para esta orden.</p>
                     <button
                       type="button"
@@ -4202,7 +4186,7 @@ export default function ModalNuevaOrdenTrabajo({
                         );
                         setMostrarFlotanteAsignar(true);
                       }}
-                      className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-blue-400 font-semibold text-xs cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-white/5 dark:hover:bg-white/10 text-blue-700 dark:text-blue-400 font-semibold text-xs cursor-pointer"
                     >
                       + Asignar primer técnico
                     </button>
@@ -4212,16 +4196,16 @@ export default function ModalNuevaOrdenTrabajo({
                     {asignacionesTecnicos.map((asig) => (
                       <div
                         key={asig.id}
-                        className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-white/20 transition-all flex items-start justify-between gap-3 group"
+                        className="p-3 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 transition-all flex items-start justify-between gap-3 group shadow-xs"
                       >
                         <div className="flex items-start gap-2.5 min-w-0">
-                          <div className="w-8 h-8 rounded-xl bg-blue-600/20 text-blue-300 font-bold flex items-center justify-center text-xs shrink-0 border border-blue-500/30">
+                          <div className="w-8 h-8 rounded-xl bg-blue-600/15 dark:bg-blue-600/20 text-blue-700 dark:text-blue-300 font-bold flex items-center justify-center text-xs shrink-0 border border-blue-500/30">
                             {asig.nombre.slice(0, 2).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <strong className="text-white text-xs block truncate">{asig.nombre}</strong>
-                            <span className="text-[11px] text-zinc-400 flex items-center gap-1 mt-0.5 truncate">
-                              <span className="text-blue-400">📋</span>
+                            <strong className="text-zinc-900 dark:text-white text-xs block truncate">{asig.nombre}</strong>
+                            <span className="text-[11px] text-zinc-600 dark:text-zinc-400 flex items-center gap-1 mt-0.5 truncate">
+                              <span className="text-blue-600 dark:text-blue-400">📋</span>
                               <span className="truncate">{asig.tarea || "Trabajo general"}</span>
                             </span>
                           </div>
@@ -4230,7 +4214,7 @@ export default function ModalNuevaOrdenTrabajo({
                         <button
                           type="button"
                           onClick={() => setAsignacionesTecnicos((prev) => prev.filter((a) => a.id !== asig.id))}
-                          className="w-6 h-6 rounded-lg bg-white/5 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 flex items-center justify-center transition-colors cursor-pointer shrink-0 text-xs"
+                          className="w-6 h-6 rounded-lg bg-zinc-200/60 dark:bg-white/5 hover:bg-red-500/20 text-zinc-600 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 flex items-center justify-center transition-colors cursor-pointer shrink-0 text-xs"
                           title="Quitar técnico"
                         >
                           ✕
@@ -4243,7 +4227,7 @@ export default function ModalNuevaOrdenTrabajo({
 
               {/* Email para Notificaciones / Presupuesto */}
               <div className="space-y-1.5 text-xs">
-                <label className="text-zinc-400 font-normal block">
+                <label className="text-zinc-700 dark:text-zinc-300 font-semibold block">
                   Email para envío de presupuesto y orden digital (Opcional)
                 </label>
                 <input
@@ -4251,7 +4235,7 @@ export default function ModalNuevaOrdenTrabajo({
                   value={emailContacto}
                   onChange={(e) => setEmailContacto(e.target.value)}
                   placeholder="cliente@ejemplo.com"
-                  className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-blue-500 text-white text-xs sm:text-sm focus:outline-none"
+                  className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 focus:border-blue-500 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-xs sm:text-sm focus:outline-none shadow-xs"
                 />
               </div>
             </div>
@@ -4260,20 +4244,20 @@ export default function ModalNuevaOrdenTrabajo({
           {/* FLOTANTE / MODAL DE ASIGNACIÓN DE TÉCNICO Y TAREA */}
           {mostrarFlotanteAsignar && (
             <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-              <div className="w-full max-w-md bg-[#16161a] border border-white/15 rounded-3xl shadow-2xl p-5 space-y-4 animate-scale-in">
-                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="w-full max-w-md bg-white dark:bg-[#16161a] border border-zinc-200 dark:border-white/15 rounded-3xl shadow-2xl p-5 space-y-4 animate-scale-in">
+                <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-3">
                   <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-xl bg-blue-600/20 text-blue-300 flex items-center justify-center font-bold text-sm border border-blue-500/30">
+                    <span className="w-8 h-8 rounded-xl bg-blue-600/15 dark:bg-blue-600/20 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-sm border border-blue-500/30">
                       👷
                     </span>
                     <div>
-                      <h4 className="text-sm font-bold text-white">Asignar Técnico</h4>
+                      <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Asignar Técnico</h4>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setMostrarFlotanteAsignar(false)}
-                    className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center text-xs"
+                    className="w-7 h-7 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center text-xs"
                   >
                     ✕
                   </button>
@@ -4281,7 +4265,7 @@ export default function ModalNuevaOrdenTrabajo({
 
                 {/* Seleccionar Empleado con Buscador Dropdown */}
                 <div className="space-y-1.5 relative" ref={dropdownTecnicoRef}>
-                  <label className="block text-zinc-400 font-normal text-xs">
+                  <label className="block text-zinc-700 dark:text-zinc-300 font-semibold text-xs">
                     Técnico:
                   </label>
 
@@ -4297,7 +4281,7 @@ export default function ModalNuevaOrdenTrabajo({
                         setMostrarDropdownTecnicos(true);
                       }}
                       placeholder="Buscar..."
-                      className="w-full h-11 pl-10 pr-16 rounded-xl bg-black/40 border border-white/15 focus:border-blue-500 text-white text-xs sm:text-sm placeholder:text-zinc-500 focus:outline-none transition-all cursor-text"
+                      className="w-full h-11 pl-10 pr-16 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/15 focus:border-blue-500 text-zinc-900 dark:text-white text-xs sm:text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all cursor-text shadow-xs"
                     />
                     <svg
                       className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
@@ -4322,7 +4306,7 @@ export default function ModalNuevaOrdenTrabajo({
                             setFlotanteTecnicoSeleccionado("");
                             setMostrarDropdownTecnicos(true);
                           }}
-                          className="text-zinc-400 hover:text-white cursor-pointer p-1 text-xs"
+                          className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white cursor-pointer p-1 text-xs"
                           title="Borrar nombre"
                         >
                           ✕
@@ -4331,7 +4315,7 @@ export default function ModalNuevaOrdenTrabajo({
                       <button
                         type="button"
                         onClick={() => setMostrarDropdownTecnicos((prev) => !prev)}
-                        className="text-zinc-400 hover:text-white cursor-pointer p-1"
+                        className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white cursor-pointer p-1"
                       >
                         <svg
                           className={`w-4 h-4 transition-transform ${mostrarDropdownTecnicos ? "rotate-180" : ""}`}
@@ -4347,7 +4331,7 @@ export default function ModalNuevaOrdenTrabajo({
 
                   {/* Dropdown flotante con los técnicos */}
                   {mostrarDropdownTecnicos && (
-                    <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#16161b] border border-white/15 rounded-2xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto">
+                    <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white dark:bg-[#16161b] border border-zinc-200 dark:border-white/15 rounded-2xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto">
                       {mecanicosFiltrados.length > 0 ? (
                         <div className="p-1 space-y-0.5">
                           {mecanicosFiltrados.map((m) => {
@@ -4363,7 +4347,7 @@ export default function ModalNuevaOrdenTrabajo({
                                 className={`px-3 py-2.5 rounded-xl text-xs font-medium cursor-pointer flex items-center justify-between transition-colors ${
                                   seleccionado
                                     ? "bg-blue-600 text-white font-semibold"
-                                    : "text-zinc-200 hover:bg-white/[0.08]"
+                                    : "text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.08]"
                                 }`}
                               >
                                 <div className="flex items-center gap-2 truncate">
@@ -4377,7 +4361,7 @@ export default function ModalNuevaOrdenTrabajo({
                         </div>
                       ) : (
                         <div className="p-4 text-center space-y-2">
-                          <p className="text-xs text-zinc-400">No se encontró "{busquedaTecnico}"</p>
+                          <p className="text-xs text-zinc-600 dark:text-zinc-400">No se encontró "{busquedaTecnico}"</p>
                           {busquedaTecnico.trim() && (
                             <button
                               type="button"
@@ -4399,7 +4383,7 @@ export default function ModalNuevaOrdenTrabajo({
 
                 {/* Qué va a hacer */}
                 <div className="space-y-1.5">
-                  <label className="block text-zinc-400 font-normal text-xs">
+                  <label className="block text-zinc-700 dark:text-zinc-300 font-semibold text-xs">
                     Labor:
                   </label>
                   <input
@@ -4407,7 +4391,7 @@ export default function ModalNuevaOrdenTrabajo({
                     value={flotanteTarea}
                     onChange={(e) => setFlotanteTarea(e.target.value)}
                     placeholder="Labor..."
-                    className="w-full h-11 px-3.5 rounded-xl bg-black/40 border border-white/10 focus:border-blue-500 text-white text-xs sm:text-sm focus:outline-none"
+                    className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 focus:border-blue-500 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-xs sm:text-sm focus:outline-none shadow-xs"
                     autoFocus
                   />
 
@@ -4415,20 +4399,20 @@ export default function ModalNuevaOrdenTrabajo({
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {(tipoIngreso === "Lubricentro"
                       ? [
-                          { nombre: "Aceite", color: "bg-blue-500/10 border-blue-500/20 text-blue-300 hover:bg-blue-500/20" },
-                          { nombre: "Filtros", color: "bg-emerald-500/10 border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20" },
-                          { nombre: "Fluidos", color: "bg-cyan-500/10 border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/20" },
-                          { nombre: "Frenos", color: "bg-rose-500/10 border-rose-500/20 text-rose-300 hover:bg-rose-500/20" },
-                          { nombre: "Batería", color: "bg-amber-500/10 border-amber-500/20 text-amber-300 hover:bg-amber-500/20" },
-                          { nombre: "Engrase", color: "bg-purple-500/10 border-purple-500/20 text-purple-300 hover:bg-purple-500/20" },
+                          { nombre: "Aceite", color: "bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20" },
+                          { nombre: "Filtros", color: "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20" },
+                          { nombre: "Fluidos", color: "bg-cyan-500/10 border-cyan-500/20 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/20" },
+                          { nombre: "Frenos", color: "bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-300 hover:bg-rose-500/20" },
+                          { nombre: "Batería", color: "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20" },
+                          { nombre: "Engrase", color: "bg-purple-500/10 border-purple-500/20 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20" },
                         ]
                       : [
-                          { nombre: "Diagnóstico", color: "bg-blue-500/10 border-blue-500/20 text-blue-300 hover:bg-blue-500/20" },
-                          { nombre: "Mantenimiento", color: "bg-emerald-500/10 border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20" },
-                          { nombre: "Frenos", color: "bg-rose-500/10 border-rose-500/20 text-rose-300 hover:bg-rose-500/20" },
-                          { nombre: "Motor", color: "bg-amber-500/10 border-amber-500/20 text-amber-300 hover:bg-amber-500/20" },
-                          { nombre: "Suspensión", color: "bg-purple-500/10 border-purple-500/20 text-purple-300 hover:bg-purple-500/20" },
-                          { nombre: "Eléctrico", color: "bg-cyan-500/10 border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/20" },
+                          { nombre: "Diagnóstico", color: "bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20" },
+                          { nombre: "Mantenimiento", color: "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20" },
+                          { nombre: "Frenos", color: "bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-300 hover:bg-rose-500/20" },
+                          { nombre: "Motor", color: "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20" },
+                          { nombre: "Suspensión", color: "bg-purple-500/10 border-purple-500/20 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20" },
+                          { nombre: "Eléctrico", color: "bg-cyan-500/10 border-cyan-500/20 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/20" },
                         ]
                     ).map((sug) => (
                       <button
@@ -4444,11 +4428,11 @@ export default function ModalNuevaOrdenTrabajo({
                 </div>
 
                 {/* Botón Guardar Asignación */}
-                <div className="pt-2 flex items-center justify-end gap-2 border-t border-white/10">
+                <div className="pt-2 flex items-center justify-end gap-2 border-t border-zinc-200 dark:border-white/10">
                   <button
                     type="button"
                     onClick={() => setMostrarFlotanteAsignar(false)}
-                    className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
+                    className="px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-medium text-zinc-700 dark:text-zinc-300 cursor-pointer"
                   >
                     Cancelar
                   </button>
@@ -4485,20 +4469,20 @@ export default function ModalNuevaOrdenTrabajo({
           {/* FLOTANTE / MODAL DE SELECCIÓN DE MARCA Y MODELO */}
           {mostrarFlotanteVehiculo && (
             <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in">
-              <div className="w-full max-w-lg bg-[#16161b] border border-white/15 rounded-3xl shadow-2xl p-5 sm:p-6 space-y-4 animate-scale-in max-h-[90vh] flex flex-col">
+              <div className="w-full max-w-lg bg-white dark:bg-[#16161b] border border-zinc-200 dark:border-white/15 rounded-3xl shadow-2xl p-5 sm:p-6 space-y-4 animate-scale-in max-h-[90vh] flex flex-col">
                 {/* Header del flotante */}
-                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-3">
                   <div className="flex items-center gap-2.5">
-                    <span className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold text-base border border-emerald-500/30">
+                    <span className="w-9 h-9 rounded-xl bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold text-base border border-emerald-500/30">
                       🚗
                     </span>
                     <div>
-                      <h4 className="text-sm font-bold text-white">
+                      <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
                         {tabFlotanteVehiculo === "marca"
                           ? "Escoger Marca del Vehículo"
                           : `Escoger Modelo (${vehiculoMarca || "General"})`}
                       </h4>
-                      <p className="text-xs text-zinc-400 font-normal">
+                      <p className="text-xs text-zinc-600 dark:text-zinc-400 font-normal">
                         {tabFlotanteVehiculo === "marca"
                           ? "Selecciona una marca del catálogo o escribe para buscar"
                           : `Modelos disponibles para ${vehiculoMarca || "el vehículo"}`}
@@ -4508,14 +4492,14 @@ export default function ModalNuevaOrdenTrabajo({
                   <button
                     type="button"
                     onClick={() => setMostrarFlotanteVehiculo(false)}
-                    className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
+                    className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
                   >
                     ✕
                   </button>
                 </div>
 
                 {/* Tabs Marca / Modelo */}
-                <div className="grid grid-cols-2 gap-2 bg-black/40 p-1 rounded-2xl border border-white/5">
+                <div className="grid grid-cols-2 gap-2 bg-zinc-100 dark:bg-black/40 p-1 rounded-2xl border border-zinc-200 dark:border-white/5">
                   <button
                     type="button"
                     onClick={() => {
@@ -4525,7 +4509,7 @@ export default function ModalNuevaOrdenTrabajo({
                     className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                       tabFlotanteVehiculo === "marca"
                         ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
-                        : "text-zinc-400 hover:text-white"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                     }`}
                   >
                     <span>1. Marca</span>
@@ -4541,7 +4525,7 @@ export default function ModalNuevaOrdenTrabajo({
                     className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                       tabFlotanteVehiculo === "modelo"
                         ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
-                        : "text-zinc-400 hover:text-white"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                     }`}
                   >
                     <span>2. Modelo</span>
@@ -4560,7 +4544,7 @@ export default function ModalNuevaOrdenTrabajo({
                         ? "Buscar marca (Ej: Toyota, Chevrolet, Kia, Nissan...)"
                         : `Buscar modelo de ${vehiculoMarca || "vehículo"}...`
                     }
-                    className="w-full h-11 pl-10 pr-20 rounded-2xl bg-black/40 border border-white/15 focus:border-emerald-500 text-white text-xs sm:text-sm placeholder:text-zinc-500 focus:outline-none transition-all"
+                    className="w-full h-11 pl-10 pr-20 rounded-2xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-xs sm:text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all shadow-xs"
                     autoFocus
                   />
                   <svg
@@ -4575,7 +4559,7 @@ export default function ModalNuevaOrdenTrabajo({
                     <button
                       type="button"
                       onClick={() => setBusquedaFlotanteVehiculo("")}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded-lg bg-white/10 text-zinc-300 hover:text-white cursor-pointer"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs px-2 py-1 rounded-lg bg-zinc-200 dark:bg-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white cursor-pointer"
                     >
                       Limpiar
                     </button>
@@ -4596,8 +4580,8 @@ export default function ModalNuevaOrdenTrabajo({
                               onClick={() => seleccionarMarcaFlotante(marca)}
                               className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex items-center justify-between ${
                                 activo
-                                  ? "bg-emerald-600/20 border-emerald-500 text-emerald-300 font-semibold ring-1 ring-emerald-500/30"
-                                  : "bg-white/[0.03] hover:bg-white/[0.08] border-white/10 text-zinc-200 hover:text-white"
+                                  ? "bg-emerald-600/15 dark:bg-emerald-600/20 border-emerald-500 text-emerald-700 dark:text-emerald-300 font-semibold ring-1 ring-emerald-500/30"
+                                  : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white"
                               }`}
                             >
                               <span className="text-xs truncate">{marca}</span>
@@ -4616,7 +4600,7 @@ export default function ModalNuevaOrdenTrabajo({
                           <button
                             type="button"
                             onClick={() => seleccionarMarcaFlotante(busquedaFlotanteVehiculo.trim())}
-                            className="px-4 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold cursor-pointer transition-all"
+                            className="px-4 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold cursor-pointer transition-all"
                           >
                             Usar marca personalizada: &ldquo;{busquedaFlotanteVehiculo.trim()}&rdquo; →
                           </button>
@@ -4635,8 +4619,8 @@ export default function ModalNuevaOrdenTrabajo({
                               onClick={() => seleccionarModeloFlotante(modelo)}
                               className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex items-center justify-between ${
                                 activo
-                                  ? "bg-emerald-600/20 border-emerald-500 text-emerald-300 font-semibold ring-1 ring-emerald-500/30"
-                                  : "bg-white/[0.03] hover:bg-white/[0.08] border-white/10 text-zinc-200 hover:text-white"
+                                  ? "bg-emerald-600/15 dark:bg-emerald-600/20 border-emerald-500 text-emerald-700 dark:text-emerald-300 font-semibold ring-1 ring-emerald-500/30"
+                                  : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white"
                               }`}
                             >
                               <span className="text-xs truncate">{modelo}</span>
@@ -4651,7 +4635,7 @@ export default function ModalNuevaOrdenTrabajo({
                           <button
                             type="button"
                             onClick={() => seleccionarModeloFlotante(busquedaFlotanteVehiculo.trim())}
-                            className="px-4 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold cursor-pointer transition-all"
+                            className="px-4 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold cursor-pointer transition-all"
                           >
                             Usar modelo personalizado: &ldquo;{busquedaFlotanteVehiculo.trim()}&rdquo; ✓
                           </button>
@@ -4662,7 +4646,7 @@ export default function ModalNuevaOrdenTrabajo({
                 </div>
 
                 {/* Footer del flotante */}
-                <div className="flex items-center justify-between border-t border-white/10 pt-3">
+                <div className="flex items-center justify-between border-t border-zinc-200 dark:border-white/10 pt-3">
                   {tabFlotanteVehiculo === "modelo" ? (
                     <button
                       type="button"
@@ -4670,13 +4654,13 @@ export default function ModalNuevaOrdenTrabajo({
                         setTabFlotanteVehiculo("marca");
                         setBusquedaFlotanteVehiculo("");
                       }}
-                      className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs cursor-pointer flex items-center gap-1"
+                      className="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs cursor-pointer flex items-center gap-1"
                     >
                       <span>←</span>
                       <span>Volver a Marcas</span>
                     </button>
                   ) : (
-                    <span className="text-[11px] text-zinc-500 font-normal">
+                    <span className="text-[11px] text-zinc-600 dark:text-zinc-500 font-normal">
                       {marcasFlotante.length} marcas en catálogo
                     </span>
                   )}
@@ -4750,20 +4734,23 @@ export default function ModalNuevaOrdenTrabajo({
               </button>
             )}
 
-            {/* Fecha y Hora de Recepción a la izquierda */}
-            {fechaHoraRecepcion && (
+          </div>
+
+          {/* En PC / Tablet: Fecha y Hora de Recepción en el medio */}
+          {fechaHoraRecepcion && (
+            <div className="hidden md:flex items-center justify-center">
               <span
                 title="Fecha y hora de recepción"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-200/50 dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400 text-[11px] sm:text-xs font-mono min-w-0"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-200/60 dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-400 text-xs font-mono font-semibold min-w-0"
               >
-                <svg className="w-3.5 h-3.5 text-zinc-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                <svg className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                   <circle cx="12" cy="12" r="9" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" />
                 </svg>
                 <span className="truncate">{fechaHoraRecepcion}</span>
               </span>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="flex items-center gap-2 shrink-0">
             {pasoActivo < 4 ? (
@@ -4830,6 +4817,23 @@ export default function ModalNuevaOrdenTrabajo({
           </div>
         </div>
       </div>
+
+      {/* En móvil: Fuera de este rectángulo al final del móvil, más grande */}
+      {fechaHoraRecepcion && (
+        <div className="md:hidden flex items-center justify-center pt-3 pb-1 text-center">
+          <span
+            title="Fecha y hora de recepción"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/90 dark:bg-[#121215]/90 backdrop-blur-md border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-xs sm:text-sm font-semibold font-mono shadow-xs"
+          >
+            <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <circle cx="12" cy="12" r="9" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" />
+            </svg>
+            <span>{fechaHoraRecepcion}</span>
+          </span>
+        </div>
+      )}
+    </div>
   );
 
   if (isPageMode) {
