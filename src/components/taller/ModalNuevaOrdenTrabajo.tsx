@@ -276,6 +276,7 @@ export default function ModalNuevaOrdenTrabajo({
   const [vehiculoKm, setVehiculoKm] = useState("");
   const [vehiculoTipo, setVehiculoTipo] = useState("Auto");
   const [mostrarFormNuevoVehiculo, setMostrarFormNuevoVehiculo] = useState(false);
+  const [subPasoVehiculo, setSubPasoVehiculo] = useState<"placa" | "marca" | "modelo" | "anio" | "tipo" | "km">("placa");
 
   // Selector flotante para Marca y Modelo
   const [mostrarFlotanteVehiculo, setMostrarFlotanteVehiculo] = useState(false);
@@ -469,6 +470,9 @@ export default function ModalNuevaOrdenTrabajo({
       }
       detenerTracksMedia();
     }
+    // Cerrar escáner de matrícula al cambiar de paso
+    detenerCamara();
+    setMostrarEscanerMatricula(false);
     setPasoActivo(nuevoPaso);
   };
 
@@ -1246,7 +1250,7 @@ export default function ModalNuevaOrdenTrabajo({
       }, 60);
     } catch {
       setCamaraActiva(false);
-      setErrorCamara("Permiso de cámara en vivo no disponible. Pulsa 'Cámara del Celular' abajo.");
+      setErrorCamara("Permiso de cámara no disponible. Pulsa 'Cámara Celular' para tomar la foto.");
     }
   };
 
@@ -1422,6 +1426,7 @@ export default function ModalNuevaOrdenTrabajo({
       setVehiculoModelo("");
       setVehiculoKm("");
       setMostrarFormNuevoVehiculo(true);
+      setSubPasoVehiculo("marca");
 
       setMatriculaEscaneadaInfo({
         placa: placaLimpia,
@@ -1769,6 +1774,7 @@ export default function ModalNuevaOrdenTrabajo({
       setVehiculoModelo("");
       setVehiculoKm("");
       setMostrarFormNuevoVehiculo(true);
+      setSubPasoVehiculo("marca");
       setPasoActivo(2);
       return;
     }
@@ -2212,22 +2218,19 @@ export default function ModalNuevaOrdenTrabajo({
               ESCÁNER DE MATRÍCULA EN VIVO (APPLE iOS / ANDROID)
               ================================================================= */}
           {mostrarEscanerMatricula && (
-            <div className="p-4 sm:p-5 rounded-3xl bg-[#18181d] border border-emerald-500/40 shadow-2xl space-y-4 animate-fade-in">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <div className="p-4 sm:p-5 rounded-3xl bg-zinc-100 dark:bg-[#18181d] border border-emerald-500/40 shadow-2xl space-y-4 animate-fade-in">
+              <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                       <circle cx="12" cy="13" r="3" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="text-xs sm:text-sm font-bold text-white">
+                    <h4 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">
                       Escanear Matrícula del Vehículo
                     </h4>
-                    <p className="text-[11px] text-zinc-400">
-                      Compatible con Apple (iPhone/iPad) y Android • Detecta si existe o abre registro
-                    </p>
                   </div>
                 </div>
                 <button
@@ -2236,14 +2239,14 @@ export default function ModalNuevaOrdenTrabajo({
                     detenerCamara();
                     setMostrarEscanerMatricula(false);
                   }}
-                  className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                  className="w-8 h-8 rounded-xl bg-zinc-200 hover:bg-zinc-300 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center text-xs cursor-pointer"
                 >
                   ✕
                 </button>
               </div>
 
               {/* Visor de Cámara o Vista Previa de Captura */}
-              <div className="relative w-full h-52 sm:h-60 rounded-2xl bg-black overflow-hidden border border-white/15 flex items-center justify-center">
+              <div className="relative w-full h-52 sm:h-60 rounded-2xl bg-zinc-200 dark:bg-black overflow-hidden border border-zinc-300 dark:border-white/15 flex items-center justify-center">
                 {previewImagenUrl ? (
                   <img
                     src={previewImagenUrl}
@@ -2259,16 +2262,13 @@ export default function ModalNuevaOrdenTrabajo({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="text-center p-4 space-y-2">
-                    <p className="text-xs text-zinc-300 font-medium">
-                      {errorCamara || "Iniciando cámara trasera del dispositivo..."}
-                    </p>
+                  <div className="text-center p-4">
                     <button
                       type="button"
                       onClick={() => inputFotoNativaRef.current?.click()}
                       className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-black font-bold text-xs cursor-pointer shadow-md"
                     >
-                      📱 Abrir Cámara de Apple / Android
+                      📱 Abrir Cámara
                     </button>
                   </div>
                 )}
@@ -2313,7 +2313,7 @@ export default function ModalNuevaOrdenTrabajo({
                     type="button"
                     disabled={procesandoOcr}
                     onClick={iniciarCamaraEnVivo}
-                    className="h-11 px-3.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="h-11 px-3.5 rounded-xl bg-zinc-200 hover:bg-zinc-300 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-white font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <span>↺</span>
                     <span>Repetir</span>
@@ -2324,7 +2324,7 @@ export default function ModalNuevaOrdenTrabajo({
                   type="button"
                   disabled={procesandoOcr}
                   onClick={() => inputFotoNativaRef.current?.click()}
-                  className="h-11 px-4 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+                  className="h-11 px-4 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/40 text-blue-700 dark:text-blue-300 font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all"
                 >
                   <span>📱</span>
                   <span>Cámara Celular / Foto</span>
@@ -2332,13 +2332,13 @@ export default function ModalNuevaOrdenTrabajo({
               </div>
 
               {estadoEscaneo && !procesandoOcr && (
-                <p className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/25 rounded-xl px-3 py-2">
+                <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/25 rounded-xl px-3 py-2">
                   {estadoEscaneo}
                 </p>
               )}
 
               {/* Confirmación / Lectura rápida de la matrícula detectada */}
-              <div className="pt-1 border-t border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="pt-1 border-t border-zinc-200 dark:border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <div className="relative flex-1">
                   <input
                     type="text"
@@ -2351,7 +2351,7 @@ export default function ModalNuevaOrdenTrabajo({
                       }
                     }}
                     placeholder="Matrícula detectada (ej. ABC-1234)..."
-                    className="w-full h-11 px-3.5 rounded-xl bg-black/50 border border-white/15 focus:border-emerald-500 text-white font-mono font-bold uppercase text-sm tracking-wider focus:outline-none"
+                    className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white font-mono font-bold uppercase text-sm tracking-wider focus:outline-none"
                   />
                 </div>
                 <button
@@ -2366,6 +2366,7 @@ export default function ModalNuevaOrdenTrabajo({
               </div>
             </div>
           )}
+
 
           {/* Banner informativo cuando se escaneó una matrícula nueva que no estaba en BD */}
           {matriculaEscaneadaInfo && !matriculaEscaneadaInfo.existe && (
@@ -2395,8 +2396,8 @@ export default function ModalNuevaOrdenTrabajo({
           {pasoActivo === 1 && (
             <div className="space-y-5 animate-fade-in">
 
-              {/* Barra de Búsqueda Inteligente con Dropdown + Escáner de Matrícula (Oculta al registrar nuevo cliente) */}
-              {!mostrarFormNuevoCliente && (
+              {/* Barra de Búsqueda Inteligente con Dropdown + Escáner de Matrícula (Oculta al registrar nuevo cliente o al escanear) */}
+              {!mostrarFormNuevoCliente && !mostrarEscanerMatricula && (
                 <div className="relative" ref={dropdownRef}>
                   {/* Buscador de Cliente */}
                   <div className="relative w-full">
@@ -2820,6 +2821,7 @@ export default function ModalNuevaOrdenTrabajo({
                         setVehiculoModelo("");
                         setVehiculoKm("");
                         setMostrarFormNuevoVehiculo(true);
+                        setSubPasoVehiculo("placa");
                       }}
                       className="p-4 rounded-2xl border border-dashed border-zinc-300 dark:border-white/15 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all cursor-pointer flex items-center justify-center gap-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 min-h-[72px]"
                     >
@@ -2830,174 +2832,628 @@ export default function ModalNuevaOrdenTrabajo({
                 </div>
               )}
 
-              {/* Formulario de Vehículo (Si es nuevo o el cliente no tenía vehículos) */}
-              {(mostrarFormNuevoVehiculo || !clienteSeleccionado?.vehicles?.length) && (
-                <div className="p-5 rounded-3xl bg-zinc-50/80 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-4 animate-fade-in shadow-xs">
-                  <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/5 pb-2">
-                    <div className="flex items-center gap-1.5 text-xs">
-                      <span className="text-zinc-600 dark:text-zinc-400 font-semibold">Cliente:</span>
-                      <strong className="font-bold text-zinc-900 dark:text-zinc-100">
-                        {clienteSeleccionado?.name || nuevoClienteNombre || "Consumidor Final"}
-                      </strong>
-                    </div>
-                    {clienteSeleccionado?.vehicles?.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setMostrarFormNuevoVehiculo(false)}
-                        className="text-xs text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white font-medium cursor-pointer"
-                      >
-                        Ver guardados
-                      </button>
-                    )}
-                  </div>
+              {/* Formulario de Vehículo — Flujo Deslizable Paso a Paso */}
+              {(mostrarFormNuevoVehiculo || !clienteSeleccionado?.vehicles?.length) && (() => {
+                const PASOS: Array<{ id: typeof subPasoVehiculo; label: string; icon: string }> = [
+                  { id: "placa", label: "Placa", icon: "🔢" },
+                  { id: "marca", label: "Marca", icon: "🏷️" },
+                  { id: "modelo", label: "Modelo", icon: "🚘" },
+                  { id: "anio", label: "Año", icon: "📅" },
+                  { id: "tipo", label: "Tipo", icon: "🚗" },
+                  { id: "km", label: "Kilometraje", icon: "⏱️" },
+                ];
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                    <div className="col-span-1">
-                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
-                        Placa *
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={vehiculoPlaca}
-                          onChange={(e) => setVehiculoPlaca(e.target.value.toUpperCase())}
-                          placeholder="Ej: ABC-1234"
-                          className="w-full h-11 pl-3.5 pr-9 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white font-mono font-bold uppercase text-sm tracking-wider placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none shadow-xs"
-                          required
-                          autoFocus
-                        />
+                const pasoIdx = PASOS.findIndex((p) => p.id === subPasoVehiculo);
+                const irASiguiente = () => {
+                  if (subPasoVehiculo === "placa") {
+                    if (!vehiculoPlaca.trim()) {
+                      mostrarToast("Ingresa la placa del vehículo para continuar", "err");
+                      return;
+                    }
+                    setSubPasoVehiculo("marca");
+                  } else if (subPasoVehiculo === "marca") {
+                    setSubPasoVehiculo("modelo");
+                  } else if (subPasoVehiculo === "modelo") {
+                    setSubPasoVehiculo("anio");
+                  } else if (subPasoVehiculo === "anio") {
+                    setSubPasoVehiculo("tipo");
+                  } else if (subPasoVehiculo === "tipo") {
+                    setSubPasoVehiculo("km");
+                  } else if (subPasoVehiculo === "km") {
+                    if (!vehiculoPlaca.trim()) {
+                      mostrarToast("Ingresa la placa del vehículo", "err");
+                      setSubPasoVehiculo("placa");
+                      return;
+                    }
+                    setPasoActivo(3);
+                  }
+                };
+
+                const irAAnterior = () => {
+                  if (pasoIdx > 0) {
+                    setSubPasoVehiculo(PASOS[pasoIdx - 1].id);
+                  }
+                };
+
+                const getValorResumen = (id: typeof subPasoVehiculo) => {
+                  if (id === "placa") return vehiculoPlaca;
+                  if (id === "marca") return vehiculoMarca;
+                  if (id === "modelo") return vehiculoModelo;
+                  if (id === "anio") return vehiculoAnio;
+                  if (id === "tipo") return vehiculoTipo;
+                  if (id === "km") return vehiculoKm ? `${vehiculoKm} km` : "";
+                  return "";
+                };
+
+                return (
+                  <div className="p-5 sm:p-6 rounded-3xl bg-zinc-50/90 dark:bg-zinc-900/40 border border-zinc-200/80 dark:border-white/10 space-y-5 shadow-xs transition-all">
+                    {/* Header: Cliente y botón para volver a lista guardados si tiene */}
+                    <div className="flex items-center justify-between border-b border-zinc-200/80 dark:border-white/5 pb-3">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-zinc-500 dark:text-zinc-400 font-medium">Asociado a:</span>
+                        <strong className="font-bold text-zinc-900 dark:text-zinc-100 bg-white dark:bg-white/5 px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-white/10">
+                          {clienteSeleccionado?.name || nuevoClienteNombre || "Consumidor Final"}
+                        </strong>
+                      </div>
+                      {clienteSeleccionado?.vehicles && clienteSeleccionado.vehicles.length > 0 && (
                         <button
                           type="button"
-                          onClick={abrirEscanerMatricula}
-                          title="Escanear matrícula con cámara"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center cursor-pointer transition-colors"
+                          onClick={() => setMostrarFormNuevoVehiculo(false)}
+                          className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
                         >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                            <circle cx="12" cy="13" r="3" />
-                          </svg>
+                          ← Ver vehículos guardados
                         </button>
-                      </div>
+                      )}
                     </div>
 
-                    {/* Marca con apertura de selector flotante */}
-                    <div className="col-span-1">
-                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
-                        Marca
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={vehiculoMarca}
-                          onChange={(e) => setVehiculoMarca(e.target.value)}
-                          onClick={() => abrirFlotanteVehiculo("marca")}
-                          placeholder="Ej: Toyota"
-                          className="w-full h-11 pl-3.5 pr-8 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 hover:border-emerald-500/50 focus:border-emerald-500 text-zinc-900 dark:text-white text-xs sm:text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all cursor-pointer shadow-xs"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => abrirFlotanteVehiculo("marca")}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white p-1 cursor-pointer"
-                          title="Abrir selector flotante de marcas"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                      </div>
+                    {/* Barra de Progreso Deslizable / Breadcrumbs Interactivos */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                      {PASOS.map((p, idx) => {
+                        const esActivo = p.id === subPasoVehiculo;
+                        const esCompletado = idx < pasoIdx;
+                        const valor = getValorResumen(p.id);
+
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              // Solo permitir ir si la placa ya está ingresada o si se regresa
+                              if (idx === 0 || vehiculoPlaca.trim()) {
+                                setSubPasoVehiculo(p.id);
+                              } else {
+                                mostrarToast("Primero ingresa la placa del vehículo", "err");
+                              }
+                            }}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                              esActivo
+                                ? "bg-emerald-500 text-black shadow-sm font-bold scale-[1.02]"
+                                : esCompletado
+                                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
+                                : "bg-zinc-100 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
+                            }`}
+                          >
+                            <span>{p.icon}</span>
+                            <span>{p.label}</span>
+                            {esCompletado && valor && (
+                              <span className="max-w-[70px] truncate text-[10px] opacity-80 font-mono">
+                                ({valor})
+                              </span>
+                            )}
+                            {esCompletado && <span className="text-emerald-600 dark:text-emerald-400">✓</span>}
+                          </button>
+                        );
+                      })}
                     </div>
 
-                    {/* Modelo con apertura de selector flotante */}
-                    <div className="col-span-1">
-                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
-                        Modelo
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={vehiculoModelo}
-                          onChange={(e) => setVehiculoModelo(e.target.value)}
-                          onClick={() => abrirFlotanteVehiculo("modelo")}
-                          placeholder="Ej: Hilux"
-                          className="w-full h-11 pl-3.5 pr-8 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 hover:border-emerald-500/50 focus:border-emerald-500 text-zinc-900 dark:text-white text-xs sm:text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all cursor-pointer shadow-xs"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => abrirFlotanteVehiculo("modelo")}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white p-1 cursor-pointer"
-                          title="Abrir selector flotante de modelos"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
+                    {/* Tarjeta del Campo Activo con Animación Deslizable */}
+                    <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-black/30 border border-zinc-200 dark:border-white/10 shadow-xs space-y-4 animate-fade-in">
 
-                    <div className="col-span-1">
-                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
-                        Kilometraje (Km)
-                      </label>
-                      <input
-                        type="number"
-                        value={vehiculoKm}
-                        onChange={(e) => setVehiculoKm(e.target.value)}
-                        placeholder="Ej: 48500"
-                        className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 focus:border-emerald-500 text-zinc-900 dark:text-white font-mono text-xs sm:text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none shadow-xs"
-                      />
+                      {/* ================= PASO 1: PLACA ================= */}
+                      {subPasoVehiculo === "placa" && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                                🔢 Matrícula / Placa del Vehículo <span className="text-rose-500">*</span>
+                              </label>
+                              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                                Escribe la placa o usa la cámara para escanearla automáticamente
+                              </p>
+                            </div>
+                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                              Paso 1 de 6
+                            </span>
+                          </div>
+
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={vehiculoPlaca}
+                              onChange={(e) => setVehiculoPlaca(e.target.value.toUpperCase())}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && vehiculoPlaca.trim()) {
+                                  e.preventDefault();
+                                  setSubPasoVehiculo("marca");
+                                }
+                              }}
+                              placeholder="Ej: ABC-1234"
+                              className="w-full h-16 pl-5 pr-16 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white font-mono font-bold uppercase text-2xl tracking-widest placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-inner"
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              onClick={abrirEscanerMatricula}
+                              title="Escanear placa con cámara"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center cursor-pointer transition-all shadow-md active:scale-95"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <circle cx="12" cy="13" r="3" />
+                              </svg>
+                            </button>
+                          </div>
+
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              onClick={irASiguiente}
+                              disabled={!vehiculoPlaca.trim()}
+                              className={`w-full h-12 rounded-xl font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 ${
+                                vehiculoPlaca.trim()
+                                  ? "bg-emerald-500 hover:bg-emerald-400 text-black shadow-md shadow-emerald-500/20"
+                                  : "bg-zinc-200 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                              }`}
+                            >
+                              <span>Avanzar a Marca</span>
+                              <span>→</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ================= PASO 2: MARCA ================= */}
+                      {subPasoVehiculo === "marca" && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                                🏷️ Marca del Vehículo
+                              </label>
+                              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                                Escribe la marca o selecciona una sugerida para avanzar rápido
+                              </p>
+                            </div>
+                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                              Paso 2 de 6
+                            </span>
+                          </div>
+
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={vehiculoMarca}
+                              onChange={(e) => setVehiculoMarca(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  setSubPasoVehiculo("modelo");
+                                }
+                              }}
+                              placeholder="Ej: Toyota, Chevrolet, Hyundai..."
+                              className="w-full h-14 pl-4 pr-12 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              onClick={() => abrirFlotanteVehiculo("marca")}
+                              title="Abrir catálogo de marcas"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg text-zinc-400 hover:text-emerald-500 dark:hover:text-emerald-400 cursor-pointer"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                          </div>
+
+                          {/* Chips de Marcas Populares */}
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
+                              Marcas Frecuentes:
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                              {["Toyota", "Chevrolet", "Hyundai", "Kia", "Nissan", "Ford", "Renault", "Volkswagen", "Mazda", "Honda"].map((m) => (
+                                <button
+                                  key={m}
+                                  type="button"
+                                  onClick={() => {
+                                    setVehiculoMarca(m);
+                                    setSubPasoVehiculo("modelo");
+                                  }}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                                    vehiculoMarca.toUpperCase() === m.toUpperCase()
+                                      ? "bg-emerald-500 text-black font-bold shadow-xs"
+                                      : "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
+                                  }`}
+                                >
+                                  {m}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Botones de Navegación */}
+                          <div className="flex items-center gap-3 pt-2">
+                            <button
+                              type="button"
+                              onClick={irAAnterior}
+                              className="h-12 px-5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer transition-all"
+                            >
+                              ← Placa
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSubPasoVehiculo("modelo");
+                              }}
+                              className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 underline cursor-pointer px-2"
+                            >
+                              Saltar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={irASiguiente}
+                              className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
+                            >
+                              <span>Avanzar a Modelo</span>
+                              <span>→</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ================= PASO 3: MODELO ================= */}
+                      {subPasoVehiculo === "modelo" && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                                🚘 Modelo del Vehículo {vehiculoMarca ? `(${vehiculoMarca})` : ""}
+                              </label>
+                              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                                Escribe el modelo específico o escoge uno común
+                              </p>
+                            </div>
+                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                              Paso 3 de 6
+                            </span>
+                          </div>
+
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={vehiculoModelo}
+                              onChange={(e) => setVehiculoModelo(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  setSubPasoVehiculo("anio");
+                                }
+                              }}
+                              placeholder={vehiculoMarca ? `Ej: Modelo de ${vehiculoMarca}` : "Ej: Hilux, Aveo, Tucson..."}
+                              className="w-full h-14 pl-4 pr-12 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              onClick={() => abrirFlotanteVehiculo("modelo")}
+                              title="Abrir catálogo de modelos"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg text-zinc-400 hover:text-emerald-500 dark:hover:text-emerald-400 cursor-pointer"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                          </div>
+
+                          {/* Chips de Modelos Frecuentes */}
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
+                              Modelos Comunes:
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                              {["Hilux", "D-Max", "Fortuner", "Sportage", "Tucson", "Aveo", "Sail", "Ranger", "Picanto", "Corolla"].map((mod) => (
+                                <button
+                                  key={mod}
+                                  type="button"
+                                  onClick={() => {
+                                    setVehiculoModelo(mod);
+                                    setSubPasoVehiculo("anio");
+                                  }}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                                    vehiculoModelo.toUpperCase() === mod.toUpperCase()
+                                      ? "bg-emerald-500 text-black font-bold shadow-xs"
+                                      : "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
+                                  }`}
+                                >
+                                  {mod}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Botones de Navegación */}
+                          <div className="flex items-center gap-3 pt-2">
+                            <button
+                              type="button"
+                              onClick={irAAnterior}
+                              className="h-12 px-5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer transition-all"
+                            >
+                              ← Marca
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSubPasoVehiculo("anio");
+                              }}
+                              className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 underline cursor-pointer px-2"
+                            >
+                              Saltar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={irASiguiente}
+                              className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
+                            >
+                              <span>Avanzar a Año</span>
+                              <span>→</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ================= PASO 4: AÑO ================= */}
+                      {subPasoVehiculo === "anio" && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                                📅 Año de Fabricación
+                              </label>
+                              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                                Selecciona el año del vehículo o escribe el año exacto
+                              </p>
+                            </div>
+                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                              Paso 4 de 6
+                            </span>
+                          </div>
+
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={vehiculoAnio}
+                              onChange={(e) => setVehiculoAnio(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  setSubPasoVehiculo("tipo");
+                                }
+                              }}
+                              placeholder="Ej: 2024"
+                              maxLength={4}
+                              className="w-full h-14 px-5 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white font-mono text-xl font-bold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
+                              autoFocus
+                            />
+                          </div>
+
+                          {/* Chips de Años Recientes */}
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">
+                              Años Recientes:
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                              {[2025, 2024, 2023, 2022, 2021, 2020, 2018, 2015, 2010].map((yr) => (
+                                <button
+                                  key={yr}
+                                  type="button"
+                                  onClick={() => {
+                                    setVehiculoAnio(String(yr));
+                                    setSubPasoVehiculo("tipo");
+                                  }}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all cursor-pointer ${
+                                    vehiculoAnio === String(yr)
+                                      ? "bg-emerald-500 text-black font-bold shadow-xs"
+                                      : "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
+                                  }`}
+                                >
+                                  {yr}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Botones de Navegación */}
+                          <div className="flex items-center gap-3 pt-2">
+                            <button
+                              type="button"
+                              onClick={irAAnterior}
+                              className="h-12 px-5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer transition-all"
+                            >
+                              ← Modelo
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSubPasoVehiculo("tipo");
+                              }}
+                              className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 underline cursor-pointer px-2"
+                            >
+                              Saltar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={irASiguiente}
+                              className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
+                            >
+                              <span>Avanzar a Tipo</span>
+                              <span>→</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ================= PASO 5: TIPO DE VEHÍCULO ================= */}
+                      {subPasoVehiculo === "tipo" && (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                                🚗 Tipo de Carrocería
+                              </label>
+                              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                                Selecciona la categoría del vehículo para avanzar a kilometraje
+                              </p>
+                            </div>
+                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                              Paso 5 de 6
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                            {[
+                              { v: "Auto", label: "Auto / Sedán", emoji: "🚗" },
+                              { v: "SUV", label: "SUV", emoji: "🚙" },
+                              { v: "Camioneta", label: "Camioneta", emoji: "🛻" },
+                              { v: "Moto", label: "Moto", emoji: "🏍️" },
+                              { v: "Camión", label: "Camión / Pesado", emoji: "🚛" },
+                            ].map(({ v, label, emoji }) => {
+                              const esSeleccionado = vehiculoTipo === v;
+                              return (
+                                <button
+                                  key={v}
+                                  type="button"
+                                  onClick={() => {
+                                    setVehiculoTipo(v);
+                                    setSubPasoVehiculo("km");
+                                  }}
+                                  className={`p-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 ${
+                                    esSeleccionado
+                                      ? "bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-sm"
+                                      : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:border-emerald-500/40"
+                                  }`}
+                                >
+                                  <span className="text-3xl">{emoji}</span>
+                                  <span className="text-xs font-bold text-center leading-tight">{label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Botones de Navegación */}
+                          <div className="flex items-center gap-3 pt-2">
+                            <button
+                              type="button"
+                              onClick={irAAnterior}
+                              className="h-12 px-5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer transition-all"
+                            >
+                              ← Año
+                            </button>
+                            <button
+                              type="button"
+                              onClick={irASiguiente}
+                              className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
+                            >
+                              <span>Avanzar a Kilometraje</span>
+                              <span>→</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ================= PASO 6: KILOMETRAJE ================= */}
+                      {subPasoVehiculo === "km" && (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                                ⏱️ Kilometraje Actual
+                              </label>
+                              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                                Registra el kilometraje actual del vehículo (opcional)
+                              </p>
+                            </div>
+                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                              Paso 6 de 6
+                            </span>
+                          </div>
+
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={vehiculoKm}
+                              onChange={(e) => setVehiculoKm(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  irASiguiente();
+                                }
+                              }}
+                              placeholder="Ej: 45000"
+                              className="w-full h-16 pl-5 pr-14 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white font-mono text-2xl font-bold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-inner"
+                              autoFocus
+                            />
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-400">
+                              km
+                            </span>
+                          </div>
+
+                          {/* Resumen del Vehículo Configurado */}
+                          <div className="p-3.5 rounded-xl bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="text-emerald-500 font-bold">✓</span>
+                              <span className="font-mono font-bold text-zinc-900 dark:text-white">
+                                {vehiculoPlaca || "SIN PLACA"}
+                              </span>
+                              <span className="text-zinc-500">•</span>
+                              <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                                {[vehiculoMarca, vehiculoModelo, vehiculoAnio, vehiculoTipo].filter(Boolean).join(" ")}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setSubPasoVehiculo("placa")}
+                              className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
+                            >
+                              Editar datos
+                            </button>
+                          </div>
+
+                          {/* Botones de Navegación Final */}
+                          <div className="flex items-center gap-3 pt-2">
+                            <button
+                              type="button"
+                              onClick={irAAnterior}
+                              className="h-12 px-5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer transition-all"
+                            >
+                              ← Tipo
+                            </button>
+                            <button
+                              type="button"
+                              onClick={irASiguiente}
+                              className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-98"
+                            >
+                              <span>Confirmar Vehículo y Continuar al Ingreso</span>
+                              <span>→</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs pt-1">
-                    <div className="col-span-1">
-                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
-                        Año
-                      </label>
-                      <input
-                        type="text"
-                        value={vehiculoAnio}
-                        onChange={(e) => setVehiculoAnio(e.target.value)}
-                        placeholder="2024"
-                        className="w-full h-10 px-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 focus:border-emerald-500 text-zinc-900 dark:text-white text-xs placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none shadow-xs"
-                      />
-                    </div>
-
-                    <div className="col-span-1">
-                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
-                        Tipo de Carrocería
-                      </label>
-                      <select
-                        value={vehiculoTipo}
-                        onChange={(e) => setVehiculoTipo(e.target.value)}
-                        className="w-full h-10 px-3 rounded-xl bg-white dark:bg-[#1c1c21] border border-zinc-300 dark:border-white/10 text-zinc-900 dark:text-white text-xs focus:outline-none cursor-pointer shadow-xs"
-                      >
-                        <option value="Auto">Auto / Sedán</option>
-                        <option value="SUV">SUV</option>
-                        <option value="Camioneta">Camioneta / Pick-up</option>
-                        <option value="Moto">Moto</option>
-                        <option value="Camión">Camión / Pesado</option>
-                      </select>
-                    </div>
-
-                    <div className="col-span-2 sm:col-span-1 flex items-end">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!vehiculoPlaca.trim()) {
-                            mostrarToast("Ingresa la placa del vehículo", "err");
-                            return;
-                          }
-                          setPasoActivo(3);
-                        }}
-                        className="w-full h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-black font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 active:scale-95"
-                      >
-                        <span>Confirmar Vehículo</span>
-                        <span>→</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
 
             </div>
           )}
@@ -4714,6 +5170,9 @@ export default function ModalNuevaOrdenTrabajo({
                     }
                     detenerTracksMedia();
                   }
+                  // Cerrar escáner al retroceder
+                  detenerCamara();
+                  setMostrarEscanerMatricula(false);
                   setPasoActivo((p) => ((p - 1) as 1 | 2 | 3 | 4));
                 }}
                 className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-200/60 hover:bg-zinc-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.10] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-medium transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 min-h-[44px]"
