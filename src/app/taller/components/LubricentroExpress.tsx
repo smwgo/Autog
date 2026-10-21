@@ -75,7 +75,7 @@ export default function LubricentroExpress({
   modoEspecialidad = "lubricentro",
 }: LubricentroExpressProps) {
   // =========================================================================
-  // STEPPER DE 3 ETAPAS (1. Lubricación, 2. Presupuesto, 3. Firma)
+  // STEPPER DE 2 ETAPAS (1. Servicios Express, 2. Firma)
   // =========================================================================
   const [etapaActiva, setEtapaActiva] = useState<number>(2);
   const stepperCarouselRef = useRef<HTMLDivElement | null>(null);
@@ -89,7 +89,7 @@ export default function LubricentroExpress({
       const width = container.clientWidth;
       if (width > 0) {
         const pageIndex = Math.round(container.scrollLeft / width);
-        const steps = [2, 3, 4];
+        const steps = [2, 4];
         const targetStep = steps[pageIndex];
         if (targetStep && targetStep !== etapaActiva) {
           setEtapaActiva(targetStep);
@@ -768,13 +768,13 @@ export default function LubricentroExpress({
   return (
     <div className="space-y-5 animate-fade-in text-white">
       {/* ===================================================================
-          STEPPER: 3 ETAPAS (1. Lubricación, 2. Presupuesto, 3. Firma)
+          STEPPER: 2 ETAPAS (1. Servicios Express, 2. Firma)
           =================================================================== */}
       <div className="bg-white/[0.02] backdrop-blur-md border border-white/[0.08] p-1.5 sm:p-2 rounded-2xl space-y-1.5">
         <div
           ref={stepperCarouselRef}
           onScroll={handleStepperScroll}
-          className="flex sm:grid sm:grid-cols-3 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
+          className="flex sm:grid sm:grid-cols-2 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
         >
           {[
             {
@@ -792,17 +792,8 @@ export default function LubricentroExpress({
               ),
             },
             {
-              id: 3,
-              label: "2. Presupuesto",
-              icon: (
-                <svg className="w-6 h-6 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                </svg>
-              ),
-            },
-            {
               id: 4,
-              label: "3. Firma",
+              label: "2. Firma",
               icon: (
                 <svg className="w-6 h-6 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
@@ -834,7 +825,7 @@ export default function LubricentroExpress({
 
         {/* Puntos de paginación solo en móvil */}
         <div className="flex sm:hidden items-center justify-center gap-1.5 pt-1">
-          {[2, 3, 4].map((id) => (
+          {[2, 4].map((id) => (
             <button
               key={id}
               type="button"
@@ -1310,338 +1301,21 @@ export default function LubricentroExpress({
           <div className="flex items-center justify-end pt-2">
             <button
               type="button"
-              onClick={() => setEtapaActiva(3)}
+              onClick={() => setEtapaActiva(4)}
               className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-semibold cursor-pointer"
             >
-              Siguiente →
+              Siguiente (Aviso y Firma) →
             </button>
           </div>
         </div>
       )}
 
-      {/* ===================================================================
-          ETAPA 3: PRESUPUESTO (SELECCIÓN LUBRICENTRO + TIENDA + PROPUESTA PDF/STICKER)
-          =================================================================== */}
-      {etapaActiva === 3 && (
-        <div className="w-full space-y-5 animate-fade-in">
-          {/* 1. RESUMEN DE SERVICIOS DE LUBRICACIÓN SELECCIONADOS */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-2.5">
-              <div className="flex items-center gap-2">
-                <span className="text-base">🛢️</span>
-                <h4 className="text-xs sm:text-sm font-normal text-white uppercase tracking-wider">
-                  Lubricación
-                </h4>
-              </div>
-              {kmProximoCambio && (
-                <span className="text-xs font-mono text-amber-300">
-                  Próximo cambio: <strong>{kmProximoCambio.toLocaleString()} km</strong>
-                </span>
-              )}
-            </div>
-
-            {itemsOrden.length === 0 ? (
-              <div className="py-6 text-center space-y-2 bg-black/30 rounded-xl border border-dashed border-white/10 p-4">
-                <p className="text-xs text-zinc-400">
-                  Sin servicios marcados en Lubricación.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setEtapaActiva(2)}
-                  className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-semibold cursor-pointer"
-                >
-                  ← Ir a Lubricación
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {itemsOrden.map((it) => (
-                  <div
-                    key={it.id}
-                    className="p-3 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between gap-2"
-                  >
-                    <div className="min-w-0">
-                      <span className="text-xs font-semibold text-white block truncate">
-                        {it.name}
-                      </span>
-                      <span className="text-[10px] text-zinc-400">
-                        {(it.category || "Lubricentro").replace(/^Lubricentro\s*[-–]\s*/i, "")}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className="relative w-20">
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-zinc-400">$</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={it.price ?? 0}
-                          onChange={(e) =>
-                            handleCambiarPrecioItem(it.id, parseFloat(e.target.value) || 0)
-                          }
-                          className="w-full h-7 pl-5 pr-1.5 rounded-lg bg-black border border-white/10 text-emerald-400 font-mono text-xs text-right focus:outline-none focus:border-amber-500/50"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleEliminarItemOrden(it.id)}
-                        className="text-zinc-500 hover:text-rose-400 text-xs cursor-pointer px-1"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 2. TIENDA (IDÉNTICO A TALLER) */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3.5 shadow-xl">
-            <div className="flex items-center gap-2 border-b border-white/[0.08] pb-2.5">
-              <span className="text-base">🏪</span>
-              <h4 className="text-xs sm:text-sm font-normal text-white uppercase tracking-wider">
-                Tienda
-              </h4>
-            </div>
-
-            <div className="space-y-2.5">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setFiltroTipoTienda("ALL")}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    filtroTipoTienda === "ALL"
-                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
-                      : "bg-white/5 text-zinc-400 hover:text-white border border-transparent"
-                  }`}
-                >
-                  Todos
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFiltroTipoTienda("SERVICE")}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
-                    filtroTipoTienda === "SERVICE"
-                      ? "bg-purple-500/20 text-purple-300 border border-purple-500/40"
-                      : "bg-white/5 text-zinc-400 hover:text-white border border-transparent"
-                  }`}
-                >
-                  <span>🛠️</span>
-                  <span>Servicios</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFiltroTipoTienda("PART")}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
-                    filtroTipoTienda === "PART"
-                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                      : "bg-white/5 text-zinc-400 hover:text-white border border-transparent"
-                  }`}
-                >
-                  <span>📦</span>
-                  <span>Aceites / Filtros</span>
-                </button>
-              </div>
-
-              <div className="relative">
-                <div className="relative flex items-center">
-                  <span className="absolute left-3 text-zinc-400 text-sm pointer-events-none">🔍</span>
-                  <input
-                    type="text"
-                    value={busquedaTienda}
-                    onChange={(e) => {
-                      setBusquedaTienda(e.target.value);
-                      setDropdownTiendaAbierto(true);
-                    }}
-                    onFocus={() => setDropdownTiendaAbierto(true)}
-                    placeholder="Buscar aceite, filtro o servicio..."
-                    className="w-full h-10 pl-9 pr-8 rounded-xl bg-black/60 border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/50"
-                  />
-                  {busquedaTienda && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBusquedaTienda("");
-                        setDropdownTiendaAbierto(false);
-                      }}
-                      className="absolute right-3 text-zinc-400 hover:text-white text-xs font-bold"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-
-                {dropdownTiendaAbierto && busquedaTienda.trim().length > 0 && (
-                  <div className="absolute left-0 right-0 top-full mt-1.5 max-h-60 overflow-y-auto rounded-xl bg-[#0c0d12] border border-amber-500/30 shadow-2xl z-50 divide-y divide-white/5">
-                    {(() => {
-                      const q = busquedaTienda.toLowerCase().trim();
-                      const filtrados = catalogoTiendaCombinado.filter((item) => {
-                        if (filtroTipoTienda === "SERVICE" && item.type !== "SERVICE") return false;
-                        if (filtroTipoTienda === "PART" && item.type !== "PART") return false;
-                        return (
-                          item.name.toLowerCase().includes(q) ||
-                          (item.category && item.category.toLowerCase().includes(q)) ||
-                          (item.code && item.code.toLowerCase().includes(q))
-                        );
-                      });
-
-                      if (filtrados.length === 0) {
-                        return (
-                          <div className="p-4 text-center text-xs text-zinc-500 italic">
-                            Sin coincidencias para &quot;{busquedaTienda}&quot;.
-                          </div>
-                        );
-                      }
-
-                      return filtrados.slice(0, 15).map((item, idx) => (
-                        <div
-                          key={idx}
-                          onClick={() => {
-                            void handleAgregarDesdeTienda(item);
-                            setDropdownTiendaAbierto(false);
-                          }}
-                          className="p-2.5 hover:bg-amber-500/15 cursor-pointer flex items-center justify-between gap-3 transition-colors"
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <span className="text-sm">{item.type === "PART" ? "🛢️" : "🛠️"}</span>
-                            <div className="min-w-0">
-                              <span className="text-xs font-semibold text-white truncate block">
-                                {item.name}
-                              </span>
-                              <span className="text-[10px] text-zinc-400 block truncate">
-                                {item.category}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="font-mono font-bold text-xs text-emerald-400">
-                              ${Number(item.price).toFixed(2)}
-                            </span>
-                            <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-600 text-white font-bold">
-                              + Sumar
-                            </span>
-                          </div>
-                        </div>
-                      ));
-                    })()}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* 3. PROPUESTA Y TOTALES (IDÉNTICO A TALLER + BOTÓN STICKER QR) */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4 shadow-xl">
-            <div className="flex items-center gap-2 border-b border-white/[0.08] pb-3">
-              <span className="text-base">💼</span>
-              <h4 className="text-xs sm:text-sm font-normal text-white uppercase tracking-wider">
-                Propuesta
-              </h4>
-            </div>
-
-            {itemsOrden.length === 0 ? (
-              <div className="py-6 text-center text-xs text-zinc-500 italic bg-black/20 rounded-xl border border-dashed border-white/5">
-                Sin servicios ni lubricantes añadidos.
-              </div>
-            ) : (
-              <div className="divide-y divide-white/5 bg-black/25 p-3.5 rounded-xl border border-white/5">
-                {itemsOrden.map((it) => (
-                  <div key={it.id} className="py-2.5 flex items-center justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <span className="font-normal text-white text-sm block truncate">
-                        {it.name}
-                      </span>
-                      <span className="text-xs text-zinc-400">
-                        {(it.category || "Lubricentro").replace(/^Lubricentro\s*[-–]\s*/i, "")}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2.5 shrink-0">
-                      <span className="font-mono text-emerald-400 font-bold text-sm">
-                        ${(Number(it.price) || 0).toFixed(2)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleCiclarEstadoItem(it.id)}
-                        className="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer"
-                      >
-                        {it.status || "Listo"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleEliminarItemOrden(it.id)}
-                        className="text-zinc-500 hover:text-rose-400 text-xs cursor-pointer p-1"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {itemsOrden.length > 0 && (
-              <div className="pt-3 border-t border-white/[0.08] flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setModalPresupuestoPdfAbierto(true)}
-                    className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-600/30"
-                  >
-                    <span>🖨️</span>
-                    <span>PDF</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMostrarModalStickerQr(true)}
-                    className="h-9 px-3.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-300 text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span>🏷️</span>
-                    <span>Sticker QR</span>
-                  </button>
-                </div>
-
-                <div className="w-full sm:w-64 bg-black/50 p-3.5 rounded-xl border border-white/10 space-y-1.5 font-mono">
-                  <div className="flex justify-between text-zinc-300 text-xs">
-                    <span>Subtotal:</span>
-                    <span>${calculosPresupuesto.subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-zinc-300 text-xs">
-                    <span>IVA ({calculosPresupuesto.taxRateNum}%):</span>
-                    <span>${calculosPresupuesto.taxAmount.toFixed(2)}</span>
-                  </div>
-                  <div className="border-t border-white/10 pt-1.5 flex justify-between text-sm font-normal text-white">
-                    <span>TOTAL:</span>
-                    <span className="text-emerald-400">${calculosPresupuesto.total.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between pt-2">
-            <button
-              type="button"
-              onClick={() => setEtapaActiva(2)}
-              className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-normal text-zinc-300 cursor-pointer"
-            >
-              Anterior
-            </button>
-            <button
-              type="button"
-              onClick={() => setEtapaActiva(4)}
-              className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-normal cursor-pointer"
-            >
-              Continuar
-            </button>
-          </div>
-
-          <ModalPresupuestoPdf
-            abierto={modalPresupuestoPdfAbierto}
-            onCerrar={() => setModalPresupuestoPdfAbierto(false)}
-            orden={ordenActiva}
-          />
-        </div>
-      )}
+      {/* Modal Presupuesto PDF */}
+      <ModalPresupuestoPdf
+        abierto={modalPresupuestoPdfAbierto}
+        onCerrar={() => setModalPresupuestoPdfAbierto(false)}
+        orden={ordenActiva}
+      />
 
       {/* ===================================================================
           ETAPA 4: AVISO Y FIRMA + PASAR A POS (IDÉNTICO A TALLER)
@@ -1868,7 +1542,7 @@ export default function LubricentroExpress({
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                 <button
                   type="button"
-                  onClick={() => setEtapaActiva(3)}
+                  onClick={() => setEtapaActiva(2)}
                   className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-normal text-zinc-300 cursor-pointer"
                 >
                   Anterior

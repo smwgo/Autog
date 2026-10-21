@@ -23,8 +23,7 @@ export function Header() {
   const isInternalPanel =
     pathname.startsWith("/gerencia") ||
     pathname.startsWith("/oficina") ||
-    pathname.startsWith("/pos") ||
-    pathname.startsWith("/taller");
+    pathname.startsWith("/pos");
   const isGerenciaOrOficina =
     pathname.startsWith("/gerencia") || pathname.startsWith("/oficina");
 
