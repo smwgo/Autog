@@ -2046,8 +2046,73 @@ export default function ModalNuevaOrdenTrabajo({
   const tieneCliente = Boolean(clienteSeleccionado || nuevoClienteNombre.trim());
   const tieneVehiculo = Boolean(vehiculoPlaca.trim());
 
+  // Etiqueta única del paso activo (color diferente por paso: 1=azul, 2=verde, 3=ámbar, 4=púrpura)
+  const pasoPill = (() => {
+    const pasoConfig: Record<
+      number,
+      { nombre: string; pill: string; circle: string }
+    > = {
+      1: {
+        nombre: "Cliente",
+        pill: "bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/30 text-sky-700 dark:text-sky-300",
+        circle: "bg-sky-500 text-white",
+      },
+      2: {
+        nombre: "Vehículo",
+        pill: "bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/30 text-emerald-700 dark:text-emerald-300",
+        circle: "bg-emerald-500 text-white",
+      },
+      3: {
+        nombre: "Ingreso",
+        pill: "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/30 text-amber-700 dark:text-amber-300",
+        circle: "bg-amber-500 text-white",
+      },
+      4: {
+        nombre: "Orden",
+        pill: "bg-purple-500/15 hover:bg-purple-500/25 border-purple-500/30 text-purple-700 dark:text-purple-300",
+        circle: "bg-purple-500 text-white",
+      },
+    };
+    const actual = pasoConfig[pasoActivo] || pasoConfig[1];
+
+    return (
+      <div className="flex items-center gap-1.5 shrink-0">
+        {pasoActivo > 1 ? (
+          <button
+            type="button"
+            onClick={() => irAPaso((pasoActivo - 1) as any)}
+            className={`h-8 sm:h-9 px-3 sm:px-3.5 rounded-xl border font-bold text-xs sm:text-sm flex items-center gap-2 select-none transition-all cursor-pointer active:scale-95 animate-fade-in ${actual.pill}`}
+            title="Paso actual. Clic para volver al paso anterior."
+          >
+            <span
+              className={`w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black shrink-0 shadow-xs ${actual.circle}`}
+            >
+              {pasoActivo}
+            </span>
+            <span className="font-bold">{actual.nombre}</span>
+          </button>
+        ) : (
+          <div
+            className={`h-8 sm:h-9 px-3 sm:px-3.5 rounded-xl border font-bold text-xs sm:text-sm flex items-center gap-2 select-none transition-all animate-fade-in ${actual.pill}`}
+          >
+            <span
+              className={`w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black shrink-0 shadow-xs ${actual.circle}`}
+            >
+              1
+            </span>
+            <span className="font-bold">{actual.nombre}</span>
+          </div>
+        )}
+      </div>
+    );
+  })();
+
   const cardContent = (
     <div className="w-full flex flex-col">
+      {/* Etiqueta del paso fuera del recuadro, alineada a la derecha (modo página) */}
+      {isPageMode && (
+        <div className="flex justify-end mb-2.5">{pasoPill}</div>
+      )}
       <div
         onClick={(e) => e.stopPropagation()}
         className={
@@ -2108,66 +2173,8 @@ export default function ModalNuevaOrdenTrabajo({
               </div>
             </div>
 
-            {/* Etiqueta única del paso activo (suave y transparente, color diferente por paso: 1=azul, 2=verde, 3=ámbar, 4=púrpura) */}
-            {(() => {
-              const pasoConfig: Record<
-                number,
-                { nombre: string; pill: string; circle: string }
-              > = {
-                1: {
-                  nombre: "Cliente",
-                  pill: "bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/30 text-sky-700 dark:text-sky-300",
-                  circle: "bg-sky-500 text-white",
-                },
-                2: {
-                  nombre: "Vehículo",
-                  pill: "bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/30 text-emerald-700 dark:text-emerald-300",
-                  circle: "bg-emerald-500 text-white",
-                },
-                3: {
-                  nombre: "Ingreso",
-                  pill: "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/30 text-amber-700 dark:text-amber-300",
-                  circle: "bg-amber-500 text-white",
-                },
-                4: {
-                  nombre: "Orden",
-                  pill: "bg-purple-500/15 hover:bg-purple-500/25 border-purple-500/30 text-purple-700 dark:text-purple-300",
-                  circle: "bg-purple-500 text-white",
-                },
-              };
-              const actual = pasoConfig[pasoActivo] || pasoConfig[1];
-
-              return (
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {pasoActivo > 1 ? (
-                    <button
-                      type="button"
-                      onClick={() => irAPaso((pasoActivo - 1) as any)}
-                      className={`h-8 sm:h-9 px-3 sm:px-3.5 rounded-xl border font-bold text-xs sm:text-sm flex items-center gap-2 select-none transition-all cursor-pointer active:scale-95 animate-fade-in ${actual.pill}`}
-                      title="Paso actual. Clic para volver al paso anterior."
-                    >
-                      <span
-                        className={`w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black shrink-0 shadow-xs ${actual.circle}`}
-                      >
-                        {pasoActivo}
-                      </span>
-                      <span className="font-bold">{actual.nombre}</span>
-                    </button>
-                  ) : (
-                    <div
-                      className={`h-8 sm:h-9 px-3 sm:px-3.5 rounded-xl border font-bold text-xs sm:text-sm flex items-center gap-2 select-none transition-all animate-fade-in ${actual.pill}`}
-                    >
-                      <span
-                        className={`w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black shrink-0 shadow-xs ${actual.circle}`}
-                      >
-                        1
-                      </span>
-                      <span className="font-bold">{actual.nombre}</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
+            {/* Etiqueta del paso dentro de la cabecera solo en modo modal */}
+            {!isPageMode && pasoPill}
 
             {/* Botón X para cerrar (solo en modo modal flotante) */}
             {!isPageMode && (
