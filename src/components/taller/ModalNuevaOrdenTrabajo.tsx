@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getClientActiveBranch } from "@/lib/branch";
 import {
   MULTIMEDIA_CONFIG,
@@ -17,13 +18,16 @@ import {
 } from "@/lib/transcription";
 
 export interface ModalNuevaOrdenProps {
-  isOpen: boolean;
-  onClose: () => void;
-  empleadoLogueado: { id: string; nombre: string; rol?: string };
-  mecanicos: string[];
-  clientesCatalogo: any[];
-  onOrdenCreada: (nuevaOrden: any, cliente?: any, tipo?: "Taller" | "Lubricentro" | "Lavado") => void;
-  mostrarToast: (msg: string, tipo?: "ok" | "err") => void;
+  isOpen?: boolean;
+  onClose?: () => void;
+  empleadoLogueado?: { id: string; nombre: string; rol?: string };
+  mecanicos?: string[];
+  clientesCatalogo?: any[];
+  onOrdenCreada?: (nuevaOrden: any, cliente?: any, tipo?: "Taller" | "Lubricentro" | "Lavado") => void;
+  mostrarToast?: (msg: string, tipo?: "ok" | "err") => void;
+  isPageMode?: boolean;
+  placaInicial?: string;
+  clienteInicial?: string;
 }
 
 // Catálogo de Marcas y Modelos populares en la región
@@ -219,16 +223,30 @@ const detectarCarroceria = (modelo: string, marca: string): string => {
 };
 
 export default function ModalNuevaOrdenTrabajo({
-  isOpen,
+  isOpen = true,
   onClose,
-  empleadoLogueado,
-  mecanicos,
-  clientesCatalogo,
+  empleadoLogueado = { id: "emp-admin", nombre: "Carlos Rodríguez", rol: "Mecánico" },
+  mecanicos = [],
+  clientesCatalogo = [],
   onOrdenCreada,
-  mostrarToast,
+  mostrarToast = () => {},
+  isPageMode = false,
+  placaInicial = "",
+  clienteInicial = "",
 }: ModalNuevaOrdenProps) {
+  const router = useRouter();
   // Stepper deslizable: 1 = Cliente, 2 = Vehículo, 3 = Ingreso, 4 = Orden
   const [pasoActivo, setPasoActivo] = useState<1 | 2 | 3 | 4>(1);
+
+  // Sincronizar placa y cliente inicial si se reciben por URL o props
+  useEffect(() => {
+    if (placaInicial && !vehiculoPlaca) {
+      setVehiculoPlaca(placaInicial.trim().toUpperCase());
+    }
+    if (clienteInicial && !busquedaCliente) {
+      setBusquedaCliente(clienteInicial.trim());
+    }
+  }, [placaInicial, clienteInicial]);
 
   // =========================================================================
   // PASO 1: CLIENTE
@@ -1980,17 +1998,34 @@ export default function ModalNuevaOrdenTrabajo({
 
       const data = await res.json();
       if (data.success && data.activeOrder) {
-        onOrdenCreada(data.activeOrder, data.customer, tipoIngreso);
-        mostrarToast(
-          `Orden #${data.activeOrder.orderNumber} creada para ${nombreFinal} (${placaFinal})`
-        );
+        if (onOrdenCreada) {
+          onOrdenCreada(data.activeOrder, data.customer, tipoIngreso);
+        }
+        if (mostrarToast) {
+          mostrarToast(
+            `Orden #${data.activeOrder.orderNumber} creada para ${nombreFinal} (${placaFinal})`
+          );
+        }
         resetFormularioCompleto();
-        onClose();
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem("taller_orden_activa_id", String(data.activeOrder.id));
+          } catch {}
+        }
+        if (isPageMode) {
+          router.push("/taller");
+        } else if (onClose) {
+          onClose();
+        }
       } else {
-        mostrarToast(data.error || "No se pudo crear la orden", "err");
+        if (mostrarToast) {
+          mostrarToast(data.error || "No se pudo crear la orden", "err");
+        }
       }
     } catch (err: any) {
-      mostrarToast(err.message || "Error al conectar con la base de datos", "err");
+      if (mostrarToast) {
+        mostrarToast(err.message || "Error al conectar con la base de datos", "err");
+      }
     } finally {
       setCreando(false);
     }
@@ -1999,32 +2034,55 @@ export default function ModalNuevaOrdenTrabajo({
   // Si se cierra o cancela sin completar el Paso 3, el número de orden y datos temporales se descartan y NO se guardan
   const handleCancelarSinGuardar = () => {
     resetFormularioCompleto();
-    onClose();
+    if (isPageMode) {
+      router.push("/taller");
+    } else if (onClose) {
+      onClose();
+    }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !isPageMode) return null;
 
   const tieneCliente = Boolean(clienteSeleccionado || nuevoClienteNombre.trim());
   const tieneVehiculo = Boolean(vehiculoPlaca.trim());
 
-  return (
+  const cardContent = (
     <div
-      onClick={handleCancelarSinGuardar}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-black/80 backdrop-blur-md animate-fade-in"
+      onClick={(e) => e.stopPropagation()}
+      className={
+        isPageMode
+          ? "w-full space-y-3 sm:space-y-4 animate-fade-in"
+          : "w-full h-[100dvh] sm:h-auto sm:max-w-3xl lg:max-w-4xl bg-white dark:bg-[#141417] text-zinc-900 dark:text-white border-0 sm:border border-zinc-200 dark:border-white/10 rounded-none sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[100dvh] sm:max-h-[90vh] transition-all pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
+      }
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full h-[100dvh] sm:h-auto sm:max-w-3xl lg:max-w-4xl bg-white dark:bg-[#141417] text-zinc-900 dark:text-white border-0 sm:border border-zinc-200 dark:border-white/10 rounded-none sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[100dvh] sm:max-h-[90vh] transition-all pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)]"
-      >
-        {/* Cabecera Superior: Título + Stepper + Botón X */}
-        <div className="px-3.5 py-2.5 sm:px-6 sm:py-3.5 border-b border-zinc-200 dark:border-white/10 bg-zinc-50/90 dark:bg-black/30 backdrop-blur-md shrink-0">
+        {/* Cabecera Superior: Título + Stepper */}
+        <div
+          className={
+            isPageMode
+              ? "p-3 sm:p-4 rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 shadow-xs flex flex-col gap-2"
+              : "px-3.5 py-2.5 sm:px-6 sm:py-3.5 border-b border-zinc-200 dark:border-white/10 bg-zinc-50/90 dark:bg-black/30 backdrop-blur-md shrink-0"
+          }
+        >
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+              {isPageMode && (
+                <button
+                  type="button"
+                  onClick={() => router.push("/taller")}
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-white/10 transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-xs cursor-pointer"
+                  title="Volver a Taller"
+                >
+                  <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                  </svg>
+                </button>
+              )}
+
               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl bg-blue-600/15 border border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs sm:text-sm shrink-0">
                 OT
               </div>
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="font-mono font-bold text-xs text-zinc-500 dark:text-zinc-400 tracking-wide shrink-0">
+                <span className="font-mono font-bold text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 tracking-wide shrink-0">
                   #{correlativoOrden}
                 </span>
                 {(asignacionesTecnicos?.[0]?.nombre || empleadoLogueado?.nombre) && (
@@ -2127,15 +2185,17 @@ export default function ModalNuevaOrdenTrabajo({
               </button>
             </div>
 
-            {/* Botón X para cerrar sin llenar */}
-            <button
-              type="button"
-              onClick={handleCancelarSinGuardar}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer text-sm shrink-0 min-h-[36px] min-w-[36px]"
-              title="Cerrar sin guardar"
-            >
-              ✕
-            </button>
+            {/* Botón X para cerrar (solo en modo modal flotante) */}
+            {!isPageMode && (
+              <button
+                type="button"
+                onClick={handleCancelarSinGuardar}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer text-sm shrink-0 min-h-[36px] min-w-[36px]"
+                title="Cerrar sin guardar"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
           {/* Stepper Móvil Compacto e Interactivo (< md) */}
@@ -2176,8 +2236,14 @@ export default function ModalNuevaOrdenTrabajo({
           </div>
         </div>
 
-        {/* Contenido Principal con Contenedor Deslizable */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-5">
+        {/* Contenido Principal */}
+        <div
+          className={
+            isPageMode
+              ? "p-4 sm:p-6 rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 shadow-xs space-y-4 sm:space-y-5"
+              : "flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-5"
+          }
+        >
           {/* Input oculto para Cámara Nativa de iOS (Apple) y Android */}
           <input
             ref={inputFotoNativaRef}
@@ -4662,8 +4728,14 @@ export default function ModalNuevaOrdenTrabajo({
           )}
         </div>
 
-        {/* Pie Inferior: Cancelar / Atrás + Fecha/Hora a la izquierda + Siguiente / Crear Orden */}
-        <div className="px-3.5 py-3 sm:px-6 sm:py-4 border-t border-zinc-200 dark:border-white/10 flex items-center justify-between gap-2 bg-zinc-50 dark:bg-black/30">
+        {/* Pie Inferior: Navegación */}
+        <div
+          className={
+            isPageMode
+              ? "p-3 sm:p-4 rounded-2xl bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 shadow-xs flex items-center justify-between gap-2"
+              : "px-3.5 py-3 sm:px-6 sm:py-4 border-t border-zinc-200 dark:border-white/10 flex items-center justify-between gap-2 bg-zinc-50 dark:bg-black/30"
+          }
+        >
           <div className="flex items-center gap-2 min-w-0">
             {mostrarFormNuevoCliente ? (
               <button
@@ -4691,6 +4763,15 @@ export default function ModalNuevaOrdenTrabajo({
               >
                 <span>←</span>
                 <span>Atrás</span>
+              </button>
+            ) : isPageMode ? (
+              <button
+                type="button"
+                onClick={() => router.push("/taller")}
+                className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 min-h-[44px]"
+              >
+                <span>←</span>
+                <span>Volver</span>
               </button>
             ) : (
               <button
@@ -4783,6 +4864,18 @@ export default function ModalNuevaOrdenTrabajo({
           </div>
         </div>
       </div>
+  );
+
+  if (isPageMode) {
+    return cardContent;
+  }
+
+  return (
+    <div
+      onClick={handleCancelarSinGuardar}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-black/80 backdrop-blur-md animate-fade-in"
+    >
+      {cardContent}
     </div>
   );
 }

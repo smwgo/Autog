@@ -4788,16 +4788,15 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
           {/* Lado derecho: Botones Nueva Orden y Lista de Autos */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-            {/* 1. Botón + Nueva Orden */}
-            <button
-              type="button"
-              onClick={() => setMostrarModalNuevaOrden(true)}
+            {/* 1. Botón + Nueva Orden (Página Completa) */}
+            <Link
+              href="/taller/nueva-orden"
               className="h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-blue-600/25 active:scale-95 shrink-0"
               title="Nueva Orden"
             >
               <span className="text-base sm:text-lg font-bold leading-none">+</span>
               <span className="text-xs sm:text-sm hidden sm:inline">Nueva Orden</span>
-            </button>
+            </Link>
 
             {/* 2. Botón Lista de Autos */}
             <button
@@ -6094,7 +6093,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     type="button"
                     onClick={() => {
                       setMostrarModalAutosAtencion(false);
-                      setMostrarModalNuevaOrden(true);
+                      router.push("/taller/nueva-orden");
                     }}
                     className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer"
                   >
@@ -6232,7 +6231,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 type="button"
                 onClick={() => {
                   setMostrarModalAutosAtencion(false);
-                  setMostrarModalNuevaOrden(true);
+                  router.push("/taller/nueva-orden");
                 }}
                 className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-600/25"
               >
