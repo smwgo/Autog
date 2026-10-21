@@ -4870,20 +4870,15 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       {ordenActiva.plate}
                     </span>
 
-                    <div className="min-w-0 flex-1 space-y-0.5">
-                      {/* Fila 1: Solo Vehículo */}
-                      <div className="truncate">
-                        <span className="text-xs sm:text-base font-bold text-zinc-900 dark:text-white truncate block">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 truncate flex-wrap">
+                        <span className="text-xs sm:text-base font-bold text-zinc-900 dark:text-white truncate">
                           {ordenActiva.vehicle}
                         </span>
-                      </div>
-
-                      {/* Fila 2: Solo Cliente y Número de visitas */}
-                      <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 truncate">
-                        <span className="text-zinc-700 dark:text-zinc-200 font-semibold truncate">
+                        <span className="text-zinc-400 dark:text-zinc-600 shrink-0">•</span>
+                        <span className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-200 font-semibold truncate">
                           <span className="text-zinc-400 font-normal">Cliente:</span> {ordenActiva.client}
                         </span>
-                        <span className="text-zinc-400 dark:text-zinc-600 shrink-0">•</span>
                         <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-300 font-medium text-[10px] sm:text-[11px] shrink-0">
                           {vecesAtendido} {vecesAtendido === 1 ? "visita" : "visitas"}
                         </span>

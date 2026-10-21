@@ -2425,42 +2425,42 @@ export default function ModalNuevaOrdenTrabajo({
                     )}
                   </div>
 
-                  {/* Tres botones debajo del buscador: 2 columnas en móvil con Consumidor Final de ancho completo, 3 columnas en desktop */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2.5">
-                    {/* Botón Consumidor Final */}
+                  {/* Tres botones debajo del buscador en una sola fila con una sola palabra cada uno */}
+                  <div className="grid grid-cols-3 gap-2 mt-2.5">
+                    {/* Botón Consumidor */}
                     <button
                       type="button"
                       onClick={handleSeleccionarConsumidorFinal}
                       title="Consumidor Final (trabajo rápido sin registro nominal)"
-                      className="col-span-2 sm:col-span-1 h-11 px-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] border border-zinc-300 dark:border-white/15 text-zinc-800 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm active:scale-95 text-xs sm:text-sm font-semibold min-h-[44px]"
+                      className="h-11 px-2 sm:px-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] border border-zinc-300 dark:border-white/15 text-zinc-800 dark:text-zinc-200 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer shadow-sm active:scale-95 text-xs sm:text-sm font-semibold min-h-[44px]"
                     >
                       <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0 text-zinc-500 dark:text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
                         <circle cx="12" cy="7" r="4" />
                       </svg>
-                      <span>Consumidor Final</span>
+                      <span className="truncate">Consumidor</span>
                     </button>
 
-                    {/* Botón Escanear Matrícula */}
+                    {/* Botón Escanear */}
                     <button
                       type="button"
                       onClick={abrirEscanerMatricula}
                       title="Escanear matrícula con cámara (Apple iOS / Android)"
-                      className="col-span-1 h-11 px-2 sm:px-3 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 dark:bg-emerald-600/20 dark:hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer shadow-sm active:scale-95 text-xs sm:text-sm font-semibold min-h-[44px]"
+                      className="h-11 px-2 sm:px-3 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 dark:bg-emerald-600/20 dark:hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer shadow-sm active:scale-95 text-xs sm:text-sm font-semibold min-h-[44px]"
                     >
                       <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
                         <circle cx="12" cy="13" r="3" />
                       </svg>
-                      <span className="truncate">Escanear Matrícula</span>
+                      <span className="truncate">Escanear</span>
                     </button>
 
-                    {/* Botón Nuevo Cliente */}
+                    {/* Botón Nuevo */}
                     <button
                       type="button"
                       onClick={handleIniciarNuevoCliente}
                       title="Crear nuevo cliente"
-                      className="col-span-1 h-11 px-2 sm:px-3 rounded-2xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer shadow-md shadow-blue-600/30 active:scale-95 text-xs sm:text-sm font-semibold min-h-[44px]"
+                      className="h-11 px-2 sm:px-3 rounded-2xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer shadow-md shadow-blue-600/30 active:scale-95 text-xs sm:text-sm font-semibold min-h-[44px]"
                     >
                       <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -2468,7 +2468,7 @@ export default function ModalNuevaOrdenTrabajo({
                         <line x1="19" x2="19" y1="8" y2="14" />
                         <line x1="22" x2="16" y1="11" y2="11" />
                       </svg>
-                      <span className="truncate">Nuevo Cliente</span>
+                      <span className="truncate">Nuevo</span>
                     </button>
                   </div>
 
@@ -2743,15 +2743,16 @@ export default function ModalNuevaOrdenTrabajo({
               ================================================================= */}
           {pasoActivo === 2 && (
             <div className="space-y-5 animate-fade-in">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-400" />
                     Vehículo
                   </h3>
-                  <p className="text-xs text-zinc-400 font-normal">
-                    Cliente: <span className="text-zinc-200">{clienteSeleccionado?.name || nuevoClienteNombre}</span>
-                  </p>
+                  <span className="text-zinc-400 dark:text-zinc-600">•</span>
+                  <span className="text-xs text-zinc-600 dark:text-zinc-400 font-normal">
+                    Cliente: <strong className="text-zinc-900 dark:text-zinc-200 font-semibold">{clienteSeleccionado?.name || nuevoClienteNombre}</strong>
+                  </span>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -4709,62 +4710,63 @@ export default function ModalNuevaOrdenTrabajo({
           )}
         </div>
 
-        {/* Pie Inferior: Cancelar / Atrás + Navegación + Crear Orden */}
-        <div className="px-4 py-3 sm:px-6 sm:py-4 border-t border-white/10 flex items-center justify-between bg-black/30">
-          {mostrarFormNuevoCliente ? (
-            <button
-              type="button"
-              onClick={() => setMostrarFormNuevoCliente(false)}
-              className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
-            >
-              <span>←</span>
-              <span>Atrás</span>
-            </button>
-          ) : pasoActivo > 1 ? (
-            <button
-              type="button"
-              onClick={() => {
-                if (pasoActivo === 3) {
-                  if (subiendoFoto || grabandoVideo || subiendoVideo || grabandoAudio || subiendoAudio) {
-                    mostrarToast("Hay una grabación o subida en curso. Finalízala o cancélala antes de retroceder.", "err");
-                    return;
+        {/* Pie Inferior: Cancelar / Atrás + Fecha/Hora a la izquierda + Siguiente / Crear Orden */}
+        <div className="px-3.5 py-3 sm:px-6 sm:py-4 border-t border-zinc-200 dark:border-white/10 flex items-center justify-between gap-2 bg-zinc-50 dark:bg-black/30">
+          <div className="flex items-center gap-2 min-w-0">
+            {mostrarFormNuevoCliente ? (
+              <button
+                type="button"
+                onClick={() => setMostrarFormNuevoCliente(false)}
+                className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 min-h-[44px]"
+              >
+                <span>←</span>
+                <span>Atrás</span>
+              </button>
+            ) : pasoActivo > 1 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (pasoActivo === 3) {
+                    if (subiendoFoto || grabandoVideo || subiendoVideo || grabandoAudio || subiendoAudio) {
+                      mostrarToast("Hay una grabación o subida en curso. Finalízala o cancélala antes de retroceder.", "err");
+                      return;
+                    }
+                    detenerTracksMedia();
                   }
-                  detenerTracksMedia();
-                }
-                setPasoActivo((p) => ((p - 1) as 1 | 2 | 3 | 4));
-              }}
-              className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 min-h-[44px]"
-            >
-              <span>←</span>
-              <span>Atrás</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleCancelarSinGuardar}
-              disabled={creando}
-              className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer active:scale-95 disabled:opacity-50 min-h-[44px]"
-            >
-              Cancelar
-            </button>
-          )}
+                  setPasoActivo((p) => ((p - 1) as 1 | 2 | 3 | 4));
+                }}
+                className="px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shrink-0 min-h-[44px]"
+              >
+                <span>←</span>
+                <span>Atrás</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleCancelarSinGuardar}
+                disabled={creando}
+                className="hidden sm:inline-flex px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs sm:text-sm font-semibold transition-all cursor-pointer active:scale-95 disabled:opacity-50 min-h-[44px] shrink-0"
+              >
+                Cancelar
+              </button>
+            )}
 
-          {/* Etiqueta de Hora de recepción (compacta en móvil, completa en desktop) */}
-          {fechaHoraRecepcion && (
-            <span
-              title="Fecha y hora de recepción"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-white/[0.04] border border-zinc-300 dark:border-white/10 text-zinc-600 dark:text-zinc-300 text-[11px] sm:text-xs font-mono whitespace-nowrap"
-            >
-              <svg className="w-3.5 h-3.5 text-zinc-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                <circle cx="12" cy="12" r="9" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" />
-              </svg>
-              <span className="hidden sm:inline">{fechaHoraRecepcion}</span>
-              <span className="sm:hidden">{fechaHoraRecepcion.includes("•") ? fechaHoraRecepcion.split("•")[1]?.trim() : fechaHoraRecepcion}</span>
-            </span>
-          )}
+            {/* Fecha y Hora de Recepción a la izquierda */}
+            {fechaHoraRecepcion && (
+              <span
+                title="Fecha y hora de recepción"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-zinc-100 dark:bg-white/[0.04] border border-zinc-300 dark:border-white/10 text-zinc-600 dark:text-zinc-300 text-[11px] sm:text-xs font-mono min-w-0"
+              >
+                <svg className="w-3.5 h-3.5 text-zinc-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                  <circle cx="12" cy="12" r="9" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" />
+                </svg>
+                <span className="truncate">{fechaHoraRecepcion}</span>
+              </span>
+            )}
+          </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {pasoActivo < 4 ? (
               <button
                 type="button"
