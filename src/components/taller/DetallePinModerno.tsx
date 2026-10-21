@@ -76,18 +76,18 @@ export function DetallePinModerno({
   );
 
   return (
-    <div className="mt-3 rounded-2xl bg-[#0b0c10]/95 backdrop-blur-xl border border-white/10 p-3 sm:p-4 shadow-2xl space-y-3 animate-fade-in">
+    <div className="mt-3 rounded-2xl bg-white dark:bg-[#0b0c10]/95 backdrop-blur-xl border border-zinc-200 dark:border-white/10 p-3 sm:p-4 shadow-xl dark:shadow-2xl space-y-3 animate-fade-in">
       {/* 1. CABECERA COMPACTA MÓVIL: PIN #, ZONA Y ACCIONES RÁPIDAS */}
-      <div className="flex items-center justify-between gap-1.5 border-b border-white/[0.08] pb-2.5">
+      <div className="flex items-center justify-between gap-1.5 border-b border-zinc-200 dark:border-white/[0.08] pb-2.5">
         <div className="flex items-center gap-2 min-w-0">
           <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-rose-600 to-rose-400 text-white font-mono text-[11px] font-black flex items-center justify-center shrink-0 shadow-md shadow-rose-500/30 ring-1 ring-white/30">
             #{mismoNumero}
           </span>
-          <span className="text-xs font-bold text-white uppercase tracking-wider truncate">
+          <span className="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider truncate">
             {pin.vistaLabel || pin.vista}
           </span>
           {listaMismoPin.length > 1 && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-mono font-bold border border-cyan-500/30 shrink-0">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 font-mono font-bold border border-cyan-500/30 shrink-0">
               {listaMismoPin.findIndex((h) => h.id === pin.id) + 1}/{listaMismoPin.length}
             </span>
           )}
@@ -98,7 +98,7 @@ export function DetallePinModerno({
             <button
               type="button"
               onClick={onReubicarPin}
-              className="h-7 px-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 active:scale-95"
+              className="h-7 px-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 active:scale-95"
               title={`Mover Pin #${mismoNumero}`}
             >
               <span>📍</span>
@@ -109,7 +109,7 @@ export function DetallePinModerno({
           <button
             type="button"
             onClick={onEliminarPin}
-            className="h-7 w-7 sm:w-auto sm:px-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95"
+            className="h-7 w-7 sm:w-auto sm:px-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95"
             title={`Eliminar Pin #${mismoNumero}`}
           >
             <span>🗑️</span>
@@ -119,7 +119,7 @@ export function DetallePinModerno({
           <button
             type="button"
             onClick={onCerrar}
-            className="h-7 w-7 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs font-bold flex items-center justify-center transition-all cursor-pointer"
+            className="h-7 w-7 rounded-lg bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-xs font-bold flex items-center justify-center transition-all cursor-pointer"
             title="Cerrar"
           >
             ✕
@@ -129,8 +129,8 @@ export function DetallePinModerno({
 
       {/* PESTAÑAS SI EL PIN TIENE MÁS DE 1 DAÑO EN EL MISMO PUNTO */}
       {listaMismoPin.length > 1 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar border-b border-white/[0.05]">
-          <span className="text-[10px] text-zinc-400 font-medium shrink-0">Punto #{mismoNumero}:</span>
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar border-b border-zinc-200 dark:border-white/[0.05]">
+          <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium shrink-0">Punto #{mismoNumero}:</span>
           {listaMismoPin.map((h, idx) => {
             const activo = h.id === pin.id;
             return (
@@ -141,7 +141,7 @@ export function DetallePinModerno({
                   className={`h-6 px-2.5 rounded-lg text-[10px] font-semibold flex items-center gap-1 transition-all cursor-pointer ${
                     activo
                       ? "bg-rose-500 text-white shadow-sm ring-1 ring-white/30 font-bold"
-                      : "bg-white/[0.04] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.08]"
+                      : "bg-zinc-100 dark:bg-white/[0.04] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-white/[0.08]"
                   }`}
                 >
                   <span>#{idx + 1}</span>
@@ -156,7 +156,7 @@ export function DetallePinModerno({
                       e.stopPropagation();
                       onEliminarHallazgoEspecifico(h.id);
                     }}
-                    className="ml-0.5 w-4 h-4 rounded-full hover:bg-rose-500/20 text-zinc-500 hover:text-rose-300 text-[9px] flex items-center justify-center transition-all cursor-pointer"
+                    className="ml-0.5 w-4 h-4 rounded-full hover:bg-rose-500/20 text-zinc-400 hover:text-rose-600 dark:hover:text-rose-300 text-[9px] flex items-center justify-center transition-all cursor-pointer"
                     title="Quitar este daño"
                   >
                     ✕
@@ -180,7 +180,7 @@ export function DetallePinModerno({
               className={`h-7 px-2.5 rounded-lg border text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 shrink-0 active:scale-95 ${
                 sel
                   ? `${chip.color} ring-1 ring-white/30 font-bold shadow-sm`
-                  : "bg-white/[0.03] hover:bg-white/[0.08] border-white/10 text-zinc-400 hover:text-zinc-200"
+                  : "bg-zinc-50 dark:bg-white/[0.03] hover:bg-zinc-100 dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
               }`}
             >
               {sel && <span className="text-[10px]">✓</span>}
@@ -194,20 +194,20 @@ export function DetallePinModerno({
       <div
         className={`rounded-xl border p-2.5 transition-all space-y-2 ${
           escuchandoVoz
-            ? "bg-rose-950/20 border-rose-500/60 ring-2 ring-rose-500/20"
-            : "bg-black/60 border-white/10 focus-within:border-cyan-500/50"
+            ? "bg-rose-50 dark:bg-rose-950/20 border-rose-400 dark:border-rose-500/60 ring-2 ring-rose-500/20"
+            : "bg-zinc-50 dark:bg-black/60 border-zinc-200 dark:border-white/10 focus-within:border-cyan-500/50"
         }`}
       >
         {/* Barra superior de estado del recuadro de texto */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
             {escuchandoVoz ? (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-rose-400 animate-pulse">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-rose-600 dark:text-rose-400 animate-pulse">
                 <span className="w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-500" />
                 Grabando audio y transformando a texto...
               </span>
             ) : (
-              <span className="text-[11px] font-semibold text-zinc-400">
+              <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400">
                 ✍️ Detalle de lo que tiene:
               </span>
             )}
@@ -217,7 +217,7 @@ export function DetallePinModerno({
             <button
               type="button"
               onClick={() => onChangeObservacion("")}
-              className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 hover:bg-rose-500/20 text-zinc-400 hover:text-rose-300 transition-all cursor-pointer"
+              className="text-[10px] px-2 py-0.5 rounded-md bg-zinc-200/80 dark:bg-white/5 hover:bg-rose-500/20 text-zinc-600 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-300 transition-all cursor-pointer"
             >
               Limpiar
             </button>
@@ -234,7 +234,7 @@ export function DetallePinModerno({
               ? "Habla ahora... tu voz se convertirá en texto aquí automáticamente."
               : "Escribe qué tiene aquí o toca 'Grabar Voz' para dictar..."
           }
-          className="w-full rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2 text-white text-xs sm:text-sm placeholder:text-zinc-500 focus:outline-none focus:border-cyan-500/40 resize-none leading-relaxed"
+          className="w-full rounded-lg bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/[0.06] px-3 py-2 text-zinc-900 dark:text-white text-xs sm:text-sm placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-cyan-500/40 resize-none leading-relaxed"
         />
 
         {/* Botonera táctil inferior: GRABAR VOZ A TEXTO + ESCUCHAR + FOTOS */}
@@ -246,7 +246,7 @@ export function DetallePinModerno({
             className={`h-9 px-2 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
               escuchandoVoz
                 ? "bg-rose-600 text-white border-rose-400 shadow-lg shadow-rose-600/30 animate-pulse"
-                : "bg-rose-500/15 hover:bg-rose-500/25 border-rose-500/30 text-rose-300"
+                : "bg-rose-50 dark:bg-rose-500/15 hover:bg-rose-100 dark:hover:bg-rose-500/25 border-rose-300 dark:border-rose-500/30 text-rose-700 dark:text-rose-300"
             }`}
           >
             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -262,7 +262,7 @@ export function DetallePinModerno({
             className={`h-9 px-2 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
               reproduciendoAudio
                 ? "bg-emerald-500 text-black border-emerald-300 shadow-lg shadow-emerald-500/30 animate-pulse"
-                : "bg-white/[0.05] hover:bg-white/[0.1] border-white/10 text-zinc-200"
+                : "bg-zinc-100 dark:bg-white/[0.05] hover:bg-zinc-200 dark:hover:bg-white/[0.1] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
             }`}
           >
             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
@@ -275,8 +275,8 @@ export function DetallePinModerno({
           <label
             className={`h-9 px-2 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
               maxFotosAlcanzado
-                ? "bg-white/[0.02] border-white/5 text-zinc-500 cursor-not-allowed"
-                : "bg-cyan-500/15 hover:bg-cyan-500/25 border-cyan-500/30 text-cyan-300"
+                ? "bg-zinc-100 dark:bg-white/[0.02] border-zinc-200 dark:border-white/5 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                : "bg-cyan-50 dark:bg-cyan-500/15 hover:bg-cyan-100 dark:hover:bg-cyan-500/25 border-cyan-300 dark:border-cyan-500/30 text-cyan-700 dark:text-cyan-300"
             }`}
           >
             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>

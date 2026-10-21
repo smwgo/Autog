@@ -2344,95 +2344,97 @@ export default function ModalNuevaOrdenTrabajo({
               {/* Barra de Búsqueda Inteligente con Dropdown + Escáner de Matrícula (Oculta al registrar nuevo cliente) */}
               {!mostrarFormNuevoCliente && (
                 <div className="relative" ref={dropdownRef}>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <input
-                        type="text"
-                        value={busquedaCliente}
-                        onChange={(e) => {
-                          setBusquedaCliente(e.target.value);
-                          setMostrarDropdownClientes(true);
-                          if (clienteSeleccionado && e.target.value !== clienteSeleccionado.name) {
-                            setClienteSeleccionado(null);
-                          }
-                        }}
-                        onFocus={() => {
-                          if (busquedaCliente.trim()) setMostrarDropdownClientes(true);
-                        }}
-                        placeholder="Buscar cliente, cédula, matrícula o WhatsApp..."
-                        className="w-full h-12 pl-11 pr-24 rounded-2xl bg-black/40 border border-white/15 focus:border-blue-500 text-white text-sm placeholder:text-zinc-500 focus:outline-none transition-all shadow-inner"
-                        autoFocus
+                  {/* Buscador de Cliente */}
+                  <div className="relative w-full">
+                    <input
+                      type="text"
+                      value={busquedaCliente}
+                      onChange={(e) => {
+                        setBusquedaCliente(e.target.value);
+                        setMostrarDropdownClientes(true);
+                        if (clienteSeleccionado && e.target.value !== clienteSeleccionado.name) {
+                          setClienteSeleccionado(null);
+                        }
+                      }}
+                      onFocus={() => {
+                        if (busquedaCliente.trim()) setMostrarDropdownClientes(true);
+                      }}
+                      placeholder="Buscar cliente, cédula, matrícula o WhatsApp..."
+                      className="w-full h-12 pl-11 pr-24 rounded-2xl bg-black/40 border border-white/15 focus:border-blue-500 text-white text-sm placeholder:text-zinc-500 focus:outline-none transition-all shadow-inner"
+                      autoFocus
+                    />
+                    <svg
+                      className="w-5 h-5 text-zinc-400 absolute left-3.5 top-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
                       />
-                      <svg
-                        className="w-5 h-5 text-zinc-400 absolute left-3.5 top-3.5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        strokeWidth={1.5}
+                    </svg>
+
+                    {busquedaCliente && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBusquedaCliente("");
+                          setClienteSeleccionado(null);
+                        }}
+                        className="absolute right-3 top-3 px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs cursor-pointer"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-                        />
-                      </svg>
+                        Limpiar
+                      </button>
+                    )}
+                  </div>
 
-                      {busquedaCliente && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setBusquedaCliente("");
-                            setClienteSeleccionado(null);
-                          }}
-                          className="absolute right-3 top-3 px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs cursor-pointer"
-                        >
-                          Limpiar
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Botón Consumidor Final (Solo icono) */}
+                  {/* Tres botones con letra debajo del buscador */}
+                  <div className="grid grid-cols-3 gap-2 mt-2.5">
+                    {/* Botón Consumidor Final */}
                     <button
                       type="button"
                       onClick={handleSeleccionarConsumidorFinal}
                       title="Consumidor Final (trabajo rápido sin registro nominal)"
-                      aria-label="Consumidor Final"
-                      className="w-12 h-12 rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 text-zinc-300 hover:text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95"
+                      className="h-11 px-2 sm:px-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 text-zinc-200 hover:text-white flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer shadow-sm active:scale-95 text-xs sm:text-sm font-semibold"
                     >
-                      <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
                         <circle cx="12" cy="7" r="4" />
                       </svg>
+                      <span className="truncate">Consumidor Final</span>
                     </button>
 
-                    {/* Botón Escanear Matrícula (Solo icono) */}
+                    {/* Botón Escanear Matrícula */}
                     <button
                       type="button"
                       onClick={abrirEscanerMatricula}
                       title="Escanear matrícula con cámara (Apple / Android)"
-                      aria-label="Escanear matrícula con cámara"
-                      className="w-12 h-12 rounded-2xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-400 hover:text-emerald-300 flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-md shadow-emerald-600/10 hover:scale-105 active:scale-95"
+                      className="h-11 px-2 sm:px-3 rounded-2xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-400 hover:text-emerald-300 flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer shadow-md shadow-emerald-600/10 active:scale-95 text-xs sm:text-sm font-semibold"
                     >
-                      <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
                         <circle cx="12" cy="13" r="3" />
                       </svg>
+                      <span className="truncate">Escanear Matrícula</span>
                     </button>
 
-                    {/* Botón Nuevo Cliente (Solo icono) */}
+                    {/* Botón Nuevo Cliente */}
                     <button
                       type="button"
                       onClick={handleIniciarNuevoCliente}
                       title="Crear nuevo cliente"
-                      aria-label="Crear nuevo cliente"
-                      className="w-12 h-12 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-md shadow-blue-600/30 hover:scale-105 active:scale-95"
+                      className="h-11 px-2 sm:px-3 rounded-2xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer shadow-md shadow-blue-600/30 active:scale-95 text-xs sm:text-sm font-semibold"
                     >
-                      <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
                         <line x1="19" x2="19" y1="8" y2="14" />
                         <line x1="22" x2="16" y1="11" y2="11" />
                       </svg>
+                      <span className="truncate">Nuevo Cliente</span>
                     </button>
                   </div>
 

@@ -297,3 +297,16 @@ a.bg-black:hover {
 :is(.dark) a.bg-black:hover {
   background-color: rgba(255, 255, 255, 0.15) !important;
 }
+
+/* Adaptación de gráficos 3D e inspección vehicular para Modo Claro y Oscuro */
+.inspeccion-wireframe-img {
+  filter: invert(1) hue-rotate(180deg) contrast(1.25) brightness(1.02);
+  mix-blend-mode: multiply;
+  transition: filter 0.3s ease, mix-blend-mode 0.3s ease;
+}
+
+:is(.dark) .inspeccion-wireframe-img,
+:where(.dark, .dark *) .inspeccion-wireframe-img {
+  filter: none !important;
+  mix-blend-mode: normal !important;
+}

@@ -313,6 +313,27 @@ export default function InspeccionVehiculo({
   const [imagenCargando, setImagenCargando] = useState<boolean>(true);
   const [imagenError, setImagenError] = useState<boolean>(false);
 
+  // Detección reactiva de modo claro/oscuro para renderizado de esquemas 3D
+  const [isDark, setIsDark] = useState<boolean>(true);
+  const [modoVisualLienzo, setModoVisualLienzo] = useState<"auto" | "claro" | "oscuro">("auto");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const checkTheme = () => {
+      const darkActive = document.documentElement.classList.contains("dark");
+      setIsDark(darkActive);
+    };
+    checkTheme();
+    const observer = new MutationObserver(() => {
+      checkTheme();
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
+  // Determina si el lienzo se dibuja en modo oscuro o claro
+  const lienzoOscuro = modoVisualLienzo === "auto" ? isDark : modoVisualLienzo === "oscuro";
+
   useEffect(() => {
     setImagenCargando(true);
     setImagenError(false);
@@ -1054,7 +1075,7 @@ ${urlSeguimiento}`;
       {/* ===================================================================
           BARRA DE SISTEMAS DEL VEHÍCULO: INSPECCIÓN TOTAL (5 SISTEMAS)
           =================================================================== */}
-      <div className="space-y-1.5 pb-2 border-b border-white/10">
+      <div className="space-y-1.5 pb-2 border-b border-zinc-200 dark:border-white/10">
         <div
           ref={seccionCarouselRef}
           onScroll={handleSeccionScroll}
@@ -1093,8 +1114,8 @@ ${urlSeguimiento}`;
                 onClick={() => setSeccionActiva(sis.id)}
                 className={`h-11 sm:h-10 px-3 sm:px-4 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer text-sm sm:text-xs font-semibold shrink-0 active:scale-95 w-full min-w-full sm:min-w-0 sm:w-auto snap-center ${
                   active
-                    ? "bg-purple-500/20 border-purple-500/40 text-purple-200 shadow-md shadow-purple-500/10"
-                    : "bg-white/[0.02] hover:bg-white/[0.05] border-white/5 text-zinc-400 hover:text-zinc-200"
+                    ? "bg-purple-50 dark:bg-purple-500/20 border-purple-400 dark:border-purple-500/40 text-purple-700 dark:text-purple-200 shadow-sm"
+                    : "bg-white dark:bg-white/[0.02] hover:bg-zinc-50 dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 shadow-sm dark:shadow-none"
                 }`}
               >
                 <span className="text-base sm:text-sm">{sis.icon}</span>
@@ -1114,7 +1135,7 @@ ${urlSeguimiento}`;
               onClick={() => setSeccionActiva(sis.id)}
               aria-label={`Ir a ${sis.shortName}`}
               className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                seccionActiva === sis.id ? "w-5 bg-purple-500" : "w-1.5 bg-white/20"
+                seccionActiva === sis.id ? "w-5 bg-purple-500" : "w-1.5 bg-zinc-300 dark:bg-white/20"
               }`}
             />
           ))}
@@ -1151,11 +1172,11 @@ ${urlSeguimiento}`;
                 }}
                 className={`h-11 sm:h-12 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shrink-0 px-3 sm:px-0 w-full min-w-full sm:min-w-0 sm:w-auto snap-center ${
                   active
-                    ? "bg-purple-500/20 border-purple-500/40 text-purple-300 shadow-md shadow-purple-500/10"
-                    : "bg-white/[0.02] hover:bg-white/[0.05] border-white/5 text-zinc-400 hover:text-zinc-200"
+                    ? "bg-purple-50 dark:bg-purple-500/20 border-purple-400 dark:border-purple-500/40 text-purple-700 dark:text-purple-300 shadow-sm"
+                    : "bg-white dark:bg-white/[0.02] hover:bg-zinc-50 dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 shadow-sm dark:shadow-none"
                 }`}
               >
-                <div className="p-1 rounded-md bg-white/5">{v.icon}</div>
+                <div className="p-1 rounded-md bg-zinc-100 dark:bg-white/5 text-zinc-700 dark:text-white">{v.icon}</div>
                 <span className="text-sm sm:text-xs font-semibold">{v.label}</span>
                 {cantVista > 0 && (
                   <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
@@ -1180,7 +1201,7 @@ ${urlSeguimiento}`;
               }}
               aria-label={`Ir a ${v.label}`}
               className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                vistaActiva === v.id ? "w-5 bg-purple-500" : "w-1.5 bg-white/20"
+                vistaActiva === v.id ? "w-5 bg-purple-500" : "w-1.5 bg-zinc-300 dark:bg-white/20"
               }`}
             />
           ))}
@@ -1188,19 +1209,40 @@ ${urlSeguimiento}`;
       </div>
 
       {/* LIENZO DEL VEHÍCULO CON PINES NUMERADOS */}
-      <div className="relative rounded-2xl bg-[#09090b] border border-white/10 p-3 sm:p-5 overflow-hidden select-none">
+      <div className="relative rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-white/10 p-3 sm:p-5 overflow-hidden select-none shadow-sm dark:shadow-none">
 
 
         <div
           onClick={handleTocarLienzo}
           onTouchEnd={handleTocarLienzo}
           style={{ touchAction: "manipulation" }}
-          className={`relative w-full h-72 sm:h-96 rounded-xl bg-black border flex items-center justify-center overflow-hidden group transition-all shadow-[0_0_35px_rgba(6,182,212,0.12)] ${
+          className={`relative w-full h-72 sm:h-96 rounded-xl border flex items-center justify-center overflow-hidden group transition-all ${
+            lienzoOscuro
+              ? "bg-slate-950 border-cyan-500/30 shadow-[0_0_35px_rgba(6,182,212,0.12)]"
+              : "bg-slate-50 border-zinc-300 shadow-inner bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:20px_20px]"
+          } ${
             modoColocandoPin || pinReubicandoId
-              ? "border-cyan-400 ring-2 ring-cyan-500/40 cursor-crosshair"
-              : "border-cyan-500/30 cursor-default"
+              ? "ring-2 ring-cyan-500/40 cursor-crosshair !border-cyan-500"
+              : "cursor-default"
           }`}
         >
+          {/* Selector de modo visual para el lienzo 3D (Plano CAD / Neón 3D) */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setModoVisualLienzo(lienzoOscuro ? "claro" : "oscuro");
+            }}
+            title="Alternar fondo: Plano Técnico CAD (Claro) / Neón 3D (Oscuro)"
+            className={`absolute top-2.5 right-2.5 z-30 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all flex items-center gap-1.5 cursor-pointer backdrop-blur-md shadow-md ${
+              lienzoOscuro
+                ? "bg-slate-900/85 hover:bg-slate-800 border-cyan-500/40 text-cyan-300"
+                : "bg-white/95 hover:bg-zinc-100 border-zinc-300 text-zinc-700 shadow-sm"
+            }`}
+          >
+            <span>{lienzoOscuro ? "🌙 Neón 3D" : "☀️ Plano CAD"}</span>
+          </button>
+
           {/* Banner de modo colocación de nuevo Pin */}
           {modoColocandoPin && (
             <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-1.5 rounded-xl bg-cyan-950/95 border border-cyan-400 text-cyan-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
@@ -1242,9 +1284,9 @@ ${urlSeguimiento}`;
 
           {/* Indicador de carga si la imagen está descargando en móvil */}
           {imagenCargando && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-10 pointer-events-none gap-2">
-              <div className="w-8 h-8 rounded-full border-2 border-cyan-500/30 border-t-cyan-400 animate-spin" />
-              <span className="text-[11px] text-cyan-300 font-mono">Cargando vista 3D...</span>
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 dark:bg-black/60 z-10 pointer-events-none gap-2">
+              <div className="w-8 h-8 rounded-full border-2 border-cyan-500/30 border-t-cyan-500 animate-spin" />
+              <span className="text-[11px] text-cyan-700 dark:text-cyan-300 font-mono font-semibold">Cargando vista 3D...</span>
             </div>
           )}
 
@@ -1268,7 +1310,13 @@ ${urlSeguimiento}`;
                 setImagenCargando(false);
                 setImagenError(true);
               }}
-              className="max-w-full max-h-full w-auto h-auto object-contain select-none filter sm:drop-shadow-[0_0_25px_rgba(6,182,212,0.35)] transition-opacity duration-300"
+              style={{
+                filter: lienzoOscuro
+                  ? "none"
+                  : "invert(1) hue-rotate(180deg) contrast(1.25) brightness(1.02)",
+                mixBlendMode: lienzoOscuro ? "normal" : "multiply",
+              }}
+              className="max-w-full max-h-full w-auto h-auto object-contain select-none transition-all duration-300 inspeccion-wireframe-img"
             />
           </div>
 
@@ -1341,7 +1389,7 @@ ${urlSeguimiento}`;
         </div>
 
         {/* BARRA INFERIOR DE CONTROL DE PINES: LISTA DE PINES EN ESTA VISTA + GENERAR SIGUIENTE */}
-        <div className="mt-2.5 flex items-center justify-between gap-2 p-2 rounded-xl bg-white/[0.03] border border-white/10">
+        <div className="mt-2.5 flex items-center justify-between gap-2 p-2 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1">
             {pinsCarroceriaVista.map((p) => {
               const activo = p.items.some((it) => it.id === pinSeleccionadoId);
@@ -1361,7 +1409,7 @@ ${urlSeguimiento}`;
                   className={`h-7 px-2.5 rounded-lg border font-mono text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shrink-0 active:scale-95 ${
                     activo
                       ? "bg-rose-500 text-white border-rose-400 shadow-sm ring-1 ring-white/30"
-                      : "bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-zinc-300 hover:text-white"
+                      : "bg-white dark:bg-white/[0.04] hover:bg-zinc-100 dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
                   }`}
                 >
                   <span>#{p.num}</span>
@@ -1385,7 +1433,7 @@ ${urlSeguimiento}`;
             className={`h-7 px-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 active:scale-95 ${
               modoColocandoPin
                 ? "bg-cyan-500 text-black border-cyan-400 animate-pulse font-black shadow-md shadow-cyan-500/30"
-                : "bg-cyan-500/15 hover:bg-cyan-500/25 border-cyan-500/40 text-cyan-300"
+                : "bg-cyan-50 dark:bg-cyan-500/15 hover:bg-cyan-100 dark:hover:bg-cyan-500/25 border-cyan-300 dark:border-cyan-500/40 text-cyan-700 dark:text-cyan-300 shadow-sm"
             }`}
           >
             <span className="text-sm font-black">+</span>
@@ -1439,7 +1487,7 @@ ${urlSeguimiento}`;
     </div>
   ) : (
     /* SISTEMAS MECÁNICOS Y ELÉCTRICOS (Motor, Frenos, Suspensión, Eléctrico) */
-    <div className="p-4 sm:p-5 rounded-2xl bg-[#09090b] border border-white/10 space-y-4 animate-fade-in">
+    <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-white/10 space-y-4 animate-fade-in shadow-sm dark:shadow-none">
       {(() => {
         const sistemaActual = SISTEMAS_INSPECCION.find((s) => s.id === seccionActiva);
         if (!sistemaActual) return null;
@@ -1450,7 +1498,7 @@ ${urlSeguimiento}`;
           <>
             {cantPinesSis > 0 && (
               <div className="flex items-center justify-end pb-1">
-                <span className="px-2.5 py-1 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-bold flex items-center gap-1.5">
+                <span className="px-2.5 py-1 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-xs font-bold flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-rose-500" />
                   {cantPinesSis} {cantPinesSis === 1 ? "hallazgo" : "hallazgos"}
                 </span>
@@ -1462,12 +1510,33 @@ ${urlSeguimiento}`;
               onClick={handleTocarLienzo}
               onTouchEnd={handleTocarLienzo}
               style={{ touchAction: "manipulation" }}
-              className={`relative w-full h-72 sm:h-96 rounded-xl bg-black border flex items-center justify-center overflow-hidden group transition-all shadow-[0_0_35px_rgba(6,182,212,0.12)] ${
+              className={`relative w-full h-72 sm:h-96 rounded-xl border flex items-center justify-center overflow-hidden group transition-all ${
+                lienzoOscuro
+                  ? "bg-slate-950 border-cyan-500/30 shadow-[0_0_35px_rgba(6,182,212,0.12)]"
+                  : "bg-slate-50 border-zinc-300 shadow-inner bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:20px_20px]"
+              } ${
                 modoColocandoPin || pinReubicandoId
-                  ? "border-cyan-400 ring-2 ring-cyan-500/40 cursor-crosshair"
-                  : "border-cyan-500/30 cursor-default"
+                  ? "ring-2 ring-cyan-500/40 cursor-crosshair !border-cyan-500"
+                  : "cursor-default"
               }`}
             >
+              {/* Selector de modo visual para el esquema 3D (Plano CAD / Neón 3D) */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setModoVisualLienzo(lienzoOscuro ? "claro" : "oscuro");
+                }}
+                title="Alternar fondo: Plano Técnico CAD (Claro) / Neón 3D (Oscuro)"
+                className={`absolute top-2.5 right-2.5 z-30 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all flex items-center gap-1.5 cursor-pointer backdrop-blur-md shadow-md ${
+                  lienzoOscuro
+                    ? "bg-slate-900/85 hover:bg-slate-800 border-cyan-500/40 text-cyan-300"
+                    : "bg-white/95 hover:bg-zinc-100 border-zinc-300 text-zinc-700 shadow-sm"
+                }`}
+              >
+                <span>{lienzoOscuro ? "🌙 Neón 3D" : "☀️ Plano CAD"}</span>
+              </button>
+
               {/* Banner de modo colocación de nuevo Pin */}
               {modoColocandoPin && (
                 <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-1.5 rounded-xl bg-cyan-950/95 border border-cyan-400 text-cyan-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
@@ -1509,9 +1578,9 @@ ${urlSeguimiento}`;
 
               {/* Indicador de carga si la imagen está descargando en móvil */}
               {imagenCargando && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-10 pointer-events-none gap-2">
-                  <div className="w-8 h-8 rounded-full border-2 border-cyan-500/30 border-t-cyan-400 animate-spin" />
-                  <span className="text-[11px] text-cyan-300 font-mono">Cargando esquema {sistemaActual.name}...</span>
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 dark:bg-black/60 z-10 pointer-events-none gap-2">
+                  <div className="w-8 h-8 rounded-full border-2 border-cyan-500/30 border-t-cyan-500 animate-spin" />
+                  <span className="text-[11px] text-cyan-700 dark:text-cyan-300 font-mono font-semibold">Cargando esquema {sistemaActual.name}...</span>
                 </div>
               )}
 
@@ -1537,7 +1606,13 @@ ${urlSeguimiento}`;
                     setImagenCargando(false);
                     setImagenError(true);
                   }}
-                  className="max-w-full max-h-full w-auto h-auto object-contain select-none filter sm:drop-shadow-[0_0_25px_rgba(6,182,212,0.35)] transition-opacity duration-300"
+                  style={{
+                    filter: lienzoOscuro
+                      ? "none"
+                      : "invert(1) hue-rotate(180deg) contrast(1.25) brightness(1.02)",
+                    mixBlendMode: lienzoOscuro ? "normal" : "multiply",
+                  }}
+                  className="max-w-full max-h-full w-auto h-auto object-contain select-none transition-all duration-300 inspeccion-wireframe-img"
                 />
               </div>
 
@@ -1610,7 +1685,7 @@ ${urlSeguimiento}`;
             </div>
 
             {/* BARRA INFERIOR DE CONTROL DE PINES: LISTA DE PINES EN ESTE SISTEMA + GENERAR SIGUIENTE */}
-            <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-white/[0.03] border border-white/10">
+            <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10">
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1">
                 {pinsSistemaActivo.map((p) => {
                   const activo = p.items.some((it) => it.id === pinSeleccionadoId);
@@ -1630,7 +1705,7 @@ ${urlSeguimiento}`;
                       className={`h-7 px-2.5 rounded-lg border font-mono text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shrink-0 active:scale-95 ${
                         activo
                           ? "bg-rose-500 text-white border-rose-400 shadow-sm ring-1 ring-white/30"
-                          : "bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-zinc-300 hover:text-white"
+                          : "bg-white dark:bg-white/[0.04] hover:bg-zinc-100 dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
                       }`}
                     >
                       <span>#{p.num}</span>
@@ -1654,7 +1729,7 @@ ${urlSeguimiento}`;
                 className={`h-7 px-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 active:scale-95 ${
                   modoColocandoPin
                     ? "bg-cyan-500 text-black border-cyan-400 animate-pulse font-black shadow-md shadow-cyan-500/30"
-                    : "bg-cyan-500/15 hover:bg-cyan-500/25 border-cyan-500/40 text-cyan-300"
+                    : "bg-cyan-50 dark:bg-cyan-500/15 hover:bg-cyan-100 dark:hover:bg-cyan-500/25 border-cyan-300 dark:border-cyan-500/40 text-cyan-700 dark:text-cyan-300 shadow-sm"
                 }`}
               >
                 <span className="text-sm font-black">+</span>
@@ -1723,20 +1798,20 @@ ${urlSeguimiento}`;
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#111113] border border-white/10 rounded-2xl w-[95%] sm:w-full max-w-3xl max-h-[90dvh] overflow-y-auto p-4 sm:p-6 shadow-2xl space-y-4 [WebkitOverflowScrolling:touch]"
+            className="bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 rounded-2xl w-[95%] sm:w-full max-w-3xl max-h-[90dvh] overflow-y-auto p-4 sm:p-6 shadow-2xl space-y-4 [WebkitOverflowScrolling:touch]"
           >
             {/* Cabecera del Modal */}
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-3">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-purple-400" />
-                <h3 className="text-base font-bold text-white">
+                <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />
+                <h3 className="text-base font-bold text-zinc-900 dark:text-white">
                   Reporte Oficial de Inspección Vehicular
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setModalPdfAbierto(false)}
-                className="text-zinc-400 hover:text-white px-2.5 py-1 rounded-lg bg-white/5 cursor-pointer text-xs"
+                className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-white/5 cursor-pointer text-xs"
               >
                 ✕ Cerrar
               </button>

@@ -1079,7 +1079,7 @@ export default function TallerPanel() {
       const width = container.clientWidth;
       if (width > 0) {
         const pageIndex = Math.round(container.scrollLeft / width);
-        const steps = [2, 3, 4];
+        const steps = [2, 4];
         const targetStep = steps[pageIndex];
         if (targetStep && targetStep !== etapaActiva) {
           setEtapaActiva(targetStep);
@@ -4650,7 +4650,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
     VISTAS_INSPECCION.find((v) => v.id === etapa3VistaActiva) || VISTAS_INSPECCION[0];
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#050505] text-white font-sans pb-28 md:pb-12 selection:bg-blue-500/30">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white font-sans pb-28 md:pb-12 selection:bg-blue-500/30">
       <Header />
 
 
@@ -4665,7 +4665,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             <Link
               href="/"
               aria-label="Volver"
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#111113] hover:bg-[#161618] border border-white/10 text-zinc-200 transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-sm"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-[#111113] hover:bg-zinc-100 dark:hover:bg-[#161618] border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-sm"
             >
               <svg
                 className="w-4 h-4 sm:w-5 sm:h-5"
@@ -4681,14 +4681,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             </Link>
 
             {/* SELECTOR SUPERIOR 4 EN 1: Taller, Lubricentro, Car Wash y Tecnicentro */}
-            <div className="flex items-center p-0.5 sm:p-1 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-md shadow-xl gap-0.5 sm:gap-1 shrink-0">
+            <div className="flex items-center p-0.5 sm:p-1 rounded-2xl bg-white/80 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl gap-0.5 sm:gap-1 shrink-0">
               <button
                 type="button"
                 onClick={() => setModuloTaller("taller")}
                 className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   moduloTaller === "taller"
                     ? "bg-blue-600 border border-blue-400/40 text-white shadow-lg shadow-blue-600/30 scale-[1.01]"
-                    : "text-zinc-400 hover:text-white hover:bg-white/5"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
                 }`}
                 title="Taller Mecánico"
               >
@@ -4714,7 +4714,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   moduloTaller === "lubricentro"
                     ? "bg-amber-600 border border-amber-400/40 text-white shadow-lg shadow-amber-600/30 scale-[1.01]"
-                    : "text-zinc-400 hover:text-white hover:bg-white/5"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
                 }`}
                 title="Lubricentro Express"
               >
@@ -4740,7 +4740,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   moduloTaller === "carwash"
                     ? "bg-cyan-600 border border-cyan-400/40 text-white shadow-lg shadow-cyan-600/30 scale-[1.01]"
-                    : "text-zinc-400 hover:text-white hover:bg-white/5"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
                 }`}
                 title="Car Wash & Detailing"
               >
@@ -4766,7 +4766,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   moduloTaller === "tecnicentro"
                     ? "bg-emerald-600 border border-emerald-400/40 text-white shadow-lg shadow-emerald-600/30 scale-[1.01]"
-                    : "text-zinc-400 hover:text-white hover:bg-white/5"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
                 }`}
                 title="Tecnicentro (Llantas, Alineación, Balanceo y Baterías)"
               >
@@ -4803,11 +4803,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             <button
               type="button"
               onClick={() => setMostrarModalAutosAtencion(true)}
-              className="h-8 sm:h-9 px-2 sm:px-3 rounded-xl bg-[#111113] hover:bg-white/[0.08] border border-white/15 text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:border-white/25 active:scale-95 shrink-0"
+              className="h-8 sm:h-9 px-2 sm:px-3 rounded-xl bg-white dark:bg-[#111113] hover:bg-zinc-100 dark:hover:bg-white/[0.08] border border-zinc-200 dark:border-white/15 text-zinc-700 dark:text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:border-zinc-300 dark:hover:border-white/25 active:scale-95 shrink-0"
               title="Ver autos y órdenes en atención"
             >
               <svg
-                className="w-4 h-4 text-zinc-300"
+                className="w-4 h-4 text-zinc-500 dark:text-zinc-300"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -4820,7 +4820,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 />
               </svg>
               {autosEnPista.length > 0 && (
-                <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 text-[11px] sm:text-xs font-bold font-mono flex items-center justify-center">
+                <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40 text-[11px] sm:text-xs font-bold font-mono flex items-center justify-center">
                   {autosEnPista.length}
                 </span>
               )}
@@ -4832,26 +4832,26 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             CONTENEDOR PRINCIPAL: CABECERA COMÚN (PLACA, VEHÍCULO, CLIENTE, VECES ATENDIDO Y MODO)
             SALE EXACTAMENTE IGUAL PARA TALLER Y LUBRICENTRO
             =================================================================== */}
-        <section className="bg-[#111113]/90 rounded-2xl border border-white/[0.08] p-4 sm:p-6 shadow-2xl space-y-5 overflow-hidden">
+        <section className="bg-white dark:bg-[#111113]/90 rounded-2xl border border-zinc-200 dark:border-white/[0.08] p-4 sm:p-6 shadow-sm dark:shadow-2xl space-y-5 overflow-hidden">
           {/* Cabecera del Auto Seleccionado + Información Rápida (para Taller y Lubricentro) */}
           {ordenActiva && (
-            <div className="pb-3 border-b border-white/[0.08]">
+            <div className="pb-3 border-b border-zinc-200 dark:border-white/[0.08]">
               <>
                 {/* Pestaña colapsada solo en móvil para volver a aparecer */}
                 {!mostrarCabeceraMovil && (
-                  <div className="flex sm:hidden items-center justify-between py-1.5 px-3 rounded-xl bg-white/[0.03] border border-white/10 text-xs animate-fade-in">
+                  <div className="flex sm:hidden items-center justify-between py-1.5 px-3 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 text-xs animate-fade-in">
                     <div className="flex items-center gap-2 min-w-0 font-mono">
-                      <span className="px-2 py-0.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 font-bold text-xs shrink-0">
+                      <span className="px-2 py-0.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-300 font-bold text-xs shrink-0">
                         {ordenActiva.plate}
                       </span>
-                      <span className="text-zinc-200 font-semibold truncate text-xs">
+                      <span className="text-zinc-800 dark:text-zinc-200 font-semibold truncate text-xs">
                         {ordenActiva.vehicle}
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setMostrarCabeceraMovil(true)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 text-xs font-medium cursor-pointer active:scale-95 shrink-0"
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-600 dark:text-blue-300 text-xs font-medium cursor-pointer active:scale-95 shrink-0"
                     >
                       <span>Mostrar</span>
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -4866,25 +4866,25 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   {/* Lado izquierdo: Placa + Vehículo + Cliente */}
                   <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                     {/* Placa Destacada */}
-                    <span className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 font-mono text-xs sm:text-base font-bold text-blue-300 tracking-wider shrink-0 shadow-sm">
+                    <span className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 font-mono text-xs sm:text-base font-bold text-blue-600 dark:text-blue-300 tracking-wider shrink-0 shadow-sm">
                       {ordenActiva.plate}
                     </span>
 
                     <div className="min-w-0 flex-1 space-y-0.5">
                       {/* Fila 1: Solo Vehículo */}
                       <div className="truncate">
-                        <span className="text-xs sm:text-base font-bold text-white truncate block">
+                        <span className="text-xs sm:text-base font-bold text-zinc-900 dark:text-white truncate block">
                           {ordenActiva.vehicle}
                         </span>
                       </div>
 
                       {/* Fila 2: Solo Cliente y Número de visitas */}
-                      <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
-                        <span className="text-zinc-200 font-semibold truncate">
+                      <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                        <span className="text-zinc-700 dark:text-zinc-200 font-semibold truncate">
                           <span className="text-zinc-400 font-normal">Cliente:</span> {ordenActiva.client}
                         </span>
-                        <span className="text-zinc-600 shrink-0">•</span>
-                        <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-300 font-medium text-[10px] sm:text-[11px] shrink-0">
+                        <span className="text-zinc-400 dark:text-zinc-600 shrink-0">•</span>
+                        <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-300 font-medium text-[10px] sm:text-[11px] shrink-0">
                           {vecesAtendido} {vecesAtendido === 1 ? "visita" : "visitas"}
                         </span>
                       </div>
@@ -4893,11 +4893,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
                   {/* Lado derecho: Estado de Ingreso con el círculo y pestaña de ocultar en móvil */}
                   <div className="shrink-0 flex items-center justify-end gap-1.5">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-black/60 border border-white/15 shadow-sm text-xs">
-                      <span className="text-zinc-300 font-normal whitespace-nowrap">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-zinc-100 dark:bg-black/60 border border-zinc-200 dark:border-white/15 shadow-sm text-xs">
+                      <span className="text-zinc-600 dark:text-zinc-300 font-normal whitespace-nowrap">
                         Ingreso:{" "}
                         <span
-                          className="text-white font-normal"
+                          className="text-zinc-900 dark:text-white font-normal"
                           title={formatearFechaCompleta(ordenActiva.dateIn || ordenActiva.startedAt)}
                         >
                           {formatearFechaIngreso(ordenActiva.dateIn || ordenActiva.startedAt)}
@@ -4906,13 +4906,13 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
                       {/* El círculo justo al lado de Ingreso */}
                       {ordenActiva.status === "Pausada" ? (
-                        <span className="inline-flex items-center gap-1 text-amber-400 font-normal shrink-0" title="En Pausa">
-                          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+                        <span className="inline-flex items-center gap-1 text-amber-500 dark:text-amber-400 font-normal shrink-0" title="En Pausa">
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 dark:bg-amber-400 shrink-0" />
                           <span className="hidden sm:inline">En Pausa</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-emerald-400 font-normal shrink-0" title="Trabajando">
-                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                        <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-normal shrink-0" title="Trabajando">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
                           <span className="hidden sm:inline">Trabajando</span>
                         </span>
                       )}
@@ -4923,7 +4923,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       type="button"
                       onClick={() => setMostrarCabeceraMovil(false)}
                       title="Ocultar información del vehículo en móvil"
-                      className="flex sm:hidden items-center justify-center w-7 h-7 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-zinc-400 hover:text-white transition-all cursor-pointer active:scale-95 shrink-0"
+                      className="flex sm:hidden items-center justify-center w-7 h-7 rounded-xl bg-zinc-100 dark:bg-white/[0.04] hover:bg-zinc-200 dark:hover:bg-white/[0.08] border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer active:scale-95 shrink-0"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
@@ -5001,13 +5001,13 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             <>
 
           {/* ===================================================================
-              STEPPER: 3 PASOS EN TALLER (1. INSPECCIÓN, 2. PRESUPUESTO, 3. FIRMA)
+              STEPPER: 2 PASOS EN TALLER (1. INSPECCIÓN, 2. FIRMA)
               =================================================================== */}
-          <div className="bg-white/[0.02] backdrop-blur-md border border-white/[0.08] p-1.5 sm:p-2 rounded-2xl space-y-1.5">
+          <div className="bg-zinc-100/70 dark:bg-white/[0.02] backdrop-blur-md border border-zinc-200 dark:border-white/[0.08] p-1.5 sm:p-2 rounded-2xl space-y-1.5 shadow-sm dark:shadow-none">
             <div
               ref={stepperCarouselRef}
               onScroll={handleStepperScroll}
-              className="flex sm:grid sm:grid-cols-3 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
+              className="flex sm:grid sm:grid-cols-2 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
             >
               {[
                 {
@@ -5020,17 +5020,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   ),
                 },
                 {
-                  id: 3,
-                  label: "2. Presupuesto",
-                  icon: (
-                    <svg className="w-6 h-6 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                    </svg>
-                  ),
-                },
-                {
                   id: 4,
-                  label: "3. Firma",
+                  label: "2. Firma",
                   icon: (
                     <svg className="w-6 h-6 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
@@ -5047,11 +5038,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     onClick={() => setEtapaActiva(step.id)}
                     className={`flex flex-col items-center justify-center p-3.5 sm:p-2.5 rounded-xl border transition-all cursor-pointer active:scale-95 w-full min-w-full sm:min-w-0 sm:w-auto snap-center shrink-0 min-h-[74px] sm:min-h-[48px] ${
                       active
-                        ? "bg-blue-500/15 border-blue-500/40 text-blue-300 shadow-md shadow-blue-500/10"
-                        : "bg-white/[0.02] hover:bg-white/[0.06] border-white/5 text-zinc-400 hover:text-zinc-200"
+                        ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/40 text-blue-700 dark:text-blue-300 shadow-sm"
+                        : "bg-white dark:bg-white/[0.02] hover:bg-zinc-50 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 shadow-sm dark:shadow-none"
                     }`}
                   >
-                    <div className="p-1.5 sm:p-1 rounded-lg bg-white/5">{step.icon}</div>
+                    <div className="p-1.5 sm:p-1 rounded-lg bg-zinc-100 dark:bg-white/5 text-zinc-700 dark:text-zinc-200">{step.icon}</div>
                     <span className="text-sm sm:text-xs font-semibold tracking-tight mt-1.5 sm:mt-1 truncate max-w-full">
                       {step.label}
                     </span>
@@ -5062,14 +5053,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
             {/* Puntos de paginación solo en móvil para ver el paso y deslizar */}
             <div className="flex sm:hidden items-center justify-center gap-1.5 pt-1">
-              {[2, 3, 4].map((id) => (
+              {[2, 4].map((id) => (
                 <button
                   key={id}
                   type="button"
                   onClick={() => setEtapaActiva(id)}
                   aria-label={`Ir a paso ${id}`}
                   className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                    etapaActiva === id ? "w-5 bg-blue-500" : "w-1.5 bg-white/20"
+                    etapaActiva === id ? "w-5 bg-blue-500" : "w-1.5 bg-zinc-300 dark:bg-white/20"
                   }`}
                 />
               ))}
@@ -5095,687 +5086,26 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   }}
                   onGenerarPdf={handleGenerarPdfInspeccion}
                   onVolver={() => {}}
-                  onContinuar={() => setEtapaActiva(3)}
+                  onContinuar={() => setEtapaActiva(4)}
                   mostrarToast={mostrarToast}
                 />
               </div>
             )}
 
-            {/* ETAPA 3: CATÁLOGO / PRESUPUESTO (HALLAZGOS POR SECCIÓN + SERVICIOS/REPUESTOS + DESCARGA PDF) */}
-            {etapaActiva === 3 && (
-              <div className="w-full space-y-5 animate-fade-in">
-
-
-                {/* 2. LISTA DE TODO LO QUE SE ESCOGIÓ EN LA INSPECCIÓN (ORDENADO POR SECCIÓN) */}
-                <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4 shadow-xl">
-                  <div className="flex items-center gap-2 border-b border-white/[0.08] pb-2.5">
-                    <span className="text-base">🔍</span>
-                    <h4 className="text-xs sm:text-sm font-normal text-white uppercase tracking-wider">
-                      Inspección
-                    </h4>
-                  </div>
-
-                  {(!ordenActiva?.inspectionFindings || ordenActiva.inspectionFindings.length === 0) ? (
-                    <div className="py-6 text-center space-y-2 bg-black/30 rounded-xl border border-dashed border-white/10 p-4">
-                      <p className="text-xs text-zinc-400">
-                        Sin hallazgos en la inspección.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setEtapaActiva(2)}
-                        className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs font-semibold cursor-pointer"
-                      >
-                        ← Ir a Inspección
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {(() => {
-                        const hallazgos = ordenActiva.inspectionFindings;
-                        const secciones = [
-                          {
-                            id: "carroceria",
-                            nombre: "Carrocería",
-                            icon: "🚗",
-                            color: "border-blue-500/30 bg-blue-500/10 text-blue-300",
-                            items: hallazgos.filter((h) =>
-                              ["frontal", "trasera", "lateral_izq", "lateral_der", "superior"].includes(h.vista)
-                            ),
-                            presetsCotizar: [
-                              { name: "Enderezada y desabollado", price: 35, type: "SERVICE" as const },
-                              { name: "Pintura y acabado por paño", price: 60, type: "SERVICE" as const },
-                              { name: "Pulido y desmanchado de rayón", price: 15, type: "SERVICE" as const },
-                              { name: "Fondo primer y masilla", price: 12, type: "PART" as const },
-                            ],
-                          },
-                          {
-                            id: "motor",
-                            nombre: "Motor",
-                            icon: "⚙️",
-                            color: "border-amber-500/30 bg-amber-500/10 text-amber-300",
-                            items: hallazgos.filter((h) => h.vista === "motor"),
-                            presetsCotizar: [
-                              { name: "Corrección de fuga y cambio de sello", price: 30, type: "SERVICE" as const },
-                              { name: "Aceite de motor sintético", price: 38, type: "PART" as const },
-                              { name: "Filtro de aceite / combustible", price: 10, type: "PART" as const },
-                            ],
-                          },
-                          {
-                            id: "frenos",
-                            nombre: "Frenos",
-                            icon: "🛑",
-                            color: "border-rose-500/30 bg-rose-500/10 text-rose-300",
-                            items: hallazgos.filter((h) => h.vista === "frenos"),
-                            presetsCotizar: [
-                              { name: "Pastillas", price: 15, type: "SERVICE" as const },
-                              { name: "Juego de pastillas de freno", price: 35, type: "PART" as const },
-                              { name: "Líquido de frenos DOT 4", price: 9, type: "PART" as const },
-                              { name: "Rectificación de discos", price: 20, type: "SERVICE" as const },
-                            ],
-                          },
-                          {
-                            id: "suspension",
-                            nombre: "Suspensión",
-                            icon: "🔩",
-                            color: "border-purple-500/30 bg-purple-500/10 text-purple-300",
-                            items: hallazgos.filter((h) => h.vista === "suspension"),
-                            presetsCotizar: [
-                              { name: "Cambio de amortiguadores delanteros", price: 25, type: "SERVICE" as const },
-                              { name: "Amortiguador de recambio", price: 55, type: "PART" as const },
-                              { name: "Cambio de bujes y terminales", price: 20, type: "SERVICE" as const },
-                            ],
-                          },
-                          {
-                            id: "electrico",
-                            nombre: "Eléctrico",
-                            icon: "⚡",
-                            color: "border-yellow-500/30 bg-yellow-500/10 text-yellow-300",
-                            items: hallazgos.filter((h) => h.vista === "electrico"),
-                            presetsCotizar: [
-                              { name: "Diagnóstico eléctrico y escáner", price: 25, type: "SERVICE" as const },
-                              { name: "Batería automotriz nueva", price: 85, type: "PART" as const },
-                              { name: "Cambio de foco / lámpara", price: 8, type: "PART" as const },
-                            ],
-                          },
-                        ];
-
-                        return secciones
-                          .filter((sec) => sec.items.length > 0)
-                          .map((sec) => (
-                            <div
-                              key={sec.id}
-                              className="rounded-xl bg-black/40 border border-white/10 overflow-hidden space-y-2 p-3 sm:p-3.5"
-                            >
-                              <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-base">{sec.icon}</span>
-                                  <span className="text-xs sm:text-sm font-bold text-white">
-                                    {sec.nombre}
-                                  </span>
-                                </div>
-                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${sec.color}`}>
-                                  {sec.items.length} {sec.items.length === 1 ? "ítem" : "ítems"}
-                                </span>
-                              </div>
-
-                              <div className="space-y-3 pt-1">
-                                {sec.items.map((pin) => {
-                                  const fotosPin = pin.photoUrls || (pin.photoUrl ? [pin.photoUrl] : []);
-                                  const categoriaPinPrefix = `Inspección - Pin #${pin.pinNumber || 1}`;
-                                  const itemsCotizadosPin = (ordenActiva.items || []).filter((it) =>
-                                    it.category?.startsWith(categoriaPinPrefix)
-                                  );
-
-                                  const estaCotizando = pinCotizandoId === pin.id;
-
-                                  return (
-                                    <div
-                                      key={pin.id}
-                                      className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2.5"
-                                    >
-                                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                        <div className="flex items-center gap-2 min-w-0">
-                                          <span className="w-5 h-5 rounded-full bg-rose-500 text-white font-mono text-[10px] font-bold flex items-center justify-center shrink-0">
-                                            #{pin.pinNumber || 1}
-                                          </span>
-                                          <span className="text-xs font-bold text-white">
-                                            {pin.tipo}
-                                          </span>
-                                          <span className="text-[10px] text-zinc-400 bg-white/5 px-2 py-0.5 rounded">
-                                            {pin.vistaLabel || pin.vista}
-                                          </span>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              if (estaCotizando) {
-                                                setPinCotizandoId(null);
-                                              } else {
-                                                setPinCotizandoId(pin.id);
-                                                setCotizarPinNombre(pin.tipo ? pin.tipo.trim().split(/[\s/]+/)[0] : "Reparación");
-                                                setCotizarPinPrecio("25");
-                                                setCotizarPinTipo("SERVICE");
-                                              }
-                                            }}
-                                            className="px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 active:scale-95"
-                                          >
-                                            <span>{estaCotizando ? "✕ Cancelar" : "+ Cotizar"}</span>
-                                          </button>
-                                        </div>
-                                      </div>
-
-                                      {/* Descripción y fotos de evidencia */}
-                                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                                        {pin.descripcion ? (
-                                          <p className="text-zinc-300 text-xs italic pl-7 flex-1">
-                                            &quot;{pin.descripcion}&quot;
-                                          </p>
-                                        ) : (
-                                          <span className="text-zinc-500 text-[11px] italic pl-7">
-                                            Sin observación.
-                                          </span>
-                                        )}
-
-                                        {fotosPin.length > 0 && (
-                                          <div className="flex items-center gap-1.5 shrink-0 pl-7 sm:pl-0">
-                                            <span className="text-[10px] text-zinc-500 font-mono">
-                                              Fotos ({fotosPin.length}/3):
-                                            </span>
-                                            {fotosPin.map((url, fIdx) => (
-                                              <a
-                                                key={fIdx}
-                                                href={url}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="w-8 h-8 rounded-lg overflow-hidden border border-white/20 bg-black block group relative"
-                                                title="Ver foto en tamaño completo"
-                                              >
-                                                <img
-                                                  src={url}
-                                                  alt="Evidencia"
-                                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                                                />
-                                              </a>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-
-                                      {/* Lista de trabajos ya cotizados para este pin específico */}
-                                      {itemsCotizadosPin.length > 0 && (
-                                        <div className="pl-7 flex flex-wrap items-center gap-2 pt-1 border-t border-white/5">
-                                          <span className="text-[10px] text-zinc-400 font-medium">Cotizado:</span>
-                                          {itemsCotizadosPin.map((it) => (
-                                            <span
-                                              key={it.id}
-                                              className="px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-medium flex items-center gap-1.5"
-                                            >
-                                              <span>{it.name ? (it.name.trim().toLowerCase().startsWith("fondo") ? "Masilla" : it.name.trim().split(/[\s/]+/)[0]) : "Ítem"}</span>
-                                              <span className="font-mono font-bold">${Number(it.price).toFixed(2)}</span>
-                                              <button
-                                                type="button"
-                                                onClick={() => handleEliminarItemEtapa4(it.id)}
-                                                className="text-emerald-400 hover:text-rose-400 font-bold text-xs ml-1 cursor-pointer"
-                                                title="Quitar ítem"
-                                              >
-                                                ✕
-                                              </button>
-                                            </span>
-                                          ))}
-                                        </div>
-                                      )}
-
-                                      {/* Formulario / Selector rápido inline cuando se pulsa + Cotizar Solución */}
-                                      {estaCotizando && (
-                                        <div className="mt-2 p-2.5 rounded-xl bg-black/60 border border-cyan-500/30 animate-fade-in pl-7">
-                                          {/* Fila única minimalista y moderna: Buscador interactivo + Campo Valor ($) + Botón Sumar */}
-                                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 relative">
-                                            {/* Input Buscador con dropdown flotante */}
-                                            <div className="relative flex-1 min-w-[200px]">
-                                              <input
-                                                type="text"
-                                                value={cotizarPinNombre}
-                                                onChange={(e) => {
-                                                  setCotizarPinNombre(e.target.value);
-                                                  setDropdownBuscadorPinAbierto(true);
-                                                }}
-                                                onFocus={() => setDropdownBuscadorPinAbierto(true)}
-                                                placeholder="Buscar o escribir ítem..."
-                                                className="w-full h-8 pl-3 pr-7 rounded-lg bg-black border border-cyan-500/30 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-cyan-400"
-                                              />
-                                              {cotizarPinNombre && (
-                                                <button
-                                                  type="button"
-                                                  onClick={() => {
-                                                    setCotizarPinNombre("");
-                                                    setDropdownBuscadorPinAbierto(false);
-                                                  }}
-                                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white text-xs font-bold"
-                                                >
-                                                  ✕
-                                                </button>
-                                              )}
-
-                                              {/* Dropdown de catálogo flotante al buscar */}
-                                              {dropdownBuscadorPinAbierto && (
-                                                <div className="absolute left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto rounded-xl bg-[#0c0d12] border border-cyan-500/30 shadow-2xl z-50 divide-y divide-white/5">
-                                                  {(() => {
-                                                    const query = cotizarPinNombre.toLowerCase().trim();
-                                                    const filtrados = catalogoItemsCotizar.filter((item) => {
-                                                      if (!query) return true;
-                                                      return (
-                                                        item.name.toLowerCase().includes(query) ||
-                                                        item.category.toLowerCase().includes(query)
-                                                      );
-                                                    });
-
-                                                    if (filtrados.length === 0) {
-                                                      return (
-                                                        <div className="p-2.5 text-center text-xs text-zinc-500 italic">
-                                                          Sin coincidencias. Escribe manualmente.
-                                                        </div>
-                                                      );
-                                                    }
-
-                                                    return filtrados.slice(0, 10).map((item, idx) => (
-                                                      <div
-                                                        key={idx}
-                                                        onMouseDown={() => {
-                                                          setCotizarPinNombre(item.name);
-                                                          setCotizarPinTipo(item.type);
-                                                          setCotizarPinPrecio(item.price.toString());
-                                                          setDropdownBuscadorPinAbierto(false);
-                                                        }}
-                                                        className="p-2 hover:bg-cyan-500/15 cursor-pointer flex items-center justify-between gap-2 transition-colors"
-                                                      >
-                                                        <div className="flex items-center gap-2 min-w-0">
-                                                          <span className="text-xs">{item.type === "PART" ? "📦" : "🛠️"}</span>
-                                                          <div className="min-w-0">
-                                                            <span className="text-xs font-semibold text-white truncate block">{item.name}</span>
-                                                            <span className="text-[10px] text-zinc-400 block truncate">{item.category}</span>
-                                                          </div>
-                                                        </div>
-                                                        <span className="font-mono font-bold text-xs text-emerald-400 shrink-0">
-                                                          ${Number(item.price).toFixed(2)}
-                                                        </span>
-                                                      </div>
-                                                    ));
-                                                  })()}
-                                                </div>
-                                              )}
-                                            </div>
-
-                                            {/* Campo Valor */}
-                                            <div className="relative w-full sm:w-32 shrink-0">
-                                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 text-xs font-semibold">$</span>
-                                              <input
-                                                type="number"
-                                                step="0.01"
-                                                value={cotizarPinPrecio}
-                                                onChange={(e) => setCotizarPinPrecio(e.target.value)}
-                                                placeholder="0.00"
-                                                className="w-full h-8 pl-16 pr-2 rounded-lg bg-black border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-cyan-500/50"
-                                              />
-                                            </div>
-
-                                            {/* Botón Sumar */}
-                                            <button
-                                              type="button"
-                                              onClick={() => {
-                                                const p = parseFloat(cotizarPinPrecio) || 0;
-                                                handleCotizarPin(pin, cotizarPinNombre, p, cotizarPinTipo);
-                                                setDropdownBuscadorPinAbierto(false);
-                                              }}
-                                              className="h-8 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer active:scale-95 shrink-0 flex items-center justify-center gap-1 shadow-md shadow-emerald-600/20"
-                                            >
-                                              <span>+</span>
-                                              <span>Sumar</span>
-                                            </button>
-                                          </div>
-                                        </div>                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ));
-                      })()}
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. AL FINAL: TIENDA */}
-                <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3.5 shadow-xl">
-                  <div className="flex items-center gap-2 border-b border-white/[0.08] pb-2.5">
-                    <span className="text-base">🏪</span>
-                    <h4 className="text-xs sm:text-sm font-normal text-white uppercase tracking-wider">
-                      Tienda
-                    </h4>
-                  </div>
-
-                  {/* Filtros de Tipo y Buscador Principal */}
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setEtapa4FiltroTipo("ALL")}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                            etapa4FiltroTipo === "ALL"
-                              ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40"
-                              : "bg-white/5 text-zinc-400 hover:text-white border border-transparent"
-                          }`}
-                        >
-                          Todos
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEtapa4FiltroTipo("SERVICE")}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
-                            etapa4FiltroTipo === "SERVICE"
-                              ? "bg-purple-500/20 text-purple-300 border border-purple-500/40"
-                              : "bg-white/5 text-zinc-400 hover:text-white border border-transparent"
-                          }`}
-                        >
-                          <span>🛠️</span>
-                          <span>Servicios</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEtapa4FiltroTipo("PART")}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
-                            etapa4FiltroTipo === "PART"
-                              ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                              : "bg-white/5 text-zinc-400 hover:text-white border border-transparent"
-                          }`}
-                        >
-                          <span>📦</span>
-                          <span>Repuestos</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Input Buscador interactivo */}
-                    <div className="relative">
-                      <div className="relative flex items-center">
-                        <span className="absolute left-3 text-zinc-400 text-sm pointer-events-none">🔍</span>
-                        <input
-                          type="text"
-                          value={etapa4BusquedaCatalogo}
-                          onChange={(e) => {
-                            setEtapa4BusquedaCatalogo(e.target.value);
-                            setDropdownCatalogoAbierto(true);
-                          }}
-                          onFocus={() => setDropdownCatalogoAbierto(true)}
-                          placeholder="Buscar..."
-                          className="w-full h-10 pl-9 pr-8 rounded-xl bg-black/60 border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-cyan-500/50 transition-colors"
-                        />
-                        {etapa4BusquedaCatalogo && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEtapa4BusquedaCatalogo("");
-                              setDropdownCatalogoAbierto(false);
-                            }}
-                            className="absolute right-3 text-zinc-400 hover:text-white text-xs font-bold"
-                          >
-                            ✕
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Dropdown o Lista interactiva con los resultados */}
-                      {dropdownCatalogoAbierto && etapa4BusquedaCatalogo.trim().length > 0 && (
-                        <div className="absolute left-0 right-0 top-full mt-1.5 max-h-64 overflow-y-auto rounded-xl bg-[#0c0d12] border border-cyan-500/30 shadow-2xl z-50 divide-y divide-white/5">
-                          {(() => {
-                            const query = etapa4BusquedaCatalogo.toLowerCase().trim();
-                            const filtrados = catalogoItemsCotizar.filter((item) => {
-                              if (etapa4FiltroTipo === "SERVICE" && item.type !== "SERVICE") return false;
-                              if (etapa4FiltroTipo === "PART" && item.type !== "PART") return false;
-                              if (!query) return true;
-                              return (
-                                item.name.toLowerCase().includes(query) ||
-                                (item.category && item.category.toLowerCase().includes(query)) ||
-                                (item as any).code && (item as any).code.toLowerCase().includes(query)
-                              );
-                            });
-
-                            if (filtrados.length === 0) {
-                              return (
-                                <div className="p-4 text-center text-xs text-zinc-500 italic">
-                                  Sin coincidencias para &quot;{etapa4BusquedaCatalogo}&quot;.
-                                </div>
-                              );
-                            }
-
-                            return filtrados.slice(0, 15).map((item, idx) => (
-                              <div
-                                key={idx}
-                                onClick={() => {
-                                  handleAgregarItemPresupuesto(item);
-                                  setDropdownCatalogoAbierto(false);
-                                }}
-                                className="p-2.5 hover:bg-cyan-500/15 cursor-pointer flex items-center justify-between gap-3 transition-colors group"
-                              >
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <div
-                                    className={`p-1.5 rounded-lg text-sm shrink-0 ${
-                                      item.type === "PART"
-                                        ? "bg-amber-500/15 text-amber-300"
-                                        : "bg-purple-500/15 text-purple-300"
-                                    }`}
-                                  >
-                                    {item.type === "PART" ? "📦" : "🛠️"}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <span className="text-xs font-semibold text-white group-hover:text-cyan-300 truncate block">
-                                      {item.name}
-                                    </span>
-                                    <span className="text-[10px] text-zinc-400 block truncate">
-                                      {item.category} {(item as any).brand ? `• ${(item as any).brand}` : ""} {(item as any).stock !== undefined ? `• Stock: ${(item as any).stock}` : ""}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <span className="font-mono font-bold text-xs text-emerald-400">
-                                    ${Number(item.price).toFixed(2)}
-                                  </span>
-                                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-colors">
-                                    + Sumar
-                                  </span>
-                                </div>
-                              </div>
-                            ));
-                          })()}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. RESUMEN Y CONSOLIDADO DE PRESUPUESTO CON TOTAL Y DESCARGA EN PDF */}
-                <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4 shadow-xl">
-                  <div className="flex items-center gap-2 border-b border-white/[0.08] pb-3">
-                    <span className="text-base">💼</span>
-                    <h4 className="text-xs sm:text-sm font-normal text-white uppercase tracking-wider">
-                      Propuesta
-                    </h4>
-                  </div>
-
-                  {!ordenActiva || (ordenActiva.items.length === 0 && etapa4Items.length === 0) ? (
-                    <div className="py-6 text-center text-xs text-zinc-500 italic bg-black/20 rounded-xl border border-dashed border-white/5">
-                      Sin servicios ni repuestos añadidos.
-                    </div>
-                  ) : (() => {
-                    const allItems = etapa4Items.length > 0 ? etapa4Items : (ordenActiva?.items || []);
-                    const itemsInspeccion = allItems.filter(it => 
-                      it.id.startsWith("pin-cot-") || (it.category && it.category.toLowerCase().includes("inspección"))
-                    );
-                    const itemsTienda = allItems.filter(it => 
-                      !it.id.startsWith("pin-cot-") && (!it.category || !it.category.toLowerCase().includes("inspección"))
-                    );
-
-                    const renderItemRow = (it: OrderItem) => {
-                      const esInspeccion = it.id.startsWith("pin-cot-") || (it.category && it.category.toLowerCase().includes("inspección"));
-                      const textoOrigenCorto = esInspeccion
-                        ? (it.category || "Inspección").replace(/^Inspección\s*[-–]\s*/i, "").replace(/[()]/g, "")
-                        : (it.category || "Tienda");
-
-                      return (
-                        <div key={it.id} className="py-3 flex items-center justify-between gap-3">
-                          <div className="space-y-1 min-w-0 flex-1">
-                            <span className="font-normal text-white text-sm sm:text-base block truncate">
-                              {it.name}
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-zinc-400 font-medium truncate">
-                                {textoOrigenCorto}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3 shrink-0">
-                            <span className="font-mono text-emerald-400 font-bold text-sm sm:text-base">
-                              ${(Number(it.price) || 0).toFixed(2)}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleCiclarEstadoItem(it.id)}
-                              className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-zinc-300 cursor-pointer transition-colors"
-                            >
-                              {it.status}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleEliminarItemEtapa4(it.id)}
-                              className="text-zinc-500 hover:text-rose-400 text-sm cursor-pointer p-1.5 transition-colors"
-                              title="Eliminar de la orden"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    };
-
-                    return (
-                      <div className="space-y-3.5">
-                        {itemsInspeccion.length > 0 && (
-                          <div className="space-y-1.5 bg-black/25 p-3.5 rounded-xl border border-white/5">
-                            <div className="flex items-center justify-between px-1 pb-1.5 border-b border-purple-500/20">
-                              <span className="text-xs font-normal text-purple-300 uppercase tracking-wider">
-                                Inspección
-                              </span>
-                              <span className="text-xs text-purple-400/80 font-mono font-semibold">
-                                {itemsInspeccion.length}
-                              </span>
-                            </div>
-                            <div className="divide-y divide-white/5">
-                              {itemsInspeccion.map(renderItemRow)}
-                            </div>
-                          </div>
-                        )}
-
-                        {itemsTienda.length > 0 && (
-                          <div className="space-y-1.5 bg-black/25 p-3.5 rounded-xl border border-white/5">
-                            <div className="flex items-center justify-between px-1 pb-1.5 border-b border-cyan-500/20">
-                              <span className="text-xs font-normal text-cyan-300 uppercase tracking-wider">
-                                Tienda
-                              </span>
-                              <span className="text-xs text-cyan-400/80 font-mono font-semibold">
-                                {itemsTienda.length}
-                              </span>
-                            </div>
-                            <div className="divide-y divide-white/5">
-                              {itemsTienda.map(renderItemRow)}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Cuadro de Totales */}
-                  {ordenActiva && ordenActiva.items.length > 0 && (
-                    <div className="pt-3 border-t border-white/[0.08] flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() => setModalPresupuestoPdfAbierto(true)}
-                          className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-600/30 active:scale-95"
-                        >
-                          <span>🖨️</span>
-                          <span>PDF</span>
-                        </button>
-                      </div>
-                      <div className="w-full sm:w-64 bg-black/50 p-3.5 rounded-xl border border-white/10 space-y-1.5 font-mono">
-                        <div className="flex justify-between text-zinc-300 text-xs sm:text-sm font-normal">
-                          <span>Subtotal:</span>
-                          <span>${calculosPresupuestoEtapa4.subtotal.toFixed(2)}</span>
-                        </div>
-                        {calculosPresupuestoEtapa4.discountAmount > 0 && (
-                          <div className="flex justify-between text-emerald-400 text-xs sm:text-sm font-normal">
-                            <span>Descuento:</span>
-                            <span>-${calculosPresupuestoEtapa4.discountAmount.toFixed(2)}</span>
-                          </div>
-                        )}
-                        <div className="flex justify-between text-zinc-300 text-xs sm:text-sm font-normal">
-                          <span>IVA ({calculosPresupuestoEtapa4.taxRateNum}%):</span>
-                          <span>${calculosPresupuestoEtapa4.taxAmount.toFixed(2)}</span>
-                        </div>
-                        <div className="border-t border-white/10 pt-1.5 flex justify-between text-sm sm:text-base font-normal text-white">
-                          <span>TOTAL:</span>
-                          <span className="text-emerald-400 font-normal">${calculosPresupuestoEtapa4.total.toFixed(2)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Navegación entre pasos */}
-                <div className="flex items-center justify-between pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setEtapaActiva(2)}
-                    className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-normal text-zinc-300 cursor-pointer transition-colors"
-                  >
-                    Anterior
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEtapaActiva(4)}
-                    className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-normal cursor-pointer transition-colors"
-                  >
-                    Continuar
-                  </button>
-                </div>
-
-                {/* MODAL OFICIAL PARA DESCARGAR EL PRESUPUESTO EN PDF */}
-                <ModalPresupuestoPdf
-                  abierto={modalPresupuestoPdfAbierto}
-                  onCerrar={() => setModalPresupuestoPdfAbierto(false)}
-                  orden={ordenActiva}
-                />
-              </div>
-            )}
-
-
             {/* ETAPA 4: AVISO Y FIRMA + TRASPASO A POS / ÓRDENES */}
             {etapaActiva === 4 && (
               <div className="w-full space-y-4 animate-fade-in">
-                <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4 shadow-xl">
+                <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/[0.08] space-y-4 shadow-sm dark:shadow-xl">
                   {/* Cabecera */}
-                  <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+                  <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/[0.08] pb-3">
                     <div className="flex items-center gap-2">
                       <span className="text-base">📲</span>
-                      <h4 className="text-xs sm:text-sm font-normal text-white uppercase tracking-wider">
+                      <h4 className="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white uppercase tracking-wider">
                         Aviso y Firma
                       </h4>
                     </div>
                     {ordenActiva && (
-                      <span className="font-mono text-xs text-zinc-400">
+                      <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
                         {ordenActiva.plate ? `Placa: ${ordenActiva.plate} • ` : ""}Orden #{String(ordenActiva.orderNumber || ordenActiva.id).replace(/^OT-\d{4}-/i, "")}
                       </span>
                     )}
@@ -5786,8 +5116,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     {/* Columna Izquierda: Estado y Notificación */}
                     <div className="lg:col-span-5 space-y-3">
                       {/* Estado */}
-                      <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2">
-                        <span className="text-xs font-normal text-zinc-300 block">
+                      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 space-y-2">
+                        <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 block">
                           Estado:
                         </span>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
@@ -5797,14 +5127,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                               etapa6EstadoSeleccionado.toLowerCase().includes(st.name.toLowerCase().replace(/^\d+\s*/, ""));
 
                             const coloresActivoPorIndice = [
-                              "bg-amber-500/25 text-amber-200 border-amber-400/60 ring-1 ring-amber-400/40 font-semibold shadow-sm",
-                              "bg-blue-500/25 text-blue-200 border-blue-400/60 ring-1 ring-blue-400/40 font-semibold shadow-sm",
-                              "bg-rose-500/25 text-rose-200 border-rose-400/60 ring-1 ring-rose-400/40 font-semibold shadow-sm",
-                              "bg-emerald-500/25 text-emerald-200 border-emerald-400/60 ring-1 ring-emerald-400/40 font-semibold shadow-sm",
-                              "bg-purple-500/25 text-purple-200 border-purple-400/60 ring-1 ring-purple-400/40 font-semibold shadow-sm",
+                              "bg-amber-500/25 text-amber-800 dark:text-amber-200 border-amber-400/60 ring-1 ring-amber-400/40 font-semibold shadow-sm",
+                              "bg-blue-500/25 text-blue-800 dark:text-blue-200 border-blue-400/60 ring-1 ring-blue-400/40 font-semibold shadow-sm",
+                              "bg-rose-500/25 text-rose-800 dark:text-rose-200 border-rose-400/60 ring-1 ring-rose-400/40 font-semibold shadow-sm",
+                              "bg-emerald-500/25 text-emerald-800 dark:text-emerald-200 border-emerald-400/60 ring-1 ring-emerald-400/40 font-semibold shadow-sm",
+                              "bg-purple-500/25 text-purple-800 dark:text-purple-200 border-purple-400/60 ring-1 ring-purple-400/40 font-semibold shadow-sm",
                             ];
                             const estiloActivo = coloresActivoPorIndice[idx % coloresActivoPorIndice.length];
-                            const estiloPlomo = "bg-white/[0.03] hover:bg-white/[0.07] text-zinc-400 hover:text-zinc-200 border-white/10";
+                            const estiloPlomo = "bg-white dark:bg-white/[0.03] hover:bg-zinc-100 dark:hover:bg-white/[0.07] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-zinc-200 dark:border-white/10";
 
                             return (
                               <button
@@ -5823,14 +5153,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       </div>
 
                       {/* Notificación rápida */}
-                      <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2">
-                        <span className="text-xs font-normal text-zinc-300 block">
+                      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 space-y-2">
+                        <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 block">
                           Aviso:
                         </span>
                         <button
                           type="button"
                           onClick={handleEnviarWhatsAppAvisoEtapa6}
-                          className="w-full h-9 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 shadow-sm"
+                          className="w-full h-9 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 shadow-sm"
                           title="Abrir WhatsApp Web con mensaje prediseñado según el estado actual"
                         >
                           <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
@@ -5843,20 +5173,20 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
                     {/* Columna Derecha: Doble Firma (Aceptación o Entrega) */}
                     <div className="lg:col-span-7 space-y-3">
-                      <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-3">
+                      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 space-y-3">
                         {/* Selector de Modo de Firma */}
-                        <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-2.5">
-                          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/5 border border-white/10">
+                        <div className="flex items-center justify-between gap-2 border-b border-zinc-200 dark:border-white/5 pb-2.5">
+                          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 shadow-xs">
                             <button
                               type="button"
                               onClick={() => {
                                 setModoFirma("ACEPTACION");
                                 limpiarCanvasFirmaEtapa7();
                               }}
-                              className={`px-3 py-1 rounded-md text-xs font-normal transition-all cursor-pointer ${
+                              className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                                 modoFirma === "ACEPTACION"
                                   ? "bg-blue-600 text-white shadow-xs"
-                                  : "text-zinc-400 hover:text-white"
+                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                               }`}
                             >
                               Presupuesto
@@ -5867,10 +5197,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                 setModoFirma("ENTREGA");
                                 limpiarCanvasFirmaEtapa7();
                               }}
-                              className={`px-3 py-1 rounded-md text-xs font-normal transition-all cursor-pointer ${
+                              className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                                 modoFirma === "ENTREGA"
                                   ? "bg-teal-600 text-white shadow-xs"
-                                  : "text-zinc-400 hover:text-white"
+                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                               }`}
                             >
                               Entrega
@@ -5880,7 +5210,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           <button
                             type="button"
                             onClick={limpiarCanvasFirmaEtapa7}
-                            className="text-[11px] text-zinc-400 hover:text-white px-2 py-0.5 rounded bg-white/5 cursor-pointer transition-colors"
+                            className="text-[11px] text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white px-2 py-0.5 rounded bg-zinc-200/80 dark:bg-white/5 cursor-pointer transition-colors"
                           >
                             Limpiar
                           </button>
@@ -5984,7 +5314,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                       <button
                         type="button"
-                        onClick={() => setEtapaActiva(3)}
+                        onClick={() => setEtapaActiva(2)}
                         className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-normal text-zinc-300 cursor-pointer transition-colors"
                       >
                         Anterior
