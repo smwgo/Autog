@@ -4824,6 +4824,16 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 </span>
               )}
             </button>
+
+            {/* 3. Acceso directo al Panel de Presupuestos & Repuestos */}
+            <Link
+              href="/presupuestos"
+              className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-400 font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shrink-0"
+              title="Ir a Presupuestos & Repuestos"
+            >
+              <span>📋</span>
+              <span className="text-xs sm:text-sm hidden md:inline">Presupuestos</span>
+            </Link>
           </div>
         </div>
 
@@ -5313,6 +5323,15 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       >
                         Anterior
                       </button>
+
+                      <Link
+                        href="/presupuestos"
+                        className="px-3.5 py-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-300 text-xs font-semibold backdrop-blur-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                        title="Abrir panel de Presupuestos & Repuestos"
+                      >
+                        <span>📋</span>
+                        <span>Presupuestos</span>
+                      </Link>
 
                       <button
                         type="button"

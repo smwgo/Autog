@@ -256,6 +256,7 @@ export default function ModalNuevaOrdenTrabajo({
   const [mostrarDropdownClientes, setMostrarDropdownClientes] = useState(false);
   const [clienteSeleccionado, setClienteSeleccionado] = useState<any | null>(null);
   const [mostrarFormNuevoCliente, setMostrarFormNuevoCliente] = useState(false);
+  const [subPasoCliente, setSubPasoCliente] = useState<"tipo" | "nombre" | "identificacion" | "telefono" | "email" | "direccion">("tipo");
 
   // Campos del cliente nuevo (igual que en módulo Clientes)
   const [nuevoClienteIdentificacion, setNuevoClienteIdentificacion] = useState("");
@@ -1444,6 +1445,7 @@ export default function ModalNuevaOrdenTrabajo({
         // Abrir formulario de Nuevo Cliente en Paso 1 y dejar placa lista para Paso 2
         setMostrarDropdownClientes(false);
         setMostrarFormNuevoCliente(true);
+        setSubPasoCliente("tipo");
         setPasoActivo(1);
         mostrarToast(
           `Matrícula ${placaLimpia} nueva. Llena los datos del cliente y del vehículo.`,
@@ -1814,6 +1816,7 @@ export default function ModalNuevaOrdenTrabajo({
   const handleIniciarNuevoCliente = () => {
     setClienteSeleccionado(null);
     setMostrarFormNuevoCliente(true);
+    setSubPasoCliente("tipo");
     setMostrarDropdownClientes(false);
     setNuevoClienteNombre(busquedaCliente.trim());
     setNuevoClienteIdentificacion("");
@@ -2615,150 +2618,448 @@ export default function ModalNuevaOrdenTrabajo({
                 </div>
               )}
 
-              {/* Formulario Completo de Cliente Nuevo (Mismo formato que el módulo Clientes) */}
-              {mostrarFormNuevoCliente && (
-                <div className="p-5 rounded-3xl bg-zinc-50/80 dark:bg-white/[0.02] border border-zinc-200 dark:border-blue-500/30 space-y-4 animate-fade-in shadow-xs">
-                  <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/5 pb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                      <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
-                        Nuevo Cliente
-                      </h4>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setMostrarFormNuevoCliente(false)}
-                      className="text-xs text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1.5 cursor-pointer px-2.5 py-1 rounded-lg bg-zinc-200/70 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 transition-colors font-medium"
-                    >
-                      <span>←</span>
-                      <span>Atrás</span>
-                    </button>
-                  </div>
+              {/* Formulario de Cliente Nuevo — Flujo Deslizable Paso a Paso */}
+              {mostrarFormNuevoCliente && (() => {
+                const PASOS_CLIENTE = [
+                  { id: "tipo" as const, label: "Tipo", icon: "👤" },
+                  { id: "nombre" as const, label: tipoCliente === "Empresa" ? "Razón Social" : "Nombre", icon: "📝" },
+                  { id: "identificacion" as const, label: tipoCliente === "Empresa" ? "RUC" : "Cédula", icon: "🪪" },
+                  { id: "telefono" as const, label: "Teléfono", icon: "📱" },
+                  { id: "email" as const, label: "Correo", icon: "✉️" },
+                  { id: "direccion" as const, label: "Dirección", icon: "📍" },
+                ];
 
-                  {/* Selector de Tipo: Solo Iconos */}
-                  <div>
-                    <label className="text-zinc-700 dark:text-zinc-300 text-xs font-semibold block mb-2">
-                      Tipo de Cliente: <span className="text-zinc-900 dark:text-zinc-200 font-bold">{tipoCliente === "Empresa" ? "Empresa (RUC)" : "Persona (Cédula)"}</span>
-                    </label>
-                    <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                const pasoIdx = PASOS_CLIENTE.findIndex((p) => p.id === subPasoCliente);
+
+                const getValorCliente = (id: typeof subPasoCliente) => {
+                  if (id === "tipo") return tipoCliente;
+                  if (id === "nombre") return nuevoClienteNombre;
+                  if (id === "identificacion") return nuevoClienteIdentificacion;
+                  if (id === "telefono") return nuevoClienteTelefono;
+                  if (id === "email") return nuevoClienteEmail;
+                  if (id === "direccion") return nuevoClienteDireccion;
+                  return "";
+                };
+
+                const avanzarCliente = () => {
+                  if (subPasoCliente === "tipo") {
+                    setSubPasoCliente("nombre");
+                  } else if (subPasoCliente === "nombre") {
+                    if (!nuevoClienteNombre.trim()) {
+                      mostrarToast(tipoCliente === "Empresa" ? "Ingresa la razón social" : "Ingresa nombres y apellidos", "err");
+                      return;
+                    }
+                    setSubPasoCliente("identificacion");
+                  } else if (subPasoCliente === "identificacion") {
+                    setSubPasoCliente("telefono");
+                  } else if (subPasoCliente === "telefono") {
+                    setSubPasoCliente("email");
+                  } else if (subPasoCliente === "email") {
+                    setSubPasoCliente("direccion");
+                  } else if (subPasoCliente === "direccion") {
+                    handleGuardarClienteYPasarVehiculo();
+                  }
+                };
+
+                return (
+                  <div className="p-5 sm:p-6 rounded-3xl bg-zinc-50/90 dark:bg-zinc-900/40 border border-zinc-200/80 dark:border-white/10 space-y-5 shadow-xs transition-all animate-fade-in">
+                    {/* Header */}
+                    <div className="flex items-center justify-between border-b border-zinc-200/80 dark:border-white/5 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                        <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
+                          Registrar Nuevo Cliente
+                        </h4>
+                      </div>
                       <button
                         type="button"
-                        onClick={() => setTipoCliente("Persona")}
-                        title="Persona (Particular / Cédula)"
-                        className={`h-11 rounded-2xl border flex items-center justify-center transition-all cursor-pointer active:scale-[0.98] ${
-                          tipoCliente === "Persona"
-                            ? "bg-blue-600/15 border-blue-500 text-blue-700 dark:text-blue-400 shadow-xs ring-1 ring-blue-500/30 font-bold"
-                            : "bg-white dark:bg-white/[0.03] hover:bg-zinc-100 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
-                        }`}
+                        onClick={() => setMostrarFormNuevoCliente(false)}
+                        className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setTipoCliente("Empresa")}
-                        title="Empresa (Corporativo / RUC)"
-                        className={`h-11 rounded-2xl border flex items-center justify-center transition-all cursor-pointer active:scale-[0.98] ${
-                          tipoCliente === "Empresa"
-                            ? "bg-blue-600/15 border-blue-500 text-blue-700 dark:text-blue-400 shadow-xs ring-1 ring-blue-500/30 font-bold"
-                            : "bg-white dark:bg-white/[0.03] hover:bg-zinc-100 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
-                        }`}
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                        </svg>
+                        ← Volver a buscar clientes
                       </button>
                     </div>
+
+                    {/* Barra de Progreso Deslizable / Breadcrumbs Interactivos */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                      {PASOS_CLIENTE.map((p, idx) => {
+                        const esActivo = p.id === subPasoCliente;
+                        const esCompletado = idx < pasoIdx;
+                        const valor = getValorCliente(p.id);
+
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              // Permitir volver o avanzar si el nombre ya está
+                              if (idx <= 1 || nuevoClienteNombre.trim()) {
+                                setSubPasoCliente(p.id);
+                              } else {
+                                mostrarToast("Primero ingresa el nombre del cliente", "err");
+                              }
+                            }}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                              esActivo
+                                ? "bg-emerald-500 text-black shadow-sm font-bold scale-[1.02]"
+                                : esCompletado
+                                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
+                                : "bg-zinc-100 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
+                            }`}
+                          >
+                            <span>{p.icon}</span>
+                            <span>{p.label}</span>
+                            {esCompletado && valor && (
+                              <span className="max-w-[70px] truncate text-[10px] opacity-80 font-mono">
+                                ({valor})
+                              </span>
+                            )}
+                            {esCompletado && <span className="text-emerald-600 dark:text-emerald-400">✓</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Tarjeta del Campo Activo */}
+                    <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-black/30 border border-zinc-200 dark:border-white/10 shadow-xs space-y-4 animate-fade-in">
+
+                      {/* ================= PASO 1: TIPO DE CLIENTE ================= */}
+                      {subPasoCliente === "tipo" && (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                                Tipo de Cliente
+                              </label>
+                            </div>
+                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                              Paso 1 de 6
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTipoCliente("Persona");
+                                setSubPasoCliente("nombre");
+                              }}
+                              className={`p-5 rounded-2xl border-2 flex items-center gap-4 transition-all cursor-pointer text-left active:scale-[0.99] ${
+                                tipoCliente === "Persona"
+                                  ? "bg-emerald-500/15 border-emerald-500 text-emerald-800 dark:text-emerald-300 shadow-sm font-bold"
+                                  : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:border-emerald-500/50"
+                              }`}
+                            >
+                              <div className="w-12 h-12 rounded-2xl bg-white dark:bg-white/10 flex items-center justify-center text-2xl shadow-xs shrink-0">
+                                👤
+                              </div>
+                              <div>
+                                <span className="text-sm font-bold block">Persona Natural</span>
+                                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">Particular con Cédula</span>
+                              </div>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTipoCliente("Empresa");
+                                setSubPasoCliente("nombre");
+                              }}
+                              className={`p-5 rounded-2xl border-2 flex items-center gap-4 transition-all cursor-pointer text-left active:scale-[0.99] ${
+                                tipoCliente === "Empresa"
+                                  ? "bg-emerald-500/15 border-emerald-500 text-emerald-800 dark:text-emerald-300 shadow-sm font-bold"
+                                  : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:border-emerald-500/50"
+                              }`}
+                            >
+                              <div className="w-12 h-12 rounded-2xl bg-white dark:bg-white/10 flex items-center justify-center text-2xl shadow-xs shrink-0">
+                                🏢
+                              </div>
+                              <div>
+                                <span className="text-sm font-bold block">Empresa / Corporativo</span>
+                                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">Persona Jurídica con RUC</span>
+                              </div>
+                            </button>
+                          </div>
+
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              onClick={avanzarCliente}
+                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
+                            >
+                              <span>Avanzar a Nombre</span>
+                              <span>→</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ================= PASO 2: NOMBRE O RAZÓN SOCIAL ================= */}
+                      {subPasoCliente === "nombre" && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                                {tipoCliente === "Empresa" ? "Razón Social de la Empresa" : "Nombres y Apellidos del Cliente"} <span className="text-rose-500">*</span>
+                              </label>
+                            </div>
+                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                              Paso 2 de 6
+                            </span>
+                          </div>
+
+                          <div>
+                            <input
+                              type="text"
+                              value={nuevoClienteNombre}
+                              onChange={(e) => setNuevoClienteNombre(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  avanzarCliente();
+                                }
+                              }}
+                              placeholder={tipoCliente === "Empresa" ? "Ej: Transportes Andinos S.A." : "Ej: Juan Carlos Pérez"}
+                              className="w-full h-14 px-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
+                              autoFocus
+                            />
+                          </div>
+
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              onClick={avanzarCliente}
+                              disabled={!nuevoClienteNombre.trim()}
+                              className={`w-full h-12 rounded-xl font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 ${
+                                nuevoClienteNombre.trim()
+                                  ? "bg-emerald-500 hover:bg-emerald-400 text-black shadow-md shadow-emerald-500/20"
+                                  : "bg-zinc-200 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                              }`}
+                            >
+                              <span>Avanzar a {tipoCliente === "Empresa" ? "RUC" : "Cédula"}</span>
+                              <span>→</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ================= PASO 3: CÉDULA / RUC ================= */}
+                      {subPasoCliente === "identificacion" && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                                {tipoCliente === "Empresa" ? "Número de RUC" : "Número de Cédula"} <span className="text-rose-500">*</span>
+                              </label>
+                            </div>
+                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                              Paso 3 de 6
+                            </span>
+                          </div>
+
+                          <div>
+                            <input
+                              type="text"
+                              value={nuevoClienteIdentificacion}
+                              onChange={(e) => setNuevoClienteIdentificacion(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  avanzarCliente();
+                                }
+                              }}
+                              placeholder={tipoCliente === "Empresa" ? "Ej: 1790012345001" : "Ej: 0912345678"}
+                              className="w-full h-14 px-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white font-mono text-xl font-bold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
+                              autoFocus
+                            />
+                          </div>
+
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              onClick={avanzarCliente}
+                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
+                            >
+                              <span>Avanzar a Teléfono</span>
+                              <span>→</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ================= PASO 4: TELÉFONO / WHATSAPP ================= */}
+                      {subPasoCliente === "telefono" && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                                Teléfono / WhatsApp <span className="text-rose-500">*</span>
+                              </label>
+                            </div>
+                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                              Paso 4 de 6
+                            </span>
+                          </div>
+
+                          <div>
+                            <input
+                              type="tel"
+                              value={nuevoClienteTelefono}
+                              onChange={(e) => setNuevoClienteTelefono(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  avanzarCliente();
+                                }
+                              }}
+                              placeholder="Ej: 0991234567"
+                              className="w-full h-14 px-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white font-mono text-xl font-bold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
+                              autoFocus
+                            />
+                          </div>
+
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              onClick={avanzarCliente}
+                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
+                            >
+                              <span>Avanzar a Correo</span>
+                              <span>→</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ================= PASO 5: CORREO ELECTRÓNICO ================= */}
+                      {subPasoCliente === "email" && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                                Correo Electrónico (Opcional)
+                              </label>
+                            </div>
+                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                              Paso 5 de 6
+                            </span>
+                          </div>
+
+                          <div>
+                            <input
+                              type="email"
+                              value={nuevoClienteEmail}
+                              onChange={(e) => {
+                                setNuevoClienteEmail(e.target.value);
+                                setEmailContacto(e.target.value);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  avanzarCliente();
+                                }
+                              }}
+                              placeholder="correo@ejemplo.com"
+                              className="w-full h-14 px-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
+                              autoFocus
+                            />
+                          </div>
+
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              onClick={avanzarCliente}
+                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
+                            >
+                              <span>Avanzar a Dirección</span>
+                              <span>→</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ================= PASO 6: DIRECCIÓN ================= */}
+                      {subPasoCliente === "direccion" && (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
+                                Dirección de Domicilio / Oficina (Opcional)
+                              </label>
+                            </div>
+                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                              Paso 6 de 6
+                            </span>
+                          </div>
+
+                          <div>
+                            <input
+                              type="text"
+                              value={nuevoClienteDireccion}
+                              onChange={(e) => setNuevoClienteDireccion(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleGuardarClienteYPasarVehiculo();
+                                }
+                              }}
+                              placeholder="Av. Principal y Calle Secundaria"
+                              className="w-full h-14 px-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
+                              autoFocus
+                            />
+                          </div>
+
+                          {/* Resumen del Cliente Configurado */}
+                          <div className="p-3.5 rounded-xl bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="text-emerald-500 font-bold">✓</span>
+                              <strong className="font-bold text-zinc-900 dark:text-white">
+                                {nuevoClienteNombre || "Sin nombre"}
+                              </strong>
+                              {nuevoClienteIdentificacion && (
+                                <>
+                                  <span className="text-zinc-400">•</span>
+                                  <span className="font-mono text-zinc-600 dark:text-zinc-300">
+                                    {nuevoClienteIdentificacion}
+                                  </span>
+                                </>
+                              )}
+                              {nuevoClienteTelefono && (
+                                <>
+                                  <span className="text-zinc-400">•</span>
+                                  <span className="text-zinc-600 dark:text-zinc-300">
+                                    📱 {nuevoClienteTelefono}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setSubPasoCliente("nombre")}
+                              className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
+                            >
+                              Editar datos
+                            </button>
+                          </div>
+
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              onClick={handleGuardarClienteYPasarVehiculo}
+                              disabled={guardandoCliente}
+                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-98 disabled:opacity-50"
+                            >
+                              <span>{guardandoCliente ? "Guardando..." : "Guardar Cliente y Continuar a Vehículo"}</span>
+                              <span>→</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs pt-1">
-                    <div className="sm:col-span-2">
-                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
-                        {tipoCliente === "Empresa" ? "Razón Social *" : "Nombres y Apellidos *"}
-                      </label>
-                      <input
-                        type="text"
-                        value={nuevoClienteNombre}
-                        onChange={(e) => setNuevoClienteNombre(e.target.value)}
-                        placeholder={tipoCliente === "Empresa" ? "Ej: Transportes Andinos S.A." : "Ej: Juan Carlos Pérez"}
-                        className="w-full h-10 px-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 focus:border-blue-500 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-xs focus:outline-none shadow-xs"
-                        required
-                      />
-                    </div>
-
-                    <div className="col-span-1">
-                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
-                        {tipoCliente === "Empresa" ? "RUC *" : "Cédula *"}
-                      </label>
-                      <input
-                        type="text"
-                        value={nuevoClienteIdentificacion}
-                        onChange={(e) => setNuevoClienteIdentificacion(e.target.value)}
-                        placeholder={tipoCliente === "Empresa" ? "Ej: 1790012345001" : "Ej: 0912345678"}
-                        className="w-full h-10 px-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 focus:border-blue-500 text-zinc-900 dark:text-white font-mono placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-xs focus:outline-none shadow-xs"
-                        required
-                      />
-                    </div>
-
-                    <div className="col-span-1">
-                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
-                        Teléfono / WhatsApp *
-                      </label>
-                      <input
-                        type="tel"
-                        value={nuevoClienteTelefono}
-                        onChange={(e) => setNuevoClienteTelefono(e.target.value)}
-                        placeholder="Ej: 0991234567"
-                        className="w-full h-10 px-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 focus:border-blue-500 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-xs focus:outline-none shadow-xs"
-                        required
-                      />
-                    </div>
-
-                    <div className="col-span-1">
-                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
-                        Correo Electrónico
-                      </label>
-                      <input
-                        type="email"
-                        value={nuevoClienteEmail}
-                        onChange={(e) => {
-                          setNuevoClienteEmail(e.target.value);
-                          setEmailContacto(e.target.value);
-                        }}
-                        placeholder="correo@ejemplo.com"
-                        className="w-full h-10 px-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 focus:border-blue-500 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-xs focus:outline-none shadow-xs"
-                      />
-                    </div>
-
-                    <div className="col-span-1 sm:col-span-2 lg:col-span-1">
-                      <label className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-1">
-                        Dirección (Opcional)
-                      </label>
-                      <input
-                        type="text"
-                        value={nuevoClienteDireccion}
-                        onChange={(e) => setNuevoClienteDireccion(e.target.value)}
-                        placeholder="Av. Principal y Secundaria"
-                        className="w-full h-10 px-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 focus:border-blue-500 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-xs focus:outline-none shadow-xs"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end pt-2">
-                    <button
-                      type="button"
-                      onClick={handleGuardarClienteYPasarVehiculo}
-                      disabled={guardandoCliente}
-                      className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-blue-600/30 disabled:opacity-50"
-                    >
-                      <span>{guardandoCliente ? "Guardando..." : "Guardar / Vehículo"}</span>
-                      <span>→</span>
-                    </button>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           )}
 
@@ -2955,11 +3256,8 @@ export default function ModalNuevaOrdenTrabajo({
                           <div className="flex items-center justify-between">
                             <div>
                               <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
-                                🔢 Matrícula / Placa del Vehículo <span className="text-rose-500">*</span>
+                                🔢 Placa del Vehículo <span className="text-rose-500">*</span>
                               </label>
-                              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                                Escribe la placa o usa la cámara para escanearla automáticamente
-                              </p>
                             </div>
                             <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                               Paso 1 de 6
@@ -3020,16 +3318,13 @@ export default function ModalNuevaOrdenTrabajo({
                               <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
                                 🏷️ Marca del Vehículo
                               </label>
-                              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                                Escribe la marca o selecciona una sugerida para avanzar rápido
-                              </p>
                             </div>
                             <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                               Paso 2 de 6
                             </span>
                           </div>
 
-                          <div className="relative">
+                          <div>
                             <input
                               type="text"
                               value={vehiculoMarca}
@@ -3041,19 +3336,9 @@ export default function ModalNuevaOrdenTrabajo({
                                 }
                               }}
                               placeholder="Ej: Toyota, Chevrolet, Hyundai..."
-                              className="w-full h-14 pl-4 pr-12 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
+                              className="w-full h-14 px-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
                               autoFocus
                             />
-                            <button
-                              type="button"
-                              onClick={() => abrirFlotanteVehiculo("marca")}
-                              title="Abrir catálogo de marcas"
-                              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg text-zinc-400 hover:text-emerald-500 dark:hover:text-emerald-400 cursor-pointer"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </button>
                           </div>
 
                           {/* Chips de Marcas Populares */}
@@ -3083,27 +3368,11 @@ export default function ModalNuevaOrdenTrabajo({
                           </div>
 
                           {/* Botones de Navegación */}
-                          <div className="flex items-center gap-3 pt-2">
-                            <button
-                              type="button"
-                              onClick={irAAnterior}
-                              className="h-12 px-5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer transition-all"
-                            >
-                              ← Placa
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSubPasoVehiculo("modelo");
-                              }}
-                              className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 underline cursor-pointer px-2"
-                            >
-                              Saltar
-                            </button>
+                          <div className="pt-2">
                             <button
                               type="button"
                               onClick={irASiguiente}
-                              className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
+                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
                             >
                               <span>Avanzar a Modelo</span>
                               <span>→</span>
@@ -3120,16 +3389,13 @@ export default function ModalNuevaOrdenTrabajo({
                               <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
                                 🚘 Modelo del Vehículo {vehiculoMarca ? `(${vehiculoMarca})` : ""}
                               </label>
-                              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                                Escribe el modelo específico o escoge uno común
-                              </p>
                             </div>
                             <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                               Paso 3 de 6
                             </span>
                           </div>
 
-                          <div className="relative">
+                          <div>
                             <input
                               type="text"
                               value={vehiculoModelo}
@@ -3141,19 +3407,9 @@ export default function ModalNuevaOrdenTrabajo({
                                 }
                               }}
                               placeholder={vehiculoMarca ? `Ej: Modelo de ${vehiculoMarca}` : "Ej: Hilux, Aveo, Tucson..."}
-                              className="w-full h-14 pl-4 pr-12 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
+                              className="w-full h-14 px-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
                               autoFocus
                             />
-                            <button
-                              type="button"
-                              onClick={() => abrirFlotanteVehiculo("modelo")}
-                              title="Abrir catálogo de modelos"
-                              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg text-zinc-400 hover:text-emerald-500 dark:hover:text-emerald-400 cursor-pointer"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </button>
                           </div>
 
                           {/* Chips de Modelos Frecuentes */}
@@ -3183,27 +3439,11 @@ export default function ModalNuevaOrdenTrabajo({
                           </div>
 
                           {/* Botones de Navegación */}
-                          <div className="flex items-center gap-3 pt-2">
-                            <button
-                              type="button"
-                              onClick={irAAnterior}
-                              className="h-12 px-5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer transition-all"
-                            >
-                              ← Marca
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSubPasoVehiculo("anio");
-                              }}
-                              className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 underline cursor-pointer px-2"
-                            >
-                              Saltar
-                            </button>
+                          <div className="pt-2">
                             <button
                               type="button"
                               onClick={irASiguiente}
-                              className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
+                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
                             >
                               <span>Avanzar a Año</span>
                               <span>→</span>
@@ -3220,9 +3460,6 @@ export default function ModalNuevaOrdenTrabajo({
                               <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
                                 📅 Año de Fabricación
                               </label>
-                              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                                Selecciona el año del vehículo o escribe el año exacto
-                              </p>
                             </div>
                             <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                               Paso 4 de 6
@@ -3274,27 +3511,11 @@ export default function ModalNuevaOrdenTrabajo({
                           </div>
 
                           {/* Botones de Navegación */}
-                          <div className="flex items-center gap-3 pt-2">
-                            <button
-                              type="button"
-                              onClick={irAAnterior}
-                              className="h-12 px-5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer transition-all"
-                            >
-                              ← Modelo
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSubPasoVehiculo("tipo");
-                              }}
-                              className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 underline cursor-pointer px-2"
-                            >
-                              Saltar
-                            </button>
+                          <div className="pt-2">
                             <button
                               type="button"
                               onClick={irASiguiente}
-                              className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
+                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
                             >
                               <span>Avanzar a Tipo</span>
                               <span>→</span>
@@ -3309,11 +3530,8 @@ export default function ModalNuevaOrdenTrabajo({
                           <div className="flex items-center justify-between">
                             <div>
                               <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
-                                🚗 Tipo de Carrocería
+                                Tipo de Carrocería
                               </label>
-                              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                                Selecciona la categoría del vehículo para avanzar a kilometraje
-                              </p>
                             </div>
                             <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                               Paso 5 de 6
@@ -3322,12 +3540,88 @@ export default function ModalNuevaOrdenTrabajo({
 
                           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                             {[
-                              { v: "Auto", label: "Auto / Sedán", emoji: "🚗" },
-                              { v: "SUV", label: "SUV", emoji: "🚙" },
-                              { v: "Camioneta", label: "Camioneta", emoji: "🛻" },
-                              { v: "Moto", label: "Moto", emoji: "🏍️" },
-                              { v: "Camión", label: "Camión / Pesado", emoji: "🚛" },
-                            ].map(({ v, label, emoji }) => {
+                              {
+                                v: "Auto",
+                                label: "Auto / Sedán",
+                                icon: (
+                                  <svg viewBox="0 0 64 36" fill="none" className="w-12 h-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M6 24h6m12 0h16m12 0h6a3 3 0 0 0 3-3c0-3-2-5-5-5l-5-1-6-7a4 4 0 0 0-3-1.5H23a4 4 0 0 0-3.2 1.6L14 15l-8 2c-2 0.5-3 2-3 4a3 3 0 0 0 3 3z" />
+                                    <path d="M20 10.5h18.5a2 2 0 0 1 1.6 0.8l4.4 5.7H20V10.5z" fill="currentColor" fillOpacity="0.16" />
+                                    <path d="M15.5 17l3.5-5.5V17h-3.5z" fill="currentColor" fillOpacity="0.16" />
+                                    <circle cx="18" cy="24" r="5" fill="currentColor" fillOpacity="0.15" />
+                                    <circle cx="18" cy="24" r="2.2" fill="currentColor" />
+                                    <circle cx="46" cy="24" r="5" fill="currentColor" fillOpacity="0.15" />
+                                    <circle cx="46" cy="24" r="2.2" fill="currentColor" />
+                                  </svg>
+                                ),
+                              },
+                              {
+                                v: "SUV",
+                                label: "SUV",
+                                icon: (
+                                  <svg viewBox="0 0 64 36" fill="none" className="w-12 h-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="22" y1="5" x2="40" y2="5" strokeWidth="2" />
+                                    <line x1="25" y1="5" x2="25" y2="7" strokeWidth="1.8" />
+                                    <line x1="37" y1="5" x2="37" y2="7" strokeWidth="1.8" />
+                                    <path d="M6 25h6m12 0h16m12 0h6a3 3 0 0 0 3-3c0-3.5-2.5-5.5-5-5.5h-2l-3-8a3 3 0 0 0-2.8-2H21a3 3 0 0 0-2.6 1.5L13 16l-7 1.5c-2 0.5-3 2-3 4a3.5 3.5 0 0 0 3 3.5z" />
+                                    <path d="M19.5 8h20a1.5 1.5 0 0 1 1.4 1l2.5 7.5H15.5L19.5 8z" fill="currentColor" fillOpacity="0.16" />
+                                    <line x1="30" y1="8" x2="30" y2="16.5" />
+                                    <circle cx="18" cy="25" r="5.5" fill="currentColor" fillOpacity="0.15" />
+                                    <circle cx="18" cy="25" r="2.2" fill="currentColor" />
+                                    <circle cx="46" cy="25" r="5.5" fill="currentColor" fillOpacity="0.15" />
+                                    <circle cx="46" cy="25" r="2.2" fill="currentColor" />
+                                  </svg>
+                                ),
+                              },
+                              {
+                                v: "Camioneta",
+                                label: "Camioneta",
+                                icon: (
+                                  <svg viewBox="0 0 64 36" fill="none" className="w-12 h-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M6 25h6m12 0h16m12 0h6a3 3 0 0 0 3-3v-5a1.5 1.5 0 0 0-1.5-1.5H41V10a3 3 0 0 0-2.8-2.5H23a3 3 0 0 0-2.6 1.5L14 16l-8 1.5c-2 0.5-3 2-3 4a3.5 3.5 0 0 0 3 3.5z" />
+                                    <path d="M21 9h17a1.5 1.5 0 0 1 1.5 1.5V15.5H16L21 9z" fill="currentColor" fillOpacity="0.16" />
+                                    <line x1="41" y1="15.5" x2="58" y2="15.5" strokeWidth="2" />
+                                    <circle cx="18" cy="25" r="5.5" fill="currentColor" fillOpacity="0.15" />
+                                    <circle cx="18" cy="25" r="2.2" fill="currentColor" />
+                                    <circle cx="46" cy="25" r="5.5" fill="currentColor" fillOpacity="0.15" />
+                                    <circle cx="46" cy="25" r="2.2" fill="currentColor" />
+                                  </svg>
+                                ),
+                              },
+                              {
+                                v: "Moto",
+                                label: "Moto",
+                                icon: (
+                                  <svg viewBox="0 0 64 36" fill="none" className="w-12 h-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="14" cy="23" r="6" fill="currentColor" fillOpacity="0.15" />
+                                    <circle cx="14" cy="23" r="2" fill="currentColor" />
+                                    <circle cx="49" cy="23" r="6" fill="currentColor" fillOpacity="0.15" />
+                                    <circle cx="49" cy="23" r="2" fill="currentColor" />
+                                    <line x1="49" y1="23" x2="42" y2="8" />
+                                    <line x1="39" y1="8" x2="45" y2="8" strokeWidth="2.6" />
+                                    <path d="M14 23l12-3 6-7h8l-3 10-10 1" />
+                                    <path d="M28 13c3-3 7-3 10 0l-3 4h-7z" fill="currentColor" fillOpacity="0.16" />
+                                    <path d="M19 14h7l2 4" strokeWidth="2" />
+                                    <line x1="14" y1="23" x2="28" y2="20" />
+                                  </svg>
+                                ),
+                              },
+                              {
+                                v: "Camión",
+                                label: "Camión / Pesado",
+                                icon: (
+                                  <svg viewBox="0 0 64 36" fill="none" className="w-12 h-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="5" y="7" width="31" height="18" rx="2" fill="currentColor" fillOpacity="0.16" />
+                                    <path d="M36 12h13a2 2 0 0 1 1.7 1l4.8 7.5a2 2 0 0 1 0.5 1.2V25h-5m-15 0h-6m-13 0H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h31" />
+                                    <path d="M38 14h9l3.5 5.5H38V14z" fill="currentColor" fillOpacity="0.25" />
+                                    <circle cx="16" cy="25" r="5" fill="currentColor" fillOpacity="0.15" />
+                                    <circle cx="16" cy="25" r="2" fill="currentColor" />
+                                    <circle cx="45" cy="25" r="5" fill="currentColor" fillOpacity="0.15" />
+                                    <circle cx="45" cy="25" r="2" fill="currentColor" />
+                                  </svg>
+                                ),
+                              },
+                            ].map(({ v, label, icon }) => {
                               const esSeleccionado = vehiculoTipo === v;
                               return (
                                 <button
@@ -3337,13 +3631,21 @@ export default function ModalNuevaOrdenTrabajo({
                                     setVehiculoTipo(v);
                                     setSubPasoVehiculo("km");
                                   }}
-                                  className={`p-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 ${
+                                  className={`p-3.5 sm:p-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-2.5 transition-all cursor-pointer group active:scale-95 ${
                                     esSeleccionado
-                                      ? "bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-sm"
-                                      : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:border-emerald-500/40"
+                                      ? "bg-emerald-500/15 border-emerald-500 text-emerald-800 dark:text-emerald-300 shadow-sm font-bold"
+                                      : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:border-emerald-500/50"
                                   }`}
                                 >
-                                  <span className="text-3xl">{emoji}</span>
+                                  <div
+                                    className={`transition-transform duration-200 group-hover:scale-110 ${
+                                      esSeleccionado
+                                        ? "text-emerald-600 dark:text-emerald-400"
+                                        : "text-zinc-500 dark:text-zinc-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400"
+                                    }`}
+                                  >
+                                    {icon}
+                                  </div>
                                   <span className="text-xs font-bold text-center leading-tight">{label}</span>
                                 </button>
                               );
@@ -3351,18 +3653,11 @@ export default function ModalNuevaOrdenTrabajo({
                           </div>
 
                           {/* Botones de Navegación */}
-                          <div className="flex items-center gap-3 pt-2">
-                            <button
-                              type="button"
-                              onClick={irAAnterior}
-                              className="h-12 px-5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer transition-all"
-                            >
-                              ← Año
-                            </button>
+                          <div className="pt-2">
                             <button
                               type="button"
                               onClick={irASiguiente}
-                              className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
+                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
                             >
                               <span>Avanzar a Kilometraje</span>
                               <span>→</span>
@@ -3379,9 +3674,6 @@ export default function ModalNuevaOrdenTrabajo({
                               <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
                                 ⏱️ Kilometraje Actual
                               </label>
-                              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                                Registra el kilometraje actual del vehículo (opcional)
-                              </p>
                             </div>
                             <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                               Paso 6 de 6
@@ -3430,18 +3722,11 @@ export default function ModalNuevaOrdenTrabajo({
                           </div>
 
                           {/* Botones de Navegación Final */}
-                          <div className="flex items-center gap-3 pt-2">
-                            <button
-                              type="button"
-                              onClick={irAAnterior}
-                              className="h-12 px-5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer transition-all"
-                            >
-                              ← Tipo
-                            </button>
+                          <div className="pt-2">
                             <button
                               type="button"
                               onClick={irASiguiente}
-                              className="flex-1 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-98"
+                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-98"
                             >
                               <span>Confirmar Vehículo y Continuar al Ingreso</span>
                               <span>→</span>
@@ -4929,8 +5214,8 @@ export default function ModalNuevaOrdenTrabajo({
             </div>
           )}
 
-          {/* FLOTANTE / MODAL DE SELECCIÓN DE MARCA Y MODELO */}
-          {mostrarFlotanteVehiculo && (
+          {/* FLOTANTE / MODAL DE SELECCIÓN DE MARCA Y MODELO (ELIMINADO) */}
+          {false && mostrarFlotanteVehiculo && (
             <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in">
               <div className="w-full max-w-lg bg-white dark:bg-[#16161b] border border-zinc-200 dark:border-white/15 rounded-3xl shadow-2xl p-5 sm:p-6 space-y-4 animate-scale-in max-h-[90vh] flex flex-col">
                 {/* Header del flotante */}
