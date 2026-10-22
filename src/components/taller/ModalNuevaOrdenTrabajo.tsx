@@ -277,7 +277,7 @@ export default function ModalNuevaOrdenTrabajo({
   const [vehiculoKm, setVehiculoKm] = useState("");
   const [vehiculoTipo, setVehiculoTipo] = useState("Auto");
   const [mostrarFormNuevoVehiculo, setMostrarFormNuevoVehiculo] = useState(false);
-  const [subPasoVehiculo, setSubPasoVehiculo] = useState<"placa" | "marca" | "modelo" | "anio" | "tipo" | "km">("placa");
+  const [subPasoVehiculo, setSubPasoVehiculo] = useState<"placa" | "marca" | "modelo" | "anio" | "tipo">("placa");
 
   // Selector flotante para Marca y Modelo
   const [mostrarFlotanteVehiculo, setMostrarFlotanteVehiculo] = useState(false);
@@ -289,12 +289,23 @@ export default function ModalNuevaOrdenTrabajo({
   // =========================================================================
   const [tipoIngreso, setTipoIngreso] = useState<"Taller" | "Lubricentro" | "Lavado">("Taller");
   const [nivelCombustible, setNivelCombustible] = useState<"E" | "1/4" | "1/2" | "3/4" | "F">("1/2");
-  const [inventarioTrae, setInventarioTrae] = useState<string[]>([
-    "Gata",
-    "Llave",
-    "Repuesto",
-    "Matrícula",
-  ]);
+  const [porcentajeCombustible, setPorcentajeCombustible] = useState<number>(50);
+
+  const handleSliderCombustible = (val: number) => {
+    setPorcentajeCombustible(val);
+    if (val <= 12) setNivelCombustible("E");
+    else if (val <= 37) setNivelCombustible("1/4");
+    else if (val <= 62) setNivelCombustible("1/2");
+    else if (val <= 87) setNivelCombustible("3/4");
+    else setNivelCombustible("F");
+  };
+
+  const handleBotonCombustible = (lvl: "E" | "1/4" | "1/2" | "3/4" | "F") => {
+    setNivelCombustible(lvl);
+    const mapa: Record<string, number> = { E: 0, "1/4": 25, "1/2": 50, "3/4": 75, F: 100 };
+    setPorcentajeCombustible(mapa[lvl] ?? 50);
+  };
+  const [inventarioTrae, setInventarioTrae] = useState<string[]>([]);
   const [listaItemsInventario, setListaItemsInventario] = useState<string[]>([
     "Gata",
     "Llave",
@@ -304,8 +315,6 @@ export default function ModalNuevaOrdenTrabajo({
     "Repuesto",
     "Matrícula",
     "Herramientas",
-    "Antena",
-    "Documentos",
   ]);
   const [itemManualInventario, setItemManualInventario] = useState("");
   const [fotosIniciales, setFotosIniciales] = useState<string[]>([]);
@@ -1914,6 +1923,7 @@ export default function ModalNuevaOrdenTrabajo({
     setMotivoIngreso("");
     setTipoIngreso("Taller");
     setNivelCombustible("1/2");
+    setPorcentajeCombustible(50);
     setInventarioTrae(["Gata", "Llave", "Repuesto", "Matrícula"]);
     setItemManualInventario("");
     setFotosIniciales([]);
@@ -3038,7 +3048,7 @@ export default function ModalNuevaOrdenTrabajo({
                               onClick={() => setSubPasoCliente("nombre")}
                               className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
                             >
-                              Editar datos
+                              Editar
                             </button>
                           </div>
 
@@ -3141,7 +3151,6 @@ export default function ModalNuevaOrdenTrabajo({
                   { id: "modelo", label: "Modelo", icon: "🚘" },
                   { id: "anio", label: "Año", icon: "📅" },
                   { id: "tipo", label: "Tipo", icon: "🚗" },
-                  { id: "km", label: "Kilometraje", icon: "⏱️" },
                 ];
 
                 const pasoIdx = PASOS.findIndex((p) => p.id === subPasoVehiculo);
@@ -3159,8 +3168,6 @@ export default function ModalNuevaOrdenTrabajo({
                   } else if (subPasoVehiculo === "anio") {
                     setSubPasoVehiculo("tipo");
                   } else if (subPasoVehiculo === "tipo") {
-                    setSubPasoVehiculo("km");
-                  } else if (subPasoVehiculo === "km") {
                     if (!vehiculoPlaca.trim()) {
                       mostrarToast("Ingresa la placa del vehículo", "err");
                       setSubPasoVehiculo("placa");
@@ -3182,7 +3189,6 @@ export default function ModalNuevaOrdenTrabajo({
                   if (id === "modelo") return vehiculoModelo;
                   if (id === "anio") return vehiculoAnio;
                   if (id === "tipo") return vehiculoTipo;
-                  if (id === "km") return vehiculoKm ? `${vehiculoKm} km` : "";
                   return "";
                 };
 
@@ -3214,6 +3220,14 @@ export default function ModalNuevaOrdenTrabajo({
                         const esCompletado = idx < pasoIdx;
                         const valor = getValorResumen(p.id);
 
+                        const colorClase = esActivo
+                          ? "bg-emerald-500 text-black shadow-sm font-bold scale-[1.02]"
+                          : esCompletado
+                          ? p.id === "placa"
+                            ? "bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/40 hover:bg-blue-500/25"
+                            : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
+                          : "bg-zinc-100 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300";
+
                         return (
                           <button
                             key={p.id}
@@ -3226,22 +3240,24 @@ export default function ModalNuevaOrdenTrabajo({
                                 mostrarToast("Primero ingresa la placa del vehículo", "err");
                               }
                             }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                              esActivo
-                                ? "bg-emerald-500 text-black shadow-sm font-bold scale-[1.02]"
-                                : esCompletado
-                                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
-                                : "bg-zinc-100 dark:bg-white/5 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"
-                            }`}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${colorClase}`}
                           >
-                            <span>{p.icon}</span>
-                            <span>{p.label}</span>
-                            {esCompletado && valor && (
-                              <span className="max-w-[70px] truncate text-[10px] opacity-80 font-mono">
-                                ({valor})
+                            {p.id === "placa" && esCompletado && valor ? (
+                              <span className="font-mono font-bold tracking-wider uppercase">
+                                {valor}
                               </span>
+                            ) : (
+                              <>
+                                <span>{p.icon}</span>
+                                <span>{p.label}</span>
+                                {esCompletado && valor && (
+                                  <span className="max-w-[70px] truncate text-[10px] opacity-80 font-mono">
+                                    ({valor})
+                                  </span>
+                                )}
+                                {esCompletado && <span className="text-emerald-600 dark:text-emerald-400">✓</span>}
+                              </>
                             )}
-                            {esCompletado && <span className="text-emerald-600 dark:text-emerald-400">✓</span>}
                           </button>
                         );
                       })}
@@ -3260,7 +3276,7 @@ export default function ModalNuevaOrdenTrabajo({
                               </label>
                             </div>
                             <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                              Paso 1 de 6
+                              Paso 1 de 5
                             </span>
                           </div>
 
@@ -3320,7 +3336,7 @@ export default function ModalNuevaOrdenTrabajo({
                               </label>
                             </div>
                             <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                              Paso 2 de 6
+                              Paso 2 de 5
                             </span>
                           </div>
 
@@ -3347,7 +3363,7 @@ export default function ModalNuevaOrdenTrabajo({
                               Marcas Frecuentes:
                             </span>
                             <div className="flex flex-wrap gap-2">
-                              {["Toyota", "Chevrolet", "Hyundai", "Kia", "Nissan", "Ford", "Renault", "Volkswagen", "Mazda", "Honda"].map((m) => (
+                              {["Toyota", "Chevrolet", "Hyundai", "Kia", "Nissan", "Ford", "Renault", "Volkswagen", "Mazda"].map((m) => (
                                 <button
                                   key={m}
                                   type="button"
@@ -3391,7 +3407,7 @@ export default function ModalNuevaOrdenTrabajo({
                               </label>
                             </div>
                             <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                              Paso 3 de 6
+                              Paso 3 de 5
                             </span>
                           </div>
 
@@ -3418,7 +3434,7 @@ export default function ModalNuevaOrdenTrabajo({
                               Modelos Comunes:
                             </span>
                             <div className="flex flex-wrap gap-2">
-                              {["Hilux", "D-Max", "Fortuner", "Sportage", "Tucson", "Aveo", "Sail", "Ranger", "Picanto", "Corolla"].map((mod) => (
+                              {["Hilux", "D-Max", "Fortuner", "Sportage", "Tucson", "Aveo", "Sail", "Ranger", "Picanto"].map((mod) => (
                                 <button
                                   key={mod}
                                   type="button"
@@ -3462,7 +3478,7 @@ export default function ModalNuevaOrdenTrabajo({
                               </label>
                             </div>
                             <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                              Paso 4 de 6
+                              Paso 4 de 5
                             </span>
                           </div>
 
@@ -3534,7 +3550,7 @@ export default function ModalNuevaOrdenTrabajo({
                               </label>
                             </div>
                             <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                              Paso 5 de 6
+                              Paso 5 de 5
                             </span>
                           </div>
 
@@ -3615,9 +3631,9 @@ export default function ModalNuevaOrdenTrabajo({
                                     <path d="M36 12h13a2 2 0 0 1 1.7 1l4.8 7.5a2 2 0 0 1 0.5 1.2V25h-5m-15 0h-6m-13 0H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h31" />
                                     <path d="M38 14h9l3.5 5.5H38V14z" fill="currentColor" fillOpacity="0.25" />
                                     <circle cx="16" cy="25" r="5" fill="currentColor" fillOpacity="0.15" />
-                                    <circle cx="16" cy="25" r="2" fill="currentColor" />
+                                    <circle cx="16" cy="25" r="2.2" fill="currentColor" />
                                     <circle cx="45" cy="25" r="5" fill="currentColor" fillOpacity="0.15" />
-                                    <circle cx="45" cy="25" r="2" fill="currentColor" />
+                                    <circle cx="45" cy="25" r="2.2" fill="currentColor" />
                                   </svg>
                                 ),
                               },
@@ -3629,7 +3645,6 @@ export default function ModalNuevaOrdenTrabajo({
                                   type="button"
                                   onClick={() => {
                                     setVehiculoTipo(v);
-                                    setSubPasoVehiculo("km");
                                   }}
                                   className={`p-3.5 sm:p-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-2.5 transition-all cursor-pointer group active:scale-95 ${
                                     esSeleccionado
@@ -3652,54 +3667,6 @@ export default function ModalNuevaOrdenTrabajo({
                             })}
                           </div>
 
-                          {/* Botones de Navegación */}
-                          <div className="pt-2">
-                            <button
-                              type="button"
-                              onClick={irASiguiente}
-                              className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 active:scale-98"
-                            >
-                              <span>Avanzar a Kilometraje</span>
-                              <span>→</span>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* ================= PASO 6: KILOMETRAJE ================= */}
-                      {subPasoVehiculo === "km" && (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
-                                ⏱️ Kilometraje Actual
-                              </label>
-                            </div>
-                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                              Paso 6 de 6
-                            </span>
-                          </div>
-
-                          <div className="relative">
-                            <input
-                              type="number"
-                              value={vehiculoKm}
-                              onChange={(e) => setVehiculoKm(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  irASiguiente();
-                                }
-                              }}
-                              placeholder="Ej: 45000"
-                              className="w-full h-16 pl-5 pr-14 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white font-mono text-2xl font-bold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-inner"
-                              autoFocus
-                            />
-                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-400">
-                              km
-                            </span>
-                          </div>
-
                           {/* Resumen del Vehículo Configurado */}
                           <div className="p-3.5 rounded-xl bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
                             <div className="flex items-center gap-2">
@@ -3717,18 +3684,18 @@ export default function ModalNuevaOrdenTrabajo({
                               onClick={() => setSubPasoVehiculo("placa")}
                               className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
                             >
-                              Editar datos
+                              Editar
                             </button>
                           </div>
 
-                          {/* Botones de Navegación Final */}
+                          {/* Botón de Confirmación Final */}
                           <div className="pt-2">
                             <button
                               type="button"
                               onClick={irASiguiente}
                               className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-98"
                             >
-                              <span>Confirmar Vehículo y Continuar al Ingreso</span>
+                              <span>Continuar</span>
                               <span>→</span>
                             </button>
                           </div>
@@ -3754,7 +3721,7 @@ export default function ModalNuevaOrdenTrabajo({
                 {/* Columna Izquierda: Combustible + Kilometraje + Inventario */}
                 <div className="lg:col-span-7 space-y-4">
                   {/* Card 1: Combustible */}
-                  <div className="p-4 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 shadow-xs">
+                  <div className="p-4 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3.5 shadow-xs">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-sm">
@@ -3762,14 +3729,14 @@ export default function ModalNuevaOrdenTrabajo({
                         </div>
                         <div>
                           <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-200 block">Nivel de Combustible</span>
-                          <span className="text-[10px] text-zinc-600 dark:text-zinc-400 font-medium">Tanque actual del vehículo</span>
                         </div>
                       </div>
                       <span className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
-                        {nivelCombustible}
+                        {nivelCombustible} • {porcentajeCombustible}%
                       </span>
                     </div>
 
+                    {/* Botones de Selección Rápida (Conservados intactos) */}
                     <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
                       {(["E", "1/4", "1/2", "3/4", "F"] as const).map((lvl) => {
                         const sel = nivelCombustible === lvl;
@@ -3777,7 +3744,7 @@ export default function ModalNuevaOrdenTrabajo({
                           <button
                             key={lvl}
                             type="button"
-                            onClick={() => setNivelCombustible(lvl)}
+                            onClick={() => handleBotonCombustible(lvl)}
                             className={`h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                               sel
                                 ? "bg-emerald-500/20 border border-emerald-500/50 text-emerald-700 dark:text-emerald-300 shadow-sm shadow-emerald-500/10"
@@ -3788,6 +3755,59 @@ export default function ModalNuevaOrdenTrabajo({
                           </button>
                         );
                       })}
+                    </div>
+
+                    {/* Barra manual deslizable interactiva para medir gasolina */}
+                    <div className="space-y-1.5 pt-1">
+                      <div className="relative flex items-center h-7">
+                        {/* Pista de fondo con marcas */}
+                        <div className="w-full h-4 rounded-full bg-zinc-200 dark:bg-black/50 border border-zinc-300 dark:border-white/10 relative overflow-hidden shadow-inner">
+                          {/* Relleno con gradiente dinámico */}
+                          <div
+                            className={`h-full transition-all duration-100 rounded-full ${
+                              porcentajeCombustible <= 15
+                                ? "bg-gradient-to-r from-rose-500 to-amber-500"
+                                : porcentajeCombustible <= 40
+                                ? "bg-gradient-to-r from-amber-500 to-emerald-400"
+                                : "bg-gradient-to-r from-emerald-500 to-teal-400"
+                            }`}
+                            style={{ width: `${Math.max(porcentajeCombustible, 2)}%` }}
+                          />
+
+                          {/* Marcas de referencia (25%, 50%, 75%) */}
+                          <div className="absolute inset-0 flex justify-between px-[25%] pointer-events-none opacity-30">
+                            <span className="w-px h-full bg-zinc-500 dark:bg-white/40" />
+                            <span className="w-px h-full bg-zinc-500 dark:bg-white/40" />
+                          </div>
+                        </div>
+
+                        {/* Input Range táctil/mouse para deslizar con dedo en móvil */}
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={porcentajeCombustible}
+                          onChange={(e) => handleSliderCombustible(Number(e.target.value))}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-20 touch-none"
+                          title="Arrastra para ajustar el nivel de combustible manualmente"
+                        />
+
+                        {/* Aguja / Perilla visual del slider */}
+                        <div
+                          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-white dark:bg-zinc-800 border-2 border-emerald-500 shadow-md flex items-center justify-center pointer-events-none transition-all duration-75 z-10"
+                          style={{ left: `${porcentajeCombustible}%` }}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        </div>
+                      </div>
+
+                      {/* Leyenda inferior */}
+                      <div className="flex justify-between items-center px-1 text-[10px] font-bold text-zinc-500 dark:text-zinc-400">
+                        <span>E (Vacío)</span>
+                        <span className="text-emerald-700 dark:text-emerald-400 font-mono font-extrabold">{porcentajeCombustible}%</span>
+                        <span>F (Lleno)</span>
+                      </div>
                     </div>
                   </div>
 
@@ -3802,7 +3822,6 @@ export default function ModalNuevaOrdenTrabajo({
                         </div>
                         <div>
                           <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-200 block">Kilometraje</span>
-                          <span className="text-[10px] text-zinc-600 dark:text-zinc-400 font-medium">Lectura actual del odómetro</span>
                         </div>
                       </div>
                       {vehiculoKm && (
@@ -3853,7 +3872,6 @@ export default function ModalNuevaOrdenTrabajo({
                         </div>
                         <div>
                           <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-200 block">Inventario de Recepción</span>
-                          <span className="text-[10px] text-zinc-600 dark:text-zinc-400 font-medium">Accesorios que ingresan en el auto</span>
                         </div>
                       </div>
                       <span className="text-xs text-zinc-600 dark:text-zinc-400 font-mono px-2 py-0.5 rounded-full bg-zinc-200/50 dark:bg-white/5 border border-zinc-200 dark:border-white/5">
@@ -3948,7 +3966,6 @@ export default function ModalNuevaOrdenTrabajo({
                         </div>
                         <div>
                           <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-200 block">Evidencias Multimedia</span>
-                          <span className="text-[10px] text-zinc-600 dark:text-zinc-400 font-medium">Fotos, video y notas de voz</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -3958,8 +3975,8 @@ export default function ModalNuevaOrdenTrabajo({
                       </div>
                     </div>
 
-                    {/* Barra de 3 Acciones Discretas */}
-                    <div className="grid grid-cols-3 gap-1.5 p-1 bg-zinc-200/60 dark:bg-black/40 rounded-xl border border-zinc-200 dark:border-white/5">
+                    {/* Barra de 2 Acciones Discretas */}
+                    <div className="grid grid-cols-2 gap-1.5 p-1 bg-zinc-200/60 dark:bg-black/40 rounded-xl border border-zinc-200 dark:border-white/5">
                       <button
                         type="button"
                         onClick={() => setPanelMultimedia((curr) => (curr === "foto" ? null : "foto"))}
@@ -3977,29 +3994,6 @@ export default function ModalNuevaOrdenTrabajo({
                         {fotosIniciales.length > 0 && (
                           <span className="w-4 h-4 rounded-full bg-sky-500/30 text-sky-800 dark:text-sky-200 text-[9px] font-bold flex items-center justify-center">
                             {fotosIniciales.length}
-                          </span>
-                        )}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (grabandoAudio) detenerGrabacionAudio();
-                          setPanelMultimedia((curr) => (curr === "video" ? null : "video"));
-                        }}
-                        className={`py-1.5 px-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          panelMultimedia === "video"
-                            ? "bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30"
-                            : "text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white hover:bg-white/80 dark:hover:bg-white/5"
-                        }`}
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
-                        </svg>
-                        <span>Video</span>
-                        {videosIniciales.length > 0 && (
-                          <span className="w-4 h-4 rounded-full bg-amber-500/30 text-amber-800 dark:text-amber-200 text-[9px] font-bold flex items-center justify-center">
-                            {videosIniciales.length}
                           </span>
                         )}
                       </button>
@@ -4559,9 +4553,7 @@ export default function ModalNuevaOrdenTrabajo({
                   {/* Galería de Evidencias Capturadas (Fotos, Videos, Notas de Voz) */}
                   <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-white/5">
                     {fotosIniciales.length === 0 && videosIniciales.length === 0 && notasVozIniciales.length === 0 ? (
-                      <p className="text-[11px] text-zinc-600 dark:text-zinc-500 text-center py-3 font-medium">
-                        Sin evidencias registradas. Selecciona <strong className="text-zinc-900 dark:text-zinc-300 font-semibold">Foto</strong>, <strong className="text-zinc-900 dark:text-zinc-300 font-semibold">Video</strong> o <strong className="text-zinc-900 dark:text-zinc-300 font-semibold">Voz</strong> para adjuntar.
-                      </p>
+                      null
                     ) : (
                       <div className="space-y-2">
                         {/* Miniaturas de Fotos con visualizador ampliado */}
@@ -4733,13 +4725,12 @@ export default function ModalNuevaOrdenTrabajo({
                 </div>
               </div>
 
-              {/* Motivo de Ingreso / Trabajo Solicitado */}
+              {/* Motivo de Ingreso */}
               <div className="p-4 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-2 text-xs shadow-xs">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-zinc-900 dark:text-zinc-300">
-                    Motivo de Ingreso / Trabajo Solicitado
+                    Motivo de Ingreso
                   </label>
-                  <span className="text-[11px] text-zinc-600 dark:text-zinc-400 font-medium">Detalla qué solicita el cliente</span>
                 </div>
 
                 <textarea
@@ -4748,56 +4739,15 @@ export default function ModalNuevaOrdenTrabajo({
                   onChange={(e) => setMotivoIngreso(e.target.value)}
                   placeholder={
                     tipoIngreso === "Lubricentro"
-                      ? "Ej: Cambio de aceite 10W-30 sintético + filtro de aceite y filtro de aire..."
+                      ? "Ej: Cambio de aceite..."
                       : tipoIngreso === "Lavado"
-                      ? "Ej: Lavado express exterior + aspirado y limpieza profunda de interiores..."
-                      : "Ej: Ruido al frenar, cambio de pastillas y revisión de suspensión delantera..."
+                      ? "Ej: Lavado general..."
+                      : "Ej: Ruido al frenar..."
                   }
                   className="w-full p-3 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/15 focus:border-blue-500 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-xs sm:text-sm focus:outline-none resize-none leading-relaxed shadow-xs"
                 />
 
-                {/* Sugerencias Rápidas de Motivo */}
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {(tipoIngreso === "Lubricentro"
-                    ? [
-                        "Cambio de Aceite y Filtro",
-                        "Cambio de Filtro de Aire",
-                        "Filtro de Cabina / A/C",
-                        "Chequeo de Niveles de Fluidos",
-                        "Engrase General",
-                        "Líquido de Frenos",
-                      ]
-                    : tipoIngreso === "Lavado"
-                    ? [
-                        "Lavado Completo Exterior + Interior",
-                        "Lavado de Motor",
-                        "Encerado y Pulido",
-                        "Desinfección de Cabina",
-                        "Limpieza de Tapicería",
-                      ]
-                    : [
-                        "Mantenimiento Preventivo",
-                        "Revisión y Cambio de Frenos",
-                        "Diagnóstico de Motor (Check Engine)",
-                        "Ruido en Suspensión",
-                        "Falla en Batería / Carga",
-                        "Alineación y Balanceo",
-                      ]
-                  ).map((sug) => (
-                    <button
-                      key={sug}
-                      type="button"
-                      onClick={() => {
-                        setMotivoIngreso((prev) =>
-                          prev ? `${prev}, ${sug}` : sug
-                        );
-                      }}
-                      className="px-2.5 py-1 rounded-xl bg-white dark:bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-[11px] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer font-medium shadow-xs"
-                    >
-                      + {sug}
-                    </button>
-                  ))}
-                </div>
+
               </div>
 
               {/* Botón para continuar al Paso 4 */}
@@ -4807,7 +4757,7 @@ export default function ModalNuevaOrdenTrabajo({
                   onClick={() => irAPaso(4)}
                   className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 shadow-lg shadow-blue-600/30 active:scale-95"
                 >
-                  <span>Continuar a Orden (Asignar Técnicos)</span>
+                  <span>Continuar</span>
                   <span>→</span>
                 </button>
               </div>
