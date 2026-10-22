@@ -94,6 +94,21 @@ interface ProveedorItem {
   email?: string | null;
 }
 
+const OPCIONES_TIPO = [
+  { id: "TODOS", label: "Todos los Tipos", short: "Todos", icon: "🏢" },
+  { id: "Taller", label: "Taller Mecánico", short: "Taller", icon: "🔧" },
+  { id: "Lubricentro", label: "Lubricentro Express", short: "Lubricentro", icon: "🛢️" },
+  { id: "Carwash", label: "Carwash / Lavado", short: "Carwash", icon: "🚿" },
+  { id: "Tecnicentro", label: "Tecnicentro", short: "Tecnicentro", icon: "⚙️" },
+];
+
+const OPCIONES_ESTADO = [
+  { id: "TODOS", label: "Todos los Estados", short: "Todas", icon: "📋" },
+  { id: "PENDIENTE", label: "Por Cotizar", short: "Por Cotizar", icon: "⏳" },
+  { id: "APROBADO", label: "Aprobadas", short: "Aprobadas", icon: "✅" },
+  { id: "EN_CAJA", label: "En Caja POS", short: "En Caja POS", icon: "💳" },
+];
+
 export default function PanelPresupuestosPage() {
   const router = useRouter();
 
@@ -103,6 +118,8 @@ export default function PanelPresupuestosPage() {
   const [busqueda, setBusqueda] = useState("");
   const [filtroTipo, setFiltroTipo] = useState<string>("TODOS");
   const [filtroEstado, setFiltroEstado] = useState<string>("TODOS");
+  const [menuTipoAbierto, setMenuTipoAbierto] = useState(false);
+  const [menuEstadoAbierto, setMenuEstadoAbierto] = useState(false);
   const [kpis, setKpis] = useState({
     total: 0,
     pendientesCotizar: 0,
@@ -691,67 +708,254 @@ export default function PanelPresupuestosPage() {
         </section>
 
         {/* Barra de Filtros y Búsqueda */}
-        <section className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-zinc-900/50 p-3 sm:p-4 rounded-2xl border border-white/10">
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar por placa, cliente, vehículo o # de orden..."
-              className="w-full h-11 pl-10 pr-4 rounded-xl bg-zinc-950/80 border border-white/10 focus:border-sky-500 focus:outline-none text-xs sm:text-sm text-white placeholder-zinc-500 transition-all"
-            />
-            <span className="absolute left-3.5 top-3 text-zinc-500 text-sm">🔍</span>
-            {busqueda && (
-              <button
-                type="button"
-                onClick={() => setBusqueda("")}
-                className="absolute right-3 top-3 text-zinc-500 hover:text-white text-xs"
-              >
-                ✕
-              </button>
-            )}
+        <section className="space-y-2">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 bg-zinc-900/60 p-3 sm:p-4 rounded-2xl border border-white/10 shadow-lg backdrop-blur-sm">
+            {/* Buscador Más Grande */}
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Buscar por placa, cliente, vehículo o # de orden..."
+                className="w-full h-12 sm:h-13 pl-12 pr-10 rounded-xl bg-zinc-950/90 border border-white/10 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none text-sm sm:text-base text-white placeholder-zinc-500 transition-all shadow-inner"
+              />
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-base sm:text-lg pointer-events-none">
+                🔍
+              </span>
+              {busqueda && (
+                <button
+                  type="button"
+                  onClick={() => setBusqueda("")}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
+                  title="Borrar búsqueda"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Un solo campo para los dos filtros desplegables */}
+            <div className="flex items-stretch h-12 sm:h-13 bg-zinc-950/90 border border-white/10 rounded-xl divide-x divide-white/10 shrink-0 shadow-inner focus-within:border-sky-500/50 transition-all">
+              {/* Filtro 1: Tipo de Negocio */}
+              <div className="relative flex-1 md:flex-initial">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuTipoAbierto(!menuTipoAbierto);
+                    setMenuEstadoAbierto(false);
+                  }}
+                  className={`w-full h-full px-3.5 sm:px-4 flex items-center justify-between gap-2.5 text-xs sm:text-sm font-semibold hover:bg-white/5 transition-all cursor-pointer ${
+                    filtroTipo !== "TODOS" ? "text-sky-400 bg-sky-500/10" : "text-zinc-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <span className="text-sm">
+                      {OPCIONES_TIPO.find((t) => t.id === filtroTipo)?.icon || "🏢"}
+                    </span>
+                    <span className="truncate">
+                      {filtroTipo === "TODOS"
+                        ? "Tipo: Todos"
+                        : OPCIONES_TIPO.find((t) => t.id === filtroTipo)?.short}
+                    </span>
+                  </div>
+                  <svg
+                    className={`w-3.5 h-3.5 text-zinc-400 transition-transform ${
+                      menuTipoAbierto ? "rotate-180" : ""
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {menuTipoAbierto && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setMenuTipoAbierto(false)}
+                    />
+                    <div className="absolute left-0 md:right-0 md:left-auto mt-2 w-56 bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 py-1.5 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100">
+                      <div className="px-3.5 py-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-white/5">
+                        Tipo de Negocio
+                      </div>
+                      {OPCIONES_TIPO.map((op) => (
+                        <button
+                          key={op.id}
+                          type="button"
+                          onClick={() => {
+                            setFiltroTipo(op.id);
+                            setMenuTipoAbierto(false);
+                          }}
+                          className={`w-full px-3.5 py-2 text-left text-xs sm:text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                            filtroTipo === op.id
+                              ? "bg-sky-500/15 text-sky-400 font-bold"
+                              : "text-zinc-300 hover:bg-white/5 hover:text-white"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>{op.icon}</span>
+                            <span>{op.label}</span>
+                          </div>
+                          {filtroTipo === op.id && (
+                            <svg className="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Filtro 2: Estado de Cotización */}
+              <div className="relative flex-1 md:flex-initial">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuEstadoAbierto(!menuEstadoAbierto);
+                    setMenuTipoAbierto(false);
+                  }}
+                  className={`w-full h-full px-3.5 sm:px-4 flex items-center justify-between gap-2.5 text-xs sm:text-sm font-semibold hover:bg-white/5 transition-all cursor-pointer ${
+                    filtroEstado !== "TODOS" ? "text-amber-400 bg-amber-500/10" : "text-zinc-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <span className="text-sm">
+                      {OPCIONES_ESTADO.find((e) => e.id === filtroEstado)?.icon || "📋"}
+                    </span>
+                    <span className="truncate">
+                      {filtroEstado === "TODOS"
+                        ? "Estado: Todos"
+                        : OPCIONES_ESTADO.find((e) => e.id === filtroEstado)?.short}
+                    </span>
+                  </div>
+                  <svg
+                    className={`w-3.5 h-3.5 text-zinc-400 transition-transform ${
+                      menuEstadoAbierto ? "rotate-180" : ""
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {menuEstadoAbierto && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setMenuEstadoAbierto(false)}
+                    />
+                    <div className="absolute right-0 mt-2 w-52 bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 py-1.5 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100">
+                      <div className="px-3.5 py-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-white/5">
+                        Estado de Cotización
+                      </div>
+                      {OPCIONES_ESTADO.map((op) => (
+                        <button
+                          key={op.id}
+                          type="button"
+                          onClick={() => {
+                            setFiltroEstado(op.id);
+                            setMenuEstadoAbierto(false);
+                          }}
+                          className={`w-full px-3.5 py-2 text-left text-xs sm:text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                            filtroEstado === op.id
+                              ? "bg-amber-500/15 text-amber-400 font-bold"
+                              : "text-zinc-300 hover:bg-white/5 hover:text-white"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>{op.icon}</span>
+                            <span>{op.label}</span>
+                          </div>
+                          {filtroEstado === op.id && (
+                            <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Botón rápido para limpiar filtros si alguno está activo */}
+              {(filtroTipo !== "TODOS" || filtroEstado !== "TODOS") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFiltroTipo("TODOS");
+                    setFiltroEstado("TODOS");
+                  }}
+                  title="Restablecer filtros"
+                  className="px-3 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors flex items-center justify-center text-xs cursor-pointer"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Filtro por tipo de negocio */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-            {["TODOS", "Taller", "Lubricentro", "Carwash", "Tecnicentro"].map((tipo) => (
+          {/* Badges / Chips activos debajo de la barra */}
+          {(filtroTipo !== "TODOS" || filtroEstado !== "TODOS" || busqueda) && (
+            <div className="flex items-center flex-wrap gap-2 px-1 text-xs">
+              <span className="text-zinc-500 font-medium text-[11px]">Filtros activos:</span>
+              {busqueda && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-200 border border-white/5">
+                  🔍 &quot;{busqueda}&quot;
+                  <button
+                    type="button"
+                    onClick={() => setBusqueda("")}
+                    className="hover:text-white text-zinc-400 text-xs ml-0.5 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {filtroTipo !== "TODOS" && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                  {OPCIONES_TIPO.find((t) => t.id === filtroTipo)?.icon}{" "}
+                  {OPCIONES_TIPO.find((t) => t.id === filtroTipo)?.label}
+                  <button
+                    type="button"
+                    onClick={() => setFiltroTipo("TODOS")}
+                    className="hover:text-white text-sky-400 text-xs ml-0.5 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {filtroEstado !== "TODOS" && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                  {OPCIONES_ESTADO.find((e) => e.id === filtroEstado)?.icon}{" "}
+                  {OPCIONES_ESTADO.find((e) => e.id === filtroEstado)?.label}
+                  <button
+                    type="button"
+                    onClick={() => setFiltroEstado("TODOS")}
+                    className="hover:text-white text-amber-400 text-xs ml-0.5 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
               <button
-                key={tipo}
                 type="button"
-                onClick={() => setFiltroTipo(tipo)}
-                className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                  filtroTipo === tipo
-                    ? "bg-sky-500 text-white shadow-md shadow-sky-500/30"
-                    : "bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white"
-                }`}
+                onClick={() => {
+                  setBusqueda("");
+                  setFiltroTipo("TODOS");
+                  setFiltroEstado("TODOS");
+                }}
+                className="text-[11px] text-zinc-400 hover:text-white underline underline-offset-2 ml-1 cursor-pointer"
               >
-                {tipo}
+                Limpiar todo
               </button>
-            ))}
-          </div>
-
-          {/* Filtro por estado de cotización */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-            {[
-              { id: "TODOS", label: "Todas" },
-              { id: "PENDIENTE", label: "Por Cotizar" },
-              { id: "APROBADO", label: "Aprobadas" },
-              { id: "EN_CAJA", label: "En Caja POS" },
-            ].map((st) => (
-              <button
-                key={st.id}
-                type="button"
-                onClick={() => setFiltroEstado(st.id)}
-                className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                  filtroEstado === st.id
-                    ? "bg-zinc-200 text-zinc-950 font-bold"
-                    : "bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white"
-                }`}
-              >
-                {st.label}
-              </button>
-            ))}
-          </div>
+            </div>
+          )}
         </section>
 
         {/* Lista de Órdenes */}
