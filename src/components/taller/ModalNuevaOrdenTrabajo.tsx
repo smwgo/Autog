@@ -2371,9 +2371,9 @@ export default function ModalNuevaOrdenTrabajo({
           )}
 
 
-          {/* Banner informativo cuando se escaneó una matrícula nueva que no estaba en BD */}
+          {/* Banner informativo cuando se escaneó una matrícula nueva que no estaba en BD (oculto en móvil) */}
           {matriculaEscaneadaInfo && !matriculaEscaneadaInfo.existe && (
-            <div className="px-3.5 py-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2 text-xs animate-fade-in">
+            <div className="hidden sm:flex px-3.5 py-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 items-center justify-between gap-2 text-xs animate-fade-in">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="px-2 py-0.5 rounded-lg bg-emerald-500 text-black font-mono font-bold text-xs">
                   {matriculaEscaneadaInfo.placa}
