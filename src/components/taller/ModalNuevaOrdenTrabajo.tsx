@@ -382,11 +382,14 @@ export default function ModalNuevaOrdenTrabajo({
 
   // Audio / Nota de voz
   const [grabandoAudio, setGrabandoAudio] = useState(false);
+  const grabandoAudioRef = useRef(false);
   const [subiendoAudio, setSubiendoAudio] = useState(false);
   const [segundosAudio, setSegundosAudio] = useState(0);
   const [audioBlobTemp, setAudioBlobTemp] = useState<Blob | null>(null);
   const [audioUrlTemp, setAudioUrlTemp] = useState<string | null>(null);
   const [transcripcionVoz, setTranscripcionVoz] = useState("");
+  const transcripcionVozRef = useRef("");
+  const transcripcionUltimaAgregadaRef = useRef("");
   const [transcripcionOriginal, setTranscripcionOriginal] = useState("");
   const [estadoTranscripcion, setEstadoTranscripcion] = useState<TranscriptionStatus>("no_disponible");
   const [errorSubidaAudio, setErrorSubidaAudio] = useState<string | null>(null);
@@ -971,8 +974,11 @@ export default function ModalNuevaOrdenTrabajo({
 
       recorder.start();
       setGrabandoAudio(true);
+      grabandoAudioRef.current = true;
       setSegundosAudio(0);
       setTranscripcionVoz("");
+      transcripcionVozRef.current = "";
+      transcripcionUltimaAgregadaRef.current = "";
       setTranscripcionOriginal("");
       setEstadoTranscripcion("pendiente");
 
@@ -993,10 +999,35 @@ export default function ModalNuevaOrdenTrabajo({
       if (speechProvider.isSupported()) {
         const liveRec = speechProvider.startLiveRecognition(
           (text, isFinal) => {
-            if (text.trim()) {
-              setTranscripcionVoz(text.trim());
-              setTranscripcionOriginal(text.trim());
+            const limpio = text.trim();
+            if (limpio) {
+              transcripcionVozRef.current = limpio;
+              setTranscripcionVoz(limpio);
+              setTranscripcionOriginal(limpio);
               setEstadoTranscripcion(isFinal ? "lista" : "pendiente");
+
+              // Si la grabación ya se detuvo pero el proveedor entrega resultados finales tardíos
+              if (!grabandoAudioRef.current) {
+                const yaAgregado = transcripcionUltimaAgregadaRef.current;
+                if (yaAgregado && yaAgregado !== limpio) {
+                  transcripcionUltimaAgregadaRef.current = limpio;
+                  setMotivoIngreso((prev) => {
+                    if (prev.endsWith(yaAgregado)) {
+                      return prev.slice(0, prev.length - yaAgregado.length) + limpio;
+                    }
+                    const base = prev.trim();
+                    return base ? `${base}\n${limpio}` : limpio;
+                  });
+                } else if (!yaAgregado) {
+                  transcripcionUltimaAgregadaRef.current = limpio;
+                  setMotivoIngreso((prev) => {
+                    const base = prev.trim();
+                    if (!base) return limpio;
+                    if (base.endsWith(limpio)) return base;
+                    return `${base}\n${limpio}`;
+                  });
+                }
+              }
             }
           },
           (err) => {
@@ -1021,6 +1052,7 @@ export default function ModalNuevaOrdenTrabajo({
         mostrarToast(err?.message || "Error al acceder al micrófono", "err");
       }
       setGrabandoAudio(false);
+      grabandoAudioRef.current = false;
     }
   };
 
@@ -1036,9 +1068,24 @@ export default function ModalNuevaOrdenTrabajo({
       speechRecognitionRef.current = null;
     }
     setGrabandoAudio(false);
+    grabandoAudioRef.current = false;
+
+    // Pasar el texto transcrito de forma automática al campo motivo de ingreso
+    const textoDetectado = (transcripcionVozRef.current || transcripcionVoz).trim();
+    if (textoDetectado) {
+      transcripcionUltimaAgregadaRef.current = textoDetectado;
+      setMotivoIngreso((prev) => {
+        const base = prev.trim();
+        if (!base) return textoDetectado;
+        if (base.endsWith(textoDetectado)) return base;
+        return `${base}\n${textoDetectado}`;
+      });
+      mostrarToast("Texto transcrito añadido a Motivo de Ingreso", "ok");
+    }
+
     setEstadoTranscripcion((prev) => {
       if (prev === "pendiente") {
-        return transcripcionVoz.trim() ? "lista" : "no_disponible";
+        return textoDetectado ? "lista" : "no_disponible";
       }
       return prev;
     });
@@ -1113,15 +1160,17 @@ export default function ModalNuevaOrdenTrabajo({
 
       setNotasVozIniciales((prev) => [...prev, nuevaNota]);
 
-      // Si hay transcripción, agregar referencia al motivo de ingreso
+      // Asegurar que el texto final quede reflejado limpiamente sin duplicar
       if (textoFinal) {
         setMotivoIngreso((prev) => {
-          const limpio = prev.trim();
-          return limpio
-            ? `${limpio}\n[Nota de voz]: "${textoFinal}"`
-            : `[Nota de voz]: "${textoFinal}"`;
+          const base = prev.trim();
+          if (!base) return textoFinal;
+          if (base.includes(textoFinal)) return base;
+          return `${base}\n${textoFinal}`;
         });
       }
+      transcripcionUltimaAgregadaRef.current = "";
+      transcripcionVozRef.current = "";
 
       mostrarToast("Nota de voz y transcripción guardadas correctamente", "ok");
 
@@ -1153,6 +1202,9 @@ export default function ModalNuevaOrdenTrabajo({
 
   const descartarNotaVozTemp = () => {
     detenerTracksMedia();
+    grabandoAudioRef.current = false;
+    transcripcionUltimaAgregadaRef.current = "";
+    transcripcionVozRef.current = "";
     setAudioBlobTemp(null);
     if (audioUrlTemp) {
       try {
@@ -2765,7 +2817,6 @@ export default function ModalNuevaOrdenTrabajo({
                               </div>
                               <div>
                                 <span className="text-sm font-bold block">Persona Natural</span>
-                                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">Particular con Cédula</span>
                               </div>
                             </button>
 
@@ -2786,7 +2837,6 @@ export default function ModalNuevaOrdenTrabajo({
                               </div>
                               <div>
                                 <span className="text-sm font-bold block">Empresa / Corporativo</span>
-                                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">Persona Jurídica con RUC</span>
                               </div>
                             </button>
                           </div>
@@ -2897,13 +2947,13 @@ export default function ModalNuevaOrdenTrabajo({
                         </div>
                       )}
 
-                      {/* ================= PASO 4: TELÉFONO / WHATSAPP ================= */}
+                      {/* ================= PASO 4: WHATSAPP ================= */}
                       {subPasoCliente === "telefono" && (
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
                             <div>
                               <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
-                                Teléfono / WhatsApp <span className="text-rose-500">*</span>
+                                WhatsApp <span className="text-rose-500">*</span>
                               </label>
                             </div>
                             <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
@@ -2994,7 +3044,7 @@ export default function ModalNuevaOrdenTrabajo({
                           <div className="flex items-center justify-between">
                             <div>
                               <label className="text-sm font-bold text-zinc-900 dark:text-zinc-100 block">
-                                Dirección de Domicilio / Oficina (Opcional)
+                                Dirección (Opcional)
                               </label>
                             </div>
                             <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
@@ -3059,7 +3109,7 @@ export default function ModalNuevaOrdenTrabajo({
                               disabled={guardandoCliente}
                               className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-98 disabled:opacity-50"
                             >
-                              <span>{guardandoCliente ? "Guardando..." : "Guardar Cliente y Continuar a Vehículo"}</span>
+                              <span>{guardandoCliente ? "Guardando..." : "Continuar"}</span>
                               <span>→</span>
                             </button>
                           </div>
@@ -4467,7 +4517,21 @@ export default function ModalNuevaOrdenTrabajo({
                             <textarea
                               rows={3}
                               value={transcripcionVoz}
-                              onChange={(e) => setTranscripcionVoz(e.target.value)}
+                              onChange={(e) => {
+                                const nuevoTexto = e.target.value;
+                                setTranscripcionVoz(nuevoTexto);
+                                transcripcionVozRef.current = nuevoTexto;
+                                const previoAgregado = transcripcionUltimaAgregadaRef.current;
+                                if (previoAgregado && previoAgregado !== nuevoTexto.trim()) {
+                                  setMotivoIngreso((prev) => {
+                                    if (prev.includes(previoAgregado)) {
+                                      return prev.replace(previoAgregado, nuevoTexto.trim());
+                                    }
+                                    return prev;
+                                  });
+                                  transcripcionUltimaAgregadaRef.current = nuevoTexto.trim();
+                                }
+                              }}
                               placeholder="Escribe o corrige lo expresado por el cliente o técnico..."
                               className="w-full p-2.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-xs placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed transition-all shadow-xs"
                             />
@@ -4542,7 +4606,7 @@ export default function ModalNuevaOrdenTrabajo({
                               <span>Grabar nota de voz (Micrófono)</span>
                             </button>
                             <p className="text-[10px] text-zinc-600 dark:text-zinc-500 text-center font-medium">
-                              Graba hasta 60 segundos con transcripción automática al texto de la orden.
+                              Máx. 60s con transcripción automática
                             </p>
                           </div>
                         )}
@@ -4923,19 +4987,7 @@ export default function ModalNuevaOrdenTrabajo({
                 )}
               </div>
 
-              {/* Email para Notificaciones / Presupuesto */}
-              <div className="space-y-1.5 text-xs">
-                <label className="text-zinc-700 dark:text-zinc-300 font-semibold block">
-                  Email para envío de presupuesto y orden digital (Opcional)
-                </label>
-                <input
-                  type="email"
-                  value={emailContacto}
-                  onChange={(e) => setEmailContacto(e.target.value)}
-                  placeholder="cliente@ejemplo.com"
-                  className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 focus:border-blue-500 text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-xs sm:text-sm focus:outline-none shadow-xs"
-                />
-              </div>
+
             </div>
           )}
 
