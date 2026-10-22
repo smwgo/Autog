@@ -10,12 +10,12 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     return await withRetry(async () => {
-      const rows: any[] = await prisma.$queryRawUnsafe(
+      const rows = ((await prisma.$queryRawUnsafe(
         `SELECT "id", "name", "contact", "phone", "email", "categories" 
          FROM "Supplier" 
          WHERE "status" = 'Activo' 
          ORDER BY "name" ASC`
-      ).catch(() => []);
+      ).catch(() => [])) as any[]) || [];
 
       return NextResponse.json({ success: true, proveedores: rows });
     });

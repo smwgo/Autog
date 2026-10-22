@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
       query += ` ORDER BY "name" ASC LIMIT 30`;
 
-      const rows: any[] = await prisma.$queryRawUnsafe(query, ...params).catch(() => []);
+      const rows = ((await prisma.$queryRawUnsafe(query, ...params).catch(() => [])) as any[]) || [];
       return NextResponse.json({ success: true, productos: rows });
     });
   } catch (error: any) {

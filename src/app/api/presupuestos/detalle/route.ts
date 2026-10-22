@@ -37,7 +37,7 @@ export async function GET(request: Request) {
       const order = rows[0];
 
       // 2. Obtener todas las evidencias multimedia asociadas desde Neon
-      const evRows: any[] = await prisma.$queryRawUnsafe(
+      const evRows = ((await prisma.$queryRawUnsafe(
         `SELECT * FROM "WorkshopEvidence" 
          WHERE ("orderId" = $1 OR "orderNumber" = $2 OR "plate" ILIKE $3)
            AND "uploadStatus" = 'COMPLETED'
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
         order.id,
         order.orderNumber,
         (order.plate || "").trim()
-      ).catch(() => []);
+      ).catch(() => [])) as any[]) || [];
 
       const evidencias = evRows.map((ev: any) => ({
         id: ev.id,
@@ -123,9 +123,9 @@ export async function GET(request: Request) {
       }));
 
       // 4. Obtener proveedores disponibles para el autocompletado
-      const proveedores: any[] = await prisma.$queryRawUnsafe(
+      const proveedores = ((await prisma.$queryRawUnsafe(
         `SELECT "id", "name", "contact", "phone", "email" FROM "Supplier" WHERE "status" = 'Activo' ORDER BY "name" ASC`
-      ).catch(() => []);
+      ).catch(() => [])) as any[]) || [];
 
       return NextResponse.json({
         success: true,
