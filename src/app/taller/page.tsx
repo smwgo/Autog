@@ -1250,12 +1250,18 @@ export default function TallerPanel() {
       const res = await fetch(`/api/taller/operacion?sede=${sActiva}&userBranch=${uBranch}`);
       if (!res.ok) {
         console.warn(`Respuesta no exitosa al cargar taller (${res.status})`);
-        return;
+        return false;
       }
       const data = await res.json();
       if (data.success) {
         const pista: UnifiedOrder[] = data.autosEnPista || [];
         setAutosEnPista(pista);
+        try {
+          localStorage.setItem(
+            "taller_pista_cache",
+            JSON.stringify(pista.map((o) => ({ ...o, receptionPhotos: [] })))
+          );
+        } catch {}
         if (Array.isArray(data.clientes)) {
           setClientesCatalogo(data.clientes);
         }
@@ -1286,18 +1292,35 @@ export default function TallerPanel() {
         } else if (selectFirstIfNone && pista.length === 0) {
           setOrdenActiva(null);
         }
+        return true;
       }
+      return false;
     } catch (err) {
       console.error("Error cargando operación de taller:", err);
+      return false;
     } finally {
       setCargandoInicial(false);
     }
   }, []);
 
   useEffect(() => {
-    cargarOperacionInicial(true);
+    try {
+      const cached = JSON.parse(localStorage.getItem("taller_pista_cache") || "null");
+      if (Array.isArray(cached) && cached.length > 0) {
+        const savedId = localStorage.getItem("taller_orden_activa_id");
+        setAutosEnPista((prev) => (prev.length > 0 ? prev : cached));
+        setOrdenActiva((prev) => prev || cached.find((o: UnifiedOrder) => o.id === savedId) || cached[0]);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    let cargado = false;
+    cargarOperacionInicial(true).then((ok) => {
+      cargado = ok;
+    });
     const retryTimer = setTimeout(() => {
-      cargarOperacionInicial(true);
+      if (!cargado) cargarOperacionInicial(true);
     }, 1500);
     const handleBranchChange = () => cargarOperacionInicial(true);
     window.addEventListener("autog-branch-change", handleBranchChange);
@@ -4696,6 +4719,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   </span>
                 </div>
               </div>
+            ) : cargandoInicial ? (
+              <div className="flex items-center gap-2.5 animate-pulse">
+                <span className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-white/10" />
+                <span className="space-y-1.5">
+                  <span className="block h-3 w-28 rounded bg-zinc-200 dark:bg-white/10" />
+                  <span className="block h-2.5 w-16 rounded bg-zinc-200 dark:bg-white/10" />
+                </span>
+              </div>
             ) : (
               <span className="text-base sm:text-lg font-bold text-zinc-800 dark:text-zinc-200">
                 Taller Mecánico
@@ -4738,6 +4769,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               </button>
             </div>
           </div>
+
+          {!ordenActiva && cargandoInicial && (
+            <div className="w-full min-h-[68px] rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-[#111113] animate-pulse" />
+          )}
 
           {/* Lado derecho: Estado de Ingreso en rectángulo a juego */}
           {ordenActiva && (

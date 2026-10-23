@@ -31,7 +31,7 @@ export interface InspectionTemplate {
   items: InspectionChecklistItem[];
 }
 
-export type SeccionInspeccionId = "carroceria" | "motor" | "frenos" | "suspension" | "electrico";
+export type SeccionInspeccionId = "carroceria" | "motor" | "frenos" | "suspension" | "electrico" | "aire";
 
 export interface SeccionInspeccionConfig {
   id: SeccionInspeccionId;
@@ -115,6 +115,21 @@ export const SISTEMAS_INSPECCION: SeccionInspeccionConfig[] = [
       { id: "elec_clima", label: "Sistema de climatización / A/C y ventilación", modo: "semaforo" },
     ],
   },
+  {
+    id: "aire",
+    name: "Aire Acondicionado",
+    shortName: "A/C",
+    icon: "❄️",
+    description: "Compresor, gas refrigerante, condensador, filtro de cabina y ventilación",
+    items: [
+      { id: "ac_compresor", label: "Compresor y embrague: funcionamiento y ruidos", modo: "semaforo" },
+      { id: "ac_gas", label: "Nivel de gas refrigerante y presiones", modo: "semaforo" },
+      { id: "ac_condensador", label: "Condensador y electroventilador: limpieza y estado", modo: "semaforo" },
+      { id: "ac_fugas", label: "Fugas en mangueras, cañerías y uniones", modo: "semaforo" },
+      { id: "ac_filtro", label: "Filtro de cabina y limpieza del evaporador", modo: "semaforo" },
+      { id: "ac_ventilacion", label: "Soplador, salidas de aire y temperatura de salida", modo: "semaforo" },
+    ],
+  },
 ];
 
 export const PLANTILLAS_INSPECCION: InspectionTemplate[] = SISTEMAS_INSPECCION
@@ -126,6 +141,92 @@ export const PLANTILLAS_INSPECCION: InspectionTemplate[] = SISTEMAS_INSPECCION
     description: s.description,
     items: s.items,
   }));
+
+const SUBCATEGORIAS_SISTEMA: Record<string, { id: string; icon: string }[]> = {
+  motor: [
+    { id: "Fugas", icon: "💧" },
+    { id: "Refrigeración", icon: "🌡️" },
+    { id: "Correas", icon: "⛓️" },
+    { id: "Encendido", icon: "⚡" },
+    { id: "Escape", icon: "💨" },
+    { id: "Soportes", icon: "🔩" },
+  ],
+  frenos: [
+    { id: "Pastillas", icon: "🟫" },
+    { id: "Discos", icon: "💿" },
+    { id: "Líquido", icon: "💧" },
+    { id: "Calipers", icon: "🔧" },
+    { id: "Pedal", icon: "🦶" },
+    { id: "Mano", icon: "🅿️" },
+  ],
+  suspension: [
+    { id: "Amortiguadores", icon: "🔽" },
+    { id: "Resortes", icon: "🌀" },
+    { id: "Rótulas", icon: "⚪" },
+    { id: "Terminales", icon: "↔️" },
+    { id: "Bujes", icon: "🔩" },
+    { id: "Dirección", icon: "🛞" },
+  ],
+  electrico: [
+    { id: "Batería", icon: "🔋" },
+    { id: "Alternador", icon: "🔄" },
+    { id: "Arranque", icon: "🔑" },
+    { id: "Luces", icon: "💡" },
+    { id: "Tablero", icon: "📟" },
+    { id: "Fusibles", icon: "🔌" },
+  ],
+  aire: [
+    { id: "Compresor", icon: "⚙️" },
+    { id: "Gas", icon: "🧊" },
+    { id: "Condensador", icon: "♨️" },
+    { id: "Fugas", icon: "💧" },
+    { id: "Filtro", icon: "🌬️" },
+    { id: "Ventilación", icon: "❄️" },
+  ],
+};
+
+const ZONAS_SUBCATEGORIA: Record<string, Record<string, { x: number; y: number }>> = {
+  motor: {
+    Fugas: { x: 700, y: 560 },
+    Refrigeración: { x: 1150, y: 560 },
+    Correas: { x: 880, y: 440 },
+    Encendido: { x: 700, y: 250 },
+    Escape: { x: 520, y: 390 },
+    Soportes: { x: 330, y: 340 },
+  },
+  frenos: {
+    Pastillas: { x: 800, y: 400 },
+    Discos: { x: 340, y: 300 },
+    Líquido: { x: 1020, y: 100 },
+    Calipers: { x: 700, y: 200 },
+    Pedal: { x: 1140, y: 170 },
+    Mano: { x: 1180, y: 330 },
+  },
+  suspension: {
+    Amortiguadores: { x: 520, y: 180 },
+    Resortes: { x: 1000, y: 120 },
+    Rótulas: { x: 480, y: 570 },
+    Terminales: { x: 730, y: 540 },
+    Bujes: { x: 850, y: 590 },
+    Dirección: { x: 900, y: 440 },
+  },
+  electrico: {
+    Batería: { x: 640, y: 400 },
+    Alternador: { x: 1100, y: 300 },
+    Arranque: { x: 800, y: 600 },
+    Luces: { x: 180, y: 260 },
+    Tablero: { x: 700, y: 110 },
+    Fusibles: { x: 380, y: 280 },
+  },
+  aire: {
+    Compresor: { x: 820, y: 470 },
+    Gas: { x: 1150, y: 640 },
+    Condensador: { x: 1150, y: 700 },
+    Fugas: { x: 760, y: 100 },
+    Filtro: { x: 1190, y: 290 },
+    Ventilación: { x: 900, y: 700 },
+  },
+};
 
 const CHIPS_HALLAZGO = [
   { id: "Rayón", label: "Rayón", color: "bg-amber-500/20 text-amber-300 border-amber-500/40" },
@@ -211,7 +312,15 @@ export default function InspeccionVehiculo({
   mostrarToast = (msg) => console.log(msg),
 }: InspeccionVehiculoProps) {
   const [vistaActiva, setVistaActiva] = useState<VistaVehiculoId>("frontal");
+  const [subCategoriaPorSistema, setSubCategoriaPorSistema] = useState<Record<string, string>>({
+    motor: SUBCATEGORIAS_SISTEMA.motor[0].id,
+    frenos: SUBCATEGORIAS_SISTEMA.frenos[0].id,
+    suspension: SUBCATEGORIAS_SISTEMA.suspension[0].id,
+    electrico: SUBCATEGORIAS_SISTEMA.electrico[0].id,
+    aire: SUBCATEGORIAS_SISTEMA.aire[0].id,
+  });
   const vistaCarouselRef = useRef<HTMLDivElement | null>(null);
+  const ultimoToquePinRef = useRef(0);
   const scrollTimeoutVistaRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleVistaScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -337,7 +446,7 @@ export default function InspeccionVehiculo({
   useEffect(() => {
     setImagenCargando(true);
     setImagenError(false);
-  }, [vistaActiva, seccionActiva]);
+  }, [vistaActiva, seccionActiva, subCategoriaPorSistema]);
 
   // Sincronizar hallazgos locales cuando cambie la orden seleccionada
   useEffect(() => {
@@ -397,10 +506,14 @@ export default function InspeccionVehiculo({
   const handleTocarLienzo = (
     e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>
   ) => {
-    // Si NO estamos en modo colocación NI reubicación, NO crear pines por toques accidentales en móvil
-    if (!modoColocandoPin && !pinReubicandoId) {
+    const esToque = "touches" in e || "changedTouches" in e;
+    // Un toque libre se registra con el clic que sigue al toque (evita duplicados y pines al hacer scroll)
+    if (!modoColocandoPin && !pinReubicandoId && esToque) {
       return;
     }
+    const ahora = Date.now();
+    if (ahora - ultimoToquePinRef.current < 600) return;
+    ultimoToquePinRef.current = ahora;
 
     const rect = e.currentTarget.getBoundingClientRect();
     let clientX: number;
@@ -462,6 +575,8 @@ export default function InspeccionVehiculo({
           ? "Frenos"
           : seccionActiva === "suspension"
           ? "Suspensión"
+          : seccionActiva === "aire"
+          ? "Aire Acondicionado"
           : "Eléctrico");
 
     const tipoDefault = esCarroceria ? "Rayón" : (seccionActiva === "motor" ? "Fuga" : "Desgaste");
@@ -472,7 +587,9 @@ export default function InspeccionVehiculo({
       vistaLabel: vistaLabel,
       x: xPct,
       y: yPct,
-      zona: `${vistaLabel}`,
+      zona: !esCarroceria && SUBCATEGORIAS_SISTEMA[seccionActiva]
+        ? `${vistaLabel} · ${subCategoriaPorSistema[seccionActiva]}`
+        : `${vistaLabel}`,
       tipo: tipoDefault,
       descripcion: "",
       pinNumber: nuevoPinNumero,
@@ -1079,7 +1196,7 @@ ${urlSeguimiento}`;
         <div
           ref={seccionCarouselRef}
           onScroll={handleSeccionScroll}
-          className="flex sm:grid sm:grid-cols-5 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
+          className="flex sm:grid sm:grid-cols-6 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
         >
           {SISTEMAS_INSPECCION.map((sis) => {
             const active = seccionActiva === sis.id;
@@ -1496,6 +1613,53 @@ ${urlSeguimiento}`;
 
         return (
           <>
+            {SUBCATEGORIAS_SISTEMA[seccionActiva] && (
+              <div className="space-y-1.5 pb-1">
+                <div className="flex sm:grid sm:grid-cols-6 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar touch-pan-x">
+                  {SUBCATEGORIAS_SISTEMA[seccionActiva].map((sub, idx) => {
+                    const activa = subCategoriaPorSistema[seccionActiva] === sub.id;
+                    const cantSub = hallazgos.filter(
+                      (h) => h.vista === seccionActiva && (h.zona || "").endsWith(`· ${sub.id}`)
+                    ).length;
+                    return (
+                      <button
+                        key={sub.id}
+                        type="button"
+                        onClick={() => setSubCategoriaPorSistema((prev) => ({ ...prev, [seccionActiva]: sub.id }))}
+                        className={`h-11 sm:h-12 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shrink-0 px-3 sm:px-0 w-full min-w-full sm:min-w-0 sm:w-auto snap-center ${
+                          activa
+                            ? "bg-purple-50 dark:bg-purple-500/20 border-purple-400 dark:border-purple-500/40 text-purple-700 dark:text-purple-300 shadow-sm"
+                            : "bg-white dark:bg-white/[0.02] hover:bg-zinc-50 dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 shadow-sm dark:shadow-none"
+                        }`}
+                      >
+                        <div className="p-1 rounded-md bg-zinc-100 dark:bg-white/5 text-sm leading-none">{sub.icon}</div>
+                        <span className="text-sm sm:text-xs font-semibold">
+                          {idx + 1}. {sub.id}
+                        </span>
+                        {cantSub > 0 && (
+                          <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+                            {cantSub}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex sm:hidden items-center justify-center gap-1.5 pt-0.5">
+                  {SUBCATEGORIAS_SISTEMA[seccionActiva].map((sub) => (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      onClick={() => setSubCategoriaPorSistema((prev) => ({ ...prev, [seccionActiva]: sub.id }))}
+                      aria-label={`Ir a ${sub.id}`}
+                      className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                        subCategoriaPorSistema[seccionActiva] === sub.id ? "w-5 bg-purple-500" : "w-1.5 bg-zinc-300 dark:bg-white/20"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
             {cantPinesSis > 0 && (
               <div className="flex items-center justify-end pb-1">
                 <span className="px-2.5 py-1 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-xs font-bold flex items-center gap-1.5">
@@ -1615,6 +1779,36 @@ ${urlSeguimiento}`;
                   className="max-w-full max-h-full w-auto h-auto object-contain select-none transition-all duration-300 inspeccion-wireframe-img"
                 />
               </div>
+
+              {(() => {
+                const subActual = subCategoriaPorSistema[seccionActiva];
+                const zona = ZONAS_SUBCATEGORIA[seccionActiva]?.[subActual];
+                if (!zona) return null;
+                const labelX = Math.min(Math.max(zona.x, 130), 1246);
+                const labelY = zona.y < 130 ? zona.y + 85 : zona.y - 62;
+                return (
+                  <div className="absolute inset-0 p-2 sm:p-4 pointer-events-none z-10">
+                    <svg viewBox="0 0 1376 768" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+                      <circle cx={zona.x} cy={zona.y} r="58" fill="#fbbf24" fillOpacity="0.18" className="animate-pulse" />
+                      <circle cx={zona.x} cy={zona.y} r="46" fill="none" stroke="#fbbf24" strokeWidth="6" />
+                      <circle cx={zona.x} cy={zona.y} r="62" fill="none" stroke="#fbbf24" strokeWidth="3" strokeDasharray="10 10" />
+                      <text
+                        x={labelX}
+                        y={labelY}
+                        textAnchor="middle"
+                        fontSize="38"
+                        fontWeight="700"
+                        fill="#fff"
+                        stroke="#000"
+                        strokeWidth="8"
+                        paintOrder="stroke"
+                      >
+                        {subActual}
+                      </text>
+                    </svg>
+                  </div>
+                );
+              })()}
 
               {/* Fallback de respaldo en caso de que el navegador móvil bloquee o falle al cargar la imagen */}
               {imagenError && (

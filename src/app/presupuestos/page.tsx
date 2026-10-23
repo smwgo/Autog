@@ -582,7 +582,7 @@ export default function PanelPresupuestosPage() {
   // ============================================================================
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-sky-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-800 dark:bg-zinc-950 dark:text-zinc-100 flex flex-col font-sans antialiased selection:bg-blue-600/20 selection:text-blue-900">
       {/* Toast Notificaciones */}
       {toast && (
         <div
@@ -600,58 +600,58 @@ export default function PanelPresupuestosPage() {
       )}
 
       {/* Cabecera Superior con Switcher de Paneles */}
-      <header className="border-b border-white/10 bg-zinc-900/80 backdrop-blur-md sticky top-0 z-30 px-4 sm:px-6 py-3.5">
+      <header className="border-b border-zinc-200/80 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md sticky top-0 z-30 px-4 sm:px-6 py-3.5">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link
               href="/login"
-              className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-all text-sm font-bold"
+              className="w-10 h-10 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/70 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-all text-sm font-bold shrink-0"
               title="Ir al Menú Principal / Login"
             >
               ←
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-sky-400 animate-pulse" />
-                <h1 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
+                <h1 className="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50 flex flex-wrap items-center gap-2">
                   <span>Presupuestos & Repuestos</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-sky-500/20 border border-sky-500/30 text-sky-300 font-mono uppercase">
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 font-mono uppercase">
                     Compras • POS
                   </span>
                 </h1>
               </div>
-              <p className="text-xs text-zinc-400 hidden sm:block">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 hidden sm:block">
                 Revisión de inspección técnica, compra de repuestos con proveedores y autorización de cobro.
               </p>
             </div>
           </div>
 
           {/* Accesos rápidos a los otros paneles */}
-          <div className="flex items-center gap-1.5 bg-black/40 p-1 rounded-2xl border border-white/10 text-xs">
+          <div className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800/70 p-1 rounded-2xl border border-zinc-200 dark:border-zinc-700 text-xs">
             <Link
               href="/taller"
-              className="px-3 py-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all font-medium flex items-center gap-1"
+              className="px-3 py-1.5 rounded-xl text-zinc-600 dark:text-zinc-300 hover:text-blue-700 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-700 transition-all font-medium flex items-center gap-1"
             >
               <span>🔧</span>
               <span className="hidden md:inline">Taller</span>
             </Link>
             <Link
               href="/pos"
-              className="px-3 py-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all font-medium flex items-center gap-1"
+              className="px-3 py-1.5 rounded-xl text-zinc-600 dark:text-zinc-300 hover:text-blue-700 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-700 transition-all font-medium flex items-center gap-1"
             >
               <span>💳</span>
               <span className="hidden md:inline">POS</span>
             </Link>
             <Link
               href="/oficina"
-              className="px-3 py-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all font-medium flex items-center gap-1"
+              className="px-3 py-1.5 rounded-xl text-zinc-600 dark:text-zinc-300 hover:text-blue-700 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-700 transition-all font-medium flex items-center gap-1"
             >
               <span>🏢</span>
               <span className="hidden md:inline">Oficina</span>
             </Link>
             <Link
               href="/gerencia"
-              className="px-3 py-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all font-medium flex items-center gap-1"
+              className="px-3 py-1.5 rounded-xl text-zinc-600 dark:text-zinc-300 hover:text-blue-700 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-700 transition-all font-medium flex items-center gap-1"
             >
               <span>📊</span>
               <span className="hidden md:inline">Gerencia</span>
@@ -661,55 +661,55 @@ export default function PanelPresupuestosPage() {
       </header>
 
       {/* Contenido Principal */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8 space-y-5 sm:space-y-6">
         {/* KPI Cards de Resumen */}
         <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <div className="p-4 rounded-2xl bg-zinc-900/60 border border-white/10 shadow-lg space-y-1">
-            <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-sm space-y-1">
+            <span className="text-[10px] sm:text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
               📥 Órdenes Totales
             </span>
             <div className="flex items-baseline justify-between">
-              <span className="text-2xl font-black text-white">{kpis.total}</span>
-              <span className="text-xs text-zinc-400">En base de datos</span>
+              <span className="text-2xl font-black text-zinc-900 dark:text-white">{kpis.total}</span>
+              <span className="hidden sm:inline text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400">En base de datos</span>
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 shadow-lg space-y-1">
-            <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-amber-200 dark:border-amber-500/20 shadow-sm space-y-1">
+            <span className="text-[10px] sm:text-[11px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
               ⏳ Por Cotizar
             </span>
             <div className="flex items-baseline justify-between">
-              <span className="text-2xl font-black text-amber-300">{kpis.pendientesCotizar}</span>
-              <span className="text-xs text-amber-400/80">Requieren repuestos</span>
+              <span className="text-2xl font-black text-amber-700 dark:text-amber-300">{kpis.pendientesCotizar}</span>
+              <span className="hidden sm:inline text-[10px] sm:text-xs text-amber-700/80 dark:text-amber-400/80">Requieren repuestos</span>
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 shadow-lg space-y-1">
-            <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-emerald-200 dark:border-emerald-500/20 shadow-sm space-y-1">
+            <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
               ✅ Autorizadas / En Caja
             </span>
             <div className="flex items-baseline justify-between">
-              <span className="text-2xl font-black text-emerald-300">{kpis.aprobadas}</span>
-              <span className="text-xs text-emerald-400/80">Listas para cobro POS</span>
+              <span className="text-2xl font-black text-emerald-700 dark:text-emerald-300">{kpis.aprobadas}</span>
+              <span className="hidden sm:inline text-[10px] sm:text-xs text-emerald-700/80 dark:text-emerald-400/80">Listas para cobro POS</span>
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-sky-500/10 border border-sky-500/20 shadow-lg space-y-1">
-            <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-blue-200 dark:border-sky-500/20 shadow-sm space-y-1">
+            <span className="text-[10px] sm:text-[11px] font-bold text-blue-700 dark:text-sky-400 uppercase tracking-wider">
               💵 Total Valorizado
             </span>
             <div className="flex items-baseline justify-between">
-              <span className="text-2xl font-black text-sky-300">
+              <span className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-sky-300">
                 ${kpis.totalValorizado.toLocaleString("en-US", { minimumFractionDigits: 2 })}
               </span>
-              <span className="text-xs text-sky-400/80">PVP Estimado</span>
+              <span className="hidden sm:inline text-[10px] sm:text-xs text-blue-700/80 dark:text-sky-400/80">PVP Estimado</span>
             </div>
           </div>
         </section>
 
         {/* Barra de Filtros y Búsqueda */}
         <section className="space-y-2">
-          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 bg-zinc-900/60 p-3 sm:p-4 rounded-2xl border border-white/10 shadow-lg backdrop-blur-sm">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 bg-white dark:bg-zinc-900 p-3 sm:p-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
             {/* Buscador Más Grande */}
             <div className="flex-1 relative">
               <input
@@ -717,7 +717,7 @@ export default function PanelPresupuestosPage() {
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
                 placeholder="Buscar por placa, cliente, vehículo o # de orden..."
-                className="w-full h-12 sm:h-13 pl-12 pr-10 rounded-xl bg-zinc-950/90 border border-white/10 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none text-sm sm:text-base text-white placeholder-zinc-500 transition-all shadow-inner"
+                className="w-full h-12 sm:h-13 pl-12 pr-10 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none text-sm sm:text-base text-zinc-900 dark:text-white placeholder-zinc-500 transition-all"
               />
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-base sm:text-lg pointer-events-none">
                 🔍
@@ -735,7 +735,7 @@ export default function PanelPresupuestosPage() {
             </div>
 
             {/* Un solo campo para los dos filtros desplegables */}
-            <div className="flex items-stretch h-12 sm:h-13 bg-zinc-950/90 border border-white/10 rounded-xl divide-x divide-white/10 shrink-0 shadow-inner focus-within:border-sky-500/50 transition-all">
+            <div className="flex items-stretch h-12 sm:h-13 bg-slate-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-700 rounded-xl divide-x divide-zinc-200 dark:divide-zinc-800 shrink-0 focus-within:border-blue-500/50 transition-all">
               {/* Filtro 1: Tipo de Negocio */}
               <div className="relative flex-1 md:flex-initial">
                 <button
@@ -745,7 +745,7 @@ export default function PanelPresupuestosPage() {
                     setMenuEstadoAbierto(false);
                   }}
                   className={`w-full h-full px-3.5 sm:px-4 flex items-center justify-between gap-2.5 text-xs sm:text-sm font-semibold hover:bg-white/5 transition-all cursor-pointer ${
-                    filtroTipo !== "TODOS" ? "text-sky-400 bg-sky-500/10" : "text-zinc-200"
+                    filtroTipo !== "TODOS" ? "text-blue-700 bg-blue-50 dark:text-sky-300 dark:bg-sky-500/10" : "text-zinc-700 dark:text-zinc-200"
                   }`}
                 >
                   <div className="flex items-center gap-2 truncate">
@@ -759,7 +759,7 @@ export default function PanelPresupuestosPage() {
                     </span>
                   </div>
                   <svg
-                    className={`w-3.5 h-3.5 text-zinc-400 transition-transform ${
+                    className={`w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 transition-transform ${
                       menuTipoAbierto ? "rotate-180" : ""
                     }`}
                     fill="none"
@@ -776,8 +776,8 @@ export default function PanelPresupuestosPage() {
                       className="fixed inset-0 z-40"
                       onClick={() => setMenuTipoAbierto(false)}
                     />
-                    <div className="absolute left-0 md:right-0 md:left-auto mt-2 w-56 bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 py-1.5 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100">
-                      <div className="px-3.5 py-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-white/5">
+                    <div className="absolute left-0 md:right-0 md:left-auto mt-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl shadow-xl overflow-hidden z-50 py-1.5 animate-in fade-in zoom-in-95 duration-100">
+                      <div className="px-3.5 py-1.5 text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider border-b border-zinc-100 dark:border-zinc-800">
                         Tipo de Negocio
                       </div>
                       {OPCIONES_TIPO.map((op) => (
@@ -790,8 +790,8 @@ export default function PanelPresupuestosPage() {
                           }}
                           className={`w-full px-3.5 py-2 text-left text-xs sm:text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
                             filtroTipo === op.id
-                              ? "bg-sky-500/15 text-sky-400 font-bold"
-                              : "text-zinc-300 hover:bg-white/5 hover:text-white"
+                              ? "bg-blue-50 text-blue-700 font-bold dark:bg-sky-500/15 dark:text-sky-300"
+                              : "text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
                           }`}
                         >
                           <div className="flex items-center gap-2">
@@ -799,7 +799,7 @@ export default function PanelPresupuestosPage() {
                             <span>{op.label}</span>
                           </div>
                           {filtroTipo === op.id && (
-                            <svg className="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 text-blue-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                             </svg>
                           )}
@@ -819,7 +819,7 @@ export default function PanelPresupuestosPage() {
                     setMenuTipoAbierto(false);
                   }}
                   className={`w-full h-full px-3.5 sm:px-4 flex items-center justify-between gap-2.5 text-xs sm:text-sm font-semibold hover:bg-white/5 transition-all cursor-pointer ${
-                    filtroEstado !== "TODOS" ? "text-amber-400 bg-amber-500/10" : "text-zinc-200"
+                    filtroEstado !== "TODOS" ? "text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-500/10" : "text-zinc-700 dark:text-zinc-200"
                   }`}
                 >
                   <div className="flex items-center gap-2 truncate">
@@ -833,7 +833,7 @@ export default function PanelPresupuestosPage() {
                     </span>
                   </div>
                   <svg
-                    className={`w-3.5 h-3.5 text-zinc-400 transition-transform ${
+                    className={`w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 transition-transform ${
                       menuEstadoAbierto ? "rotate-180" : ""
                     }`}
                     fill="none"
@@ -850,8 +850,8 @@ export default function PanelPresupuestosPage() {
                       className="fixed inset-0 z-40"
                       onClick={() => setMenuEstadoAbierto(false)}
                     />
-                    <div className="absolute right-0 mt-2 w-52 bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 py-1.5 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100">
-                      <div className="px-3.5 py-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-white/5">
+                    <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl shadow-xl overflow-hidden z-50 py-1.5 animate-in fade-in zoom-in-95 duration-100">
+                      <div className="px-3.5 py-1.5 text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider border-b border-zinc-100 dark:border-zinc-800">
                         Estado de Cotización
                       </div>
                       {OPCIONES_ESTADO.map((op) => (
@@ -864,8 +864,8 @@ export default function PanelPresupuestosPage() {
                           }}
                           className={`w-full px-3.5 py-2 text-left text-xs sm:text-sm font-medium transition-colors flex items-center justify-between cursor-pointer ${
                             filtroEstado === op.id
-                              ? "bg-amber-500/15 text-amber-400 font-bold"
-                              : "text-zinc-300 hover:bg-white/5 hover:text-white"
+                              ? "bg-amber-50 text-amber-700 font-bold dark:bg-amber-500/15 dark:text-amber-300"
+                              : "text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
                           }`}
                         >
                           <div className="flex items-center gap-2">
@@ -873,7 +873,7 @@ export default function PanelPresupuestosPage() {
                             <span>{op.label}</span>
                           </div>
                           {filtroEstado === op.id && (
-                            <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                             </svg>
                           )}
@@ -893,7 +893,7 @@ export default function PanelPresupuestosPage() {
                     setFiltroEstado("TODOS");
                   }}
                   title="Restablecer filtros"
-                  className="px-3 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors flex items-center justify-center text-xs cursor-pointer"
+                  className="px-3 text-zinc-500 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 transition-colors flex items-center justify-center text-xs cursor-pointer"
                 >
                   ✕
                 </button>
@@ -904,9 +904,9 @@ export default function PanelPresupuestosPage() {
           {/* Badges / Chips activos debajo de la barra */}
           {(filtroTipo !== "TODOS" || filtroEstado !== "TODOS" || busqueda) && (
             <div className="flex items-center flex-wrap gap-2 px-1 text-xs">
-              <span className="text-zinc-500 font-medium text-[11px]">Filtros activos:</span>
+              <span className="text-zinc-500 dark:text-zinc-400 font-medium text-[11px]">Filtros activos:</span>
               {busqueda && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-200 border border-white/5">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-white/5">
                   🔍 &quot;{busqueda}&quot;
                   <button
                     type="button"
@@ -918,7 +918,7 @@ export default function PanelPresupuestosPage() {
                 </span>
               )}
               {filtroTipo !== "TODOS" && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-sky-500/15 text-blue-700 dark:text-sky-300 border border-blue-200 dark:border-sky-500/30">
                   {OPCIONES_TIPO.find((t) => t.id === filtroTipo)?.icon}{" "}
                   {OPCIONES_TIPO.find((t) => t.id === filtroTipo)?.label}
                   <button
@@ -931,7 +931,7 @@ export default function PanelPresupuestosPage() {
                 </span>
               )}
               {filtroEstado !== "TODOS" && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30">
                   {OPCIONES_ESTADO.find((e) => e.id === filtroEstado)?.icon}{" "}
                   {OPCIONES_ESTADO.find((e) => e.id === filtroEstado)?.label}
                   <button
@@ -950,7 +950,7 @@ export default function PanelPresupuestosPage() {
                   setFiltroTipo("TODOS");
                   setFiltroEstado("TODOS");
                 }}
-                className="text-[11px] text-zinc-400 hover:text-white underline underline-offset-2 ml-1 cursor-pointer"
+                className="text-[11px] text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white underline underline-offset-2 ml-1 cursor-pointer"
               >
                 Limpiar todo
               </button>
@@ -958,40 +958,46 @@ export default function PanelPresupuestosPage() {
           )}
         </section>
 
-        {/* Lista de Órdenes */}
         <section className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-sm font-bold text-zinc-800 dark:text-zinc-100">Órdenes y presupuestos</h2>
+            {!cargando && (
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                {ordenes.length} {ordenes.length === 1 ? "resultado" : "resultados"}
+              </span>
+            )}
+          </div>
           {cargando ? (
-            <div className="p-12 text-center text-zinc-400 flex flex-col items-center justify-center gap-3">
-              <span className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
+            <div className="p-10 text-center text-zinc-500 dark:text-zinc-400 flex flex-col items-center justify-center gap-3 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+              <span className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
               <p className="text-xs">Cargando órdenes y evidencias desde Neon DB...</p>
             </div>
           ) : ordenes.length === 0 ? (
-            <div className="p-12 text-center rounded-3xl bg-zinc-900/40 border border-white/5 space-y-2">
+            <div className="p-8 sm:p-12 text-center rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2 shadow-sm">
               <span className="text-3xl">📋</span>
-              <h3 className="text-sm font-bold text-white">No se encontraron órdenes</h3>
-              <p className="text-xs text-zinc-400 max-w-md mx-auto">
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-white">No se encontraron órdenes</h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">
                 No hay órdenes registradas que coincidan con los filtros aplicados. Las inspecciones realizadas desde el panel de Taller aparecerán aquí automáticamente.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-2.5">
               {ordenes.map((orden) => (
                 <div
                   key={orden.id}
                   onClick={() => abrirOrdenDetalle(orden.id)}
-                  className="group relative p-4 rounded-3xl bg-zinc-900/60 hover:bg-zinc-900/90 border border-white/10 hover:border-sky-500/50 shadow-xl transition-all cursor-pointer flex flex-col justify-between gap-4 overflow-hidden"
+                  className="group relative p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-zinc-900 hover:border-blue-400 dark:hover:border-blue-500/60 border border-zinc-200/80 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-5 overflow-hidden"
                 >
-                  {/* Cabecera de la Tarjeta */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-xs font-black text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2.5 py-1 rounded-lg">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2">
+                      <span className="font-mono text-xs font-black text-blue-700 dark:text-sky-300 bg-blue-50 dark:bg-sky-500/10 border border-blue-200 dark:border-sky-500/20 px-2.5 py-1 rounded-lg">
                         #{orden.orderNumber}
                       </span>
                       <span
                         className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold border ${
                           orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA"
-                            ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
-                            : "bg-amber-500/15 border-amber-500/30 text-amber-300"
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-500/15 dark:border-emerald-500/30 dark:text-emerald-300"
+                            : "bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-500/15 dark:border-amber-500/30 dark:text-amber-300"
                         }`}
                       >
                         {orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA"
@@ -1000,31 +1006,33 @@ export default function PanelPresupuestosPage() {
                       </span>
                     </div>
 
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-black text-white group-hover:text-sky-300 transition-colors">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-sm font-black text-zinc-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-sky-300 transition-colors shrink-0">
                           {orden.plate}
                         </span>
-                        <span className="text-xs text-zinc-400 font-medium truncate">
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium truncate">
                           • {orden.vehicle}
                         </span>
                       </div>
-                      <p className="text-xs text-zinc-300 font-medium truncate mt-0.5">
-                        👤 {orden.client} {orden.clientPhone ? `(${orden.clientPhone})` : ""}
+                      <p className="text-xs text-zinc-600 dark:text-zinc-300 font-medium truncate mt-0.5">
+                        👤 {orden.client} {orden.clientPhone ? `· ${orden.clientPhone}` : ""}
+                      </p>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                        {orden.tipoNegocio} · {new Date(orden.dateIn).toLocaleDateString("es-EC")}
                       </p>
                     </div>
                   </div>
 
-                  {/* Evidencias multimedia y hallazgos reportados */}
-                  <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-white/5 text-[11px]">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:w-44 sm:shrink-0 text-[11px]">
                     {orden.evidencias.fotos > 0 && (
-                      <span className="px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-300 border border-blue-500/25 flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/25 flex items-center gap-1">
                         <span>📸</span>
                         <span>{orden.evidencias.fotos}</span>
                       </span>
                     )}
                     {orden.evidencias.audios > 0 && (
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/25 flex items-center gap-1">
                         <span>🎙️</span>
                         <span>{orden.evidencias.audios}</span>
                         {orden.evidencias.transcripciones > 0 && (
@@ -1033,33 +1041,32 @@ export default function PanelPresupuestosPage() {
                       </span>
                     )}
                     {orden.evidencias.videos > 0 && (
-                      <span className="px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-300 border border-purple-500/25 flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-500/25 flex items-center gap-1">
                         <span>🎥</span>
                         <span>{orden.evidencias.videos}</span>
                       </span>
                     )}
                     {orden.findingsCount > 0 && (
-                      <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/25 flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/25 flex items-center gap-1">
                         <span>📝</span>
                         <span>{orden.findingsCount} hallazgos</span>
                       </span>
                     )}
                     {orden.evidencias.total === 0 && (
-                      <span className="text-zinc-500 text-[10px]">Sin fotos de ingreso</span>
+                      <span className="text-zinc-500 dark:text-zinc-400 text-[10px]">Sin evidencias</span>
                     )}
                   </div>
 
-                  {/* Resumen Financiero y Acciones */}
-                  <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                  <div className="pt-2 sm:pt-0 border-t sm:border-t-0 sm:border-l border-zinc-100 dark:border-zinc-800 sm:pl-4 flex items-center justify-between gap-3 sm:w-52 sm:shrink-0">
                     <div>
-                      <span className="text-[10px] uppercase text-zinc-400 font-bold block">
+                      <span className="text-[10px] uppercase text-zinc-500 dark:text-zinc-400 font-bold block">
                         Presupuesto PVP
                       </span>
-                      <span className="text-base font-black text-white">
+                      <span className="text-base font-black text-zinc-900 dark:text-white">
                         ${orden.totalVentaEstimada.toFixed(2)}
                       </span>
                       {orden.margenPercent > 0 && (
-                        <span className="text-[10px] text-emerald-400 block font-semibold">
+                        <span className="text-[10px] text-emerald-700 dark:text-emerald-400 block font-semibold">
                           Margen: {orden.margenPercent}% (${orden.utilidadEstimada.toFixed(2)})
                         </span>
                       )}
@@ -1071,7 +1078,7 @@ export default function PanelPresupuestosPage() {
                         e.stopPropagation();
                         abrirOrdenDetalle(orden.id);
                       }}
-                      className="px-3.5 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-bold text-xs shadow-md shadow-sky-500/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+                      className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
                     >
                       <span>Abrir</span>
                       <span>→</span>

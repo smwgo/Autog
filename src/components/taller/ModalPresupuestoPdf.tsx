@@ -61,6 +61,12 @@ export default function ModalPresupuestoPdf({
       icon: "⚡",
       items: hallazgos.filter((h) => h.vista === "electrico"),
     },
+    {
+      id: "aire",
+      nombre: "Aire Acondicionado",
+      icon: "❄️",
+      items: hallazgos.filter((h) => h.vista === "aire"),
+    },
   ].filter((s) => s.items.length > 0);
 
   // Totales
