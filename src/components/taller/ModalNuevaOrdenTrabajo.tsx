@@ -2232,11 +2232,11 @@ export default function ModalNuevaOrdenTrabajo({
                       )
                     }
                     title="Clic para alternar etiqueta de rol (Mecánico / Asesor)"
-                    className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 text-emerald-700 dark:text-emerald-400 text-xs sm:text-xs md:text-[12px] font-medium cursor-pointer select-none transition-colors"
+                    className="mt-1 inline-flex items-center gap-2 sm:gap-1.5 px-3 py-1.5 sm:px-2.5 sm:py-1 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 text-emerald-700 dark:text-emerald-400 text-sm sm:text-xs md:text-[12px] font-medium cursor-pointer select-none transition-colors"
                   >
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                    <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                     <span className="opacity-80">{etiquetaRolCabecera}:</span>
-                    <strong className="font-bold text-zinc-900 dark:text-zinc-100 truncate max-w-[200px] sm:max-w-none">
+                    <strong className="font-bold text-zinc-900 dark:text-zinc-100 truncate max-w-[220px] sm:max-w-none">
                       {asignacionesTecnicos?.[0]?.nombre || empleadoLogueado?.nombre}
                     </strong>
                   </span>
@@ -2343,7 +2343,7 @@ export default function ModalNuevaOrdenTrabajo({
                   <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-4">
                     <div className="w-4/5 max-w-xs h-20 sm:h-24 rounded-2xl border-2 border-emerald-400/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] relative flex items-center justify-center">
                       <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-300/80 bg-black/60 px-2 py-0.5 rounded">
-                        ENFOCA LA MATRÍCULA AQUÍ
+                        MATRÍCULA AQUÍ
                       </span>
                     </div>
                   </div>
@@ -2415,7 +2415,7 @@ export default function ModalNuevaOrdenTrabajo({
                         verificarYAplicarMatricula(placaDetectadaInput);
                       }
                     }}
-                    placeholder="Matrícula detectada (ej. ABC-1234)..."
+                    placeholder="Ej. ABC-1234"
                     className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white font-mono font-bold uppercase text-sm tracking-wider focus:outline-none"
                   />
                 </div>
