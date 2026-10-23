@@ -1201,6 +1201,8 @@ export default function TallerPanel() {
 
   const fileInputRecepcionRef = useRef<HTMLInputElement | null>(null);
   const fileInputEvidenciaRef = useRef<HTMLInputElement | null>(null);
+  const ordenesCarouselRef = useRef<HTMLDivElement | null>(null);
+  const ordenesCarouselScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const mostrarToast = useCallback((_texto: string, _tipo: "ok" | "err" = "ok") => {
     // Desactivado: sin etiquetas flotantes verde ni roja al realizar acciones
@@ -4662,49 +4664,261 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
         {/* ===================================================================
             FILA 1: FLECHA VOLVER (←) + DATOS DEL VEHÍCULO ACTIVO
             =================================================================== */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 py-1">
+        <div className="flex flex-col items-stretch gap-2.5 sm:gap-3 py-1">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-            <Link
-              href="/"
-              aria-label="Volver"
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-[#111113] hover:bg-zinc-100 dark:hover:bg-[#161618] border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 transition-all flex items-center justify-center shrink-0 active:scale-95 shadow-sm"
-            >
-              <svg
-                className="w-4 h-4 sm:w-5 sm:h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M19 12H5M12 19l-7-7 7-7" />
-              </svg>
-            </Link>
-
             {ordenActiva ? (
-              <div className="flex items-center gap-2 min-w-0 flex-1 text-xs">
-                {/* Placa + Vehículo en un solo bloque de color */}
-                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/25 shrink-0">
-                  <span className="font-mono tracking-wider text-blue-400 dark:text-blue-300">
-                    {ordenActiva.plate}
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-9 h-9 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-500 flex items-center justify-center shrink-0">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11" />
+                      <path d="M3.5 11h17v7h-17zM6.5 18v1.5M17.5 18v1.5M3.5 14h2M18.5 14h2" />
+                      <circle cx="7" cy="14.5" r=".5" />
+                      <circle cx="17" cy="14.5" r=".5" />
+                    </svg>
                   </span>
-                  <span className="text-blue-500/40">•</span>
-                  <span className="font-normal text-zinc-900 dark:text-white">
-                    {ordenActiva.vehicle}
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold leading-tight text-zinc-900 dark:text-white">
+                      Orden de Servicio
+                    </span>
+                    <span className="block text-[11px] leading-tight text-zinc-500 dark:text-zinc-400">
+                      #{ordenActiva.orderNumber}
+                    </span>
                   </span>
-                </span>
+                </div>
               </div>
             ) : (
               <span className="text-base sm:text-lg font-bold text-zinc-800 dark:text-zinc-200">
                 Taller Mecánico
               </span>
             )}
+            <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+              <Link
+                href="/taller/nueva-orden"
+                aria-label="Nueva Orden"
+                className="w-8 h-8 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white font-semibold flex items-center justify-center transition-all cursor-pointer shadow-lg shadow-blue-600/25 active:scale-95"
+                title="Orden"
+              >
+                <span className="text-lg font-bold leading-none">+</span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => setMostrarModalAutosAtencion(true)}
+                className="h-8 px-2 rounded-xl bg-white dark:bg-[#111113] hover:bg-zinc-100 dark:hover:bg-white/[0.08] border border-zinc-200 dark:border-white/15 text-zinc-700 dark:text-white flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95"
+                title="Ver autos y órdenes en atención"
+              >
+                <svg
+                  className="w-4 h-4 text-zinc-500 dark:text-zinc-300"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+                  />
+                </svg>
+                {autosEnPista.length > 0 && (
+                  <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40 text-[11px] font-bold font-mono flex items-center justify-center">
+                    {autosEnPista.length}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Lado derecho: Estado de Ingreso en rectángulo a juego */}
           {ordenActiva && (
-            <div className="shrink-0 flex items-center justify-end">
+            <div className="w-full min-w-0 flex flex-col items-start gap-2">
+              <div
+                ref={ordenesCarouselRef}
+                className="w-full overflow-x-auto snap-x snap-mandatory flex gap-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:cursor-grab"
+                onPointerDown={(event: React.PointerEvent<HTMLDivElement>) => {
+                  if (event.pointerType !== "mouse" || event.button !== 0) return;
+                  const container = event.currentTarget;
+                  const startX = event.clientX;
+                  const startScroll = container.scrollLeft;
+                  let moved = false;
+                  container.style.scrollSnapType = "none";
+                  const onMove = (moveEvent: PointerEvent) => {
+                    const delta = moveEvent.clientX - startX;
+                    if (Math.abs(delta) > 5) moved = true;
+                    container.scrollLeft = startScroll - delta;
+                  };
+                  const onUp = () => {
+                    window.removeEventListener("pointermove", onMove);
+                    window.removeEventListener("pointerup", onUp);
+                    const step = container.clientWidth + 8;
+                    const index = Math.round(container.scrollLeft / step);
+                    container.scrollTo({ left: index * step, behavior: "smooth" });
+                    setTimeout(() => {
+                      container.style.scrollSnapType = "";
+                    }, 400);
+                    if (moved) {
+                      const block = (clickEvent: Event) => {
+                        clickEvent.stopPropagation();
+                        clickEvent.preventDefault();
+                      };
+                      container.addEventListener("click", block, { capture: true, once: true });
+                      setTimeout(() => container.removeEventListener("click", block, true), 0);
+                    }
+                  };
+                  window.addEventListener("pointermove", onMove);
+                  window.addEventListener("pointerup", onUp);
+                }}
+                onWheel={(event: React.WheelEvent<HTMLDivElement>) => {
+                  if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+                    event.currentTarget.scrollBy({
+                      left: event.deltaY,
+                      behavior: "smooth",
+                    });
+                  }
+                }}
+                onScroll={(event: React.UIEvent<HTMLDivElement>) => {
+                  const container = event.currentTarget;
+                  if (ordenesCarouselScrollTimeoutRef.current) {
+                    clearTimeout(ordenesCarouselScrollTimeoutRef.current);
+                  }
+                  ordenesCarouselScrollTimeoutRef.current = setTimeout(() => {
+                    const center = container.getBoundingClientRect().left + container.clientWidth / 2;
+                    const cards = Array.from(
+                      container.querySelectorAll<HTMLButtonElement>("[data-order-carousel-card]")
+                    );
+                    const visibleCard = cards.reduce<HTMLButtonElement | null>((closest, card) => {
+                      if (!closest) return card;
+                      const distance = Math.abs(card.getBoundingClientRect().left + card.offsetWidth / 2 - center);
+                      const closestDistance = Math.abs(
+                        closest.getBoundingClientRect().left + closest.offsetWidth / 2 - center
+                      );
+                      return distance < closestDistance ? card : closest;
+                    }, null);
+                    const orderId = visibleCard?.dataset.orderId;
+                    const visibleOrder =
+                      autosEnPista.find((auto) => auto.id === orderId) ||
+                      (ordenActiva.id === orderId ? ordenActiva : null);
+                    if (visibleOrder && visibleOrder.id !== ordenActiva.id) {
+                      handleSeleccionarAutoYVolver(visibleOrder);
+                    }
+                  }, 120);
+                }}
+              >
+                {(autosEnPista.length > 0 ? autosEnPista : [ordenActiva]).map((auto) => {
+                  const esActivo = auto.id === ordenActiva.id;
+                  const vehiculoCatalogo = clientesCatalogo
+                    .flatMap((cliente) => (Array.isArray(cliente.vehicles) ? cliente.vehicles : []))
+                    .find((vehiculo) => vehiculo.id === auto.vehicleId || vehiculo.plate === auto.plate);
+                  const anioVehiculo =
+                    vehiculoCatalogo?.year ||
+                    auto.vehicle.match(/\b(?:19|20)\d{2}\b/)?.[0] ||
+                    "";
+                  let fotosVehiculo: string[] = [];
+                  if (Array.isArray(vehiculoCatalogo?.photos)) {
+                    fotosVehiculo = vehiculoCatalogo.photos;
+                  } else if (typeof vehiculoCatalogo?.photosJson === "string") {
+                    try {
+                      const fotosParseadas: unknown = JSON.parse(vehiculoCatalogo.photosJson);
+                      if (Array.isArray(fotosParseadas)) {
+                        fotosVehiculo = fotosParseadas.filter(
+                          (foto): foto is string => typeof foto === "string"
+                        );
+                      }
+                    } catch (error) {
+                      console.error("No se pudieron cargar las fotos del vehículo:", error);
+                    }
+                  }
+                  const fotoVehiculo = [...fotosVehiculo, ...(auto.receptionPhotos || [])].find(
+                    (foto) => /^(data:image\/|https?:\/\/|\/|blob:)/i.test(foto.trim())
+                  );
+                  const nombreVehiculo = anioVehiculo
+                    ? auto.vehicle.replace(String(anioVehiculo), "").trim()
+                    : auto.vehicle;
+                  return (
+                    <button
+                      key={auto.id}
+                      data-order-carousel-card
+                      data-order-id={auto.id}
+                      type="button"
+                      onClick={() => {
+                        if (autosEnPista.length < 2) return;
+                        const index = autosEnPista.findIndex((item) => item.id === auto.id);
+                        const nextIndex = (index + 1) % autosEnPista.length;
+                        handleSeleccionarAutoYVolver(autosEnPista[nextIndex]);
+                        const container = ordenesCarouselRef.current;
+                        container?.scrollTo({
+                          left: nextIndex * (container.clientWidth + 8),
+                          behavior: "smooth",
+                        });
+                      }}
+                      aria-pressed={esActivo}
+                      className={`snap-start shrink-0 w-full min-h-[68px] px-3 py-2 rounded-xl border text-left flex items-center justify-between gap-3 transition-colors ${
+                        esActivo
+                          ? "bg-blue-500/10 border-blue-500/30"
+                          : "bg-white dark:bg-[#111113] border-zinc-200 dark:border-white/10"
+                      }`}
+                    >
+                      <span className="relative w-14 h-12 rounded-lg shrink-0 bg-zinc-100 dark:bg-white/5 text-zinc-400 flex items-center justify-center overflow-hidden">
+                        <svg
+                          className="w-7 h-7"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                          aria-hidden="true"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m5 11 1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11M3.5 11h17v7h-17zM6.5 18v1.5M17.5 18v1.5" />
+                        </svg>
+                        {fotoVehiculo && (
+                          <img
+                            src={fotoVehiculo}
+                            alt={`Vehículo ${auto.vehicle}`}
+                            onError={(event) => {
+                              event.currentTarget.style.display = "none";
+                            }}
+                            className="absolute inset-0 w-full h-full rounded-lg object-cover"
+                          />
+                        )}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-zinc-900 dark:text-white truncate">
+                          {nombreVehiculo}
+                        </span>
+                        <span className="mt-1 flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+                          <span className="font-mono tracking-wider text-blue-500 dark:text-blue-300 truncate">
+                            {auto.plate}
+                          </span>
+                          {anioVehiculo && (
+                            <span className="shrink-0 border-l border-zinc-300 dark:border-white/15 pl-2">
+                              {anioVehiculo}
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                      <svg
+                        className="w-4 h-4 shrink-0 text-zinc-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        aria-hidden="true"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m9 5 7 7-7 7" />
+                      </svg>
+                    </button>
+                  );
+                })}
+              </div>
               <div
                 className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-normal ${
                   ordenActiva.status === "Pausada"
@@ -4745,11 +4959,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             =================================================================== */}
         <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 py-1">
           {/* SELECTOR SUPERIOR 4 EN 1: Taller, Lubricentro, Car Wash y Tecnicentro */}
-          <div className="flex items-center p-0.5 sm:p-1 rounded-2xl bg-white/80 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl gap-0.5 sm:gap-1 shrink-0 overflow-x-auto max-w-full">
+          <div className="w-full sm:w-fit flex items-center p-1 rounded-2xl bg-white/80 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl gap-0.5 sm:gap-1 shrink-0 overflow-x-auto max-w-full">
             <button
               type="button"
               onClick={() => setModuloTaller("taller")}
-              className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+              className={`h-9 min-w-0 flex-1 sm:flex-none px-1 sm:px-3.5 rounded-xl text-[10px] sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 ${
                 moduloTaller === "taller"
                   ? "bg-blue-600 border border-blue-400/40 text-white shadow-lg shadow-blue-600/30 scale-[1.01]"
                   : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
@@ -4769,13 +4983,13 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.07a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091.455.087.935-.012 1.39"
                 />
               </svg>
-              <span className="hidden sm:inline">Taller</span>
+              <span className="whitespace-nowrap">Taller</span>
             </button>
 
             <button
               type="button"
               onClick={() => setModuloTaller("lubricentro")}
-              className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+              className={`h-9 min-w-0 flex-1 sm:flex-none px-1 sm:px-3.5 rounded-xl text-[10px] sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 ${
                 moduloTaller === "lubricentro"
                   ? "bg-amber-600 border border-amber-400/40 text-white shadow-lg shadow-amber-600/30 scale-[1.01]"
                   : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
@@ -4795,13 +5009,13 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z"
                 />
               </svg>
-              <span className="hidden sm:inline">Lubricentro</span>
+              <span className="whitespace-nowrap">Lubricentro</span>
             </button>
 
             <button
               type="button"
               onClick={() => setModuloTaller("carwash")}
-              className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+              className={`h-9 min-w-0 flex-1 sm:flex-none px-1 sm:px-3.5 rounded-xl text-[10px] sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 ${
                 moduloTaller === "carwash"
                   ? "bg-cyan-600 border border-cyan-400/40 text-white shadow-lg shadow-cyan-600/30 scale-[1.01]"
                   : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
@@ -4821,13 +5035,13 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"
                 />
               </svg>
-              <span className="hidden sm:inline">Car Wash</span>
+              <span className="whitespace-nowrap">Car Wash</span>
             </button>
 
             <button
               type="button"
               onClick={() => setModuloTaller("tecnicentro")}
-              className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+              className={`h-9 min-w-0 flex-1 sm:flex-none px-1 sm:px-3.5 rounded-xl text-[10px] sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 ${
                 moduloTaller === "tecnicentro"
                   ? "bg-emerald-600 border border-emerald-400/40 text-white shadow-lg shadow-emerald-600/30 scale-[1.01]"
                   : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
@@ -4845,12 +5059,12 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 <circle cx="12" cy="12" r="3" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v6m0 6v6M3 12h6m6 0h6" />
               </svg>
-              <span className="hidden sm:inline">Tecnicentro</span>
+              <span className="whitespace-nowrap">Tecnicentro</span>
             </button>
           </div>
 
           {/* Lado derecho: Botones Nueva Orden y Lista de Autos */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          <div className="hidden items-center gap-1.5 sm:gap-2.5 shrink-0">
             {/* 1. Botón + Nueva Orden (Página Completa) */}
             <Link
               href="/taller/nueva-orden"
