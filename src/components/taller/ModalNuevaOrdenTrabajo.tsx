@@ -2294,7 +2294,7 @@ export default function ModalNuevaOrdenTrabajo({
                   </div>
                   <div>
                     <h4 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">
-                      Escanear Matrícula del Vehículo
+                      Escanear Matrícula
                     </h4>
                   </div>
                 </div>
