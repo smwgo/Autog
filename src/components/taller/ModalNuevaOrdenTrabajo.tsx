@@ -2511,23 +2511,8 @@ export default function ModalNuevaOrdenTrabajo({
                     )}
                   </div>
 
-                  {/* Tres botones de acción rápida con estética moderna y minimalista */}
-                  <div className="grid grid-cols-3 gap-2 sm:gap-2.5 mt-2.5">
-                    {/* Botón Consumidor */}
-                    <button
-                      type="button"
-                      onClick={handleSeleccionarConsumidorFinal}
-                      title="Consumidor Final (trabajo rápido sin registro nominal)"
-                      aria-label="Consumidor Final"
-                      className="h-11 px-2.5 sm:px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200 dark:border-white/[0.08] text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95 text-xs font-medium min-h-[44px]"
-                    >
-                      <svg className="w-4 h-4 shrink-0 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                        <circle cx="12" cy="7" r="4" />
-                      </svg>
-                      <span className="truncate">Consumidor</span>
-                    </button>
-
+                  {/* Botones de acción rápida con estética moderna y minimalista */}
+                  <div className="grid grid-cols-2 gap-2 sm:gap-2.5 mt-2.5">
                     {/* Botón Escanear */}
                     <button
                       type="button"

@@ -4659,9 +4659,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
         {/* ===================================================================
             CABECERA PRINCIPAL: VOLVER + SELECTOR (SOLO ICONO EN MÓVIL) + BOTONES ACCIÓN
             =================================================================== */}
-        <div className="flex items-center justify-between gap-2 sm:gap-3 py-1">
-          {/* Lado izquierdo: Botón Volver + Selector Taller / Lubricentro */}
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        {/* ===================================================================
+            FILA 1: FLECHA VOLVER (←) + DATOS DEL VEHÍCULO ACTIVO
+            =================================================================== */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 py-1">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             <Link
               href="/"
               aria-label="Volver"
@@ -4680,110 +4682,171 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               </svg>
             </Link>
 
-            {/* SELECTOR SUPERIOR 4 EN 1: Taller, Lubricentro, Car Wash y Tecnicentro */}
-            <div className="flex items-center p-0.5 sm:p-1 rounded-2xl bg-white/80 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl gap-0.5 sm:gap-1 shrink-0">
-              <button
-                type="button"
-                onClick={() => setModuloTaller("taller")}
-                className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  moduloTaller === "taller"
-                    ? "bg-blue-600 border border-blue-400/40 text-white shadow-lg shadow-blue-600/30 scale-[1.01]"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-                }`}
-                title="Taller Mecánico"
-              >
-                <svg
-                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.75}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.07a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091.455.087.935-.012 1.39"
-                  />
-                </svg>
-                <span className="hidden sm:inline">Taller</span>
-              </button>
+            {ordenActiva ? (
+              <div className="flex items-center gap-2 min-w-0 flex-1 text-xs">
+                {/* Placa + Vehículo en un solo bloque de color */}
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/25 shrink-0">
+                  <span className="font-mono tracking-wider text-blue-400 dark:text-blue-300">
+                    {ordenActiva.plate}
+                  </span>
+                  <span className="text-blue-500/40">•</span>
+                  <span className="font-normal text-zinc-900 dark:text-white">
+                    {ordenActiva.vehicle}
+                  </span>
+                </span>
+              </div>
+            ) : (
+              <span className="text-base sm:text-lg font-bold text-zinc-800 dark:text-zinc-200">
+                Taller Mecánico
+              </span>
+            )}
+          </div>
 
-              <button
-                type="button"
-                onClick={() => setModuloTaller("lubricentro")}
-                className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  moduloTaller === "lubricentro"
-                    ? "bg-amber-600 border border-amber-400/40 text-white shadow-lg shadow-amber-600/30 scale-[1.01]"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
+          {/* Lado derecho: Estado de Ingreso en rectángulo a juego */}
+          {ordenActiva && (
+            <div className="shrink-0 flex items-center justify-end">
+              <div
+                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-normal ${
+                  ordenActiva.status === "Pausada"
+                    ? "bg-amber-500/10 border-amber-500/25 text-amber-400"
+                    : "bg-emerald-500/10 border-emerald-500/25 text-emerald-400"
                 }`}
-                title="Lubricentro Express"
               >
-                <svg
-                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.75}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z"
-                  />
-                </svg>
-                <span className="hidden sm:inline">Lubricentro</span>
-              </button>
+                <span className="text-zinc-600 dark:text-zinc-300 whitespace-nowrap">
+                  Ingreso:{" "}
+                  <span
+                    className="text-zinc-900 dark:text-white font-normal"
+                    title={formatearFechaCompleta(ordenActiva.dateIn || ordenActiva.startedAt)}
+                  >
+                    {formatearFechaIngreso(ordenActiva.dateIn || ordenActiva.startedAt)}
+                  </span>
+                </span>
 
-              <button
-                type="button"
-                onClick={() => setModuloTaller("carwash")}
-                className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  moduloTaller === "carwash"
-                    ? "bg-cyan-600 border border-cyan-400/40 text-white shadow-lg shadow-cyan-600/30 scale-[1.01]"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-                }`}
-                title="Car Wash & Detailing"
-              >
-                <svg
-                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.75}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"
-                  />
-                </svg>
-                <span className="hidden sm:inline">Car Wash</span>
-              </button>
+                <span className={ordenActiva.status === "Pausada" ? "text-amber-500/40" : "text-emerald-500/40"}>•</span>
 
-              <button
-                type="button"
-                onClick={() => setModuloTaller("tecnicentro")}
-                className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  moduloTaller === "tecnicentro"
-                    ? "bg-emerald-600 border border-emerald-400/40 text-white shadow-lg shadow-emerald-600/30 scale-[1.01]"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-                }`}
-                title="Tecnicentro (Llantas, Alineación, Balanceo y Baterías)"
-              >
-                <svg
-                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.75}
-                >
-                  <circle cx="12" cy="12" r="9" />
-                  <circle cx="12" cy="12" r="3" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v6m0 6v6M3 12h6m6 0h6" />
-                </svg>
-                <span className="hidden sm:inline">Tecnicentro</span>
-              </button>
+                {ordenActiva.status === "Pausada" ? (
+                  <span className="inline-flex items-center gap-1.5 text-amber-500 dark:text-amber-400 shrink-0" title="En Pausa">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400 shrink-0" />
+                    <span>En Pausa</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-emerald-500 dark:text-emerald-400 shrink-0" title="Trabajando">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
+                    <span>Trabajando</span>
+                  </span>
+                )}
+              </div>
             </div>
+          )}
+        </div>
+
+        {/* ===================================================================
+            FILA 2: MÁS ABAJO ESOS BOTONES (SELECTOR 4 EN 1 + BOTONES ACCIÓN)
+            =================================================================== */}
+        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 py-1">
+          {/* SELECTOR SUPERIOR 4 EN 1: Taller, Lubricentro, Car Wash y Tecnicentro */}
+          <div className="flex items-center p-0.5 sm:p-1 rounded-2xl bg-white/80 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl gap-0.5 sm:gap-1 shrink-0 overflow-x-auto max-w-full">
+            <button
+              type="button"
+              onClick={() => setModuloTaller("taller")}
+              className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                moduloTaller === "taller"
+                  ? "bg-blue-600 border border-blue-400/40 text-white shadow-lg shadow-blue-600/30 scale-[1.01]"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
+              }`}
+              title="Taller Mecánico"
+            >
+              <svg
+                className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.75}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.07a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091.455.087.935-.012 1.39"
+                />
+              </svg>
+              <span className="hidden sm:inline">Taller</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setModuloTaller("lubricentro")}
+              className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                moduloTaller === "lubricentro"
+                  ? "bg-amber-600 border border-amber-400/40 text-white shadow-lg shadow-amber-600/30 scale-[1.01]"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
+              }`}
+              title="Lubricentro Express"
+            >
+              <svg
+                className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.75}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z"
+                />
+              </svg>
+              <span className="hidden sm:inline">Lubricentro</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setModuloTaller("carwash")}
+              className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                moduloTaller === "carwash"
+                  ? "bg-cyan-600 border border-cyan-400/40 text-white shadow-lg shadow-cyan-600/30 scale-[1.01]"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
+              }`}
+              title="Car Wash & Detailing"
+            >
+              <svg
+                className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.75}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"
+                />
+              </svg>
+              <span className="hidden sm:inline">Car Wash</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setModuloTaller("tecnicentro")}
+              className={`h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                moduloTaller === "tecnicentro"
+                  ? "bg-emerald-600 border border-emerald-400/40 text-white shadow-lg shadow-emerald-600/30 scale-[1.01]"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
+              }`}
+              title="Tecnicentro (Llantas, Alineación, Balanceo y Baterías)"
+            >
+              <svg
+                className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.75}
+              >
+                <circle cx="12" cy="12" r="9" />
+                <circle cx="12" cy="12" r="3" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v6m0 6v6M3 12h6m6 0h6" />
+              </svg>
+              <span className="hidden sm:inline">Tecnicentro</span>
+            </button>
           </div>
 
           {/* Lado derecho: Botones Nueva Orden y Lista de Autos */}
@@ -4825,15 +4888,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               )}
             </button>
 
-            {/* 3. Acceso directo al Panel de Presupuestos & Repuestos */}
-            <Link
-              href="/presupuestos"
-              className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-400 font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shrink-0"
-              title="Ir a Presupuestos & Repuestos"
-            >
-              <span>📋</span>
-              <span className="text-xs sm:text-sm hidden md:inline">Presupuestos</span>
-            </Link>
+
           </div>
         </div>
 
@@ -4842,145 +4897,48 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             SALE EXACTAMENTE IGUAL PARA TALLER Y LUBRICENTRO
             =================================================================== */}
         <section className="bg-white dark:bg-[#111113]/90 rounded-2xl border border-zinc-200 dark:border-white/[0.08] p-4 sm:p-6 shadow-sm dark:shadow-2xl space-y-5 overflow-hidden">
-          {/* Cabecera del Auto Seleccionado + Información Rápida (para Taller y Lubricentro) */}
-          {ordenActiva && (
-            <div className="pb-3 border-b border-zinc-200 dark:border-white/[0.08]">
-              <>
-                {/* Pestaña colapsada solo en móvil para volver a aparecer */}
-                {!mostrarCabeceraMovil && (
-                  <div className="flex sm:hidden items-center justify-between py-1.5 px-3 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 text-xs animate-fade-in">
-                    <div className="flex items-center gap-2 min-w-0 font-mono">
-                      <span className="px-2 py-0.5 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-300 font-bold text-xs shrink-0">
-                        {ordenActiva.plate}
-                      </span>
-                      <span className="text-zinc-800 dark:text-zinc-200 font-semibold truncate text-xs">
-                        {ordenActiva.vehicle}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setMostrarCabeceraMovil(true)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-600 dark:text-blue-300 text-xs font-medium cursor-pointer active:scale-95 shrink-0"
-                    >
-                      <span>Mostrar</span>
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
-                )}
-
-                {/* Vista completa: siempre visible en desktop (sm:), y en móvil si mostrarCabeceraMovil es true */}
-                <div className={`${mostrarCabeceraMovil ? "flex" : "hidden"} sm:flex items-center justify-between gap-2.5 sm:gap-4`}>
-                  {/* Lado izquierdo: Placa + Vehículo + Cliente */}
-                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                    {/* Placa Destacada */}
-                    <span className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 font-mono text-xs sm:text-base font-bold text-blue-600 dark:text-blue-300 tracking-wider shrink-0 shadow-sm">
-                      {ordenActiva.plate}
-                    </span>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 truncate flex-wrap">
-                        <span className="text-xs sm:text-base font-bold text-zinc-900 dark:text-white truncate">
-                          {ordenActiva.vehicle}
-                        </span>
-                        <span className="text-zinc-400 dark:text-zinc-600 shrink-0">•</span>
-                        <span className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-200 font-semibold truncate">
-                          <span className="text-zinc-400 font-normal">Cliente:</span> {ordenActiva.client}
-                        </span>
-                        <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-300 font-medium text-[10px] sm:text-[11px] shrink-0">
-                          {vecesAtendido} {vecesAtendido === 1 ? "visita" : "visitas"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Lado derecho: Estado de Ingreso con el círculo y pestaña de ocultar en móvil */}
-                  <div className="shrink-0 flex items-center justify-end gap-1.5">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-zinc-100 dark:bg-black/60 border border-zinc-200 dark:border-white/15 shadow-sm text-xs">
-                      <span className="text-zinc-600 dark:text-zinc-300 font-normal whitespace-nowrap">
-                        Ingreso:{" "}
-                        <span
-                          className="text-zinc-900 dark:text-white font-normal"
-                          title={formatearFechaCompleta(ordenActiva.dateIn || ordenActiva.startedAt)}
-                        >
-                          {formatearFechaIngreso(ordenActiva.dateIn || ordenActiva.startedAt)}
-                        </span>
-                      </span>
-
-                      {/* El círculo justo al lado de Ingreso */}
-                      {ordenActiva.status === "Pausada" ? (
-                        <span className="inline-flex items-center gap-1 text-amber-500 dark:text-amber-400 font-normal shrink-0" title="En Pausa">
-                          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 dark:bg-amber-400 shrink-0" />
-                          <span className="hidden sm:inline">En Pausa</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-normal shrink-0" title="Trabajando">
-                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
-                          <span className="hidden sm:inline">Trabajando</span>
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Botón pestaña para esconder cabecera solo en móvil */}
-                    <button
-                      type="button"
-                      onClick={() => setMostrarCabeceraMovil(false)}
-                      title="Ocultar información del vehículo en móvil"
-                      className="flex sm:hidden items-center justify-center w-7 h-7 rounded-xl bg-zinc-100 dark:bg-white/[0.04] hover:bg-zinc-200 dark:hover:bg-white/[0.08] border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer active:scale-95 shrink-0"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-                      </svg>
-                    </button>
-                  </div>
+          {/* Registro sencillo de Notas de Voz vinculadas a la Orden */}
+          {ordenActiva && Array.isArray(ordenActiva.voiceNotes) && ordenActiva.voiceNotes.length > 0 && (
+            <div className="pb-3 border-b border-zinc-200 dark:border-white/[0.08] space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                  <span className="text-sm">🎙️</span>
+                  <span>Notas de voz del ingreso ({ordenActiva.voiceNotes.length})</span>
                 </div>
-
-                {/* Registro sencillo de Notas de Voz vinculadas a la Orden */}
-                {Array.isArray(ordenActiva.voiceNotes) && ordenActiva.voiceNotes.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-white/[0.08] space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-                        <span className="text-sm">🎙️</span>
-                        <span>Notas de voz del ingreso ({ordenActiva.voiceNotes.length})</span>
-                      </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {ordenActiva.voiceNotes.map((vn, i) => (
+                  <div
+                    key={vn.id || i}
+                    className="p-3 rounded-xl bg-black/40 border border-emerald-500/20 space-y-2 text-xs shadow-sm"
+                  >
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-emerald-300 font-bold flex items-center gap-1.5">
+                        <span>Nota #{i + 1}</span>
+                        <span className="font-mono text-[10px] text-emerald-400/80 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                          {vn.durationSeconds}s
+                        </span>
+                      </span>
+                      <span className="text-[10px] text-zinc-400 font-mono">
+                        {vn.createdAt ? new Date(vn.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Ingreso"} • {vn.author || "Técnico"}
+                      </span>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {ordenActiva.voiceNotes.map((vn, i) => (
-                        <div
-                          key={vn.id || i}
-                          className="p-3 rounded-xl bg-black/40 border border-emerald-500/20 space-y-2 text-xs shadow-sm"
-                        >
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-emerald-300 font-bold flex items-center gap-1.5">
-                              <span>Nota #{i + 1}</span>
-                              <span className="font-mono text-[10px] text-emerald-400/80 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                                {vn.durationSeconds}s
-                              </span>
-                            </span>
-                            <span className="text-[10px] text-zinc-400 font-mono">
-                              {vn.createdAt ? new Date(vn.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Ingreso"} • {vn.author || "Técnico"}
-                            </span>
-                          </div>
-                          {vn.text && (
-                            <p className="text-[11px] text-zinc-200 italic leading-relaxed bg-white/[0.02] p-2 rounded-lg border border-white/5">
-                              "{vn.text}"
-                            </p>
-                          )}
-                          {vn.audioUrl && (
-                            <audio
-                              src={vn.audioUrl}
-                              controls
-                              className="w-full h-7 rounded"
-                              preload="none"
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                    {vn.text && (
+                      <p className="text-[11px] text-zinc-200 italic leading-relaxed bg-white/[0.02] p-2 rounded-lg border border-white/5">
+                        "{vn.text}"
+                      </p>
+                    )}
+                    {vn.audioUrl && (
+                      <audio
+                        src={vn.audioUrl}
+                        controls
+                        className="w-full h-7 rounded"
+                        preload="none"
+                      />
+                    )}
                   </div>
-                )}
-              </>
+                ))}
+              </div>
             </div>
           )}
 
