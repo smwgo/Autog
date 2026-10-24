@@ -15,22 +15,32 @@ export const ALLOWED_MIME_TYPES = [
   "image/png",
   "image/webp",
   "image/gif",
+  "image/svg+xml",
   "audio/webm",
   "audio/mp4",
   "audio/ogg",
   "audio/mpeg",
   "audio/wav",
+  "audio/m4a",
+  "audio/x-m4a",
+  "audio/aac",
+  "audio/mp3",
   "video/webm",
   "video/mp4",
   "video/quicktime",
+  "video/3gpp",
+  "video/ogg",
+  "video/x-m4v",
   "application/pdf",
   "text/xml",
   "application/xml",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ] as const;
 
 export type AllowedMimeType = typeof ALLOWED_MIME_TYPES[number];
 
-export const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB
+export const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB para soportar videos de inspección y evidencias
 
 // Extension map by MIME type
 const MIME_TO_EXT: Record<string, string> = {
@@ -38,17 +48,27 @@ const MIME_TO_EXT: Record<string, string> = {
   "image/png": "png",
   "image/webp": "webp",
   "image/gif": "gif",
+  "image/svg+xml": "svg",
   "audio/webm": "webm",
   "audio/mp4": "m4a",
   "audio/ogg": "ogg",
   "audio/mpeg": "mp3",
   "audio/wav": "wav",
+  "audio/m4a": "m4a",
+  "audio/x-m4a": "m4a",
+  "audio/aac": "aac",
+  "audio/mp3": "mp3",
   "video/webm": "webm",
   "video/mp4": "mp4",
   "video/quicktime": "mov",
+  "video/3gpp": "3gp",
+  "video/ogg": "ogv",
+  "video/x-m4v": "m4v",
   "application/pdf": "pdf",
   "text/xml": "xml",
   "application/xml": "xml",
+  "application/msword": "doc",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
 };
 
 function getR2Client(): S3Client {
@@ -58,13 +78,15 @@ function getR2Client(): S3Client {
 
   if (!accountId || !accessKeyId || !secretAccessKey) {
     throw new Error(
-      "Cloudflare R2 no está configurado. Por favor define R2_ACCOUNT_ID, R2_ACCESS_KEY_ID y R2_SECRET_ACCESS_KEY en las variables de entorno de Vercel."
+      "Cloudflare R2 no está configurado. Por favor define R2_ACCOUNT_ID, R2_ACCESS_KEY_ID y R2_SECRET_ACCESS_KEY en las variables de entorno."
     );
   }
 
+  const endpoint = process.env.R2_ENDPOINT || `https://${accountId}.r2.cloudflarestorage.com`;
+
   return new S3Client({
     region: "auto",
-    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    endpoint,
     credentials: {
       accessKeyId,
       secretAccessKey,
@@ -92,7 +114,7 @@ export function validateFileMetadata(size: number, mimeType: string): { valid: b
   if (!ALLOWED_MIME_TYPES.includes(cleanMime as AllowedMimeType)) {
     return {
       valid: false,
-      error: `Tipo de archivo no permitido: ${mimeType}. Tipos permitidos: imágenes (JPG, PNG, WEBP), audio (Notas de voz), PDF y XML.`,
+      error: `Tipo de archivo no permitido: ${mimeType}. Tipos permitidos: fotos e imágenes (JPG, PNG, WEBP), videos (MP4, WEBM, MOV), audio (Notas de voz) y documentos (PDF, XML).`,
     };
   }
 

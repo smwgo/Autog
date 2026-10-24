@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import type { UnifiedOrder, InspectionFinding, OrderItem, FindingItemLink } from "@/app/taller/page";
 import { DetallePinModerno } from "./DetallePinModerno";
+import { comprimirImagenEnNavegador } from "@/lib/storage-client";
 
 export interface InspeccionVehiculoProps {
   ordenActiva: UnifiedOrder | null;
@@ -868,7 +869,7 @@ export default function InspeccionVehiculo({
     mostrarToast("Ítem removido de la propuesta.");
   };
 
-  // 2. FOTOS COMO EVIDENCIA EN CLOUDFLARE R2 (HASTA 5 FOTOS POR PIN)
+  // 2. FOTOS Y VIDEOS COMO EVIDENCIA EN CLOUDFLARE R2 (HASTA 5 EVIDENCIAS POR PIN)
   const handleSubirFotosPinR2 = async (e: React.ChangeEvent<HTMLInputElement>, targetPinId: string) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -877,7 +878,7 @@ export default function InspeccionVehiculo({
     const fotosActuales = pinExistente?.photoUrls || (pinExistente?.photoUrl ? [pinExistente.photoUrl] : []);
 
     if (fotosActuales.length >= 5) {
-      mostrarToast("Ya alcanzaste el límite de 5 fotos para este hallazgo.", "err");
+      mostrarToast("Ya alcanzaste el límite de 5 evidencias para este punto.", "err");
       e.target.value = "";
       return;
     }
@@ -886,14 +887,35 @@ export default function InspeccionVehiculo({
 
     try {
       setSubiendoFotoPin(true);
-      mostrarToast(`Subiendo ${archivosSubir.length} ${archivosSubir.length === 1 ? "foto" : "fotos"} a R2...`, "ok");
+      const contieneVideo = archivosSubir.some((f) => f.type.startsWith("video/"));
+      const labelMedio = contieneVideo ? "evidencias" : archivosSubir.length === 1 ? "foto" : "fotos";
+      mostrarToast(`Subiendo ${archivosSubir.length} ${labelMedio} a Cloudflare R2...`, "ok");
 
       const nuevasUrls: string[] = [];
 
       for (const file of archivosSubir) {
+        const esVideo = file.type.startsWith("video/");
+        const folder = esVideo ? "taller_videos" : "taller_inspeccion_evidencia";
+        const tipo = esVideo ? "video" : "image";
+
+        let archivoFinal: File | Blob = file;
+        if (!esVideo) {
+          try {
+            const { file: optimizada } = await comprimirImagenEnNavegador(file);
+            archivoFinal = optimizada;
+          } catch {
+            archivoFinal = file;
+          }
+        }
+
         const formData = new FormData();
-        formData.append("file", file);
-        formData.append("folder", "taller_inspeccion_evidencia");
+        formData.append("file", archivoFinal, file.name || "foto_evidencia.jpg");
+        formData.append("folder", folder);
+        formData.append("tipo", tipo);
+        if (ordenActiva?.id) formData.append("orderId", ordenActiva.id);
+        if (ordenActiva?.orderNumber) formData.append("orderNumber", ordenActiva.orderNumber);
+        if (ordenActiva?.plate) formData.append("plate", ordenActiva.plate);
+        formData.append("uploadedBy", ordenActiva?.mechanic || "Taller Mecánico");
 
         const res = await fetch("/api/storage/upload", {
           method: "POST",
@@ -902,6 +924,8 @@ export default function InspeccionVehiculo({
         const data = await res.json();
         if (data.success && data.url) {
           nuevasUrls.push(data.url);
+        } else if (!data.success && data.error) {
+          mostrarToast(`Error: ${data.error}`, "err");
         }
       }
 
@@ -932,12 +956,12 @@ export default function InspeccionVehiculo({
 
         setHallazgos(actualizados);
         sincronizarHallazgosNeon(actualizados);
-        mostrarToast(`✓ ${nuevasUrls.length} ${nuevasUrls.length === 1 ? "foto agregada" : "fotos agregadas"} (${fotosFinales.length}/5)`);
+        mostrarToast(`✓ ${nuevasUrls.length} ${nuevasUrls.length === 1 ? "evidencia guardada" : "evidencias guardadas"} en R2 (${fotosFinales.length}/5)`);
       } else {
-        mostrarToast("No se pudo subir la foto a R2", "err");
+        mostrarToast("No se pudo completar la subida a Cloudflare R2", "err");
       }
     } catch {
-      mostrarToast("Error de conexión al subir fotos a R2", "err");
+      mostrarToast("Error de conexión al subir evidencia a Cloudflare R2", "err");
     } finally {
       setSubiendoFotoPin(false);
       e.target.value = "";
@@ -1045,6 +1069,14 @@ export default function InspeccionVehiculo({
     const nuevoTipoStr = nuevosTipos.join(", ");
     setTipoSeleccionado(nuevoTipoStr);
     handleGuardarDetallePin(nuevoTipoStr, observacionTexto !== "" ? observacionTexto : pin.descripcion);
+  };
+
+  // CAMBIO DIRECTO MANUAL DEL TIPO/DAÑO DE UN PIN
+  const handleCambiarTipoPinDirecto = (targetPinId: string, nuevoTipo: string) => {
+    const pin = hallazgos.find((h) => h.id === targetPinId);
+    if (!pin) return;
+    setTipoSeleccionado(nuevoTipo);
+    handleGuardarDetallePin(nuevoTipo, observacionTexto !== "" ? observacionTexto : pin.descripcion);
   };
 
   // GENERAR OTRO HALLAZGO EN EL MISMO PIN (MISMO NÚMERO, NO INCREMENTA)
@@ -1565,6 +1597,7 @@ ${urlSeguimiento}`;
             chipsTipos={CHIPS_HALLAZGO}
             tipoSeleccionado={tipoSeleccionado}
             onToggleTipo={(tipoId) => handleToggleTipoPin(pinActual.id, tipoId)}
+            onChangeTipo={(nuevoTipo) => handleCambiarTipoPinDirecto(pinActual.id, nuevoTipo)}
             observacionTexto={observacionTexto}
             onChangeObservacion={(texto) => {
               setObservacionTexto(texto);
@@ -1938,6 +1971,7 @@ ${urlSeguimiento}`;
                 chipsTipos={CHIPS_HALLAZGO_MECANICO}
                 tipoSeleccionado={tipoSeleccionado}
                 onToggleTipo={(tipoId) => handleToggleTipoPin(pinActual.id, tipoId)}
+                onChangeTipo={(nuevoTipo) => handleCambiarTipoPinDirecto(pinActual.id, nuevoTipo)}
                 observacionTexto={observacionTexto}
                 onChangeObservacion={(texto) => {
                   setObservacionTexto(texto);

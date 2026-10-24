@@ -35,6 +35,456 @@ const ESTADOS_LUBRICENTRO = [
   { id: "st-5", name: "05 Entregada", color: "purple", progress: 100 },
 ];
 
+export interface CategoriaConfig {
+  id: string;
+  label: string;
+  icon: string;
+}
+
+export interface SubcategoriaConfig {
+  id: string;
+  label: string;
+  icon: string;
+}
+
+export interface ItemPresetConfig {
+  code: string;
+  name: string;
+  desc: string;
+  icon: string;
+  price: number;
+  type: "SERVICE" | "PART";
+}
+
+// ============================================================================
+// 1. CATEGORÍAS INDEPENDIENTES POR CADA ESPECIALIDAD (LUBRICENTRO, CAR WASH, TECNICENTRO)
+// ============================================================================
+export const CATEGORIAS_POR_ESPECIALIDAD: Record<
+  "lubricentro" | "carwash" | "tecnicentro",
+  CategoriaConfig[]
+> = {
+  lubricentro: [
+    { id: "lub_aceite", label: "Aceite", icon: "🛢️" },
+    { id: "lub_transmision", label: "Transmisión", icon: "⚙️" },
+    { id: "lub_filtros", label: "Filtros", icon: "🌪️" },
+    { id: "lub_fluidos", label: "Fluidos", icon: "🌡️" },
+    { id: "lub_baterias", label: "Baterías", icon: "🔋" },
+  ],
+  carwash: [
+    { id: "cw_lavados", label: "Lavados", icon: "🚿" },
+    { id: "cw_interior", label: "Interior", icon: "🧽" },
+    { id: "cw_pulido", label: "Pulido", icon: "✨" },
+    { id: "cw_chasis", label: "Chasis", icon: "🧴" },
+    { id: "cw_combos", label: "Combos", icon: "💎" },
+  ],
+  tecnicentro: [
+    { id: "tc_llantas", label: "Llantas", icon: "🛞" },
+    { id: "tc_alineacion", label: "Alineación", icon: "⚖️" },
+    { id: "tc_frenos", label: "Frenos", icon: "🛑" },
+    { id: "tc_suspension", label: "Suspensión", icon: "🔩" },
+    { id: "tc_baterias", label: "Baterías", icon: "⚡" },
+  ],
+};
+
+// ============================================================================
+// 2. SUBCATEGORÍAS POR CADA CATEGORÍA DE LAS 3 ESPECIALIDADES (UNA SOLA PALABRA)
+// ============================================================================
+export const SUBCATEGORIAS_POR_ESPECIALIDAD: Record<string, SubcategoriaConfig[]> = {
+  // --- LUBRICENTRO ---
+  lub_aceite: [
+    { id: "lub_aceite_motor", label: "Aceite", icon: "🛢️" },
+    { id: "lub_aditivos", label: "Aditivos", icon: "🧪" },
+    { id: "lub_flush", label: "Flush", icon: "🧼" },
+    { id: "lub_grasa", label: "Grasa", icon: "🧴" },
+  ],
+  lub_transmision: [
+    { id: "lub_trans_manual", label: "Manual", icon: "⚙️" },
+    { id: "lub_trans_automatica", label: "ATF", icon: "🔄" },
+    { id: "lub_trans_cvt", label: "CVT", icon: "⚡" },
+    { id: "lub_trans_diferencial", label: "Diferencial", icon: "🔩" },
+  ],
+  lub_filtros: [
+    { id: "lub_fil_aceite", label: "Aceite", icon: "🛢️" },
+    { id: "lub_fil_aire", label: "Aire", icon: "🌪️" },
+    { id: "lub_fil_cabina", label: "Cabina", icon: "❄️" },
+    { id: "lub_fil_combustible", label: "Combustible", icon: "⛽" },
+  ],
+  lub_fluidos: [
+    { id: "lub_flu_frenos", label: "Frenos", icon: "🛑" },
+    { id: "lub_flu_coolant", label: "Coolant", icon: "🌡️" },
+    { id: "lub_flu_hidraulico", label: "Hidráulico", icon: "🛞" },
+    { id: "lub_flu_inyectores", label: "Inyectores", icon: "🧪" },
+  ],
+  lub_baterias: [
+    { id: "lub_bat_diagnostico", label: "Diagnóstico", icon: "⚡" },
+    { id: "lub_bat_nuevas", label: "Baterías", icon: "🔋" },
+    { id: "lub_bat_plumas", label: "Plumas", icon: "🌧️" },
+    { id: "lub_bat_lavado", label: "Lavado", icon: "🚿" },
+  ],
+
+  // --- CAR WASH ---
+  cw_lavados: [
+    { id: "cw_lav_express", label: "Express", icon: "🚿" },
+    { id: "cw_lav_completo", label: "Completo", icon: "🌊" },
+    { id: "cw_lav_motor", label: "Motor", icon: "⚙️" },
+    { id: "cw_lav_especial", label: "Camionetas", icon: "🚙" },
+  ],
+  cw_interior: [
+    { id: "cw_int_aspirado", label: "Aspirado", icon: "🧹" },
+    { id: "cw_int_tapiceria", label: "Tapicería", icon: "🛋️" },
+    { id: "cw_int_cuero", label: "Cuero", icon: "🧴" },
+    { id: "cw_int_ozono", label: "Ozono", icon: "🌬️" },
+  ],
+  cw_pulido: [
+    { id: "cw_pul_encerado", label: "Encerado", icon: "✨" },
+    { id: "cw_pul_correccion", label: "Pulido", icon: "🌟" },
+    { id: "cw_pul_faros", label: "Faros", icon: "💡" },
+    { id: "cw_pul_cristales", label: "Vidrios", icon: "🪟" },
+  ],
+  cw_chasis: [
+    { id: "cw_cha_grafito", label: "Grafito", icon: "🧴" },
+    { id: "cw_cha_engrase", label: "Engrase", icon: "🔩" },
+    { id: "cw_cha_motor", label: "Motor", icon: "⚙️" },
+    { id: "cw_cha_llantas", label: "Llantas", icon: "🛞" },
+  ],
+  cw_combos: [
+    { id: "cw_com_basico", label: "Básicos", icon: "🏷️" },
+    { id: "cw_com_ejecutivo", label: "Ejecutivos", icon: "👔" },
+    { id: "cw_com_spa", label: "Spa", icon: "👑" },
+    { id: "cw_com_detail", label: "Detailing", icon: "💎" },
+  ],
+
+  // --- TECNICENTRO ---
+  tc_llantas: [
+    { id: "tc_lla_inspeccion", label: "Inspección", icon: "🚗" },
+    { id: "tc_lla_parches", label: "Parchado", icon: "🩹" },
+    { id: "tc_lla_nuevas", label: "Neumáticos", icon: "🛞" },
+    { id: "tc_lla_valvulas", label: "Válvulas", icon: "🔘" },
+  ],
+  tc_alineacion: [
+    { id: "tc_ali_computarizada", label: "Alineación", icon: "📐" },
+    { id: "tc_ali_balanceo", label: "Balanceo", icon: "⚖️" },
+    { id: "tc_ali_nitrogeno", label: "Nitrógeno", icon: "🔄" },
+    { id: "tc_ali_combos", label: "Combos", icon: "⭐" },
+  ],
+  tc_frenos: [
+    { id: "tc_fre_pastillas", label: "Pastillas", icon: "🟫" },
+    { id: "tc_fre_discos", label: "Discos", icon: "💿" },
+    { id: "tc_fre_liquido", label: "Líquido", icon: "💧" },
+    { id: "tc_fre_calipers", label: "Calipers", icon: "🔧" },
+  ],
+  tc_suspension: [
+    { id: "tc_sus_amortiguadores", label: "Amortiguadores", icon: "🔽" },
+    { id: "tc_sus_terminales", label: "Terminales", icon: "↔️" },
+    { id: "tc_sus_trapecios", label: "Trapecios", icon: "🔩" },
+    { id: "tc_sus_direccion", label: "Dirección", icon: "🛞" },
+  ],
+  tc_baterias: [
+    { id: "tc_bat_test", label: "Diagnóstico", icon: "⚡" },
+    { id: "tc_bat_nuevas", label: "Baterías", icon: "🔋" },
+    { id: "tc_bat_bornes", label: "Bornes", icon: "🔌" },
+    { id: "tc_bat_inspeccion", label: "Inspección", icon: "🔍" },
+  ],
+};
+
+// ============================================================================
+// 3. CATÁLOGO COMPLETO DE ITEMS PRESET POR CADA SUBCATEGORÍA
+// ============================================================================
+export const ITEMS_POR_SUBCATEGORIA: Record<string, ItemPresetConfig[]> = {
+  // LUBRICENTRO - Aceite
+  lub_aditivos: [
+    { code: "LUB-ADT-INY", name: "Limpiador de Inyectores", desc: "Concentrado gasolina / diésel", icon: "🧪", price: 9, type: "PART" },
+    { code: "LUB-ADT-TRAT", name: "Tratamiento Antifricción Motor", desc: "Reduce desgaste de metales", icon: "🛡️", price: 14, type: "PART" },
+    { code: "LUB-ADT-HUMO", name: "Tratamiento Anti-Humo", desc: "Restaura compresión y sella", icon: "💨", price: 12, type: "PART" },
+  ],
+  lub_flush: [
+    { code: "LUB-FLUSH-INT", name: "Engine Flush (Lavado Interno)", desc: "Desincrusta carbón pre-cambio", icon: "🧼", price: 10, type: "PART" },
+    { code: "LUB-FLUSH-SERV", name: "Servicio de Enjuague de Motor", desc: "Ciclo de lavado y purga de cárter", icon: "⚙️", price: 12, type: "SERVICE" },
+  ],
+  lub_grasa: [
+    { code: "LUB-GRAS-LIT", name: "Grasa Multipropósito Litio", desc: "Crucetas, rodamientos y chasis", icon: "🧴", price: 6, type: "PART" },
+    { code: "LUB-GRAS-SERV", name: "Servicio de Engrase de Chasis", desc: "Puntos de engrase y rótulas", icon: "🔩", price: 8, type: "SERVICE" },
+  ],
+  // LUBRICENTRO - Transmisión
+  lub_trans_manual: [
+    { code: "LUB-TM-80W90", name: "Aceite Caja Manual 80W-90 (Galón)", desc: "Engranajes hipoidales GL-5", icon: "⚙️", price: 28, type: "PART" },
+    { code: "LUB-TM-75W90", name: "Aceite Caja Manual 75W-90 Sintético", desc: "Alta fluidez cambios suaves", icon: "⚙️", price: 34, type: "PART" },
+    { code: "LUB-TM-SERV", name: "Servicio Cambio Aceite Caja Manual", desc: "Vaciado, limpieza tapón y llenado", icon: "🔧", price: 10, type: "SERVICE" },
+  ],
+  lub_trans_automatica: [
+    { code: "LUB-TA-ATF", name: "Aceite ATF Automático Dexron III/VI", desc: "Fluido de transmisión automática", icon: "🔄", price: 16, type: "PART" },
+    { code: "LUB-TA-MERCON", name: "Aceite ATF Mercon V / Multi-Vehículo", desc: "Cajas electrónicas modernas", icon: "🔄", price: 18, type: "PART" },
+    { code: "LUB-TA-SERV", name: "Servicio Cambio Fluido ATF", desc: "Drenado y nivelación de caja", icon: "🔧", price: 15, type: "SERVICE" },
+  ],
+  lub_trans_cvt: [
+    { code: "LUB-TCVT-FLUID", name: "Aceite Transmisión CVT Sintético", desc: "Correa y poleas variables", icon: "⚡", price: 22, type: "PART" },
+    { code: "LUB-TCVT-SERV", name: "Servicio Cambio Fluido CVT", desc: "Purga y ajuste por escáner", icon: "🔧", price: 18, type: "SERVICE" },
+  ],
+  lub_trans_diferencial: [
+    { code: "LUB-DIF-85W140", name: "Aceite Diferencial 85W-140 (Galón)", desc: "Corona, piñón y diferencial 4x4", icon: "🔩", price: 30, type: "PART" },
+    { code: "LUB-DIF-SERV", name: "Servicio Cambio Aceite Diferencial", desc: "Eje delantero y trasero", icon: "🔧", price: 10, type: "SERVICE" },
+  ],
+  // LUBRICENTRO - Filtros
+  lub_fil_aceite: [
+    { code: "LUB-FIL-ACEITE", name: "Filtro de Aceite Blindado", desc: "Tipo Spin-on estándar", icon: "🛢️", price: 8, type: "PART" },
+    { code: "LUB-FIL-ACE-ELEM", name: "Filtro Aceite Cartucho / Elemento", desc: "Ecológico para motores modernos", icon: "🛢️", price: 10, type: "PART" },
+    { code: "LUB-FIL-ACE-DSL", name: "Filtro Aceite Diésel Heavy Duty", desc: "Alta retención de partículas", icon: "🚛", price: 12, type: "PART" },
+  ],
+  lub_fil_aire: [
+    { code: "LUB-FIL-AIRE", name: "Filtro de Aire Motor Convencional", desc: "Celulosa de admisión de aire", icon: "🌪️", price: 12, type: "PART" },
+    { code: "LUB-FIL-AIRE-PANEL", name: "Filtro de Aire Panel Plano", desc: "Para sedán y SUV moderno", icon: "🌪️", price: 14, type: "PART" },
+    { code: "LUB-FIL-AIRE-CIL", name: "Filtro de Aire Cilíndrico / Cono", desc: "Camionetas y alta aspiración", icon: "🌪️", price: 16, type: "PART" },
+  ],
+  lub_fil_cabina: [
+    { code: "LUB-FIL-CAB", name: "Filtro Cabina (A/C) Estándar", desc: "Retiene polvo y polen exterior", icon: "❄️", price: 14, type: "PART" },
+    { code: "LUB-FIL-CAB-CARB", name: "Filtro Cabina Carbón Activado", desc: "Neutraliza olores y smog", icon: "🛡️", price: 18, type: "PART" },
+  ],
+  lub_fil_combustible: [
+    { code: "LUB-FIL-COMB", name: "Filtro de Gasolina en Línea", desc: "Protección inyectores gasolina", icon: "⛽", price: 15, type: "PART" },
+    { code: "LUB-FIL-COMB-SUM", name: "Filtro Combustible Sumergido", desc: "En tanque de combustible", icon: "⛽", price: 22, type: "PART" },
+    { code: "LUB-FIL-COMB-DSL", name: "Filtro Trampa Diésel Decantador", desc: "Separador de agua y sedimentos", icon: "🚛", price: 20, type: "PART" },
+  ],
+  // LUBRICENTRO - Fluidos
+  lub_flu_frenos: [
+    { code: "LUB-FL-DOT4", name: "Líquido de Frenos DOT 4 Sintético", desc: "Punto ebullición elevado 260°C", icon: "🛑", price: 8, type: "PART" },
+    { code: "LUB-FL-DOT3", name: "Líquido de Frenos DOT 3", desc: "Uso general automotriz", icon: "🛑", price: 7, type: "PART" },
+    { code: "LUB-FL-FREN-SERV", name: "Servicio Purga y Cambio Líquido Frenos", desc: "Purga en 4 ruedas", icon: "🔧", price: 12, type: "SERVICE" },
+  ],
+  lub_flu_coolant: [
+    { code: "LUB-FL-COOLANT", name: "Refrigerante Coolant Concentrado (Galón)", desc: "Antioxidante 50/50 etilenglicol", icon: "🌡️", price: 12, type: "PART" },
+    { code: "LUB-FL-COOL-SERV", name: "Servicio Lavado y Cambio Refrigerante", desc: "Drenado radiador y reserva", icon: "🔧", price: 10, type: "SERVICE" },
+  ],
+  lub_flu_hidraulico: [
+    { code: "LUB-FL-HID", name: "Fluido Dirección Hidráulica", desc: "Protección cremallera y bomba", icon: "🛞", price: 10, type: "PART" },
+    { code: "LUB-FL-HID-SERV", name: "Servicio Purga Dirección Hidráulica", desc: "Elimina aire y ruido de bomba", icon: "🔧", price: 10, type: "SERVICE" },
+  ],
+  lub_flu_inyectores: [
+    { code: "LUB-INY-CLEAN", name: "Limpiador de Inyectores en Boya", desc: "Limpieza directa por riel", icon: "🧪", price: 16, type: "PART" },
+    { code: "LUB-INY-SERV", name: "Servicio Limpieza Inyectores en Riel", desc: "Descarbonizado sin desmontar", icon: "🔧", price: 15, type: "SERVICE" },
+  ],
+  // LUBRICENTRO - Baterías y Entrega
+  lub_bat_diagnostico: [
+    { code: "LUB-BAT-TEST", name: "Test Computarizado de Batería y Alternador", desc: "Medición CCA y diodos alternador", icon: "⚡", price: 8, type: "SERVICE" },
+    { code: "LUB-BAT-BORNES", name: "Limpieza y Desulfatado de Bornes", desc: "Grasa protectora dieléctrica", icon: "🧹", price: 5, type: "SERVICE" },
+  ],
+  lub_bat_nuevas: [
+    { code: "LUB-BAT-11P", name: "Batería 11 Placas 45Ah", desc: "Autos compactos con garantía", icon: "🔋", price: 65, type: "PART" },
+    { code: "LUB-BAT-13P", name: "Batería 13 Placas 60Ah", desc: "Sedán y hatchback mediano", icon: "🔋", price: 85, type: "PART" },
+    { code: "LUB-BAT-15P", name: "Batería 15 Placas 75Ah", desc: "SUV, camionetas y 4x4", icon: "🔋", price: 105, type: "PART" },
+    { code: "LUB-BAT-INSTAL", name: "Instalación de Batería con Respaldo", desc: "Conserva memorias de radio y ECU", icon: "🔧", price: 8, type: "SERVICE" },
+  ],
+  lub_bat_plumas: [
+    { code: "LUB-PLUMAS-PAR", name: "Plumas Limpiaparabrisas Delanteras (Par)", desc: "Siliconadas aerodinámicas", icon: "🌧️", price: 14, type: "PART" },
+    { code: "LUB-PLUMA-POST", name: "Pluma Limpiaparabrisas Posterior", desc: "Para compuerta trasera", icon: "🌧️", price: 8, type: "PART" },
+  ],
+  lub_bat_lavado: [
+    { code: "LUB-LAV-ENTREGA", name: "Lavado Express de Entrega", desc: "Carrocería y secado rápido de cortesía", icon: "🚿", price: 6, type: "SERVICE" },
+    { code: "LUB-ASP-ENTREGA", name: "Aspirado Rápido de Cabina", desc: "Pisos y asientos delanteros", icon: "🧹", price: 5, type: "SERVICE" },
+  ],
+
+  // --- CAR WASH ---
+  cw_lav_express: [
+    { code: "CW-EXP-EXT", name: "Lavado Express Exterior", desc: "Shampoo pH neutro y secado microfibra", icon: "🚿", price: 6, type: "SERVICE" },
+    { code: "CW-EXP-AROS", name: "Lavado Express + Aros", desc: "Limpieza profunda de llantas y rines", icon: "🛞", price: 8, type: "SERVICE" },
+    { code: "CW-EXP-MOTO", name: "Lavado Express Moto / Cuadrón", desc: "Presión controlada delicada", icon: "🏍️", price: 5, type: "SERVICE" },
+    { code: "CW-EXP-ENJUAGUE", name: "Enjuague Rápido de Presión", desc: "Retiro express de polvo y lodo", icon: "💧", price: 4, type: "SERVICE" },
+  ],
+  cw_lav_completo: [
+    { code: "CW-COMP-CHASIS", name: "Lavado Completo Carrocería + Chasis", desc: "Elevador y lavado a presión de bajos", icon: "🧽", price: 12, type: "SERVICE" },
+    { code: "CW-SNOW-FOAM", name: "Lavado Espuma Activa (Snow Foam)", desc: "Espuma densa desincrustante touchless", icon: "🫧", price: 14, type: "SERVICE" },
+    { code: "CW-COMP-FULL", name: "Lavado Integral Full (Ext + Chasis + Motor)", desc: "Limpieza profunda total", icon: "🌊", price: 22, type: "SERVICE" },
+    { code: "CW-CAMIONETA-SUV", name: "Lavado Completo Camioneta / SUV Grande", desc: "Vehículos 3 filas y pickups", icon: "🚙", price: 16, type: "SERVICE" },
+  ],
+  cw_lav_motor: [
+    { code: "CW-MOT-VAPOR", name: "Lavado de Motor al Vapor", desc: "Desengrasado seguro sin mojar sensores", icon: "⚙️", price: 15, type: "SERVICE" },
+    { code: "CW-MOT-DESENG", name: "Desengrasado Profundo de Motor y Bahía", desc: "Elimina grasa acumulada y aceite", icon: "🧼", price: 18, type: "SERVICE" },
+    { code: "CW-MOT-BARNIZ", name: "Lavado Motor + Barniz Protector Dieléctrico", desc: "Brillo mate y repelente de polvo", icon: "🛡️", price: 22, type: "SERVICE" },
+  ],
+  cw_lav_especial: [
+    { code: "CW-DESBARRE-4X4", name: "Desbarre y Desarenado Chasis 4x4", desc: "Retiro de lodo pegado en bajos", icon: "🚜", price: 20, type: "SERVICE" },
+    { code: "CW-DESALINIZADO", name: "Tratamiento Desalinizador de Chasis", desc: "Neutraliza sal marina post-playa", icon: "🏖️", price: 18, type: "SERVICE" },
+    { code: "CW-PLATON-PICKUP", name: "Lavado Balde / Platón Camioneta Pickup", desc: "Limpieza con hidrolavadora", icon: "🛻", price: 8, type: "SERVICE" },
+  ],
+  cw_int_aspirado: [
+    { code: "CW-ASP-CABINA", name: "Aspirado Profundo Interior", desc: "Asientos, alfombras y cajuela", icon: "🧹", price: 8, type: "SERVICE" },
+    { code: "CW-ASP-MALETERO", name: "Aspirado Detallado de Cajuela / Maletero", desc: "Espacio de llanta de emergencia", icon: "🧳", price: 4, type: "SERVICE" },
+    { code: "CW-SOPLADO-DUCTOS", name: "Soplado de Rendijas y Ductos A/C", desc: "Elimina polvo acumulado en rejillas", icon: "💨", price: 5, type: "SERVICE" },
+  ],
+  cw_int_tapiceria: [
+    { code: "CW-TAP-ASIENTOS", name: "Lavado en Seco Asientos Tela (4 puestos)", desc: "Extracción y desmanchado textil", icon: "🛋️", price: 20, type: "SERVICE" },
+    { code: "CW-TAP-ALFOMBRAS", name: "Lavado y Extracción Pisos / Alfombras", desc: "Elimina barro y suciedad adherida", icon: "🧽", price: 18, type: "SERVICE" },
+    { code: "CW-TAP-TECHO", name: "Limpieza Delicada de Techo / Cielo Raso", desc: "Sin despegar el tapiz original", icon: "☁️", price: 15, type: "SERVICE" },
+    { code: "CW-TAP-MANCHAS", name: "Tratamiento Desmanchador Puntual", desc: "Café, grasa, tinta y derrames", icon: "🧴", price: 8, type: "SERVICE" },
+  ],
+  cw_int_cuero: [
+    { code: "CW-CUE-CLEAN", name: "Limpieza y Humectación Asientos de Cuero", desc: "Nutre el cuero y evita cuarteaduras", icon: "🛋️", price: 18, type: "SERVICE" },
+    { code: "CW-TABLERO-UV", name: "Renovador y Protección UV Tablero / Puertas", desc: "Acabado mate no grasoso", icon: "🧴", price: 6, type: "SERVICE" },
+    { code: "CW-SELLADO-VINIL", name: "Sellado de Vinilos y Molduras Interiores", desc: "Repele el polvo por semanas", icon: "🛡️", price: 10, type: "SERVICE" },
+  ],
+  cw_int_ozono: [
+    { code: "CW-OZONO-CANON", name: "Desinfección con Cañón de Ozono", desc: "Elimina 99% bacterias, virus y ácaros", icon: "🌬️", price: 10, type: "SERVICE" },
+    { code: "CW-OLOR-HUMEDAD", name: "Tratamiento Anti-Humedad y Mascotas", desc: "Neutraliza olores de raíz", icon: "🐕", price: 12, type: "SERVICE" },
+    { code: "CW-AROMATIZANTE", name: "Aromatización de Cabina Larga Duración", desc: "Fragancias finas de diseñador", icon: "🌸", price: 4, type: "SERVICE" },
+  ],
+  cw_pul_encerado: [
+    { code: "CW-ENC-CARNAUBA", name: "Encerado a Mano con Cera Carnauba", desc: "Brillo cálido y efecto hidrofóbico", icon: "✨", price: 12, type: "SERVICE" },
+    { code: "CW-SELLADOR-LIQ", name: "Sellador Cerámico Líquido Spray", desc: "Protección UV y brillo 3 meses", icon: "💎", price: 18, type: "SERVICE" },
+    { code: "CW-CERA-EXPRESS", name: "Cera Rápida en Húmedo de Secado", desc: "Brillo express al terminar el lavado", icon: "🧴", price: 6, type: "SERVICE" },
+  ],
+  cw_pul_correccion: [
+    { code: "CW-CLAY-BAR", name: "Descontaminado con Barra de Arcilla (Clay Bar)", desc: "Retira lluvia ácida y pintura pulverizada", icon: "🧱", price: 15, type: "SERVICE" },
+    { code: "CW-PUL-1P", name: "Pulido Corrección 1 Paso (Micro-Rayas)", desc: "Elimina remolinos y marcas de lavado", icon: "🌟", price: 35, type: "SERVICE" },
+    { code: "CW-ABRILLANTADO", name: "Abrillantado Orbital Efecto Espejo", desc: "Máxima reflectividad sin hologramas", icon: "🪞", price: 25, type: "SERVICE" },
+  ],
+  cw_pul_faros: [
+    { code: "CW-FAROS-PAR", name: "Pulido y Restauración de Faros (Par)", desc: "Elimina tono amarillo y opacidad", icon: "💡", price: 15, type: "SERVICE" },
+    { code: "CW-FAROS-UV", name: "Pulido de Faros + Sellador Polímero UV", desc: "Garantía de transparencia prolongada", icon: "🛡️", price: 20, type: "SERVICE" },
+    { code: "CW-FAROS-POST", name: "Pulido de Micas / Stops Posteriores", desc: "Restaura brillo rojo original", icon: "🚨", price: 10, type: "SERVICE" },
+  ],
+  cw_pul_cristales: [
+    { code: "CW-RAIN-X", name: "Tratamiento Repelente de Lluvia Rain-X", desc: "Mejora visión en lluvia en parabrisas", icon: "🌧️", price: 10, type: "SERVICE" },
+    { code: "CW-GOTA-SECA", name: "Desmanchado de Lluvia Ácida y Gota Seca", desc: "Vidrios totalmente transparentes", icon: "🪟", price: 15, type: "SERVICE" },
+    { code: "CW-PUL-VIDRIOS", name: "Pulido Desengrasante de Parabrisas", desc: "Elimina película de aceite y grasa", icon: "✨", price: 12, type: "SERVICE" },
+  ],
+  cw_cha_grafito: [
+    { code: "CW-GRAF-CHASIS", name: "Pulverizado con Grafito de Chasis", desc: "Protector contra herrumbre y ruidos", icon: "🧴", price: 10, type: "SERVICE" },
+    { code: "CW-ACEITE-CHASIS", name: "Baño de Aceite Protector Anticorrosivo", desc: "Protección para zonas costeras", icon: "🛢️", price: 14, type: "SERVICE" },
+    { code: "CW-GRAF-ECO", name: "Grafito Ecológico No Pegajoso", desc: "No acumula tierra en guardapolvos", icon: "🌿", price: 16, type: "SERVICE" },
+  ],
+  cw_cha_engrase: [
+    { code: "CW-ENG-PUNTOS", name: "Engrase de Puntos de Chasis y Rótulas", desc: "Grasa de litio a presión", icon: "🔩", price: 10, type: "SERVICE" },
+    { code: "CW-ENG-CRUCETAS", name: "Engrase de Crucetas y Cardán", desc: "Para camionetas y vehículos de tracción", icon: "⚙️", price: 8, type: "SERVICE" },
+    { code: "CW-LUB-PUERTAS", name: "Lubricación de Bisagras y Cerraduras", desc: "Previene chirridos y desgaste", icon: "🚪", price: 5, type: "SERVICE" },
+  ],
+  cw_cha_motor: [
+    { code: "CW-BARNIZ-MOT", name: "Barniz Protector Térmico de Motor", desc: "Acabado brillante de exhibición", icon: "✨", price: 12, type: "SERVICE" },
+    { code: "CW-HIDRAT-MANG", name: "Hidratación de Mangueras y Plásticos", desc: "Evita resequedad por calor", icon: "🧪", price: 8, type: "SERVICE" },
+  ],
+  cw_cha_llantas: [
+    { code: "CW-DESCONT-AROS", name: "Descontaminante Férrico de Rines", desc: "Elimina carboncillo negro de frenos", icon: "🛞", price: 10, type: "SERVICE" },
+    { code: "CW-SILICONA-GEL", name: "Gel Silicona Larga Duración para Llantas", desc: "Negro intenso no salpica pintura", icon: "🧴", price: 4, type: "SERVICE" },
+    { code: "CW-RENO-PLASTIC", name: "Renovador de Plásticos Negros Exteriores", desc: "Restaura guardapolvos descoloridos", icon: "🛡️", price: 6, type: "SERVICE" },
+  ],
+  cw_com_basico: [
+    { code: "CW-PKG-BASICO", name: "Combo Básico (Lavado Ext + Aspirado + Llantas)", desc: "Carrocería, aspirado y silicona", icon: "🏷️", price: 12, type: "SERVICE" },
+    { code: "CW-PKG-TAXI", name: "Combo Taxi / Utilitario Rápido", desc: "Lavado express y aspirado básico", icon: "🚕", price: 10, type: "SERVICE" },
+  ],
+  cw_com_ejecutivo: [
+    { code: "CW-PKG-EJECUTIVO", name: "Combo Ejecutivo (Chasis + Carrocería + Cera)", desc: "Aspirado completo y humectación tablero", icon: "👔", price: 20, type: "SERVICE" },
+    { code: "CW-PKG-FAMILIAR", name: "Combo Familiar SUV (Completo + Ozono)", desc: "Para camionetas familiares", icon: "👨‍👩‍👧‍👦", price: 25, type: "SERVICE" },
+  ],
+  cw_com_spa: [
+    { code: "CW-PKG-SPA", name: "Combo Spa Premium (Full + Motor + Carnauba + Ozono)", desc: "Tratamiento de belleza integral", icon: "👑", price: 35, type: "SERVICE" },
+    { code: "CW-PKG-4X4", name: "Combo Extremo 4x4 (Chasis + Motor + Grafito + Lavado)", desc: "Para camionetas de trabajo o campo", icon: "🚜", price: 38, type: "SERVICE" },
+  ],
+  cw_com_detail: [
+    { code: "CW-PKG-DETAIL-INT", name: "Detailing Interior Completo", desc: "Lavado en seco asientos, alfombras, techo y ozono", icon: "🛋️", price: 55, type: "SERVICE" },
+    { code: "CW-PKG-DETAIL-FULL", name: "Full Detailing (Interior + Pulido + Sellador Cerámico)", desc: "Restauración estética total", icon: "💎", price: 95, type: "SERVICE" },
+  ],
+
+  // --- TECNICENTRO ---
+  tc_lla_parches: [
+    { code: "TC-PARCHE-TUBE", name: "Parche Tubeless Rápido", desc: "Reparación sin desmontar aro", icon: "🩹", price: 5, type: "SERVICE" },
+    { code: "TC-VULCANIZADO", name: "Vulcanizado Térmico en Caliente", desc: "Reparación profunda de lona y banda", icon: "🔥", price: 8, type: "SERVICE" },
+    { code: "TC-PARCHE-SETA", name: "Parche Tipo Seta / Paragüita", desc: "Sellado interno radial certificado", icon: "🍄", price: 10, type: "SERVICE" },
+    { code: "TC-DESMONTE", name: "Desmonte y Montaje en Enllantadora", desc: "Cuidado de aros de magnesio", icon: "⚙️", price: 4, type: "SERVICE" },
+  ],
+  tc_lla_nuevas: [
+    { code: "TC-TIRE-R1314", name: "Neumático Rin 13 / 14 Estándar", desc: "Para auto compacto y sedán económico", icon: "🛞", price: 48, type: "PART" },
+    { code: "TC-TIRE-R1516", name: "Neumático Rin 15 / 16 Sedán / SUV", desc: "Excelente agarre en seco y mojado", icon: "🛞", price: 68, type: "PART" },
+    { code: "TC-TIRE-R1718", name: "Neumático Rin 17 / 18 Camioneta / Deportivo", desc: "Alta durabilidad y rendimiento", icon: "🛞", price: 98, type: "PART" },
+    { code: "TC-TIRE-AT", name: "Neumático All-Terrain A/T 4x4", desc: "Tracción mixta asfalto y tierra", icon: "🚜", price: 135, type: "PART" },
+  ],
+  tc_lla_valvulas: [
+    { code: "TC-VALV-CAUCHO", name: "Válvula de Caucho TR414 (Unidad)", desc: "Válvula hermética estándar", icon: "🔘", price: 3, type: "PART" },
+    { code: "TC-VALV-METAL", name: "Válvula Metálica de Seguridad", desc: "Para alta presión y velocidad", icon: "🔩", price: 5, type: "PART" },
+    { code: "TC-TUERCAS-SEG", name: "Juego de Tuercas de Seguridad", desc: "Llave especial antirrobo para 4 ruedas", icon: "🔒", price: 18, type: "PART" },
+    { code: "TC-ESPARRAGOS", name: "Cambio de Espárrago de Rueda", desc: "Sustitución de perno roto", icon: "🛠️", price: 8, type: "SERVICE" },
+  ],
+  tc_ali_computarizada: [
+    { code: "TC-ALI-DEL", name: "Alineación Computarizada 3D Delantera", desc: "Eje delantero con sensores de cámara", icon: "📐", price: 15, type: "SERVICE" },
+    { code: "TC-ALI-4R", name: "Alineación Computarizada 3D 4 Ruedas", desc: "Eje delantero y trasero alineados", icon: "📐", price: 20, type: "SERVICE" },
+    { code: "TC-REG-CASTER", name: "Corrección de Cáster y Comba", desc: "Instalación de pernos excéntricos", icon: "🔧", price: 12, type: "SERVICE" },
+  ],
+  tc_ali_balanceo: [
+    { code: "TC-BAL-CLIP", name: "Balanceo por Rueda (Plomo Clip)", desc: "Para rines de hierro estándar", icon: "⚖️", price: 4, type: "SERVICE" },
+    { code: "TC-BAL-PEGADO", name: "Balanceo por Rueda (Plomo Pegado)", desc: "Para rines de magnesio y aluminio", icon: "⚖️", price: 5, type: "SERVICE" },
+    { code: "TC-BAL-4R", name: "Balanceo Electrónico de 4 Ruedas", desc: "Elimina vibraciones al volante", icon: "⚖️", price: 18, type: "SERVICE" },
+  ],
+  tc_ali_nitrogeno: [
+    { code: "TC-ROT-4R", name: "Rotación Cruzada de 4 Llantas", desc: "Desgaste parejo y mayor vida útil", icon: "🔄", price: 10, type: "SERVICE" },
+    { code: "TC-NITRO-4R", name: "Inflado y Purga con Nitrógeno (4 Ruedas)", desc: "Presión estable y menos fugas térmicas", icon: "💨", price: 10, type: "SERVICE" },
+    { code: "TC-RECARGA-NITRO", name: "Calibración y Recarga de Nitrógeno", desc: "Mantenimiento periódico de presión", icon: "💨", price: 4, type: "SERVICE" },
+  ],
+  tc_ali_combos: [
+    { code: "TC-COMBO-AB", name: "Combo Alineación 3D + Balanceo 4 Ruedas", desc: "Servicio completo recomendado cada 10,000 km", icon: "⭐", price: 32, type: "SERVICE" },
+    { code: "TC-COMBO-FULL", name: "Combo Rodaje Total (Ali + Bal + Rot + Nitro)", desc: "El mantenimiento más completo para tus neumáticos", icon: "👑", price: 42, type: "SERVICE" },
+  ],
+  tc_fre_pastillas: [
+    { code: "TC-PAST-DEL-MO", name: "Cambio de Pastillas Delanteras (Mano de Obra)", desc: "Instalación y revisión de discos", icon: "🟫", price: 15, type: "SERVICE" },
+    { code: "TC-PAST-POST-MO", name: "Cambio de Pastillas Traseras (Mano de Obra)", desc: "Instalación y purga", icon: "🟫", price: 18, type: "SERVICE" },
+    { code: "TC-ZAPATAS-MO", name: "Cambio de Zapatas de Tambor (Mano de Obra)", desc: "Limpieza y regulación de balatas", icon: "🟫", price: 20, type: "SERVICE" },
+    { code: "TC-PAST-CERAM", name: "Juego de Pastillas Cerámicas Delanteras", desc: "Frenado suave sin polvo negro", icon: "🛡️", price: 38, type: "PART" },
+  ],
+  tc_fre_discos: [
+    { code: "TC-RECT-DISCOS", name: "Rectificación de Discos de Freno (Par)", desc: "Elimina surcos y pedal vibrante", icon: "💿", price: 20, type: "SERVICE" },
+    { code: "TC-RECT-TAMBORES", name: "Rectificación de Tambores de Freno (Par)", desc: "Torneado de campana trasera", icon: "💿", price: 20, type: "SERVICE" },
+    { code: "TC-DISCOS-NUEVOS", name: "Discos de Freno Delanteros Ventilados (Par)", desc: "Repuesto nuevo de alta disipación", icon: "💿", price: 65, type: "PART" },
+  ],
+  tc_fre_liquido: [
+    { code: "TC-LIQ-DOT4", name: "Líquido de Frenos DOT 4 Sintético", desc: "Punto de ebullición 260°C", icon: "💧", price: 8, type: "PART" },
+    { code: "TC-PURGA-ELEC", name: "Purga Electrónica de Frenos por Vacío", desc: "Elimina burbujas y humedad del pedal", icon: "🔧", price: 15, type: "SERVICE" },
+    { code: "TC-BRAKE-CLEAN", name: "Limpiador Desengrasante de Frenos Spray", desc: "Limpieza de caliper y mordaza", icon: "🧼", price: 6, type: "PART" },
+  ],
+  tc_fre_calipers: [
+    { code: "TC-MANT-CALIPER", name: "Mantenimiento Pasadores de Caliper", desc: "Grasa de silicona alta temperatura", icon: "🔧", price: 12, type: "SERVICE" },
+    { code: "TC-BOMBIN-FRENO", name: "Cambio de Bombín / Cilindro de Rueda", desc: "Sustitución por fuga de líquido", icon: "🔩", price: 15, type: "SERVICE" },
+    { code: "TC-REG-MANO", name: "Regulación de Freno de Mano", desc: "Ajuste de piola y tensión de palanca", icon: "🅿️", price: 10, type: "SERVICE" },
+  ],
+  tc_sus_amortiguadores: [
+    { code: "TC-AMORT-DEL-MO", name: "Cambio de Amortiguadores Delanteros (Par)", desc: "Mano de obra con prensa de resortes", icon: "🔽", price: 40, type: "SERVICE" },
+    { code: "TC-AMORT-POST-MO", name: "Cambio de Amortiguadores Posteriores (Par)", desc: "Mano de obra", icon: "🔽", price: 30, type: "SERVICE" },
+    { code: "TC-BASES-AMORT", name: "Bases y Rodamientos de Amortiguador (Par)", desc: "Elimina ruidos al girar el volante", icon: "⚙️", price: 25, type: "PART" },
+    { code: "TC-GUARDAPOLVO-AM", name: "Guardapolvos y Topes de Rebote", desc: "Protege el vástago del amortiguador", icon: "🛡️", price: 15, type: "PART" },
+  ],
+  tc_sus_terminales: [
+    { code: "TC-TERM-DIR", name: "Cambio de Terminales de Dirección (Par)", desc: "Mano de obra e instalación", icon: "↔️", price: 25, type: "SERVICE" },
+    { code: "TC-ROTULAS-SUSP", name: "Cambio de Rótulas de Suspensión (Par)", desc: "Mano de obra e instalación", icon: "⚪", price: 30, type: "SERVICE" },
+    { code: "TC-BRAZOS-AXIALES", name: "Cambio de Axiales / Bieletas Estabilizadoras", desc: "Mano de obra e instalación", icon: "📏", price: 25, type: "SERVICE" },
+  ],
+  tc_sus_trapecios: [
+    { code: "TC-BUJES-TRAP", name: "Cambio de Bujes de Trapecio en Prensa", desc: "Bujes grandes y chicos por lado", icon: "🔩", price: 35, type: "SERVICE" },
+    { code: "TC-TRAPECIO-COMP", name: "Cambio de Trapecio / Tijera Completo", desc: "Mano de obra por lado", icon: "🔧", price: 25, type: "SERVICE" },
+    { code: "TC-BUJES-ESTAB", name: "Bujes de Barra Estabilizadora", desc: "Elimina golpes secos en baches", icon: "🔘", price: 18, type: "PART" },
+  ],
+  tc_sus_direccion: [
+    { code: "TC-GUARDAPOLVO-DIR", name: "Cambio de Guardapolvos de Cremallera", desc: "Protege los axiales de dirección", icon: "🛡️", price: 15, type: "SERVICE" },
+    { code: "TC-FLUIDO-DIR", name: "Cambio de Fluido Dirección Hidráulica", desc: "Purga completa del circuito", icon: "🛞", price: 14, type: "SERVICE" },
+    { code: "TC-AJUSTE-CREM", name: "Ajuste y Regulación de Holgura Cremallera", desc: "Elimina juego libre en el volante", icon: "⚙️", price: 20, type: "SERVICE" },
+  ],
+  tc_bat_test: [
+    { code: "TC-TEST-CCA", name: "Test Computarizado de CCA y Batería", desc: "Prueba digital de capacidad de arranque", icon: "⚡", price: 6, type: "SERVICE" },
+    { code: "TC-DIAG-CARGA", name: "Diagnóstico Sistema de Carga y Alternador", desc: "Verificación de voltaje regulado", icon: "🔄", price: 8, type: "SERVICE" },
+    { code: "TC-TEST-ARRANQUE", name: "Medición Consumo de Motor de Arranque", desc: "Detección de caída de tensión", icon: "🔑", price: 8, type: "SERVICE" },
+  ],
+  tc_bat_nuevas: [
+    { code: "TC-BAT-11P", name: "Batería Automotriz 11 Placas 45Ah", desc: "Autos compactos con 15 meses garantía", icon: "🔋", price: 65, type: "PART" },
+    { code: "TC-BAT-13P", name: "Batería Automotriz 13 Placas 60Ah", desc: "Sedán y SUV con 18 meses garantía", icon: "🔋", price: 85, type: "PART" },
+    { code: "TC-BAT-15P", name: "Batería Automotriz 15 Placas 75Ah", desc: "Camionetas y 4x4 alto ciclaje", icon: "🔋", price: 105, type: "PART" },
+    { code: "TC-BAT-AGM", name: "Batería AGM Start-Stop", desc: "Tecnología absorbente de fibra vidrio", icon: "⚡", price: 145, type: "PART" },
+  ],
+  tc_bat_bornes: [
+    { code: "TC-TERM-BRONCE", name: "Terminales de Batería de Bronce Forjado", desc: "Máxima conductividad sin sulfato", icon: "🔌", price: 8, type: "PART" },
+    { code: "TC-LIMPIEZA-BORNES", name: "Desulfatado y Protección con Grasa Dieléctrica", desc: "Limpieza química de terminales", icon: "🧹", price: 5, type: "SERVICE" },
+    { code: "TC-SOPORTE-BAT", name: "Reposición Soporte Varilla Sujetadora", desc: "Evita vibraciones de batería", icon: "🔩", price: 6, type: "PART" },
+  ],
+  tc_bat_inspeccion: [
+    { code: "TC-INSP-BAJOS", name: "Inspección Visual de Chasis, Líneas y Fugas", desc: "Revisión completa de seguridad", icon: "🔍", price: 10, type: "SERVICE" },
+    { code: "TC-INSP-ESCAPES", name: "Revisión de Soportes de Escape y Catalizador", desc: "Inspección de gomas y fugas de humo", icon: "💨", price: 8, type: "SERVICE" },
+    { code: "TC-CUBRE-CARTER", name: "Ajuste o Instalación de Protector de Cárter", desc: "Fijación con pernos de acero", icon: "🛡️", price: 8, type: "SERVICE" },
+  ],
+};
+
 const CATALOGO_BASE_LUBRICENTRO = [
   { code: "LUB-001", name: "Aceite Motor 0W-20 Sintético (Galón)", price: 42, type: "PART" as const, category: "Lubricantes" },
   { code: "LUB-002", name: "Aceite Motor 5W-30 Sintético (Galón)", price: 38, type: "PART" as const, category: "Lubricantes" },
@@ -75,39 +525,9 @@ export default function LubricentroExpress({
   modoEspecialidad = "lubricentro",
 }: LubricentroExpressProps) {
   // =========================================================================
-  // STEPPER DE 2 ETAPAS (1. Servicios Express, 2. Firma)
+  // CONTROL DE ETAPAS (2: Servicios Express, 4: Firma)
   // =========================================================================
   const [etapaActiva, setEtapaActiva] = useState<number>(2);
-  const stepperCarouselRef = useRef<HTMLDivElement | null>(null);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const handleStepperScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (typeof window !== "undefined" && window.innerWidth >= 640) return;
-    const container = e.currentTarget;
-    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-    scrollTimeoutRef.current = setTimeout(() => {
-      const width = container.clientWidth;
-      if (width > 0) {
-        const pageIndex = Math.round(container.scrollLeft / width);
-        const steps = [2, 4];
-        const targetStep = steps[pageIndex];
-        if (targetStep && targetStep !== etapaActiva) {
-          setEtapaActiva(targetStep);
-        }
-      }
-    }, 80);
-  };
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.innerWidth < 640 && stepperCarouselRef.current) {
-      const container = stepperCarouselRef.current;
-      const el = document.getElementById(`lub-stepper-step-${etapaActiva}`);
-      if (el) {
-        const targetLeft = el.offsetLeft - container.offsetLeft;
-        container.scrollTo({ left: targetLeft, behavior: "smooth" });
-      }
-    }
-  }, [etapaActiva]);
 
   // =========================================================================
   // ETAPA 1: INGRESO LUBRICENTRO (NIVEL ACEITE, KM, PRÓXIMO CAMBIO, CHECKLIST, FOTOS R2)
@@ -128,27 +548,51 @@ export default function LubricentroExpress({
   const fileInputRecepcionRef = useRef<HTMLInputElement | null>(null);
 
   // =========================================================================
-  // ETAPA 2: ESTACIONES DE LUBRICENTRO (LUBRICANTES, FILTROS, LLANTERA, BATERÍAS, LAVADO)
+  // ETAPA 2: CATEGORÍAS Y SUBCATEGORÍAS POR ESPECIALIDAD
   // =========================================================================
-  const [estacionActiva, setEstacionActiva] = useState<
-    "lubricantes" | "filtros" | "llantas" | "baterias" | "lavado"
-  >(
-    modoEspecialidad === "carwash"
-      ? "lavado"
-      : modoEspecialidad === "tecnicentro"
-      ? "llantas"
-      : "lubricantes"
+  const categoriasActivas = useMemo(() => {
+    return (
+      CATEGORIAS_POR_ESPECIALIDAD[modoEspecialidad] ||
+      CATEGORIAS_POR_ESPECIALIDAD.lubricentro
+    );
+  }, [modoEspecialidad]);
+
+  const [estacionActiva, setEstacionActiva] = useState<string>(
+    CATEGORIAS_POR_ESPECIALIDAD[modoEspecialidad]?.[0]?.id || "lub_aceite"
   );
 
   useEffect(() => {
-    if (modoEspecialidad === "carwash") {
-      setEstacionActiva("lavado");
-    } else if (modoEspecialidad === "tecnicentro") {
-      setEstacionActiva("llantas");
-    } else {
-      setEstacionActiva("lubricantes");
+    const cats = CATEGORIAS_POR_ESPECIALIDAD[modoEspecialidad];
+    if (cats && cats.length > 0) {
+      setEstacionActiva(cats[0].id);
     }
   }, [modoEspecialidad]);
+
+  const [subCategoriaPorEstacion, setSubCategoriaPorEstacion] = useState<Record<string, string>>({
+    // Lubricentro
+    lub_aceite: "lub_aceite_motor",
+    lub_transmision: "lub_trans_manual",
+    lub_filtros: "lub_fil_aceite",
+    lub_fluidos: "lub_flu_frenos",
+    lub_baterias: "lub_bat_diagnostico",
+    // Car Wash
+    cw_lavados: "cw_lav_express",
+    cw_interior: "cw_int_aspirado",
+    cw_pulido: "cw_pul_encerado",
+    cw_chasis: "cw_cha_grafito",
+    cw_combos: "cw_com_basico",
+    // Tecnicentro
+    tc_llantas: "tc_lla_inspeccion",
+    tc_alineacion: "tc_ali_computarizada",
+    tc_frenos: "tc_fre_pastillas",
+    tc_suspension: "tc_sus_amortiguadores",
+    tc_baterias: "tc_bat_test",
+  });
+
+  const subCategoriasActivas = SUBCATEGORIAS_POR_ESPECIALIDAD[estacionActiva] || [];
+  const subCategoriaActiva =
+    subCategoriaPorEstacion[estacionActiva] || subCategoriasActivas[0]?.id;
+
   const [viscosidad, setViscosidad] = useState<string>("10W-30");
   const [tipoBase, setTipoBase] = useState<string>("Semi-Sintético");
   const [galonesAceite, setGalonesAceite] = useState<number>(1);
@@ -382,6 +826,7 @@ export default function LubricentroExpress({
     code: string;
     name: string;
     category: string;
+    subCategory?: string;
     price: number;
     type: "SERVICE" | "PART";
     qty?: number;
@@ -405,6 +850,7 @@ export default function LubricentroExpress({
         id: `lub-${itemConfig.code}-${Date.now()}`,
         type: itemConfig.type,
         category: `Lubricentro - ${itemConfig.category}`,
+        subCategory: itemConfig.subCategory,
         code: itemConfig.code,
         name: itemConfig.name,
         price: itemConfig.price,
@@ -752,128 +1198,77 @@ export default function LubricentroExpress({
     }
   };
 
-  // Conteo por estación para badges
-  const conteoPorEstacion = useMemo(() => {
-    const countCat = (keyword: string) =>
-      itemsOrden.filter((i) => (i.category || "").toLowerCase().includes(keyword)).length;
-    return {
-      lubricantes: countCat("lubricante"),
-      filtros: countCat("filtro"),
-      llantas: countCat("llant"),
-      baterias: countCat("bater"),
-      lavado: countCat("lavad"),
-    };
+  // Conteo dinámico por categoría para badges principales
+  const conteoPorCategoria = useMemo(() => {
+    const counts: Record<string, number> = {};
+    itemsOrden.forEach((item: any) => {
+      const code = item.code || "";
+      const subId = item.subCategory || "";
+      Object.entries(SUBCATEGORIAS_POR_ESPECIALIDAD).forEach(([catId, subList]) => {
+        if (subList.some((s) => s.id === subId)) {
+          counts[catId] = (counts[catId] || 0) + (item.qty || 1);
+        } else {
+          subList.forEach((s) => {
+            const presets = ITEMS_POR_SUBCATEGORIA[s.id] || [];
+            if (presets.some((p) => p.code === code)) {
+              counts[catId] = (counts[catId] || 0) + (item.qty || 1);
+            }
+          });
+        }
+      });
+    });
+    return counts;
+  }, [itemsOrden]);
+
+  // Conteo dinámico por subcategoría para badges secundarios idéntico a Taller
+  const conteoPorSubcategoria = useMemo(() => {
+    const counts: Record<string, number> = {};
+    itemsOrden.forEach((item: any) => {
+      const code = item.code || "";
+      const subId = item.subCategory;
+      if (subId) {
+        counts[subId] = (counts[subId] || 0) + (item.qty || 1);
+      } else {
+        Object.entries(ITEMS_POR_SUBCATEGORIA).forEach(([sId, presets]) => {
+          if (presets.some((p) => p.code === code)) {
+            counts[sId] = (counts[sId] || 0) + (item.qty || 1);
+          }
+        });
+      }
+    });
+    return counts;
   }, [itemsOrden]);
 
   return (
     <div className="space-y-5 animate-fade-in text-white">
       {/* ===================================================================
-          STEPPER: 2 ETAPAS (1. Servicios Express, 2. Firma)
-          =================================================================== */}
-      <div className="bg-white/[0.02] backdrop-blur-md border border-white/[0.08] p-1.5 sm:p-2 rounded-2xl space-y-1.5">
-        <div
-          ref={stepperCarouselRef}
-          onScroll={handleStepperScroll}
-          className="flex sm:grid sm:grid-cols-2 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
-        >
-          {[
-            {
-              id: 2,
-              label:
-                modoEspecialidad === "carwash"
-                  ? "1. Car Wash"
-                  : modoEspecialidad === "tecnicentro"
-                  ? "1. Tecnicentro"
-                  : "1. Lubricación",
-              icon: (
-                <svg className="w-6 h-6 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
-                </svg>
-              ),
-            },
-            {
-              id: 4,
-              label: "2. Firma",
-              icon: (
-                <svg className="w-6 h-6 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-                </svg>
-              ),
-            },
-          ].map((step) => {
-            const active = etapaActiva === step.id;
-            return (
-              <button
-                key={step.id}
-                id={`lub-stepper-step-${step.id}`}
-                type="button"
-                onClick={() => setEtapaActiva(step.id)}
-                className={`flex flex-col items-center justify-center p-3.5 sm:p-2.5 rounded-xl border transition-all cursor-pointer active:scale-95 w-full min-w-full sm:min-w-0 sm:w-auto snap-center shrink-0 min-h-[74px] sm:min-h-[48px] ${
-                  active
-                    ? "bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-md shadow-amber-500/10"
-                    : "bg-white/[0.02] hover:bg-white/[0.06] border-white/5 text-zinc-400 hover:text-zinc-200"
-                }`}
-              >
-                <div className="p-1.5 sm:p-1 rounded-lg bg-white/5">{step.icon}</div>
-                <span className="text-sm sm:text-xs font-semibold tracking-tight mt-1.5 sm:mt-1 truncate max-w-full">
-                  {step.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Puntos de paginación solo en móvil */}
-        <div className="flex sm:hidden items-center justify-center gap-1.5 pt-1">
-          {[2, 4].map((id) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setEtapaActiva(id)}
-              aria-label={`Ir a paso ${id}`}
-              className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                etapaActiva === id ? "w-5 bg-amber-500" : "w-1.5 bg-white/20"
-              }`}
-            />
-          ))}
-        </div>
-      </div>
-
-
-
-      {/* ===================================================================
           ETAPA 2: LUBRICACIÓN Y SERVICIOS EXPRESS (5 ESTACIONES DE 1 TOQUE)
           =================================================================== */}
       {etapaActiva === 2 && (
         <div className="w-full space-y-4 animate-fade-in">
-          {/* Sub-barra de Estaciones de Lubricentro */}
+{/* 1. BARRA DE CATEGORÍAS PRINCIPALES SEGÚN LA ESPECIALIDAD ACTIVA */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            {[
-              { id: "lubricantes", label: "Lubricantes", icon: "🛢️", count: conteoPorEstacion.lubricantes },
-              { id: "filtros", label: "Filtros", icon: "⚙️", count: conteoPorEstacion.filtros },
-              { id: "llantas", label: "Llantera", icon: "🛞", count: conteoPorEstacion.llantas },
-              { id: "baterias", label: "Baterías", icon: "🔋", count: conteoPorEstacion.baterias },
-              { id: "lavado", label: "Lavado", icon: "🚿", count: conteoPorEstacion.lavado },
-            ].map((est) => {
-              const sel = estacionActiva === est.id;
+            {categoriasActivas.map((cat) => {
+              const sel = estacionActiva === cat.id;
+              const count = conteoPorCategoria[cat.id] || 0;
               return (
                 <button
-                  key={est.id}
+                  key={cat.id}
                   type="button"
-                  onClick={() => setEstacionActiva(est.id as any)}
-                  className={`h-10 px-3 rounded-xl border text-xs font-semibold flex items-center justify-between gap-2 transition-all cursor-pointer ${
+                  onClick={() => setEstacionActiva(cat.id)}
+                  className={`h-11 sm:h-12 px-3 rounded-xl border text-xs sm:text-sm font-semibold flex items-center justify-between gap-2 transition-all cursor-pointer active:scale-95 ${
                     sel
-                      ? "bg-amber-500/20 border-amber-500/45 text-amber-300 shadow-sm"
-                      : "bg-white/[0.03] hover:bg-white/[0.06] border-white/[0.08] text-zinc-400 hover:text-zinc-200"
+                      ? "bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-md shadow-amber-500/10 ring-1 ring-amber-500/20"
+                      : "bg-white/[0.03] hover:bg-white/[0.07] border-white/[0.08] text-zinc-400 hover:text-zinc-200"
                   }`}
                 >
-                  <span className="flex items-center gap-1.5 truncate">
-                    <span>{est.icon}</span>
-                    <span className="truncate">{est.label}</span>
+                  <span className="flex items-center gap-2 truncate">
+                    <span className="text-base sm:text-lg leading-none">{cat.icon}</span>
+                    <span className="truncate">{cat.label}</span>
                   </span>
-                  {est.count > 0 && (
-                    <span className="px-1.5 py-0.2 rounded-full bg-amber-500/25 text-amber-200 font-mono text-[10px] font-bold">
-                      {est.count}
+                  {count > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500 text-black font-mono text-[11px] font-bold shrink-0">
+                      {count}
                     </span>
                   )}
                 </button>
@@ -881,423 +1276,410 @@ export default function LubricentroExpress({
             })}
           </div>
 
-          {/* 1. ESTACIÓN LUBRICANTES Y FLUIDOS */}
-          {estacionActiva === "lubricantes" && (
-            <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4">
-              {/* Base y Cantidad */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <span className="text-xs text-zinc-400">Base del lubricante:</span>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {["Sintético", "Semi-Sintético", "Mineral"].map((base) => {
-                      const sel = tipoBase === base;
-                      return (
+          {/* 2. BARRA DE SUBCATEGORÍAS DINÁMICA (IDÉNTICO A TALLER MECÁNICO) */}
+          {subCategoriasActivas.length > 0 && (
+            <div className="space-y-1.5 pb-1">
+              <div className="flex sm:grid sm:grid-cols-4 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar touch-pan-x">
+                {subCategoriasActivas.map((sub, idx) => {
+                  const activa = subCategoriaActiva === sub.id;
+                  const cantSub = conteoPorSubcategoria[sub.id] || 0;
+                  return (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      onClick={() =>
+                        setSubCategoriaPorEstacion((prev) => ({
+                          ...prev,
+                          [estacionActiva]: sub.id,
+                        }))
+                      }
+                      className={`h-11 sm:h-12 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shrink-0 px-3 sm:px-0 w-full min-w-full sm:min-w-0 sm:w-auto snap-center ${
+                        activa
+                          ? "bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-sm"
+                          : "bg-white/[0.02] hover:bg-white/[0.05] border-white/5 text-zinc-400 hover:text-zinc-200"
+                      }`}
+                    >
+                      <div className="p-1 rounded-md bg-white/5 text-sm leading-none">{sub.icon}</div>
+                      <span className="text-sm sm:text-xs font-semibold">
+                        {sub.label}
+                      </span>
+                      {cantSub > 0 && (
+                        <span className="w-4 h-4 rounded-full bg-amber-500 text-black text-[9px] font-bold flex items-center justify-center">
+                          {cantSub}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Puntos de paginación solo en móvil */}
+              <div className="flex sm:hidden items-center justify-center gap-1.5 pt-0.5">
+                {subCategoriasActivas.map((sub) => (
+                  <button
+                    key={sub.id}
+                    type="button"
+                    onClick={() =>
+                      setSubCategoriaPorEstacion((prev) => ({
+                        ...prev,
+                        [estacionActiva]: sub.id,
+                      }))
+                    }
+                    aria-label={`Ir a ${sub.label}`}
+                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                      subCategoriaActiva === sub.id ? "w-5 bg-amber-500" : "w-1.5 bg-white/20"
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 3. VISTA Y CONTENIDO DE CADA SUBCATEGORÍA ACTIVA */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4">
+            {/* CASO ESPECIAL: Aceite de Motor (con selector de base, galones y viscosidades) */}
+            {subCategoriaActiva === "lub_aceite_motor" ? (
+              <div className="space-y-4 animate-fade-in">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <span className="text-xs text-zinc-400">Base del lubricante:</span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {["Sintético", "Semi-Sintético", "Mineral"].map((base) => {
+                        const sel = tipoBase === base;
+                        return (
+                          <button
+                            key={base}
+                            type="button"
+                            onClick={() => setTipoBase(base)}
+                            className={`h-9 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                              sel
+                                ? "bg-amber-500/20 border-amber-500/50 text-amber-300"
+                                : "bg-black/30 border-white/10 text-zinc-400 hover:text-white"
+                            }`}
+                          >
+                            {base}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <span className="text-xs text-zinc-400">Cantidad (Galones):</span>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {[1, 2, 3, 4, 5].map((cant) => (
                         <button
-                          key={base}
+                          key={cant}
                           type="button"
-                          onClick={() => setTipoBase(base)}
-                          className={`h-9 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                            sel
-                              ? "bg-amber-500/20 border-amber-500/50 text-amber-300"
+                          onClick={() => setGalonesAceite(cant)}
+                          className={`h-9 rounded-xl border font-mono text-xs font-bold transition-all cursor-pointer ${
+                            galonesAceite === cant
+                              ? "bg-blue-500/20 border-blue-500/50 text-blue-300"
                               : "bg-black/30 border-white/10 text-zinc-400 hover:text-white"
                           }`}
                         >
-                          {base}
+                          {cant} Gal
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-white/5">
+                  <span className="text-xs text-zinc-400 block">
+                    Viscosidad de Aceite (toca para agregar / quitar de la orden):
+                  </span>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    {[
+                      { visc: "0W-20", price: 42 },
+                      { visc: "5W-30", price: 38 },
+                      { visc: "10W-30", price: 28 },
+                      { visc: "10W-40", price: 28 },
+                      { visc: "15W-40", price: 26 },
+                      { visc: "20W-50", price: 22 },
+                    ].map(({ visc, price }) => {
+                      const code = `ACEITE-${visc}`;
+                      const name = `Aceite Motor ${visc} ${tipoBase} (${galonesAceite} Gal)`;
+                      const marcado = itemsOrden.some((i) => i.code === code);
+                      return (
+                        <button
+                          key={visc}
+                          type="button"
+                          onClick={() => {
+                            setViscosidad(visc);
+                            void handleToggleItemLubricentro({
+                              code,
+                              name,
+                              category: "Lubricantes",
+                              subCategory: "lub_aceite_motor",
+                              price: price * galonesAceite,
+                              type: "PART",
+                              qty: 1,
+                            });
+                          }}
+                          className={`h-11 rounded-xl border font-mono text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                            marcado
+                              ? "bg-amber-500/25 border-amber-400/60 text-amber-200 ring-1 ring-amber-400/30"
+                              : "bg-black/30 border-white/10 text-zinc-300 hover:text-white hover:bg-white/5"
+                          }`}
+                        >
+                          <span>{marcado ? "✓" : "+"}</span>
+                          <span>{visc}</span>
                         </button>
                       );
                     })}
                   </div>
                 </div>
+              </div>
+            ) : subCategoriaActiva === "tc_lla_inspeccion" ? (
+              /* CASO ESPECIAL: Inspección por Rueda en Tecnicentro */
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center animate-fade-in">
+                <div className="md:col-span-5 flex flex-col items-center justify-center p-4 rounded-2xl bg-black/40 border border-white/10 space-y-3">
+                  <span className="text-[11px] text-zinc-400 uppercase tracking-wider">
+                    Selecciona Rueda ({ruedaSeleccionada})
+                  </span>
+                  <div className="w-48 flex flex-col gap-4">
+                    <div className="flex justify-between">
+                      {(["DI", "DD"] as const).map((r) => (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => setRuedaSeleccionada(r)}
+                          className={`w-14 h-14 rounded-xl border font-mono text-xs font-bold cursor-pointer transition-all ${
+                            ruedaSeleccionada === r
+                              ? "bg-sky-500/25 border-sky-400 text-sky-200"
+                              : "bg-white/[0.03] border-white/10 text-zinc-400"
+                          }`}
+                        >
+                          {r}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex justify-between">
+                      {(["TI", "TD"] as const).map((r) => (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => setRuedaSeleccionada(r)}
+                          className={`w-14 h-14 rounded-xl border font-mono text-xs font-bold cursor-pointer transition-all ${
+                            ruedaSeleccionada === r
+                              ? "bg-sky-500/25 border-sky-400 text-sky-200"
+                              : "bg-white/[0.03] border-white/10 text-zinc-400"
+                          }`}
+                        >
+                          {r}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setRuedaSeleccionada("REP")}
+                      className={`h-8 rounded-xl border font-mono text-xs font-bold cursor-pointer transition-all ${
+                        ruedaSeleccionada === "REP"
+                          ? "bg-sky-500/25 border-sky-400 text-sky-200"
+                          : "bg-white/[0.03] border-white/10 text-zinc-400"
+                      }`}
+                    >
+                      REP: Repuesto
+                    </button>
+                  </div>
+                </div>
 
-                <div className="space-y-1.5">
-                  <span className="text-xs text-zinc-400">Cantidad (Galones):</span>
-                  <div className="grid grid-cols-5 gap-1.5">
-                    {[1, 2, 3, 4, 5].map((cant) => (
-                      <button
-                        key={cant}
-                        type="button"
-                        onClick={() => setGalonesAceite(cant)}
-                        className={`h-9 rounded-xl border font-mono text-xs font-bold transition-all cursor-pointer ${
-                          galonesAceite === cant
-                            ? "bg-blue-500/20 border-blue-500/50 text-blue-300"
-                            : "bg-black/30 border-white/10 text-zinc-400 hover:text-white"
-                        }`}
-                      >
-                        {cant} Gal
-                      </button>
-                    ))}
+                <div className="md:col-span-7 space-y-2.5">
+                  <span className="text-xs text-zinc-400 block font-medium">
+                    Servicios rápidos para rueda {ruedaSeleccionada}:
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { code: `TC-PARCHE-${ruedaSeleccionada}`, name: `Parche Llanta (${ruedaSeleccionada})`, price: 5 },
+                      { code: `TC-VULC-${ruedaSeleccionada}`, name: `Vulcanizado (${ruedaSeleccionada})`, price: 8 },
+                      { code: `TC-MONT-${ruedaSeleccionada}`, name: `Montaje Llanta (${ruedaSeleccionada})`, price: 6 },
+                      { code: `TC-BAL-${ruedaSeleccionada}`, name: `Balanceo (${ruedaSeleccionada})`, price: 5 },
+                    ].map((s) => {
+                      const sel = tieneServicioEnOrden(s.code, s.name);
+                      return (
+                        <button
+                          key={s.code}
+                          type="button"
+                          onClick={() =>
+                            handleToggleItemLubricentro({
+                              code: s.code,
+                              name: s.name,
+                              category: "Llantera",
+                              subCategory: "tc_lla_inspeccion",
+                              price: s.price,
+                              type: "SERVICE",
+                            })
+                          }
+                          className={`p-3 rounded-xl border text-xs font-medium text-left flex items-center justify-between gap-2 cursor-pointer transition-all ${
+                            sel
+                              ? "bg-sky-500/20 border-sky-400/50 text-sky-200"
+                              : "bg-black/30 border-white/10 text-zinc-400 hover:text-white"
+                          }`}
+                        >
+                          <span className="truncate">{s.name}</span>
+                          <span>{sel ? "✓" : "+"}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
-
-              {/* Viscosidad del Aceite de Motor */}
-              <div className="space-y-2 pt-2 border-t border-white/5">
-                <span className="text-xs text-zinc-400 block">
-                  Viscosidad de Aceite (toca para agregar a la orden):
-                </span>
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                  {[
-                    { visc: "0W-20", price: 42 },
-                    { visc: "5W-30", price: 38 },
-                    { visc: "10W-30", price: 28 },
-                    { visc: "10W-40", price: 28 },
-                    { visc: "15W-40", price: 26 },
-                    { visc: "20W-50", price: 22 },
-                  ].map(({ visc, price }) => {
-                    const code = `ACEITE-${visc}`;
-                    const name = `Aceite Motor ${visc} ${tipoBase} (${galonesAceite} Gal)`;
-                    const marcado = itemsOrden.some((i) => i.code === code);
-                    return (
+            ) : subCategoriaActiva === "lub_bat_diagnostico" || subCategoriaActiva === "tc_bat_test" ? (
+              /* CASO ESPECIAL: Test de Batería con foto de garantía R2 */
+              <div className="space-y-4 animate-fade-in">
+                <div className="p-4 rounded-2xl bg-black/40 border border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">⚡</span>
+                      <div>
+                        <span className="text-sm font-semibold text-white block">Test Computarizado de Batería</span>
+                        <span className="text-xs text-zinc-400">Verificación de CCA, alternador y arranque</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 pt-2">
                       <button
-                        key={visc}
-                        type="button"
-                        onClick={() => {
-                          setViscosidad(visc);
-                          void handleToggleItemLubricentro({
-                            code,
-                            name,
-                            category: "Lubricantes",
-                            price: price * galonesAceite,
-                            type: "PART",
-                            qty: 1,
-                          });
-                        }}
-                        className={`h-11 rounded-xl border font-mono text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                          marcado
-                            ? "bg-amber-500/25 border-amber-400/60 text-amber-200 ring-1 ring-amber-400/30"
-                            : "bg-black/30 border-white/10 text-zinc-300 hover:text-white hover:bg-white/5"
-                        }`}
-                      >
-                        <span>{marcado ? "✓" : "+"}</span>
-                        <span>{visc}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Fluidos Adicionales */}
-              <div className="space-y-2 pt-2 border-t border-white/5">
-                <span className="text-xs text-zinc-400 block">Fluidos adicionales:</span>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {[
-                    { code: "FL-CAJA", name: "Aceite Caja Manual", price: 14 },
-                    { code: "FL-ATF", name: "Aceite Transmisión ATF", price: 16 },
-                    { code: "FL-DIF", name: "Aceite Diferencial", price: 15 },
-                    { code: "FL-COOL", name: "Refrigerante / Coolant", price: 12 },
-                    { code: "FL-FREN", name: "Líquido de Frenos", price: 8 },
-                    { code: "FL-HID", name: "Fluido Hidráulico", price: 10 },
-                  ].map((fl) => {
-                    const sel = tieneServicioEnOrden(fl.code, fl.name);
-                    return (
-                      <button
-                        key={fl.code}
                         type="button"
                         onClick={() =>
                           handleToggleItemLubricentro({
-                            code: fl.code,
-                            name: fl.name,
-                            category: "Lubricantes",
-                            price: fl.price,
-                            type: "PART",
-                          })
-                        }
-                        className={`p-3 rounded-xl border text-xs font-medium text-left transition-all cursor-pointer flex items-center justify-between gap-2 ${
-                          sel
-                            ? "bg-amber-500/15 border-amber-500/45 text-amber-200"
-                            : "bg-black/30 border-white/10 text-zinc-400 hover:text-white"
-                        }`}
-                      >
-                        <span className="truncate">{fl.name}</span>
-                        <span>{sel ? "✓" : "+"}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 2. ESTACIÓN FILTROS */}
-          {estacionActiva === "filtros" && (
-            <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {[
-                { code: "FIL-ACEITE", name: "Filtro de Aceite", desc: "Cambio con lubricante", icon: "🛢️", price: 8 },
-                { code: "FIL-AIRE", name: "Filtro de Aire Motor", desc: "Elemento de admisión", icon: "🌪️", price: 12 },
-                { code: "FIL-CABINA", name: "Filtro de Cabina (A/C)", desc: "Antipolen cabina", icon: "❄️", price: 14 },
-                { code: "FIL-COMB", name: "Filtro Combustible", desc: "Gasolina / Diésel", icon: "⛽", price: 15 },
-              ].map((f) => {
-                const sel = tieneServicioEnOrden(f.code, f.name);
-                return (
-                  <button
-                    key={f.code}
-                    type="button"
-                    onClick={() =>
-                      handleToggleItemLubricentro({
-                        code: f.code,
-                        name: f.name,
-                        category: "Filtros",
-                        price: f.price,
-                        type: "PART",
-                      })
-                    }
-                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 ${
-                      sel
-                        ? "bg-emerald-500/15 border-emerald-500/45 text-white"
-                        : "bg-black/30 border-white/10 text-zinc-300 hover:bg-white/[0.05]"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xl">{f.icon}</span>
-                      <span
-                        className={`w-5 h-5 rounded-full border flex items-center justify-center text-xs font-bold ${
-                          sel
-                            ? "bg-emerald-500/30 border-emerald-400 text-emerald-200"
-                            : "border-white/15 text-transparent"
-                        }`}
-                      >
-                        ✓
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-xs sm:text-sm font-semibold block">{f.name}</span>
-                      <span className="text-[11px] text-zinc-400">{f.desc}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* 3. ESTACIÓN LLANTERA Y PARCHES */}
-          {estacionActiva === "llantas" && (
-            <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-              <div className="md:col-span-5 flex flex-col items-center justify-center p-4 rounded-2xl bg-black/40 border border-white/10 space-y-3">
-                <span className="text-[11px] text-zinc-400 uppercase tracking-wider">
-                  Selecciona Rueda ({ruedaSeleccionada})
-                </span>
-                <div className="w-48 flex flex-col gap-4">
-                  <div className="flex justify-between">
-                    {(["DI", "DD"] as const).map((r) => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setRuedaSeleccionada(r)}
-                        className={`w-14 h-14 rounded-xl border font-mono text-xs font-bold cursor-pointer transition-all ${
-                          ruedaSeleccionada === r
-                            ? "bg-sky-500/25 border-sky-400 text-sky-200"
-                            : "bg-white/[0.03] border-white/10 text-zinc-400"
-                        }`}
-                      >
-                        {r}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex justify-between">
-                    {(["TI", "TD"] as const).map((r) => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setRuedaSeleccionada(r)}
-                        className={`w-14 h-14 rounded-xl border font-mono text-xs font-bold cursor-pointer transition-all ${
-                          ruedaSeleccionada === r
-                            ? "bg-sky-500/25 border-sky-400 text-sky-200"
-                            : "bg-white/[0.03] border-white/10 text-zinc-400"
-                        }`}
-                      >
-                        {r}
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setRuedaSeleccionada("REP")}
-                    className={`h-8 rounded-xl border font-mono text-xs font-bold cursor-pointer transition-all ${
-                      ruedaSeleccionada === "REP"
-                        ? "bg-sky-500/25 border-sky-400 text-sky-200"
-                        : "bg-white/[0.03] border-white/10 text-zinc-400"
-                    }`}
-                  >
-                    REP: Repuesto
-                  </button>
-                </div>
-              </div>
-
-              <div className="md:col-span-7 space-y-2.5">
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { code: `PARCHE-${ruedaSeleccionada}`, name: `Parche Llanta (${ruedaSeleccionada})`, price: 5 },
-                    { code: `VULC-${ruedaSeleccionada}`, name: `Vulcanizado (${ruedaSeleccionada})`, price: 8 },
-                    { code: `MONT-${ruedaSeleccionada}`, name: `Montaje Llanta (${ruedaSeleccionada})`, price: 6 },
-                    { code: `BAL-${ruedaSeleccionada}`, name: `Balanceo (${ruedaSeleccionada})`, price: 5 },
-                    { code: "ROT-4", name: "Rotación 4 Llantas", price: 10 },
-                    { code: "ALIN-COMP", name: "Alineación", price: 20 },
-                  ].map((s) => {
-                    const sel = tieneServicioEnOrden(s.code, s.name);
-                    return (
-                      <button
-                        key={s.code}
-                        type="button"
-                        onClick={() =>
-                          handleToggleItemLubricentro({
-                            code: s.code,
-                            name: s.name,
-                            category: "Llantera",
-                            price: s.price,
+                            code: "BAT-DIAG-EXPRESS",
+                            name: "Diagnóstico Batería & Alternador",
+                            category: "Baterías",
+                            subCategory: subCategoriaActiva,
+                            price: 8,
                             type: "SERVICE",
                           })
                         }
-                        className={`p-3 rounded-xl border text-xs font-medium text-left flex items-center justify-between gap-2 cursor-pointer transition-all ${
-                          sel
-                            ? "bg-sky-500/20 border-sky-400/50 text-sky-200"
-                            : "bg-black/30 border-white/10 text-zinc-400 hover:text-white"
+                        className={`px-3 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer ${
+                          tieneServicioEnOrden("BAT-DIAG-EXPRESS", "Diagnóstico Batería & Alternador")
+                            ? "bg-purple-500/25 border-purple-400 text-purple-200"
+                            : "bg-white/5 border-white/10 text-zinc-300"
                         }`}
                       >
-                        <span className="truncate">{s.name}</span>
-                        <span>{sel ? "✓" : "+"}</span>
+                        {tieneServicioEnOrden("BAT-DIAG-EXPRESS", "Diagnóstico Batería & Alternador") ? "✓ Test Marcado ($8)" : "+ Marcar Test ($8)"}
                       </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 4. ESTACIÓN BATERÍAS Y CAMBIOS RÁPIDOS */}
-          {estacionActiva === "baterias" && (
-            <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="p-3.5 rounded-xl bg-black/30 border border-white/10 space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl">🔋</span>
-                    <div>
-                      <span className="text-xs font-semibold text-white block">Cambio de Batería</span>
-                      <span className="text-[10px] text-zinc-400">Con foto de serie / garantía</span>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleToggleItemLubricentro({
-                        code: "BAT-CAMBIO",
-                        name: "Cambio de Batería",
-                        category: "Baterías",
-                        price: 10,
-                        type: "SERVICE",
-                      })
-                    }
-                    className={`px-3 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer ${
-                      tieneServicioEnOrden("BAT-CAMBIO", "Cambio de Batería")
-                        ? "bg-purple-500/25 border-purple-400/50 text-purple-200"
-                        : "bg-white/5 border-white/10 text-zinc-300"
-                    }`}
-                  >
-                    {tieneServicioEnOrden("BAT-CAMBIO", "Cambio de Batería") ? "✓ Marcado" : "+ Marcar"}
-                  </button>
+
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-2">
+                    <span className="text-xs text-zinc-400 block font-medium">Foto de serie / prueba / garantía R2:</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] text-zinc-300 truncate">
+                        {fotoBateriaR2 ? "✓ Foto guardada en R2" : "Sin foto adjunta"}
+                      </span>
+                      <input
+                        ref={inputFotoBateriaRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleSubirFotoBateriaR2}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => inputFotoBateriaRef.current?.click()}
+                        disabled={subiendoFotoBateria}
+                        className="px-3 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-xs font-semibold cursor-pointer shrink-0"
+                      >
+                        {subiendoFotoBateria ? "Subiendo..." : "📷 Subir Foto"}
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/5">
-                  <span className="text-[11px] text-zinc-400">
-                    {fotoBateriaR2 ? "✓ Foto de garantía guardada" : "Foto serie / garantía R2"}
-                  </span>
-                  <input
-                    ref={inputFotoBateriaRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleSubirFotoBateriaR2}
-                    className="hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => inputFotoBateriaRef.current?.click()}
-                    disabled={subiendoFotoBateria}
-                    className="px-2.5 py-1 rounded-lg bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/35 text-purple-300 text-xs cursor-pointer"
-                  >
-                    {subiendoFotoBateria ? "Subiendo..." : "📷 Foto"}
-                  </button>
-                </div>
+                {/* Lista de presets complementarios de diagnóstico */}
+                {(ITEMS_POR_SUBCATEGORIA[subCategoriaActiva] || []).length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2">
+                    {(ITEMS_POR_SUBCATEGORIA[subCategoriaActiva] || []).map((item) => {
+                      const sel = tieneServicioEnOrden(item.code, item.name);
+                      return (
+                        <button
+                          key={item.code}
+                          type="button"
+                          onClick={() =>
+                            handleToggleItemLubricentro({
+                              code: item.code,
+                              name: item.name,
+                              category: "Baterías",
+                              subCategory: subCategoriaActiva,
+                              price: item.price,
+                              type: item.type,
+                            })
+                          }
+                          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                            sel
+                              ? "bg-purple-500/20 border-purple-400/50 text-white ring-1 ring-purple-400/30"
+                              : "bg-black/30 border-white/10 text-zinc-300 hover:bg-white/[0.05]"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xl">{item.icon}</span>
+                            <span className="text-xs font-bold text-purple-300">${item.price}</span>
+                          </div>
+                          <div>
+                            <span className="text-xs sm:text-sm font-semibold block">{item.name}</span>
+                            <span className="text-[11px] text-zinc-400">{item.desc}</span>
+                          </div>
+                          <div className="flex justify-end">
+                            <span className={`px-2 py-0.5 rounded-lg text-xs font-bold ${sel ? "bg-purple-500/30 text-purple-200" : "bg-white/5 text-zinc-400"}`}>
+                              {sel ? "✓ En Orden" : "+ Agregar"}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-
-              {[
-                { code: "BAT-DIAG", name: "Diagnóstico Batería & Alternador", icon: "⚡", price: 8, type: "SERVICE" as const },
-                { code: "BAT-PLUMAS", name: "Cambio de Plumas Limpiaparabrisas", icon: "🌧️", price: 14, type: "PART" as const },
-                { code: "BAT-FOCOS", name: "Cambio de Focos / Bombillos", icon: "💡", price: 6, type: "PART" as const },
-              ].map((b) => {
-                const sel = tieneServicioEnOrden(b.code, b.name);
-                return (
-                  <button
-                    key={b.code}
-                    type="button"
-                    onClick={() =>
-                      handleToggleItemLubricentro({
-                        code: b.code,
-                        name: b.name,
-                        category: "Baterías",
-                        price: b.price,
-                        type: b.type,
-                      })
-                    }
-                    className={`p-3.5 rounded-xl border text-left flex items-center justify-between gap-3 cursor-pointer transition-all ${
-                      sel
-                        ? "bg-purple-500/15 border-purple-500/45 text-white"
-                        : "bg-black/30 border-white/10 text-zinc-300 hover:bg-white/[0.05]"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-xl">{b.icon}</span>
-                      <span className="text-xs font-semibold">{b.name}</span>
-                    </div>
-                    <span>{sel ? "✓" : "+"}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* 5. ESTACIÓN LAVADO Y ENGRASE */}
-          {estacionActiva === "lavado" && (
-            <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {[
-                { code: "LAV-EXP", name: "Lavado Express Exterior", desc: "Shampoo y secado rápido", icon: "🚿", price: 6 },
-                { code: "LAV-COMP", name: "Lavado Completo (Chasis + Motor)", desc: "Desengrasado integral", icon: "🧽", price: 15 },
-                { code: "LAV-ASP", name: "Aspirado & Limpieza Interior", desc: "Asientos, alfombras y tablero", icon: "✨", price: 8 },
-                { code: "LAV-ENG", name: "Engrase de Chasis / Pulverizado", desc: "Terminales, crucetas y bajos", icon: "🧴", price: 10 },
-              ].map((lav) => {
-                const sel = tieneServicioEnOrden(lav.code, lav.name);
-                return (
-                  <button
-                    key={lav.code}
-                    type="button"
-                    onClick={() =>
-                      handleToggleItemLubricentro({
-                        code: lav.code,
-                        name: lav.name,
-                        category: "Lavado",
-                        price: lav.price,
-                        type: "SERVICE",
-                      })
-                    }
-                    className={`p-4 rounded-2xl border text-left flex items-center justify-between gap-3 cursor-pointer transition-all ${
-                      sel
-                        ? "bg-teal-500/15 border-teal-500/45 text-white"
-                        : "bg-black/30 border-white/10 text-zinc-300 hover:bg-white/[0.05]"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">{lav.icon}</span>
-                      <div>
-                        <span className="text-xs sm:text-sm font-semibold block">{lav.name}</span>
-                        <span className="text-[11px] text-zinc-400">{lav.desc}</span>
+            ) : (
+              /* CASO GENERAL: Cuadrícula responsiva de presets de la subcategoría */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-fade-in">
+                {(ITEMS_POR_SUBCATEGORIA[subCategoriaActiva] || []).map((item) => {
+                  const sel = tieneServicioEnOrden(item.code, item.name);
+                  return (
+                    <button
+                      key={item.code}
+                      type="button"
+                      onClick={() =>
+                        handleToggleItemLubricentro({
+                          code: item.code,
+                          name: item.name,
+                          category: modoEspecialidad === "carwash" ? "Lavado" : modoEspecialidad === "tecnicentro" ? "Tecnicentro" : "Lubricentro",
+                          subCategory: subCategoriaActiva,
+                          price: item.price,
+                          type: item.type,
+                        })
+                      }
+                      className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                        sel
+                          ? "bg-amber-500/15 border-amber-500/45 text-white ring-1 ring-amber-400/30"
+                          : "bg-black/30 border-white/10 text-zinc-300 hover:bg-white/[0.05]"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xl">{item.icon}</span>
+                        <span className="text-xs font-bold text-amber-300">${item.price}</span>
                       </div>
-                    </div>
-                    <span>{sel ? "✓" : "+"}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+                      <div>
+                        <span className="text-xs sm:text-sm font-semibold block">{item.name}</span>
+                        <span className="text-[11px] text-zinc-400">{item.desc}</span>
+                      </div>
+                      <div className="flex justify-end">
+                        <span
+                          className={`px-2 py-0.5 rounded-lg text-xs font-bold ${
+                            sel ? "bg-amber-500/30 text-amber-200" : "bg-white/5 text-zinc-400"
+                          }`}
+                        >
+                          {sel ? "✓ En Orden" : "+ Agregar"}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
-          {/* Navegación Etapa 2 */}
+                    {/* Navegación Etapa 2 */}
           <div className="flex items-center justify-end pt-2">
             <button
               type="button"

@@ -218,9 +218,18 @@ function SeguimientoOrdenContent() {
 
     try {
       setSubiendoAdjunto(true);
+      const esVideo = file.type.startsWith("video/");
+      const esAudio = file.type.startsWith("audio/");
+      const folder = esVideo ? "taller_videos" : esAudio ? "taller_audios" : "taller_seguimiento";
+      const tipo = esVideo ? "video" : esAudio ? "audio" : "image";
+
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("folder", "taller/seguimiento");
+      formData.append("folder", folder);
+      formData.append("tipo", tipo);
+      if (orden?.id) formData.append("orderId", orden.id);
+      if (orden?.orderNumber) formData.append("orderNumber", orden.orderNumber);
+      if (orden?.plate) formData.append("plate", orden.plate);
 
       const res = await fetch("/api/storage/upload", {
         method: "POST",
@@ -927,43 +936,72 @@ function SeguimientoOrdenContent() {
                         >
                           {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
 
-                          {/* Imagen o archivo adjunto de Cloudflare R2 */}
-                          {(msg.photoUrl || msg.attachmentUrl) && (
-                            <a
-                              href={msg.photoUrl || msg.attachmentUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="block rounded-xl overflow-hidden border border-white/15 bg-black/40 group hover:opacity-90 transition-opacity"
-                            >
-                              {msg.photoUrl?.match(/\.(jpeg|jpg|gif|png|webp)/i) ||
-                              !msg.attachmentName?.match(/\.(pdf|doc|docx)/i) ? (
-                                <img
-                                  src={msg.photoUrl || msg.attachmentUrl}
-                                  alt="Adjunto"
-                                  className="w-full max-h-48 object-cover rounded-lg"
-                                />
-                              ) : (
-                                <div className="p-2.5 flex items-center gap-2 text-xs text-sky-300">
-                                  <svg
-                                    className="w-4 h-4 shrink-0"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    strokeWidth={1.5}
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-                                    />
-                                  </svg>
-                                  <span className="truncate">
-                                    {msg.attachmentName || "Ver documento adjunto"}
-                                  </span>
+                          {/* Multimedia o archivo adjunto de Cloudflare R2 */}
+                          {(msg.photoUrl || msg.attachmentUrl) && (() => {
+                            const mediaUrl = msg.photoUrl || msg.attachmentUrl || "";
+                            const esVideo = /\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(mediaUrl) || mediaUrl.includes("video");
+                            const esAudio = /\.(mp3|wav|ogg|m4a|webm)(\?.*)?$/i.test(mediaUrl) || mediaUrl.includes("audio");
+                            const esImg = /\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i.test(mediaUrl) || (!esVideo && !esAudio && !msg.attachmentName?.match(/\.(pdf|doc|docx)/i));
+
+                            if (esVideo) {
+                              return (
+                                <div className="rounded-xl overflow-hidden border border-white/15 bg-black/60 p-1">
+                                  <video src={mediaUrl} controls className="w-full max-h-56 rounded-lg bg-black" preload="metadata" />
                                 </div>
-                              )}
-                            </a>
-                          )}
+                              );
+                            }
+
+                            if (esAudio) {
+                              return (
+                                <div className="rounded-xl p-2 bg-black/40 border border-white/10">
+                                  <audio src={mediaUrl} controls className="w-full h-8" preload="metadata" />
+                                </div>
+                              );
+                            }
+
+                            if (esImg) {
+                              return (
+                                <a
+                                  href={mediaUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="block rounded-xl overflow-hidden border border-white/15 bg-black/40 group hover:opacity-90 transition-opacity"
+                                >
+                                  <img
+                                    src={mediaUrl}
+                                    alt="Adjunto"
+                                    className="w-full max-h-48 object-cover rounded-lg"
+                                  />
+                                </a>
+                              );
+                            }
+
+                            return (
+                              <a
+                                href={mediaUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block rounded-xl overflow-hidden border border-white/15 bg-black/40 group hover:opacity-90 transition-opacity p-2.5 flex items-center gap-2 text-xs text-sky-300"
+                              >
+                                <svg
+                                  className="w-4 h-4 shrink-0"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth={1.5}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                                  />
+                                </svg>
+                                <span className="truncate">
+                                  {msg.attachmentName || "Ver documento adjunto"}
+                                </span>
+                              </a>
+                            );
+                          })()}
                         </div>
                       </div>
                     );
@@ -1008,7 +1046,7 @@ function SeguimientoOrdenContent() {
                 type="file"
                 ref={fileInputRef}
                 onChange={handleSubirAdjunto}
-                accept="image/*,.pdf,.doc,.docx"
+                accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
                 className="hidden"
               />
 
