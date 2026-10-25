@@ -1057,7 +1057,8 @@ export default function LubricentroExpress({
     dibujandoFirmaRef.current = true;
     tieneTrazosFirmaRef.current = true;
     const pos = obtenerCoordsCanvas(e);
-    ctx.strokeStyle = "#38bdf8";
+    const esDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+    ctx.strokeStyle = esDark ? "#38bdf8" : "#0284c7";
     ctx.lineWidth = 2.4;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -1240,7 +1241,7 @@ export default function LubricentroExpress({
   }, [itemsOrden]);
 
   return (
-    <div className="space-y-5 animate-fade-in text-white">
+    <div className="space-y-5 animate-fade-in text-zinc-900 dark:text-white">
       {/* ===================================================================
           ETAPA 2: LUBRICACIÓN Y SERVICIOS EXPRESS (5 ESTACIONES DE 1 TOQUE)
           =================================================================== */}
@@ -1258,8 +1259,8 @@ export default function LubricentroExpress({
                   onClick={() => setEstacionActiva(cat.id)}
                   className={`h-11 sm:h-12 px-3 rounded-xl border text-xs sm:text-sm font-semibold flex items-center justify-between gap-2 transition-all cursor-pointer active:scale-95 ${
                     sel
-                      ? "bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-md shadow-amber-500/10 ring-1 ring-amber-500/20"
-                      : "bg-white/[0.03] hover:bg-white/[0.07] border-white/[0.08] text-zinc-400 hover:text-zinc-200"
+                      ? "bg-amber-50 dark:bg-amber-500/20 border-amber-400 dark:border-amber-500/50 text-amber-800 dark:text-amber-300 shadow-sm ring-1 ring-amber-500/20 font-bold"
+                      : "bg-white hover:bg-zinc-50 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] border-zinc-200 dark:border-white/[0.08] text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 shadow-xs"
                   }`}
                 >
                   <span className="flex items-center gap-2 truncate">
@@ -1295,11 +1296,11 @@ export default function LubricentroExpress({
                       }
                       className={`h-11 sm:h-12 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shrink-0 px-3 sm:px-0 w-full min-w-full sm:min-w-0 sm:w-auto snap-center ${
                         activa
-                          ? "bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-sm"
-                          : "bg-white/[0.02] hover:bg-white/[0.05] border-white/5 text-zinc-400 hover:text-zinc-200"
+                          ? "bg-amber-50 dark:bg-amber-500/20 border-amber-400 dark:border-amber-500/50 text-amber-800 dark:text-amber-300 shadow-sm font-bold"
+                          : "bg-white hover:bg-zinc-50 dark:bg-white/[0.02] dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/5 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 shadow-xs"
                       }`}
                     >
-                      <div className="p-1 rounded-md bg-white/5 text-sm leading-none">{sub.icon}</div>
+                      <div className="p-1 rounded-md bg-zinc-100 dark:bg-white/5 text-sm leading-none">{sub.icon}</div>
                       <span className="text-sm sm:text-xs font-semibold">
                         {sub.label}
                       </span>
@@ -1327,7 +1328,7 @@ export default function LubricentroExpress({
                     }
                     aria-label={`Ir a ${sub.label}`}
                     className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                      subCategoriaActiva === sub.id ? "w-5 bg-amber-500" : "w-1.5 bg-white/20"
+                      subCategoriaActiva === sub.id ? "w-5 bg-amber-500" : "w-1.5 bg-zinc-300 dark:bg-white/20"
                     }`}
                   />
                 ))}
@@ -1336,13 +1337,13 @@ export default function LubricentroExpress({
           )}
 
           {/* 3. VISTA Y CONTENIDO DE CADA SUBCATEGORÍA ACTIVA */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4">
+          <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/[0.08] space-y-4 shadow-xs">
             {/* CASO ESPECIAL: Aceite de Motor (con selector de base, galones y viscosidades) */}
             {subCategoriaActiva === "lub_aceite_motor" ? (
               <div className="space-y-4 animate-fade-in">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <span className="text-xs text-zinc-400">Base del lubricante:</span>
+                    <span className="text-xs text-zinc-700 dark:text-zinc-400 font-semibold">Base del lubricante:</span>
                     <div className="grid grid-cols-3 gap-1.5">
                       {["Sintético", "Semi-Sintético", "Mineral"].map((base) => {
                         const sel = tipoBase === base;
@@ -1353,8 +1354,8 @@ export default function LubricentroExpress({
                             onClick={() => setTipoBase(base)}
                             className={`h-9 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
                               sel
-                                ? "bg-amber-500/20 border-amber-500/50 text-amber-300"
-                                : "bg-black/30 border-white/10 text-zinc-400 hover:text-white"
+                                ? "bg-amber-50 dark:bg-amber-500/20 border-amber-400 dark:border-amber-500/50 text-amber-800 dark:text-amber-300 shadow-xs font-bold"
+                                : "bg-white hover:bg-zinc-100 dark:bg-black/30 border-zinc-300 dark:border-white/10 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white shadow-xs"
                             }`}
                           >
                             {base}
@@ -1365,7 +1366,7 @@ export default function LubricentroExpress({
                   </div>
 
                   <div className="space-y-1.5">
-                    <span className="text-xs text-zinc-400">Cantidad (Galones):</span>
+                    <span className="text-xs text-zinc-700 dark:text-zinc-400 font-semibold">Cantidad (Galones):</span>
                     <div className="grid grid-cols-5 gap-1.5">
                       {[1, 2, 3, 4, 5].map((cant) => (
                         <button
@@ -1374,8 +1375,8 @@ export default function LubricentroExpress({
                           onClick={() => setGalonesAceite(cant)}
                           className={`h-9 rounded-xl border font-mono text-xs font-bold transition-all cursor-pointer ${
                             galonesAceite === cant
-                              ? "bg-blue-500/20 border-blue-500/50 text-blue-300"
-                              : "bg-black/30 border-white/10 text-zinc-400 hover:text-white"
+                              ? "bg-blue-50 dark:bg-blue-500/20 border-blue-400 dark:border-blue-500/50 text-blue-800 dark:text-blue-300 shadow-xs font-bold"
+                              : "bg-white hover:bg-zinc-100 dark:bg-black/30 border-zinc-300 dark:border-white/10 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white shadow-xs"
                           }`}
                         >
                           {cant} Gal
@@ -1385,8 +1386,8 @@ export default function LubricentroExpress({
                   </div>
                 </div>
 
-                <div className="space-y-2 pt-2 border-t border-white/5">
-                  <span className="text-xs text-zinc-400 block">
+                <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-white/5">
+                  <span className="text-xs text-zinc-700 dark:text-zinc-400 font-semibold block">
                     Viscosidad de Aceite (toca para agregar / quitar de la orden):
                   </span>
                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
@@ -1419,8 +1420,8 @@ export default function LubricentroExpress({
                           }}
                           className={`h-11 rounded-xl border font-mono text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                             marcado
-                              ? "bg-amber-500/25 border-amber-400/60 text-amber-200 ring-1 ring-amber-400/30"
-                              : "bg-black/30 border-white/10 text-zinc-300 hover:text-white hover:bg-white/5"
+                              ? "bg-amber-500 text-white border-amber-600 dark:bg-amber-500/25 dark:border-amber-400/60 dark:text-amber-200 ring-2 ring-amber-500/30 shadow-sm font-black"
+                              : "bg-white hover:bg-zinc-100 dark:bg-black/30 border-zinc-300 dark:border-white/10 text-zinc-800 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white shadow-xs"
                           }`}
                         >
                           <span>{marcado ? "✓" : "+"}</span>
@@ -1434,8 +1435,8 @@ export default function LubricentroExpress({
             ) : subCategoriaActiva === "tc_lla_inspeccion" ? (
               /* CASO ESPECIAL: Inspección por Rueda en Tecnicentro */
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center animate-fade-in">
-                <div className="md:col-span-5 flex flex-col items-center justify-center p-4 rounded-2xl bg-black/40 border border-white/10 space-y-3">
-                  <span className="text-[11px] text-zinc-400 uppercase tracking-wider">
+                <div className="md:col-span-5 flex flex-col items-center justify-center p-4 rounded-2xl bg-zinc-100 dark:bg-black/40 border border-zinc-200 dark:border-white/10 space-y-3">
+                  <span className="text-[11px] text-zinc-600 dark:text-zinc-400 font-semibold uppercase tracking-wider">
                     Selecciona Rueda ({ruedaSeleccionada})
                   </span>
                   <div className="w-48 flex flex-col gap-4">
@@ -1446,9 +1447,7 @@ export default function LubricentroExpress({
                           type="button"
                           onClick={() => setRuedaSeleccionada(r)}
                           className={`w-14 h-14 rounded-xl border font-mono text-xs font-bold cursor-pointer transition-all ${
-                            ruedaSeleccionada === r
-                              ? "bg-sky-500/25 border-sky-400 text-sky-200"
-                              : "bg-white/[0.03] border-white/10 text-zinc-400"
+                            ruedaSeleccionada === r ? "bg-sky-50 border-sky-400 text-sky-800 dark:bg-sky-500/25 dark:border-sky-400 dark:text-sky-200 shadow-sm font-bold" : "bg-white hover:bg-zinc-100 dark:bg-white/[0.03] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-400 shadow-xs"
                           }`}
                         >
                           {r}
@@ -1462,9 +1461,7 @@ export default function LubricentroExpress({
                           type="button"
                           onClick={() => setRuedaSeleccionada(r)}
                           className={`w-14 h-14 rounded-xl border font-mono text-xs font-bold cursor-pointer transition-all ${
-                            ruedaSeleccionada === r
-                              ? "bg-sky-500/25 border-sky-400 text-sky-200"
-                              : "bg-white/[0.03] border-white/10 text-zinc-400"
+                            ruedaSeleccionada === r ? "bg-sky-50 border-sky-400 text-sky-800 dark:bg-sky-500/25 dark:border-sky-400 dark:text-sky-200 shadow-sm font-bold" : "bg-white hover:bg-zinc-100 dark:bg-white/[0.03] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-400 shadow-xs"
                           }`}
                         >
                           {r}
@@ -1475,9 +1472,7 @@ export default function LubricentroExpress({
                       type="button"
                       onClick={() => setRuedaSeleccionada("REP")}
                       className={`h-8 rounded-xl border font-mono text-xs font-bold cursor-pointer transition-all ${
-                        ruedaSeleccionada === "REP"
-                          ? "bg-sky-500/25 border-sky-400 text-sky-200"
-                          : "bg-white/[0.03] border-white/10 text-zinc-400"
+                        ruedaSeleccionada === "REP" ? "bg-sky-50 border-sky-400 text-sky-800 dark:bg-sky-500/25 dark:border-sky-400 dark:text-sky-200 shadow-sm font-bold" : "bg-white hover:bg-zinc-100 dark:bg-white/[0.03] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-400 shadow-xs"
                       }`}
                     >
                       REP: Repuesto
@@ -1486,7 +1481,7 @@ export default function LubricentroExpress({
                 </div>
 
                 <div className="md:col-span-7 space-y-2.5">
-                  <span className="text-xs text-zinc-400 block font-medium">
+                  <span className="text-xs text-zinc-700 dark:text-zinc-400 block font-semibold">
                     Servicios rápidos para rueda {ruedaSeleccionada}:
                   </span>
                   <div className="grid grid-cols-2 gap-2">
@@ -1512,9 +1507,7 @@ export default function LubricentroExpress({
                             })
                           }
                           className={`p-3 rounded-xl border text-xs font-medium text-left flex items-center justify-between gap-2 cursor-pointer transition-all ${
-                            sel
-                              ? "bg-sky-500/20 border-sky-400/50 text-sky-200"
-                              : "bg-black/30 border-white/10 text-zinc-400 hover:text-white"
+                            sel ? "bg-sky-50 border-sky-400 text-sky-900 dark:bg-sky-500/20 dark:border-sky-400/50 dark:text-sky-200 shadow-xs font-bold" : "bg-white hover:bg-zinc-100 dark:bg-black/30 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white shadow-xs"
                           }`}
                         >
                           <span className="truncate">{s.name}</span>
@@ -1528,13 +1521,13 @@ export default function LubricentroExpress({
             ) : subCategoriaActiva === "lub_bat_diagnostico" || subCategoriaActiva === "tc_bat_test" ? (
               /* CASO ESPECIAL: Test de Batería con foto de garantía R2 */
               <div className="space-y-4 animate-fade-in">
-                <div className="p-4 rounded-2xl bg-black/40 border border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                <div className="p-4 rounded-2xl bg-zinc-100 dark:bg-black/40 border border-zinc-200 dark:border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="text-2xl">⚡</span>
                       <div>
-                        <span className="text-sm font-semibold text-white block">Test Computarizado de Batería</span>
-                        <span className="text-xs text-zinc-400">Verificación de CCA, alternador y arranque</span>
+                        <span className="text-sm font-semibold text-zinc-900 dark:text-white block">Test Computarizado de Batería</span>
+                        <span className="text-xs text-zinc-600 dark:text-zinc-400">Verificación de CCA, alternador y arranque</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 pt-2">
@@ -1552,8 +1545,8 @@ export default function LubricentroExpress({
                         }
                         className={`px-3 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer ${
                           tieneServicioEnOrden("BAT-DIAG-EXPRESS", "Diagnóstico Batería & Alternador")
-                            ? "bg-purple-500/25 border-purple-400 text-purple-200"
-                            : "bg-white/5 border-white/10 text-zinc-300"
+                            ? "bg-purple-50 border-purple-400 text-purple-800 dark:bg-purple-500/25 dark:border-purple-400 dark:text-purple-200 shadow-xs font-bold"
+                            : "bg-white hover:bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 shadow-xs"
                         }`}
                       >
                         {tieneServicioEnOrden("BAT-DIAG-EXPRESS", "Diagnóstico Batería & Alternador") ? "✓ Test Marcado ($8)" : "+ Marcar Test ($8)"}
@@ -1607,8 +1600,8 @@ export default function LubricentroExpress({
                           }
                           className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 ${
                             sel
-                              ? "bg-purple-500/20 border-purple-400/50 text-white ring-1 ring-purple-400/30"
-                              : "bg-black/30 border-white/10 text-zinc-300 hover:bg-white/[0.05]"
+                              ? "bg-purple-50 dark:bg-purple-500/20 border-purple-400 dark:border-purple-400/50 text-purple-950 dark:text-white ring-1 ring-purple-400/30 shadow-sm"
+                              : "bg-white hover:bg-zinc-50 dark:bg-black/30 border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.05] shadow-xs"
                           }`}
                         >
                           <div className="flex items-center justify-between">
@@ -1620,7 +1613,7 @@ export default function LubricentroExpress({
                             <span className="text-[11px] text-zinc-400">{item.desc}</span>
                           </div>
                           <div className="flex justify-end">
-                            <span className={`px-2 py-0.5 rounded-lg text-xs font-bold ${sel ? "bg-purple-500/30 text-purple-200" : "bg-white/5 text-zinc-400"}`}>
+                            <span className={`px-2 py-0.5 rounded-lg text-xs font-bold ${sel ? "bg-purple-600 text-white dark:bg-purple-500/30 dark:text-purple-200" : "bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400"}`}>
                               {sel ? "✓ En Orden" : "+ Agregar"}
                             </span>
                           </div>
@@ -1651,22 +1644,22 @@ export default function LubricentroExpress({
                       }
                       className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 ${
                         sel
-                          ? "bg-amber-500/15 border-amber-500/45 text-white ring-1 ring-amber-400/30"
-                          : "bg-black/30 border-white/10 text-zinc-300 hover:bg-white/[0.05]"
+                          ? "bg-amber-50 border-amber-400 text-amber-950 dark:bg-amber-500/15 dark:border-amber-500/45 dark:text-white ring-1 ring-amber-400/30 shadow-sm"
+                          : "bg-white hover:bg-zinc-50 dark:bg-black/30 border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.05] shadow-xs"
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xl">{item.icon}</span>
-                        <span className="text-xs font-bold text-amber-300">${item.price}</span>
+                        <span className="text-xs font-bold text-amber-700 dark:text-amber-300">${item.price}</span>
                       </div>
                       <div>
-                        <span className="text-xs sm:text-sm font-semibold block">{item.name}</span>
-                        <span className="text-[11px] text-zinc-400">{item.desc}</span>
+                        <span className="text-xs sm:text-sm font-semibold block text-zinc-900 dark:text-white">{item.name}</span>
+                        <span className="text-[11px] text-zinc-600 dark:text-zinc-400">{item.desc}</span>
                       </div>
                       <div className="flex justify-end">
                         <span
                           className={`px-2 py-0.5 rounded-lg text-xs font-bold ${
-                            sel ? "bg-amber-500/30 text-amber-200" : "bg-white/5 text-zinc-400"
+                            sel ? "bg-amber-500 text-white dark:bg-amber-500/30 dark:text-amber-200" : "bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400"
                           }`}
                         >
                           {sel ? "✓ En Orden" : "+ Agregar"}
@@ -1684,7 +1677,7 @@ export default function LubricentroExpress({
             <button
               type="button"
               onClick={() => setEtapaActiva(4)}
-              className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-semibold cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white dark:bg-amber-500/20 dark:hover:bg-amber-500/30 dark:border dark:border-amber-500/40 dark:text-amber-300 text-xs font-semibold cursor-pointer shadow-sm active:scale-95 transition-all"
             >
               Siguiente (Aviso y Firma) →
             </button>
@@ -1704,17 +1697,17 @@ export default function LubricentroExpress({
           =================================================================== */}
       {etapaActiva === 4 && (
         <div className="w-full space-y-4 animate-fade-in">
-          <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-4 shadow-xl">
+          <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/[0.08] space-y-4 shadow-xl">
             {/* Cabecera */}
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/[0.08] pb-3">
               <div className="flex items-center gap-2">
                 <span className="text-base">📲</span>
-                <h4 className="text-xs sm:text-sm font-normal text-white uppercase tracking-wider">
+                <h4 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-wider">
                   Aviso y Firma
                 </h4>
               </div>
               {ordenActiva && (
-                <span className="font-mono text-xs text-zinc-400">
+                <span className="font-mono text-xs text-zinc-600 dark:text-zinc-400">
                   {ordenActiva.plate ? `Placa: ${ordenActiva.plate} • ` : ""}Orden #
                   {String(ordenActiva.orderNumber || ordenActiva.id).replace(/^(?:OT|LUB)-\d{4}-/i, "")}
                 </span>
@@ -1724,8 +1717,8 @@ export default function LubricentroExpress({
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
               {/* Columna Izquierda: Estado y Aviso */}
               <div className="lg:col-span-5 space-y-3">
-                <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2">
-                  <span className="text-xs font-normal text-zinc-300 block">Estado:</span>
+                <div className="p-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/5 space-y-2 shadow-xs">
+                  <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block">Estado:</span>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                     {ESTADOS_LUBRICENTRO.map((st, idx) => {
                       const sel =
@@ -1743,7 +1736,7 @@ export default function LubricentroExpress({
                       ];
                       const estiloActivo = coloresActivoPorIndice[idx % coloresActivoPorIndice.length];
                       const estiloPlomo =
-                        "bg-white/[0.03] hover:bg-white/[0.07] text-zinc-400 hover:text-zinc-200 border-white/10";
+                        "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-zinc-200 dark:border-white/10";
 
                       return (
                         <button
@@ -1763,7 +1756,7 @@ export default function LubricentroExpress({
 
                 {/* Aviso WhatsApp + Sticker QR */}
                 <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2">
-                  <span className="text-xs font-normal text-zinc-300 block">Aviso:</span>
+                  <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block">Aviso:</span>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
@@ -1787,7 +1780,7 @@ export default function LubricentroExpress({
 
               {/* Columna Derecha: Doble Firma (Presupuesto / Entrega) */}
               <div className="lg:col-span-7 space-y-3">
-                <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-3">
+                <div className="p-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/5 space-y-3 shadow-xs">
                   <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-2.5">
                     <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/5 border border-white/10">
                       <button
@@ -1841,7 +1834,7 @@ export default function LubricentroExpress({
 
                     return (
                       <>
-                        <div className="h-40 rounded-xl bg-[#0a0a0c] border border-white/10 relative overflow-hidden flex items-center justify-center">
+                        <div className="h-40 rounded-xl bg-zinc-100 dark:bg-[#0a0a0c] border border-zinc-300 dark:border-white/10 relative overflow-hidden flex items-center justify-center">
                           {firmaGuardadaUrl && !tieneTrazosFirmaRef.current ? (
                             <div className="w-full h-full flex flex-col items-center justify-center p-2 bg-white/95 relative">
                               <img

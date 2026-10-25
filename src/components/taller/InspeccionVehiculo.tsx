@@ -428,6 +428,12 @@ export default function InspeccionVehiculo({
     observacionTextoRef.current = observacionTexto;
   }, [observacionTexto]);
 
+  // Mantener hallazgosRef sincronizado para evitar side-effects dentro de state updaters
+  const hallazgosRef = useRef(hallazgos);
+  useEffect(() => {
+    hallazgosRef.current = hallazgos;
+  }, [hallazgos]);
+
   // Cleanup de audio Text-to-Speech y grabación de voz
   useEffect(() => {
     return () => {
@@ -620,12 +626,18 @@ export default function InspeccionVehiculo({
       prevFindingsJsonRef.current = JSON.stringify(nuevosHallazgos);
 
       if (onUpdateOrden) {
-        onUpdateOrden({
+        const payloadOrden = {
           ...ordenActiva,
           inspectionFindings: nuevosHallazgos,
           ...(firmaUrl !== undefined ? { receptionSignatureUrl: firmaUrl } : {}),
           ...(evals !== undefined ? { inspectionChecklist: evals } : {}),
-        });
+        };
+        // Ejecutar en el siguiente tick para evitar 'Cannot update a component while rendering a different component'
+        setTimeout(() => {
+          if (onUpdateOrden) {
+            onUpdateOrden(payloadOrden);
+          }
+        }, 0);
       }
 
       // 2. Persistir en Neon DB
@@ -802,51 +814,51 @@ export default function InspeccionVehiculo({
   const debounceSyncPinRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleCambiarZonaPin = (pinId: string, nuevaZona: string) => {
-    setHallazgos((prev) => {
-      const actualizados = prev.map((h) => {
-        if (h.id === pinId) {
-          return { ...h, zona: nuevaZona };
-        }
-        return h;
-      });
-      if (ordenActiva?.id) {
-        try {
-          localStorage.setItem(`taller_findings_${ordenActiva.id}`, JSON.stringify(actualizados));
-        } catch {}
+    const prev = hallazgosRef.current;
+    const actualizados = prev.map((h) => {
+      if (h.id === pinId) {
+        return { ...h, zona: nuevaZona };
       }
-      if (debounceSyncPinRef.current) clearTimeout(debounceSyncPinRef.current);
-      debounceSyncPinRef.current = setTimeout(() => {
-        sincronizarHallazgosNeon(actualizados);
-      }, 300);
-      return actualizados;
+      return h;
     });
+    hallazgosRef.current = actualizados;
+    setHallazgos(actualizados);
+    if (ordenActiva?.id) {
+      try {
+        localStorage.setItem(`taller_findings_${ordenActiva.id}`, JSON.stringify(actualizados));
+      } catch {}
+    }
+    if (debounceSyncPinRef.current) clearTimeout(debounceSyncPinRef.current);
+    debounceSyncPinRef.current = setTimeout(() => {
+      sincronizarHallazgosNeon(actualizados);
+    }, 300);
   };
 
   const handleGuardarDetallePin = (tipo: string, obs?: string, explicitPinId?: string) => {
     const idTarget = explicitPinId || pinSeleccionadoId;
     if (!idTarget) return;
-    setHallazgos((prev) => {
-      const actualizados = prev.map((h) => {
-        if (h.id === idTarget) {
-          return {
-            ...h,
-            tipo: tipo || h.tipo,
-            descripcion: obs !== undefined ? obs : h.descripcion,
-          };
-        }
-        return h;
-      });
-      if (ordenActiva?.id) {
-        try {
-          localStorage.setItem(`taller_findings_${ordenActiva.id}`, JSON.stringify(actualizados));
-        } catch {}
+    const prev = hallazgosRef.current;
+    const actualizados = prev.map((h) => {
+      if (h.id === idTarget) {
+        return {
+          ...h,
+          tipo: tipo || h.tipo,
+          descripcion: obs !== undefined ? obs : h.descripcion,
+        };
       }
-      if (debounceSyncPinRef.current) clearTimeout(debounceSyncPinRef.current);
-      debounceSyncPinRef.current = setTimeout(() => {
-        sincronizarHallazgosNeon(actualizados);
-      }, 300);
-      return actualizados;
+      return h;
     });
+    hallazgosRef.current = actualizados;
+    setHallazgos(actualizados);
+    if (ordenActiva?.id) {
+      try {
+        localStorage.setItem(`taller_findings_${ordenActiva.id}`, JSON.stringify(actualizados));
+      } catch {}
+    }
+    if (debounceSyncPinRef.current) clearTimeout(debounceSyncPinRef.current);
+    debounceSyncPinRef.current = setTimeout(() => {
+      sincronizarHallazgosNeon(actualizados);
+    }, 300);
   };
 
   const handleEliminarPin = async (id: string, e?: React.MouseEvent) => {
@@ -1104,6 +1116,7 @@ export default function InspeccionVehiculo({
     const archivosSubir = files.slice(0, 5 - fotosActuales.length);
 
     try {
+      setPinAccionActivaId(targetPinId);
       setSubiendoFotoPin(true);
       const contieneVideo = archivosSubir.some((f) => f.type.startsWith("video/"));
       const labelMedio = contieneVideo ? "evidencias" : archivosSubir.length === 1 ? "foto" : "fotos";
@@ -1205,57 +1218,325 @@ export default function InspeccionVehiculo({
     mostrarToast("Foto eliminada.");
   };
 
+  const [transcribiendoVoz, setTranscribiendoVoz] = useState(false);
+  const [segundosGrabandoAudio, setSegundosGrabandoAudio] = useState(0);
+  const [pinAccionActivaId, setPinAccionActivaId] = useState<string | null>(null);
+  const grabacionTimerRef = useRef<NodeJS.Timeout | null>(null);
   const speechReconocioTextoRef = useRef(false);
   const whisperPipelineRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const audioMonitorCtxRef = useRef<AudioContext | null>(null);
+  const pcmChunksRef = useRef<Float32Array[]>([]);
+  const pcmSampleRateRef = useRef<number>(16000);
 
-  const transcribirAudioBlobATexto = async (audioBlob: Blob): Promise<string> => {
-    try {
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      const audioCtx = new AudioCtx({ sampleRate: 16000 });
-      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-      let float32Data = audioBuffer.getChannelData(0);
-      if (audioBuffer.sampleRate !== 16000) {
-        const offlineCtx = new OfflineAudioContext(
-          1,
-          Math.max(1, Math.ceil(audioBuffer.duration * 16000)),
-          16000
-        );
-        const source = offlineCtx.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(offlineCtx.destination);
-        source.start(0);
-        const resampled = await offlineCtx.startRendering();
-        float32Data = resampled.getChannelData(0);
-      }
-      await audioCtx.close().catch(() => {});
-
-      if (!whisperPipelineRef.current) {
+  const obtenerPipelineWhisper = async () => {
+    if (whisperPipelineRef.current) return whisperPipelineRef.current;
+    const win = window as any;
+    if (win.__autogWhisperInstance) {
+      whisperPipelineRef.current = win.__autogWhisperInstance;
+      return whisperPipelineRef.current;
+    }
+    if (!win.__autogWhisperPipelinePromise) {
+      win.__autogWhisperPipelinePromise = (async () => {
         const dynamicImport = new Function("url", "return import(url)");
-        const { pipeline, env } = await dynamicImport(
-          "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2"
+        const mod = await dynamicImport(
+          "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js"
         );
-        env.allowLocalModels = false;
-        env.useBrowserCache = true;
-        whisperPipelineRef.current = await pipeline(
-          "automatic-speech-recognition",
-          "Xenova/whisper-tiny"
-        );
+        const { pipeline, env } = mod;
+        if (env) {
+          env.allowLocalModels = false;
+          env.useBrowserCache = true;
+          if (env.backends?.onnx?.wasm) {
+            env.backends.onnx.wasm.numThreads = 1;
+            env.backends.onnx.wasm.proxy = false;
+          }
+        }
+        const pipe = await pipeline("automatic-speech-recognition", "Xenova/whisper-tiny");
+        win.__autogWhisperInstance = pipe;
+        return pipe;
+      })().catch((err: any) => {
+        win.__autogWhisperPipelinePromise = null;
+        throw err;
+      });
+    }
+    whisperPipelineRef.current = await win.__autogWhisperPipelinePromise;
+    return whisperPipelineRef.current;
+  };
+
+  const resamplearPcmA16kHz = (samples: Float32Array, inputSampleRate: number): Float32Array => {
+    if (!samples.length || inputSampleRate === 16000) return samples;
+    const ratio = inputSampleRate / 16000;
+    const newLength = Math.max(1, Math.round(samples.length / ratio));
+    const result = new Float32Array(newLength);
+    for (let i = 0; i < newLength; i++) {
+      const pos = i * ratio;
+      const idx = Math.floor(pos);
+      const frac = pos - idx;
+      const s0 = samples[idx] ?? 0;
+      const s1 = samples[idx + 1] ?? s0;
+      result[i] = s0 + frac * (s1 - s0);
+    }
+    return result;
+  };
+
+  const normalizarAudioPcm = (samples: Float32Array): Float32Array => {
+    let maxAbs = 0;
+    for (let i = 0; i < samples.length; i++) {
+      const abs = Math.abs(samples[i]);
+      if (abs > maxAbs) maxAbs = abs;
+    }
+    if (maxAbs < 0.003) return samples;
+    const gain = Math.min(25, 0.85 / maxAbs);
+    const out = new Float32Array(samples.length);
+    for (let i = 0; i < samples.length; i++) {
+      out[i] = Math.max(-1, Math.min(1, samples[i] * gain));
+    }
+    return out;
+  };
+
+  const crearWavBlobDesdePcm = (chunks: Float32Array[], sampleRate: number): Blob | null => {
+    const totalLength = chunks.reduce((acc, c) => acc + c.length, 0);
+    if (totalLength === 0) return null;
+    const merged = new Float32Array(totalLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+      merged.set(chunk, offset);
+      offset += chunk.length;
+    }
+    const pcm16k = resamplearPcmA16kHz(merged, sampleRate || 48000);
+    const norm = normalizarAudioPcm(pcm16k);
+    const sr = 16000;
+    const buffer = new ArrayBuffer(44 + norm.length * 2);
+    const view = new DataView(buffer);
+    const writeStr = (pos: number, str: string) => {
+      for (let i = 0; i < str.length; i++) {
+        view.setUint8(pos + i, str.charCodeAt(i));
       }
-      const output = await whisperPipelineRef.current(float32Data, {
+    };
+    writeStr(0, "RIFF");
+    view.setUint32(4, 36 + norm.length * 2, true);
+    writeStr(8, "WAVE");
+    writeStr(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sr, true);
+    view.setUint32(28, sr * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeStr(36, "data");
+    view.setUint32(40, norm.length * 2, true);
+    let idx = 44;
+    for (let i = 0; i < norm.length; i++, idx += 2) {
+      const s = Math.max(-1, Math.min(1, norm[i]));
+      view.setInt16(idx, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    }
+    return new Blob([buffer], { type: "audio/wav" });
+  };
+
+  const transcribirAudioATexto = async (audioBlob?: Blob | null): Promise<string> => {
+    try {
+      let float32Data: Float32Array | null = null;
+
+      // 1. Preferir muestras PCM crudas capturadas directamente del micrófono (100% compatible en PC sin errores de códec)
+      if (pcmChunksRef.current.length > 0) {
+        const totalLength = pcmChunksRef.current.reduce((acc, c) => acc + c.length, 0);
+        if (totalLength > 1600) {
+          const merged = new Float32Array(totalLength);
+          let offset = 0;
+          for (const chunk of pcmChunksRef.current) {
+            merged.set(chunk, offset);
+            offset += chunk.length;
+          }
+          float32Data = resamplearPcmA16kHz(merged, pcmSampleRateRef.current || 48000);
+        }
+      }
+
+      // 2. Respaldo decodificando el Blob si no hubo muestras PCM directas
+      if ((!float32Data || float32Data.length === 0) && audioBlob && audioBlob.size > 400) {
+        const arrayBuffer = await audioBlob.arrayBuffer();
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        const audioCtx = new AudioCtx();
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        const raw = audioBuffer.getChannelData(0);
+        float32Data = resamplearPcmA16kHz(raw, audioBuffer.sampleRate);
+        await audioCtx.close().catch(() => {});
+      }
+
+      if (!float32Data || float32Data.length < 1600) {
+        return "";
+      }
+
+      const audioNormalizado = normalizarAudioPcm(float32Data);
+      const pipe = await obtenerPipelineWhisper();
+      const output = await pipe(audioNormalizado, {
         language: "spanish",
         task: "transcribe",
+        chunk_length_s: 30,
+        stride_length_s: 5,
       });
-      return String(output?.text || "").trim();
+
+      const rawText = String(output?.text || "")
+        .replace(/\[.*?\]|\(.*?\)/g, "")
+        .trim();
+      return rawText;
     } catch (err) {
-      console.warn("Aviso en transcripción local de respaldo:", err);
+      console.warn("Aviso en transcripción de voz a texto:", err);
       return "";
     }
   };
 
-  // DICTADO POR VOZ (AUDIO A TEXTO) Y GRABACIÓN DE AUDIO REAL EN CLOUDFLARE R2
+  // SUBIR ARCHIVO DE AUDIO DIRECTO DESDE PC O MÓVIL COMO RESPALDO
+  const handleSubirArchivoAudioPinR2 = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    targetPinId: string
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    const localPreviewUrl = URL.createObjectURL(file);
+    setHallazgos((prev) => {
+      const actualizados = prev.map((h) => {
+        if (h.id === targetPinId) {
+          const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
+          const nuevosAudios = [...prevAudios, localPreviewUrl];
+          return {
+            ...h,
+            audioUrl: nuevosAudios[0],
+            audioUrls: nuevosAudios,
+          };
+        }
+        return h;
+      });
+      return actualizados;
+    });
+    mostrarToast("✓ Audio adjuntado. Guardando en la nube...");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file, file.name || `audio_${targetPinId}_${Date.now()}.webm`);
+      formData.append("folder", "taller_notas_voz");
+      formData.append("tipo", "audio");
+      if (ordenActiva?.id) formData.append("orderId", ordenActiva.id);
+      if (ordenActiva?.orderNumber) formData.append("orderNumber", ordenActiva.orderNumber);
+      if (ordenActiva?.plate) formData.append("plate", ordenActiva.plate);
+      formData.append("uploadedBy", ordenActiva?.mechanic || "Taller Mecánico");
+
+      const res = await fetch("/api/storage/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        const prev = hallazgosRef.current;
+        const actualizados = prev.map((h) => {
+          if (h.id === targetPinId) {
+            const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
+            const nuevosAudios = prevAudios.map((u) => (u === localPreviewUrl ? data.url : u));
+            if (!nuevosAudios.includes(data.url)) {
+              nuevosAudios.push(data.url);
+            }
+            return {
+              ...h,
+              audioUrl: nuevosAudios[0],
+              audioUrls: nuevosAudios,
+            };
+          }
+          return h;
+        });
+        hallazgosRef.current = actualizados;
+        setHallazgos(actualizados);
+        sincronizarHallazgosNeon(actualizados);
+        mostrarToast("✓ Audio guardado en la nube.");
+      }
+    } catch {
+      // Conservar vista previa local
+    }
+  };
+
+  // DICTADO POR VOZ (AUDIO A TEXTO) Y GRABACIÓN DE AUDIO REAL EN CLOUDFLARE R2 + MICRÓFONO NATIVO PC
+  const pcMicSessionRef = useRef<{ sessionId: string; targetPinId: string } | null>(null);
+
+  const guardarAudioBlobEnPin = async (
+    targetPinId: string,
+    audioBlob: Blob,
+    mimeFinal: string,
+    fallbackDataUri?: string
+  ) => {
+    const localPreviewUrl = fallbackDataUri || URL.createObjectURL(audioBlob);
+    const prevInit = hallazgosRef.current;
+    const actualizadosInit = prevInit.map((h) => {
+      if (h.id === targetPinId) {
+        const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
+        const nuevosAudios = [...prevAudios, localPreviewUrl];
+        return {
+          ...h,
+          descripcion: observacionTextoRef.current || h.descripcion,
+          audioUrl: nuevosAudios[0],
+          audioUrls: nuevosAudios,
+        };
+      }
+      return h;
+    });
+    hallazgosRef.current = actualizadosInit;
+    setHallazgos(actualizadosInit);
+    if (ordenActiva?.id) {
+      try {
+        localStorage.setItem(`taller_findings_${ordenActiva.id}`, JSON.stringify(actualizadosInit));
+      } catch {}
+    }
+    mostrarToast("✓ Nota de audio grabada y asociada.");
+
+    try {
+      const formData = new FormData();
+      const ext = mimeFinal.includes("wav")
+        ? "wav"
+        : mimeFinal.includes("mp4")
+        ? "mp4"
+        : mimeFinal.includes("aac")
+        ? "aac"
+        : "webm";
+      formData.append("file", audioBlob, `audio_${targetPinId}_${Date.now()}.${ext}`);
+      formData.append("folder", "taller_notas_voz");
+      formData.append("tipo", "audio");
+      if (ordenActiva?.id) formData.append("orderId", ordenActiva.id);
+      if (ordenActiva?.orderNumber) formData.append("orderNumber", ordenActiva.orderNumber);
+      if (ordenActiva?.plate) formData.append("plate", ordenActiva.plate);
+      formData.append("uploadedBy", ordenActiva?.mechanic || "Taller Mecánico");
+
+      const res = await fetch("/api/storage/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        const prev = hallazgosRef.current;
+        const actualizados = prev.map((h) => {
+          if (h.id === targetPinId) {
+            const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
+            const nuevosAudios = prevAudios.map((u) => (u === localPreviewUrl ? data.url : u));
+            if (!nuevosAudios.includes(data.url)) {
+              nuevosAudios.push(data.url);
+            }
+            return {
+              ...h,
+              descripcion: observacionTextoRef.current || h.descripcion,
+              audioUrl: nuevosAudios[0],
+              audioUrls: nuevosAudios,
+            };
+          }
+          return h;
+        });
+        hallazgosRef.current = actualizados;
+        setHallazgos(actualizados);
+        sincronizarHallazgosNeon(actualizados);
+      }
+    } catch {
+      // Conservar vista previa local
+    }
+  };
+
   const handleToggleVozPin = async (
     targetPinId: string,
     textoActualDirecto?: string,
@@ -1263,13 +1544,13 @@ export default function InspeccionVehiculo({
   ) => {
     if (escuchandoVoz) {
       dictandoActivoRef.current = false;
+      if (grabacionTimerRef.current) {
+        clearInterval(grabacionTimerRef.current);
+        grabacionTimerRef.current = null;
+      }
       if (silenceTimerRef.current) {
         clearInterval(silenceTimerRef.current);
         silenceTimerRef.current = null;
-      }
-      if (audioMonitorCtxRef.current) {
-        audioMonitorCtxRef.current.close().catch(() => {});
-        audioMonitorCtxRef.current = null;
       }
       if (recognitionRef.current) {
         try {
@@ -1277,18 +1558,53 @@ export default function InspeccionVehiculo({
         } catch {}
         recognitionRef.current = null;
       }
+
+      const activePcSession = pcMicSessionRef.current;
+      pcMicSessionRef.current = null;
+
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
         try {
           mediaRecorderRef.current.stop();
         } catch {}
-      }
-      if (audioStreamRef.current) {
+      } else if (audioStreamRef.current) {
         try {
           audioStreamRef.current.getTracks().forEach((t) => t.stop());
         } catch {}
         audioStreamRef.current = null;
       }
+
       setEscuchandoVoz(false);
+      setSegundosGrabandoAudio(0);
+
+      // Si estaba grabando con el micrófono nativo de Windows PC, obtener el WAV y asociarlo al bloque
+      if (activePcSession) {
+        try {
+          const res = await fetch("/api/taller/pc-mic", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "stop",
+              sessionId: activePcSession.sessionId,
+            }),
+          });
+          const data = await res.json();
+          if (data?.success && data?.audioBase64) {
+            const binStr = atob(data.audioBase64);
+            const bytes = new Uint8Array(binStr.length);
+            for (let i = 0; i < binStr.length; i++) {
+              bytes[i] = binStr.charCodeAt(i);
+            }
+            const wavBlob = new Blob([bytes], { type: "audio/wav" });
+            const dataUri = `data:audio/wav;base64,${data.audioBase64}`;
+            await guardarAudioBlobEnPin(
+              activePcSession.targetPinId,
+              wavBlob,
+              "audio/wav",
+              dataUri
+            );
+          }
+        } catch {}
+      }
       return;
     }
 
@@ -1303,33 +1619,79 @@ export default function InspeccionVehiculo({
     textoBaseRef.current = textoPrevio;
     observacionTextoRef.current = textoPrevio;
     speechReconocioTextoRef.current = false;
-    dictandoActivoRef.current = true;
-    setEscuchandoVoz(true);
+    pcmChunksRef.current = [];
+    setPinAccionActivaId(targetPinId);
+
+    // En modo "audio", activar visualmente de inmediato y en PC usar grabación directa del micrófono de Windows
+    if (modo === "audio") {
+      setEscuchandoVoz(true);
+      setSegundosGrabandoAudio(0);
+      if (grabacionTimerRef.current) clearInterval(grabacionTimerRef.current);
+      grabacionTimerRef.current = setInterval(() => {
+        setSegundosGrabandoAudio((s) => s + 1);
+      }, 1000);
+
+      const esMovil =
+        typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+      if (!esMovil) {
+        const sessionId = `pc_${targetPinId}_${Date.now()}`;
+        pcMicSessionRef.current = { sessionId, targetPinId };
+        try {
+          const res = await fetch("/api/taller/pc-mic", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "start", sessionId }),
+          });
+          const data = await res.json();
+          if (res.ok && data?.success) {
+            mostrarToast("🎙️ Grabando nota de audio en PC... habla y pulsa Parar al terminar.");
+            return;
+          }
+          pcMicSessionRef.current = null;
+        } catch {
+          pcMicSessionRef.current = null;
+        }
+      }
+    }
+
+    // Pre-calentar Whisper solo si es modo dictado
+    if (modo === "dictado") {
+      obtenerPipelineWhisper().catch(() => {});
+    }
 
     let falloRedSpeech = false;
 
-    const iniciarGrabadoraRespaldo = async (activarAutoCorteSilencio: boolean) => {
+    const iniciarGrabadoraRespaldo = async (): Promise<boolean> => {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-        return;
+        return true;
       }
       if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-        return;
+        mostrarToast(
+          "Tu navegador bloqueó el micrófono (requiere localhost o HTTPS). Usa el botón de subir audio.",
+          "err"
+        );
+        return false;
       }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
-        });
-        if (!dictandoActivoRef.current) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            },
+          });
+        } catch {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         }
+
         audioStreamRef.current = stream;
         const mimeType = getBestSupportedAudioMimeType();
-        const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+        const options: MediaRecorderOptions = {};
+        if (mimeType) options.mimeType = mimeType;
+        const recorder = new MediaRecorder(stream, options);
         audioChunksRef.current = [];
 
         recorder.ondataavailable = (ev) => {
@@ -1339,38 +1701,71 @@ export default function InspeccionVehiculo({
         };
 
         recorder.onstop = async () => {
+          if (grabacionTimerRef.current) {
+            clearInterval(grabacionTimerRef.current);
+            grabacionTimerRef.current = null;
+          }
           if (silenceTimerRef.current) {
             clearInterval(silenceTimerRef.current);
             silenceTimerRef.current = null;
           }
           if (audioMonitorCtxRef.current) {
-            audioMonitorCtxRef.current.close().catch(() => {});
+            await audioMonitorCtxRef.current.close().catch(() => {});
             audioMonitorCtxRef.current = null;
           }
           stream.getTracks().forEach((track) => track.stop());
+          if (audioStreamRef.current === stream) {
+            audioStreamRef.current = null;
+          }
+
           const mime = recorder.mimeType || mimeType || "audio/webm";
-          const audioBlob = new Blob(audioChunksRef.current, { type: mime });
+          const rawBlob = new Blob(audioChunksRef.current, { type: mime });
+          const wavRespaldo =
+            pcmChunksRef.current.length > 0
+              ? crearWavBlobDesdePcm(pcmChunksRef.current, pcmSampleRateRef.current || 48000)
+              : null;
+          const audioBlob = rawBlob.size > 200 ? rawBlob : wavRespaldo || rawBlob;
+          const mimeFinal = audioBlob === wavRespaldo ? "audio/wav" : mime;
 
-          if (audioBlob.size > 500) {
-            // Si Web Speech API no transcribió (ej. visor Electron/Brave o bloqueo de red), transcribir el audio a texto
-            if (!speechReconocioTextoRef.current) {
-              mostrarToast("⏳ Convirtiendo tu voz a texto...");
-              const textoTranscrito = await transcribirAudioBlobATexto(audioBlob);
-              if (textoTranscrito) {
-                const base = textoBaseRef.current.trim();
-                const nuevoTexto = base ? `${base} ${textoTranscrito}` : textoTranscrito;
-                textoBaseRef.current = nuevoTexto;
-                observacionTextoRef.current = nuevoTexto;
-                setObservacionTexto(nuevoTexto);
-                handleGuardarDetallePin(tipoPin, nuevoTexto, targetPinId);
-                mostrarToast("✓ Dictado convertido a texto en Descripción.");
-              }
+          // 1. Si es GRABACIÓN DE NOTA DE AUDIO (botón naranja de micrófono en PC o móvil):
+          if (modo === "audio") {
+            if (audioBlob.size < 50) {
+              mostrarToast("La grabación fue demasiado corta. Habla al micrófono y pulsa Parar.", "err");
+              return;
             }
+            const localPreviewUrl = URL.createObjectURL(audioBlob);
+            const prevInit = hallazgosRef.current;
+            const actualizadosInit = prevInit.map((h) => {
+              if (h.id === targetPinId) {
+                const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
+                const nuevosAudios = [...prevAudios, localPreviewUrl];
+                return {
+                  ...h,
+                  descripcion: observacionTextoRef.current || h.descripcion,
+                  audioUrl: nuevosAudios[0],
+                  audioUrls: nuevosAudios,
+                };
+              }
+              return h;
+            });
+            hallazgosRef.current = actualizadosInit;
+            setHallazgos(actualizadosInit);
+            if (ordenActiva?.id) {
+              try {
+                localStorage.setItem(`taller_findings_${ordenActiva.id}`, JSON.stringify(actualizadosInit));
+              } catch {}
+            }
+            mostrarToast("✓ Nota de audio grabada y asociada.");
 
-            // Subir evidencia de audio a Cloudflare R2 y preservar siempre la descripción actual
             try {
               const formData = new FormData();
-              const ext = mime.includes("mp4") ? "mp4" : mime.includes("aac") ? "aac" : "webm";
+              const ext = mimeFinal.includes("wav")
+                ? "wav"
+                : mimeFinal.includes("mp4")
+                ? "mp4"
+                : mimeFinal.includes("aac")
+                ? "aac"
+                : "webm";
               formData.append("file", audioBlob, `audio_${targetPinId}_${Date.now()}.${ext}`);
               formData.append("folder", "taller_notas_voz");
               formData.append("tipo", "audio");
@@ -1385,66 +1780,111 @@ export default function InspeccionVehiculo({
               });
               const data = await res.json();
               if (data.success && data.url) {
-                setHallazgos((prev) => {
-                  const actualizados = prev.map((h) => {
-                    if (h.id === targetPinId) {
-                      const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
-                      const nuevosAudios = [...prevAudios, data.url];
-                      return {
-                        ...h,
-                        descripcion: observacionTextoRef.current || h.descripcion,
-                        audioUrl: nuevosAudios[0],
-                        audioUrls: nuevosAudios,
-                      };
+                const prev = hallazgosRef.current;
+                const actualizados = prev.map((h) => {
+                  if (h.id === targetPinId) {
+                    const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
+                    const nuevosAudios = prevAudios.map((u) => (u === localPreviewUrl ? data.url : u));
+                    if (!nuevosAudios.includes(data.url)) {
+                      nuevosAudios.push(data.url);
                     }
-                    return h;
-                  });
-                  sincronizarHallazgosNeon(actualizados);
-                  return actualizados;
+                    return {
+                      ...h,
+                      descripcion: observacionTextoRef.current || h.descripcion,
+                      audioUrl: nuevosAudios[0],
+                      audioUrls: nuevosAudios,
+                    };
+                  }
+                  return h;
                 });
+                hallazgosRef.current = actualizados;
+                setHallazgos(actualizados);
+                sincronizarHallazgosNeon(actualizados);
               }
             } catch {
-              // Ignorar fallo de subida si ocurre
+              // Mantener vista previa local si falla la red
+            }
+            return;
+          }
+
+          // 2. Si es modo DICTADO A TEXTO y Web Speech API no transcribió, convertir con Whisper
+          if (
+            modo === "dictado" &&
+            !speechReconocioTextoRef.current &&
+            (pcmChunksRef.current.length > 0 || audioBlob.size > 400)
+          ) {
+            setTranscribiendoVoz(true);
+            mostrarToast("⏳ Convirtiendo tu voz a texto...");
+            const textoTranscrito = await transcribirAudioATexto(audioBlob);
+            setTranscribiendoVoz(false);
+            if (textoTranscrito) {
+              const base = textoBaseRef.current.trim();
+              const nuevoTexto = base ? `${base} ${textoTranscrito}` : textoTranscrito;
+              textoBaseRef.current = nuevoTexto;
+              observacionTextoRef.current = nuevoTexto;
+              setObservacionTexto(nuevoTexto);
+              handleGuardarDetallePin(tipoPin, nuevoTexto, targetPinId);
+              mostrarToast("✓ Dictado escrito en Descripción.");
+            } else {
+              mostrarToast("No se detectó voz clara. Intenta hablar más cerca del micrófono.", "err");
             }
           }
         };
 
         mediaRecorderRef.current = recorder;
-        recorder.start(250);
+        dictandoActivoRef.current = true;
+        recorder.start(200);
+        setEscuchandoVoz(true);
+        setSegundosGrabandoAudio(0);
+        if (grabacionTimerRef.current) clearInterval(grabacionTimerRef.current);
+        grabacionTimerRef.current = setInterval(() => {
+          setSegundosGrabandoAudio((s) => s + 1);
+        }, 1000);
 
-        // Si estamos en modo fallback sin Web Speech API, detectar silencio tras hablar para transcribir automáticamente
-        if (activarAutoCorteSilencio) {
+        // Solo conectar el monitor de silencio en modo "dictado" (evita interferir con la grabación de audio pura en PC)
+        if (modo === "dictado") {
           try {
             const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
             const actx = new AudioCtx();
+            if (actx.state === "suspended") {
+              await actx.resume().catch(() => {});
+            }
             audioMonitorCtxRef.current = actx;
+            pcmSampleRateRef.current = actx.sampleRate || 48000;
+
             const source = actx.createMediaStreamSource(stream);
-            const analyser = actx.createAnalyser();
-            analyser.fftSize = 512;
-            source.connect(analyser);
-            const dataArray = new Uint8Array(analyser.fftSize);
+            const processor = actx.createScriptProcessor(4096, 1, 1);
+            source.connect(processor);
+            processor.connect(actx.destination);
+
             let hablo = false;
             let ultimoSonidoMs = Date.now();
 
-            silenceTimerRef.current = setInterval(() => {
+            processor.onaudioprocess = (e) => {
               if (!dictandoActivoRef.current) return;
-              analyser.getByteTimeDomainData(dataArray);
+              const input = e.inputBuffer.getChannelData(0);
+              pcmChunksRef.current.push(new Float32Array(input));
+
               let sumSq = 0;
-              for (let i = 0; i < dataArray.length; i++) {
-                const norm = (dataArray[i] - 128) / 128;
-                sumSq += norm * norm;
+              for (let i = 0; i < input.length; i++) {
+                sumSq += input[i] * input[i];
               }
-              const rms = Math.sqrt(sumSq / dataArray.length);
-              if (rms > 0.025) {
+              const rms = Math.sqrt(sumSq / input.length);
+              if (rms > 0.012) {
                 hablo = true;
                 ultimoSonidoMs = Date.now();
-              } else if (hablo && Date.now() - ultimoSonidoMs > 1600) {
-                // El usuario terminó de hablar: detener y transcribir automáticamente al campo Descripción
+              } else if (
+                hablo &&
+                !speechReconocioTextoRef.current &&
+                Date.now() - ultimoSonidoMs > 1500
+              ) {
                 dictandoActivoRef.current = false;
                 setEscuchandoVoz(false);
-                if (silenceTimerRef.current) {
-                  clearInterval(silenceTimerRef.current);
-                  silenceTimerRef.current = null;
+                if (recognitionRef.current) {
+                  try {
+                    recognitionRef.current.stop();
+                  } catch {}
+                  recognitionRef.current = null;
                 }
                 if (recorder.state !== "inactive") {
                   try {
@@ -1452,27 +1892,42 @@ export default function InspeccionVehiculo({
                   } catch {}
                 }
               }
-            }, 120);
+            };
           } catch {}
         }
-      } catch {
-        mostrarToast("Permite el acceso al micrófono en tu navegador para dictar.", "err");
+
+        return true;
+      } catch (err: any) {
+        const msg =
+          err?.name === "NotAllowedError"
+            ? "Permiso de micrófono denegado en el navegador o en Windows. Habilítalo o sube un archivo de audio."
+            : err?.name === "NotFoundError"
+            ? "No se detectó un micrófono activo en esta PC."
+            : "No se pudo abrir el micrófono en esta PC. Verifica permisos de Windows o adjunta un audio.";
+        mostrarToast(msg, "err");
         dictandoActivoRef.current = false;
         setEscuchandoVoz(false);
+        return false;
       }
     };
+
+    // Iniciar la captura de micrófono y verificar que realmente abrió antes de continuar
+    const inicioOk = await iniciarGrabadoraRespaldo();
+    if (!inicioOk) {
+      return;
+    }
+
+    if (modo === "audio") {
+      mostrarToast("🎙️ Grabando nota de audio... habla al micrófono y pulsa Parar al terminar.");
+      // IMPORTANTE: En modo "audio" NO iniciar SpeechRecognition para evitar conflicto con el micrófono en Windows PC
+      return;
+    }
+
+    mostrarToast("🎙 Habla ahora... tu voz se escribirá en Descripción.");
 
     const SpeechRecognition =
       typeof window !== "undefined" &&
       ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
-
-    if (modo === "audio") {
-      await iniciarGrabadoraRespaldo(!SpeechRecognition);
-    } else if (!SpeechRecognition) {
-      await iniciarGrabadoraRespaldo(true);
-      mostrarToast("🎙 Habla ahora... tu voz se convertirá a texto en Descripción.");
-      return;
-    }
 
     if (!SpeechRecognition) {
       return;
@@ -1480,17 +1935,11 @@ export default function InspeccionVehiculo({
 
     try {
       const recognition = new SpeechRecognition();
-      recognition.lang = "es-EC";
+      const navLang = typeof navigator !== "undefined" ? navigator.language : "es-ES";
+      recognition.lang = navLang && navLang.startsWith("es") ? navLang : "es-ES";
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
-
-      recognition.onstart = () => {
-        if (dictandoActivoRef.current) {
-          setEscuchandoVoz(true);
-          mostrarToast("🎙 Escuchando voz a texto... habla al micrófono.");
-        }
-      };
 
       recognition.onresult = (event: any) => {
         let finalStr = "";
@@ -1517,30 +1966,15 @@ export default function InspeccionVehiculo({
       recognition.onerror = (event: any) => {
         const errCode = event?.error || "";
         if (errCode === "no-speech" || errCode === "aborted") {
-          // No cortar el dictado si hay una pausa breve antes de hablar
           return;
         }
-        if (errCode === "language-not-supported" && recognition.lang !== "es-ES") {
-          recognition.lang = "es-ES";
-          return;
-        }
-        if (errCode === "network" || errCode === "service-not-allowed" || errCode === "audio-capture") {
-          // Si el navegador bloquea el servicio web de voz, activar grabadora + transcripción local automática
+        if (errCode === "network" || errCode === "service-not-allowed" || errCode === "audio-capture" || errCode === "language-not-supported") {
           falloRedSpeech = true;
-          if (dictandoActivoRef.current) {
-            iniciarGrabadoraRespaldo(true);
-          }
           return;
-        }
-        if (errCode === "not-allowed") {
-          dictandoActivoRef.current = false;
-          setEscuchandoVoz(false);
-          mostrarToast("Permite el uso del micrófono en el navegador para dictar.", "err");
         }
       };
 
       recognition.onend = () => {
-        // Guardar lo acumulado en esta sesión como base para la siguiente frase
         textoBaseRef.current = observacionTextoRef.current;
         if (dictandoActivoRef.current && !falloRedSpeech) {
           try {
@@ -1552,9 +1986,7 @@ export default function InspeccionVehiculo({
       recognitionRef.current = recognition;
       recognition.start();
     } catch {
-      // Si falla al iniciar SpeechRecognition, usar grabadora con transcripción automática
       falloRedSpeech = true;
-      await iniciarGrabadoraRespaldo(true);
     }
   };
 
@@ -1620,6 +2052,9 @@ export default function InspeccionVehiculo({
       descripcion: "",
       photoUrl: undefined,
       photoUrls: [],
+      audioUrl: undefined,
+      audioUrls: [],
+      linkedItems: [],
     };
     const actualizados = [...hallazgos, nuevoHallazgo];
     setHallazgos(actualizados);
@@ -1627,7 +2062,7 @@ export default function InspeccionVehiculo({
     setTipoSeleccionado(nuevoHallazgo.tipo);
     setObservacionTexto("");
     sincronizarHallazgosNeon(actualizados);
-    mostrarToast(`✓ Nuevo hallazgo añadido al mismo Pin #${mismoPinNumero}.`);
+    mostrarToast(`✓ Nuevo bloque de evidencia creado en Pin #${mismoPinNumero}.`);
   };
 
   // 3. SELECCIÓN DE SISTEMAS Y EVALUACIÓN
@@ -2147,18 +2582,24 @@ ${urlSeguimiento}`;
             onChangeTipo={(nuevoTipo) => handleCambiarTipoPinDirecto(pinActual.id, nuevoTipo)}
             onChangeZona={(nuevaZona) => handleCambiarZonaPin(pinActual.id, nuevaZona)}
             observacionTexto={observacionTexto}
-            onChangeObservacion={(texto) => {
-              setObservacionTexto(texto);
-              handleGuardarDetallePin(pinActual.tipo, texto);
+            onChangeObservacion={(texto, targetId) => {
+              const idUso = targetId || pinActual.id;
+              if (idUso === pinActual.id) setObservacionTexto(texto);
+              const targetObj = hallazgos.find((h) => h.id === idUso) || pinActual;
+              handleGuardarDetallePin(targetObj.tipo, texto, idUso);
             }}
             escuchandoVoz={escuchandoVoz}
-            onToggleVoz={(textoActualDirecto, modo) => handleToggleVozPin(pinActual.id, textoActualDirecto, modo)}
+            transcribiendoVoz={transcribiendoVoz}
+            segundosGrabandoAudio={segundosGrabandoAudio}
+            pinAccionActivaId={pinAccionActivaId}
+            onToggleVoz={(textoActualDirecto, modo, targetId) => handleToggleVozPin(targetId || pinActual.id, textoActualDirecto, modo)}
+            onSubirAudio={(e, targetId) => handleSubirArchivoAudioPinR2(e, targetId || pinActual.id)}
             reproduciendoAudio={reproduciendoAudio}
             onReproducirAudio={handleReproducirAudioTexto}
-            onEliminarAudio={(index) => handleEliminarAudioPin(pinActual.id, index)}
+            onEliminarAudio={(index, targetId) => handleEliminarAudioPin(targetId || pinActual.id, index)}
             subiendoFotos={subiendoFotoPin}
-            onSubirFotos={(e) => handleSubirFotosPinR2(e, pinActual.id)}
-            onEliminarFoto={(idx, e) => handleEliminarFotoPin(pinActual.id, idx, e)}
+            onSubirFotos={(e, targetId) => handleSubirFotosPinR2(e, targetId || pinActual.id)}
+            onEliminarFoto={(idx, e, targetId) => handleEliminarFotoPin(targetId || pinActual.id, idx, e)}
             productosCatalogo={productosCatalogo}
             serviciosCatalogo={serviciosCatalogo}
             onAgregarItemPin={(item) => handleAgregarItemPin(pinActual.id, item)}
@@ -2585,18 +3026,24 @@ ${urlSeguimiento}`;
                 onChangeTipo={(nuevoTipo) => handleCambiarTipoPinDirecto(pinActual.id, nuevoTipo)}
                 onChangeZona={(nuevaZona) => handleCambiarZonaPin(pinActual.id, nuevaZona)}
                 observacionTexto={observacionTexto}
-                onChangeObservacion={(texto) => {
-                  setObservacionTexto(texto);
-                  handleGuardarDetallePin(pinActual.tipo, texto);
+                onChangeObservacion={(texto, targetId) => {
+                  const idUso = targetId || pinActual.id;
+                  if (idUso === pinActual.id) setObservacionTexto(texto);
+                  const targetObj = hallazgos.find((h) => h.id === idUso) || pinActual;
+                  handleGuardarDetallePin(targetObj.tipo, texto, idUso);
                 }}
                 escuchandoVoz={escuchandoVoz}
-                onToggleVoz={(textoActualDirecto, modo) => handleToggleVozPin(pinActual.id, textoActualDirecto, modo)}
+                transcribiendoVoz={transcribiendoVoz}
+                segundosGrabandoAudio={segundosGrabandoAudio}
+                pinAccionActivaId={pinAccionActivaId}
+                onToggleVoz={(textoActualDirecto, modo, targetId) => handleToggleVozPin(targetId || pinActual.id, textoActualDirecto, modo)}
+                onSubirAudio={(e, targetId) => handleSubirArchivoAudioPinR2(e, targetId || pinActual.id)}
                 reproduciendoAudio={reproduciendoAudio}
                 onReproducirAudio={handleReproducirAudioTexto}
-                onEliminarAudio={(index) => handleEliminarAudioPin(pinActual.id, index)}
+                onEliminarAudio={(index, targetId) => handleEliminarAudioPin(targetId || pinActual.id, index)}
                 subiendoFotos={subiendoFotoPin}
-                onSubirFotos={(e) => handleSubirFotosPinR2(e, pinActual.id)}
-                onEliminarFoto={(idx, e) => handleEliminarFotoPin(pinActual.id, idx, e)}
+                onSubirFotos={(e, targetId) => handleSubirFotosPinR2(e, targetId || pinActual.id)}
+                onEliminarFoto={(idx, e, targetId) => handleEliminarFotoPin(targetId || pinActual.id, idx, e)}
                 productosCatalogo={productosCatalogo}
                 serviciosCatalogo={serviciosCatalogo}
                 onAgregarItemPin={(item) => handleAgregarItemPin(pinActual.id, item)}

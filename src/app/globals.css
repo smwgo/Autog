@@ -305,3 +305,15 @@ a.bg-black:hover {
   -webkit-user-drag: none;
 }
 
+/* Ocultar botón de dictar voz en PC (escritorio) y mostrar únicamente en móvil */
+.btn-dictar-solo-movil {
+  display: flex !important;
+}
+
+@media (min-width: 640px) {
+  .btn-dictar-solo-movil {
+    display: none !important;
+  }
+}
+
+
