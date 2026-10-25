@@ -184,6 +184,7 @@ export interface InspectionFinding {
   pinNumber?: number;
   photoUrl?: string;
   photoUrls?: string[];
+  audioUrl?: string;
   capturedAt?: string;
   severidad?: "LEVE" | "MODERADO" | "GRAVE" | string;
   linkedItems?: FindingItemLink[];
@@ -4899,11 +4900,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       aria-pressed={esActivo}
                       className={`snap-start shrink-0 w-full min-h-[68px] px-3 py-2 rounded-xl border text-left flex items-center justify-between gap-3 transition-colors ${
                         esActivo
-                          ? "bg-blue-500/10 border-blue-500/30"
+                          ? "bg-blue-50/80 dark:bg-blue-500/10 border-blue-300 dark:border-blue-500/30 shadow-sm"
                           : "bg-white dark:bg-[#111113] border-zinc-200 dark:border-white/10"
                       }`}
                     >
-                      <span className="relative w-14 h-12 rounded-lg shrink-0 bg-zinc-100 dark:bg-white/5 text-zinc-400 flex items-center justify-center overflow-hidden">
+                      <span className="relative w-14 h-12 rounded-lg shrink-0 bg-blue-100/60 dark:bg-white/5 text-blue-600 dark:text-zinc-400 flex items-center justify-center overflow-hidden border border-blue-200/50 dark:border-transparent">
                         <svg
                           className="w-7 h-7"
                           fill="none"
@@ -4930,7 +4931,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           {nombreVehiculo}
                         </span>
                         <span className="mt-1 flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
-                          <span className="font-mono tracking-wider text-blue-500 dark:text-blue-300 truncate">
+                          <span className="font-mono tracking-wider text-blue-600 dark:text-blue-300 truncate font-semibold">
                             {auto.plate}
                           </span>
                           {anioVehiculo && (
@@ -4957,29 +4958,29 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               <div
                 className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-normal ${
                   ordenActiva.status === "Pausada"
-                    ? "bg-amber-500/10 border-amber-500/25 text-amber-400"
-                    : "bg-emerald-500/10 border-emerald-500/25 text-emerald-400"
+                    ? "bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400"
+                    : "bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-400"
                 }`}
               >
-                <span className="text-zinc-600 dark:text-zinc-300 whitespace-nowrap">
+                <span className="text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
                   Ingreso:{" "}
                   <span
-                    className="text-zinc-900 dark:text-white font-normal"
+                    className="text-zinc-900 dark:text-white font-medium"
                     title={formatearFechaCompleta(ordenActiva.dateIn || ordenActiva.startedAt)}
                   >
                     {formatearFechaIngreso(ordenActiva.dateIn || ordenActiva.startedAt)}
                   </span>
                 </span>
 
-                <span className={ordenActiva.status === "Pausada" ? "text-amber-500/40" : "text-emerald-500/40"}>•</span>
+                <span className={ordenActiva.status === "Pausada" ? "text-amber-500/60" : "text-emerald-500/60"}>•</span>
 
                 {ordenActiva.status === "Pausada" ? (
-                  <span className="inline-flex items-center gap-1.5 text-amber-500 dark:text-amber-400 shrink-0" title="En Pausa">
+                  <span className="inline-flex items-center gap-1.5 text-amber-700 dark:text-amber-400 shrink-0 font-medium" title="En Pausa">
                     <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400 shrink-0" />
                     <span>En Pausa</span>
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 text-emerald-500 dark:text-emerald-400 shrink-0" title="Trabajando">
+                  <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 shrink-0 font-medium" title="Trabajando">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
                     <span>Trabajando</span>
                   </span>

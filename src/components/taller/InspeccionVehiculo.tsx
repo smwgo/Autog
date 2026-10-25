@@ -16,7 +16,7 @@ export interface InspeccionVehiculoProps {
   mostrarToast?: (msg: string, tipo?: "ok" | "err") => void;
 }
 
-type VistaVehiculoId = "frontal" | "trasera" | "lateral_izq" | "lateral_der" | "superior";
+type VistaVehiculoId = "frontal" | "trasera" | "lateral_izq" | "lateral_der" | "superior" | "manual";
 
 export interface InspectionChecklistItem {
   id: string;
@@ -32,7 +32,7 @@ export interface InspectionTemplate {
   items: InspectionChecklistItem[];
 }
 
-export type SeccionInspeccionId = "carroceria" | "motor" | "frenos" | "suspension" | "electrico" | "aire";
+export type SeccionInspeccionId = "carroceria" | "motor" | "frenos" | "suspension" | "electrico" | "aire" | "personalizado";
 
 export interface SeccionInspeccionConfig {
   id: SeccionInspeccionId;
@@ -131,6 +131,13 @@ export const SISTEMAS_INSPECCION: SeccionInspeccionConfig[] = [
       { id: "ac_ventilacion", label: "Soplador, salidas de aire y temperatura de salida", modo: "semaforo" },
     ],
   },
+  {
+    id: "personalizado",
+    name: "Manual / Personalizado",
+    shortName: "Manual",
+    icon: "✏️",
+    description: "Inspección libre con categoría y subcategorías ingresadas manualmente",
+  },
 ];
 
 export const PLANTILLAS_INSPECCION: InspectionTemplate[] = SISTEMAS_INSPECCION
@@ -151,6 +158,7 @@ const SUBCATEGORIAS_SISTEMA: Record<string, { id: string; icon: string }[]> = {
     { id: "Encendido", icon: "⚡" },
     { id: "Escape", icon: "💨" },
     { id: "Soportes", icon: "🔩" },
+    { id: "Manual", icon: "✏️" },
   ],
   frenos: [
     { id: "Pastillas", icon: "🟫" },
@@ -159,6 +167,7 @@ const SUBCATEGORIAS_SISTEMA: Record<string, { id: string; icon: string }[]> = {
     { id: "Calipers", icon: "🔧" },
     { id: "Pedal", icon: "🦶" },
     { id: "Mano", icon: "🅿️" },
+    { id: "Manual", icon: "✏️" },
   ],
   suspension: [
     { id: "Amortiguadores", icon: "🔽" },
@@ -167,6 +176,7 @@ const SUBCATEGORIAS_SISTEMA: Record<string, { id: string; icon: string }[]> = {
     { id: "Terminales", icon: "↔️" },
     { id: "Bujes", icon: "🔩" },
     { id: "Dirección", icon: "🛞" },
+    { id: "Manual", icon: "✏️" },
   ],
   electrico: [
     { id: "Batería", icon: "🔋" },
@@ -175,6 +185,7 @@ const SUBCATEGORIAS_SISTEMA: Record<string, { id: string; icon: string }[]> = {
     { id: "Luces", icon: "💡" },
     { id: "Tablero", icon: "📟" },
     { id: "Fusibles", icon: "🔌" },
+    { id: "Manual", icon: "✏️" },
   ],
   aire: [
     { id: "Compresor", icon: "⚙️" },
@@ -183,6 +194,10 @@ const SUBCATEGORIAS_SISTEMA: Record<string, { id: string; icon: string }[]> = {
     { id: "Fugas", icon: "💧" },
     { id: "Filtro", icon: "🌬️" },
     { id: "Ventilación", icon: "❄️" },
+    { id: "Manual", icon: "✏️" },
+  ],
+  personalizado: [
+    { id: "Manual", icon: "✏️" },
   ],
 };
 
@@ -230,19 +245,19 @@ const ZONAS_SUBCATEGORIA: Record<string, Record<string, { x: number; y: number }
 };
 
 const CHIPS_HALLAZGO = [
-  { id: "Rayón", label: "Rayón", color: "bg-amber-500/20 text-amber-300 border-amber-500/40" },
-  { id: "Golpe", label: "Golpe", color: "bg-rose-500/20 text-rose-300 border-rose-500/40" },
-  { id: "Abolladura", label: "Abolladura", color: "bg-orange-500/20 text-orange-300 border-orange-500/40" },
-  { id: "Fisura", label: "Fisura", color: "bg-purple-500/20 text-purple-300 border-purple-500/40" },
+  { id: "Rayón", label: "Rayón", color: "bg-amber-50 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-500/40" },
+  { id: "Golpe", label: "Golpe", color: "bg-rose-50 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-500/40" },
+  { id: "Abolladura", label: "Abolladura", color: "bg-orange-50 dark:bg-orange-500/20 text-orange-800 dark:text-orange-300 border-orange-300 dark:border-orange-500/40" },
+  { id: "Fisura", label: "Fisura", color: "bg-purple-50 dark:bg-purple-500/20 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-500/40" },
 ];
 
 const CHIPS_HALLAZGO_MECANICO = [
-  { id: "Fuga", label: "Fuga", color: "bg-rose-500/20 text-rose-300 border-rose-500/40" },
-  { id: "Roto", label: "Roto", color: "bg-red-500/20 text-red-300 border-red-500/40" },
-  { id: "Desgaste", label: "Desgaste", color: "bg-amber-500/20 text-amber-300 border-amber-500/40" },
-  { id: "Ruido", label: "Ruido", color: "bg-orange-500/20 text-orange-300 border-orange-500/40" },
-  { id: "Suelto", label: "Suelto", color: "bg-yellow-500/20 text-yellow-300 border-yellow-500/40" },
-  { id: "Sensor/Falla", label: "Sensor/Falla", color: "bg-purple-500/20 text-purple-300 border-purple-500/40" },
+  { id: "Fuga", label: "Fuga", color: "bg-rose-50 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-500/40" },
+  { id: "Roto", label: "Roto", color: "bg-red-50 dark:bg-red-500/20 text-red-800 dark:text-red-300 border-red-300 dark:border-red-500/40" },
+  { id: "Desgaste", label: "Desgaste", color: "bg-amber-50 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-500/40" },
+  { id: "Ruido", label: "Ruido", color: "bg-orange-50 dark:bg-orange-500/20 text-orange-800 dark:text-orange-300 border-orange-300 dark:border-orange-500/40" },
+  { id: "Suelto", label: "Suelto", color: "bg-yellow-50 dark:bg-yellow-500/20 text-yellow-800 dark:text-yellow-300 border-yellow-300 dark:border-yellow-500/40" },
+  { id: "Sensor/Falla", label: "Sensor/Falla", color: "bg-purple-50 dark:bg-purple-500/20 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-500/40" },
 ];
 
 const VISTAS_CARROCERIA: { id: VistaVehiculoId; label: string; icon: React.ReactNode }[] = [
@@ -300,6 +315,15 @@ const VISTAS_CARROCERIA: { id: VistaVehiculoId; label: string; icon: React.React
       </svg>
     ),
   },
+  {
+    id: "manual",
+    label: "6. Manual",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+      </svg>
+    ),
+  },
 ];
 
 export default function InspeccionVehiculo({
@@ -319,6 +343,19 @@ export default function InspeccionVehiculo({
     suspension: SUBCATEGORIAS_SISTEMA.suspension[0].id,
     electrico: SUBCATEGORIAS_SISTEMA.electrico[0].id,
     aire: SUBCATEGORIAS_SISTEMA.aire[0].id,
+    personalizado: "Manual",
+  });
+  // Estados para inputs manuales / personalizados
+  const [nombreManualCategoria, setNombreManualCategoria] = useState<string>("");
+  const [nombreManualSubcategoria, setNombreManualSubcategoria] = useState<string>("");
+  const [subcategoriaManualCarroceria, setSubcategoriaManualCarroceria] = useState<string>("");
+  const [subcategoriaManualPorSistema, setSubcategoriaManualPorSistema] = useState<Record<string, string>>({
+    motor: "",
+    frenos: "",
+    suspension: "",
+    electrico: "",
+    aire: "",
+    personalizado: "",
   });
   const vistaCarouselRef = useRef<HTMLDivElement | null>(null);
   const ultimoToquePinRef = useRef(0);
@@ -368,12 +405,23 @@ export default function InspeccionVehiculo({
   const [escuchandoVoz, setEscuchandoVoz] = useState(false);
   const [reproduciendoAudio, setReproduciendoAudio] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioStreamRef = useRef<MediaStream | null>(null);
 
-  // Cleanup de audio Text-to-Speech
+  // Cleanup de audio Text-to-Speech y grabación de voz
   useEffect(() => {
     return () => {
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         window.speechSynthesis.cancel();
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        try {
+          mediaRecorderRef.current.stop();
+        } catch {}
+      }
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach((t) => t.stop());
       }
     };
   }, []);
@@ -559,18 +607,32 @@ export default function InspeccionVehiculo({
     const nuevoPinNumero = maxNum + 1;
 
     const esCarroceria = seccionActiva === "carroceria";
+    const esPersonalizado = seccionActiva === "personalizado";
     const vistaDestino = esCarroceria ? vistaActiva : (seccionActiva as any);
-    const vistaLabel = esCarroceria
-      ? (vistaActiva === "frontal"
-          ? "Frontal"
-          : vistaActiva === "trasera"
-          ? "Trasera"
-          : vistaActiva === "lateral_izq"
-          ? "Lateral Izq"
-          : vistaActiva === "lateral_der"
-          ? "Lateral Der"
-          : "Superior")
-      : (seccionActiva === "motor"
+
+    let vistaLabel = "";
+    if (esPersonalizado) {
+      vistaLabel = nombreManualCategoria.trim() || "Manual";
+    } else if (esCarroceria) {
+      if (vistaActiva === "manual") {
+        vistaLabel = subcategoriaManualCarroceria.trim()
+          ? `Carrocería · ${subcategoriaManualCarroceria.trim()}`
+          : "Carrocería · Manual";
+      } else {
+        vistaLabel =
+          vistaActiva === "frontal"
+            ? "Frontal"
+            : vistaActiva === "trasera"
+            ? "Trasera"
+            : vistaActiva === "lateral_izq"
+            ? "Lateral Izq"
+            : vistaActiva === "lateral_der"
+            ? "Lateral Der"
+            : "Superior";
+      }
+    } else {
+      vistaLabel =
+        seccionActiva === "motor"
           ? "Motor"
           : seccionActiva === "frenos"
           ? "Frenos"
@@ -578,7 +640,28 @@ export default function InspeccionVehiculo({
           ? "Suspensión"
           : seccionActiva === "aire"
           ? "Aire Acondicionado"
-          : "Eléctrico");
+          : "Eléctrico";
+    }
+
+    let zonaCalculada = vistaLabel;
+    if (esPersonalizado) {
+      const sub = nombreManualSubcategoria.trim() || "Manual";
+      zonaCalculada = `${vistaLabel} · ${sub}`;
+    } else if (esCarroceria) {
+      if (vistaActiva === "manual" && subcategoriaManualCarroceria.trim()) {
+        zonaCalculada = `Carrocería · ${subcategoriaManualCarroceria.trim()}`;
+      } else {
+        zonaCalculada = vistaLabel;
+      }
+    } else {
+      const subActual = subCategoriaPorSistema[seccionActiva];
+      if (subActual === "Manual") {
+        const subManual = subcategoriaManualPorSistema[seccionActiva]?.trim() || "Manual";
+        zonaCalculada = `${vistaLabel} · ${subManual}`;
+      } else if (subActual) {
+        zonaCalculada = `${vistaLabel} · ${subActual}`;
+      }
+    }
 
     const tipoDefault = esCarroceria ? "Rayón" : (seccionActiva === "motor" ? "Fuga" : "Desgaste");
 
@@ -588,9 +671,7 @@ export default function InspeccionVehiculo({
       vistaLabel: vistaLabel,
       x: xPct,
       y: yPct,
-      zona: !esCarroceria && SUBCATEGORIAS_SISTEMA[seccionActiva]
-        ? `${vistaLabel} · ${subCategoriaPorSistema[seccionActiva]}`
-        : `${vistaLabel}`,
+      zona: zonaCalculada,
       tipo: tipoDefault,
       descripcion: "",
       pinNumber: nuevoPinNumero,
@@ -610,6 +691,20 @@ export default function InspeccionVehiculo({
 
   const pinActual = hallazgos.find((h) => h.id === pinSeleccionadoId) || null;
   const debounceSyncPinRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleCambiarZonaPin = (pinId: string, nuevaZona: string) => {
+    const actualizados = hallazgos.map((h) => {
+      if (h.id === pinId) {
+        return { ...h, zona: nuevaZona };
+      }
+      return h;
+    });
+    setHallazgos(actualizados);
+    if (debounceSyncPinRef.current) clearTimeout(debounceSyncPinRef.current);
+    debounceSyncPinRef.current = setTimeout(() => {
+      sincronizarHallazgosNeon(actualizados);
+    }, 450);
+  };
 
   const handleGuardarDetallePin = (tipo: string, obs?: string) => {
     if (!pinSeleccionadoId) return;
@@ -987,29 +1082,101 @@ export default function InspeccionVehiculo({
     mostrarToast("Foto eliminada.");
   };
 
-  // DICTADO POR VOZ (AUDIO A TEXTO) DIRECTO EN LA OBSERVACIÓN
+  // DICTADO POR VOZ (AUDIO A TEXTO) Y GRABACIÓN DE AUDIO REAL EN CLOUDFLARE R2
   const handleToggleVozPin = (targetPinId: string) => {
-    if (escuchandoVoz && recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {}
+    if (escuchandoVoz) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        try {
+          mediaRecorderRef.current.stop();
+        } catch {}
+      }
       setEscuchandoVoz(false);
       return;
     }
 
+    const pinObjetivo = hallazgos.find((h) => h.id === targetPinId);
+    const textoPrevio = (observacionTexto || pinObjetivo?.descripcion || "").trim();
+
+    // 1. Iniciar grabación física de audio con MediaRecorder para guardar el archivo en R2
+    try {
+      if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+        navigator.mediaDevices
+          .getUserMedia({ audio: true })
+          .then((stream) => {
+            audioStreamRef.current = stream;
+            const recorder = new MediaRecorder(stream);
+            audioChunksRef.current = [];
+            recorder.ondataavailable = (ev) => {
+              if (ev.data && ev.data.size > 0) {
+                audioChunksRef.current.push(ev.data);
+              }
+            };
+            recorder.onstop = async () => {
+              stream.getTracks().forEach((track) => track.stop());
+              const mime = recorder.mimeType || "audio/webm";
+              const audioBlob = new Blob(audioChunksRef.current, { type: mime });
+              if (audioBlob.size > 500) {
+                try {
+                  const formData = new FormData();
+                  const ext = mime.includes("mp4") ? "mp4" : "webm";
+                  formData.append(
+                    "file",
+                    audioBlob,
+                    `audio_${targetPinId}_${Date.now()}.${ext}`
+                  );
+                  formData.append("folder", "taller_notas_voz");
+                  formData.append("tipo", "audio");
+                  if (ordenActiva?.id) formData.append("orderId", ordenActiva.id);
+                  if (ordenActiva?.orderNumber) formData.append("orderNumber", ordenActiva.orderNumber);
+                  if (ordenActiva?.plate) formData.append("plate", ordenActiva.plate);
+                  formData.append("uploadedBy", ordenActiva?.mechanic || "Taller Mecánico");
+
+                  const res = await fetch("/api/storage/upload", {
+                    method: "POST",
+                    body: formData,
+                  });
+                  const data = await res.json();
+                  if (data.success && data.url) {
+                    setHallazgos((prev) => {
+                      const actualizados = prev.map((h) =>
+                        h.id === targetPinId ? { ...h, audioUrl: data.url } : h
+                      );
+                      sincronizarHallazgosNeon(actualizados);
+                      return actualizados;
+                    });
+                    mostrarToast("✓ Audio grabado y guardado correctamente.");
+                  }
+                } catch {
+                  // Silently ignore upload failure
+                }
+              }
+            };
+            mediaRecorderRef.current = recorder;
+            recorder.start();
+          })
+          .catch(() => {
+            // Permiso denegado o no soportado
+          });
+      }
+    } catch {}
+
+    // 2. Iniciar SpeechRecognition si está soportado en este navegador
     const SpeechRecognition =
       typeof window !== "undefined" &&
       ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
     if (!SpeechRecognition) {
-      mostrarToast("Tu navegador no soporta dictado por voz. Escribe en el recuadro.", "err");
+      setEscuchandoVoz(true);
+      mostrarToast("🎙 Grabando nota de voz al pin...", "ok");
       return;
     }
 
     try {
-      const pinObjetivo = hallazgos.find((h) => h.id === targetPinId);
-      const textoPrevio = (observacionTexto || pinObjetivo?.descripcion || "").trim();
-
       const recognition = new SpeechRecognition();
       recognition.lang = "es-EC";
       recognition.continuous = true;
@@ -1037,6 +1204,11 @@ export default function InspeccionVehiculo({
 
       recognition.onerror = (event: any) => {
         setEscuchandoVoz(false);
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+          try {
+            mediaRecorderRef.current.stop();
+          } catch {}
+        }
         if (event.error !== "no-speech" && event.error !== "aborted") {
           mostrarToast(`Micrófono: ${event.error}`, "err");
         }
@@ -1044,14 +1216,33 @@ export default function InspeccionVehiculo({
 
       recognition.onend = () => {
         setEscuchandoVoz(false);
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+          try {
+            mediaRecorderRef.current.stop();
+          } catch {}
+        }
       };
 
       recognitionRef.current = recognition;
       recognition.start();
-    } catch (err) {
-      setEscuchandoVoz(false);
-      mostrarToast("No se pudo iniciar el micrófono.", "err");
+    } catch {
+      setEscuchandoVoz(true);
     }
+  };
+
+  const handleEliminarAudioPin = (targetPinId: string) => {
+    const actualizados = hallazgos.map((h) => {
+      if (h.id === targetPinId) {
+        return {
+          ...h,
+          audioUrl: undefined,
+        };
+      }
+      return h;
+    });
+    setHallazgos(actualizados);
+    sincronizarHallazgosNeon(actualizados);
+    mostrarToast("Audio eliminado.");
   };
 
   // COMBINAR O CAMBIAR MÚLTIPLES TIPOS DE PROBLEMA EN EL MISMO PIN
@@ -1228,14 +1419,14 @@ ${urlSeguimiento}`;
         <div
           ref={seccionCarouselRef}
           onScroll={handleSeccionScroll}
-          className="flex sm:grid sm:grid-cols-6 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
+          className="flex sm:grid sm:grid-cols-7 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
         >
           {SISTEMAS_INSPECCION.map((sis) => {
             const active = seccionActiva === sis.id;
             let badge = null;
             if (sis.id === "carroceria") {
               const cantCarroceria = hallazgos.filter((h) =>
-                ["frontal", "trasera", "lateral_izq", "lateral_der", "superior"].includes(h.vista)
+                ["frontal", "trasera", "lateral_izq", "lateral_der", "superior", "manual"].includes(h.vista)
               ).length;
               if (cantCarroceria > 0) {
                 badge = (
@@ -1298,13 +1489,13 @@ ${urlSeguimiento}`;
         <div className="space-y-3 animate-fade-in">
 
       {/* ===================================================================
-          1. ESQUEMA INTERACTIVO EN 5 VISTAS CON PINES NUMERADOS (1, 2, 3...)
+          1. ESQUEMA INTERACTIVO EN 5 VISTAS + VISTA MANUAL CON PINES NUMERADOS
           =================================================================== */}
       <div className="space-y-1.5 pb-1">
         <div
           ref={vistaCarouselRef}
           onScroll={handleVistaScroll}
-          className="flex sm:grid sm:grid-cols-5 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
+          className="flex sm:grid sm:grid-cols-6 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
         >
           {VISTAS_CARROCERIA.map((v) => {
             const active = vistaActiva === v.id;
@@ -1337,6 +1528,25 @@ ${urlSeguimiento}`;
           })}
         </div>
 
+        {/* Input para ingresar la subcategoría manual de Carrocería */}
+        {vistaActiva === "manual" && (
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 p-3 sm:p-3.5 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 animate-fade-in">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-sm">✏️</span>
+              <label className="text-xs sm:text-sm font-normal text-zinc-500 dark:text-zinc-400">
+                Subcategoría:
+              </label>
+            </div>
+            <input
+              type="text"
+              value={subcategoriaManualCarroceria}
+              onChange={(e) => setSubcategoriaManualCarroceria(e.target.value)}
+              placeholder="Ej: Techo solar"
+              className="flex-1 h-11 sm:h-12 px-4 text-sm font-medium rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 shadow-sm"
+            />
+          </div>
+        )}
+
         {/* Puntos de paginación solo en móvil para ver la vista y deslizar */}
         <div className="flex sm:hidden items-center justify-center gap-1.5 pt-0.5">
           {VISTAS_CARROCERIA.map((v) => (
@@ -1368,7 +1578,7 @@ ${urlSeguimiento}`;
           className={`relative w-full h-72 sm:h-96 rounded-xl border flex items-center justify-center overflow-hidden group transition-all ${
             lienzoOscuro
               ? "bg-slate-950 border-cyan-500/30 shadow-[0_0_35px_rgba(6,182,212,0.12)]"
-              : "bg-slate-50 border-zinc-300 shadow-inner bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:20px_20px]"
+              : "bg-slate-50 border-slate-300/80 shadow-[inset_0_2px_12px_rgba(0,0,0,0.03)] bg-[radial-gradient(#94a3b8_1.2px,transparent_1.2px)] [background-size:22px_22px]"
           } ${
             modoColocandoPin || pinReubicandoId
               ? "ring-2 ring-cyan-500/40 cursor-crosshair !border-cyan-500"
@@ -1386,7 +1596,7 @@ ${urlSeguimiento}`;
             className={`absolute top-2.5 right-2.5 z-30 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all flex items-center gap-1.5 cursor-pointer backdrop-blur-md shadow-md ${
               lienzoOscuro
                 ? "bg-slate-900/85 hover:bg-slate-800 border-cyan-500/40 text-cyan-300"
-                : "bg-white/95 hover:bg-zinc-100 border-zinc-300 text-zinc-700 shadow-sm"
+                : "bg-white/95 hover:bg-zinc-100 border-zinc-300 text-zinc-800 shadow-sm"
             }`}
           >
             <span>{lienzoOscuro ? "🌙 Neón 3D" : "☀️ Plano CAD"}</span>
@@ -1394,7 +1604,7 @@ ${urlSeguimiento}`;
 
           {/* Banner de modo colocación de nuevo Pin */}
           {modoColocandoPin && (
-            <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-1.5 rounded-xl bg-cyan-950/95 border border-cyan-400 text-cyan-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
+            <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-1.5 rounded-xl bg-cyan-700/95 dark:bg-cyan-950/95 border border-cyan-400 text-white dark:text-cyan-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-mono font-bold flex items-center justify-center text-[10px] shrink-0">
                   #{proximoPinNumero}
@@ -1416,7 +1626,7 @@ ${urlSeguimiento}`;
 
           {/* Banner de reubicación de Pin existente */}
           {pinReubicandoId && (
-            <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-1.5 rounded-xl bg-amber-950/95 border border-amber-400 text-amber-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
+            <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-1.5 rounded-xl bg-amber-600/95 dark:bg-amber-950/95 border border-amber-400 text-white dark:text-amber-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
               <span className="font-semibold text-xs truncate">📍 Reubicar Pin</span>
               <button
                 type="button"
@@ -1443,10 +1653,10 @@ ${urlSeguimiento}`;
             <img
               src={
                 vistaActiva === "trasera" || vistaActiva === "lateral_der"
-                  ? "/images/inspeccion/auto_3d_trasera.jpg"
+                  ? (lienzoOscuro ? "/images/inspeccion/auto_3d_trasera.jpg" : "/images/inspeccion/auto_3d_trasera_cad.png")
                   : vistaActiva === "superior"
-                  ? "/images/inspeccion/auto_3d_superior.jpg"
-                  : "/images/inspeccion/auto_3d_frontal.jpg"
+                  ? (lienzoOscuro ? "/images/inspeccion/auto_3d_superior.jpg" : "/images/inspeccion/auto_3d_superior_cad.png")
+                  : (lienzoOscuro ? "/images/inspeccion/auto_3d_frontal.jpg" : "/images/inspeccion/auto_3d_frontal_cad.png")
               }
               alt={`Vehículo 3D ${vistaActiva}`}
               loading="eager"
@@ -1460,12 +1670,10 @@ ${urlSeguimiento}`;
                 setImagenError(true);
               }}
               style={{
-                filter: lienzoOscuro
-                  ? "none"
-                  : "invert(1) hue-rotate(180deg) contrast(1.25) brightness(1.02)",
-                mixBlendMode: lienzoOscuro ? "normal" : "multiply",
+                filter: "none",
+                mixBlendMode: "normal",
               }}
-              className="max-w-full max-h-full w-auto h-auto object-contain select-none transition-all duration-300 inspeccion-wireframe-img"
+              className="max-w-full max-h-full w-auto h-auto object-contain select-none transition-all duration-300 inspeccion-wireframe-img drop-shadow-sm"
             />
           </div>
 
@@ -1598,6 +1806,7 @@ ${urlSeguimiento}`;
             tipoSeleccionado={tipoSeleccionado}
             onToggleTipo={(tipoId) => handleToggleTipoPin(pinActual.id, tipoId)}
             onChangeTipo={(nuevoTipo) => handleCambiarTipoPinDirecto(pinActual.id, nuevoTipo)}
+            onChangeZona={(nuevaZona) => handleCambiarZonaPin(pinActual.id, nuevaZona)}
             observacionTexto={observacionTexto}
             onChangeObservacion={(texto) => {
               setObservacionTexto(texto);
@@ -1607,6 +1816,7 @@ ${urlSeguimiento}`;
             onToggleVoz={() => handleToggleVozPin(pinActual.id)}
             reproduciendoAudio={reproduciendoAudio}
             onReproducirAudio={handleReproducirAudioTexto}
+            onEliminarAudio={() => handleEliminarAudioPin(pinActual.id)}
             subiendoFotos={subiendoFotoPin}
             onSubirFotos={(e) => handleSubirFotosPinR2(e, pinActual.id)}
             onEliminarFoto={(idx, e) => handleEliminarFotoPin(pinActual.id, idx, e)}
@@ -1646,52 +1856,113 @@ ${urlSeguimiento}`;
 
         return (
           <>
-            {SUBCATEGORIAS_SISTEMA[seccionActiva] && (
-              <div className="space-y-1.5 pb-1">
-                <div className="flex sm:grid sm:grid-cols-6 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar touch-pan-x">
-                  {SUBCATEGORIAS_SISTEMA[seccionActiva].map((sub, idx) => {
-                    const activa = subCategoriaPorSistema[seccionActiva] === sub.id;
-                    const cantSub = hallazgos.filter(
-                      (h) => h.vista === seccionActiva && (h.zona || "").endsWith(`· ${sub.id}`)
-                    ).length;
-                    return (
+            {seccionActiva === "personalizado" ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-3.5 sm:p-4 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 animate-fade-in">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm">📁</span>
+                    <label className="text-xs sm:text-sm font-normal text-zinc-500 dark:text-zinc-400">
+                      Categoría:
+                    </label>
+                  </div>
+                  <input
+                    type="text"
+                    value={nombreManualCategoria}
+                    onChange={(e) => setNombreManualCategoria(e.target.value)}
+                    placeholder="Ej: Transmisión"
+                    className="w-full h-11 sm:h-12 px-4 text-sm font-medium rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 shadow-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm">✏️</span>
+                    <label className="text-xs sm:text-sm font-normal text-zinc-500 dark:text-zinc-400">
+                      Subcategoría:
+                    </label>
+                  </div>
+                  <input
+                    type="text"
+                    value={nombreManualSubcategoria}
+                    onChange={(e) => setNombreManualSubcategoria(e.target.value)}
+                    placeholder="Ej: Embrague"
+                    className="w-full h-11 sm:h-12 px-4 text-sm font-medium rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 shadow-sm"
+                  />
+                </div>
+              </div>
+            ) : (
+              SUBCATEGORIAS_SISTEMA[seccionActiva] && (
+                <div className="space-y-2 pb-1">
+                  <div className="flex sm:grid sm:grid-cols-7 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar touch-pan-x">
+                    {SUBCATEGORIAS_SISTEMA[seccionActiva].map((sub, idx) => {
+                      const activa = subCategoriaPorSistema[seccionActiva] === sub.id;
+                      const cantSub = hallazgos.filter(
+                        (h) => h.vista === seccionActiva && (
+                          sub.id === "Manual"
+                            ? (h.zona || "").includes("·") && !SUBCATEGORIAS_SISTEMA[seccionActiva].some((s) => s.id !== "Manual" && (h.zona || "").endsWith(`· ${s.id}`))
+                            : (h.zona || "").endsWith(`· ${sub.id}`)
+                        )
+                      ).length;
+                      return (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          onClick={() => setSubCategoriaPorSistema((prev) => ({ ...prev, [seccionActiva]: sub.id }))}
+                          className={`h-11 sm:h-12 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shrink-0 px-3 sm:px-0 w-full min-w-full sm:min-w-0 sm:w-auto snap-center ${
+                            activa
+                              ? "bg-purple-50 dark:bg-purple-500/20 border-purple-400 dark:border-purple-500/40 text-purple-700 dark:text-purple-300 shadow-sm"
+                              : "bg-white dark:bg-white/[0.02] hover:bg-zinc-50 dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 shadow-sm dark:shadow-none"
+                          }`}
+                        >
+                          <div className="p-1 rounded-md bg-zinc-100 dark:bg-white/5 text-sm leading-none">{sub.icon}</div>
+                          <span className="text-sm sm:text-xs font-semibold">
+                            {idx + 1}. {sub.id}
+                          </span>
+                          {cantSub > 0 && (
+                            <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+                              {cantSub}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex sm:hidden items-center justify-center gap-1.5 pt-0.5">
+                    {SUBCATEGORIAS_SISTEMA[seccionActiva].map((sub) => (
                       <button
                         key={sub.id}
                         type="button"
                         onClick={() => setSubCategoriaPorSistema((prev) => ({ ...prev, [seccionActiva]: sub.id }))}
-                        className={`h-11 sm:h-12 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shrink-0 px-3 sm:px-0 w-full min-w-full sm:min-w-0 sm:w-auto snap-center ${
-                          activa
-                            ? "bg-purple-50 dark:bg-purple-500/20 border-purple-400 dark:border-purple-500/40 text-purple-700 dark:text-purple-300 shadow-sm"
-                            : "bg-white dark:bg-white/[0.02] hover:bg-zinc-50 dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 shadow-sm dark:shadow-none"
+                        aria-label={`Ir a ${sub.id}`}
+                        className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                          subCategoriaPorSistema[seccionActiva] === sub.id ? "w-5 bg-purple-500" : "w-1.5 bg-zinc-300 dark:bg-white/20"
                         }`}
-                      >
-                        <div className="p-1 rounded-md bg-zinc-100 dark:bg-white/5 text-sm leading-none">{sub.icon}</div>
-                        <span className="text-sm sm:text-xs font-semibold">
-                          {idx + 1}. {sub.id}
-                        </span>
-                        {cantSub > 0 && (
-                          <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
-                            {cantSub}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Input de subcategoría manual cuando se selecciona "Manual" */}
+                  {subCategoriaPorSistema[seccionActiva] === "Manual" && (
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 p-3 sm:p-3.5 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 animate-fade-in">
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-sm">✏️</span>
+                        <label className="text-xs sm:text-sm font-normal text-zinc-500 dark:text-zinc-400">
+                          Subcategoría:
+                        </label>
+                      </div>
+                      <input
+                        type="text"
+                        value={subcategoriaManualPorSistema[seccionActiva] || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSubcategoriaManualPorSistema((prev) => ({ ...prev, [seccionActiva]: val }));
+                        }}
+                        placeholder="Ej: Inyectores"
+                        className="flex-1 h-11 sm:h-12 px-4 text-sm font-medium rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 shadow-sm"
+                      />
+                    </div>
+                  )}
                 </div>
-                <div className="flex sm:hidden items-center justify-center gap-1.5 pt-0.5">
-                  {SUBCATEGORIAS_SISTEMA[seccionActiva].map((sub) => (
-                    <button
-                      key={sub.id}
-                      type="button"
-                      onClick={() => setSubCategoriaPorSistema((prev) => ({ ...prev, [seccionActiva]: sub.id }))}
-                      aria-label={`Ir a ${sub.id}`}
-                      className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                        subCategoriaPorSistema[seccionActiva] === sub.id ? "w-5 bg-purple-500" : "w-1.5 bg-zinc-300 dark:bg-white/20"
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
+              )
             )}
             {cantPinesSis > 0 && (
               <div className="flex items-center justify-end pb-1">
@@ -1710,7 +1981,7 @@ ${urlSeguimiento}`;
               className={`relative w-full h-72 sm:h-96 rounded-xl border flex items-center justify-center overflow-hidden group transition-all ${
                 lienzoOscuro
                   ? "bg-slate-950 border-cyan-500/30 shadow-[0_0_35px_rgba(6,182,212,0.12)]"
-                  : "bg-slate-50 border-zinc-300 shadow-inner bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:20px_20px]"
+                  : "bg-slate-50 border-slate-300/80 shadow-[inset_0_2px_12px_rgba(0,0,0,0.03)] bg-[radial-gradient(#94a3b8_1.2px,transparent_1.2px)] [background-size:22px_22px]"
               } ${
                 modoColocandoPin || pinReubicandoId
                   ? "ring-2 ring-cyan-500/40 cursor-crosshair !border-cyan-500"
@@ -1728,7 +1999,7 @@ ${urlSeguimiento}`;
                 className={`absolute top-2.5 right-2.5 z-30 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all flex items-center gap-1.5 cursor-pointer backdrop-blur-md shadow-md ${
                   lienzoOscuro
                     ? "bg-slate-900/85 hover:bg-slate-800 border-cyan-500/40 text-cyan-300"
-                    : "bg-white/95 hover:bg-zinc-100 border-zinc-300 text-zinc-700 shadow-sm"
+                    : "bg-white/95 hover:bg-zinc-100 border-zinc-300 text-zinc-800 shadow-sm"
                 }`}
               >
                 <span>{lienzoOscuro ? "🌙 Neón 3D" : "☀️ Plano CAD"}</span>
@@ -1736,7 +2007,7 @@ ${urlSeguimiento}`;
 
               {/* Banner de modo colocación de nuevo Pin */}
               {modoColocandoPin && (
-                <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-1.5 rounded-xl bg-cyan-950/95 border border-cyan-400 text-cyan-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
+                <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-1.5 rounded-xl bg-cyan-700/95 dark:bg-cyan-950/95 border border-cyan-400 text-white dark:text-cyan-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-mono font-bold flex items-center justify-center text-[10px] shrink-0">
                       #{proximoPinNumero}
@@ -1758,7 +2029,7 @@ ${urlSeguimiento}`;
 
               {/* Banner de reubicación de Pin existente */}
               {pinReubicandoId && (
-                <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-1.5 rounded-xl bg-amber-950/95 border border-amber-400 text-amber-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
+                <div className="absolute top-2 inset-x-2 z-30 flex items-center justify-between px-3 py-1.5 rounded-xl bg-amber-600/95 dark:bg-amber-950/95 border border-amber-400 text-white dark:text-amber-200 text-xs shadow-xl backdrop-blur-md animate-pulse">
                   <span className="font-semibold text-xs truncate">📍 Reubicar Pin</span>
                   <button
                     type="button"
@@ -1785,12 +2056,14 @@ ${urlSeguimiento}`;
                 <img
                   src={
                     seccionActiva === "frenos"
-                      ? "/images/inspeccion/auto_3d_frenos.jpg"
+                      ? (lienzoOscuro ? "/images/inspeccion/auto_3d_frenos.jpg" : "/images/inspeccion/auto_3d_frenos_cad.png")
                       : seccionActiva === "suspension"
-                      ? "/images/inspeccion/auto_3d_suspension.jpg"
+                      ? (lienzoOscuro ? "/images/inspeccion/auto_3d_suspension.jpg" : "/images/inspeccion/auto_3d_suspension_cad.png")
                       : seccionActiva === "electrico"
-                      ? "/images/inspeccion/auto_3d_electrico.jpg"
-                      : "/images/inspeccion/auto_3d_motor.jpg"
+                      ? (lienzoOscuro ? "/images/inspeccion/auto_3d_electrico.jpg" : "/images/inspeccion/auto_3d_electrico_cad.png")
+                      : seccionActiva === "personalizado"
+                      ? (lienzoOscuro ? "/images/inspeccion/auto_3d_superior.jpg" : "/images/inspeccion/auto_3d_superior_cad.png")
+                      : (lienzoOscuro ? "/images/inspeccion/auto_3d_motor.jpg" : "/images/inspeccion/auto_3d_motor_cad.png")
                   }
                   alt={`${sistemaActual.name} 3D`}
                   loading="eager"
@@ -1804,12 +2077,10 @@ ${urlSeguimiento}`;
                     setImagenError(true);
                   }}
                   style={{
-                    filter: lienzoOscuro
-                      ? "none"
-                      : "invert(1) hue-rotate(180deg) contrast(1.25) brightness(1.02)",
-                    mixBlendMode: lienzoOscuro ? "normal" : "multiply",
+                    filter: "none",
+                    mixBlendMode: "normal",
                   }}
-                  className="max-w-full max-h-full w-auto h-auto object-contain select-none transition-all duration-300 inspeccion-wireframe-img"
+                  className="max-w-full max-h-full w-auto h-auto object-contain select-none transition-all duration-300 inspeccion-wireframe-img drop-shadow-sm"
                 />
               </div>
 
@@ -1964,14 +2235,15 @@ ${urlSeguimiento}`;
               </button>
             </div>
 
-            {/* DETALLE MODERNO PARA PINES DEL SISTEMA MECÁNICO */}
+            {/* DETALLE MODERNO PARA PINES DEL SISTEMA MECÁNICO O PERSONALIZADO */}
             {popoverAbierto && pinActual && pinActual.vista === seccionActiva && (
               <DetallePinModerno
                 pin={pinActual}
-                chipsTipos={CHIPS_HALLAZGO_MECANICO}
+                chipsTipos={seccionActiva === "personalizado" ? [...CHIPS_HALLAZGO_MECANICO, ...CHIPS_HALLAZGO] : CHIPS_HALLAZGO_MECANICO}
                 tipoSeleccionado={tipoSeleccionado}
                 onToggleTipo={(tipoId) => handleToggleTipoPin(pinActual.id, tipoId)}
                 onChangeTipo={(nuevoTipo) => handleCambiarTipoPinDirecto(pinActual.id, nuevoTipo)}
+                onChangeZona={(nuevaZona) => handleCambiarZonaPin(pinActual.id, nuevaZona)}
                 observacionTexto={observacionTexto}
                 onChangeObservacion={(texto) => {
                   setObservacionTexto(texto);
@@ -1981,6 +2253,7 @@ ${urlSeguimiento}`;
                 onToggleVoz={() => handleToggleVozPin(pinActual.id)}
                 reproduciendoAudio={reproduciendoAudio}
                 onReproducirAudio={handleReproducirAudioTexto}
+                onEliminarAudio={() => handleEliminarAudioPin(pinActual.id)}
                 subiendoFotos={subiendoFotoPin}
                 onSubirFotos={(e) => handleSubirFotosPinR2(e, pinActual.id)}
                 onEliminarFoto={(idx, e) => handleEliminarFotoPin(pinActual.id, idx, e)}
@@ -2217,7 +2490,7 @@ ${urlSeguimiento}`;
               <button
                 type="button"
                 onClick={() => setModalPdfAbierto(false)}
-                className="h-10 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-zinc-300 transition-all cursor-pointer"
+                className="h-10 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10 transition-all cursor-pointer"
               >
                 Cerrar
               </button>
@@ -2225,7 +2498,7 @@ ${urlSeguimiento}`;
               <button
                 type="button"
                 onClick={handleEnviarReporteWhatsApp}
-                className="h-10 px-5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-2 active:scale-95"
+                className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 dark:border dark:border-emerald-500/40 dark:text-emerald-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-2 active:scale-95 shadow-sm"
               >
                 <span>💬 WhatsApp</span>
               </button>
@@ -2235,7 +2508,7 @@ ${urlSeguimiento}`;
                 onClick={() => {
                   if (typeof window !== "undefined") window.print();
                 }}
-                className="h-10 px-6 rounded-xl bg-purple-500 hover:bg-purple-400 text-black text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shadow-lg shadow-purple-500/20 active:scale-95"
+                className="h-10 px-6 rounded-xl bg-purple-600 hover:bg-purple-500 text-white dark:bg-purple-500 dark:hover:bg-purple-400 dark:text-black text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shadow-lg shadow-purple-600/20 active:scale-95"
               >
                 <span>🖨️ PDF</span>
               </button>
@@ -2252,7 +2525,7 @@ ${urlSeguimiento}`;
           <button
             type="button"
             onClick={onVolver}
-            className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-zinc-300 transition-all cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10 transition-all cursor-pointer"
           >
             ← Anterior
           </button>
@@ -2262,7 +2535,7 @@ ${urlSeguimiento}`;
           <button
             type="button"
             onClick={onContinuar}
-            className="px-4 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 text-xs font-semibold transition-all cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white dark:bg-purple-500/20 dark:hover:bg-purple-500/30 dark:border dark:border-purple-500/40 dark:text-purple-300 text-xs font-bold transition-all cursor-pointer shadow-sm"
           >
             Siguiente →
           </button>

@@ -300,13 +300,8 @@ a.bg-black:hover {
 
 /* Adaptación de gráficos 3D e inspección vehicular para Modo Claro y Oscuro */
 .inspeccion-wireframe-img {
-  filter: invert(1) hue-rotate(180deg) contrast(1.25) brightness(1.02);
-  mix-blend-mode: multiply;
-  transition: filter 0.3s ease, mix-blend-mode 0.3s ease;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
-:is(.dark) .inspeccion-wireframe-img,
-:where(.dark, .dark *) .inspeccion-wireframe-img {
-  filter: none !important;
-  mix-blend-mode: normal !important;
-}
