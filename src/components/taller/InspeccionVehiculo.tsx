@@ -390,9 +390,18 @@ export default function InspeccionVehiculo({
       }
     }
   }, [vistaActiva]);
-  const [hallazgos, setHallazgos] = useState<InspectionFinding[]>(
-    ordenActiva?.inspectionFindings || []
-  );
+  const [hallazgos, setHallazgos] = useState<InspectionFinding[]>(() => {
+    if (Array.isArray(ordenActiva?.inspectionFindings) && ordenActiva.inspectionFindings.length > 0) {
+      return ordenActiva.inspectionFindings;
+    }
+    if (ordenActiva?.id && typeof window !== "undefined") {
+      try {
+        const saved = JSON.parse(localStorage.getItem(`taller_findings_${ordenActiva.id}`) || "null");
+        if (Array.isArray(saved) && saved.length > 0) return saved;
+      } catch {}
+    }
+    return [];
+  });
   const [pinSeleccionadoId, setPinSeleccionadoId] = useState<string | null>(null);
   // Estados para colocación controlada de pines (evitar toques accidentales en móvil)
   const [modoColocandoPin, setModoColocandoPin] = useState<boolean>(false);
@@ -446,9 +455,26 @@ export default function InspeccionVehiculo({
   }, []);
 
   // Estados para Sistemas de Inspección Total del Vehículo
-  const [seccionActiva, setSeccionActiva] = useState<SeccionInspeccionId>("carroceria");
+  const [seccionActiva, setSeccionActiva] = useState<SeccionInspeccionId>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("taller_seccion_activa") as SeccionInspeccionId;
+        if (saved && ["carroceria", "motor", "frenos", "suspension", "electrico", "aire", "personalizado"].includes(saved)) {
+          return saved;
+        }
+      } catch {}
+    }
+    return "carroceria";
+  });
   const seccionCarouselRef = useRef<HTMLDivElement | null>(null);
   const scrollTimeoutSeccionRef = useRef<NodeJS.Timeout | null>(null);
+
+  const cambiarSeccionActiva = (sec: SeccionInspeccionId) => {
+    setSeccionActiva(sec);
+    try {
+      localStorage.setItem("taller_seccion_activa", sec);
+    } catch {}
+  };
 
   const handleSeccionScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (typeof window !== "undefined" && window.innerWidth >= 640) return;
@@ -460,7 +486,7 @@ export default function InspeccionVehiculo({
         const pageIndex = Math.round(container.scrollLeft / width);
         const targetSis = SISTEMAS_INSPECCION[pageIndex];
         if (targetSis && targetSis.id !== seccionActiva) {
-          setSeccionActiva(targetSis.id);
+          cambiarSeccionActiva(targetSis.id);
         }
       }
     }, 80);
@@ -516,22 +542,65 @@ export default function InspeccionVehiculo({
     setImagenError(false);
   }, [vistaActiva, seccionActiva, subCategoriaPorSistema]);
 
-  // Sincronizar hallazgos locales cuando cambie la orden seleccionada
+  const prevOrderIdRef = useRef<string | undefined>(ordenActiva?.id);
+  const prevFindingsJsonRef = useRef<string>(JSON.stringify(ordenActiva?.inspectionFindings || []));
+  const syncRequestIdRef = useRef<number>(0);
+
+  // Sincronizar hallazgos locales cuando cambie la orden seleccionada o cuando lleguen datos del backend
   useEffect(() => {
-    if (ordenActiva?.inspectionFindings) {
-      setHallazgos(ordenActiva.inspectionFindings);
-    } else {
-      setHallazgos([]);
+    const orderId = ordenActiva?.id;
+    const incomingFindings = ordenActiva?.inspectionFindings;
+    const incomingJson = JSON.stringify(incomingFindings || []);
+
+    const orderChanged = orderId !== prevOrderIdRef.current;
+    const findingsChanged = incomingJson !== prevFindingsJsonRef.current;
+
+    prevOrderIdRef.current = orderId;
+
+    if (orderChanged) {
+      prevFindingsJsonRef.current = incomingJson;
+      // Cambio de orden: cargar hallazgos de la nueva orden (o del respaldo en localStorage)
+      if (Array.isArray(incomingFindings) && incomingFindings.length > 0) {
+        setHallazgos(incomingFindings);
+      } else if (orderId) {
+        try {
+          const localBackup = JSON.parse(localStorage.getItem(`taller_findings_${orderId}`) || "null");
+          if (Array.isArray(localBackup) && localBackup.length > 0) {
+            setHallazgos(localBackup);
+          } else {
+            setHallazgos([]);
+          }
+        } catch {
+          setHallazgos([]);
+        }
+      } else {
+        setHallazgos([]);
+      }
+    } else if (findingsChanged) {
+      // Si el usuario está dictando en vivo, no sobreescribir con respuestas intermedias del servidor
+      if (dictandoActivoRef.current) return;
+      // Mismo vehículo: llegaron hallazgos actualizados del backend
+      prevFindingsJsonRef.current = incomingJson;
+      if (Array.isArray(incomingFindings)) {
+        setHallazgos((prevLocal) => {
+          // Si tenemos pines locales y el incoming es un array vacío temporal, proteger los pines locales
+          if (incomingFindings.length === 0 && prevLocal.length > 0) {
+            return prevLocal;
+          }
+          return incomingFindings;
+        });
+      }
     }
+
     if (ordenActiva?.receptionSignatureUrl) {
       setFirmaRecepcionUrl(ordenActiva.receptionSignatureUrl);
     }
     if ((ordenActiva as any)?.inspectionChecklist) {
       setEvaluacionesPlantilla((ordenActiva as any).inspectionChecklist);
     }
-  }, [ordenActiva?.id]);
+  }, [ordenActiva?.id, ordenActiva?.inspectionFindings, ordenActiva?.receptionSignatureUrl, (ordenActiva as any)?.inspectionChecklist]);
 
-  // Persistir hallazgos y evaluaciones en Neon DB
+  // Persistir hallazgos y evaluaciones en Neon DB con actualización optimista inmediata
   const sincronizarHallazgosNeon = useCallback(
     async (
       nuevosHallazgos: InspectionFinding[],
@@ -540,6 +609,26 @@ export default function InspeccionVehiculo({
       seccionId?: string
     ) => {
       if (!ordenActiva) return;
+
+      const currentReqId = ++syncRequestIdRef.current;
+
+      // 1. Inmediato y Optimista: guardar en localStorage y actualizar la orden en memoria
+      try {
+        localStorage.setItem(`taller_findings_${ordenActiva.id}`, JSON.stringify(nuevosHallazgos));
+      } catch {}
+
+      prevFindingsJsonRef.current = JSON.stringify(nuevosHallazgos);
+
+      if (onUpdateOrden) {
+        onUpdateOrden({
+          ...ordenActiva,
+          inspectionFindings: nuevosHallazgos,
+          ...(firmaUrl !== undefined ? { receptionSignatureUrl: firmaUrl } : {}),
+          ...(evals !== undefined ? { inspectionChecklist: evals } : {}),
+        });
+      }
+
+      // 2. Persistir en Neon DB
       try {
         const payload: any = {
           action: "GUARDAR_ETAPA_3_INSPECCION",
@@ -560,7 +649,8 @@ export default function InspeccionVehiculo({
           body: JSON.stringify(payload),
         });
         const data = await res.json();
-        if (data.success && data.activeOrder && onUpdateOrden) {
+        if (currentReqId === syncRequestIdRef.current && data.success && data.activeOrder && onUpdateOrden) {
+          prevFindingsJsonRef.current = JSON.stringify(data.activeOrder.inspectionFindings || []);
           onUpdateOrden(data.activeOrder);
         }
       } catch (err) {
@@ -712,37 +802,51 @@ export default function InspeccionVehiculo({
   const debounceSyncPinRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleCambiarZonaPin = (pinId: string, nuevaZona: string) => {
-    const actualizados = hallazgos.map((h) => {
-      if (h.id === pinId) {
-        return { ...h, zona: nuevaZona };
+    setHallazgos((prev) => {
+      const actualizados = prev.map((h) => {
+        if (h.id === pinId) {
+          return { ...h, zona: nuevaZona };
+        }
+        return h;
+      });
+      if (ordenActiva?.id) {
+        try {
+          localStorage.setItem(`taller_findings_${ordenActiva.id}`, JSON.stringify(actualizados));
+        } catch {}
       }
-      return h;
+      if (debounceSyncPinRef.current) clearTimeout(debounceSyncPinRef.current);
+      debounceSyncPinRef.current = setTimeout(() => {
+        sincronizarHallazgosNeon(actualizados);
+      }, 300);
+      return actualizados;
     });
-    setHallazgos(actualizados);
-    if (debounceSyncPinRef.current) clearTimeout(debounceSyncPinRef.current);
-    debounceSyncPinRef.current = setTimeout(() => {
-      sincronizarHallazgosNeon(actualizados);
-    }, 450);
   };
 
-  const handleGuardarDetallePin = (tipo: string, obs?: string) => {
-    if (!pinSeleccionadoId) return;
-    const actualizados = hallazgos.map((h) => {
-      if (h.id === pinSeleccionadoId) {
-        return {
-          ...h,
-          tipo,
-          descripcion: obs !== undefined ? obs : h.descripcion,
-        };
+  const handleGuardarDetallePin = (tipo: string, obs?: string, explicitPinId?: string) => {
+    const idTarget = explicitPinId || pinSeleccionadoId;
+    if (!idTarget) return;
+    setHallazgos((prev) => {
+      const actualizados = prev.map((h) => {
+        if (h.id === idTarget) {
+          return {
+            ...h,
+            tipo: tipo || h.tipo,
+            descripcion: obs !== undefined ? obs : h.descripcion,
+          };
+        }
+        return h;
+      });
+      if (ordenActiva?.id) {
+        try {
+          localStorage.setItem(`taller_findings_${ordenActiva.id}`, JSON.stringify(actualizados));
+        } catch {}
       }
-      return h;
+      if (debounceSyncPinRef.current) clearTimeout(debounceSyncPinRef.current);
+      debounceSyncPinRef.current = setTimeout(() => {
+        sincronizarHallazgosNeon(actualizados);
+      }, 300);
+      return actualizados;
     });
-    setHallazgos(actualizados);
-
-    if (debounceSyncPinRef.current) clearTimeout(debounceSyncPinRef.current);
-    debounceSyncPinRef.current = setTimeout(() => {
-      sincronizarHallazgosNeon(actualizados);
-    }, 450);
   };
 
   const handleEliminarPin = async (id: string, e?: React.MouseEvent) => {
@@ -1101,9 +1205,72 @@ export default function InspeccionVehiculo({
     mostrarToast("Foto eliminada.");
   };
 
+  const speechReconocioTextoRef = useRef(false);
+  const whisperPipelineRef = useRef<any>(null);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const audioMonitorCtxRef = useRef<AudioContext | null>(null);
+
+  const transcribirAudioBlobATexto = async (audioBlob: Blob): Promise<string> => {
+    try {
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const audioCtx = new AudioCtx({ sampleRate: 16000 });
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      let float32Data = audioBuffer.getChannelData(0);
+      if (audioBuffer.sampleRate !== 16000) {
+        const offlineCtx = new OfflineAudioContext(
+          1,
+          Math.max(1, Math.ceil(audioBuffer.duration * 16000)),
+          16000
+        );
+        const source = offlineCtx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(offlineCtx.destination);
+        source.start(0);
+        const resampled = await offlineCtx.startRendering();
+        float32Data = resampled.getChannelData(0);
+      }
+      await audioCtx.close().catch(() => {});
+
+      if (!whisperPipelineRef.current) {
+        const dynamicImport = new Function("url", "return import(url)");
+        const { pipeline, env } = await dynamicImport(
+          "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2"
+        );
+        env.allowLocalModels = false;
+        env.useBrowserCache = true;
+        whisperPipelineRef.current = await pipeline(
+          "automatic-speech-recognition",
+          "Xenova/whisper-tiny"
+        );
+      }
+      const output = await whisperPipelineRef.current(float32Data, {
+        language: "spanish",
+        task: "transcribe",
+      });
+      return String(output?.text || "").trim();
+    } catch (err) {
+      console.warn("Aviso en transcripción local de respaldo:", err);
+      return "";
+    }
+  };
+
   // DICTADO POR VOZ (AUDIO A TEXTO) Y GRABACIÓN DE AUDIO REAL EN CLOUDFLARE R2
-  const handleToggleVozPin = (targetPinId: string, textoActualDirecto?: string) => {
+  const handleToggleVozPin = async (
+    targetPinId: string,
+    textoActualDirecto?: string,
+    modo: "dictado" | "audio" = "dictado"
+  ) => {
     if (escuchandoVoz) {
+      dictandoActivoRef.current = false;
+      if (silenceTimerRef.current) {
+        clearInterval(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+      if (audioMonitorCtxRef.current) {
+        audioMonitorCtxRef.current.close().catch(() => {});
+        audioMonitorCtxRef.current = null;
+      }
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
@@ -1126,160 +1293,268 @@ export default function InspeccionVehiculo({
     }
 
     const pinObjetivo = hallazgos.find((h) => h.id === targetPinId);
+    const tipoPin = pinObjetivo?.tipo || tipoSeleccionado;
     const textoPrevio = (
       typeof textoActualDirecto === "string"
         ? textoActualDirecto
-        : observacionTexto || pinObjetivo?.descripcion || ""
+        : observacionTextoRef.current || observacionTexto || pinObjetivo?.descripcion || ""
     ).trim();
 
-    // 1. Iniciar grabación física de audio con MediaRecorder para guardar el archivo en R2
-    try {
-      if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
-        navigator.mediaDevices
-          .getUserMedia({ audio: true })
-          .then((stream) => {
-            audioStreamRef.current = stream;
-            const mimeType = getBestSupportedAudioMimeType();
-            const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-            audioChunksRef.current = [];
-            recorder.ondataavailable = (ev) => {
-              if (ev.data && ev.data.size > 0) {
-                audioChunksRef.current.push(ev.data);
-              }
-            };
-            recorder.onstop = async () => {
-              stream.getTracks().forEach((track) => track.stop());
-              const mime = recorder.mimeType || mimeType || "audio/webm";
-              const audioBlob = new Blob(audioChunksRef.current, { type: mime });
-              if (audioBlob.size > 500) {
-                try {
-                  const formData = new FormData();
-                  const ext = mime.includes("mp4") ? "mp4" : mime.includes("aac") ? "aac" : "webm";
-                  formData.append(
-                    "file",
-                    audioBlob,
-                    `audio_${targetPinId}_${Date.now()}.${ext}`
-                  );
-                  formData.append("folder", "taller_notas_voz");
-                  formData.append("tipo", "audio");
-                  if (ordenActiva?.id) formData.append("orderId", ordenActiva.id);
-                  if (ordenActiva?.orderNumber) formData.append("orderNumber", ordenActiva.orderNumber);
-                  if (ordenActiva?.plate) formData.append("plate", ordenActiva.plate);
-                  formData.append("uploadedBy", ordenActiva?.mechanic || "Taller Mecánico");
+    textoBaseRef.current = textoPrevio;
+    observacionTextoRef.current = textoPrevio;
+    speechReconocioTextoRef.current = false;
+    dictandoActivoRef.current = true;
+    setEscuchandoVoz(true);
 
-                  const res = await fetch("/api/storage/upload", {
-                    method: "POST",
-                    body: formData,
+    let falloRedSpeech = false;
+
+    const iniciarGrabadoraRespaldo = async (activarAutoCorteSilencio: boolean) => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+        return;
+      }
+      if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+        if (!dictandoActivoRef.current) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        audioStreamRef.current = stream;
+        const mimeType = getBestSupportedAudioMimeType();
+        const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+        audioChunksRef.current = [];
+
+        recorder.ondataavailable = (ev) => {
+          if (ev.data && ev.data.size > 0) {
+            audioChunksRef.current.push(ev.data);
+          }
+        };
+
+        recorder.onstop = async () => {
+          if (silenceTimerRef.current) {
+            clearInterval(silenceTimerRef.current);
+            silenceTimerRef.current = null;
+          }
+          if (audioMonitorCtxRef.current) {
+            audioMonitorCtxRef.current.close().catch(() => {});
+            audioMonitorCtxRef.current = null;
+          }
+          stream.getTracks().forEach((track) => track.stop());
+          const mime = recorder.mimeType || mimeType || "audio/webm";
+          const audioBlob = new Blob(audioChunksRef.current, { type: mime });
+
+          if (audioBlob.size > 500) {
+            // Si Web Speech API no transcribió (ej. visor Electron/Brave o bloqueo de red), transcribir el audio a texto
+            if (!speechReconocioTextoRef.current) {
+              mostrarToast("⏳ Convirtiendo tu voz a texto...");
+              const textoTranscrito = await transcribirAudioBlobATexto(audioBlob);
+              if (textoTranscrito) {
+                const base = textoBaseRef.current.trim();
+                const nuevoTexto = base ? `${base} ${textoTranscrito}` : textoTranscrito;
+                textoBaseRef.current = nuevoTexto;
+                observacionTextoRef.current = nuevoTexto;
+                setObservacionTexto(nuevoTexto);
+                handleGuardarDetallePin(tipoPin, nuevoTexto, targetPinId);
+                mostrarToast("✓ Dictado convertido a texto en Descripción.");
+              }
+            }
+
+            // Subir evidencia de audio a Cloudflare R2 y preservar siempre la descripción actual
+            try {
+              const formData = new FormData();
+              const ext = mime.includes("mp4") ? "mp4" : mime.includes("aac") ? "aac" : "webm";
+              formData.append("file", audioBlob, `audio_${targetPinId}_${Date.now()}.${ext}`);
+              formData.append("folder", "taller_notas_voz");
+              formData.append("tipo", "audio");
+              if (ordenActiva?.id) formData.append("orderId", ordenActiva.id);
+              if (ordenActiva?.orderNumber) formData.append("orderNumber", ordenActiva.orderNumber);
+              if (ordenActiva?.plate) formData.append("plate", ordenActiva.plate);
+              formData.append("uploadedBy", ordenActiva?.mechanic || "Taller Mecánico");
+
+              const res = await fetch("/api/storage/upload", {
+                method: "POST",
+                body: formData,
+              });
+              const data = await res.json();
+              if (data.success && data.url) {
+                setHallazgos((prev) => {
+                  const actualizados = prev.map((h) => {
+                    if (h.id === targetPinId) {
+                      const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
+                      const nuevosAudios = [...prevAudios, data.url];
+                      return {
+                        ...h,
+                        descripcion: observacionTextoRef.current || h.descripcion,
+                        audioUrl: nuevosAudios[0],
+                        audioUrls: nuevosAudios,
+                      };
+                    }
+                    return h;
                   });
-                  const data = await res.json();
-                  if (data.success && data.url) {
-                    setHallazgos((prev) => {
-                      const actualizados = prev.map((h) => {
-                        if (h.id === targetPinId) {
-                          const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
-                          const nuevosAudios = [...prevAudios, data.url];
-                          return {
-                            ...h,
-                            audioUrl: nuevosAudios[0],
-                            audioUrls: nuevosAudios,
-                          };
-                        }
-                        return h;
-                      });
-                      sincronizarHallazgosNeon(actualizados);
-                      return actualizados;
-                    });
-                    mostrarToast("✓ Audio grabado y guardado correctamente.");
-                  }
-                } catch {
-                  // Silently ignore upload failure
+                  sincronizarHallazgosNeon(actualizados);
+                  return actualizados;
+                });
+              }
+            } catch {
+              // Ignorar fallo de subida si ocurre
+            }
+          }
+        };
+
+        mediaRecorderRef.current = recorder;
+        recorder.start(250);
+
+        // Si estamos en modo fallback sin Web Speech API, detectar silencio tras hablar para transcribir automáticamente
+        if (activarAutoCorteSilencio) {
+          try {
+            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+            const actx = new AudioCtx();
+            audioMonitorCtxRef.current = actx;
+            const source = actx.createMediaStreamSource(stream);
+            const analyser = actx.createAnalyser();
+            analyser.fftSize = 512;
+            source.connect(analyser);
+            const dataArray = new Uint8Array(analyser.fftSize);
+            let hablo = false;
+            let ultimoSonidoMs = Date.now();
+
+            silenceTimerRef.current = setInterval(() => {
+              if (!dictandoActivoRef.current) return;
+              analyser.getByteTimeDomainData(dataArray);
+              let sumSq = 0;
+              for (let i = 0; i < dataArray.length; i++) {
+                const norm = (dataArray[i] - 128) / 128;
+                sumSq += norm * norm;
+              }
+              const rms = Math.sqrt(sumSq / dataArray.length);
+              if (rms > 0.025) {
+                hablo = true;
+                ultimoSonidoMs = Date.now();
+              } else if (hablo && Date.now() - ultimoSonidoMs > 1600) {
+                // El usuario terminó de hablar: detener y transcribir automáticamente al campo Descripción
+                dictandoActivoRef.current = false;
+                setEscuchandoVoz(false);
+                if (silenceTimerRef.current) {
+                  clearInterval(silenceTimerRef.current);
+                  silenceTimerRef.current = null;
+                }
+                if (recorder.state !== "inactive") {
+                  try {
+                    recorder.stop();
+                  } catch {}
                 }
               }
-            };
-            mediaRecorderRef.current = recorder;
-            try {
-              recorder.start();
-            } catch {}
-          })
-          .catch(() => {
-            // Permiso denegado o no soportado
-          });
+            }, 120);
+          } catch {}
+        }
+      } catch {
+        mostrarToast("Permite el acceso al micrófono en tu navegador para dictar.", "err");
+        dictandoActivoRef.current = false;
+        setEscuchandoVoz(false);
       }
-    } catch {}
+    };
 
-    // 2. Iniciar SpeechRecognition si está soportado en este navegador (PC Chrome/Edge y Móvil)
     const SpeechRecognition =
       typeof window !== "undefined" &&
       ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
+    if (modo === "audio") {
+      await iniciarGrabadoraRespaldo(!SpeechRecognition);
+    } else if (!SpeechRecognition) {
+      await iniciarGrabadoraRespaldo(true);
+      mostrarToast("🎙 Habla ahora... tu voz se convertirá a texto en Descripción.");
+      return;
+    }
+
     if (!SpeechRecognition) {
-      setEscuchandoVoz(true);
-      mostrarToast("🎙 Grabando nota de voz al pin (navegador sin transcripción directa)...", "ok");
       return;
     }
 
     try {
       const recognition = new SpeechRecognition();
-      // Idioma estándar compatible en PC Chrome/Edge y Móvil
-      const navLang = typeof navigator !== "undefined" ? navigator.language : "es-EC";
-      recognition.lang = navLang && navLang !== "es-419" && navLang.toLowerCase().startsWith("es") ? navLang : "es-EC";
+      recognition.lang = "es-EC";
       recognition.continuous = true;
       recognition.interimResults = true;
-
-      const esElectronOIde =
-        typeof navigator !== "undefined" &&
-        (/electron/i.test(navigator.userAgent) || Boolean((window as any).process?.versions?.electron));
+      recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
-        setEscuchandoVoz(true);
-        if (esElectronOIde) {
-          mostrarToast("💡 El visor interno del IDE bloquea la nube de voz de Google. Abre http://localhost:3000/taller en Google Chrome o Edge para dictar.", "ok");
-        } else {
+        if (dictandoActivoRef.current) {
+          setEscuchandoVoz(true);
           mostrarToast("🎙 Escuchando voz a texto... habla al micrófono.");
         }
       };
 
       recognition.onresult = (event: any) => {
-        let dictadoSesion = "";
+        let finalStr = "";
+        let interimStr = "";
         for (let i = 0; i < event.results.length; ++i) {
-          dictadoSesion += event.results[i][0].transcript;
+          const item = event.results[i];
+          if (item.isFinal) {
+            finalStr += item[0].transcript + " ";
+          } else {
+            interimStr += item[0].transcript;
+          }
         }
-        const dictadoLimpio = dictadoSesion.trim();
+        const dictadoLimpio = (finalStr + interimStr).trim();
         if (dictadoLimpio) {
-          const separador = !textoPrevio ? "" : textoPrevio.endsWith(" ") ? "" : " ";
-          const nuevoTexto = `${textoPrevio}${separador}${dictadoLimpio}`;
+          speechReconocioTextoRef.current = true;
+          const base = textoBaseRef.current.trim();
+          const nuevoTexto = base ? `${base} ${dictadoLimpio}` : dictadoLimpio;
+          observacionTextoRef.current = nuevoTexto;
           setObservacionTexto(nuevoTexto);
-          handleGuardarDetallePin(pinObjetivo?.tipo || tipoSeleccionado, nuevoTexto);
+          handleGuardarDetallePin(tipoPin, nuevoTexto, targetPinId);
         }
       };
 
       recognition.onerror = (event: any) => {
-        setEscuchandoVoz(false);
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-          try {
-            mediaRecorderRef.current.stop();
-          } catch {}
+        const errCode = event?.error || "";
+        if (errCode === "no-speech" || errCode === "aborted") {
+          // No cortar el dictado si hay una pausa breve antes de hablar
+          return;
         }
-        if (event.error !== "no-speech" && event.error !== "aborted") {
-          mostrarToast(`Micrófono: ${event.error}`, "err");
+        if (errCode === "language-not-supported" && recognition.lang !== "es-ES") {
+          recognition.lang = "es-ES";
+          return;
+        }
+        if (errCode === "network" || errCode === "service-not-allowed" || errCode === "audio-capture") {
+          // Si el navegador bloquea el servicio web de voz, activar grabadora + transcripción local automática
+          falloRedSpeech = true;
+          if (dictandoActivoRef.current) {
+            iniciarGrabadoraRespaldo(true);
+          }
+          return;
+        }
+        if (errCode === "not-allowed") {
+          dictandoActivoRef.current = false;
+          setEscuchandoVoz(false);
+          mostrarToast("Permite el uso del micrófono en el navegador para dictar.", "err");
         }
       };
 
       recognition.onend = () => {
-        setEscuchandoVoz(false);
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        // Guardar lo acumulado en esta sesión como base para la siguiente frase
+        textoBaseRef.current = observacionTextoRef.current;
+        if (dictandoActivoRef.current && !falloRedSpeech) {
           try {
-            mediaRecorderRef.current.stop();
+            recognition.start();
           } catch {}
         }
       };
 
       recognitionRef.current = recognition;
-      setEscuchandoVoz(true);
       recognition.start();
-    } catch (err: any) {
-      setEscuchandoVoz(false);
-      mostrarToast(`Error al iniciar micrófono: ${err?.message || "incompatible"}`, "err");
+    } catch {
+      // Si falla al iniciar SpeechRecognition, usar grabadora con transcripción automática
+      falloRedSpeech = true;
+      await iniciarGrabadoraRespaldo(true);
     }
   };
 
@@ -1514,7 +1789,7 @@ ${urlSeguimiento}`;
                 key={sis.id}
                 id={`seccion-tab-${sis.id}`}
                 type="button"
-                onClick={() => setSeccionActiva(sis.id)}
+                onClick={() => cambiarSeccionActiva(sis.id)}
                 className={`h-11 sm:h-10 px-3 sm:px-4 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer text-sm sm:text-xs font-semibold shrink-0 active:scale-95 w-full min-w-full sm:min-w-0 sm:w-auto snap-center ${
                   active
                     ? "bg-purple-50 dark:bg-purple-500/20 border-purple-400 dark:border-purple-500/40 text-purple-700 dark:text-purple-200 shadow-sm"
@@ -1535,7 +1810,7 @@ ${urlSeguimiento}`;
             <button
               key={sis.id}
               type="button"
-              onClick={() => setSeccionActiva(sis.id)}
+              onClick={() => cambiarSeccionActiva(sis.id)}
               aria-label={`Ir a ${sis.shortName}`}
               className={`h-1.5 rounded-full transition-all cursor-pointer ${
                 seccionActiva === sis.id ? "w-5 bg-purple-500" : "w-1.5 bg-zinc-300 dark:bg-white/20"
@@ -1877,7 +2152,7 @@ ${urlSeguimiento}`;
               handleGuardarDetallePin(pinActual.tipo, texto);
             }}
             escuchandoVoz={escuchandoVoz}
-            onToggleVoz={(textoActualDirecto) => handleToggleVozPin(pinActual.id, textoActualDirecto)}
+            onToggleVoz={(textoActualDirecto, modo) => handleToggleVozPin(pinActual.id, textoActualDirecto, modo)}
             reproduciendoAudio={reproduciendoAudio}
             onReproducirAudio={handleReproducirAudioTexto}
             onEliminarAudio={(index) => handleEliminarAudioPin(pinActual.id, index)}
@@ -2315,7 +2590,7 @@ ${urlSeguimiento}`;
                   handleGuardarDetallePin(pinActual.tipo, texto);
                 }}
                 escuchandoVoz={escuchandoVoz}
-                onToggleVoz={(textoActualDirecto) => handleToggleVozPin(pinActual.id, textoActualDirecto)}
+                onToggleVoz={(textoActualDirecto, modo) => handleToggleVozPin(pinActual.id, textoActualDirecto, modo)}
                 reproduciendoAudio={reproduciendoAudio}
                 onReproducirAudio={handleReproducirAudioTexto}
                 onEliminarAudio={(index) => handleEliminarAudioPin(pinActual.id, index)}

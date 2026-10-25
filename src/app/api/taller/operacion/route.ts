@@ -22,6 +22,9 @@ async function ensureTallerSchema() {
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "generalCondition" TEXT DEFAULT 'Bueno'`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "receptionInventoryJson" TEXT DEFAULT '[]'`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "inspectionFindingsJson" TEXT DEFAULT '[]'`,
+      `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "receptionSignatureUrl" TEXT`,
+      `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "inspectionChecklistJson" TEXT DEFAULT '{}'`,
+      `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "inspectionTemplateId" TEXT`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "itemsJson" TEXT DEFAULT '[]'`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "receptionPhotosJson" TEXT DEFAULT '[]'`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "evidencePhotosJson" TEXT DEFAULT '[]'`,
@@ -319,6 +322,9 @@ function mapOrderRow(r: any) {
     generalCondition: r.generalCondition || "Bueno",
     receptionInventory,
     inspectionFindings,
+    receptionSignatureUrl: r.receptionSignatureUrl || null,
+    inspectionChecklist: safeParseJson<Record<string, any>>(r.inspectionChecklistJson, {}),
+    inspectionTemplateId: r.inspectionTemplateId || null,
     items,
     services: items.map((i: any) => i.name),
     receptionPhotos,
@@ -1605,6 +1611,9 @@ export async function POST(request: Request) {
           findings = [],
           inspectionPhotos = [],
           notesInspeccion = "",
+          receptionSignatureUrl,
+          inspectionChecklist,
+          inspectionTemplateId,
         } = body;
 
         if (!orderId) {
@@ -1654,18 +1663,28 @@ export async function POST(request: Request) {
           .filter(Boolean)
           .join(" • ");
 
+        const nextSignature = receptionSignatureUrl !== undefined ? receptionSignatureUrl : current.receptionSignatureUrl || null;
+        const nextChecklist = inspectionChecklist !== undefined ? JSON.stringify(inspectionChecklist) : current.inspectionChecklistJson || "{}";
+        const nextTemplateId = inspectionTemplateId !== undefined ? inspectionTemplateId : current.inspectionTemplateId || null;
+
         await prisma.$executeRawUnsafe(
           `UPDATE "WorkshopOrder"
            SET "inspectionFindingsJson" = $2,
                "receptionPhotosJson" = $3,
                "notes" = $4,
+               "receptionSignatureUrl" = $5,
+               "inspectionChecklistJson" = $6,
+               "inspectionTemplateId" = $7,
                "progress" = GREATEST("progress", 30),
                "updatedAt" = NOW()
            WHERE "id" = $1`,
           current.id,
           JSON.stringify(findingsArr),
           JSON.stringify(photosArr),
-          updatedNotes
+          updatedNotes,
+          nextSignature,
+          nextChecklist,
+          nextTemplateId
         );
 
         // Registrar / actualizar en WorkshopInspection

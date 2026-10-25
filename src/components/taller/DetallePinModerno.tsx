@@ -13,7 +13,8 @@ export interface DetallePinModernoProps {
   onChangeObservacion: (text: string) => void;
   // Audio
   escuchandoVoz: boolean;
-  onToggleVoz: (textoActual?: string) => void;
+  onToggleVoz: (textoActual?: string, modo?: "dictado" | "audio") => void;
+  transcribiendoVoz?: boolean;
   reproduciendoAudio: boolean;
   onReproducirAudio?: (text: string) => void;
   onEliminarAudio?: (idx?: number) => void;
@@ -47,6 +48,7 @@ export function DetallePinModerno({
   observacionTexto,
   onChangeObservacion,
   escuchandoVoz,
+  transcribiendoVoz = false,
   onToggleVoz,
   reproduciendoAudio,
   onReproducirAudio,
@@ -66,7 +68,14 @@ export function DetallePinModerno({
   const fotos = pin.photoUrls || (pin.photoUrl ? [pin.photoUrl] : []);
   const maxFotosAlcanzado = fotos.length >= 5;
 
-  const textoActual = observacionTexto;
+  const textoActual = observacionTexto !== "" ? observacionTexto : (pin.descripcion || "");
+  const inputDescripcionRef = React.useRef<HTMLInputElement | null>(null);
+
+  React.useEffect(() => {
+    if (escuchandoVoz && inputDescripcionRef.current) {
+      inputDescripcionRef.current.scrollLeft = inputDescripcionRef.current.scrollWidth;
+    }
+  }, [textoActual, escuchandoVoz]);
 
   const mismoNumero = pin.pinNumber || 1;
   const listaMismoPin = hallazgosDelMismoPin.filter(
@@ -329,6 +338,7 @@ export function DetallePinModerno({
         <div className="relative flex items-center">
           <input
             type="text"
+            ref={inputDescripcionRef}
             value={textoActual}
             onChange={(e) => onChangeObservacion(e.target.value)}
             placeholder={

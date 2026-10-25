@@ -740,11 +740,16 @@ export default function TallerPanel() {
 
   // Seleccionar auto de la lista y volver a la vista
   const handleSeleccionarAutoYVolver = (auto: UnifiedOrder) => {
-    setOrdenActiva(auto);
-    setKmActualInput(auto.mileage ? String(auto.mileage) : "");
-    setFotosRecepcion(auto.receptionPhotos || []);
+    // Buscar la versión más fresca del auto en autosEnPista (por si tiene hallazgos actualizados)
+    const fresca = autosEnPista.find((o) => o.id === auto.id) || auto;
+    setOrdenActiva(fresca);
+    setKmActualInput(fresca.mileage ? String(fresca.mileage) : "");
+    setFotosRecepcion(fresca.receptionPhotos || []);
+    try {
+      localStorage.setItem("taller_orden_activa_id", fresca.id);
+    } catch {}
     setMostrarModalAutosAtencion(false);
-    mostrarToast(`Atendiendo a ${auto.client} (${auto.plate})`);
+    mostrarToast(`Atendiendo a ${fresca.client} (${fresca.plate})`);
   };
 
   // Marcar trabajo como terminado totalmente y enviarlo a Historial de Órdenes en Panel Órdenes
@@ -1287,6 +1292,9 @@ export default function TallerPanel() {
               targetOrder = pista.find((o) => o.id === prev.id || o.orderNumber === prev.orderNumber) || null;
             }
             const finalOrder = targetOrder || pista[0];
+            try {
+              localStorage.setItem("taller_orden_activa_id", finalOrder.id);
+            } catch {}
             setFotosRecepcion(finalOrder.receptionPhotos || []);
             setKmActualInput(finalOrder.mileage ? String(finalOrder.mileage) : "");
             return finalOrder;
@@ -1311,7 +1319,19 @@ export default function TallerPanel() {
       if (Array.isArray(cached) && cached.length > 0) {
         const savedId = localStorage.getItem("taller_orden_activa_id");
         setAutosEnPista((prev) => (prev.length > 0 ? prev : cached));
-        setOrdenActiva((prev) => prev || cached.find((o: UnifiedOrder) => o.id === savedId) || cached[0]);
+        setOrdenActiva((prev) => {
+          if (prev) return prev;
+          const found = cached.find((o: UnifiedOrder) => o.id === savedId) || cached[0];
+          if (found && found.id) {
+            try {
+              const savedFindings = JSON.parse(localStorage.getItem(`taller_findings_${found.id}`) || "null");
+              if (Array.isArray(savedFindings) && savedFindings.length > 0) {
+                return { ...found, inspectionFindings: savedFindings };
+              }
+            } catch {}
+          }
+          return found;
+        });
       }
     } catch {}
   }, []);
@@ -5225,9 +5245,17 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   serviciosCatalogo={serviciosDb}
                   onUpdateOrden={(updated) => {
                     setOrdenActiva(updated);
-                    setAutosEnPista((prev) =>
-                      prev.map((o) => (o.id === updated.id ? updated : o))
-                    );
+                    setAutosEnPista((prev) => {
+                      const next = prev.map((o) => (o.id === updated.id ? updated : o));
+                      try {
+                        localStorage.setItem(
+                          "taller_pista_cache",
+                          JSON.stringify(next.map((o) => ({ ...o, receptionPhotos: [] })))
+                        );
+                        localStorage.setItem("taller_orden_activa_id", updated.id);
+                      } catch {}
+                      return next;
+                    });
                   }}
                   onGenerarPdf={handleGenerarPdfInspeccion}
                   onVolver={() => {}}
