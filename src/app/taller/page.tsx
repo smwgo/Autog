@@ -185,6 +185,7 @@ export interface InspectionFinding {
   photoUrl?: string;
   photoUrls?: string[];
   audioUrl?: string;
+  audioUrls?: string[];
   capturedAt?: string;
   severidad?: "LEVE" | "MODERADO" | "GRAVE" | string;
   linkedItems?: FindingItemLink[];

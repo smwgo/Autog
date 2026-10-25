@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import type { UnifiedOrder, InspectionFinding, OrderItem, FindingItemLink } from "@/app/taller/page";
 import { DetallePinModerno } from "./DetallePinModerno";
 import { comprimirImagenEnNavegador } from "@/lib/storage-client";
+import { getBestSupportedAudioMimeType } from "@/lib/transcription";
 
 export interface InspeccionVehiculoProps {
   ordenActiva: UnifiedOrder | null;
@@ -409,11 +410,27 @@ export default function InspeccionVehiculo({
   const audioChunksRef = useRef<Blob[]>([]);
   const audioStreamRef = useRef<MediaStream | null>(null);
 
+  const dictandoActivoRef = useRef(false);
+  const textoBaseRef = useRef("");
+  const observacionTextoRef = useRef(observacionTexto);
+
+  // Mantener observacionTextoRef sincronizado en todo momento
+  useEffect(() => {
+    observacionTextoRef.current = observacionTexto;
+  }, [observacionTexto]);
+
   // Cleanup de audio Text-to-Speech y grabación de voz
   useEffect(() => {
     return () => {
+      dictandoActivoRef.current = false;
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         window.speechSynthesis.cancel();
+      }
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+        recognitionRef.current = null;
       }
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
         try {
@@ -421,7 +438,9 @@ export default function InspeccionVehiculo({
         } catch {}
       }
       if (audioStreamRef.current) {
-        audioStreamRef.current.getTracks().forEach((t) => t.stop());
+        try {
+          audioStreamRef.current.getTracks().forEach((t) => t.stop());
+        } catch {}
       }
     };
   }, []);
@@ -1083,24 +1102,35 @@ export default function InspeccionVehiculo({
   };
 
   // DICTADO POR VOZ (AUDIO A TEXTO) Y GRABACIÓN DE AUDIO REAL EN CLOUDFLARE R2
-  const handleToggleVozPin = (targetPinId: string) => {
+  const handleToggleVozPin = (targetPinId: string, textoActualDirecto?: string) => {
     if (escuchandoVoz) {
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
         } catch {}
+        recognitionRef.current = null;
       }
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
         try {
           mediaRecorderRef.current.stop();
         } catch {}
       }
+      if (audioStreamRef.current) {
+        try {
+          audioStreamRef.current.getTracks().forEach((t) => t.stop());
+        } catch {}
+        audioStreamRef.current = null;
+      }
       setEscuchandoVoz(false);
       return;
     }
 
     const pinObjetivo = hallazgos.find((h) => h.id === targetPinId);
-    const textoPrevio = (observacionTexto || pinObjetivo?.descripcion || "").trim();
+    const textoPrevio = (
+      typeof textoActualDirecto === "string"
+        ? textoActualDirecto
+        : observacionTexto || pinObjetivo?.descripcion || ""
+    ).trim();
 
     // 1. Iniciar grabación física de audio con MediaRecorder para guardar el archivo en R2
     try {
@@ -1109,7 +1139,8 @@ export default function InspeccionVehiculo({
           .getUserMedia({ audio: true })
           .then((stream) => {
             audioStreamRef.current = stream;
-            const recorder = new MediaRecorder(stream);
+            const mimeType = getBestSupportedAudioMimeType();
+            const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
             audioChunksRef.current = [];
             recorder.ondataavailable = (ev) => {
               if (ev.data && ev.data.size > 0) {
@@ -1118,12 +1149,12 @@ export default function InspeccionVehiculo({
             };
             recorder.onstop = async () => {
               stream.getTracks().forEach((track) => track.stop());
-              const mime = recorder.mimeType || "audio/webm";
+              const mime = recorder.mimeType || mimeType || "audio/webm";
               const audioBlob = new Blob(audioChunksRef.current, { type: mime });
               if (audioBlob.size > 500) {
                 try {
                   const formData = new FormData();
-                  const ext = mime.includes("mp4") ? "mp4" : "webm";
+                  const ext = mime.includes("mp4") ? "mp4" : mime.includes("aac") ? "aac" : "webm";
                   formData.append(
                     "file",
                     audioBlob,
@@ -1143,9 +1174,18 @@ export default function InspeccionVehiculo({
                   const data = await res.json();
                   if (data.success && data.url) {
                     setHallazgos((prev) => {
-                      const actualizados = prev.map((h) =>
-                        h.id === targetPinId ? { ...h, audioUrl: data.url } : h
-                      );
+                      const actualizados = prev.map((h) => {
+                        if (h.id === targetPinId) {
+                          const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
+                          const nuevosAudios = [...prevAudios, data.url];
+                          return {
+                            ...h,
+                            audioUrl: nuevosAudios[0],
+                            audioUrls: nuevosAudios,
+                          };
+                        }
+                        return h;
+                      });
                       sincronizarHallazgosNeon(actualizados);
                       return actualizados;
                     });
@@ -1157,7 +1197,9 @@ export default function InspeccionVehiculo({
               }
             };
             mediaRecorderRef.current = recorder;
-            recorder.start();
+            try {
+              recorder.start();
+            } catch {}
           })
           .catch(() => {
             // Permiso denegado o no soportado
@@ -1165,26 +1207,36 @@ export default function InspeccionVehiculo({
       }
     } catch {}
 
-    // 2. Iniciar SpeechRecognition si está soportado en este navegador
+    // 2. Iniciar SpeechRecognition si está soportado en este navegador (PC Chrome/Edge y Móvil)
     const SpeechRecognition =
       typeof window !== "undefined" &&
       ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
     if (!SpeechRecognition) {
       setEscuchandoVoz(true);
-      mostrarToast("🎙 Grabando nota de voz al pin...", "ok");
+      mostrarToast("🎙 Grabando nota de voz al pin (navegador sin transcripción directa)...", "ok");
       return;
     }
 
     try {
       const recognition = new SpeechRecognition();
-      recognition.lang = "es-EC";
+      // Idioma estándar compatible en PC Chrome/Edge y Móvil
+      const navLang = typeof navigator !== "undefined" ? navigator.language : "es-EC";
+      recognition.lang = navLang && navLang !== "es-419" && navLang.toLowerCase().startsWith("es") ? navLang : "es-EC";
       recognition.continuous = true;
       recognition.interimResults = true;
 
+      const esElectronOIde =
+        typeof navigator !== "undefined" &&
+        (/electron/i.test(navigator.userAgent) || Boolean((window as any).process?.versions?.electron));
+
       recognition.onstart = () => {
         setEscuchandoVoz(true);
-        mostrarToast("🎙 Grabando audio a texto... habla ahora.");
+        if (esElectronOIde) {
+          mostrarToast("💡 El visor interno del IDE bloquea la nube de voz de Google. Abre http://localhost:3000/taller en Google Chrome o Edge para dictar.", "ok");
+        } else {
+          mostrarToast("🎙 Escuchando voz a texto... habla al micrófono.");
+        }
       };
 
       recognition.onresult = (event: any) => {
@@ -1194,9 +1246,8 @@ export default function InspeccionVehiculo({
         }
         const dictadoLimpio = dictadoSesion.trim();
         if (dictadoLimpio) {
-          const nuevoTexto = textoPrevio
-            ? `${textoPrevio} ${dictadoLimpio}`
-            : dictadoLimpio;
+          const separador = !textoPrevio ? "" : textoPrevio.endsWith(" ") ? "" : " ";
+          const nuevoTexto = `${textoPrevio}${separador}${dictadoLimpio}`;
           setObservacionTexto(nuevoTexto);
           handleGuardarDetallePin(pinObjetivo?.tipo || tipoSeleccionado, nuevoTexto);
         }
@@ -1224,18 +1275,30 @@ export default function InspeccionVehiculo({
       };
 
       recognitionRef.current = recognition;
-      recognition.start();
-    } catch {
       setEscuchandoVoz(true);
+      recognition.start();
+    } catch (err: any) {
+      setEscuchandoVoz(false);
+      mostrarToast(`Error al iniciar micrófono: ${err?.message || "incompatible"}`, "err");
     }
   };
 
-  const handleEliminarAudioPin = (targetPinId: string) => {
+  const handleEliminarAudioPin = (targetPinId: string, indexAEliminar?: number) => {
     const actualizados = hallazgos.map((h) => {
       if (h.id === targetPinId) {
+        const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
+        if (typeof indexAEliminar === "number") {
+          const filtrados = prevAudios.filter((_, idx) => idx !== indexAEliminar);
+          return {
+            ...h,
+            audioUrl: filtrados[0] || undefined,
+            audioUrls: filtrados,
+          };
+        }
         return {
           ...h,
           audioUrl: undefined,
+          audioUrls: [],
         };
       }
       return h;
@@ -1782,6 +1845,7 @@ ${urlSeguimiento}`;
 
           <button
             type="button"
+            suppressHydrationWarning
             onClick={() => {
               setPinReubicandoId(null);
               setModoColocandoPin(true);
@@ -1794,7 +1858,7 @@ ${urlSeguimiento}`;
             }`}
           >
             <span className="text-sm font-black">+</span>
-            <span>Generar #{proximoPinNumero}</span>
+            <span suppressHydrationWarning translate="no">{`Generar #${proximoPinNumero}`}</span>
           </button>
         </div>
 
@@ -1813,10 +1877,10 @@ ${urlSeguimiento}`;
               handleGuardarDetallePin(pinActual.tipo, texto);
             }}
             escuchandoVoz={escuchandoVoz}
-            onToggleVoz={() => handleToggleVozPin(pinActual.id)}
+            onToggleVoz={(textoActualDirecto) => handleToggleVozPin(pinActual.id, textoActualDirecto)}
             reproduciendoAudio={reproduciendoAudio}
             onReproducirAudio={handleReproducirAudioTexto}
-            onEliminarAudio={() => handleEliminarAudioPin(pinActual.id)}
+            onEliminarAudio={(index) => handleEliminarAudioPin(pinActual.id, index)}
             subiendoFotos={subiendoFotoPin}
             onSubirFotos={(e) => handleSubirFotosPinR2(e, pinActual.id)}
             onEliminarFoto={(idx, e) => handleEliminarFotoPin(pinActual.id, idx, e)}
@@ -2219,6 +2283,7 @@ ${urlSeguimiento}`;
 
               <button
                 type="button"
+                suppressHydrationWarning
                 onClick={() => {
                   setPinReubicandoId(null);
                   setModoColocandoPin(true);
@@ -2231,7 +2296,7 @@ ${urlSeguimiento}`;
                 }`}
               >
                 <span className="text-sm font-black">+</span>
-                <span>Generar #{proximoPinNumero}</span>
+                <span suppressHydrationWarning translate="no">{`Generar #${proximoPinNumero}`}</span>
               </button>
             </div>
 
@@ -2250,10 +2315,10 @@ ${urlSeguimiento}`;
                   handleGuardarDetallePin(pinActual.tipo, texto);
                 }}
                 escuchandoVoz={escuchandoVoz}
-                onToggleVoz={() => handleToggleVozPin(pinActual.id)}
+                onToggleVoz={(textoActualDirecto) => handleToggleVozPin(pinActual.id, textoActualDirecto)}
                 reproduciendoAudio={reproduciendoAudio}
                 onReproducirAudio={handleReproducirAudioTexto}
-                onEliminarAudio={() => handleEliminarAudioPin(pinActual.id)}
+                onEliminarAudio={(index) => handleEliminarAudioPin(pinActual.id, index)}
                 subiendoFotos={subiendoFotoPin}
                 onSubirFotos={(e) => handleSubirFotosPinR2(e, pinActual.id)}
                 onEliminarFoto={(idx, e) => handleEliminarFotoPin(pinActual.id, idx, e)}
