@@ -482,26 +482,6 @@ export function DetallePinModerno({
               </svg>
             )}
           </button>
-
-          {/* Botón + Agregar si no alcanzó el máximo */}
-          {!maxFotosAlcanzado && (
-            <label
-              title="Agregar foto o video"
-              className="relative h-12 w-12 sm:h-14 sm:w-14 rounded-xl border border-dashed border-emerald-300 dark:border-emerald-500/30 bg-emerald-50/50 hover:bg-emerald-100/60 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 transition-all cursor-pointer active:scale-95 group shadow-xs overflow-hidden"
-            >
-              <svg className="w-5 h-5 sm:w-6 sm:h-6 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              <input
-                type="file"
-                multiple
-                accept="image/*,video/*"
-                disabled={subiendoFotos}
-                onChange={onSubirFotos}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              />
-            </label>
-          )}
         </div>
 
         {/* Indicador activo si está grabando voz */}
