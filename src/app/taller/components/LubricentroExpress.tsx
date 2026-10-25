@@ -1728,11 +1728,11 @@ export default function LubricentroExpress({
                           .includes(st.name.toLowerCase().replace(/^\d+\s*/, ""));
 
                       const coloresActivoPorIndice = [
-                        "bg-amber-500/25 text-amber-200 border-amber-400/60 ring-1 ring-amber-400/40 font-semibold shadow-sm",
-                        "bg-blue-500/25 text-blue-200 border-blue-400/60 ring-1 ring-blue-400/40 font-semibold shadow-sm",
-                        "bg-rose-500/25 text-rose-200 border-rose-400/60 ring-1 ring-rose-400/40 font-semibold shadow-sm",
-                        "bg-emerald-500/25 text-emerald-200 border-emerald-400/60 ring-1 ring-emerald-400/40 font-semibold shadow-sm",
-                        "bg-purple-500/25 text-purple-200 border-purple-400/60 ring-1 ring-purple-400/40 font-semibold shadow-sm",
+                        "bg-amber-100 text-amber-800 border-amber-400 dark:bg-amber-500/25 dark:text-amber-200 dark:border-amber-400/60 ring-1 ring-amber-400/40 font-semibold shadow-sm",
+                        "bg-blue-100 text-blue-800 border-blue-400 dark:bg-blue-500/25 dark:text-blue-200 dark:border-blue-400/60 ring-1 ring-blue-400/40 font-semibold shadow-sm",
+                        "bg-rose-100 text-rose-800 border-rose-400 dark:bg-rose-500/25 dark:text-rose-200 dark:border-rose-400/60 ring-1 ring-rose-400/40 font-semibold shadow-sm",
+                        "bg-emerald-100 text-emerald-800 border-emerald-400 dark:bg-emerald-500/25 dark:text-emerald-200 dark:border-emerald-400/60 ring-1 ring-emerald-400/40 font-semibold shadow-sm",
+                        "bg-purple-100 text-purple-800 border-purple-400 dark:bg-purple-500/25 dark:text-purple-200 dark:border-purple-400/60 ring-1 ring-purple-400/40 font-semibold shadow-sm",
                       ];
                       const estiloActivo = coloresActivoPorIndice[idx % coloresActivoPorIndice.length];
                       const estiloPlomo =
@@ -1755,13 +1755,13 @@ export default function LubricentroExpress({
                 </div>
 
                 {/* Aviso WhatsApp + Sticker QR */}
-                <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2">
+                <div className="p-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/5 space-y-2 shadow-xs">
                   <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block">Aviso:</span>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={handleEnviarWhatsAppLubricentro}
-                      className="h-9 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                      className="h-9 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 border border-emerald-300 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5"
                     >
                       <span>💬</span>
                       <span>WhatsApp</span>
@@ -1769,7 +1769,7 @@ export default function LubricentroExpress({
                     <button
                       type="button"
                       onClick={() => setMostrarModalStickerQr(true)}
-                      className="h-9 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-300 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                      className="h-9 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border border-amber-300 dark:border-amber-500/35 text-amber-700 dark:text-amber-300 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5"
                     >
                       <span>🏷️</span>
                       <span>Sticker QR</span>
@@ -1781,8 +1781,8 @@ export default function LubricentroExpress({
               {/* Columna Derecha: Doble Firma (Presupuesto / Entrega) */}
               <div className="lg:col-span-7 space-y-3">
                 <div className="p-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/5 space-y-3 shadow-xs">
-                  <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-2.5">
-                    <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/5 border border-white/10">
+                  <div className="flex items-center justify-between gap-2 border-b border-zinc-200 dark:border-white/5 pb-2.5">
+                    <div className="flex items-center gap-1 p-0.5 rounded-lg bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10">
                       <button
                         type="button"
                         onClick={() => {
@@ -1791,8 +1791,8 @@ export default function LubricentroExpress({
                         }}
                         className={`px-3 py-1 rounded-md text-xs font-normal transition-all cursor-pointer ${
                           modoFirma === "ACEPTACION"
-                            ? "bg-blue-600 text-white"
-                            : "text-zinc-400 hover:text-white"
+                            ? "bg-blue-600 text-white shadow-sm"
+                            : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
                         }`}
                       >
                         Presupuesto
@@ -1805,8 +1805,8 @@ export default function LubricentroExpress({
                         }}
                         className={`px-3 py-1 rounded-md text-xs font-normal transition-all cursor-pointer ${
                           modoFirma === "ENTREGA"
-                            ? "bg-teal-600 text-white"
-                            : "text-zinc-400 hover:text-white"
+                            ? "bg-teal-600 text-white shadow-sm"
+                            : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
                         }`}
                       >
                         Entrega
@@ -1816,7 +1816,7 @@ export default function LubricentroExpress({
                     <button
                       type="button"
                       onClick={limpiarCanvasFirma}
-                      className="text-[11px] text-zinc-400 hover:text-white px-2 py-0.5 rounded bg-white/5 cursor-pointer"
+                      className="text-[11px] text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white px-2 py-0.5 rounded bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 cursor-pointer"
                     >
                       Limpiar
                     </button>
@@ -1834,7 +1834,7 @@ export default function LubricentroExpress({
 
                     return (
                       <>
-                        <div className="h-40 rounded-xl bg-zinc-100 dark:bg-[#0a0a0c] border border-zinc-300 dark:border-white/10 relative overflow-hidden flex items-center justify-center">
+                        <div className="h-40 rounded-xl bg-zinc-50 dark:bg-[#0a0a0c] border border-dashed border-zinc-300 dark:border-white/10 relative overflow-hidden flex items-center justify-center">
                           {firmaGuardadaUrl && !tieneTrazosFirmaRef.current ? (
                             <div className="w-full h-full flex flex-col items-center justify-center p-2 bg-white/95 relative">
                               <img
@@ -1862,7 +1862,7 @@ export default function LubricentroExpress({
                                 className="w-full h-full cursor-crosshair touch-none select-none"
                               />
                               {!tieneTrazosFirmaRef.current && (
-                                <div className="absolute pointer-events-none text-zinc-500 text-xs font-mono text-center px-3">
+                                <div className="absolute pointer-events-none text-zinc-400 dark:text-zinc-500 text-xs font-mono text-center px-3">
                                   {firmaSolicitadaPanel
                                     ? "📲 Esperando firma del cliente en su Panel Cliente..."
                                     : modoFirma === "ACEPTACION"
@@ -1879,7 +1879,7 @@ export default function LubricentroExpress({
                             type="button"
                             onClick={handleGuardarFirmaActiva}
                             disabled={guardandoFirma}
-                            className="h-9 px-4 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                            className="h-9 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-800 dark:bg-white/10 dark:hover:bg-white/15 dark:border-transparent dark:text-white text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                           >
                             <span>💾 {guardandoFirma ? "Guardando..." : "Guardar"}</span>
                           </button>
@@ -1890,8 +1890,8 @@ export default function LubricentroExpress({
                             disabled={guardandoFirma}
                             className={`h-9 px-3 rounded-xl border text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 ${
                               firmaRemotaEnviada || firmaSolicitadaPanel
-                                ? "bg-blue-500/20 border-blue-500/40 text-blue-300"
-                                : "bg-white/5 hover:bg-white/10 border-white/10 text-zinc-300"
+                                ? "bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-500/20 dark:border-blue-500/40 dark:text-blue-300"
+                                : "bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-700 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-zinc-300"
                             }`}
                           >
                             <span>
@@ -1909,8 +1909,8 @@ export default function LubricentroExpress({
             </div>
 
             {/* Pie: Pasar a POS */}
-            <div className="pt-3 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="text-[11px] text-zinc-400 font-normal">
+            <div className="pt-3 border-t border-zinc-200 dark:border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-normal">
                 <span>Cobro en POS.</span>
               </div>
 
@@ -1918,7 +1918,7 @@ export default function LubricentroExpress({
                 <button
                   type="button"
                   onClick={() => setEtapaActiva(2)}
-                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-normal text-zinc-300 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-700 dark:bg-white/5 dark:hover:bg-white/10 dark:border-transparent dark:text-zinc-300 text-xs font-normal cursor-pointer"
                 >
                   Anterior
                 </button>
@@ -1927,7 +1927,7 @@ export default function LubricentroExpress({
                   type="button"
                   onClick={() => handlePasarAPosLubricentro(false)}
                   disabled={guardandoPasarPos}
-                  className="px-4 py-2 rounded-xl text-xs font-normal bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl text-xs font-normal bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 dark:border-emerald-500/35 dark:text-emerald-300 transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
                 >
                   <span>
                     {guardandoPasarPos

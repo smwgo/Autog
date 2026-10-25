@@ -5402,7 +5402,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
                           return (
                             <>
-                              <div className="h-40 rounded-xl bg-[#0a0a0c] border border-white/10 relative overflow-hidden flex items-center justify-center">
+                              <div className="h-40 rounded-xl bg-zinc-50 dark:bg-[#0a0a0c] border border-dashed border-zinc-300 dark:border-white/10 relative overflow-hidden flex items-center justify-center">
                                 {firmaGuardadaUrl && !tieneTrazosFirmaEtapa7Ref.current ? (
                                   <div className="w-full h-full flex flex-col items-center justify-center p-2 bg-white/95 relative">
                                     <img
@@ -5430,7 +5430,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                       className="w-full h-full cursor-crosshair touch-none select-none"
                                     />
                                     {!tieneTrazosFirmaEtapa7Ref.current && (
-                                      <div className="absolute pointer-events-none text-zinc-500 text-xs font-mono text-center px-3">
+                                      <div className="absolute pointer-events-none text-zinc-400 dark:text-zinc-500 text-xs font-mono text-center px-3">
                                         {firmaSolicitadaPanel
                                           ? "📲 Esperando firma del cliente en su Panel Cliente..."
                                           : modoFirma === "ACEPTACION"
@@ -5448,7 +5448,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                   type="button"
                                   onClick={handleGuardarFirmaActiva}
                                   disabled={guardandoEtapa7}
-                                  className="h-9 px-4 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                                  className="h-9 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-800 dark:bg-white/10 dark:hover:bg-white/15 dark:border-transparent dark:text-white text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
                                 >
                                   <span>💾 {guardandoEtapa7 ? "Guardando..." : "Guardar"}</span>
                                 </button>
@@ -5459,8 +5459,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                   disabled={guardandoEtapa7}
                                   className={`h-9 px-3 rounded-xl border text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
                                     copiadoLinkFirmaEtapa7 || firmaSolicitadaPanel
-                                      ? "bg-blue-500/20 border-blue-500/40 text-blue-300"
-                                      : "bg-white/5 hover:bg-white/10 border-white/10 text-zinc-300"
+                                      ? "bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-500/20 dark:border-blue-500/40 dark:text-blue-300"
+                                      : "bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-700 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-zinc-300"
                                   }`}
                                   title="Habilita la firma remota directamente en el Panel del Cliente (/cliente/taller)"
                                 >
@@ -5479,8 +5479,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   </div>
 
                   {/* Pie: Traspaso a POS / Órdenes */}
-                  <div className="pt-3 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <div className="text-[11px] text-zinc-400 font-normal">
+                  <div className="pt-3 border-t border-zinc-200 dark:border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-normal">
                       <span>Cobro en POS.</span>
                     </div>
 
@@ -5488,14 +5488,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       <button
                         type="button"
                         onClick={() => setEtapaActiva(2)}
-                        className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-normal text-zinc-300 cursor-pointer transition-colors"
+                        className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-700 dark:bg-white/5 dark:hover:bg-white/10 dark:border-transparent dark:text-zinc-300 text-xs font-normal cursor-pointer transition-colors"
                       >
                         Anterior
                       </button>
 
                       <Link
                         href="/presupuestos"
-                        className="px-3.5 py-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-300 text-xs font-semibold backdrop-blur-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                        className="px-3.5 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-700 dark:bg-sky-500/15 dark:hover:bg-sky-500/25 dark:border-sky-500/35 dark:text-sky-300 text-xs font-semibold backdrop-blur-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
                         title="Abrir panel de Presupuestos & Repuestos"
                       >
                         <span>📋</span>
@@ -5506,10 +5506,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                         type="button"
                         onClick={() => handlePasarAPosOrdenes(false)}
                         disabled={guardandoPasarPos}
-                        className={`px-4 py-2 rounded-xl text-xs font-normal backdrop-blur-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50 ${
+                        className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50 ${
                           ordenActiva && (ordenActiva.posRequestId || ordenActiva.status === "EN_CAJA" || ordenActiva.status?.toLowerCase().includes("caja"))
-                            ? "bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300"
-                            : "bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300"
+                            ? "bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 dark:border-emerald-500/40 dark:text-emerald-300"
+                            : "bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 dark:border-emerald-500/35 dark:text-emerald-300"
                         }`}
                       >
                         <span>
