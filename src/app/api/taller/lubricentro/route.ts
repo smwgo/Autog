@@ -189,16 +189,11 @@ const DEFAULT_LUBRICENTRO_CONFIG: LubricentroConfigData = {
   ],
   subcategories: [
     // 1. Aceites
-    { id: "lub_aceite_motor", categoryId: "lub_aceite", label: "Aceite", icon: "🛢️", order: 1, active: true, subSchemaType: "aceite_motor" },
+    { id: "lub_aceite_motor", categoryId: "lub_aceite", label: "Motor", icon: "🛢️", order: 1, active: true, subSchemaType: "aceite_motor" },
     { id: "lub_aditivos", categoryId: "lub_aceite", label: "Aditivos", icon: "🧪", order: 2, active: true, subSchemaType: "aditivos" },
     { id: "lub_flush", categoryId: "lub_aceite", label: "Flush", icon: "🧼", order: 3, active: true, subSchemaType: "flush" },
     { id: "lub_grasa", categoryId: "lub_aceite", label: "Grasa", icon: "🧴", order: 4, active: true, subSchemaType: "grasas" },
     { id: "lub_tratamiento", categoryId: "lub_aceite", label: "Tratamiento", icon: "🛡️", order: 5, active: true, subSchemaType: "aditivos" },
-    { id: "lub_valvulina", categoryId: "lub_aceite", label: "Valvulina", icon: "⚙️", order: 6, active: true, subSchemaType: "transmision" },
-    { id: "lub_hidraulico_aceite", categoryId: "lub_aceite", label: "Hidráulico", icon: "🛞", order: 7, active: true, subSchemaType: "fluidos" },
-    { id: "lub_frenos_aceite", categoryId: "lub_aceite", label: "Frenos", icon: "🛑", order: 8, active: true, subSchemaType: "fluidos" },
-    { id: "lub_refrigerante_aceite", categoryId: "lub_aceite", label: "Refrigerante", icon: "🌡️", order: 9, active: true, subSchemaType: "fluidos" },
-    { id: "lub_limpieza_combustible", categoryId: "lub_aceite", label: "Inyectores", icon: "⛽", order: 10, active: true, subSchemaType: "aditivos" },
     // 2. Transmisión
     { id: "lub_trans_automatica", categoryId: "lub_transmision", label: "ATF", icon: "🔄", order: 1, active: true, subSchemaType: "transmision" },
     { id: "lub_trans_cvt", categoryId: "lub_transmision", label: "CVT", icon: "⚡", order: 2, active: true, subSchemaType: "transmision" },
@@ -208,11 +203,11 @@ const DEFAULT_LUBRICENTRO_CONFIG: LubricentroConfigData = {
     { id: "lub_trans_transfer", categoryId: "lub_transmision", label: "Transfer 4x4", icon: "🚜", order: 6, active: true, subSchemaType: "transmision" },
     { id: "lub_trans_embrague", categoryId: "lub_transmision", label: "Embrague", icon: "🦶", order: 7, active: true, subSchemaType: "transmision" },
     // 3. Filtros
-    { id: "lub_fil_aceite", categoryId: "lub_filtros", label: "Aceite", icon: "🛢️", order: 1, active: true, subSchemaType: "filtros" },
-    { id: "lub_fil_aire", categoryId: "lub_filtros", label: "Aire", icon: "🌪️", order: 2, active: true, subSchemaType: "filtros" },
-    { id: "lub_fil_cabina", categoryId: "lub_filtros", label: "Cabina", icon: "❄️", order: 3, active: true, subSchemaType: "filtros" },
+    { id: "lub_fil_aceite", categoryId: "lub_filtros", label: "De Aceite", icon: "🛢️", order: 1, active: true, subSchemaType: "filtros" },
+    { id: "lub_fil_aire", categoryId: "lub_filtros", label: "De Aire", icon: "🌪️", order: 2, active: true, subSchemaType: "filtros" },
+    { id: "lub_fil_cabina", categoryId: "lub_filtros", label: "Cabina A/C", icon: "❄️", order: 3, active: true, subSchemaType: "filtros" },
     { id: "lub_fil_combustible", categoryId: "lub_filtros", label: "Combustible", icon: "⛽", order: 4, active: true, subSchemaType: "filtros" },
-    { id: "lub_fil_transmision", categoryId: "lub_filtros", label: "Transmisión", icon: "⚙️", order: 5, active: true, subSchemaType: "filtros" },
+    { id: "lub_fil_transmision", categoryId: "lub_filtros", label: "De Caja", icon: "⚙️", order: 5, active: true, subSchemaType: "filtros" },
     { id: "lub_fil_separador", categoryId: "lub_filtros", label: "Separador Agua", icon: "💧", order: 6, active: true, subSchemaType: "filtros" },
     // 4. Fluidos
     { id: "lub_flu_coolant", categoryId: "lub_fluidos", label: "Refrigerante", icon: "🌡️", order: 1, active: true, subSchemaType: "fluidos" },
@@ -449,27 +444,43 @@ const DEFAULT_LUBRICENTRO_CONFIG: LubricentroConfigData = {
 
 function normalizeLubricentroConfig(raw: any): LubricentroConfigData {
   const merged = { ...DEFAULT_LUBRICENTRO_CONFIG, ...(raw || {}) };
+  const deprecatedSubIds = new Set([
+    "lub_valvulina",
+    "lub_hidraulico_aceite",
+    "lub_frenos_aceite",
+    "lub_refrigerante_aceite",
+    "lub_limpieza_combustible",
+  ]);
   const singleWordSubMap: Record<string, string> = {
-    "Aceite de motor": "Aceite",
+    "Aceite de motor": "Motor",
     "Flush / Limpiadores": "Flush",
     "Flush o limpiadores internos": "Flush",
     "Grasas lubricantes": "Grasa",
     "Transmisión manual": "Manual",
-    "Filtro de aceite": "Aceite",
-    "Aire de motor": "Aire",
-    "Aire de cabina": "Cabina",
+    "Filtro de aceite": "De Aceite",
+    "Aire de motor": "De Aire",
+    "Aire de cabina": "Cabina A/C",
     "Líquido de frenos": "Frenos",
     "Dirección hidráulica": "Hidráulico",
     "Limpiaparabrisas": "Parabrisas",
     "Otros fluidos": "Otros",
   };
+  const labelBySubId: Record<string, string> = {
+    lub_aceite_motor: "Motor",
+    lub_fil_aceite: "De Aceite",
+    lub_fil_aire: "De Aire",
+    lub_fil_cabina: "Cabina A/C",
+    lub_fil_transmision: "De Caja",
+  };
   const subcategories = (Array.isArray(merged.subcategories)
     ? merged.subcategories
     : DEFAULT_LUBRICENTRO_CONFIG.subcategories
-  ).map((sub: LubSubcategoryItem) => ({
-    ...sub,
-    label: singleWordSubMap[sub.label] || sub.label,
-  }));
+  )
+    .filter((sub: LubSubcategoryItem) => !deprecatedSubIds.has(sub.id))
+    .map((sub: LubSubcategoryItem) => ({
+      ...sub,
+      label: labelBySubId[sub.id] || singleWordSubMap[sub.label] || sub.label,
+    }));
 
   const qtyMap: Record<string, string> = {
     "1 galón": "1 Gal",

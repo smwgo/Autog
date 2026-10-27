@@ -312,7 +312,7 @@ const SECUENCIA_VISTAS: { id: VistaVehiculoId; label: string; short: string; ico
     label: "Frontal",
     short: "Frontal",
     icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+      <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 14.25l2.25-6.75h12l2.25 6.75M3.75 14.25h16.5M3.75 14.25v4.5h16.5v-4.5" />
         <circle cx="7.5" cy="16.5" r="1.5" />
         <circle cx="16.5" cy="16.5" r="1.5" />
@@ -324,7 +324,7 @@ const SECUENCIA_VISTAS: { id: VistaVehiculoId; label: string; short: string; ico
     label: "Lateral Derecho",
     short: "Lat. Der",
     icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+      <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 15.75l-2.25-4.5H9l-4.5 4.5v3h18v-3Z" />
         <circle cx="8" cy="18.75" r="2.25" />
         <circle cx="18" cy="18.75" r="2.25" />
@@ -336,7 +336,7 @@ const SECUENCIA_VISTAS: { id: VistaVehiculoId; label: string; short: string; ico
     label: "Trasera",
     short: "Trasera",
     icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+      <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l1.5-6h13.5l1.5 6M3.75 13.5h16.5M3.75 13.5v5.25h16.5V13.5" />
         <rect x="7" y="15" width="10" height="2" rx="1" />
       </svg>
@@ -347,7 +347,7 @@ const SECUENCIA_VISTAS: { id: VistaVehiculoId; label: string; short: string; ico
     label: "Lateral Izquierdo",
     short: "Lat. Izq",
     icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+      <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l2.25-4.5h10.5l4.5 4.5v3h-18v-3Z" />
         <circle cx="6" cy="18.75" r="2.25" />
         <circle cx="16" cy="18.75" r="2.25" />
@@ -359,7 +359,7 @@ const SECUENCIA_VISTAS: { id: VistaVehiculoId; label: string; short: string; ico
     label: "Superior",
     short: "Superior",
     icon: (
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+      <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
         <rect x="6" y="3" width="12" height="18" rx="4" strokeLinecap="round" strokeLinejoin="round" />
         <line x1="6" y1="8" x2="18" y2="8" strokeLinecap="round" />
         <line x1="6" y1="16" x2="18" y2="16" strokeLinecap="round" />
@@ -2279,7 +2279,7 @@ ${urlSeguimiento}`;
       <div className="space-y-1.5 pb-2 border-b border-zinc-200 dark:border-white/10">
         <div
           ref={seccionCarouselRef}
-          className="flex sm:grid sm:grid-cols-6 gap-2 overflow-x-auto no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 w-full"
         >
           {SISTEMAS_INSPECCION.map((sis) => {
             const active = seccionActiva === sis.id;
@@ -2312,14 +2312,14 @@ ${urlSeguimiento}`;
                 id={`seccion-tab-${sis.id}`}
                 type="button"
                 onClick={() => cambiarSeccionActiva(sis.id)}
-                className={`h-10 px-3 sm:px-4 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer text-xs font-semibold shrink-0 active:scale-95 ${
+                className={`h-10 px-3 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer text-xs font-semibold w-full active:scale-95 ${
                   active
                     ? "bg-purple-50 dark:bg-purple-500/20 border-purple-400 dark:border-purple-500/40 text-purple-700 dark:text-purple-200 shadow-sm"
                     : "bg-white dark:bg-white/[0.02] hover:bg-zinc-50 dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 shadow-sm dark:shadow-none"
                 }`}
               >
-                <span className="text-sm">{sis.icon}</span>
-                <span className="whitespace-nowrap">{sis.shortName}</span>
+                <span className="text-sm shrink-0">{sis.icon}</span>
+                <span className="truncate">{sis.shortName}</span>
                 {badge}
               </button>
             );
@@ -2385,10 +2385,10 @@ ${urlSeguimiento}`;
               >
                 {/* Control centralizado de navegación de vistas (Grande en móvil, Moderno y Minimalista) */}
                 <div
-                  className={`flex items-center rounded-full border shadow-xl backdrop-blur-2xl transition-all duration-200 p-1 sm:p-1 ${
+                  className={`flex items-center rounded-full border shadow-2xl backdrop-blur-2xl transition-all duration-200 p-1.5 sm:p-1 ${
                     lienzoOscuro
-                      ? "bg-slate-950/90 border-white/20 hover:border-white/30 text-zinc-100 shadow-black/60 ring-1 ring-white/10"
-                      : "bg-white/95 border-zinc-300 hover:border-zinc-400 text-zinc-800 shadow-zinc-900/10 ring-1 ring-black/5"
+                      ? "bg-slate-950/95 border-white/20 hover:border-white/30 text-zinc-100 shadow-black/70 ring-1 ring-white/10"
+                      : "bg-white/95 border-zinc-300 hover:border-zinc-400 text-zinc-800 shadow-zinc-900/15 ring-1 ring-black/5"
                   }`}
                 >
                   {/* Flecha Anterior (Para atrás / Izquierda) */}
@@ -2402,9 +2402,9 @@ ${urlSeguimiento}`;
                     onTouchEnd={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                     title="Perspectiva anterior"
-                    className="w-11 h-11 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/15 dark:hover:bg-white/15 transition-all cursor-pointer active:scale-90"
+                    className="w-12 h-12 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-zinc-200 hover:text-white hover:bg-white/15 dark:hover:bg-white/15 transition-all cursor-pointer active:scale-90"
                   >
-                    <svg className="w-5 h-5 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                    <svg className="w-6 h-6 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
                     </svg>
                   </button>
@@ -2420,12 +2420,12 @@ ${urlSeguimiento}`;
                       onTouchStart={(e) => e.stopPropagation()}
                       onTouchEnd={(e) => e.stopPropagation()}
                       onPointerDown={(e) => e.stopPropagation()}
-                      className="h-11 sm:h-9 px-3.5 sm:px-3 rounded-full flex items-center gap-2 sm:gap-1.5 cursor-pointer hover:bg-white/10 active:scale-95 transition-all"
+                      className="h-12 sm:h-9 px-4 sm:px-3 rounded-full flex items-center gap-2.5 sm:gap-1.5 cursor-pointer hover:bg-white/10 active:scale-95 transition-all"
                     >
-                      <span className="text-cyan-400 shrink-0 flex items-center justify-center scale-125 sm:scale-110">
+                      <span className="text-cyan-400 shrink-0 flex items-center justify-center [&>svg]:w-6 [&>svg]:h-6 sm:[&>svg]:w-4 sm:[&>svg]:h-4">
                         {infoVistaActual.icon}
                       </span>
-                      <span className="text-sm sm:text-xs md:text-sm font-bold tracking-wide">
+                      <span className="text-base sm:text-xs md:text-sm font-black tracking-wide">
                         {infoVistaActual.short}
                       </span>
                       <svg
@@ -2448,13 +2448,13 @@ ${urlSeguimiento}`;
                         onTouchStart={(e) => e.stopPropagation()}
                         onTouchEnd={(e) => e.stopPropagation()}
                         onPointerDown={(e) => e.stopPropagation()}
-                        className={`absolute left-0 top-full mt-2 w-56 sm:w-52 rounded-2xl border p-2 sm:p-1.5 shadow-2xl backdrop-blur-2xl z-50 animate-fade-in ${
+                        className={`absolute left-0 top-full mt-2 w-64 sm:w-52 rounded-2xl border p-2 sm:p-1.5 shadow-2xl backdrop-blur-2xl z-50 animate-fade-in ${
                           lienzoOscuro
                             ? "bg-slate-950/95 border-white/20 text-zinc-100 shadow-black/80 ring-1 ring-white/10"
                             : "bg-white/95 border-zinc-200 text-zinc-800 shadow-xl"
                         }`}
                       >
-                        <div className="px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                        <div className="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-zinc-400">
                           Perspectiva:
                         </div>
                         {SECUENCIA_VISTAS.map((v) => {
@@ -2470,20 +2470,20 @@ ${urlSeguimiento}`;
                               onTouchStart={(e) => e.stopPropagation()}
                               onTouchEnd={(e) => e.stopPropagation()}
                               onPointerDown={(e) => e.stopPropagation()}
-                              className={`w-full flex items-center justify-between px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-xl text-sm sm:text-xs font-semibold transition-all text-left cursor-pointer ${
+                              className={`w-full flex items-center justify-between px-4 py-3 sm:px-3 sm:py-2 rounded-xl text-base sm:text-xs font-semibold transition-all text-left cursor-pointer ${
                                 esActivo
                                   ? "bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30"
                                   : "text-zinc-300 hover:text-white hover:bg-white/10"
                               }`}
                             >
-                              <div className="flex items-center gap-2.5">
+                              <div className="flex items-center gap-3">
                                 <span className={esActivo ? "text-cyan-400" : "opacity-80"}>
                                   {v.icon}
                                 </span>
                                 <span>{v.label}</span>
                               </div>
                               {esActivo && (
-                                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
                               )}
                             </button>
                           );
@@ -2503,9 +2503,9 @@ ${urlSeguimiento}`;
                     onTouchEnd={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                     title="Siguiente perspectiva"
-                    className="w-11 h-11 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/15 dark:hover:bg-white/15 transition-all cursor-pointer active:scale-90"
+                    className="w-12 h-12 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-zinc-200 hover:text-white hover:bg-white/15 dark:hover:bg-white/15 transition-all cursor-pointer active:scale-90"
                   >
-                    <svg className="w-5 h-5 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                    <svg className="w-6 h-6 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                     </svg>
                   </button>
