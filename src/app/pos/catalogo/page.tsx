@@ -59,7 +59,9 @@ export default function CatalogoPage() {
       if (searchTerm) params.set("busqueda", searchTerm);
       if (selectedCategory) params.set("categoria", selectedCategory);
 
-      const res = await fetch(`/api/productos?${params.toString()}`);
+      const res = await fetch(`/api/productos?${params.toString()}`, {
+        cache: "no-store",
+      });
       const data = await res.json();
 
       if (!res.ok || !data.success) {
@@ -179,9 +181,10 @@ export default function CatalogoPage() {
   const confirmarEliminarProducto = async () => {
     if (!productoAEliminar) return;
 
+    const idAEliminar = productoAEliminar.id;
     try {
-      setEliminandoId(productoAEliminar.id);
-      const res = await fetch(`/api/productos?id=${productoAEliminar.id}`, {
+      setEliminandoId(idAEliminar);
+      const res = await fetch(`/api/productos?id=${idAEliminar}`, {
         method: "DELETE",
       });
 
@@ -191,6 +194,7 @@ export default function CatalogoPage() {
         return;
       }
 
+      setProductos((prev) => prev.filter((p) => p.id !== idAEliminar));
       setProductoAEliminar(null);
       await cargarProductos();
     } catch (err: any) {

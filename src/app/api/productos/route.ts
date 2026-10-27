@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 let cachedProducts: any[] | null = null;
 let lastCacheTime = 0;
 const CACHE_TTL_MS = 30000; // 30 segundos
@@ -70,17 +72,24 @@ export async function GET(request: Request) {
     const totalBajoStock = products.filter((p) => p.status === "Bajo Stock").length;
     const totalAgotados = products.filter((p) => p.status === "Agotado").length;
 
-    return NextResponse.json({
-      success: true,
-      productos: filtrados,
-      categories,
-      stats: {
-        totalProductos,
-        totalEnStock,
-        totalBajoStock,
-        totalAgotados,
+    return NextResponse.json(
+      {
+        success: true,
+        productos: filtrados,
+        categories,
+        stats: {
+          totalProductos,
+          totalEnStock,
+          totalBajoStock,
+          totalAgotados,
+        },
       },
-    });
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   } catch (error: any) {
     console.error("Error al obtener productos de Neon:", error);
     return NextResponse.json(
@@ -204,14 +213,39 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: "ID de producto requerido" }, { status: 400 });
     }
 
-    await prisma.product.delete({
+    const existing = await prisma.product.findUnique({
       where: { id },
+    });
+
+    if (!existing) {
+      cachedProducts = null;
+      lastCacheTime = 0;
+      return NextResponse.json({ success: true, message: "El producto ya había sido eliminado." });
+    }
+
+    // Limpieza en transacción de registros dependientes para asegurar borrado completo
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe(`DELETE FROM "InventoryMovement" WHERE "productId" = $1`, id).catch(() => {});
+      await tx.$executeRawUnsafe(`DELETE FROM "PhysicalCountItem" WHERE "productId" = $1`, id).catch(() => {});
+      await tx.$executeRawUnsafe(`DELETE FROM "StockTransferItem" WHERE "productId" = $1`, id).catch(() => {});
+      await tx.$executeRawUnsafe(`DELETE FROM "BranchStock" WHERE "productId" = $1`, id).catch(() => {});
+      await tx.$executeRawUnsafe(`DELETE FROM "ProductLot" WHERE "productId" = $1`, id).catch(() => {});
+      await tx.product.delete({
+        where: { id },
+      });
     });
 
     cachedProducts = null;
     lastCacheTime = 0;
 
-    return NextResponse.json({ success: true, message: "Producto eliminado correctamente." });
+    return NextResponse.json(
+      { success: true, message: "Producto eliminado correctamente." },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   } catch (error: any) {
     console.error("Error al eliminar producto de Neon:", error);
     return NextResponse.json(

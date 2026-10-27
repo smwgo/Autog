@@ -107,7 +107,16 @@ export async function DELETE(req: Request) {
     if (!id) return NextResponse.json({ error: "ID requerido" }, { status: 400 });
 
     await withRetry(async () => {
-      await prisma.product.delete({ where: { id } });
+      await prisma.$transaction(async (tx) => {
+        await tx.$executeRawUnsafe(`DELETE FROM "InventoryMovement" WHERE "productId" = $1`, id).catch(() => {});
+        await tx.$executeRawUnsafe(`DELETE FROM "PhysicalCountItem" WHERE "productId" = $1`, id).catch(() => {});
+        await tx.$executeRawUnsafe(`DELETE FROM "StockTransferItem" WHERE "productId" = $1`, id).catch(() => {});
+        await tx.$executeRawUnsafe(`DELETE FROM "BranchStock" WHERE "productId" = $1`, id).catch(() => {});
+        await tx.$executeRawUnsafe(`DELETE FROM "ProductLot" WHERE "productId" = $1`, id).catch(() => {});
+        await tx.product.delete({ where: { id } }).catch((e) => {
+          if (!e.message?.includes("Record to delete does not exist")) throw e;
+        });
+      });
     });
     return NextResponse.json({ ok: true });
   } catch (error: any) {
