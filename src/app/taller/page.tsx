@@ -8,6 +8,7 @@ import { TallerMobileNav } from "@/components/TallerMobileNav";
 import InspeccionVehiculo from "@/components/taller/InspeccionVehiculo";
 import ModalNuevaOrdenTrabajo from "@/components/taller/ModalNuevaOrdenTrabajo";
 import ModalPresupuestoPdf from "@/components/taller/ModalPresupuestoPdf";
+import ModalFormularioRapido from "@/components/taller/ModalFormularioRapido";
 import LubricentroExpress from "./components/LubricentroExpress";
 import ModalCategoriasTaller from "./components/ModalCategoriasTaller";
 import { getClientActiveBranch, getClientUserBranch } from "@/lib/branch";
@@ -670,9 +671,10 @@ export const MODULOS_ESPECIALIDADES = [
     name: "Taller Mecánico",
     desc: "Mecánica general y diagnóstico",
     color: "blue",
-    bgClass: "bg-blue-600",
-    borderClass: "border-blue-400/50",
-    shadowClass: "shadow-blue-600/30",
+    bgClass: "bg-blue-500/10 dark:bg-blue-500/15",
+    borderClass: "border-blue-500/30 dark:border-blue-400/35",
+    textClass: "text-blue-600 dark:text-blue-300",
+    shadowClass: "shadow-sm shadow-blue-500/10",
     dotClass: "bg-blue-500",
     svg: (className = "w-4 h-4") => (
       <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -686,9 +688,10 @@ export const MODULOS_ESPECIALIDADES = [
     name: "Lubricentro Express",
     desc: "Cambio de aceite, filtros y fluidos",
     color: "amber",
-    bgClass: "bg-amber-600",
-    borderClass: "border-amber-400/50",
-    shadowClass: "shadow-amber-600/30",
+    bgClass: "bg-amber-500/10 dark:bg-amber-500/15",
+    borderClass: "border-amber-500/30 dark:border-amber-400/35",
+    textClass: "text-amber-600 dark:text-amber-300",
+    shadowClass: "shadow-sm shadow-amber-500/10",
     dotClass: "bg-amber-500",
     svg: (className = "w-4 h-4") => (
       <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -702,9 +705,10 @@ export const MODULOS_ESPECIALIDADES = [
     name: "Car Wash & Detailing",
     desc: "Lavado premium, aspirado y estética",
     color: "cyan",
-    bgClass: "bg-cyan-600",
-    borderClass: "border-cyan-400/50",
-    shadowClass: "shadow-cyan-600/30",
+    bgClass: "bg-cyan-500/10 dark:bg-cyan-500/15",
+    borderClass: "border-cyan-500/30 dark:border-cyan-400/35",
+    textClass: "text-cyan-600 dark:text-cyan-300",
+    shadowClass: "shadow-sm shadow-cyan-500/10",
     dotClass: "bg-cyan-500",
     svg: (className = "w-4 h-4") => (
       <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -718,9 +722,10 @@ export const MODULOS_ESPECIALIDADES = [
     name: "Tecnicentro Automotriz",
     desc: "Llantas, alineación, balanceo y baterías",
     color: "emerald",
-    bgClass: "bg-emerald-600",
-    borderClass: "border-emerald-400/50",
-    shadowClass: "shadow-emerald-600/30",
+    bgClass: "bg-emerald-500/10 dark:bg-emerald-500/15",
+    borderClass: "border-emerald-500/30 dark:border-emerald-400/35",
+    textClass: "text-emerald-600 dark:text-emerald-300",
+    shadowClass: "shadow-sm shadow-emerald-500/10",
     dotClass: "bg-emerald-500",
     svg: (className = "w-4 h-4") => (
       <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -805,6 +810,7 @@ export default function TallerPanel() {
 
   const [triggerAbrirConfig, setTriggerAbrirConfig] = useState<number>(0);
   const [modalConfigTallerAbierto, setModalConfigTallerAbierto] = useState<boolean>(false);
+  const [mostrarModalFormularioRapido, setMostrarModalFormularioRapido] = useState<boolean>(false);
 
   const handleAbrirCategoriasModuloActivo = () => {
     if (moduloTaller === "taller") {
@@ -1344,7 +1350,7 @@ export default function TallerPanel() {
   const ordenesCarouselRef = useRef<HTMLDivElement | null>(null);
   const ordenesCarouselScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const mostrarToast = useCallback((_texto: string, _tipo: "ok" | "err" | "info" = "ok") => {
+  const mostrarToast = useCallback((_texto: string, _tipo?: string) => {
     // Desactivado: sin etiquetas flotantes verde ni roja al realizar acciones
   }, []);
 
@@ -5163,88 +5169,108 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
         <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 py-1">
           {/* SELECTOR SUPERIOR 4 EN 1: VISTA MÓVIL (DESLIZABLE UNO A UNO) */}
           <div className="block sm:hidden w-full select-none">
-            <div className="relative flex items-center bg-white/90 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 rounded-2xl p-1 shadow-sm backdrop-blur-md">
-              {/* Botón flecha izquierda */}
-              <button
-                type="button"
-                onClick={handlePrevModulo}
-                className="h-11 w-9 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors shrink-0 z-10 active:scale-95 cursor-pointer rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5"
-                title="Anterior especialidad"
-                aria-label="Anterior"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
+            <div className="flex items-center gap-1.5 w-full">
+              <div className="relative flex-1 min-w-0 flex items-center bg-white/90 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 rounded-2xl p-1 shadow-sm backdrop-blur-md">
+                {/* Botón flecha izquierda */}
+                <button
+                  type="button"
+                  onClick={handlePrevModulo}
+                  className="h-11 w-8 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors shrink-0 z-10 active:scale-95 cursor-pointer rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5"
+                  title="Anterior especialidad"
+                  aria-label="Anterior"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
 
-              {/* Contenedor deslizable uno a uno */}
-              <div
-                ref={mobileSliderRef}
-                onScroll={handleMobileSliderScroll}
-                className="flex-1 flex overflow-x-auto snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden touch-pan-x"
-              >
-                {MODULOS_ESPECIALIDADES.map((mod, idx) => {
-                  const isActivo = moduloTaller === mod.id;
-                  return (
-                    <div
-                      key={mod.id}
-                      className="w-full shrink-0 snap-center px-1"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setModuloTaller(mod.id)}
-                        className={`w-full h-11 px-3 rounded-xl flex items-center justify-between transition-all select-none cursor-pointer ${
-                          isActivo
-                            ? `${mod.bgClass} border ${mod.borderClass} text-white shadow-md ${mod.shadowClass} scale-[1.01]`
-                            : "bg-zinc-100/80 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 border border-transparent"
-                        }`}
+                {/* Contenedor deslizable uno a uno */}
+                <div
+                  ref={mobileSliderRef}
+                  onScroll={handleMobileSliderScroll}
+                  className="flex-1 flex overflow-x-auto snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden touch-pan-x"
+                >
+                  {MODULOS_ESPECIALIDADES.map((mod, idx) => {
+                    const isActivo = moduloTaller === mod.id;
+                    return (
+                      <div
+                        key={mod.id}
+                        className="w-full shrink-0 snap-center px-1"
                       >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span
-                            className={`p-1.5 rounded-lg shrink-0 ${
-                              isActivo
-                                ? "bg-white/20 text-white"
-                                : "bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-zinc-300"
-                            }`}
-                          >
-                            {mod.svg("w-4 h-4")}
-                          </span>
-                          <div className="text-left min-w-0">
-                            <div className="text-xs font-bold leading-tight truncate">{mod.name}</div>
-                            <div
-                              className={`text-[10px] leading-tight truncate ${
-                                isActivo ? "text-white/80" : "text-zinc-400 dark:text-zinc-500"
-                              }`}
-                            >
-                              {mod.desc}
-                            </div>
-                          </div>
-                        </div>
-                        <div
-                          className={`text-[9px] font-semibold px-2 py-0.5 rounded-full shrink-0 ml-1.5 ${
+                        <button
+                          type="button"
+                          onClick={() => setModuloTaller(mod.id)}
+                          className={`w-full h-11 px-2.5 rounded-xl flex items-center justify-between transition-all select-none cursor-pointer ${
                             isActivo
-                              ? "bg-black/25 text-white"
-                              : "bg-zinc-200 dark:bg-white/10 text-zinc-400"
+                              ? `${mod.bgClass} border ${mod.borderClass} text-white shadow-md ${mod.shadowClass} scale-[1.01]`
+                              : "bg-zinc-100/80 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 border border-transparent"
                           }`}
                         >
-                          {idx + 1} de {MODULOS_ESPECIALIDADES.length}
-                        </div>
-                      </button>
-                    </div>
-                  );
-                })}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className={`p-1.5 rounded-lg shrink-0 ${
+                                isActivo
+                                  ? "bg-white/20 text-white"
+                                  : "bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-zinc-300"
+                              }`}
+                            >
+                              {mod.svg("w-4 h-4")}
+                            </span>
+                            <div className="text-left min-w-0">
+                              <div className="text-xs font-bold leading-tight truncate">{mod.name}</div>
+                              <div
+                                className={`text-[10px] leading-tight truncate ${
+                                  isActivo ? "text-white/80" : "text-zinc-400 dark:text-zinc-500"
+                                }`}
+                              >
+                                {mod.desc}
+                              </div>
+                            </div>
+                          </div>
+                          <div
+                            className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ml-1 ${
+                              isActivo
+                                ? "bg-black/25 text-white"
+                                : "bg-zinc-200 dark:bg-white/10 text-zinc-400"
+                            }`}
+                          >
+                            {idx + 1}/4
+                          </div>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Botón flecha derecha */}
+                <button
+                  type="button"
+                  onClick={handleNextModulo}
+                  className="h-11 w-8 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors shrink-0 z-10 active:scale-95 cursor-pointer rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5"
+                  title="Siguiente especialidad"
+                  aria-label="Siguiente"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
               </div>
 
-              {/* Botón flecha derecha */}
+              {/* Botón Engranaje Móvil */}
               <button
                 type="button"
-                onClick={handleNextModulo}
-                className="h-11 w-9 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors shrink-0 z-10 active:scale-95 cursor-pointer rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5"
-                title="Siguiente especialidad"
-                aria-label="Siguiente"
+                onClick={() => setMostrarModalFormularioRapido(true)}
+                className="h-11 w-11 shrink-0 flex items-center justify-center rounded-2xl bg-white/90 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white active:scale-95 transition-all cursor-pointer"
+                title="Registro Manual (Modo Formulario)"
+                aria-label="Abrir formulario manual"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </button>
             </div>
@@ -5271,27 +5297,53 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             </div>
           </div>
 
-          {/* SELECTOR SUPERIOR 4 EN 1: VISTA DESKTOP (COMPACTO EN FILA) */}
-          <div className="hidden sm:flex items-center p-1 rounded-2xl bg-white/80 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl gap-1 shrink-0 overflow-x-auto max-w-full">
-            {MODULOS_ESPECIALIDADES.map((mod) => {
-              const isActivo = moduloTaller === mod.id;
-              return (
-                <button
-                  key={mod.id}
-                  type="button"
-                  onClick={() => setModuloTaller(mod.id)}
-                  className={`h-9 px-3.5 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    isActivo
-                      ? `${mod.bgClass} border ${mod.borderClass} text-white shadow-lg ${mod.shadowClass} scale-[1.01]`
-                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-                  }`}
-                  title={mod.name}
-                >
-                  {mod.svg("w-4 h-4 shrink-0")}
-                  <span className="whitespace-nowrap">{mod.shortName}</span>
-                </button>
-              );
-            })}
+          {/* SELECTOR SUPERIOR 4 EN 1: VISTA DESKTOP (COMPACTO EN FILA + BOTÓN ENGRANAJE) */}
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
+            <div className="flex items-center p-1 rounded-2xl bg-white/80 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl gap-1 shrink-0 overflow-x-auto max-w-full">
+              {MODULOS_ESPECIALIDADES.map((mod) => {
+                const isActivo = moduloTaller === mod.id;
+                return (
+                  <button
+                    key={mod.id}
+                    type="button"
+                    onClick={() => setModuloTaller(mod.id)}
+                    className={`h-9 px-3.5 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      isActivo
+                        ? `${mod.bgClass} border ${mod.borderClass} text-white shadow-lg ${mod.shadowClass} scale-[1.01]`
+                        : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
+                    }`}
+                    title={mod.name}
+                  >
+                    {mod.svg("w-4 h-4 shrink-0")}
+                    <span className="whitespace-nowrap">{mod.shortName}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* BOTÓN ENGRANAJE: REGISTRO MANUAL / MODO FORMULARIO */}
+            <button
+              type="button"
+              onClick={() => setMostrarModalFormularioRapido(true)}
+              className="h-11 w-11 flex items-center justify-center rounded-2xl bg-white/80 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-all cursor-pointer group shrink-0"
+              title="Registro Manual (Modo Formulario)"
+              aria-label="Abrir formulario manual"
+            >
+              <svg
+                className="w-5 h-5 transition-transform duration-300 group-hover:rotate-45"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.8}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -6543,6 +6595,25 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
           void sincronizarOrdenEnNeon({ items: itemsNuevos });
         }}
         mostrarToast={mostrarToast}
+      />
+
+      {/* Modal de Registro Manual Rápido (Modo Formulario) */}
+      <ModalFormularioRapido
+        isOpen={mostrarModalFormularioRapido}
+        onClose={() => setMostrarModalFormularioRapido(false)}
+        especialidadInicial={moduloTaller}
+        mecanicos={mecanicos}
+        empleadoLogueado={empleadoLogueado}
+        clientesCatalogo={clientesCatalogo}
+        onOrdenCreada={(nuevaOrden, cliente, tipo) => {
+          handleOrdenCreadaDesdeModal(nuevaOrden, cliente, tipo);
+          if (tipo === "Lubricentro") setModuloTaller("lubricentro");
+          else if (tipo === "Lavado") setModuloTaller("carwash");
+          else if (moduloTaller === "tecnicentro") setModuloTaller("tecnicentro");
+          else setModuloTaller("taller");
+        }}
+        mostrarToast={mostrarToast}
+        onCambiarEspecialidad={(esp) => setModuloTaller(esp)}
       />
 
       <TallerMobileNav />

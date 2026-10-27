@@ -1219,6 +1219,29 @@ export async function POST(request: Request) {
         const jsonFotos = JSON.stringify(Array.isArray(receptionPhotos) ? receptionPhotos : []);
         const jsonVoiceNotes = JSON.stringify(Array.isArray(voiceNotes) ? voiceNotes : []);
 
+        const incomingItems: any[] = Array.isArray(body.items) ? body.items : [];
+        const finalServicesJson = JSON.stringify(
+          incomingItems.map((it: any) => it.name || it.description || "Servicio")
+        );
+        const finalItemsJson = JSON.stringify(
+          incomingItems.map((it: any, idx: number) => ({
+            id: it.id || `item_${Date.now()}_${idx}`,
+            type: it.type || "SERVICE",
+            category: it.category || "General",
+            code: it.code || `ITM-${idx + 1}`,
+            name: it.name || it.description || "Servicio",
+            price: Number(it.price || 0),
+            qty: Number(it.qty || 1),
+            status: "En Proceso",
+          }))
+        );
+        const finalTotalCost =
+          Number(body.totalCost) ||
+          incomingItems.reduce(
+            (acc: number, it: any) => acc + Number(it.price || 0) * Number(it.qty || 1),
+            0
+          );
+
         await prisma.$executeRawUnsafe(
           `INSERT INTO "WorkshopOrder" (
             "id", "orderNumber", "customerId", "vehicleId", "vehicle", "plate",
@@ -1231,9 +1254,9 @@ export async function POST(request: Request) {
             $1, $2, $3, $4, $5, $6,
             $7, $8, $9, $10, 'En Pista', 10,
             $11, $12, $13, $14,
-            '[]', '[]',
+            $19, $20,
             $15, '[]', $16, $17, 'Hoy',
-            0, $18, NOW(), NOW(), NOW()
+            $21, $18, NOW(), NOW(), NOW()
           )`,
           orderId,
           orderNumber,
@@ -1252,7 +1275,10 @@ export async function POST(request: Request) {
           jsonFotos,
           jsonVoiceNotes,
           notesFormatted,
-          orderBranch
+          orderBranch,
+          finalServicesJson,
+          finalItemsJson,
+          finalTotalCost
         );
 
         // Vincular evidencias multimedia a la nueva orden de trabajo en Neon DB
