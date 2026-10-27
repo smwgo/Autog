@@ -661,6 +661,19 @@ function formatearFechaIngreso(dateStr?: string | null): string {
   }
 }
 
+export function limpiarNumeroOrden(orderNumber?: string | null): string {
+  if (!orderNumber) return "";
+  const raw = String(orderNumber).trim();
+  const num = raw
+    .replace(/^#+/, "")
+    .replace(/^(?:OT|ORD|LUB|CW|TC)\s*#?\s*-?\s*(\d{4}-)?/i, "")
+    .replace(/^ORD-[A-Z0-9]+-/i, "")
+    .replace(/^OT\s*#?\s*/i, "")
+    .replace(/^#+/, "")
+    .trim();
+  return `#${num || raw}`;
+}
+
 // ============================================================================
 // ESPECIALIDADES DEL SELECTOR (TALLER, LUBRICENTRO, CAR WASH, TECNICENTRO)
 // ============================================================================
@@ -747,13 +760,7 @@ export default function TallerPanel() {
   const [clientesCatalogo, setClientesCatalogo] = useState<any[]>([]);
   const [productosInventario, setProductosInventario] = useState<InventoryProduct[]>([]);
   const [serviciosDb, setServiciosDb] = useState<any[]>([]);
-  const [mecanicos, setMecanicos] = useState<string[]>([
-    "Hernan Marquez",
-    "Carlos Rodríguez",
-    "Luis Martínez",
-    "Ana Torres",
-    "Miguel Ángel",
-  ]);
+  const [mecanicos, setMecanicos] = useState<string[]>([]);
   const [cargandoInicial, setCargandoInicial] = useState(true);
 
   // SELECTOR SUPERIOR 4 EN 1: TALLER MECÁNICO, LUBRICENTRO, CAR WASH Y TECNICENTRO
@@ -1402,12 +1409,6 @@ export default function TallerPanel() {
       if (data.success) {
         const pista: UnifiedOrder[] = data.autosEnPista || [];
         setAutosEnPista(pista);
-        try {
-          localStorage.setItem(
-            "taller_pista_cache",
-            JSON.stringify(pista.map((o) => ({ ...o, receptionPhotos: [] })))
-          );
-        } catch {}
         if (Array.isArray(data.clientes)) {
           setClientesCatalogo(data.clientes);
         }
@@ -1418,22 +1419,10 @@ export default function TallerPanel() {
         }
         if (selectFirstIfNone && pista.length > 0) {
           setOrdenActiva((prev) => {
-            let targetOrder: UnifiedOrder | null = null;
-            if (typeof window !== "undefined") {
-              try {
-                const savedId = localStorage.getItem("taller_orden_activa_id");
-                if (savedId) {
-                  targetOrder = pista.find((o) => o.id === savedId) || null;
-                }
-              } catch {}
-            }
-            if (!targetOrder && prev) {
-              targetOrder = pista.find((o) => o.id === prev.id || o.orderNumber === prev.orderNumber) || null;
-            }
+            const targetOrder = prev
+              ? pista.find((o) => o.id === prev.id || o.orderNumber === prev.orderNumber) || null
+              : null;
             const finalOrder = targetOrder || pista[0];
-            try {
-              localStorage.setItem("taller_orden_activa_id", finalOrder.id);
-            } catch {}
             setFotosRecepcion(finalOrder.receptionPhotos || []);
             setKmActualInput(finalOrder.mileage ? String(finalOrder.mileage) : "");
             return finalOrder;
@@ -1453,32 +1442,6 @@ export default function TallerPanel() {
   }, []);
 
   useEffect(() => {
-    try {
-      const cached = JSON.parse(localStorage.getItem("taller_pista_cache") || "null");
-      if (Array.isArray(cached) && cached.length > 0) {
-        const cleanCached = cached.map((o: UnifiedOrder) =>
-          o.orderNumber === "ORD-POS-6734" ? { ...o, orderNumber: "868675" } : o
-        );
-        const savedId = localStorage.getItem("taller_orden_activa_id");
-        setAutosEnPista((prev) => (prev.length > 0 ? prev : cleanCached));
-        setOrdenActiva((prev) => {
-          if (prev) return prev.orderNumber === "ORD-POS-6734" ? { ...prev, orderNumber: "868675" } : prev;
-          const found = cleanCached.find((o: UnifiedOrder) => o.id === savedId) || cleanCached[0];
-          if (found && found.id) {
-            try {
-              const savedFindings = JSON.parse(localStorage.getItem(`taller_findings_${found.id}`) || "null");
-              if (Array.isArray(savedFindings) && savedFindings.length > 0) {
-                return { ...found, inspectionFindings: savedFindings };
-              }
-            } catch {}
-          }
-          return found;
-        });
-      }
-    } catch {}
-  }, []);
-
-  useEffect(() => {
     let cargado = false;
     cargarOperacionInicial(true).then((ok) => {
       cargado = ok;
@@ -1487,20 +1450,15 @@ export default function TallerPanel() {
       if (!cargado) cargarOperacionInicial(true);
     }, 1500);
     const handleBranchChange = () => cargarOperacionInicial(true);
+    const handleCatalogoActualizado = () => cargarOperacionInicial(false);
     window.addEventListener("autog-branch-change", handleBranchChange);
+    window.addEventListener("taller-catalogo-actualizado", handleCatalogoActualizado);
     return () => {
       clearTimeout(retryTimer);
       window.removeEventListener("autog-branch-change", handleBranchChange);
+      window.removeEventListener("taller-catalogo-actualizado", handleCatalogoActualizado);
     };
   }, [cargarOperacionInicial]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && ordenActiva?.id) {
-      try {
-        localStorage.setItem("taller_orden_activa_id", ordenActiva.id);
-      } catch {}
-    }
-  }, [ordenActiva?.id]);
 
   // Búsqueda reactiva de clientes en Neon DB cuando el usuario escribe en Flotante 01
   useEffect(() => {
@@ -4839,12 +4797,12 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
     VISTAS_INSPECCION.find((v) => v.id === etapa3VistaActiva) || VISTAS_INSPECCION[0];
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-[#141A22] text-zinc-900 dark:text-white font-sans pb-28 md:pb-12 selection:bg-blue-500/30">
+    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-[#141A22] text-zinc-900 dark:text-white font-sans pb-28 md:pb-12 selection:bg-blue-500/30 overflow-x-hidden max-w-full">
       <Header />
 
 
 
-      <main className="flex-grow p-4 sm:p-6 md:p-8 max-w-[1440px] mx-auto w-full space-y-6">
+      <main className="flex-grow p-2.5 sm:p-6 md:p-8 max-w-[1440px] mx-auto w-full space-y-3.5 sm:space-y-6 overflow-x-hidden max-w-full">
         {/* ===================================================================
             CABECERA PRINCIPAL: VOLVER + SELECTOR (SOLO ICONO EN MÓVIL) + BOTONES ACCIÓN
             =================================================================== */}
@@ -4878,17 +4836,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       Orden de Servicio
                     </span>
                     <span className="block text-sm sm:text-sm font-mono font-normal leading-tight text-zinc-500 dark:text-zinc-400 mt-0.5">
-                      {(() => {
-                        const raw = String(ordenActiva.orderNumber || "").trim();
-                        const num = raw
-                          .replace(/^#+/, "")
-                          .replace(/^OT\s*#?\s*/i, "")
-                          .replace(/^ORD-[A-Z0-9]+-/i, "")
-                          .replace(/^ORD-/i, "")
-                          .replace(/^OT-\d{4}-/i, "")
-                          .trim();
-                        return `#${num || raw}`;
-                      })()}
+                      {limpiarNumeroOrden(ordenActiva.orderNumber)}
                     </span>
                   </span>
                 </div>
@@ -4910,7 +4858,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               <Link
                 href="/taller/nueva-orden"
                 aria-label="Nueva Orden"
-                className="w-10 h-10 sm:w-9 sm:h-9 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white font-semibold flex items-center justify-center transition-all cursor-pointer shadow-lg shadow-blue-600/25 active:scale-95 shrink-0"
+                className="w-11 h-11 sm:w-9 sm:h-9 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white font-semibold flex items-center justify-center transition-all cursor-pointer shadow-lg shadow-blue-600/25 active:scale-95 shrink-0"
                 title="Nueva Orden"
               >
                 <span className="text-xl sm:text-lg font-bold leading-none">+</span>
@@ -4918,7 +4866,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               <button
                 type="button"
                 onClick={() => setMostrarModalAutosAtencion(true)}
-                className="relative w-10 h-10 sm:w-9 sm:h-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border border-emerald-500/30 dark:border-emerald-500/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
+                className="relative w-11 h-11 sm:w-9 sm:h-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border border-emerald-500/30 dark:border-emerald-500/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
                 title="Ver autos y órdenes en atención"
               >
                 <svg
@@ -4953,7 +4901,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             <div className="w-full min-w-0 flex flex-col items-start gap-2">
               <div
                 ref={ordenesCarouselRef}
-                className="w-full overflow-x-auto snap-x snap-mandatory flex gap-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:cursor-grab"
+                className="w-full overflow-x-auto snap-x snap-mandatory flex gap-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:cursor-grab touch-pan-x overscroll-x-contain"
                 onPointerDown={(event: React.PointerEvent<HTMLDivElement>) => {
                   if (event.pointerType !== "mouse" || event.button !== 0) return;
                   const container = event.currentTarget;
@@ -5175,11 +5123,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 <button
                   type="button"
                   onClick={handlePrevModulo}
-                  className="h-9 w-8 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors shrink-0 z-10 active:scale-95 cursor-pointer rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5"
+                  className="h-11 w-10 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors shrink-0 z-10 active:scale-95 cursor-pointer rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5"
                   title="Anterior especialidad"
                   aria-label="Anterior"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                  <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
@@ -5188,7 +5136,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 <div
                   ref={mobileSliderRef}
                   onScroll={handleMobileSliderScroll}
-                  className="flex-1 flex overflow-x-auto snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden touch-pan-x"
+                  className="flex-1 flex overflow-x-auto snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden touch-pan-x overscroll-x-contain"
                 >
                   {MODULOS_ESPECIALIDADES.map((mod) => {
                     const isActivo = moduloTaller === mod.id;
@@ -5200,13 +5148,13 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                         <button
                           type="button"
                           onClick={() => setModuloTaller(mod.id)}
-                          className={`w-full h-9 px-3.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 transition-all select-none cursor-pointer ${
+                          className={`w-full h-11 px-3.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 transition-all select-none cursor-pointer ${
                             isActivo
                               ? `${mod.bgClass} border ${mod.borderClass} text-white shadow-lg ${mod.shadowClass} scale-[1.01]`
                               : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
                           }`}
                         >
-                          {mod.svg("w-4 h-4 shrink-0")}
+                          {mod.svg("w-4.5 h-4.5 shrink-0")}
                           <span className="whitespace-nowrap">{mod.shortName}</span>
                         </button>
                       </div>
@@ -5218,11 +5166,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 <button
                   type="button"
                   onClick={handleNextModulo}
-                  className="h-9 w-8 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors shrink-0 z-10 active:scale-95 cursor-pointer rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5"
+                  className="h-11 w-10 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors shrink-0 z-10 active:scale-95 cursor-pointer rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5"
                   title="Siguiente especialidad"
                   aria-label="Siguiente"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                  <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
@@ -5323,7 +5271,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             CONTENEDOR PRINCIPAL: CABECERA COMÚN (PLACA, VEHÍCULO, CLIENTE, VECES ATENDIDO Y MODO)
             SALE EXACTAMENTE IGUAL PARA TALLER Y LUBRICENTRO
             =================================================================== */}
-        <section className="bg-white dark:bg-[#111113]/90 rounded-2xl border border-zinc-200 dark:border-white/[0.08] p-4 sm:p-6 shadow-sm dark:shadow-2xl space-y-5 overflow-hidden">
+        <section className="bg-white dark:bg-[#111113]/90 rounded-2xl border border-zinc-200 dark:border-white/[0.08] p-3 sm:p-6 shadow-sm dark:shadow-2xl space-y-4 sm:space-y-5 overflow-hidden w-full max-w-full">
           {/* VISTAS SEGÚN EL SELECTOR: TALLER, LUBRICENTRO, CAR WASH O TECNICENTRO */}
           <div className={moduloTaller !== "taller" ? "block w-full" : "hidden"}>
             <LubricentroExpress
@@ -5341,6 +5289,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 setOrdenActiva(orden);
               }}
               onCambiarATaller={() => setModuloTaller("taller")}
+              onCambiarModulo={(mod) => setModuloTaller(mod)}
             />
           </div>
 
@@ -5358,21 +5307,17 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   serviciosCatalogo={serviciosDb}
                   onUpdateOrden={(updated) => {
                     setOrdenActiva(updated);
-                    setAutosEnPista((prev) => {
-                      const next = prev.map((o) => (o.id === updated.id ? updated : o));
-                      try {
-                        localStorage.setItem(
-                          "taller_pista_cache",
-                          JSON.stringify(next.map((o) => ({ ...o, receptionPhotos: [] })))
-                        );
-                        localStorage.setItem("taller_orden_activa_id", updated.id);
-                      } catch {}
-                      return next;
-                    });
+                    setAutosEnPista((prev) =>
+                      prev.map((o) => (o.id === updated.id ? updated : o))
+                    );
                   }}
                   onGenerarPdf={handleGenerarPdfInspeccion}
                   onVolver={() => {}}
-                  onContinuar={() => setEtapaActiva(4)}
+                  onContinuar={() => {
+                    setModuloTaller("lubricentro");
+                  }}
+                  textoContinuar="Siguiente (Lubricentro) →"
+                  onFirmarDirecto={() => setEtapaActiva(4)}
                   mostrarToast={mostrarToast}
                 />
               </div>
@@ -5383,18 +5328,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               <div className="w-full space-y-4 animate-fade-in">
                 <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/[0.08] space-y-4 shadow-sm dark:shadow-xl">
                   {/* Cabecera */}
-                  <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/[0.08] pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base">📲</span>
-                      <h4 className="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white uppercase tracking-wider">
-                        Aviso y Firma
-                      </h4>
-                    </div>
-                    {ordenActiva && (
-                      <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
-                        {ordenActiva.plate ? `Placa: ${ordenActiva.plate} • ` : ""}Orden #{String(ordenActiva.orderNumber || ordenActiva.id).replace(/^OT-\d{4}-/i, "")}
-                      </span>
-                    )}
+                  <div className="flex items-center border-b border-zinc-200 dark:border-white/[0.08] pb-3">
+                    <h4 className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-white">
+                      Firma
+                    </h4>
                   </div>
 
                   {/* Contenido en 2 columnas */}
@@ -5403,7 +5340,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     <div className="lg:col-span-5 space-y-3">
                       {/* Estado */}
                       <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 space-y-2">
-                        <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 block">
+                        <span className="text-xs font-normal text-zinc-700 dark:text-zinc-300 block">
                           Estado:
                         </span>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
@@ -5413,14 +5350,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                               etapa6EstadoSeleccionado.toLowerCase().includes(st.name.toLowerCase().replace(/^\d+\s*/, ""));
 
                             const coloresActivoPorIndice = [
-                              "bg-amber-500/25 text-amber-800 dark:text-amber-200 border-amber-400/60 ring-1 ring-amber-400/40 font-semibold shadow-sm",
-                              "bg-blue-500/25 text-blue-800 dark:text-blue-200 border-blue-400/60 ring-1 ring-blue-400/40 font-semibold shadow-sm",
-                              "bg-rose-500/25 text-rose-800 dark:text-rose-200 border-rose-400/60 ring-1 ring-rose-400/40 font-semibold shadow-sm",
-                              "bg-emerald-500/25 text-emerald-800 dark:text-emerald-200 border-emerald-400/60 ring-1 ring-emerald-400/40 font-semibold shadow-sm",
-                              "bg-purple-500/25 text-purple-800 dark:text-purple-200 border-purple-400/60 ring-1 ring-purple-400/40 font-semibold shadow-sm",
+                              "bg-amber-500/25 text-amber-800 dark:text-amber-200 border-amber-400/60 ring-1 ring-amber-400/40 font-normal shadow-sm",
+                              "bg-blue-500/25 text-blue-800 dark:text-blue-200 border-blue-400/60 ring-1 ring-blue-400/40 font-normal shadow-sm",
+                              "bg-rose-500/25 text-rose-800 dark:text-rose-200 border-rose-400/60 ring-1 ring-rose-400/40 font-normal shadow-sm",
+                              "bg-emerald-500/25 text-emerald-800 dark:text-emerald-200 border-emerald-400/60 ring-1 ring-emerald-400/40 font-normal shadow-sm",
+                              "bg-purple-500/25 text-purple-800 dark:text-purple-200 border-purple-400/60 ring-1 ring-purple-400/40 font-normal shadow-sm",
                             ];
                             const estiloActivo = coloresActivoPorIndice[idx % coloresActivoPorIndice.length];
-                            const estiloPlomo = "bg-white dark:bg-white/[0.03] hover:bg-zinc-100 dark:hover:bg-white/[0.07] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-zinc-200 dark:border-white/10";
+                            const estiloPlomo = "bg-white dark:bg-white/[0.03] hover:bg-zinc-100 dark:hover:bg-white/[0.07] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-zinc-200 dark:border-white/10 font-normal";
 
                             return (
                               <button
@@ -5440,13 +5377,13 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
                       {/* Notificación rápida */}
                       <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 space-y-2">
-                        <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 block">
+                        <span className="text-xs font-normal text-zinc-700 dark:text-zinc-300 block">
                           Aviso:
                         </span>
                         <button
                           type="button"
                           onClick={handleEnviarWhatsAppAvisoEtapa6}
-                          className="w-full h-9 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 shadow-sm"
+                          className="w-full h-9 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-normal transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 shadow-sm"
                           title="Abrir WhatsApp Web con mensaje prediseñado según el estado actual"
                         >
                           <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
@@ -5469,7 +5406,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                 setModoFirma("ACEPTACION");
                                 limpiarCanvasFirmaEtapa7();
                               }}
-                              className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                              className={`px-3 py-1 rounded-md text-xs font-normal transition-all cursor-pointer ${
                                 modoFirma === "ACEPTACION"
                                   ? "bg-blue-600 text-white shadow-xs"
                                   : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
@@ -5483,7 +5420,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                                 setModoFirma("ENTREGA");
                                 limpiarCanvasFirmaEtapa7();
                               }}
-                              className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                              className={`px-3 py-1 rounded-md text-xs font-normal transition-all cursor-pointer ${
                                 modoFirma === "ENTREGA"
                                   ? "bg-teal-600 text-white shadow-xs"
                                   : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
@@ -5591,49 +5528,56 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     </div>
                   </div>
 
-                  {/* Pie: Traspaso a POS / Órdenes */}
-                  <div className="pt-3 border-t border-zinc-200 dark:border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-normal">
-                      <span>Cobro en POS.</span>
-                    </div>
+                  {/* Pie: Pasar a Propuesta */}
+                  <div className="pt-3 border-t border-zinc-200 dark:border-white/[0.08] flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEtapaActiva(2)}
+                      className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-700 dark:bg-white/5 dark:hover:bg-white/10 dark:border-transparent dark:text-zinc-300 text-xs font-normal cursor-pointer transition-colors"
+                    >
+                      Anterior
+                    </button>
 
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                      <button
-                        type="button"
-                        onClick={() => setEtapaActiva(2)}
-                        className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-700 dark:bg-white/5 dark:hover:bg-white/10 dark:border-transparent dark:text-zinc-300 text-xs font-normal cursor-pointer transition-colors"
-                      >
-                        Anterior
-                      </button>
-
-                      <Link
-                        href="/presupuestos"
-                        className="px-3.5 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-700 dark:bg-sky-500/15 dark:hover:bg-sky-500/25 dark:border-sky-500/35 dark:text-sky-300 text-xs font-semibold backdrop-blur-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
-                        title="Abrir panel de Presupuestos & Repuestos"
-                      >
-                        <span>📋</span>
-                        <span>Presupuestos</span>
-                      </Link>
-
-                      <button
-                        type="button"
-                        onClick={() => handlePasarAPosOrdenes(false)}
-                        disabled={guardandoPasarPos}
-                        className={`px-4 py-2 rounded-xl text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50 ${
-                          ordenActiva && (ordenActiva.posRequestId || ordenActiva.status === "EN_CAJA" || ordenActiva.status?.toLowerCase().includes("caja"))
-                            ? "bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 dark:border-emerald-500/40 dark:text-emerald-300"
-                            : "bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 dark:border-emerald-500/35 dark:text-emerald-300"
-                        }`}
-                      >
-                        <span>
-                          {guardandoPasarPos
-                            ? "Procesando..."
-                            : ordenActiva && (ordenActiva.posRequestId || ordenActiva.status === "EN_CAJA" || ordenActiva.status?.toLowerCase().includes("caja"))
-                            ? "✓ Pasada a POS"
-                            : "🚀 Pasar a POS"}
-                        </span>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      disabled={guardandoEtapa7}
+                      onClick={async () => {
+                        if (ordenActiva) {
+                          setGuardandoEtapa7(true);
+                          try {
+                            let firmaDataUrl: string | undefined;
+                            if (tieneTrazosFirmaEtapa7Ref.current && canvasFirmaEtapa7Ref.current) {
+                              firmaDataUrl = canvasFirmaEtapa7Ref.current.toDataURL("image/png");
+                            }
+                            const res = await fetch("/api/taller/operacion", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                action: "PASAR_A_PROPUESTA",
+                                orderId: ordenActiva.id,
+                                quoteSignatureUrl: modoFirma === "ACEPTACION" ? firmaDataUrl : undefined,
+                                deliverySignatureUrl: modoFirma === "ENTREGA" ? firmaDataUrl : undefined,
+                                signedBy: ordenActiva.client || "Cliente",
+                              }),
+                            });
+                            const data = await res.json();
+                            if (data.success && data.activeOrder) {
+                              setOrdenActiva(data.activeOrder);
+                              setAutosEnPista((prev) =>
+                                prev.map((o) => (o.id === data.activeOrder.id ? data.activeOrder : o))
+                              );
+                            }
+                          } catch {}
+                          setGuardandoEtapa7(false);
+                        }
+                        router.push("/presupuestos");
+                      }}
+                      className="px-4 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-700 dark:bg-sky-500/15 dark:hover:bg-sky-500/25 dark:border-sky-500/35 dark:text-sky-300 text-xs font-normal backdrop-blur-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                      title="Pasar a Propuesta"
+                    >
+                      <span>📋</span>
+                      <span>Pasar a Propuesta</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -6036,7 +5980,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             <p className="text-xs text-zinc-400 leading-relaxed">
               Placa <strong className="text-zinc-200 font-mono">{ordenActiva?.plate}</strong> • Orden{" "}
               <strong className="text-emerald-400 font-mono">
-                #{String(ordenActiva?.orderNumber || "").replace(/^OT-\d{4}-/i, "")}
+                {limpiarNumeroOrden(ordenActiva?.orderNumber)}
               </strong>{" "}
               transferida a POS.
             </p>
@@ -6077,7 +6021,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 <p className="text-xs text-zinc-400 mt-0.5">
                   Placa <strong className="text-zinc-200 font-mono">{ordenActiva.plate}</strong> • Orden{" "}
                   <strong className="text-amber-400 font-mono">
-                    #{String(ordenActiva.orderNumber || "").replace(/^OT-\d{4}-/i, "")}
+                    {limpiarNumeroOrden(ordenActiva.orderNumber)}
                   </strong>
                 </p>
               </div>
@@ -6356,7 +6300,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
       {/* Modal / Drawer: Clientes y Autos en Atención (Pausar, Cambiar, Continuar) */}
       {mostrarModalAutosAtencion && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in">
-          <div className="w-full max-w-2xl max-h-[88vh] bg-[#141417] border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-scale-in">
+          <div className="w-[95%] sm:w-full max-w-2xl max-h-[90dvh] bg-[#141417] border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-scale-in">
             {/* Header */}
             <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -6375,7 +6319,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               <button
                 type="button"
                 onClick={() => setMostrarModalAutosAtencion(false)}
-                className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+                className="w-11 h-11 sm:w-8 sm:h-8 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition-all cursor-pointer"
               >
                 ✕
               </button>
@@ -6417,15 +6361,13 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       }`}
                     >
                       <div className="space-y-1.5 min-w-0 flex-1">
+                        {/* 1. Orden de servicio y su número (en plomo, sin negrita) */}
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="px-2.5 py-0.5 rounded-lg bg-blue-500/15 border border-blue-500/30 font-mono text-xs font-normal text-blue-300">
-                            Placa: {auto.plate}
-                          </span>
-                          <span className="text-[11px] font-mono text-zinc-400 font-normal">
-                            Orden: {auto.orderNumber.startsWith("#") ? auto.orderNumber : `#${auto.orderNumber}`}
+                          <span className="px-2.5 py-0.5 rounded-lg bg-zinc-800/60 border border-zinc-700/50 font-mono text-xs font-normal text-zinc-400">
+                            Orden de servicio: <span className="text-zinc-300 font-normal">{limpiarNumeroOrden(auto.orderNumber)}</span>
                           </span>
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-normal border ${
                               auto.branch === "SUCURSAL"
                                 ? "bg-amber-500/20 text-amber-300 border-amber-500/35"
                                 : "bg-blue-500/15 text-blue-300 border-blue-500/30"
@@ -6442,77 +6384,84 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           )}
                         </div>
 
+                        {/* 2. Placa (sin negrita) */}
+                        <div className="text-xs text-zinc-300 font-mono flex items-center gap-1.5 pt-0.5 font-normal">
+                          <span className="text-zinc-400 font-normal">Placa:</span>
+                          <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 font-normal text-white tracking-wider">
+                            {auto.plate}
+                          </span>
+                        </div>
+
+                        {/* 3. Vehículo (sin negrita) */}
                         <p className="text-sm font-normal text-white truncate">
+                          <span className="text-xs text-zinc-400 font-normal mr-1">Vehículo:</span>
                           {auto.vehicle}
                         </p>
-                        <p className="text-sm text-zinc-300 font-normal truncate">
-                          Cliente: <span className="text-zinc-100 font-normal">{auto.client}</span>
-                          {auto.items?.length > 0 && (
-                            <span className="ml-2 text-zinc-400 font-normal">
-                              • {auto.items.length} {auto.items.length === 1 ? "servicio" : "servicios"}
+
+                        {/* 4. Cliente: y los datos (sin negrita) */}
+                        <p className="text-xs text-zinc-300 font-normal truncate">
+                          <span className="text-zinc-400 font-normal">Cliente: </span>
+                          <span className="text-zinc-100 font-normal">{auto.client}</span>
+                          {auto.clientPhone && (
+                            <span className="text-zinc-400 font-normal ml-2">
+                              • Tel: {auto.clientPhone}
                             </span>
                           )}
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 self-end sm:self-center pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5 w-full sm:w-auto justify-end flex-wrap">
-                        {estaPausado ? (
+                      <div className="flex flex-col items-end gap-2 shrink-0 self-end sm:self-center pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5 w-full sm:w-auto">
+                        <div className="flex items-center gap-1.5 sm:gap-2 justify-end flex-wrap">
+                          {estaPausado ? (
+                            <button
+                              type="button"
+                              onClick={(e) => handleReanudarOrden(auto, e)}
+                              className="h-8 px-2.5 sm:px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-normal flex items-center gap-1 transition-all cursor-pointer"
+                              title="Reanudar trabajo en este auto"
+                            >
+                              <span>▶</span>
+                              <span>Reanudar</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => handlePausarOrden(auto, e)}
+                              className="h-8 px-2.5 sm:px-3 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 text-xs font-normal flex items-center gap-1 transition-all cursor-pointer"
+                              title="Pausar trabajo para seguir con otro"
+                            >
+                              <span>⏸</span>
+                              <span>Pausar</span>
+                            </button>
+                          )}
+
                           <button
                             type="button"
-                            onClick={(e) => handleReanudarOrden(auto, e)}
-                            className="h-8 px-2.5 sm:px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
-                            title="Reanudar trabajo en este auto"
+                            onClick={() => handleSeleccionarAutoYVolver(auto)}
+                            className="h-8 px-3 sm:px-3.5 rounded-xl text-xs font-normal transition-all flex items-center justify-center gap-1 cursor-pointer bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30 active:scale-95"
+                            title="Trabajar en este vehículo"
                           >
-                            <span>▶</span>
-                            <span>Reanudar</span>
+                            <span>Trabajar</span>
+                            <span>→</span>
                           </button>
-                        ) : (
+
                           <button
                             type="button"
-                            onClick={(e) => handlePausarOrden(auto, e)}
-                            className="h-8 px-2.5 sm:px-3 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
-                            title="Pausar trabajo para seguir con otro"
+                            onClick={(e) => handleFinalizarOrdenAHistorial(auto, e)}
+                            className="h-8 px-2.5 sm:px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/35 flex items-center justify-center gap-1 transition-all cursor-pointer active:scale-95 text-xs font-normal shadow-sm"
+                            title="Marcar como listo"
                           >
-                            <span>⏸</span>
-                            <span>Pausar</span>
+                            <span>✓</span>
+                            <span>Listo</span>
                           </button>
+                        </div>
+
+                        {/* Conteo de servicios debajo de los 3 botones */}
+                        {auto.items?.length > 0 && (
+                          <div className="flex items-center gap-1.5 text-xs text-zinc-400 font-normal pr-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                            <span>{auto.items.length} {auto.items.length === 1 ? "servicio" : "servicios"}</span>
+                          </div>
                         )}
-
-                        <button
-                          type="button"
-                          onClick={(e) => handleTransferirOrdenSucursal(auto, e)}
-                          className={`h-8 px-2.5 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer border ${
-                            auto.branch === "SUCURSAL"
-                              ? "bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border-amber-500/35"
-                              : "bg-white/5 hover:bg-amber-500/20 text-zinc-300 hover:text-amber-300 border-white/10 hover:border-amber-500/35"
-                          }`}
-                          title={auto.branch === "SUCURSAL" ? "Transferir este trabajo a Principal" : "Transferir este trabajo a Sucursal"}
-                        >
-                          <span>⇄</span>
-                          <span>{auto.branch === "SUCURSAL" ? "Principal" : "Sucursal"}</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleSeleccionarAutoYVolver(auto)}
-                          className={`h-8 px-3 sm:px-3.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                            esActivo
-                              ? "bg-white/10 hover:bg-white/15 text-white"
-                              : "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/30"
-                          }`}
-                        >
-                          <span>{esActivo ? "Volver" : "Trabajar"}</span>
-                          <span>→</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={(e) => handleFinalizarOrdenAHistorial(auto, e)}
-                          className="w-8 h-8 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/35 flex items-center justify-center transition-all cursor-pointer active:scale-90 text-sm font-bold shadow-sm"
-                          title="Marcar como terminado"
-                        >
-                          <span>✓</span>
-                        </button>
                       </div>
                     </div>
                   );
@@ -6575,19 +6524,27 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
         onClose={() => setMostrarModalFormularioRapido(false)}
         especialidadInicial={moduloTaller}
         ordenActiva={ordenActiva}
-        onGuardarItems={async (itemsNuevos, esp) => {
-          if (!ordenActiva) {
-            mostrarToast("No hay vehículo seleccionado en atención", "err");
-            return;
+        onGuardarItems={async (itemsNuevos, esp, activeOrderFromServer) => {
+          if (activeOrderFromServer) {
+            setOrdenActiva(activeOrderFromServer);
+            setAutosEnPista((prev) =>
+              prev.map((o) => (o.id === activeOrderFromServer.id ? activeOrderFromServer : o))
+            );
+          } else if (ordenActiva) {
+            const actualizados = [...(ordenActiva.items || []), ...itemsNuevos];
+            setOrdenActiva({ ...ordenActiva, items: actualizados });
+            setAutosEnPista((prev) =>
+              prev.map((o) => (o.id === ordenActiva.id ? { ...o, items: actualizados } : o))
+            );
+            await sincronizarOrdenEnNeon({ items: actualizados });
           }
-          const actualizados = [...(ordenActiva.items || []), ...itemsNuevos];
-          setOrdenActiva({ ...ordenActiva, items: actualizados });
-          setAutosEnPista((prev) =>
-            prev.map((o) => (o.id === ordenActiva.id ? { ...o, items: actualizados } : o))
-          );
-          await sincronizarOrdenEnNeon({ items: actualizados });
           setModuloTaller(esp);
-          mostrarToast(`✅ ${itemsNuevos.length} trabajo(s) agregado(s) a ${ordenActiva.plate}`, "ok");
+          mostrarToast(
+            ordenActiva
+              ? `✅ ${itemsNuevos.length} trabajo(s) registrado(s) en Neon y agregado(s) a ${ordenActiva.plate}`
+              : `✅ ${itemsNuevos.length} trabajo(s) registrado(s) en catálogo Neon (${esp})`,
+            "ok"
+          );
         }}
         mostrarToast={mostrarToast}
         onCambiarEspecialidad={(esp) => setModuloTaller(esp)}

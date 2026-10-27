@@ -1652,28 +1652,11 @@ let serverCarWashCache: {
   timestamp: number;
 } | null = null;
 
-// GET: Cargar toda la configuración de Car Wash, servicios, paquetes, adicionales, tipos de vehículo, promociones y citas
+// GET: Cargar toda la configuración de Car Wash, servicios, paquetes, adicionales, tipos de vehículo, promociones y citas desde Neon PostgreSQL
 export async function GET() {
   try {
-    const now = Date.now();
-    // Cache de servidor de 10 minutos (se invalida en PUT/POST/DELETE)
-    if (serverCarWashCache && now - serverCarWashCache.timestamp < 600000) {
-      return NextResponse.json({
-        success: true,
-        config: serverCarWashCache.config,
-        services: serverCarWashCache.services,
-        promotions: serverCarWashCache.promotions,
-        appointments: serverCarWashCache.appointments,
-      });
-    }
     const data = await getOrInitCarWashData();
-    serverCarWashCache = {
-      config: data.config,
-      services: data.services,
-      promotions: data.promotions,
-      appointments: data.appointments,
-      timestamp: now,
-    };
+    serverCarWashCache = null;
     return NextResponse.json({
       success: true,
       config: data.config,

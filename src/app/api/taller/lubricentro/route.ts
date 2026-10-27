@@ -193,37 +193,27 @@ const DEFAULT_LUBRICENTRO_CONFIG: LubricentroConfigData = {
     { id: "lub_aditivos", categoryId: "lub_aceite", label: "Aditivos", icon: "🧪", order: 2, active: true, subSchemaType: "aditivos" },
     { id: "lub_flush", categoryId: "lub_aceite", label: "Flush", icon: "🧼", order: 3, active: true, subSchemaType: "flush" },
     { id: "lub_grasa", categoryId: "lub_aceite", label: "Grasa", icon: "🧴", order: 4, active: true, subSchemaType: "grasas" },
-    { id: "lub_tratamiento", categoryId: "lub_aceite", label: "Tratamiento", icon: "🛡️", order: 5, active: true, subSchemaType: "aditivos" },
     // 2. Transmisión
     { id: "lub_trans_automatica", categoryId: "lub_transmision", label: "ATF", icon: "🔄", order: 1, active: true, subSchemaType: "transmision" },
     { id: "lub_trans_cvt", categoryId: "lub_transmision", label: "CVT", icon: "⚡", order: 2, active: true, subSchemaType: "transmision" },
-    { id: "lub_trans_dct", categoryId: "lub_transmision", label: "DCT/DSG", icon: "🏎️", order: 3, active: true, subSchemaType: "transmision" },
-    { id: "lub_trans_manual", categoryId: "lub_transmision", label: "Manual", icon: "⚙️", order: 4, active: true, subSchemaType: "transmision" },
-    { id: "lub_trans_diferencial", categoryId: "lub_transmision", label: "Diferencial", icon: "🔩", order: 5, active: true, subSchemaType: "transmision" },
-    { id: "lub_trans_transfer", categoryId: "lub_transmision", label: "Transfer 4x4", icon: "🚜", order: 6, active: true, subSchemaType: "transmision" },
-    { id: "lub_trans_embrague", categoryId: "lub_transmision", label: "Embrague", icon: "🦶", order: 7, active: true, subSchemaType: "transmision" },
+    { id: "lub_trans_manual", categoryId: "lub_transmision", label: "Manual", icon: "⚙️", order: 3, active: true, subSchemaType: "transmision" },
+    { id: "lub_trans_diferencial", categoryId: "lub_transmision", label: "Diferencial", icon: "🔩", order: 4, active: true, subSchemaType: "transmision" },
     // 3. Filtros
-    { id: "lub_fil_aceite", categoryId: "lub_filtros", label: "De Aceite", icon: "🛢️", order: 1, active: true, subSchemaType: "filtros" },
-    { id: "lub_fil_aire", categoryId: "lub_filtros", label: "De Aire", icon: "🌪️", order: 2, active: true, subSchemaType: "filtros" },
-    { id: "lub_fil_cabina", categoryId: "lub_filtros", label: "Cabina A/C", icon: "❄️", order: 3, active: true, subSchemaType: "filtros" },
+    { id: "lub_fil_aceite", categoryId: "lub_filtros", label: "Aceite", icon: "🛢️", order: 1, active: true, subSchemaType: "filtros" },
+    { id: "lub_fil_aire", categoryId: "lub_filtros", label: "Aire", icon: "🌪️", order: 2, active: true, subSchemaType: "filtros" },
+    { id: "lub_fil_cabina", categoryId: "lub_filtros", label: "Cabina", icon: "❄️", order: 3, active: true, subSchemaType: "filtros" },
     { id: "lub_fil_combustible", categoryId: "lub_filtros", label: "Combustible", icon: "⛽", order: 4, active: true, subSchemaType: "filtros" },
-    { id: "lub_fil_transmision", categoryId: "lub_filtros", label: "De Caja", icon: "⚙️", order: 5, active: true, subSchemaType: "filtros" },
-    { id: "lub_fil_separador", categoryId: "lub_filtros", label: "Separador Agua", icon: "💧", order: 6, active: true, subSchemaType: "filtros" },
+    { id: "lub_fil_transmision", categoryId: "lub_filtros", label: "Caja", icon: "⚙️", order: 5, active: true, subSchemaType: "filtros" },
     // 4. Fluidos
     { id: "lub_flu_coolant", categoryId: "lub_fluidos", label: "Refrigerante", icon: "🌡️", order: 1, active: true, subSchemaType: "fluidos" },
     { id: "lub_flu_frenos", categoryId: "lub_fluidos", label: "Frenos", icon: "🛑", order: 2, active: true, subSchemaType: "fluidos" },
     { id: "lub_flu_hidraulico", categoryId: "lub_fluidos", label: "Hidráulico", icon: "🛞", order: 3, active: true, subSchemaType: "fluidos" },
     { id: "lub_flu_limpiaparabrisas", categoryId: "lub_fluidos", label: "Parabrisas", icon: "🌧️", order: 4, active: true, subSchemaType: "fluidos" },
-    { id: "lub_flu_desengrasante", categoryId: "lub_fluidos", label: "Desengrasante", icon: "🧽", order: 5, active: true, subSchemaType: "fluidos" },
-    { id: "lub_flu_limpiacontactos", categoryId: "lub_fluidos", label: "Limpia Contactos", icon: "⚡", order: 6, active: true, subSchemaType: "fluidos" },
-    { id: "lub_flu_otros", categoryId: "lub_fluidos", label: "Otros", icon: "💧", order: 7, active: true, subSchemaType: "fluidos" },
     // 5. Baterías
-    { id: "lub_bat_convencionales", categoryId: "lub_baterias", label: "Convencionales", icon: "🔋", order: 1, active: true, subSchemaType: "baterias" },
+    { id: "lub_bat_convencionales", categoryId: "lub_baterias", label: "Convencional", icon: "🔋", order: 1, active: true, subSchemaType: "baterias" },
     { id: "lub_bat_agm", categoryId: "lub_baterias", label: "AGM", icon: "⚡", order: 2, active: true, subSchemaType: "baterias" },
     { id: "lub_bat_efb", categoryId: "lub_baterias", label: "EFB", icon: "🔌", order: 3, active: true, subSchemaType: "baterias" },
-    { id: "lub_bat_start_stop", categoryId: "lub_baterias", label: "Start-Stop", icon: "🚀", order: 4, active: true, subSchemaType: "baterias" },
-    { id: "lub_bat_motos", categoryId: "lub_baterias", label: "Motos / Gel", icon: "🏍️", order: 5, active: true, subSchemaType: "baterias" },
-    { id: "lub_bat_bornes", categoryId: "lub_baterias", label: "Bornes y Terminales", icon: "🔩", order: 6, active: true, subSchemaType: "baterias" },
+    { id: "lub_bat_motos", categoryId: "lub_baterias", label: "Motos", icon: "🏍️", order: 4, active: true, subSchemaType: "baterias" },
   ],
   bases: [
     { id: "base_sintetico", label: "Sintético", value: "Sintético", order: 1, active: true },
@@ -1344,27 +1334,11 @@ export function invalidateServerLubricentroCache() {
   serverLubricentroCache = null;
 }
 
-// GET: Obtener toda la configuración manual de Lubricentro, productos reales y vehículos registrados
+// GET: Obtener toda la configuración manual de Lubricentro, productos reales y vehículos registrados desde Neon PostgreSQL
 export async function GET() {
   try {
-    const now = Date.now();
-    // Cache de 10 minutos (invalida al guardar en PUT/POST/DELETE)
-    if (serverLubricentroCache && now - serverLubricentroCache.timestamp < 600000) {
-      return NextResponse.json({
-        success: true,
-        config: serverLubricentroCache.config,
-        products: serverLubricentroCache.products,
-        vehicles: serverLubricentroCache.vehicles,
-      });
-    }
-
     const data = await getOrInitConfigAndMeta();
-    serverLubricentroCache = {
-      config: data.config,
-      products: data.products,
-      vehicles: data.vehicles,
-      timestamp: now,
-    };
+    serverLubricentroCache = null;
 
     return NextResponse.json({
       success: true,

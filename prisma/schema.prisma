@@ -834,6 +834,8 @@ model WorkshopService {
   code             String   @unique
   name             String
   category         String   @default("Mantenimiento Rápido")
+  subCategory      String?
+  specialty        String?  @default("taller")
   price            Decimal  @db.Decimal(12, 2)
   estimatedMinutes Int      @default(30)
   description      String?
@@ -844,46 +846,54 @@ model WorkshopService {
 
   @@index([code])
   @@index([category])
+  @@index([specialty])
   @@index([active])
 }
 
 model WorkshopOrder {
-  id                  String    @id @default(cuid())
-  orderNumber         String    @unique
-  customerId          String?
-  vehicleId           String?
-  vehicle             String
-  plate               String
-  client              String
-  clientPhone         String?
-  clientIdDoc         String?
-  mechanic            String    @default("Carlos Rodríguez")
-  status              String    @default("En Diagnóstico")
-  progress            Int       @default(25)
-  mileage                Int?
-  nextOilChangeKm        Int?
-  fuelLevel              String?   @default("1/2")
-  generalCondition       String?   @default("Bueno")
-  receptionInventoryJson String?   @default("[]")
-  inspectionFindingsJson String?   @default("[]")
-  servicesJson           String?
-  itemsJson              String?   @default("[]")
-  receptionPhotosJson    String?   @default("[]")
-  evidencePhotosJson     String?   @default("[]")
-  notes                  String?
-  dateIn              DateTime  @default(now())
-  startedAt           DateTime?
-  completedAt         DateTime?
-  durationMinutes     Int?      @default(0)
-  estimatedOut        String?   @default("24 Horas")
-  totalCost           Decimal?  @db.Decimal(12, 2)
-  quoteNumber         String?
-  quoteStatus         String?   @default("Borrador")
-  quoteToken          String?
-  quoteTaxRate        Decimal?  @default(15) @db.Decimal(5, 2)
-  quoteDiscount       Decimal?  @default(0) @db.Decimal(12, 2)
+  id                      String    @id @default(cuid())
+  orderNumber             String    @unique
+  customerId              String?
+  vehicleId               String?
+  vehicle                 String
+  plate                   String
+  client                  String
+  clientPhone             String?
+  clientIdDoc             String?
+  mechanic                String    @default("Carlos Rodríguez")
+  status                  String    @default("En Diagnóstico")
+  progress                Int       @default(25)
+  mileage                 Int?
+  nextOilChangeKm         Int?
+  fuelLevel               String?   @default("1/2")
+  generalCondition        String?   @default("Bueno")
+  receptionInventoryJson  String?   @default("[]")
+  inspectionFindingsJson  String?   @default("[]")
+  receptionSignatureUrl   String?
+  inspectionChecklistJson String?   @default("{}")
+  inspectionTemplateId    String?
+  servicesJson            String?
+  itemsJson               String?   @default("[]")
+  receptionPhotosJson     String?   @default("[]")
+  evidencePhotosJson      String?   @default("[]")
+  voiceNotesJson          String?   @default("[]")
+  notes                   String?
+  dateIn                  DateTime  @default(now())
+  startedAt               DateTime?
+  completedAt             DateTime?
+  durationMinutes         Int?      @default(0)
+  estimatedOut            String?   @default("24 Horas")
+  totalCost               Decimal?  @db.Decimal(12, 2)
+  quoteNumber             String?
+  quoteStatus             String?   @default("Borrador")
+  quoteToken              String?
+  quoteTaxRate            Decimal?  @default(15) @db.Decimal(5, 2)
+  quoteDiscount           Decimal?  @default(0) @db.Decimal(12, 2)
   quoteDiscountType       String?   @default("PERCENT")
   quoteApprovedAt         DateTime?
+  quoteSignatureUrl       String?
+  quoteSignedBy           String?
+  quoteSignedAt           DateTime?
   assignedTechniciansJson String?   @default("[]")
   internalChatJson        String?   @default("[]")
   technicianHoursJson     String?   @default("[]")
@@ -909,9 +919,9 @@ model WorkshopOrder {
   transferredFrom         String?
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
-  customer            Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  vehicleRef          Vehicle?  @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
-  evidences           WorkshopEvidence[]
+  customer                Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  vehicleRef              Vehicle?  @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  evidences               WorkshopEvidence[]
 
   @@index([orderNumber])
   @@index([plate])

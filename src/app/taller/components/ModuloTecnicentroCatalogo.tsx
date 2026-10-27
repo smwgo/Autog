@@ -42,8 +42,18 @@ const HORARIOS_BAHIA = [
   "05:00 PM",
 ];
 
+// Las 6 categorías más importantes de Tecnicentro (1 sola palabra cada una)
+const PRINCIPAL_TECNICENTRO_CAT_IDS = [
+  "tc_cat_alineacion",
+  "tc_cat_balanceo",
+  "tc_cat_venta_neum",
+  "tc_cat_suspension",
+  "tc_cat_frenos",
+  "tc_cat_diagnostico",
+];
+
 const TECNICENTRO_CAT_SINGLE: Record<string, string> = {
-  "Todas": "Todas",
+  "Todas": "Todo",
   "Alineación": "Alineación",
   "Alineación 3D": "Alineación",
   "Balanceo": "Balanceo",
@@ -75,6 +85,119 @@ const TECNICENTRO_CAT_SINGLE: Record<string, string> = {
   "Llantera & Enllantaje": "Llantera",
   "Otros servicios de tecnicentro": "Otros",
 };
+
+// Subcategorías más importantes por categoría principal (1 sola palabra cada una)
+const IMPORTANT_SUBCATEGORIES_BY_MAIN_CAT: Record<
+  string,
+  Array<{ id: string; name: string; icon: string }>
+> = {
+  tc_cat_alineacion: [
+    { id: "tc_sub_ali_delantero", name: "Delantera", icon: "⬆️" },
+    { id: "tc_sub_ali_4ruedas", name: "Completa", icon: "🚗" },
+    { id: "tc_sub_ali_geometria", name: "Geometría", icon: "🎯" },
+  ],
+  tc_cat_balanceo: [
+    { id: "tc_sub_bal_4ruedas", name: "Completo", icon: "🛞" },
+    { id: "tc_sub_bal_indiv", name: "Individual", icon: "1️⃣" },
+    { id: "tc_sub_bal_vibracion", name: "Vibración", icon: "〰️" },
+  ],
+  tc_cat_venta_neum: [
+    { id: "tc_sub_neu_venta", name: "Llantas", icon: "🛞" },
+    { id: "tc_sub_neu_montaje", name: "Montaje", icon: "🔧" },
+    { id: "tc_sub_neu_pinchazo", name: "Parche", icon: "🩹" },
+    { id: "tc_sub_neu_rotacion", name: "Rotación", icon: "🔄" },
+    { id: "tc_sub_neu_presion", name: "Presión", icon: "🌡️" },
+  ],
+  tc_cat_suspension: [
+    { id: "tc_sub_sus_amort", name: "Amortiguadores", icon: "🔽" },
+    { id: "tc_sub_dir_inspeccion", name: "Dirección", icon: "🎯" },
+    { id: "tc_sub_tdel_insp", name: "Delantero", icon: "🔍" },
+    { id: "tc_sub_sus_bujes", name: "Bujes", icon: "⭕" },
+    { id: "tc_sub_sus_rotulas", name: "Rótulas", icon: "🔩" },
+  ],
+  tc_cat_frenos: [
+    { id: "tc_sub_fre_pastillas", name: "Pastillas", icon: "🟫" },
+    { id: "tc_sub_fre_discos", name: "Discos", icon: "💿" },
+    { id: "tc_sub_fre_hidraulico", name: "Líquido", icon: "💧" },
+    { id: "tc_sub_fre_inspeccion", name: "Inspección", icon: "🛑" },
+  ],
+  tc_cat_diagnostico: [
+    { id: "tc_sub_diag_escaneo", name: "Escáner", icon: "💻" },
+    { id: "tc_sub_diag_sensores", name: "Sensores", icon: "📡" },
+    { id: "tc_sub_diag_informe", name: "Informe", icon: "📄" },
+  ],
+};
+
+function matchesMainCategoryTec(itemCatId?: string, selectedMainCatId?: string): boolean {
+  if (!selectedMainCatId || selectedMainCatId === "TODOS") return true;
+  if (!itemCatId) return false;
+  if (itemCatId === selectedMainCatId) return true;
+  if (selectedMainCatId === "tc_cat_venta_neum") {
+    return [
+      "tc_cat_venta_neum",
+      "tc_cat_montaje",
+      "tc_cat_reparacion_neum",
+      "tc_cat_rotacion",
+      "tc_cat_presion_neum",
+    ].includes(itemCatId);
+  }
+  if (selectedMainCatId === "tc_cat_suspension") {
+    return [
+      "tc_cat_suspension",
+      "tc_cat_direccion",
+      "tc_cat_tren_delantero",
+      "tc_cat_tren_posterior",
+    ].includes(itemCatId);
+  }
+  if (selectedMainCatId === "tc_cat_diagnostico") {
+    return ["tc_cat_diagnostico", "tc_cat_escaneo", "tc_cat_otros"].includes(itemCatId);
+  }
+  return false;
+}
+
+function matchesSubcategoryTec(
+  srv: { categoryId?: string; subcategoryId?: string },
+  selectedSubId?: string
+): boolean {
+  if (!selectedSubId || selectedSubId === "TODOS") return true;
+  if (srv.subcategoryId === selectedSubId) return true;
+  if (
+    selectedSubId === "tc_sub_ali_4ruedas" &&
+    (srv.subcategoryId === "tc_sub_ali_ruedas" || srv.subcategoryId === "tc_sub_ali_otros")
+  )
+    return true;
+  if (
+    selectedSubId === "tc_sub_bal_4ruedas" &&
+    (srv.subcategoryId === "tc_sub_bal_ruedas" || srv.subcategoryId === "tc_sub_bal_otros")
+  )
+    return true;
+  if (selectedSubId === "tc_sub_neu_montaje" && srv.categoryId === "tc_cat_montaje") return true;
+  if (selectedSubId === "tc_sub_neu_pinchazo" && srv.categoryId === "tc_cat_reparacion_neum")
+    return true;
+  if (selectedSubId === "tc_sub_neu_rotacion" && srv.categoryId === "tc_cat_rotacion") return true;
+  if (selectedSubId === "tc_sub_neu_presion" && srv.categoryId === "tc_cat_presion_neum")
+    return true;
+  if (selectedSubId === "tc_sub_neu_venta" && srv.categoryId === "tc_cat_venta_neum") return true;
+  if (selectedSubId === "tc_sub_dir_inspeccion" && srv.categoryId === "tc_cat_direccion")
+    return true;
+  if (
+    selectedSubId === "tc_sub_tdel_insp" &&
+    (srv.categoryId === "tc_cat_tren_delantero" ||
+      srv.categoryId === "tc_cat_tren_posterior" ||
+      srv.subcategoryId === "tc_sub_sus_inspeccion")
+  )
+    return true;
+  if (selectedSubId === "tc_sub_fre_inspeccion" && srv.subcategoryId === "tc_sub_fre_tambores")
+    return true;
+  if (
+    selectedSubId === "tc_sub_diag_escaneo" &&
+    (srv.categoryId === "tc_cat_escaneo" ||
+      srv.subcategoryId === "tc_sub_diag_codigos" ||
+      srv.subcategoryId === "tc_sub_diag_sistemas")
+  )
+    return true;
+  return false;
+}
 
 const TECNICENTRO_VEH_SINGLE: Record<string, string> = {
   "Motocicleta": "Moto",
@@ -151,34 +274,6 @@ function getPriceDisplayForItem(
   return { price: null, quoteRequired: true };
 }
 
-// Caché en el cliente (módulo y localStorage) para que cambiar de tab y volver sea instantáneo
-let _tecnicentroClientCache: {
-  config: any;
-  services: any[];
-  tires: any[];
-  vehicles: any[];
-  promotions: any[];
-  appointments: any[];
-  timestamp: number;
-} | null = null;
-
-const getInitialTecnicentroCache = () => {
-  if (_tecnicentroClientCache) return _tecnicentroClientCache;
-  if (typeof window !== "undefined") {
-    try {
-      const raw = localStorage.getItem("taller_tecnicentro_cache_v2");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed?.config) {
-          _tecnicentroClientCache = parsed;
-          return parsed;
-        }
-      }
-    } catch {}
-  }
-  return null;
-};
-
 export default function ModuloTecnicentroCatalogo({
   empleadoLogueado,
   ordenActiva,
@@ -188,15 +283,14 @@ export default function ModuloTecnicentroCatalogo({
   onIrAAvisoYFirma,
   triggerAbrirConfig,
 }: ModuloTecnicentroCatalogoProps) {
-  const initialCache = getInitialTecnicentroCache();
-  const [loading, setLoading] = useState(!initialCache);
+  const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [config, setConfig] = useState<TecnicentroConfigData | null>(initialCache ? initialCache.config : null);
-  const [services, setServices] = useState<TecnicentroEnrichedService[]>(initialCache ? initialCache.services : []);
-  const [tires, setTires] = useState<TecnicentroEnrichedTire[]>(initialCache ? initialCache.tires : []);
-  const [vehicles, setVehicles] = useState<any[]>(initialCache ? initialCache.vehicles : []);
-  const [promotions, setPromotions] = useState<any[]>(initialCache ? initialCache.promotions : []);
-  const [appointments, setAppointments] = useState<any[]>(initialCache ? initialCache.appointments : []);
+  const [config, setConfig] = useState<TecnicentroConfigData | null>(null);
+  const [services, setServices] = useState<TecnicentroEnrichedService[]>([]);
+  const [tires, setTires] = useState<TecnicentroEnrichedTire[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [promotions, setPromotions] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
 
   // Panel «Selecciona tu vehículo» (Sección 4)
   const [selectedVehicleTypeId, setSelectedVehicleTypeId] = useState<string>("vt_sedan");
@@ -302,9 +396,6 @@ export default function ModuloTecnicentroCatalogo({
   }, [triggerAbrirConfig]);
 
   const fetchTecnicentroData = useCallback(async () => {
-    if (_tecnicentroClientCache && Date.now() - _tecnicentroClientCache.timestamp < 300000) {
-      return;
-    }
     try {
       if (!config) setLoading(true);
       setErrorMsg(null);
@@ -313,19 +404,6 @@ export default function ModuloTecnicentroCatalogo({
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Error al cargar el módulo Tecnicentro");
       }
-      const cacheObj = {
-        config: data.config,
-        services: data.services || [],
-        tires: data.tires || [],
-        vehicles: data.vehicles || [],
-        promotions: data.promotions || [],
-        appointments: data.appointments || [],
-        timestamp: Date.now(),
-      };
-      _tecnicentroClientCache = cacheObj;
-      try {
-        localStorage.setItem("taller_tecnicentro_cache_v2", JSON.stringify(cacheObj));
-      } catch {}
       setConfig(data.config);
       setServices(data.services || []);
       setTires(data.tires || []);
@@ -344,6 +422,13 @@ export default function ModuloTecnicentroCatalogo({
 
   useEffect(() => {
     void fetchTecnicentroData();
+    const handleCatalogoActualizado = () => {
+      void fetchTecnicentroData();
+    };
+    window.addEventListener("taller-catalogo-actualizado", handleCatalogoActualizado);
+    return () => {
+      window.removeEventListener("taller-catalogo-actualizado", handleCatalogoActualizado);
+    };
   }, [fetchTecnicentroData]);
 
   // Pre-poblar «Selecciona tu vehículo» si hay ordenActiva
@@ -443,12 +528,19 @@ export default function ModuloTecnicentroCatalogo({
     promoCodeInput,
   ]);
 
-  const activeCategories = useMemo(
-    () => (config?.categories || []).filter((c) => c.active).sort((a, b) => a.order - b.order),
-    [config]
-  );
+  const activeCategories = useMemo(() => {
+    const list = (config?.categories || []).filter((c) => c.active);
+    const principales = list.filter((c) => PRINCIPAL_TECNICENTRO_CAT_IDS.includes(c.id));
+    const result = principales.length > 0 ? principales : list.slice(0, 6);
+    return result.sort((a, b) => {
+      const idxA = PRINCIPAL_TECNICENTRO_CAT_IDS.indexOf(a.id);
+      const idxB = PRINCIPAL_TECNICENTRO_CAT_IDS.indexOf(b.id);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      return a.order - b.order;
+    });
+  }, [config]);
 
-    const activeVehicleTypes = useMemo(() => {
+  const activeVehicleTypes = useMemo(() => {
     const list = (config?.vehicleTypes || []).filter((v) => v.active);
     const principales = list.filter(
       (v) =>
@@ -491,9 +583,17 @@ export default function ModuloTecnicentroCatalogo({
 
   const activeSubcategories = useMemo(() => {
     if (!config || selectedCategoryId === "TODOS") return [];
+    const curated = IMPORTANT_SUBCATEGORIES_BY_MAIN_CAT[selectedCategoryId];
+    if (curated) return curated;
     return config.subcategories
       .filter((s) => s.active && s.categoryId === selectedCategoryId)
-      .sort((a, b) => a.order - b.order);
+      .sort((a, b) => a.order - b.order)
+      .slice(0, 5)
+      .map((s) => ({
+        id: s.id,
+        name: toSingleWord(s.name, TECNICENTRO_CAT_SINGLE),
+        icon: s.icon || "🔧",
+      }));
   }, [config, selectedCategoryId]);
 
   // Adaptar panel Manual automáticamente al seleccionar categoría (horizontal / vertical), subcategoría o tipo de vehículo
@@ -505,8 +605,8 @@ export default function ModuloTecnicentroCatalogo({
     if (selectedSubcategoryId && selectedSubcategoryId !== "TODOS") {
       const sub = config?.subcategories?.find((s) => s.id === selectedSubcategoryId);
       const srv =
-        services.find((s) => s.subcategoryId === selectedSubcategoryId && s.active) ||
-        services.find((s) => s.subcategoryId === selectedSubcategoryId);
+        services.find((s) => matchesSubcategoryTec(s, selectedSubcategoryId) && s.active) ||
+        services.find((s) => matchesSubcategoryTec(s, selectedSubcategoryId));
       if (srv) {
         nombre = srv.name;
         const pInfo = getPriceDisplayForItem(srv, selectedVehicleTypeId);
@@ -524,8 +624,8 @@ export default function ModuloTecnicentroCatalogo({
     } else if (selectedCategoryId && selectedCategoryId !== "TODOS") {
       const cat = config?.categories?.find((c) => c.id === selectedCategoryId);
       const srv =
-        services.find((s) => s.categoryId === selectedCategoryId && s.active) ||
-        services.find((s) => s.categoryId === selectedCategoryId);
+        services.find((s) => matchesMainCategoryTec(s.categoryId, selectedCategoryId) && s.active) ||
+        services.find((s) => matchesMainCategoryTec(s.categoryId, selectedCategoryId));
       if (srv) {
         nombre = srv.name;
         const pInfo = getPriceDisplayForItem(srv, selectedVehicleTypeId);
@@ -602,14 +702,10 @@ export default function ModuloTecnicentroCatalogo({
         ) {
           return false;
         }
-        if (selectedCategoryId !== "TODOS" && s.categoryId !== selectedCategoryId) {
+        if (!matchesMainCategoryTec(s.categoryId, selectedCategoryId)) {
           return false;
         }
-        if (
-          selectedSubcategoryId !== "TODOS" &&
-          s.subcategoryId &&
-          s.subcategoryId !== selectedSubcategoryId
-        ) {
+        if (!matchesSubcategoryTec(s, selectedSubcategoryId)) {
           return false;
         }
         if (filterAvailability && s.availability !== filterAvailability) return false;
@@ -1115,44 +1211,79 @@ export default function ModuloTecnicentroCatalogo({
     }
   };
 
-  if (loading && !config) {
-    return (
-      <div className="p-8 rounded-3xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 text-center space-y-2 animate-pulse">
-        <div className="text-3xl">🛞</div>
-        <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
-          Cargando módulo Tecnicentro, alineación, balanceo, neumáticos y diagnósticos desde Neon...
-        </p>
-      </div>
-    );
-  }
+  const handleAjustarCantidadItem = async (item: any, delta: number) => {
+    try {
+      const code = item.code || `TC-${item.id}`;
+      const vehLabel = currentVehicleType
+        ? toSingleWord(currentVehicleType.name, TECNICENTRO_VEH_SINGLE)
+        : "Auto";
+      const listaActual = [...(itemsOrden || [])];
+      const idxExistente = listaActual.findIndex(
+        (it) =>
+          (it.code && it.code === code) ||
+          it.serviceId === item.id ||
+          it.id === `tec_${item.id}`
+      );
 
-  if (errorMsg || !config) {
-    return (
-      <div className="p-6 rounded-3xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-center space-y-3">
-        <p className="text-sm font-bold text-rose-700 dark:text-rose-300">
-          ⚠️ {errorMsg || "Error al cargar Tecnicentro"}
-        </p>
-        <button
-          type="button"
-          onClick={() => void fetchTecnicentroData()}
-          className="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold cursor-pointer"
-        >
-          Reintentar
-        </button>
-      </div>
-    );
-  }
-
-  const showTiresCatalog =
-    selectedCategoryId === "TODOS" ||
-    selectedCategoryId === "tc_cat_venta_neum" ||
-    currentCategory?.filterGroup === "neumaticos";
-
-  const totalSelectedCount =
-    selectedPackages.length +
-    Object.keys(selectedServices).length +
-    Object.keys(selectedAddons).length +
-    Object.keys(selectedTires).length;
+      if (idxExistente >= 0) {
+        const actual = listaActual[idxExistente];
+        const nuevaCant = (Number(actual.qty) || 1) + delta;
+        if (nuevaCant <= 0) {
+          listaActual.splice(idxExistente, 1);
+          await onActualizarItemsOrden(listaActual);
+        } else {
+          const priceUnit = Number(item.price || actual.price || 0);
+          const actualizados = listaActual.map((it, idx) =>
+            idx === idxExistente
+              ? {
+                  ...it,
+                  qty: nuevaCant,
+                  price: priceUnit,
+                  total: Number((priceUnit * nuevaCant).toFixed(2)),
+                }
+              : it
+          );
+          await onActualizarItemsOrden(actualizados);
+        }
+      } else if (delta > 0) {
+        const priceUnit = Number(item.price || 0);
+        const nuevoItem = {
+          id: `tec_${item.id}_${Date.now()}`,
+          key: `key_${item.id}_${Date.now()}`,
+          serviceId: item.id,
+          type: item.kind === "TIRE" ? ("PART" as const) : ("SERVICE" as const),
+          category: item.kind === "TIRE" ? "Neumáticos" : "Tecnicentro",
+          subCategory:
+            item.kind === "PACKAGE"
+              ? "Paquete"
+              : item.kind === "ADDON"
+              ? "Extra"
+              : item.kind === "TIRE"
+              ? "Neumático"
+              : "Servicio",
+          code,
+          name: item.kind === "TIRE" ? item.name : `${item.name} (${vehLabel})`,
+          brand: item.brand || "Tecnicentro",
+          presentation:
+            item.presentation ||
+            (item.durationMinutes ? `${item.durationMinutes} min` : "Servicio"),
+          unitOfMeasure: item.kind === "TIRE" ? "Unidad" : "Servicio",
+          price: priceUnit,
+          total: Number((priceUnit * delta).toFixed(2)),
+          qty: delta,
+          subtotal: Number((priceUnit * delta).toFixed(2)),
+          quoteRequired: Boolean(item.quoteRequired),
+          status: "Listo" as const,
+          completed: true,
+          empleado_id: empleadoLogueado.id,
+          empleado_nombre: empleadoLogueado.nombre,
+        };
+        await onActualizarItemsOrden([...listaActual, nuevoItem]);
+      }
+    } catch {
+      mostrarToast("Error al actualizar ítem de Tecnicentro", "err");
+    }
+  };
 
   const filteredPackages = useMemo(() => {
     if (!config) return [];
@@ -1160,12 +1291,10 @@ export default function ModuloTecnicentroCatalogo({
     return (config.packages || [])
       .filter((pkg) => {
         if (!pkg.active) return false;
-        if (
-          !matchesVehicleType(pkg.applicableVehicleTypes, selectedVehicleTypeId)
-        ) {
+        if (!matchesVehicleType(pkg.applicableVehicleTypes, selectedVehicleTypeId)) {
           return false;
         }
-        if (selectedCategoryId !== "TODOS" && pkg.categoryId !== selectedCategoryId) {
+        if (!matchesMainCategoryTec(pkg.categoryId, selectedCategoryId)) {
           return false;
         }
         if (q) {
@@ -1184,7 +1313,8 @@ export default function ModuloTecnicentroCatalogo({
       .filter((add) => {
         if (!add.active) return false;
         if (
-          (add as any).applicableVehicleTypes?.length > 0 && !(add as any).applicableVehicleTypes.includes(selectedVehicleTypeId)
+          (add as any).applicableVehicleTypes?.length > 0 &&
+          !(add as any).applicableVehicleTypes.includes(selectedVehicleTypeId)
         ) {
           return false;
         }
@@ -1197,23 +1327,31 @@ export default function ModuloTecnicentroCatalogo({
       .sort((a, b) => a.order - b.order);
   }, [config, selectedVehicleTypeId, searchQuery]);
 
-  const itemsTienda = useMemo(() => {
+  // Catálogo unificado y automático (se muestra al instante sin necesidad de escribir en el buscador)
+  const itemsFiltradosAutomaticos = useMemo(() => {
     const q = searchQuery
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .trim();
 
-    // Solo debe aparecer cuando el usuario busque
-    if (!q) {
-      return [];
-    }
+    const terms = q.split(/\s+/).filter(Boolean);
+    const matchText = (text: string) => {
+      if (terms.length === 0) return true;
+      const norm = (text || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+      return terms.every((t) => norm.includes(t));
+    };
 
     const list: Array<{
       id: string;
-      kind: "SERVICE" | "TIRE" | "PACKAGE" | "ADDON";
+      kind: "PACKAGE" | "SERVICE" | "TIRE" | "ADDON";
       name: string;
       code: string;
+      brand: string;
+      presentation?: string;
       description?: string;
       durationMinutes?: number;
       price: number;
@@ -1223,623 +1361,377 @@ export default function ModuloTecnicentroCatalogo({
       rawPackage?: TecnicentroPackage;
       rawAddon?: TecnicentroAddon;
       imageUrl?: string;
-      isSelected: boolean;
-      qty: number;
     }> = [];
 
-    filteredServices.forEach((srv) => {
-      const pInfo = getPriceDisplayForItem(srv, selectedVehicleTypeId);
-      const selQty = selectedServices[srv.id] || 0;
-      list.push({
-        id: srv.id,
-        kind: "SERVICE",
-        name: srv.name,
-        code: srv.code,
-        description: srv.shortDescription || srv.fullDescription,
-        durationMinutes: srv.estimatedMinutes || 45,
-        price: pInfo.price ?? 0,
-        quoteRequired: pInfo.quoteRequired,
-        rawService: srv,
-        imageUrl: srv.imageUrl,
-        isSelected: selQty > 0,
-        qty: selQty,
-      });
-    });
-
-    filteredTires.forEach((tire) => {
-      const selQty = selectedTires[tire.id] || 0;
-      list.push({
-        id: tire.id,
-        kind: "TIRE",
-        name: `${tire.brand} ${tire.modelRef} - ${tire.tireSize}`,
-        code: tire.code,
-        description: `${tire.brand} · ${tire.tireSize} · Aro ${tire.rimDiameter} · Stock: ${tire.stock}`,
-        durationMinutes: 30,
-        price: Number(tire.price) || 0,
-        quoteRequired: false,
-        rawTire: tire,
-        imageUrl: tire.imageUrl,
-        isSelected: selQty > 0,
-        qty: selQty,
-      });
-    });
-
-    filteredPackages.forEach((pkg) => {
-      const pInfo = getPriceDisplayForItem(pkg, selectedVehicleTypeId);
-      const isSel = selectedPackages.includes(pkg.id);
-      list.push({
-        id: pkg.id,
-        kind: "PACKAGE",
-        name: pkg.name,
-        code: pkg.code,
-        description: pkg.shortDescription,
-        durationMinutes: pkg.estimatedMinutes || 60,
-        price: pInfo.price ?? 0,
-        quoteRequired: pInfo.quoteRequired,
-        rawPackage: pkg,
-        imageUrl: pkg.imageUrl,
-        isSelected: isSel,
-        qty: isSel ? 1 : 0,
-      });
-    });
-
-    activeAddons.forEach((add) => {
-      const pInfo = getPriceDisplayForItem(add, selectedVehicleTypeId);
-      const selQty = selectedAddons[add.id] || 0;
-      list.push({
-        id: add.id,
-        kind: "ADDON",
-        name: add.name,
-        code: add.code,
-        description: add.description,
-        durationMinutes: add.estimatedMinutes || 15,
-        price: pInfo.price ?? 0,
-        quoteRequired: pInfo.quoteRequired,
-        rawAddon: add,
-        imageUrl: add.imageUrl,
-        isSelected: selQty > 0,
-        qty: selQty,
-      });
-    });
-
-    return list;
-  }, [
-    filteredServices,
-    filteredTires,
-    filteredPackages,
-    activeAddons,
-    selectedVehicleTypeId,
-    selectedServices,
-    selectedTires,
-    selectedPackages,
-    selectedAddons,
-  ]);
-
-  // Todos los ítems para la vista completa "Ver todo el catálogo" de Tecnicentro
-  const todosLosItemsCatalogo = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    const list: Array<{
-      id: string;
-      kind: "PACKAGE" | "SERVICE" | "TIRE" | "ADDON";
-      code: string;
-      name: string;
-      brand?: string;
-      presentation?: string;
-      description: string;
-      durationMinutes: number;
-      price: number;
-      quoteRequired: boolean;
-      imageUrl?: string;
-      rawService?: TecnicentroEnrichedService;
-      rawPackage?: TecnicentroPackage;
-      rawTire?: TecnicentroEnrichedTire;
-      rawAddon?: TecnicentroAddon;
-      isSelected: boolean;
-    }> = [];
-
-    // Paquetes
-    (config?.packages || []).forEach((pkg) => {
-      if (filtroCategoriaGeneral && pkg.categoryId !== filtroCategoriaGeneral) return;
-      if (q && !`${pkg.name} ${pkg.code} ${pkg.shortDescription || ""}`.toLowerCase().includes(q)) return;
-      const pInfo = getPriceDisplayForItem(pkg, selectedVehicleTypeId);
-      list.push({
-        id: pkg.id,
-        kind: "PACKAGE",
-        code: pkg.code,
-        name: pkg.name,
-        brand: "Paquete",
-        description: pkg.shortDescription || pkg.fullDescription || "",
-        durationMinutes: pkg.estimatedMinutes || 60,
-        price: pInfo.price ?? 0,
-        quoteRequired: pInfo.quoteRequired,
-        imageUrl: pkg.imageUrl,
-        rawPackage: pkg,
-        isSelected: selectedPackages.includes(pkg.id),
-        presentation: `${pkg.estimatedMinutes || 60} min · Paquete`,
-      });
-    });
-
-    // Servicios
-    services.forEach((srv) => {
-      if (filtroCategoriaGeneral && srv.categoryId !== filtroCategoriaGeneral) return;
-      if (q && !`${srv.name} ${srv.code} ${srv.shortDescription || ""}`.toLowerCase().includes(q)) return;
-      const pInfo = getPriceDisplayForItem(srv, selectedVehicleTypeId);
-      const catObj = config?.categories?.find((c) => c.id === srv.categoryId);
-      list.push({
-        id: srv.id,
-        kind: "SERVICE",
-        code: srv.code,
-        name: srv.name,
-        brand: catObj?.name ? toSingleWord(catObj.name, TECNICENTRO_CAT_SINGLE) : "Tecnicentro",
-        description: srv.shortDescription || srv.fullDescription || "",
-        durationMinutes: srv.estimatedMinutes || 45,
-        price: pInfo.price ?? 0,
-        quoteRequired: pInfo.quoteRequired,
-        imageUrl: srv.imageUrl,
-        rawService: srv,
-        isSelected: Boolean(selectedServices[srv.id]),
-        presentation: `${srv.estimatedMinutes || 45} min · Servicio`,
-      });
-    });
-
-    // Neumáticos
-    tires.forEach((tire) => {
-      if (filtroCategoriaGeneral && filtroCategoriaGeneral !== "tc_cat_venta_neum") return;
-      if (q && !`${tire.brand} ${tire.name || ""} ${tire.tireSize}`.toLowerCase().includes(q)) return;
-      list.push({
-        id: tire.id,
-        kind: "TIRE",
-        code: tire.code,
-        name: tire.name || `${tire.brand} - ${tire.tireSize}`,
-        brand: tire.brand || "Neumático",
-        description: `${tire.brand} · ${tire.tireSize} · Aro ${tire.rimDiameter} · Stock: ${tire.stock}`,
-        durationMinutes: 30,
-        price: Number(tire.price) || 0,
-        quoteRequired: false,
-        imageUrl: tire.imageUrl,
-        rawTire: tire,
-        isSelected: Boolean(selectedTires[tire.id]),
-        presentation: `${tire.tireSize} · Aro ${tire.rimDiameter || "16"}`,
-      });
-    });
-
-    // Extras
-    (config?.addons || []).forEach((add) => {
-      if (filtroCategoriaGeneral) return;
-      if (q && !`${add.name} ${add.code} ${add.description || ""}`.toLowerCase().includes(q)) return;
-      const pInfo = getPriceDisplayForItem(add, selectedVehicleTypeId);
-      list.push({
-        id: add.id,
-        kind: "ADDON",
-        code: add.code,
-        name: add.name,
-        brand: "Extra",
-        description: add.description || "",
-        durationMinutes: add.estimatedMinutes || 15,
-        price: pInfo.price ?? 0,
-        quoteRequired: pInfo.quoteRequired,
-        imageUrl: add.imageUrl,
-        rawAddon: add,
-        isSelected: Boolean(selectedAddons[add.id]),
-        presentation: `${add.estimatedMinutes || 15} min · Adicional`,
-      });
-    });
-
-    return list;
-  }, [config, services, tires, filtroCategoriaGeneral, searchQuery, selectedVehicleTypeId, selectedPackages, selectedServices, selectedTires, selectedAddons]);
-
-  const totalCalculado = useMemo(() => {
-    let sum = 0;
-    if (serverCalculation?.total != null) {
-      sum = Number(serverCalculation.total);
-    } else {
-      selectedPackages.forEach((pId) => {
-        const p = config?.packages.find((x) => x.id === pId);
-        if (p) sum += getPriceDisplayForItem(p, selectedVehicleTypeId).price ?? 0;
-      });
-      Object.entries(selectedServices).forEach(([sId, qty]) => {
-        const s = services.find((x) => x.id === sId);
-        if (s) sum += (getPriceDisplayForItem(s, selectedVehicleTypeId).price ?? 0) * (qty || 1);
-      });
-      Object.entries(selectedTires).forEach(([tId, qty]) => {
-        const t = tires.find((x) => x.id === tId);
-        if (t) sum += (Number(t.price) || 0) * (qty || 1);
-      });
-      Object.entries(selectedAddons).forEach(([aId, qty]) => {
-        const a = config?.addons.find((x) => x.id === aId);
-        if (a) sum += (getPriceDisplayForItem(a, selectedVehicleTypeId).price ?? 0) * (qty || 1);
+    // 1. Paquetes
+    if (!filtroCategoriaGeneral || filtroCategoriaGeneral === "PACKAGE") {
+      filteredPackages.forEach((pkg) => {
+        if (selectedSubcategoryId !== "TODOS") return;
+        const full = `${pkg.name} ${pkg.code} ${pkg.shortDescription || ""} ${(pkg.includedServicesList || pkg.includedServiceCodes || []).join(" ")}`;
+        if (!matchText(full)) return;
+        const pInfo = getPriceDisplayForItem(pkg, selectedVehicleTypeId);
+        list.push({
+          id: pkg.id,
+          kind: "PACKAGE",
+          name: pkg.name,
+          code: pkg.code,
+          brand: "Paquete",
+          presentation: `${pkg.estimatedMinutes || 60} min · Paquete`,
+          description: pkg.shortDescription,
+          durationMinutes: pkg.estimatedMinutes || 60,
+          price: pInfo.price ?? 0,
+          quoteRequired: pInfo.quoteRequired,
+          rawPackage: pkg,
+          imageUrl: pkg.imageUrl,
+        });
       });
     }
-    const valManual = (parseFloat(manualServicioPrecio) || 0) * (manualCantidad || 1);
-    return sum + valManual;
+
+    // 2. Servicios individuales
+    if (!filtroCategoriaGeneral || filtroCategoriaGeneral === "SERVICE") {
+      filteredServices.forEach((srv) => {
+        const full = `${srv.name} ${srv.code} ${srv.shortDescription || ""} ${srv.fullDescription || ""} ${(srv.includesList || []).join(" ")}`;
+        if (!matchText(full)) return;
+        const pInfo = getPriceDisplayForItem(srv, selectedVehicleTypeId);
+        const catObj = config?.categories?.find((c) => c.id === srv.categoryId);
+        list.push({
+          id: srv.id,
+          kind: "SERVICE",
+          name: srv.name,
+          code: srv.code,
+          brand: catObj?.name ? toSingleWord(catObj.name, TECNICENTRO_CAT_SINGLE) : "Servicio",
+          presentation: `${srv.estimatedMinutes || 45} min`,
+          description: srv.shortDescription || srv.fullDescription,
+          durationMinutes: srv.estimatedMinutes || 45,
+          price: pInfo.price ?? 0,
+          quoteRequired: pInfo.quoteRequired,
+          rawService: srv,
+          imageUrl: srv.imageUrl,
+        });
+      });
+    }
+
+    // 3. Neumáticos (cuando aplica la categoría o el filtro de tipo es Neumáticos)
+    const showTiresInSub =
+      selectedSubcategoryId === "TODOS" || selectedSubcategoryId === "tc_sub_neu_venta";
+    if (
+      showTiresInSub &&
+      (filtroCategoriaGeneral === "TIRE" ||
+        (!filtroCategoriaGeneral &&
+          (selectedCategoryId === "TODOS" || selectedCategoryId === "tc_cat_venta_neum")))
+    ) {
+      filteredTires.forEach((tire) => {
+        const full = `${tire.brand} ${tire.modelRef} ${tire.tireSize} ${tire.code} ${tire.rimDiameter}`;
+        if (!matchText(full)) return;
+        list.push({
+          id: tire.id,
+          kind: "TIRE",
+          name: `${tire.brand} ${tire.modelRef} - ${tire.tireSize}`,
+          code: tire.code,
+          brand: tire.brand || "Neumático",
+          presentation: `${tire.tireSize} · Aro ${tire.rimDiameter} · Stock: ${tire.stock}`,
+          description: `${tire.brand} · ${tire.tireSize} · Aro ${tire.rimDiameter} · Stock: ${tire.stock}`,
+          durationMinutes: 30,
+          price: Number(tire.price) || 0,
+          quoteRequired: false,
+          rawTire: tire,
+          imageUrl: tire.imageUrl,
+        });
+      });
+    }
+
+    // 4. Extras / Adicionales
+    if (
+      (!filtroCategoriaGeneral && selectedCategoryId === "TODOS") ||
+      filtroCategoriaGeneral === "ADDON"
+    ) {
+      activeAddons.forEach((add) => {
+        const full = `${add.name} ${add.code} ${add.description || ""}`;
+        if (!matchText(full)) return;
+        const pInfo = getPriceDisplayForItem(add, selectedVehicleTypeId);
+        list.push({
+          id: add.id,
+          kind: "ADDON",
+          name: add.name,
+          code: add.code,
+          brand: "Extra",
+          presentation: `${add.estimatedMinutes || 15} min · Extra`,
+          description: add.description,
+          durationMinutes: add.estimatedMinutes || 15,
+          price: pInfo.price ?? 0,
+          quoteRequired: pInfo.quoteRequired,
+          rawAddon: add,
+          imageUrl: add.imageUrl,
+        });
+      });
+    }
+
+    return list;
   }, [
-    serverCalculation,
-    config,
-    services,
-    tires,
-    selectedPackages,
-    selectedServices,
-    selectedTires,
-    selectedAddons,
+    searchQuery,
+    filtroCategoriaGeneral,
+    filteredPackages,
+    filteredServices,
+    filteredTires,
+    activeAddons,
     selectedVehicleTypeId,
-    manualServicioPrecio,
-    manualCantidad,
+    selectedCategoryId,
+    selectedSubcategoryId,
+    config,
   ]);
 
+  // Conteos por las 6 categorías principales y sus subcategorías de 1 palabra
+  const conteoPorCategoria = useMemo(() => {
+    const map: Record<string, number> = {};
+    PRINCIPAL_TECNICENTRO_CAT_IDS.forEach((mainId) => {
+      let c = 0;
+      (config?.packages || []).forEach((p) => {
+        if (p.active && matchesMainCategoryTec(p.categoryId, mainId)) c++;
+      });
+      services.forEach((s) => {
+        if (s.active && matchesMainCategoryTec(s.categoryId, mainId)) c++;
+      });
+      if (mainId === "tc_cat_venta_neum") {
+        c += tires.filter((t) => t.active).length;
+      }
+      map[mainId] = c;
+    });
+    return map;
+  }, [config?.packages, services, tires]);
+
+  const conteoPorSubcategoria = useMemo(() => {
+    const map: Record<string, number> = {};
+    Object.values(IMPORTANT_SUBCATEGORIES_BY_MAIN_CAT)
+      .flat()
+      .forEach((sub) => {
+        let c = services.filter((s) => s.active && matchesSubcategoryTec(s, sub.id)).length;
+        if (sub.id === "tc_sub_neu_venta") {
+          c += tires.filter((t) => t.active).length;
+        }
+        map[sub.id] = c;
+      });
+    return map;
+  }, [services, tires]);
+
+  // Ítems de Tecnicentro/Neumáticos actualmente en la orden
+  const itemsTecnicentroEnOrden = useMemo(() => {
+    return (itemsOrden || []).filter((it) => {
+      const code = String(it.code || "");
+      const cat = String(it.category || "");
+      return (
+        cat === "Tecnicentro" ||
+        cat === "Llantera" ||
+        cat === "Neumáticos" ||
+        code.startsWith("TC-") ||
+        code.startsWith("PKG-TC-") ||
+        code.startsWith("ADD-TC-") ||
+        code.startsWith("NEUM-")
+      );
+    });
+  }, [itemsOrden]);
+
+  const totalUnidadesTecnicentro = useMemo(() => {
+    return itemsTecnicentroEnOrden.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
+  }, [itemsTecnicentroEnOrden]);
+
+  const totalMontoTecnicentro = useMemo(() => {
+    return itemsTecnicentroEnOrden.reduce(
+      (acc, it) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1),
+      0
+    );
+  }, [itemsTecnicentroEnOrden]);
+
+  const totalCatalogoCount = useMemo(() => {
+    return (
+      (config?.packages || []).filter((p) => p.active).length +
+      services.filter((s) => s.active).length +
+      tires.filter((t) => t.active).length +
+      (config?.addons || []).filter((a) => a.active).length
+    );
+  }, [config?.packages, services, tires, config?.addons]);
+
+  const arosDisponibles = useMemo(() => {
+    const set = new Set<string>();
+    tires.forEach((t) => {
+      if (t.active && t.rimDiameter) set.add(t.rimDiameter.toUpperCase());
+    });
+    return Array.from(set).sort();
+  }, [tires]);
+
+  if (loading && !config) {
+    return (
+      <div className="p-8 rounded-3xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 text-center space-y-2 animate-pulse">
+        <div className="text-3xl">🛞</div>
+        <p className="text-sm font-normal text-zinc-700 dark:text-zinc-300">
+          Cargando módulo Tecnicentro, alineación, balanceo, neumáticos y diagnósticos desde Neon...
+        </p>
+      </div>
+    );
+  }
+
+  if (errorMsg || !config) {
+    return (
+      <div className="p-6 rounded-3xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-center space-y-3">
+        <p className="text-sm font-normal text-rose-700 dark:text-rose-300">
+          ⚠️ {errorMsg || "Error al cargar Tecnicentro"}
+        </p>
+        <button
+          type="button"
+          onClick={() => void fetchTecnicentroData()}
+          className="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-normal cursor-pointer"
+        >
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+
+  const vehLabelCorto = currentVehicleType
+    ? toSingleWord(currentVehicleType.name, TECNICENTRO_VEH_SINGLE)
+    : "Auto";
+
   return (
-    <div className="space-y-3.5 animate-fade-in">
+    <div className="w-full space-y-2.5 sm:space-y-3 animate-fade-in pb-4">
       {/* =====================================================================
-          FILA 1: CATEGORÍAS PRINCIPALES (Color, Porte y Diseño Taller y Lubricentro)
+          NIVEL 1: 6 CATEGORÍAS PRINCIPALES (Cubriendo todo el ancho igual que Lubricentro)
           ===================================================================== */}
-      <div className="w-full">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none">
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedCategoryId("TODOS");
-              setSelectedSubcategoryId("TODOS");
-            }}
-            className={`h-10 px-3.5 rounded-lg border text-xs font-bold flex items-center gap-2 cursor-pointer transition-all whitespace-nowrap shrink-0 shadow-2xs active:scale-95 ${
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full">
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedCategoryId("TODOS");
+            setSelectedSubcategoryId("TODOS");
+            clearCategorySpecificFilters();
+          }}
+          className={`flex-1 min-w-[100px] sm:min-w-[120px] h-9 sm:h-10 px-3 sm:px-4 rounded-xl border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
+            selectedCategoryId === "TODOS"
+              ? "bg-blue-600 text-white border-blue-500 shadow-xs"
+              : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
+          }`}
+        >
+          <span className="text-sm leading-none shrink-0">✨</span>
+          <span className="whitespace-nowrap">Todo</span>
+          <span
+            className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-normal shrink-0 ${
               selectedCategoryId === "TODOS"
-                ? "bg-blue-50/90 dark:bg-blue-500/20 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/40 font-bold"
-                : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
+                ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
             }`}
           >
-            <span className="text-base leading-none shrink-0">🛞</span>
-            <span>Todas</span>
-          </button>
-          {activeCategories.map((cat) => {
-            const activa = selectedCategoryId === cat.id;
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => {
-                  setSelectedCategoryId(cat.id);
-                  setSelectedSubcategoryId("TODOS");
-                }}
-                className={`h-10 px-3.5 rounded-lg border text-xs font-bold flex items-center gap-2 cursor-pointer transition-all whitespace-nowrap shrink-0 shadow-2xs active:scale-95 ${
-                  activa
-                    ? "bg-blue-50/90 dark:bg-blue-500/20 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/40 font-bold"
-                    : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
-                }`}
-              >
-                <span className="text-base leading-none shrink-0">{cat.icon || "🛞"}</span>
-                <span>{toSingleWord(cat.name, TECNICENTRO_CAT_SINGLE)}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* =====================================================================
-          FILA 2: SELECTOR DE TIPO DE VEHÍCULO (5 Tipos Principales, Color y Porte Taller y Lubricentro)
-          ===================================================================== */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 w-full">
-        {activeVehicleTypes.map((vt) => {
-          const activa = selectedVehicleTypeId === vt.id;
+            {totalCatalogoCount}
+          </span>
+        </button>
+        {activeCategories.map((cat) => {
+          const activa = selectedCategoryId === cat.id;
+          const count = conteoPorCategoria[cat.id] || 0;
           return (
             <button
-              key={vt.id}
+              key={cat.id}
               type="button"
-              onClick={() => setSelectedVehicleTypeId(vt.id)}
-              className={`h-10 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all shadow-2xs active:scale-95 ${
+              onClick={() => {
+                setSelectedCategoryId(cat.id);
+                setSelectedSubcategoryId("TODOS");
+                clearCategorySpecificFilters();
+              }}
+              className={`flex-1 min-w-[100px] sm:min-w-[120px] h-9 sm:h-10 px-3 sm:px-4 rounded-xl border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
                 activa
-                  ? "bg-blue-50/90 dark:bg-blue-500/20 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/40 font-bold"
-                  : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
+                  ? "bg-blue-600 text-white border-blue-500 shadow-xs"
+                  : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
               }`}
             >
-              <span className="text-base leading-none shrink-0">{vt.icon || "🚗"}</span>
-              <span className="truncate">{toSingleWord(vt.name, TECNICENTRO_VEH_SINGLE)}</span>
+              <span className="text-base leading-none shrink-0">{cat.icon || "🛞"}</span>
+              <span className="whitespace-nowrap">{toSingleWord(cat.name, TECNICENTRO_CAT_SINGLE)}</span>
+              {count > 0 && (
+                <span
+                  className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-normal shrink-0 ${
+                    activa
+                      ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                      : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
+                  }`}
+                >
+                  {count}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
 
       {/* =====================================================================
-          FILA 3: CONTENIDO EN TRES COLUMNAS O CATÁLOGO GENERAL
+          NIVEL 2: SUBCATEGORÍAS DE LA CATEGORÍA ACTIVA (Cubriendo todo el ancho con flex-1)
           ===================================================================== */}
-      {!verTodoElCatalogo ? (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-start">
-        {/* 1. PANEL IZQUIERDO: Categoría y modalidades */}
-        <div className="md:col-span-4 lg:col-span-3 p-3.5 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-2.5 shadow-2xs">
-          <div className="flex items-center gap-2 px-0.5 pb-2 border-b border-zinc-100 dark:border-white/5 text-zinc-900 dark:text-white font-normal text-xs sm:text-sm">
-            <span className="text-sm text-blue-600 dark:text-blue-400">←</span>
-            <span className="text-base">
-              {activeCategories.find((c) => c.id === selectedCategoryId)?.icon || "🛞"}
+      {selectedCategoryId !== "TODOS" && activeSubcategories.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 w-full">
+          <button
+            type="button"
+            onClick={() => setSelectedSubcategoryId("TODOS")}
+            className={`flex-1 min-w-[95px] sm:min-w-[110px] h-8 sm:h-8.5 px-3 rounded-lg border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs ${
+              selectedSubcategoryId === "TODOS"
+                ? "bg-blue-600 border-blue-500 text-white shadow-xs"
+                : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
+            }`}
+          >
+            <span>Todos</span>
+            <span
+              className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
+                selectedSubcategoryId === "TODOS"
+                  ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                  : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
+              }`}
+            >
+              {conteoPorCategoria[selectedCategoryId] || 0}
             </span>
-            <span className="truncate">Categoría</span>
-          </div>
-
-          <div className="space-y-1.5">
-            {activeSubcategories.length > 0 ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setSelectedSubcategoryId("TODOS")}
-                  className={`w-full p-2 rounded-lg border flex items-center justify-between gap-2 text-left transition-all cursor-pointer active:scale-98 ${
-                    selectedSubcategoryId === "TODOS"
-                      ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/50 text-blue-900 dark:text-blue-200 shadow-2xs ring-1 ring-blue-400/30"
-                      : "bg-zinc-50/70 hover:bg-zinc-100/80 dark:bg-white/[0.02] dark:hover:bg-white/[0.05] border-zinc-200/80 dark:border-white/5 text-zinc-700 dark:text-zinc-300"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-8 h-8 rounded-md border flex items-center justify-center text-sm shrink-0 bg-white dark:bg-black/30 border-zinc-200 dark:border-white/10">
-                      ✨
-                    </div>
-                    <span className="text-xs font-semibold truncate">Todos los servicios</span>
-                  </div>
-                  <span className="text-xs shrink-0 font-bold">›</span>
-                </button>
-                {activeSubcategories.map((sub) => {
-                  const isSelected = selectedSubcategoryId === sub.id;
-                  return (
-                    <button
-                      key={sub.id}
-                      type="button"
-                      onClick={() => setSelectedSubcategoryId(sub.id)}
-                      className={`w-full p-2 rounded-lg border flex items-center justify-between gap-2 text-left transition-all cursor-pointer active:scale-98 ${
-                        isSelected
-                          ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/50 text-blue-900 dark:text-blue-200 shadow-2xs ring-1 ring-blue-400/30"
-                          : "bg-zinc-50/70 hover:bg-zinc-100/80 dark:bg-white/[0.02] dark:hover:bg-white/[0.05] border-zinc-200/80 dark:border-white/5 text-zinc-700 dark:text-zinc-300"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div
-                          className={`w-8 h-8 rounded-md border flex items-center justify-center text-sm shrink-0 ${
-                            isSelected
-                              ? "bg-blue-100 dark:bg-blue-500/25 border-blue-300 dark:border-blue-400/40 text-blue-700 dark:text-blue-200"
-                              : "bg-white dark:bg-black/30 border-zinc-200 dark:border-white/10"
-                          }`}
-                        >
-                          {sub.icon || "🔧"}
-                        </div>
-                        <span
-                          className={`text-xs font-semibold truncate ${
-                            isSelected
-                              ? "text-blue-700 dark:text-blue-300 font-bold"
-                              : "text-zinc-700 dark:text-zinc-200"
-                          }`}
-                        >
-                          {sub.name}
-                        </span>
-                      </div>
-                      <span
-                        className={`text-xs shrink-0 font-bold ${
-                          isSelected ? "text-blue-600 dark:text-blue-400" : "text-zinc-400 dark:text-zinc-500"
-                        }`}
-                      >
-                        ›
-                      </span>
-                    </button>
-                  );
-                })}
-              </>
-            ) : (
-              activeCategories.map((cat) => {
-                const isSelected = selectedCategoryId === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedCategoryId(cat.id);
-                      setSelectedSubcategoryId("TODOS");
-                    }}
-                    className={`w-full p-2 rounded-lg border flex items-center justify-between gap-2 text-left transition-all cursor-pointer active:scale-98 ${
-                      isSelected
-                        ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/50 text-blue-900 dark:text-blue-200 shadow-2xs ring-1 ring-blue-400/30"
-                        : "bg-zinc-50/70 hover:bg-zinc-100/80 dark:bg-white/[0.02] dark:hover:bg-white/[0.05] border-zinc-200/80 dark:border-white/5 text-zinc-700 dark:text-zinc-300"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div
-                        className={`w-8 h-8 rounded-md border flex items-center justify-center text-sm shrink-0 ${
-                          isSelected
-                            ? "bg-blue-100 dark:bg-blue-500/25 border-blue-300 dark:border-blue-400/40 text-blue-700 dark:text-blue-200"
-                            : "bg-white dark:bg-black/30 border-zinc-200 dark:border-white/10"
-                        }`}
-                      >
-                        {cat.icon || "🛞"}
-                      </div>
-                      <span
-                        className={`text-xs font-semibold truncate ${
-                          isSelected
-                            ? "text-blue-700 dark:text-blue-300 font-bold"
-                            : "text-zinc-700 dark:text-zinc-200"
-                        }`}
-                      >
-                        {cat.name}
-                      </span>
-                    </div>
-                    <span
-                      className={`text-xs shrink-0 font-bold ${
-                        isSelected ? "text-blue-600 dark:text-blue-400" : "text-zinc-400 dark:text-zinc-500"
-                      }`}
-                    >
-                      ›
-                    </span>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* 2. PANEL CENTRAL: Tienda de Tecnicentro */}
-        <div className="md:col-span-8 lg:col-span-9 p-3.5 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 shadow-2xs">
-          {/* Header del panel central */}
-          <div className="flex items-center justify-between gap-2 pb-2 border-b border-zinc-100 dark:border-white/5">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-sm text-blue-600 dark:text-blue-400 shrink-0">🏪</span>
-              <h3 className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-white truncate">
-                Tienda
-              </h3>
-            </div>
-            <button
-              type="button"
-              onClick={() => setVerTodoElCatalogo(true)}
-              className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:underline flex items-center gap-1 cursor-pointer whitespace-nowrap"
-            >
-              <span>Ver todo</span>
-              <span>›</span>
-            </button>
-          </div>
-
-          {/* Input de Búsqueda */}
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar..."
-              className="w-full h-9 pl-8 pr-7 rounded-lg bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
-            />
-            {searchQuery && (
+          </button>
+          {activeSubcategories.map((sub) => {
+            const activa = selectedSubcategoryId === sub.id;
+            const count = conteoPorSubcategoria[sub.id] || 0;
+            return (
               <button
+                key={sub.id}
                 type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white text-xs cursor-pointer"
+                onClick={() => setSelectedSubcategoryId(sub.id)}
+                className={`flex-1 min-w-[95px] sm:min-w-[110px] h-8 sm:h-8.5 px-2.5 sm:px-3 rounded-lg border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs ${
+                  activa
+                    ? "bg-blue-600 border-blue-500 text-white shadow-xs"
+                    : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
+                }`}
               >
-                ✕
-              </button>
-            )}
-          </div>
-
-          {/* Lista de Servicios / Neumáticos / Paquetes / Adicionales (solo visible cuando se busca) */}
-          <div className="space-y-2 max-h-[580px] overflow-y-auto pr-0.5">
-            {!searchQuery.trim() ? null : itemsTienda.length === 0 ? (
-              <div className="p-6 rounded-xl bg-zinc-50/70 dark:bg-white/[0.01] border border-dashed border-zinc-200 dark:border-white/10 text-center space-y-1.5 text-zinc-400">
-                <span className="text-xl block">🔍</span>
-                <p className="text-xs font-semibold">No se encontraron servicios ni neumáticos para esta búsqueda.</p>
-              </div>
-            ) : (
-              itemsTienda.map((item) => (
-                <div
-                  key={`${item.kind}-${item.id}`}
-                  onClick={() => {
-                    setManualServicioTexto(item.name);
-                    setManualServicioPrecio(item.price.toFixed(2));
-                  }}
-                  className={`p-2.5 sm:p-3 rounded-lg border flex items-center justify-between gap-3 transition-all cursor-pointer group shadow-2xs ${
-                    item.isSelected
-                      ? "bg-blue-50/70 dark:bg-blue-500/10 border-blue-400/60 dark:border-blue-500/50 ring-1 ring-blue-400/20"
-                      : "bg-white dark:bg-white/[0.02] hover:bg-zinc-50/70 dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/10 hover:border-blue-400/50"
-                  }`}
-                >
-                  <div className="w-11 h-13 sm:w-12 sm:h-14 rounded-md bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-white/5 flex items-center justify-center p-1 shrink-0 overflow-hidden">
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain" />
-                    ) : (
-                      <span className="text-xl">
-                        {item.kind === "TIRE" ? "🛞" : item.kind === "PACKAGE" ? "📦" : item.kind === "ADDON" ? "✨" : "🔧"}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0 space-y-0.5">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <h4 className="text-[11px] sm:text-xs font-normal text-zinc-800 dark:text-zinc-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
-                        {item.name}
-                      </h4>
-                      {item.kind === "TIRE" && (
-                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
-                          Neumático
-                        </span>
-                      )}
-                      {item.kind === "PACKAGE" && (
-                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                          Paquete
-                        </span>
-                      )}
-                      {item.kind === "ADDON" && (
-                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
-                          Extra
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
-                      {item.durationMinutes ? `⏱ ${item.durationMinutes} min · ` : ""}
-                      {item.description || item.code}
-                    </p>
-                    <div className="pt-0.5 flex items-center gap-2">
-                      {item.quoteRequired ? (
-                        <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
-                          Cotizar en Presupuesto
-                        </span>
-                      ) : (
-                        <span className="text-xs sm:text-sm font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                          $ {item.price.toFixed(2)}
-                        </span>
-                      )}
-                      {currentVehicleType && item.kind !== "TIRE" && (
-                        <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
-                          ({currentVehicleType.name})
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setManualServicioTexto(item.name);
-                      setManualServicioPrecio(item.price.toFixed(2));
-                      if (item.kind === "SERVICE" && item.rawService) {
-                        handleToggleService(item.rawService);
-                      } else if (item.kind === "TIRE" && item.rawTire) {
-                        handleToggleTire(item.rawTire);
-                      } else if (item.kind === "PACKAGE" && item.rawPackage) {
-                        handleTogglePackage(item.rawPackage);
-                      } else if (item.kind === "ADDON" && item.rawAddon) {
-                        handleToggleAddon(item.rawAddon);
-                      }
-                    }}
-                    className={`h-8 px-3 rounded-lg border text-xs font-bold flex items-center gap-1 shrink-0 transition-all cursor-pointer active:scale-95 shadow-2xs ${
-                      item.isSelected
-                        ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500"
-                        : "bg-blue-100/80 hover:bg-blue-200/80 dark:bg-blue-500/20 dark:hover:bg-blue-500/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30"
+                <span className="text-sm leading-none shrink-0">{sub.icon || "🔧"}</span>
+                <span className="whitespace-nowrap">{sub.name}</span>
+                {count > 0 && (
+                  <span
+                    className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
+                      activa
+                        ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                        : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
                     }`}
                   >
-                    <span>{item.isSelected ? "✓" : "+"}</span>
-                    <span>{item.isSelected ? "Listo" : "Agregar"}</span>
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
-      </div>
-      ) : (
-        /* VISTA COMPLETA: TODA LA TIENDA Y CATÁLOGO GENERAL DE TECNICENTRO */
-        <div className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 shadow-2xs">
-          <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-zinc-100 dark:border-white/5">
-            <div>
-              <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                <span>🏪</span>
-                <span>Catálogo</span>
-              </h3>
-            </div>
-            <button
-              type="button"
-              onClick={() => setVerTodoElCatalogo(false)}
-              className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer transition-all shrink-0 shadow-xs active:scale-95"
-            >
-              ← Volver
-            </button>
-          </div>
+      )}
 
-          <div className="flex items-center gap-2">
+      {/* =====================================================================
+          PANEL UNIFICADO: BUSCADOR + TIPO DESPLEGABLE + VEHÍCULO + CATÁLOGO AUTOMÁTICO
+          ===================================================================== */}
+      <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 shadow-2xs">
+        {/* FILA A: Buscador + Desplegable de Tipo (Paquetes / Servicios / Neumáticos / Extras) + Config */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-1">
             <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">
+                🔍
+              </span>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar..."
-                className="w-full h-9 pl-8 pr-7 rounded-lg bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
+                placeholder="Buscar servicio, paquete o neumático..."
+                className="w-full h-9 pl-8 pr-7 rounded-xl bg-zinc-50/80 dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 text-xs text-zinc-900 dark:text-white placeholder-zinc-400"
               />
               {searchQuery && (
                 <button
@@ -1852,24 +1744,35 @@ export default function ModuloTecnicentroCatalogo({
               )}
             </div>
 
+            {/* Desplegable de Tipo al lado del buscador */}
             <div ref={menuFiltroCatalogoRef} className="relative shrink-0">
               <button
                 type="button"
                 onClick={() => setMenuFiltroCatalogoAbierto((prev) => !prev)}
-                className={`h-9 px-3 rounded-lg border text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all shadow-2xs select-none active:scale-95 ${
+                className={`h-9 px-2.5 sm:px-3 rounded-xl border text-[11px] font-normal flex items-center gap-1.5 cursor-pointer transition-all select-none active:scale-95 ${
                   menuFiltroCatalogoAbierto || filtroCategoriaGeneral
-                    ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/40 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/20"
-                    : "bg-white dark:bg-black/40 hover:bg-zinc-50 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
+                    ? "bg-blue-600 text-white border-blue-500 shadow-xs"
+                    : "bg-zinc-50/80 dark:bg-black/40 hover:bg-zinc-100 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
                 }`}
               >
-                <span>
-                  {activeCategories.find((c) => c.id === filtroCategoriaGeneral)?.name
-                    ? toSingleWord(activeCategories.find((c) => c.id === filtroCategoriaGeneral)!.name, TECNICENTRO_CAT_SINGLE)
-                    : "Todos"}
+                <span className="truncate max-w-[92px] sm:max-w-[130px]">
+                  {filtroCategoriaGeneral === "PACKAGE"
+                    ? "Paquetes"
+                    : filtroCategoriaGeneral === "SERVICE"
+                    ? "Servicios"
+                    : filtroCategoriaGeneral === "TIRE"
+                    ? "Neumáticos"
+                    : filtroCategoriaGeneral === "ADDON"
+                    ? "Extras"
+                    : "Tipo"}
                 </span>
                 <span
-                  className={`text-[9px] text-zinc-400 transition-transform duration-200 ${
+                  className={`text-[9px] transition-transform duration-200 ${
                     menuFiltroCatalogoAbierto ? "rotate-180" : ""
+                  } ${
+                    menuFiltroCatalogoAbierto || filtroCategoriaGeneral
+                      ? "text-white/90"
+                      : "text-zinc-400"
                   }`}
                 >
                   ▾
@@ -1878,44 +1781,32 @@ export default function ModuloTecnicentroCatalogo({
 
               {menuFiltroCatalogoAbierto && (
                 <div className="absolute right-0 top-full mt-1.5 w-44 rounded-xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/10 shadow-xl dark:shadow-2xl backdrop-blur-md p-1.5 space-y-0.5 z-40 animate-fade-in">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFiltroCategoriaGeneral("");
-                      setMenuFiltroCatalogoAbierto(false);
-                    }}
-                    className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
-                      !filtroCategoriaGeneral
-                        ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold"
-                        : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
-                    }`}
-                  >
-                    <span>Todos</span>
-                    {!filtroCategoriaGeneral && <span className="text-xs">✓</span>}
-                  </button>
-
-                  <div className="my-1 border-t border-zinc-100 dark:border-white/5" />
-
-                  {activeCategories.map((cat) => {
-                    const activa = filtroCategoriaGeneral === cat.id;
+                  {[
+                    { id: "", label: "Todos los tipos", icon: "✨" },
+                    { id: "PACKAGE", label: "Paquetes", icon: "📦" },
+                    { id: "SERVICE", label: "Servicios", icon: "🔧" },
+                    { id: "TIRE", label: "Neumáticos", icon: "🛞" },
+                    { id: "ADDON", label: "Extras", icon: "➕" },
+                  ].map((opt) => {
+                    const activa = filtroCategoriaGeneral === opt.id;
                     return (
                       <button
-                        key={cat.id}
+                        key={opt.id || "ALL"}
                         type="button"
                         onClick={() => {
-                          setFiltroCategoriaGeneral(cat.id);
+                          setFiltroCategoriaGeneral(opt.id);
                           setMenuFiltroCatalogoAbierto(false);
                         }}
-                        className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                        className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-normal flex items-center justify-between transition-colors cursor-pointer ${
                           activa
-                            ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold"
+                            ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-normal"
                             : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
                         }`}
                       >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-sm shrink-0">{cat.icon || "🛞"}</span>
-                          <span className="truncate">{toSingleWord(cat.name, TECNICENTRO_CAT_SINGLE)}</span>
-                        </div>
+                        <span className="flex items-center gap-1.5 truncate">
+                          <span>{opt.icon}</span>
+                          <span>{opt.label}</span>
+                        </span>
                         {activa && <span className="text-xs">✓</span>}
                       </button>
                     );
@@ -1924,49 +1815,234 @@ export default function ModuloTecnicentroCatalogo({
               )}
             </div>
           </div>
+        </div>
 
-          {/* Grid de servicios, paquetes, neumáticos y extras con diseño estándar */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {todosLosItemsCatalogo.map((item) => (
-              <div
-                key={`${item.kind}-${item.id}`}
-                className="p-3 rounded-lg bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 hover:border-blue-400/50 dark:hover:border-blue-500/40 flex flex-col justify-between gap-2.5 transition-all shadow-2xs"
-              >
-                <div>
-                  <div className="h-24 rounded-md bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-white/5 flex items-center justify-center p-2 mb-1.5 overflow-hidden">
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain" />
-                    ) : (
-                      <span className="text-2xl">
-                        {item.kind === "TIRE" ? "🛞" : item.kind === "PACKAGE" ? "📦" : item.kind === "ADDON" ? "✨" : "🔧"}
+        {/* FILA C (Opcional): Chips rápidos de Aro cuando se está viendo Neumáticos */}
+        {(selectedCategoryId === "tc_cat_venta_neum" || filtroCategoriaGeneral === "TIRE") &&
+          arosDisponibles.length > 0 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <span className="text-[10px] font-normal uppercase tracking-wider text-zinc-400 dark:text-zinc-500 shrink-0 mr-0.5">
+                Aro:
+              </span>
+              {arosDisponibles.map((aro) => {
+                const activo = filterTireRim.toUpperCase() === aro;
+                return (
+                  <button
+                    key={aro}
+                    type="button"
+                    onClick={() => setFilterTireRim(activo ? "" : aro)}
+                    className={`shrink-0 h-7 px-2.5 rounded-lg border text-[11px] font-mono font-normal cursor-pointer transition-all active:scale-95 ${
+                      activo
+                        ? "bg-indigo-600 text-white border-indigo-500 shadow-xs"
+                        : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
+                    }`}
+                  >
+                    {aro}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+        {/* Barra de estado y limpiar filtros */}
+        {(selectedCategoryId !== "TODOS" ||
+          selectedSubcategoryId !== "TODOS" ||
+          filtroCategoriaGeneral ||
+          filterTireRim ||
+          searchQuery.trim()) && (
+          <div className="flex items-center justify-between gap-2 pt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+            <span>
+              Mostrando{" "}
+              <span className="text-zinc-800 dark:text-zinc-200">
+                {itemsFiltradosAutomaticos.length}
+              </span>{" "}
+              {itemsFiltradosAutomaticos.length === 1 ? "opción" : "opciones"} para{" "}
+              <span className="text-blue-600 dark:text-blue-400">{vehLabelCorto}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedCategoryId("TODOS");
+                setSelectedSubcategoryId("TODOS");
+                setFiltroCategoriaGeneral("");
+                clearCategorySpecificFilters();
+                setSearchQuery("");
+              }}
+              className="text-[11px] font-normal text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
+            >
+              Limpiar filtros ✕
+            </button>
+          </div>
+        )}
+
+        {/* GRID AUTOMÁTICO DE SERVICIOS, PAQUETES, NEUMÁTICOS Y EXTRAS */}
+        {itemsFiltradosAutomaticos.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-[600px] overflow-y-auto pr-0.5">
+            {itemsFiltradosAutomaticos.map((item) => {
+              const code = item.code || `TC-${item.id}`;
+              const enOrden = (itemsOrden || []).find(
+                (it) =>
+                  (it.code && it.code === code) ||
+                  it.serviceId === item.id ||
+                  it.id === `tec_${item.id}`
+              );
+              const cantEnOrden = enOrden ? Number(enOrden.qty) || 1 : 0;
+
+              return (
+                <div
+                  key={`${item.kind}-${item.id}`}
+                  className={`p-2.5 sm:p-3 rounded-xl border flex flex-col justify-between gap-2.5 transition-all ${
+                    cantEnOrden > 0
+                      ? "bg-blue-50/60 dark:bg-blue-500/10 border-blue-400 dark:border-blue-500/60 ring-1 ring-blue-400/30"
+                      : "bg-white dark:bg-white/[0.02] hover:border-blue-400/50 border-zinc-200 dark:border-white/10"
+                  }`}
+                >
+                  {/* Parte superior: Imagen/Icono + Info */}
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      onClick={() => {
+                        if (item.kind === "PACKAGE" && item.rawPackage) {
+                          setDetailModal({ item: item.rawPackage, kind: "PACKAGE" });
+                        } else if (item.kind === "TIRE" && item.rawTire) {
+                          setDetailModal({ item: item.rawTire, kind: "TIRE" });
+                        } else if (item.kind === "SERVICE" && item.rawService) {
+                          setDetailModal({ item: item.rawService, kind: "SERVICE" });
+                        }
+                      }}
+                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-white/5 flex items-center justify-center p-1 shrink-0 overflow-hidden cursor-pointer"
+                    >
+                      {item.imageUrl ? (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      ) : (
+                        <span className="text-xl">
+                          {item.kind === "TIRE"
+                            ? "🛞"
+                            : item.kind === "PACKAGE"
+                            ? "📦"
+                            : item.kind === "ADDON"
+                            ? "✨"
+                            : "🔧"}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span
+                          className={`text-[9px] font-normal uppercase tracking-wider px-1.5 py-0.2 rounded ${
+                            item.kind === "PACKAGE"
+                              ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
+                              : item.kind === "TIRE"
+                              ? "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30"
+                              : item.kind === "ADDON"
+                              ? "bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30"
+                              : "text-blue-600 dark:text-blue-400"
+                          }`}
+                        >
+                          {item.brand}
+                        </span>
+                        {item.durationMinutes && item.kind !== "TIRE" && (
+                          <span className="px-1.5 py-0.2 rounded bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 text-[9px] font-mono font-normal">
+                            ⏱ {item.durationMinutes}m
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="text-xs font-normal text-zinc-900 dark:text-white line-clamp-2 leading-snug mt-0.5">
+                        {item.name}
+                      </h4>
+                      {item.description && (
+                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 line-clamp-1 mt-0.5">
+                          {item.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Parte inferior: Precio según vehículo + Botón Agregar / Stepper */}
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-zinc-100 dark:border-white/5">
+                    <div className="flex items-baseline gap-1.5">
+                      {item.quoteRequired ? (
+                        <span className="text-xs font-normal text-amber-600 dark:text-amber-400">
+                          A cotizar
+                        </span>
+                      ) : (
+                        <span className="text-sm font-mono font-normal text-emerald-600 dark:text-emerald-400">
+                          ${item.price.toFixed(2)}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-zinc-400 font-medium">
+                        /{item.kind === "TIRE" ? "u." : vehLabelCorto}
                       </span>
+                    </div>
+
+                    {cantEnOrden > 0 ? (
+                      <div className="flex items-center gap-1 bg-blue-600 text-white rounded-xl p-0.5 shadow-xs">
+                        <button
+                          type="button"
+                          onClick={() => void handleAjustarCantidadItem(item, -1)}
+                          className="w-7 h-7 rounded-lg hover:bg-black/20 flex items-center justify-center text-sm font-normal cursor-pointer active:scale-90"
+                        >
+                          −
+                        </button>
+                        <span className="min-w-[22px] text-center text-xs font-mono font-normal">
+                          {cantEnOrden}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => void handleAjustarCantidadItem(item, 1)}
+                          className="w-7 h-7 rounded-lg hover:bg-black/20 flex items-center justify-center text-sm font-normal cursor-pointer active:scale-90"
+                        >
+                          +
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void handleAjustarCantidadItem(item, 1)}
+                        className="h-8 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal flex items-center gap-1 cursor-pointer transition-all shadow-xs active:scale-95"
+                      >
+                        <span>+</span>
+                        <span>Agregar</span>
+                      </button>
                     )}
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block truncate">
-                    {item.brand || (item.kind === "TIRE" ? "Neumático" : item.kind === "PACKAGE" ? "Paquete" : item.kind === "ADDON" ? "Extra" : "Servicio")}
-                  </span>
-                  <h4 className="text-xs font-normal text-zinc-800 dark:text-zinc-200 line-clamp-2 mt-0.5 leading-snug">
-                    {item.name}
-                  </h4>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
-                    {item.presentation || (item.durationMinutes ? `⏱ ${item.durationMinutes} min` : "1 Servicio")}
-                  </p>
                 </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
-                <div className="pt-2 border-t border-zinc-100 dark:border-white/5">
-                  <button
-                    type="button"
-                    onClick={() => void handleAgregarDirectoItem(item)}
-                    className="w-full h-8 px-3 rounded-lg bg-blue-100/80 hover:bg-blue-200/80 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 text-xs font-bold cursor-pointer transition-all shadow-2xs active:scale-95 flex items-center justify-center gap-1"
-                  >
-                    + Agregar
-                  </button>
-                </div>
-              </div>
-            ))}
+      {/* BARRA INFERIOR FLOTANTE DE RESUMEN RÁPIDO (Móvil y Desktop) */}
+      <div className="sticky bottom-2 z-30 flex items-center justify-between gap-2 p-2.5 sm:p-3 rounded-xl bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border border-zinc-200 dark:border-white/15 shadow-lg">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center text-sm shrink-0">
+            🛞
+          </div>
+          <div className="min-w-0 leading-snug">
+            <span className="text-sm sm:text-base font-normal text-zinc-900 dark:text-white block truncate">
+              {totalUnidadesTecnicentro} {totalUnidadesTecnicentro === 1 ? "servicio" : "servicios"}
+            </span>
+            <span className="text-sm sm:text-base font-normal text-emerald-600 dark:text-emerald-400 block">
+              Total: ${totalMontoTecnicentro.toFixed(2)}
+            </span>
           </div>
         </div>
-      )}
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={onIrAAvisoYFirma}
+            className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-normal cursor-pointer shadow-xs active:scale-95 transition-all"
+          >
+            Siguiente →
+          </button>
+        </div>
+      </div>
 
       {/* MODAL RESERVA DE BAHÍA */}
       {showBookingPanel && (
@@ -1975,7 +2051,7 @@ export default function ModuloTecnicentroCatalogo({
             <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-white/5">
               <div className="flex items-center gap-2">
                 <span className="text-lg">📅</span>
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                <h3 className="text-sm font-normal text-zinc-900 dark:text-white">
                   Reservar Bahía en Tecnicentro
                 </h3>
               </div>
@@ -1991,7 +2067,7 @@ export default function ModuloTecnicentroCatalogo({
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  <label className="text-[11px] font-normal text-zinc-700 dark:text-zinc-300 block mb-1">
                     Fecha
                   </label>
                   <input
@@ -2002,7 +2078,7 @@ export default function ModuloTecnicentroCatalogo({
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  <label className="text-[11px] font-normal text-zinc-700 dark:text-zinc-300 block mb-1">
                     Bahía
                   </label>
                   <select
@@ -2020,7 +2096,7 @@ export default function ModuloTecnicentroCatalogo({
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
+                <label className="text-[11px] font-normal text-zinc-700 dark:text-zinc-300 block mb-1">
                   Horario disponible
                 </label>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 max-h-36 overflow-y-auto p-1">
@@ -2039,7 +2115,7 @@ export default function ModuloTecnicentroCatalogo({
                           busy
                             ? "bg-zinc-100 dark:bg-white/5 text-zinc-400 line-through cursor-not-allowed opacity-50"
                             : isSelected
-                            ? "bg-blue-600 text-white font-bold shadow-xs"
+                            ? "bg-blue-600 text-white font-normal shadow-xs"
                             : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200/60 dark:border-white/5 text-zinc-700 dark:text-zinc-300 cursor-pointer"
                         }`}
                       >
@@ -2054,7 +2130,7 @@ export default function ModuloTecnicentroCatalogo({
                 type="button"
                 disabled={savingBooking}
                 onClick={() => void handleBookBay()}
-                className="w-full h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                className="w-full h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-normal transition-all cursor-pointer disabled:opacity-50"
               >
                 {savingBooking ? "Agendando..." : "✓ Confirmar Reserva"}
               </button>

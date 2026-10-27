@@ -22,6 +22,8 @@ export interface ModuloCarWashCatalogoProps {
   mostrarToast: (msg: string, tipo?: "ok" | "err") => void;
   onActualizarItemsOrden: (nuevosItems: any[]) => Promise<void>;
   onIrAAvisoYFirma: () => void;
+  onIrASiguiente?: () => void;
+  nombreSiguiente?: string;
   triggerAbrirConfig?: number;
 }
 
@@ -63,7 +65,6 @@ const PRINCIPAL_CATEGORY_IDS = [
   "cw_cat_exterior",
   "cw_cat_interior",
   "cw_cat_completo",
-  "cw_cat_premium",
   "cw_cat_tapiceria",
   "cw_cat_motor",
 ];
@@ -190,32 +191,6 @@ function computePriceForVehicle(
   return { unitPrice: baseVal, originalPrice: baseVal, isPromo: false };
 }
 
-// Caché en el cliente (módulo y localStorage) para que cambiar de tab y volver sea instantáneo
-let _carWashClientCache: {
-  config: any;
-  services: any[];
-  promotions: any[];
-  appointments: any[];
-  timestamp: number;
-} | null = null;
-
-const getInitialCarWashCache = () => {
-  if (_carWashClientCache) return _carWashClientCache;
-  if (typeof window !== "undefined") {
-    try {
-      const raw = localStorage.getItem("taller_carwash_cache_v2");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed?.config) {
-          _carWashClientCache = parsed;
-          return parsed;
-        }
-      }
-    } catch {}
-  }
-  return null;
-};
-
 export default function ModuloCarWashCatalogo({
   empleadoLogueado,
   ordenActiva,
@@ -223,15 +198,16 @@ export default function ModuloCarWashCatalogo({
   mostrarToast,
   onActualizarItemsOrden,
   onIrAAvisoYFirma,
+  onIrASiguiente,
+  nombreSiguiente,
   triggerAbrirConfig,
 }: ModuloCarWashCatalogoProps) {
-  const initialCache = getInitialCarWashCache();
-  const [loading, setLoading] = useState(!initialCache);
+  const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [config, setConfig] = useState<CarWashConfigData | null>(initialCache ? initialCache.config : null);
-  const [services, setServices] = useState<CarWashEnrichedService[]>(initialCache ? initialCache.services : []);
-  const [promotions, setPromotions] = useState<any[]>(initialCache ? initialCache.promotions : []);
-  const [appointments, setAppointments] = useState<any[]>(initialCache ? initialCache.appointments : []);
+  const [config, setConfig] = useState<CarWashConfigData | null>(null);
+  const [services, setServices] = useState<CarWashEnrichedService[]>([]);
+  const [promotions, setPromotions] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
 
   // Paso interactivo del flujo de selección (1 a 5)
   const [activeStep, setActiveStep] = useState<1 | 2 | 3 | 4 | 5>(1);
@@ -324,11 +300,8 @@ export default function ModuloCarWashCatalogo({
     }
   }, [triggerAbrirConfig]);
 
-  // Cargar datos reales desde Neon (con caché de cliente para tabs y persistencia)
+  // Cargar datos reales desde Neon PostgreSQL
   const fetchCarWashData = useCallback(async () => {
-    if (_carWashClientCache && Date.now() - _carWashClientCache.timestamp < 300000) {
-      return;
-    }
     try {
       if (!config) setLoading(true);
       setErrorMsg(null);
@@ -337,17 +310,6 @@ export default function ModuloCarWashCatalogo({
       if (!res.ok || !data.success) {
         throw new Error(data.error || "No se pudo cargar el módulo Car Wash");
       }
-      const cacheObj = {
-        config: data.config,
-        services: data.services || [],
-        promotions: data.promotions || [],
-        appointments: data.appointments || [],
-        timestamp: Date.now(),
-      };
-      _carWashClientCache = cacheObj;
-      try {
-        localStorage.setItem("taller_carwash_cache_v2", JSON.stringify(cacheObj));
-      } catch {}
       setConfig(data.config);
       setServices(data.services || []);
       setPromotions(data.promotions || []);
@@ -364,6 +326,13 @@ export default function ModuloCarWashCatalogo({
 
   useEffect(() => {
     void fetchCarWashData();
+    const handleCatalogoActualizado = () => {
+      void fetchCarWashData();
+    };
+    window.addEventListener("taller-catalogo-actualizado", handleCatalogoActualizado);
+    return () => {
+      window.removeEventListener("taller-catalogo-actualizado", handleCatalogoActualizado);
+    };
   }, [fetchCarWashData]);
 
   // Detectar tipo de vehículo sugerido si hay una ordenActiva con descripción de vehículo
@@ -462,6 +431,9 @@ export default function ModuloCarWashCatalogo({
         .filter(
           (c) =>
             c.active &&
+            c.id !== "cw_cat_premium" &&
+            !c.slug?.includes("premium") &&
+            !c.name?.toLowerCase().includes("premium") &&
             (PRINCIPAL_CATEGORY_IDS.includes(c.id) ||
               PRINCIPAL_CATEGORY_IDS.some((pid) => c.slug?.includes(pid.replace("cw_cat_", ""))))
         )
@@ -993,87 +965,292 @@ export default function ModuloCarWashCatalogo({
     }
   };
 
-  // Agregar múltiples servicios seleccionados a la orden
-  const handleAgregarVariosSeleccionados = async () => {
-    if (agregandoVarios || itemsSeleccionadosTiendaIds.length === 0) return;
-    try {
-      setAgregandoVarios(true);
-      const seleccionados = itemsTienda.filter((it) =>
-        itemsSeleccionadosTiendaIds.includes(it.id)
-      );
-      if (seleccionados.length === 0) return;
+  // Ajustar (+1 / -1) la cantidad de un servicio/paquete/extra de Car Wash directamente en la orden
+  const obtenerCantidadEnPedido = (item: { id: string; code: string }) => {
+    const matches = (itemsOrden || []).filter(
+      (it) =>
+        it.id === item.id ||
+        it.serviceId === item.id ||
+        (it.code && item.code && it.code === item.code)
+    );
+    return matches.reduce((sum, it) => sum + (Number(it.qty) || 1), 0);
+  };
 
-      const nuevosItems: any[] = seleccionados.map((item) => {
-        const code = item.code || `CW-${Math.floor(100 + Math.random() * 900)}`;
-        return {
-          id: `cw_${item.id}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-          key: `key_${item.id}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-          type: "SERVICE",
+  const handleAjustarCantidadItem = async (
+    item: {
+      id: string;
+      kind: "PACKAGE" | "SERVICE" | "ADDON";
+      name: string;
+      code: string;
+      price: number;
+      durationMinutes?: number;
+      categoryId?: string;
+    },
+    delta: number
+  ) => {
+    try {
+      const code = item.code || `CW-${item.id}`;
+      const vehLabel = currentVehicleType
+        ? toSingleWord(currentVehicleType.name, CARWASH_VEH_SINGLE)
+        : "Auto";
+      const listaActual = [...(itemsOrden || [])];
+      const idx = listaActual.findIndex(
+        (it) =>
+          it.id === item.id ||
+          it.serviceId === item.id ||
+          (it.code && item.code && it.code === item.code)
+      );
+
+      if (idx >= 0) {
+        const actualQty = Number(listaActual[idx].qty) || 1;
+        const nextQty = actualQty + delta;
+        if (nextQty <= 0) {
+          const filtrados = listaActual.filter((_, i) => i !== idx);
+          await onActualizarItemsOrden(filtrados);
+        } else {
+          const priceUnit = Number(item.price || listaActual[idx].price || 0);
+          const actualizados = listaActual.map((it, i) =>
+            i === idx
+              ? {
+                  ...it,
+                  qty: nextQty,
+                  price: priceUnit,
+                  total: Number((priceUnit * nextQty).toFixed(2)),
+                }
+              : it
+          );
+          await onActualizarItemsOrden(actualizados);
+        }
+      } else if (delta > 0) {
+        const priceUnit = Number(item.price || 0);
+        const nuevoItem = {
+          id: `cw_${item.id}_${Date.now()}`,
+          key: `key_${item.id}_${Date.now()}`,
+          serviceId: item.id,
+          type: "SERVICE" as const,
           category: "Lavado",
-          subCategory: item.kind === "PACKAGE" ? "Paquete" : item.kind === "ADDON" ? "Extra" : "Servicio",
+          cwCategoryId: item.categoryId || selectedCategoryId,
+          subCategory:
+            item.kind === "PACKAGE"
+              ? "Paquete"
+              : item.kind === "ADDON"
+              ? "Extra"
+              : "Servicio",
           code,
-          name: `${item.name} (${currentVehicleType?.name || "General"})`,
+          name: `${item.name} (${vehLabel})`,
           brand: "Car Wash",
-          presentation: "Servicio",
+          presentation: item.durationMinutes ? `${item.durationMinutes} min` : "Servicio",
           unitOfMeasure: "Servicio",
-          price: Number(item.price || 0),
-          total: Number(item.price || 0),
-          qty: 1,
-          status: "Listo",
+          price: priceUnit,
+          total: Number((priceUnit * delta).toFixed(2)),
+          qty: delta,
+          estimatedMinutes: item.durationMinutes || 30,
+          vehicleType: currentVehicleType?.name || vehLabel,
+          status: "Listo" as const,
           completed: true,
           empleado_id: empleadoLogueado.id,
           empleado_nombre: empleadoLogueado.nombre,
         };
+        await onActualizarItemsOrden([...listaActual, nuevoItem]);
+      }
+    } catch {
+      mostrarToast("Error al actualizar servicio de Car Wash", "err");
+    }
+  };
+
+  // Lista unificada y automática de servicios, paquetes y extras (se muestra al instante sin escribir)
+  const itemsFiltradosAutomaticos = useMemo(() => {
+    const q = searchQuery
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+
+    const terms = q.split(/\s+/).filter(Boolean);
+    const matchText = (text: string) => {
+      if (terms.length === 0) return true;
+      const norm = (text || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+      return terms.every((t) => norm.includes(t));
+    };
+
+    const list: Array<{
+      id: string;
+      kind: "PACKAGE" | "SERVICE" | "ADDON";
+      name: string;
+      code: string;
+      brand: string;
+      description?: string;
+      durationMinutes?: number;
+      price: number;
+      originalPrice?: number | null;
+      isPromo?: boolean;
+      categoryId?: string;
+      subcategoryId?: string;
+      rawPackage?: CarWashPackage;
+      rawService?: CarWashEnrichedService;
+      rawAddon?: CarWashAddon;
+      imageUrl?: string;
+    }> = [];
+
+    // 1. Paquetes (si filtro de tipo lo permite)
+    if (!filtroCategoriaGeneral || filtroCategoriaGeneral === "PACKAGE") {
+      filteredPackages.forEach((pkg) => {
+        if (selectedSubcategoryId !== "TODOS") return;
+        const full = `${pkg.name} ${pkg.code} ${pkg.shortDescription || ""} ${(pkg.includedProcedures || []).join(" ")}`;
+        if (!matchText(full)) return;
+        const pInfo = computePriceForVehicle(pkg, selectedVehicleTypeId);
+        list.push({
+          id: pkg.id,
+          kind: "PACKAGE",
+          name: pkg.name,
+          code: pkg.code,
+          brand: "Paquete",
+          description: pkg.shortDescription,
+          durationMinutes: pkg.estimatedMinutes,
+          price: pInfo.unitPrice ?? 0,
+          originalPrice: pInfo.originalPrice,
+          isPromo: pInfo.isPromo,
+          categoryId: pkg.categoryId,
+          rawPackage: pkg,
+          imageUrl: pkg.imageUrl,
+        });
       });
-
-      const actualizados = [...(itemsOrden || []), ...nuevosItems];
-      await onActualizarItemsOrden(actualizados);
-      mostrarToast(`✓ ${nuevosItems.length} servicios de Car Wash agregados`, "ok");
-      setItemsSeleccionadosTiendaIds([]);
-    } catch {
-      mostrarToast("Error al agregar servicios", "err");
-    } finally {
-      setAgregandoVarios(false);
     }
-  };
 
-  // Agregar un producto/servicio directamente al pedido
-  const handleAgregarDirectoItem = async (item: any) => {
-    try {
-      const code = item.code || `CW-${Math.floor(100 + Math.random() * 900)}`;
-      const nuevoItem = {
-        id: `cw_${item.id}_${Date.now()}`,
-        key: `key_${item.id}_${Date.now()}`,
-        type: "SERVICE",
-        category: "Lavado",
-        subCategory: item.kind === "PACKAGE" ? "Paquete" : item.kind === "ADDON" ? "Extra" : "Servicio",
-        code,
-        name: `${item.name} (${currentVehicleType?.name || "General"})`,
-        brand: "Car Wash",
-        presentation: "Servicio",
-        unitOfMeasure: "Servicio",
-        price: Number(item.price || 0),
-        total: Number(item.price || 0),
-        qty: 1,
-        status: "Listo",
-        completed: true,
-        empleado_id: empleadoLogueado.id,
-        empleado_nombre: empleadoLogueado.nombre,
-      };
-
-      const actualizados = [...(itemsOrden || []), nuevoItem];
-      await onActualizarItemsOrden(actualizados);
-      mostrarToast(`✓ Agregado: ${item.name}`, "ok");
-    } catch {
-      mostrarToast("Error al agregar servicio", "err");
+    // 2. Servicios individuales
+    if (!filtroCategoriaGeneral || filtroCategoriaGeneral === "SERVICE") {
+      filteredServices.forEach((srv) => {
+        const full = `${srv.name} ${srv.code} ${srv.shortDescription || ""} ${srv.fullDescription || ""} ${(srv.includesList || []).join(" ")}`;
+        if (!matchText(full)) return;
+        const pInfo = computePriceForVehicle(srv, selectedVehicleTypeId);
+        const catObj = config?.categories?.find((c) => c.id === srv.categoryId);
+        list.push({
+          id: srv.id,
+          kind: "SERVICE",
+          name: srv.name,
+          code: srv.code,
+          brand: catObj?.name ? toSingleWord(catObj.name, CARWASH_CAT_SINGLE) : "Servicio",
+          description: srv.shortDescription || srv.fullDescription,
+          durationMinutes: srv.estimatedMinutes || 30,
+          price: pInfo.unitPrice ?? 0,
+          originalPrice: pInfo.originalPrice,
+          isPromo: pInfo.isPromo,
+          categoryId: srv.categoryId,
+          subcategoryId: srv.subcategoryId,
+          rawService: srv,
+          imageUrl: srv.imageUrl,
+        });
+      });
     }
-  };
+
+    // 3. Adicionales / Extras (cuando está en Todas o filtró por Extras)
+    if (
+      (!filtroCategoriaGeneral && selectedCategoryId === "TODOS") ||
+      filtroCategoriaGeneral === "ADDON"
+    ) {
+      activeAddons.forEach((add) => {
+        const full = `${add.name} ${add.code} ${add.description || ""}`;
+        if (!matchText(full)) return;
+        const pInfo = computePriceForVehicle(add, selectedVehicleTypeId);
+        list.push({
+          id: add.id,
+          kind: "ADDON",
+          name: add.name,
+          code: add.code,
+          brand: "Extra",
+          description: add.description,
+          durationMinutes: add.estimatedMinutes || 15,
+          price: pInfo.unitPrice ?? 0,
+          originalPrice: pInfo.originalPrice,
+          isPromo: pInfo.isPromo,
+          categoryId: "cw_cat_adicionales",
+          rawAddon: add,
+          imageUrl: add.imageUrl,
+        });
+      });
+    }
+
+    return list;
+  }, [
+    searchQuery,
+    filtroCategoriaGeneral,
+    filteredPackages,
+    filteredServices,
+    activeAddons,
+    selectedVehicleTypeId,
+    selectedCategoryId,
+    selectedSubcategoryId,
+    config,
+  ]);
+
+  // Conteos por categoría y subcategoría para los pills superiores
+  const conteoPorCategoria = useMemo(() => {
+    const map: Record<string, number> = {};
+    (config?.packages || []).forEach((p) => {
+      if (p.active && p.categoryId) {
+        map[p.categoryId] = (map[p.categoryId] || 0) + 1;
+      }
+    });
+    services.forEach((s) => {
+      if (s.active && !s.archived && s.categoryId) {
+        map[s.categoryId] = (map[s.categoryId] || 0) + 1;
+      }
+    });
+    return map;
+  }, [config?.packages, services]);
+
+  const conteoPorSubcategoria = useMemo(() => {
+    const map: Record<string, number> = {};
+    services.forEach((s) => {
+      if (s.active && !s.archived && s.subcategoryId) {
+        map[s.subcategoryId] = (map[s.subcategoryId] || 0) + 1;
+      }
+    });
+    return map;
+  }, [services]);
+
+  // Ítems de Car Wash actualmente en la orden
+  const itemsCarWashEnOrden = useMemo(() => {
+    return (itemsOrden || []).filter((it) => {
+      const code = String(it.code || "");
+      const cat = String(it.category || "");
+      return (
+        cat === "Lavado" ||
+        cat === "Car Wash" ||
+        code.startsWith("CW-") ||
+        code.startsWith("PKG-CW-") ||
+        code.startsWith("ADD-CW-")
+      );
+    });
+  }, [itemsOrden]);
+
+  const totalUnidadesCarWash = useMemo(() => {
+    return itemsCarWashEnOrden.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
+  }, [itemsCarWashEnOrden]);
+
+  const totalMontoCarWash = useMemo(() => {
+    return itemsCarWashEnOrden.reduce(
+      (acc, it) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1),
+      0
+    );
+  }, [itemsCarWashEnOrden]);
+
+  const totalCatalogoCount = useMemo(() => {
+    return (
+      (config?.packages || []).filter((p) => p.active).length +
+      services.filter((s) => s.active && !s.archived).length +
+      (config?.addons || []).filter((a) => a.active).length
+    );
+  }, [config?.packages, services, config?.addons]);
 
   if (loading && !config) {
     return (
       <div className="p-8 rounded-3xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 text-center space-y-3 animate-pulse">
         <div className="text-3xl">🚿</div>
-        <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
+        <p className="text-sm font-normal text-zinc-700 dark:text-zinc-300">
           Cargando catálogo de Car Wash, paquetes y tarifas desde Neon...
         </p>
       </div>
@@ -1083,13 +1260,13 @@ export default function ModuloCarWashCatalogo({
   if (errorMsg || !config) {
     return (
       <div className="p-6 rounded-3xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-center space-y-3">
-        <p className="text-sm font-bold text-rose-700 dark:text-rose-300">
+        <p className="text-sm font-normal text-rose-700 dark:text-rose-300">
           ⚠️ {errorMsg || "Error al cargar el módulo Car Wash"}
         </p>
         <button
           type="button"
           onClick={() => void fetchCarWashData()}
-          className="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold cursor-pointer"
+          className="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-normal cursor-pointer"
         >
           Reintentar carga
         </button>
@@ -1097,264 +1274,44 @@ export default function ModuloCarWashCatalogo({
     );
   }
 
-  const totalSelectionsCount =
-    selectedPackageIds.length + selectedServiceIds.length + selectedAddonIds.length;
-
-  const itemsTienda = useMemo(() => {
-    const q = searchQuery
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim();
-
-    // "no debe salir hasta que busque"
-    if (!q) {
-      return [];
-    }
-
-    const terms = q.split(/\s+/).filter(Boolean);
-
-    const matchText = (text: string) => {
-      const norm = (text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      return terms.every((t) => norm.includes(t));
-    };
-
-    const list: Array<{
-      id: string;
-      kind: "PACKAGE" | "SERVICE" | "ADDON";
-      name: string;
-      code: string;
-      description?: string;
-      durationMinutes?: number;
-      price: number;
-      rawPackage?: CarWashPackage;
-      rawService?: CarWashEnrichedService;
-      rawAddon?: CarWashAddon;
-      imageUrl?: string;
-      isSelected: boolean;
-    }> = [];
-
-    filteredPackages.forEach((pkg) => {
-      const full = `${pkg.name} ${pkg.code} ${pkg.shortDescription || ""} ${(pkg.includedProcedures || []).join(" ")}`;
-      if (!matchText(full)) return;
-      const pr = computePriceForVehicle(pkg, selectedVehicleTypeId).unitPrice ?? 0;
-      list.push({
-        id: pkg.id,
-        kind: "PACKAGE",
-        name: pkg.name,
-        code: pkg.code,
-        description: pkg.shortDescription,
-        durationMinutes: pkg.estimatedMinutes,
-        price: pr,
-        rawPackage: pkg,
-        imageUrl: pkg.imageUrl,
-        isSelected: itemsSeleccionadosTiendaIds.includes(pkg.id) || selectedPackageIds.includes(pkg.id),
-      });
-    });
-
-    filteredServices.forEach((srv) => {
-      const full = `${srv.name} ${srv.code} ${srv.shortDescription || ""} ${srv.fullDescription || ""} ${(srv.includesList || []).join(" ")}`;
-      if (!matchText(full)) return;
-      const pr = computePriceForVehicle(srv, selectedVehicleTypeId).unitPrice ?? 0;
-      list.push({
-        id: srv.id,
-        kind: "SERVICE",
-        name: srv.name,
-        code: srv.code,
-        description: srv.shortDescription || srv.fullDescription,
-        durationMinutes: srv.estimatedMinutes || 30,
-        price: pr,
-        rawService: srv,
-        imageUrl: srv.imageUrl,
-        isSelected: itemsSeleccionadosTiendaIds.includes(srv.id) || selectedServiceIds.includes(srv.id),
-      });
-    });
-
-    activeAddons.forEach((add) => {
-      const full = `${add.name} ${add.code} ${add.description || ""}`;
-      if (!matchText(full)) return;
-      const pr = computePriceForVehicle(add, selectedVehicleTypeId).unitPrice ?? 0;
-      list.push({
-        id: add.id,
-        kind: "ADDON",
-        name: add.name,
-        code: add.code,
-        description: add.description,
-        durationMinutes: add.estimatedMinutes || 15,
-        price: pr,
-        rawAddon: add,
-        imageUrl: add.imageUrl,
-        isSelected: itemsSeleccionadosTiendaIds.includes(add.id) || selectedAddonIds.includes(add.id),
-      });
-    });
-
-    return list;
-  }, [
-    searchQuery,
-    filteredPackages,
-    filteredServices,
-    activeAddons,
-    selectedVehicleTypeId,
-    itemsSeleccionadosTiendaIds,
-    selectedPackageIds,
-    selectedServiceIds,
-    selectedAddonIds,
-  ]);
-
-  // Todos los ítems para el Catálogo General (sin precio en la vista de tarjetas)
-  const todosLosItemsCatalogo = useMemo(() => {
-    if (!config) return [];
-    const q = searchQuery
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim();
-
-    const terms = q.split(/\s+/).filter(Boolean);
-    const matchText = (text: string) => {
-      if (!terms.length) return true;
-      const norm = (text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      return terms.every((t) => norm.includes(t));
-    };
-
-    const list: Array<{
-      id: string;
-      kind: "PACKAGE" | "SERVICE" | "ADDON";
-      name: string;
-      code: string;
-      brand?: string;
-      presentation?: string;
-      description?: string;
-      durationMinutes?: number;
-      price: number;
-      imageUrl?: string;
-      categoryId?: string;
-    }> = [];
-
-    (config.packages || []).forEach((pkg) => {
-      if (!pkg.active) return;
-      if (filtroCategoriaGeneral && pkg.categoryId !== filtroCategoriaGeneral) return;
-      const full = `${pkg.name} ${pkg.code} ${pkg.shortDescription || ""}`;
-      if (!matchText(full)) return;
-      const pr = computePriceForVehicle(pkg, selectedVehicleTypeId).unitPrice ?? 0;
-      list.push({
-        id: pkg.id,
-        kind: "PACKAGE",
-        name: pkg.name,
-        code: pkg.code,
-        brand: "Paquete",
-        description: pkg.shortDescription,
-        durationMinutes: pkg.estimatedMinutes,
-        price: pr,
-        imageUrl: pkg.imageUrl,
-        categoryId: pkg.categoryId,
-        presentation: `${pkg.estimatedMinutes || 45} min · Paquete`,
-      });
-    });
-
-    services.forEach((srv) => {
-      if (!srv.active || srv.archived) return;
-      if (filtroCategoriaGeneral && srv.categoryId !== filtroCategoriaGeneral) return;
-      const full = `${srv.name} ${srv.code} ${srv.shortDescription || ""} ${srv.fullDescription || ""}`;
-      if (!matchText(full)) return;
-      const pr = computePriceForVehicle(srv, selectedVehicleTypeId).unitPrice ?? 0;
-      const catObj = config.categories?.find((c) => c.id === srv.categoryId);
-      list.push({
-        id: srv.id,
-        kind: "SERVICE",
-        name: srv.name,
-        code: srv.code,
-        brand: catObj?.name ? toSingleWord(catObj.name, CARWASH_CAT_SINGLE) : "Car Wash",
-        description: srv.shortDescription || srv.fullDescription,
-        durationMinutes: srv.estimatedMinutes || 30,
-        price: pr,
-        imageUrl: srv.imageUrl,
-        categoryId: srv.categoryId,
-        presentation: `${srv.estimatedMinutes || 30} min · Servicio`,
-      });
-    });
-
-    (config.addons || []).forEach((add) => {
-      if (!add.active) return;
-      if (filtroCategoriaGeneral && filtroCategoriaGeneral !== "cw_cat_adicionales") return;
-      const full = `${add.name} ${add.code} ${add.description || ""}`;
-      if (!matchText(full)) return;
-      const pr = computePriceForVehicle(add, selectedVehicleTypeId).unitPrice ?? 0;
-      list.push({
-        id: add.id,
-        kind: "ADDON",
-        name: add.name,
-        code: add.code,
-        brand: "Extra",
-        description: add.description,
-        durationMinutes: add.estimatedMinutes || 15,
-        price: pr,
-        imageUrl: add.imageUrl,
-        categoryId: "cw_cat_adicionales",
-        presentation: `${add.estimatedMinutes || 15} min · Adicional`,
-      });
-    });
-
-    return list;
-  }, [config, services, searchQuery, filtroCategoriaGeneral, selectedVehicleTypeId]);
-
-  const totalCalculado = useMemo(() => {
-    let sum = 0;
-    if (serverCalculation?.total != null) {
-      sum = Number(serverCalculation.total);
-    } else {
-      (config?.packages || [])
-        .filter((p) => selectedPackageIds.includes(p.id))
-        .forEach((p) => {
-          sum += computePriceForVehicle(p, selectedVehicleTypeId).unitPrice ?? 0;
-        });
-      services
-        .filter((s) => selectedServiceIds.includes(s.id))
-        .forEach((s) => {
-          sum += computePriceForVehicle(s, selectedVehicleTypeId).unitPrice ?? 0;
-        });
-      (config?.addons || [])
-        .filter((a) => selectedAddonIds.includes(a.id))
-        .forEach((a) => {
-          sum += computePriceForVehicle(a, selectedVehicleTypeId).unitPrice ?? 0;
-        });
-    }
-    const valManual = (parseFloat(manualServicioPrecio) || 0) * (manualCantidad || 1);
-    return sum + valManual;
-  }, [
-    serverCalculation,
-    config,
-    services,
-    selectedPackageIds,
-    selectedServiceIds,
-    selectedAddonIds,
-    manualServicioPrecio,
-    manualCantidad,
-  ]);
+  const vehLabelCorto = currentVehicleType
+    ? toSingleWord(currentVehicleType.name, CARWASH_VEH_SINGLE)
+    : "Auto";
 
   return (
-    <div className="space-y-3.5 animate-fade-in">
+    <div className="w-full space-y-2.5 sm:space-y-3 animate-fade-in pb-4">
       {/* =====================================================================
-          FILA 1: CATEGORÍAS PRINCIPALES (Color, Porte y Diseño Taller y Lubricentro)
+          NIVEL 1: CATEGORÍAS PRINCIPALES (Cubriendo todo el ancho igual que Lubricentro)
           ===================================================================== */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 w-full">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full">
         <button
           type="button"
           onClick={() => {
             setSelectedCategoryId("TODOS");
             setSelectedSubcategoryId("TODOS");
           }}
-          className={`h-10 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all shadow-2xs active:scale-95 ${
+          className={`flex-1 min-w-[100px] sm:min-w-[120px] h-9 sm:h-10 px-3 sm:px-4 rounded-xl border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
             selectedCategoryId === "TODOS"
-              ? "bg-blue-50/90 dark:bg-blue-500/20 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/40 font-bold"
-              : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
+              ? "bg-blue-600 border-blue-500 text-white shadow-xs"
+              : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
           }`}
         >
-          <span className="text-base leading-none shrink-0">🚿</span>
-          <span className="truncate">Todas</span>
+          <span className="text-sm leading-none shrink-0">✨</span>
+          <span className="whitespace-nowrap">Todo</span>
+          <span
+            className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-normal shrink-0 ${
+              selectedCategoryId === "TODOS"
+                ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
+            }`}
+          >
+            {totalCatalogoCount}
+          </span>
         </button>
+
         {activeCategories.map((cat) => {
           const activa = selectedCategoryId === cat.id;
+          const totalCat = conteoPorCategoria[cat.id] || 0;
           return (
             <button
               key={cat.id}
@@ -1363,528 +1320,385 @@ export default function ModuloCarWashCatalogo({
                 setSelectedCategoryId(cat.id);
                 setSelectedSubcategoryId("TODOS");
               }}
-              className={`h-10 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all shadow-2xs active:scale-95 ${
+              className={`flex-1 min-w-[100px] sm:min-w-[120px] h-9 sm:h-10 px-3 sm:px-4 rounded-xl border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
                 activa
-                  ? "bg-blue-50/90 dark:bg-blue-500/20 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/40 font-bold"
-                  : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
+                  ? "bg-blue-600 border-blue-500 text-white shadow-xs"
+                  : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
               }`}
             >
               <span className="text-base leading-none shrink-0">{cat.icon || "🚿"}</span>
-              <span className="truncate">{toSingleWord(cat.name, CARWASH_CAT_SINGLE)}</span>
+              <span className="whitespace-nowrap">{toSingleWord(cat.name, CARWASH_CAT_SINGLE)}</span>
+              {totalCat > 0 && (
+                <span
+                  className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-normal shrink-0 ${
+                    activa
+                      ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                      : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
+                  }`}
+                >
+                  {totalCat}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
 
       {/* =====================================================================
-          FILA 2: SELECTOR DE TIPO DE VEHÍCULO (Color, Porte y Diseño Taller y Lubricentro)
+          NIVEL 2: SUBCATEGORÍAS DE LA CATEGORÍA ACTIVA (Cubriendo todo el ancho con flex-1)
           ===================================================================== */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 w-full">
-        {activeVehicleTypes.map((vt) => {
-          const activa = selectedVehicleTypeId === vt.id;
-          return (
-            <button
-              key={vt.id}
-              type="button"
-              onClick={() => setSelectedVehicleTypeId(vt.id)}
-              className={`h-10 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all shadow-2xs active:scale-95 ${
-                activa
-                  ? "bg-blue-50/90 dark:bg-blue-500/20 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/40 font-bold"
-                  : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
+      {selectedCategoryId !== "TODOS" && activeSubcategories.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 w-full">
+          <button
+            type="button"
+            onClick={() => setSelectedSubcategoryId("TODOS")}
+            className={`flex-1 min-w-[95px] sm:min-w-[110px] h-8 sm:h-8.5 px-3 rounded-lg border text-xs font-normal flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs ${
+              selectedSubcategoryId === "TODOS"
+                ? "bg-blue-600 border-blue-500 text-white font-normal shadow-xs"
+                : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
+            }`}
+          >
+            <span>Todos</span>
+            <span
+              className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
+                selectedSubcategoryId === "TODOS"
+                  ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                  : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
               }`}
             >
-              <span className="text-base leading-none shrink-0">{vt.icon || "🚗"}</span>
-              <span className="truncate">{toSingleWord(vt.name, CARWASH_VEH_SINGLE)}</span>
-            </button>
-          );
-        })}
-      </div>
+              {conteoPorCategoria[selectedCategoryId] || 0}
+            </span>
+          </button>
 
-      {/* =====================================================================
-          FILA 3: CONTENIDO EN TRES COLUMNAS O CATÁLOGO GENERAL
-          ===================================================================== */}
-      {!verTodoElCatalogo ? (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-start">
-          {/* 1. PANEL IZQUIERDO: Categoría y modalidades */}
-          <div className="md:col-span-4 lg:col-span-3 p-3.5 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-2.5 shadow-2xs">
-            <div className="flex items-center gap-2 px-0.5 pb-2 border-b border-zinc-100 dark:border-white/5 text-zinc-900 dark:text-white font-normal text-xs sm:text-sm">
-              <span className="text-sm text-blue-600 dark:text-blue-400">←</span>
-              <span className="text-base">
-                {activeCategories.find((c) => c.id === selectedCategoryId)?.icon || "🚿"}
-              </span>
-              <span className="truncate">Categoría</span>
-            </div>
-
-            <div className="space-y-1.5">
-              {activeSubcategories.length > 0 ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedSubcategoryId("TODOS")}
-                    className={`w-full p-2 rounded-lg border flex items-center justify-between gap-2 text-left transition-all cursor-pointer active:scale-98 ${
-                      selectedSubcategoryId === "TODOS"
-                        ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/50 text-blue-900 dark:text-blue-200 shadow-2xs ring-1 ring-blue-400/30"
-                        : "bg-zinc-50/70 hover:bg-zinc-100/80 dark:bg-white/[0.02] dark:hover:bg-white/[0.05] border-zinc-200/80 dark:border-white/5 text-zinc-700 dark:text-zinc-300"
+          {activeSubcategories.map((sub) => {
+            const activa = selectedSubcategoryId === sub.id;
+            const countSub = conteoPorSubcategoria[sub.id] || 0;
+            return (
+              <button
+                key={sub.id}
+                type="button"
+                onClick={() => setSelectedSubcategoryId(sub.id)}
+                className={`flex-1 min-w-[95px] sm:min-w-[110px] h-8 sm:h-8.5 px-2.5 sm:px-3 rounded-lg border text-xs font-normal flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs ${
+                  activa
+                    ? "bg-blue-600 border-blue-500 text-white font-normal shadow-xs"
+                    : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
+                }`}
+              >
+                <span className="text-sm leading-none shrink-0">{sub.icon || "🚿"}</span>
+                <span className="whitespace-nowrap">{toSingleWord(sub.name, CARWASH_SUB_SINGLE)}</span>
+                {countSub > 0 && (
+                  <span
+                    className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
+                      activa
+                        ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                        : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
                     }`}
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-8 h-8 rounded-md border flex items-center justify-center text-sm shrink-0 bg-white dark:bg-black/30 border-zinc-200 dark:border-white/10">
-                        ✨
-                      </div>
-                      <span className="text-xs font-semibold truncate">Todos</span>
-                    </div>
-                    <span className="text-xs shrink-0 font-bold">›</span>
-                  </button>
-                  {activeSubcategories.map((sub) => {
-                    const isSelected = selectedSubcategoryId === sub.id;
-                    return (
-                      <button
-                        key={sub.id}
-                        type="button"
-                        onClick={() => setSelectedSubcategoryId(sub.id)}
-                        className={`w-full p-2 rounded-lg border flex items-center justify-between gap-2 text-left transition-all cursor-pointer active:scale-98 ${
-                          isSelected
-                            ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/50 text-blue-900 dark:text-blue-200 shadow-2xs ring-1 ring-blue-400/30"
-                            : "bg-zinc-50/70 hover:bg-zinc-100/80 dark:bg-white/[0.02] dark:hover:bg-white/[0.05] border-zinc-200/80 dark:border-white/5 text-zinc-700 dark:text-zinc-300"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div
-                            className={`w-8 h-8 rounded-md border flex items-center justify-center text-sm shrink-0 ${
-                              isSelected
-                                ? "bg-blue-100 dark:bg-blue-500/25 border-blue-300 dark:border-blue-400/40 text-blue-700 dark:text-blue-200"
-                                : "bg-white dark:bg-black/30 border-zinc-200 dark:border-white/10"
-                            }`}
-                          >
-                            {sub.icon || "🚿"}
-                          </div>
-                          <span
-                            className={`text-xs font-semibold truncate ${
-                              isSelected
-                                ? "text-blue-700 dark:text-blue-300 font-bold"
-                                : "text-zinc-700 dark:text-zinc-200"
-                            }`}
-                          >
-                            {toSingleWord(sub.name, CARWASH_SUB_SINGLE)}
-                          </span>
-                        </div>
-                        <span
-                          className={`text-xs shrink-0 font-bold ${
-                            isSelected ? "text-blue-600 dark:text-blue-400" : "text-zinc-400 dark:text-zinc-500"
-                          }`}
-                        >
-                          ›
-                        </span>
-                      </button>
-                    );
-                  })}
-                </>
-              ) : (
-                activeCategories.map((cat) => {
-                  const isSelected = selectedCategoryId === cat.id;
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedCategoryId(cat.id);
-                        setSelectedSubcategoryId("TODOS");
-                      }}
-                      className={`w-full p-2 rounded-lg border flex items-center justify-between gap-2 text-left transition-all cursor-pointer active:scale-98 ${
-                        isSelected
-                          ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/50 text-blue-900 dark:text-blue-200 shadow-2xs ring-1 ring-blue-400/30"
-                          : "bg-zinc-50/70 hover:bg-zinc-100/80 dark:bg-white/[0.02] dark:hover:bg-white/[0.05] border-zinc-200/80 dark:border-white/5 text-zinc-700 dark:text-zinc-300"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div
-                          className={`w-8 h-8 rounded-md border flex items-center justify-center text-sm shrink-0 ${
-                            isSelected
-                              ? "bg-blue-100 dark:bg-blue-500/25 border-blue-300 dark:border-blue-400/40 text-blue-700 dark:text-blue-200"
-                              : "bg-white dark:bg-black/30 border-zinc-200 dark:border-white/10"
-                          }`}
-                        >
-                          {cat.icon || "🚿"}
-                        </div>
-                        <span
-                          className={`text-xs font-semibold truncate ${
-                            isSelected
-                              ? "text-blue-700 dark:text-blue-300 font-bold"
-                              : "text-zinc-700 dark:text-zinc-200"
-                          }`}
-                        >
-                          {toSingleWord(cat.name, CARWASH_CAT_SINGLE)}
-                        </span>
-                      </div>
-                      <span
-                        className={`text-xs shrink-0 font-bold ${
-                          isSelected ? "text-blue-600 dark:text-blue-400" : "text-zinc-400 dark:text-zinc-500"
-                        }`}
-                      >
-                        ›
-                      </span>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </div>
+                    {countSub}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
-          {/* 2. PANEL CENTRAL: Tienda de Car Wash */}
-          <div className="md:col-span-8 lg:col-span-9 p-3.5 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 shadow-2xs">
-            {/* Header del panel central */}
-            <div className="flex items-center justify-between gap-2 pb-2 border-b border-zinc-100 dark:border-white/5">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-sm text-blue-600 dark:text-blue-400 shrink-0">🏪</span>
-                <h3 className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-white truncate">
-                  Tienda
-                </h3>
-              </div>
+      {/* =====================================================================
+          TIENDA UNIFICADA Y AUTOMÁTICA DE CAR WASH (Igual que Lubricentro)
+          ===================================================================== */}
+      <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 shadow-2xs">
+        {/* Barra superior: Buscador + Desplegable de Tipo (Paquetes / Servicios / Extras) + Carrito */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="relative flex-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">
+              🔍
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar servicio o paquete..."
+              className="w-full h-9 pl-8 pr-8 rounded-lg bg-zinc-50/80 dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
+            />
+            {searchQuery && (
               <button
                 type="button"
-                onClick={() => setVerTodoElCatalogo(true)}
-                className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:underline flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white text-xs cursor-pointer"
               >
-                <span>Ver todo</span>
-                <span>›</span>
+                ✕
               </button>
-            </div>
-
-            {/* Input de Búsqueda */}
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar..."
-                className="w-full h-9 pl-8 pr-7 rounded-lg bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setItemsSeleccionadosTiendaIds([]);
-                  }}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white text-xs cursor-pointer"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-
-            {/* Barra de Selección Múltiple y Acciones */}
-            {searchQuery.trim() && itemsTienda.length > 0 && (
-              <div className="flex items-center justify-between gap-2 px-0.5 pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (itemsSeleccionadosTiendaIds.length === itemsTienda.length) {
-                      setItemsSeleccionadosTiendaIds([]);
-                    } else {
-                      setItemsSeleccionadosTiendaIds(itemsTienda.map((it) => it.id));
-                    }
-                  }}
-                  className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1.5 cursor-pointer select-none"
-                >
-                  <input
-                    type="checkbox"
-                    checked={
-                      itemsTienda.length > 0 &&
-                      itemsSeleccionadosTiendaIds.length === itemsTienda.length
-                    }
-                    onChange={() => {}}
-                    className="w-3.5 h-3.5 rounded border-zinc-300 dark:border-white/20 text-blue-600 focus:ring-blue-500 cursor-pointer pointer-events-none"
-                  />
-                  <span>
-                    {itemsSeleccionadosTiendaIds.length === itemsTienda.length
-                      ? "Deseleccionar"
-                      : "Seleccionar todos"}
-                  </span>
-                </button>
-
-                {itemsSeleccionadosTiendaIds.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleAgregarVariosSeleccionados}
-                    disabled={agregandoVarios}
-                    className="h-7 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] flex items-center gap-1 shadow-2xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    <span>+</span>
-                    <span>
-                      {agregandoVarios
-                        ? "Agregando..."
-                        : `Agregar (${itemsSeleccionadosTiendaIds.length})`}
-                    </span>
-                  </button>
-                )}
-              </div>
             )}
+          </div>
 
-            {/* Lista de Servicios / Paquetes / Adicionales (solo visible cuando se busca) */}
-            <div className="space-y-2 max-h-[580px] overflow-y-auto pr-0.5">
-              {!searchQuery.trim() ? null : itemsTienda.length === 0 ? (
-                <div className="p-6 rounded-xl bg-zinc-50/70 dark:bg-white/[0.01] border border-dashed border-zinc-200 dark:border-white/10 text-center space-y-1.5 text-zinc-400">
-                  <span className="text-xl block">🔍</span>
-                  <p className="text-xs font-semibold">No se encontraron servicios ni paquetes para esta búsqueda.</p>
-                </div>
-              ) : (
-                itemsTienda.map((item) => {
-                  const isChecked = itemsSeleccionadosTiendaIds.includes(item.id);
+          {/* Desplegable al lado del buscador (Tipo: Todos / Paquetes / Servicios / Extras) */}
+          <div ref={menuFiltroRef} className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setMenuFiltroAbierto((prev) => !prev)}
+              className={`h-9 px-3 rounded-lg border text-xs font-normal flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs select-none active:scale-95 ${
+                filtroCategoriaGeneral
+                  ? "bg-amber-500 border-amber-500 text-white font-normal shadow-xs"
+                  : menuFiltroAbierto
+                  ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/40 text-blue-700 dark:text-blue-300"
+                  : "bg-zinc-50/80 dark:bg-black/40 hover:bg-zinc-100 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
+              }`}
+            >
+              <span className="truncate">
+                {filtroCategoriaGeneral === "PACKAGE"
+                  ? "Paquetes"
+                  : filtroCategoriaGeneral === "SERVICE"
+                  ? "Servicios"
+                  : filtroCategoriaGeneral === "ADDON"
+                  ? "Extras"
+                  : "Tipo"}
+              </span>
+              <svg
+                className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                  menuFiltroAbierto ? "rotate-180" : ""
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth={2.5}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {menuFiltroAbierto && (
+              <div className="absolute right-0 top-full mt-1.5 w-44 rounded-xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/10 shadow-xl dark:shadow-2xl backdrop-blur-md p-1.5 space-y-0.5 z-40 animate-fade-in">
+                {[
+                  { id: "", label: "Todos los tipos", icon: "✨" },
+                  { id: "PACKAGE", label: "Paquetes", icon: "📦" },
+                  { id: "SERVICE", label: "Servicios", icon: "🚿" },
+                  { id: "ADDON", label: "Extras", icon: "➕" },
+                ].map((opt) => {
+                  const act = filtroCategoriaGeneral === opt.id;
                   return (
-                    <div
-                      key={`${item.kind}-${item.id}`}
+                    <button
+                      key={opt.id || "all"}
+                      type="button"
                       onClick={() => {
-                        setItemsSeleccionadosTiendaIds((prev) =>
-                          prev.includes(item.id)
-                            ? prev.filter((id) => id !== item.id)
-                            : [...prev, item.id]
-                        );
-                        setManualServicioTexto(item.name);
-                        setManualServicioPrecio(item.price.toFixed(2));
+                        setFiltroCategoriaGeneral(opt.id);
+                        setMenuFiltroAbierto(false);
                       }}
-                      className={`p-2.5 sm:p-3 rounded-lg border flex items-center justify-between gap-3 transition-all cursor-pointer group shadow-2xs ${
-                        isChecked || item.isSelected
-                          ? "bg-blue-50/80 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/50 ring-1 ring-blue-400/30"
-                          : "bg-white dark:bg-white/[0.02] hover:bg-zinc-50/70 dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/10 hover:border-blue-400/50"
+                      className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-normal flex items-center justify-between transition-colors cursor-pointer ${
+                        act
+                          ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-normal"
+                          : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
                       }`}
                     >
-                      {/* Checkbox de selección múltiple */}
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setItemsSeleccionadosTiendaIds((prev) =>
-                            prev.includes(item.id)
-                              ? prev.filter((id) => id !== item.id)
-                              : [...prev, item.id]
-                          );
-                        }}
-                        className="pr-1 flex items-center"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => {}}
-                          className="w-4 h-4 rounded border-zinc-300 dark:border-white/20 text-blue-600 focus:ring-blue-500 cursor-pointer pointer-events-none"
-                        />
-                      </div>
+                      <span className="flex items-center gap-1.5">
+                        <span>{opt.icon}</span>
+                        <span>{opt.label}</span>
+                      </span>
+                      {act && <span className="text-xs">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
-                      <div className="w-11 h-13 sm:w-12 sm:h-14 rounded-md bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-white/5 flex items-center justify-center p-1 shrink-0 overflow-hidden">
-                        {item.imageUrl ? (
-                          <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain" />
-                        ) : (
-                          <span className="text-xl">
-                            {item.kind === "PACKAGE" ? "📦" : item.kind === "ADDON" ? "✨" : "🚿"}
+          {totalUnidadesCarWash > 0 && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <div className="h-9 px-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-normal flex items-center gap-1.5">
+                <span>🚿</span>
+                <span>{totalUnidadesCarWash}</span>
+                <span className="font-mono">${totalMontoCarWash.toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+
+        {/* Grid automático de servicios, paquetes y extras (idéntico a Lubricentro) */}
+        {itemsFiltradosAutomaticos.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3">
+            {itemsFiltradosAutomaticos.map((item) => {
+              const qtyEnPedido = obtenerCantidadEnPedido(item);
+              const estaEnPedido = qtyEnPedido > 0;
+
+              return (
+                <div
+                  key={`${item.kind}-${item.id}`}
+                  className={`p-2.5 sm:p-3 rounded-xl border flex flex-col justify-between gap-2 transition-all shadow-2xs ${
+                    estaEnPedido
+                      ? "bg-emerald-50/40 dark:bg-emerald-500/[0.08] border-emerald-400 dark:border-emerald-500/50 ring-1 ring-emerald-400/30"
+                      : "bg-white dark:bg-white/[0.02] hover:border-blue-400/60 dark:hover:border-blue-500/40 border-zinc-200 dark:border-white/10"
+                  }`}
+                >
+                  {/* Fila superior: icono/imagen + info */}
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      onClick={() => {
+                        if (item.rawPackage) {
+                          setDetailModalItem({ item: item.rawPackage, kind: "PACKAGE" });
+                        } else if (item.rawService) {
+                          setDetailModalItem({ item: item.rawService, kind: "SERVICE" });
+                        }
+                      }}
+                      className="w-14 h-16 sm:w-16 sm:h-18 rounded-lg bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-white/5 flex items-center justify-center p-1.5 shrink-0 overflow-hidden cursor-pointer"
+                      title="Ver detalle del servicio"
+                    >
+                      {item.imageUrl ? (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          className="w-full h-full object-cover rounded-md"
+                        />
+                      ) : (
+                        <span className="text-2xl">
+                          {item.kind === "PACKAGE"
+                            ? "📦"
+                            : item.kind === "ADDON"
+                            ? "✨"
+                            : "🚿"}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <span
+                          className={`text-[10px] font-normal uppercase tracking-wider truncate ${
+                            item.kind === "PACKAGE"
+                              ? "text-amber-600 dark:text-amber-400"
+                              : item.kind === "ADDON"
+                              ? "text-purple-600 dark:text-purple-400"
+                              : "text-blue-600 dark:text-blue-400"
+                          }`}
+                        >
+                          {item.brand}
+                        </span>
+                        {estaEnPedido && (
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-normal bg-emerald-500 text-white shrink-0">
+                            ✓ {qtyEnPedido} en pedido
                           </span>
                         )}
                       </div>
 
-                      <div className="flex-1 min-w-0 space-y-0.5">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <h4 className="text-[11px] sm:text-xs font-normal text-zinc-800 dark:text-zinc-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
-                            {item.name}
-                          </h4>
-                          {item.kind === "PACKAGE" && (
-                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                              Paquete
-                            </span>
-                          )}
-                          {item.kind === "ADDON" && (
-                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
-                              Extra
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
-                          {item.durationMinutes ? `⏱ ${item.durationMinutes} min · ` : ""}
-                          {item.description || item.code}
-                        </p>
-                        <div className="pt-0.5 flex items-center gap-2">
-                          <span className="text-xs sm:text-sm font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                            $ {item.price.toFixed(2)}
-                          </span>
-                          {currentVehicleType && (
-                            <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
-                              ({currentVehicleType.name})
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                      <h4
+                        onClick={() => {
+                          if (item.rawPackage) {
+                            setDetailModalItem({ item: item.rawPackage, kind: "PACKAGE" });
+                          } else if (item.rawService) {
+                            setDetailModalItem({ item: item.rawService, kind: "SERVICE" });
+                          }
+                        }}
+                        className="text-xs font-normal text-zinc-900 dark:text-zinc-100 line-clamp-2 leading-snug cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+                      >
+                        {item.name}
+                      </h4>
 
+                      {/* Badges rápidos de duración y tipo de vehículo */}
+                      <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                        {item.durationMinutes && (
+                          <span className="px-1.5 py-0.2 rounded bg-zinc-100 dark:bg-white/10 text-[10px] font-mono font-normal text-zinc-700 dark:text-zinc-300">
+                            ⏱ {item.durationMinutes} min
+                          </span>
+                        )}
+                        <span className="px-1.5 py-0.2 rounded bg-sky-50 dark:bg-sky-500/15 text-[10px] font-normal text-sky-700 dark:text-sky-300">
+                          {currentVehicleType?.icon || "🚗"} {vehLabelCorto}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pie de tarjeta: Precio + Botón / Stepper automático (- qty +) */}
+                  <div className="pt-2 border-t border-zinc-100 dark:border-white/5 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-sm font-mono font-normal text-emerald-600 dark:text-emerald-400 leading-none">
+                          ${item.price.toFixed(2)}
+                        </span>
+                        {item.isPromo && item.originalPrice && (
+                          <span className="text-[10px] font-mono line-through text-zinc-400">
+                            ${Number(item.originalPrice).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate block mt-0.5">
+                        Tarifa {vehLabelCorto}
+                      </span>
+                    </div>
+
+                    {estaEnPedido ? (
+                      <div className="flex items-center gap-1 bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-400/50 rounded-lg p-0.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => void handleAjustarCantidadItem(item, -1)}
+                          className="w-7 h-7 rounded-md bg-white dark:bg-black/40 hover:bg-rose-50 dark:hover:bg-rose-500/20 text-zinc-800 dark:text-white font-normal text-xs flex items-center justify-center cursor-pointer active:scale-90 transition-all"
+                          title="Restar 1"
+                        >
+                          −
+                        </button>
+                        <span className="w-6 text-center text-xs font-mono font-normal text-emerald-800 dark:text-emerald-200">
+                          {qtyEnPedido}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => void handleAjustarCantidadItem(item, 1)}
+                          className="w-7 h-7 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-normal text-xs flex items-center justify-center cursor-pointer active:scale-90 transition-all"
+                          title="Sumar 1"
+                        >
+                          +
+                        </button>
+                      </div>
+                    ) : (
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void handleAgregarDirectoItem(item);
-                        }}
-                        className="h-8 px-3 rounded-lg border text-xs font-bold flex items-center gap-1 shrink-0 transition-all cursor-pointer active:scale-95 shadow-2xs bg-blue-100/80 hover:bg-blue-200/80 dark:bg-blue-500/20 dark:hover:bg-blue-500/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/30"
+                        onClick={() => void handleAjustarCantidadItem(item, 1)}
+                        className="h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal flex items-center gap-1 shrink-0 transition-all cursor-pointer active:scale-95 shadow-2xs"
                       >
                         <span>+</span>
                         <span>Agregar</span>
                       </button>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* VISTA COMPLETA: TODA LA TIENDA Y CATÁLOGO GENERAL DE CAR WASH */
-        <div className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 shadow-2xs">
-          <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-zinc-100 dark:border-white/5">
-            <div>
-              <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                <span>🏪</span>
-                <span>Catálogo</span>
-              </h3>
-            </div>
-            <button
-              type="button"
-              onClick={() => setVerTodoElCatalogo(false)}
-              className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer transition-all shrink-0 shadow-xs active:scale-95"
-            >
-              ← Volver
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar..."
-                className="w-full h-9 pl-8 pr-7 rounded-lg bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white text-xs cursor-pointer"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-
-            <div ref={menuFiltroRef} className="relative shrink-0">
-              <button
-                type="button"
-                onClick={() => setMenuFiltroAbierto((prev) => !prev)}
-                className={`h-9 px-3 rounded-lg border text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all shadow-2xs select-none active:scale-95 ${
-                  menuFiltroAbierto || filtroCategoriaGeneral
-                    ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/40 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/20"
-                    : "bg-white dark:bg-black/40 hover:bg-zinc-50 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
-                }`}
-              >
-                <span>
-                  {activeCategories.find((c) => c.id === filtroCategoriaGeneral)?.name
-                    ? toSingleWord(activeCategories.find((c) => c.id === filtroCategoriaGeneral)!.name, CARWASH_CAT_SINGLE)
-                    : "Todos"}
-                </span>
-                <span
-                  className={`text-[9px] text-zinc-400 transition-transform duration-200 ${
-                    menuFiltroAbierto ? "rotate-180" : ""
-                  }`}
-                >
-                  ▾
-                </span>
-              </button>
-
-              {menuFiltroAbierto && (
-                <div className="absolute right-0 top-full mt-1.5 w-44 rounded-xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/10 shadow-xl dark:shadow-2xl backdrop-blur-md p-1.5 space-y-0.5 z-40 animate-fade-in">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFiltroCategoriaGeneral("");
-                      setMenuFiltroAbierto(false);
-                    }}
-                    className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
-                      !filtroCategoriaGeneral
-                        ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold"
-                        : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
-                    }`}
-                  >
-                    <span>Todos</span>
-                    {!filtroCategoriaGeneral && <span className="text-xs">✓</span>}
-                  </button>
-
-                  <div className="my-1 border-t border-zinc-100 dark:border-white/5" />
-
-                  {activeCategories.map((cat) => {
-                    const activa = filtroCategoriaGeneral === cat.id;
-                    return (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => {
-                          setFiltroCategoriaGeneral(cat.id);
-                          setMenuFiltroAbierto(false);
-                        }}
-                        className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
-                          activa
-                            ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold"
-                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-sm shrink-0">{cat.icon || "🚿"}</span>
-                          <span className="truncate">{toSingleWord(cat.name, CARWASH_CAT_SINGLE)}</span>
-                        </div>
-                        {activa && <span className="text-xs">✓</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Grid de servicios y paquetes sin precio con diseño estándar */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {todosLosItemsCatalogo.map((item) => (
-              <div
-                key={`${item.kind}-${item.id}`}
-                className="p-3 rounded-lg bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 hover:border-blue-400/50 dark:hover:border-blue-500/40 flex flex-col justify-between gap-2.5 transition-all shadow-2xs"
-              >
-                <div>
-                  <div className="h-24 rounded-md bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-white/5 flex items-center justify-center p-2 mb-1.5 overflow-hidden">
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain" />
-                    ) : (
-                      <span className="text-2xl">
-                        {item.kind === "PACKAGE" ? "📦" : item.kind === "ADDON" ? "✨" : "🚿"}
-                      </span>
                     )}
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block truncate">
-                    {item.brand || (item.kind === "PACKAGE" ? "Paquete" : item.kind === "ADDON" ? "Extra" : "Servicio")}
-                  </span>
-                  <h4 className="text-xs font-normal text-zinc-800 dark:text-zinc-200 line-clamp-2 mt-0.5 leading-snug">
-                    {item.name}
-                  </h4>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
-                    {item.presentation || (item.durationMinutes ? `⏱ ${item.durationMinutes} min` : "1 Servicio")}
-                  </p>
                 </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
-                <div className="pt-2 border-t border-zinc-100 dark:border-white/5">
-                  <button
-                    type="button"
-                    onClick={() => void handleAgregarDirectoItem(item)}
-                    className="w-full h-8 px-3 rounded-lg bg-blue-100/80 hover:bg-blue-200/80 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 text-xs font-bold cursor-pointer transition-all shadow-2xs active:scale-95 flex items-center justify-center gap-1"
-                  >
-                    + Agregar
-                  </button>
-                </div>
-              </div>
-            ))}
+      {/* Barra inferior fija/flotante en móvil igual que Lubricentro */}
+      <div className="sticky bottom-2 z-30 flex items-center justify-between gap-2 p-2.5 sm:p-3 rounded-xl bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border border-zinc-200 dark:border-white/15 shadow-lg">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/20 border border-blue-200 dark:border-blue-500/30 flex items-center justify-center text-sm shrink-0">
+            🚿
+          </div>
+          <div className="min-w-0 leading-snug">
+            <span className="text-sm sm:text-base font-normal text-zinc-900 dark:text-white block truncate">
+              {totalUnidadesCarWash} {totalUnidadesCarWash === 1 ? "servicio" : "servicios"}
+            </span>
+            <span className="text-sm sm:text-base font-normal text-emerald-600 dark:text-emerald-400 block">
+              Total: ${totalMontoCarWash.toFixed(2)}
+            </span>
           </div>
         </div>
-      )}
+
+        <div className="flex items-center gap-2 shrink-0">
+          {onIrASiguiente && (
+            <button
+              type="button"
+              onClick={onIrAAvisoYFirma}
+              className="h-9 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-normal cursor-pointer active:scale-95 transition-all"
+            >
+              ✍️ Firmar
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onIrASiguiente || onIrAAvisoYFirma}
+            className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-normal cursor-pointer shadow-xs active:scale-95 transition-all"
+          >
+            Siguiente →
+          </button>
+        </div>
+      </div>
 
       {/* MODAL RESERVA DE BAHÍA */}
       {showBookingPanel && (
@@ -1893,7 +1707,7 @@ export default function ModuloCarWashCatalogo({
             <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-white/5">
               <div className="flex items-center gap-2">
                 <span className="text-lg">📅</span>
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                <h3 className="text-sm font-normal text-zinc-900 dark:text-white">
                   Reservar Bahía de Lavado
                 </h3>
               </div>
@@ -1909,7 +1723,7 @@ export default function ModuloCarWashCatalogo({
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  <label className="text-[11px] font-normal text-zinc-700 dark:text-zinc-300 block mb-1">
                     Fecha
                   </label>
                   <input
@@ -1920,7 +1734,7 @@ export default function ModuloCarWashCatalogo({
                   />
                 </div>
                 <div ref={menuHorarioRef} className="relative">
-                  <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  <label className="text-[11px] font-normal text-zinc-700 dark:text-zinc-300 block mb-1">
                     Horario
                   </label>
                   <button
@@ -1945,15 +1759,15 @@ export default function ModuloCarWashCatalogo({
                               setBookingTimeSlot(h);
                               setDropdownHorarioAbierto(false);
                             }}
-                            className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                            className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-normal flex items-center justify-between transition-colors cursor-pointer ${
                               isSelected
-                                ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold"
+                                ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-normal"
                                 : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
                             }`}
                           >
                             <span>{h}</span>
                             {isSelected && (
-                              <span className="text-xs text-blue-600 dark:text-blue-400 font-bold">✓</span>
+                              <span className="text-xs text-blue-600 dark:text-blue-400 font-normal">✓</span>
                             )}
                           </button>
                         );
@@ -1964,7 +1778,7 @@ export default function ModuloCarWashCatalogo({
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
+                <label className="text-[11px] font-normal text-zinc-700 dark:text-zinc-300 block mb-1">
                   Bahía de Lavado
                 </label>
                 <div className="grid grid-cols-2 gap-1.5">
@@ -1973,7 +1787,7 @@ export default function ModuloCarWashCatalogo({
                       key={bay}
                       type="button"
                       onClick={() => setBookingBay(bay)}
-                      className={`p-2 rounded-lg border text-xs font-semibold text-center cursor-pointer transition-all ${
+                      className={`p-2 rounded-lg border text-xs font-normal text-center cursor-pointer transition-all ${
                         bookingBay === bay
                           ? "bg-blue-600 text-white border-blue-500 shadow-2xs"
                           : "bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
@@ -1986,7 +1800,7 @@ export default function ModuloCarWashCatalogo({
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
+                <label className="text-[11px] font-normal text-zinc-700 dark:text-zinc-300 block mb-1">
                   Notas u Observaciones
                 </label>
                 <input
@@ -2000,7 +1814,7 @@ export default function ModuloCarWashCatalogo({
 
               {lastBookingConfirmed && (
                 <div className="p-2.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-[11px] text-emerald-800 dark:text-emerald-300">
-                  ✓ Reserva <strong>#{lastBookingConfirmed.appointmentNumber}</strong> confirmada para el {lastBookingConfirmed.date} ({lastBookingConfirmed.timeSlot}).
+                  ✓ Reserva <span>#{lastBookingConfirmed.appointmentNumber}</span> confirmada para el {lastBookingConfirmed.date} ({lastBookingConfirmed.timeSlot}).
                 </div>
               )}
             </div>
@@ -2009,7 +1823,7 @@ export default function ModuloCarWashCatalogo({
               <button
                 type="button"
                 onClick={() => setShowBookingPanel(false)}
-                className="h-8 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer"
+                className="h-8 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 text-zinc-700 dark:text-zinc-300 text-xs font-normal cursor-pointer"
               >
                 Cerrar
               </button>
@@ -2019,7 +1833,7 @@ export default function ModuloCarWashCatalogo({
                 onClick={async () => {
                   await handleConfirmBayReservation();
                 }}
-                className="h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+                className="h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer disabled:opacity-50"
               >
                 {savingBooking ? "Guardando..." : "Confirmar Reserva"}
               </button>

@@ -1797,32 +1797,11 @@ let serverTecnicentroCache: {
   timestamp: number;
 } | null = null;
 
-// GET: Cargar configuración, categorías, servicios, neumáticos, vehículos, promociones y citas
+// GET: Cargar configuración, categorías, servicios, neumáticos, vehículos, promociones y citas desde Neon PostgreSQL
 export async function GET() {
   try {
-    const now = Date.now();
-    // Cache de servidor de 10 minutos (se invalida en PUT/POST/DELETE)
-    if (serverTecnicentroCache && now - serverTecnicentroCache.timestamp < 600000) {
-      return NextResponse.json({
-        success: true,
-        config: serverTecnicentroCache.config,
-        services: serverTecnicentroCache.services,
-        tires: serverTecnicentroCache.tires,
-        vehicles: serverTecnicentroCache.vehicles,
-        promotions: serverTecnicentroCache.promotions,
-        appointments: serverTecnicentroCache.appointments,
-      });
-    }
     const data = await getOrInitTecnicentroData();
-    serverTecnicentroCache = {
-      config: data.config,
-      services: data.services,
-      tires: data.tires,
-      vehicles: data.vehicles,
-      promotions: data.promotions,
-      appointments: data.appointments,
-      timestamp: now,
-    };
+    serverTecnicentroCache = null;
     return NextResponse.json({
       success: true,
       config: data.config,

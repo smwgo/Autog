@@ -13,6 +13,8 @@ async function ensureTallerSchema() {
       `ALTER TABLE "Vehicle" ADD COLUMN IF NOT EXISTS "nextOilChangeMileage" INTEGER`,
       `ALTER TABLE "Vehicle" ADD COLUMN IF NOT EXISTS "photosJson" TEXT DEFAULT '[]'`,
       `ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "imageUrl" TEXT`,
+      `ALTER TABLE "WorkshopService" ADD COLUMN IF NOT EXISTS "subCategory" TEXT`,
+      `ALTER TABLE "WorkshopService" ADD COLUMN IF NOT EXISTS "specialty" TEXT DEFAULT 'taller'`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "customerId" TEXT`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "vehicleId" TEXT`,
       `ALTER TABLE "WorkshopOrder" ADD COLUMN IF NOT EXISTS "clientIdDoc" TEXT`,
@@ -105,6 +107,90 @@ async function ensureTallerSchema() {
     schemaEnsured = true;
   } catch (err) {
     console.warn("Aviso al verificar esquema de Taller:", err);
+  }
+}
+
+const ESTRUCTURA_ESPECIALIDADES_SETTING_ID = "taller_estructura_especialidades_v1";
+
+const DEFAULT_ESTRUCTURA_ESPECIALIDADES: Record<
+  "taller" | "lubricentro" | "carwash" | "tecnicentro",
+  {
+    categorias: string[];
+    subcategoriasPorCat: Record<string, string[]>;
+  }
+> = {
+  taller: {
+    categorias: ["Motor", "Frenos", "Suspensión", "Eléctrico", "Transmisión", "Diagnóstico"],
+    subcategoriasPorCat: {
+      Motor: ["Afinamiento", "Inyectores", "Distribución", "Culata"],
+      Frenos: ["Pastillas", "Discos", "Zapatas", "Purga"],
+      Suspensión: ["Amortiguadores", "Trapecios", "Rótulas", "Terminales"],
+      Eléctrico: ["Alternador", "Arrancador", "Batería", "Luces"],
+      Transmisión: ["Embrague", "Caja", "Homocinética", "Diferencial"],
+      Diagnóstico: ["Escáner", "Compresión", "Revisión"],
+    },
+  },
+  lubricentro: {
+    categorias: ["Aceites", "Transmisión", "Filtros", "Fluidos", "Baterías"],
+    subcategoriasPorCat: {
+      Aceites: ["Motor", "Aditivos", "Flush", "Grasa"],
+      Transmisión: ["ATF", "CVT", "Manual", "Diferencial"],
+      Filtros: ["Aceite", "Aire", "Cabina", "Combustible"],
+      Fluidos: ["Refrigerante", "Frenos", "Hidráulico", "Parabrisas"],
+      Baterías: ["Convencional", "AGM", "EFB", "Motos"],
+    },
+  },
+  carwash: {
+    categorias: ["Exterior", "Interior", "Completo", "Detailing", "Motor", "Extras"],
+    subcategoriasPorCat: {
+      Exterior: ["Express", "Espuma", "Chasis"],
+      Interior: ["Aspirado", "Tapicería", "Cuero", "Ozono"],
+      Completo: ["Auto", "SUV", "Camioneta", "Encerado"],
+      Detailing: ["Pulido", "Cerámico", "Faros"],
+      Motor: ["Vapor", "Desengrase", "Grafito"],
+      Extras: ["Silicona", "Aroma", "Vidrios"],
+    },
+  },
+  tecnicentro: {
+    categorias: ["Alineación", "Balanceo", "Neumáticos", "Suspensión", "Frenos", "Diagnóstico"],
+    subcategoriasPorCat: {
+      Alineación: ["Delantera", "Completa", "Geometría"],
+      Balanceo: ["Completo", "Individual", "Vibración"],
+      Neumáticos: ["Llantas", "Montaje", "Parche", "Rotación", "Presión"],
+      Suspensión: ["Amortiguadores", "Dirección", "Delantero", "Bujes", "Rótulas"],
+      Frenos: ["Pastillas", "Discos", "Líquido", "Inspección"],
+      Diagnóstico: ["Escáner", "Sensores", "Informe"],
+    },
+  },
+};
+
+async function obtenerOCrearEstructuraEspecialidades() {
+  try {
+    const row = await prisma.systemSetting.findUnique({
+      where: { id: ESTRUCTURA_ESPECIALIDADES_SETTING_ID },
+    });
+    if (row && row.configJson) {
+      const parsed = safeParseJson(row.configJson, null);
+      if (parsed && typeof parsed === "object") {
+        return {
+          taller: (parsed as any).taller || DEFAULT_ESTRUCTURA_ESPECIALIDADES.taller,
+          lubricentro: (parsed as any).lubricentro || DEFAULT_ESTRUCTURA_ESPECIALIDADES.lubricentro,
+          carwash: (parsed as any).carwash || DEFAULT_ESTRUCTURA_ESPECIALIDADES.carwash,
+          tecnicentro: (parsed as any).tecnicentro || DEFAULT_ESTRUCTURA_ESPECIALIDADES.tecnicentro,
+        };
+      }
+    }
+    await prisma.systemSetting.upsert({
+      where: { id: ESTRUCTURA_ESPECIALIDADES_SETTING_ID },
+      update: { configJson: JSON.stringify(DEFAULT_ESTRUCTURA_ESPECIALIDADES) },
+      create: {
+        id: ESTRUCTURA_ESPECIALIDADES_SETTING_ID,
+        configJson: JSON.stringify(DEFAULT_ESTRUCTURA_ESPECIALIDADES),
+      },
+    });
+    return DEFAULT_ESTRUCTURA_ESPECIALIDADES;
+  } catch {
+    return DEFAULT_ESTRUCTURA_ESPECIALIDADES;
   }
 }
 
@@ -449,6 +535,15 @@ export async function GET(request: Request) {
         });
       }
 
+      // 0.95 Consulta rápida de estructura real de Categorías y Subcategorías por especialidad desde Neon
+      if (searchParams.get("estructuraEspecialidades") === "true") {
+        const estructuraEspecialidades = await obtenerOCrearEstructuraEspecialidades();
+        return NextResponse.json({
+          success: true,
+          estructuraEspecialidades,
+        });
+      }
+
       // 1. Consulta específica de historial por placa
       if (plateParam && searchParams.get("historial") === "true") {
         const [historyRows, orderRows] = (await Promise.all([
@@ -751,11 +846,13 @@ export async function GET(request: Request) {
       }
 
       const mecanicosList = finalEmployeesRows.map((e: any) => e.name).filter(Boolean);
+      const estructuraEspecialidades = await obtenerOCrearEstructuraEspecialidades();
 
       return NextResponse.json({
         success: true,
         autosEnPista,
         clientes: clientesFiltrados,
+        estructuraEspecialidades,
         productos: products.map((p: any) => ({
           id: p.id,
           code: p.code,
@@ -773,6 +870,8 @@ export async function GET(request: Request) {
           code: s.code,
           name: s.name,
           category: s.category,
+          subCategory: s.subCategory || null,
+          specialty: s.specialty || "taller",
           price: Number(s.price || 0),
           estimatedMinutes: Number(s.estimatedMinutes || 30),
         })),
@@ -3856,6 +3955,350 @@ export async function POST(request: Request) {
           activeOrder: mapOrderRow(updatedRows[0]),
           branch: destBranch,
           message: `Orden ${current.orderNumber} transferida a ${destBranch === "SUCURSAL" ? "Sucursal" : "Principal"} exitosamente.`,
+        });
+      }
+
+      // =========================================================================
+      // ACCIÓN 9: REGISTRAR TRABAJO MANUAL EN NEON (CATEGORÍA + SUBCATEGORÍA + CATÁLOGO + ORDEN)
+      // =========================================================================
+      if (action === "REGISTRAR_TRABAJO_MANUAL") {
+        const {
+          especialidad = "taller",
+          orderId,
+          items = [],
+        } = body as {
+          especialidad: "taller" | "lubricentro" | "carwash" | "tecnicentro";
+          orderId?: string;
+          items: Array<{
+            id?: string;
+            type?: "SERVICE" | "PART";
+            category: string;
+            subCategory?: string;
+            rawCategory?: string;
+            rawSubCategory?: string;
+            rawName?: string;
+            code?: string;
+            name: string;
+            price: number;
+            qty: number;
+            status?: string;
+          }>;
+        };
+
+        if (!Array.isArray(items) || items.length === 0) {
+          return NextResponse.json(
+            { success: false, error: "Debes enviar al menos un servicio o trabajo para registrar." },
+            { status: 400 }
+          );
+        }
+
+        const espKey: "taller" | "lubricentro" | "carwash" | "tecnicentro" =
+          especialidad === "lubricentro" ||
+          especialidad === "carwash" ||
+          especialidad === "tecnicentro"
+            ? especialidad
+            : "taller";
+
+        const estructuraActual = await obtenerOCrearEstructuraEspecialidades();
+        const bloqueEsp = estructuraActual[espKey] || {
+          categorias: [],
+          subcategoriasPorCat: {},
+        };
+
+        const categoriasSet = new Set<string>(bloqueEsp.categorias || []);
+        const subMap: Record<string, string[]> = { ...(bloqueEsp.subcategoriasPorCat || {}) };
+
+        for (const it of items) {
+          const catRaw = String(it.rawCategory || it.category || "").trim();
+          const subRaw = String(it.rawSubCategory || it.subCategory || "").trim();
+          if (catRaw) {
+            const existingCat = Array.from(categoriasSet).find(
+              (c) => c.toLowerCase() === catRaw.toLowerCase()
+            );
+            const finalCatKey = existingCat || catRaw;
+            if (!existingCat) categoriasSet.add(finalCatKey);
+            if (subRaw) {
+              const listaSub = Array.isArray(subMap[finalCatKey]) ? [...subMap[finalCatKey]] : [];
+              if (!listaSub.some((s) => s.toLowerCase() === subRaw.toLowerCase())) {
+                listaSub.push(subRaw);
+              }
+              subMap[finalCatKey] = listaSub;
+            }
+          }
+        }
+
+        const nuevaEstructura = {
+          ...estructuraActual,
+          [espKey]: {
+            categorias: Array.from(categoriasSet),
+            subcategoriasPorCat: subMap,
+          },
+        };
+
+        const resultadoTx = await prisma.$transaction(async (tx) => {
+          // 1. Guardar estructura actualizada de Categorías y Subcategorías en SystemSetting (Neon)
+          await tx.systemSetting.upsert({
+            where: { id: ESTRUCTURA_ESPECIALIDADES_SETTING_ID },
+            update: { configJson: JSON.stringify(nuevaEstructura) },
+            create: {
+              id: ESTRUCTURA_ESPECIALIDADES_SETTING_ID,
+              configJson: JSON.stringify(nuevaEstructura),
+            },
+          });
+
+          // 2. Registrar / Actualizar cada ítem en el catálogo real de Neon (Product o WorkshopService)
+          const savedCatalogItems: any[] = [];
+          for (let i = 0; i < items.length; i++) {
+            const it = items[i];
+            const cleanName = String(it.rawName || it.name || "").trim();
+            const catRaw = String(it.rawCategory || it.category || "General").trim();
+            const subRaw = String(it.rawSubCategory || it.subCategory || "").trim();
+            const unitPrice = Math.max(0, Number(it.price) || 0);
+            const itemCode =
+              String(it.code || "").trim() ||
+              `${espKey.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-5)}-${i + 1}`;
+
+            if (espKey === "lubricentro") {
+              const existingProd = await tx.product.findFirst({
+                where: {
+                  OR: [
+                    { code: itemCode },
+                    { name: { equals: cleanName, mode: "insensitive" } },
+                  ],
+                },
+              });
+
+              const prod = existingProd
+                ? await tx.product.update({
+                    where: { id: existingProd.id },
+                    data: {
+                      category: `Lubricentro - ${catRaw || "General"}`,
+                      price: unitPrice > 0 ? unitPrice : existingProd.price,
+                      brand: subRaw || existingProd.brand || "Lubricentro",
+                    },
+                  })
+                : await tx.product.create({
+                    data: {
+                      code: itemCode,
+                      name: cleanName,
+                      brand: subRaw || "Lubricentro",
+                      category: `Lubricentro - ${catRaw || "General"}`,
+                      price: unitPrice,
+                      stock: 20,
+                      minStock: 5,
+                      status: "En Stock",
+                    },
+                  });
+
+              savedCatalogItems.push(prod);
+            } else {
+              const existingSrvRows: any[] = await tx.$queryRawUnsafe(
+                `SELECT * FROM "WorkshopService" WHERE "code" = $1 OR LOWER("name") = LOWER($2) LIMIT 1`,
+                itemCode,
+                cleanName
+              );
+
+              if (existingSrvRows.length > 0) {
+                const srvId = existingSrvRows[0].id;
+                await tx.$executeRawUnsafe(
+                  `UPDATE "WorkshopService"
+                   SET "category" = $2,
+                       "subCategory" = $3,
+                       "specialty" = $4,
+                       "price" = CASE WHEN $5 > 0 THEN $5 ELSE "price" END,
+                       "active" = true,
+                       "updatedAt" = NOW()
+                   WHERE "id" = $1`,
+                  srvId,
+                  catRaw || "General",
+                  subRaw || null,
+                  espKey,
+                  unitPrice
+                );
+                savedCatalogItems.push({ ...existingSrvRows[0], category: catRaw, subCategory: subRaw, price: unitPrice });
+              } else {
+                const srvId = `srv_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`;
+                await tx.$executeRawUnsafe(
+                  `INSERT INTO "WorkshopService" (
+                    "id", "code", "name", "category", "subCategory", "specialty",
+                    "price", "estimatedMinutes", "requiresBay", "active", "createdAt", "updatedAt"
+                  ) VALUES (
+                    $1, $2, $3, $4, $5, $6,
+                    $7, 30, true, true, NOW(), NOW()
+                  )`,
+                  srvId,
+                  itemCode,
+                  cleanName,
+                  catRaw || "General",
+                  subRaw || null,
+                  espKey,
+                  unitPrice
+                );
+                savedCatalogItems.push({ id: srvId, code: itemCode, name: cleanName, category: catRaw, subCategory: subRaw, price: unitPrice });
+              }
+            }
+          }
+
+          // 3. Si hay una orden activa seleccionada, anexar los ítems a la orden en Neon
+          let updatedOrder = null;
+          if (orderId) {
+            const orderRows: any[] = await tx.$queryRawUnsafe(
+              `SELECT * FROM "WorkshopOrder" WHERE "id" = $1 OR "orderNumber" = $1 LIMIT 1`,
+              orderId
+            );
+            if (orderRows.length > 0) {
+              const ord = orderRows[0];
+              const currentItems = safeParseJson<any[]>(ord.itemsJson, []);
+              const mergedItems = [
+                ...currentItems,
+                ...items.map((it, idx) => ({
+                  id: it.id || `item_${Date.now()}_${idx}`,
+                  type: it.type || (espKey === "lubricentro" ? "PART" : "SERVICE"),
+                  category: it.category,
+                  subCategory: it.subCategory || it.rawSubCategory || undefined,
+                  code: it.code || `${espKey.slice(0, 3).toUpperCase()}-${idx + 1}`,
+                  name: it.name,
+                  price: Number(it.price) || 0,
+                  qty: Number(it.qty) || 1,
+                  status: it.status || "En Proceso",
+                })),
+              ];
+              const newTotal = mergedItems.reduce(
+                (acc: number, item: any) => acc + (Number(item.price) || 0) * (Number(item.qty) || 1),
+                0
+              );
+              const serviceNames = mergedItems.map((i: any) => i.name);
+
+              await tx.$executeRawUnsafe(
+                `UPDATE "WorkshopOrder"
+                 SET "itemsJson" = $2,
+                     "servicesJson" = $3,
+                     "totalCost" = $4,
+                     "updatedAt" = NOW()
+                 WHERE "id" = $1`,
+                ord.id,
+                JSON.stringify(mergedItems),
+                JSON.stringify(serviceNames),
+                newTotal
+              );
+
+              const freshRows: any[] = await tx.$queryRawUnsafe(
+                `SELECT * FROM "WorkshopOrder" WHERE "id" = $1 LIMIT 1`,
+                ord.id
+              );
+              if (freshRows.length > 0) {
+                updatedOrder = mapOrderRow(freshRows[0]);
+              }
+            }
+          }
+
+          return { savedCatalogItems, updatedOrder };
+        });
+
+        return NextResponse.json({
+          success: true,
+          estructuraEspecialidades: nuevaEstructura,
+          catalogItems: resultadoTx.savedCatalogItems,
+          activeOrder: resultadoTx.updatedOrder,
+        });
+      }
+
+      // =========================================================================
+      // ACCIÓN 10: PASAR ORDEN A PROPUESTA (/presupuestos) EN NEON POSTGRESQL
+      // =========================================================================
+      if (action === "PASAR_A_PROPUESTA") {
+        const {
+          orderId,
+          quoteSignatureUrl,
+          deliverySignatureUrl,
+          nextOilChangeKm,
+        } = body;
+
+        if (!orderId) {
+          return NextResponse.json(
+            { success: false, error: "ID de orden requerido." },
+            { status: 400 }
+          );
+        }
+
+        const existingRows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopOrder" WHERE "id" = $1 OR "orderNumber" = $1 LIMIT 1`,
+          orderId
+        );
+
+        if (existingRows.length === 0) {
+          return NextResponse.json(
+            { success: false, error: "Orden no encontrada en Neon PostgreSQL." },
+            { status: 404 }
+          );
+        }
+
+        const rawOrder = existingRows[0];
+        const mapped = mapOrderRow(rawOrder);
+        const quoteNumber =
+          rawOrder.quoteNumber ||
+          `COT-${String(rawOrder.orderNumber || rawOrder.id).replace(/^#+/, "")}`;
+        const quoteStatus =
+          rawOrder.quoteStatus && rawOrder.quoteStatus !== "Borrador"
+            ? rawOrder.quoteStatus
+            : "Pendiente";
+
+        await prisma.$transaction(async (tx) => {
+          await tx.$executeRawUnsafe(
+            `UPDATE "WorkshopOrder"
+             SET "quoteNumber" = $2,
+                 "quoteStatus" = $3,
+                 "quoteSignatureUrl" = COALESCE($4, "quoteSignatureUrl"),
+                 "deliverySignatureUrl" = COALESCE($5, "deliverySignatureUrl"),
+                 "nextOilChangeKm" = COALESCE($6, "nextOilChangeKm"),
+                 "totalCost" = $7,
+                 "updatedAt" = NOW()
+             WHERE "id" = $1`,
+            rawOrder.id,
+            quoteNumber,
+            quoteStatus,
+            quoteSignatureUrl || null,
+            deliverySignatureUrl || null,
+            nextOilChangeKm ? Number(nextOilChangeKm) : null,
+            Number(mapped.totalCost || 0)
+          );
+
+          await tx.clientQuote.upsert({
+            where: { quoteNumber },
+            update: {
+              vehicle: mapped.vehicle,
+              plate: mapped.plate,
+              clientName: mapped.client,
+              status: quoteStatus,
+              itemsJson: JSON.stringify(mapped.items || []),
+              subtotal: Number(mapped.subtotal || 0),
+              total: Number(mapped.totalCost || 0),
+              notes: mapped.notes || "",
+            },
+            create: {
+              quoteNumber,
+              date: new Date().toISOString().split("T")[0],
+              vehicle: mapped.vehicle,
+              plate: mapped.plate,
+              clientName: mapped.client,
+              status: quoteStatus,
+              itemsJson: JSON.stringify(mapped.items || []),
+              subtotal: Number(mapped.subtotal || 0),
+              total: Number(mapped.totalCost || 0),
+              notes: mapped.notes || "",
+            },
+          });
+        });
+
+        const updatedRows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopOrder" WHERE "id" = $1 LIMIT 1`,
+          rawOrder.id
+        );
+
+        return NextResponse.json({
+          success: true,
+          activeOrder: mapOrderRow(updatedRows[0]),
+          quoteNumber,
         });
       }
 

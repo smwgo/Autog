@@ -13,7 +13,6 @@ import {
 } from "./LubricentroAdminModals";
 import {
   DEFAULT_LUBRICENTRO_CONFIG_CLIENT,
-  DEFAULT_LUBRICENTRO_PRODUCTS_CLIENT,
 } from "./lubricentroDefaults";
 
 export interface ModuloLubricentroCatalogoProps {
@@ -22,6 +21,8 @@ export interface ModuloLubricentroCatalogoProps {
   itemsOrden: any[];
   onActualizarItemsOrden: (nuevosItems: any[]) => Promise<void>;
   onIrAAvisoYFirma: () => void;
+  onIrASiguiente?: () => void;
+  nombreSiguiente?: string;
   mostrarToast?: (msg: string, tipo?: "ok" | "err") => void;
   triggerAbrirConfig?: number;
 }
@@ -100,16 +101,8 @@ function normalizarConfigCliente(rawConfig: any): LubricentroConfigData {
 }
 
 function normalizarProductosCliente(rawProducts: any[]): any[] {
-  const baseList =
-    Array.isArray(rawProducts) && rawProducts.length > 0
-      ? rawProducts
-      : DEFAULT_LUBRICENTRO_PRODUCTS_CLIENT;
-  const existingIds = new Set(baseList.map((p: any) => p.id));
-  const merged = [
-    ...baseList,
-    ...DEFAULT_LUBRICENTRO_PRODUCTS_CLIENT.filter((p: any) => !existingIds.has(p.id)),
-  ];
-  return merged.map((p: any) => {
+  const baseList = Array.isArray(rawProducts) ? rawProducts : [];
+  return baseList.map((p: any) => {
     const remap = p.lubSubcategoryId ? LEGACY_PRODUCT_REMAP[p.lubSubcategoryId] : undefined;
     if (remap) {
       return {
@@ -122,45 +115,23 @@ function normalizarProductosCliente(rawProducts: any[]): any[] {
   });
 }
 
-const getInitialLubricentroCache = () => {
-  if (_lubricentroClientCache) return _lubricentroClientCache;
-  if (typeof window !== "undefined") {
-    try {
-      const raw = localStorage.getItem(LUBRICENTRO_CACHE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed?.config) {
-          _lubricentroClientCache = parsed;
-          return parsed;
-        }
-      }
-    } catch {}
-  }
-  return null;
-};
-
 export default function ModuloLubricentroCatalogo({
   empleadoLogueado,
   ordenActiva,
   itemsOrden,
   onActualizarItemsOrden,
   onIrAAvisoYFirma,
+  onIrASiguiente,
+  nombreSiguiente,
   mostrarToast,
   triggerAbrirConfig,
 }: ModuloLubricentroCatalogoProps) {
-  // Inicializar desde caché si está disponible o desde configuración base instantánea (0ms)
-  const [config, setConfig] = useState<LubricentroConfigData>(() => {
-    const cached = getInitialLubricentroCache();
-    return normalizarConfigCliente(cached?.config);
-  });
-  const [productos, setProductos] = useState<any[]>(() => {
-    const cached = getInitialLubricentroCache();
-    return normalizarProductosCliente(cached?.products || []);
-  });
-  const [vehiculosRegistrados, setVehiculosRegistrados] = useState<any[]>(() => {
-    const cached = getInitialLubricentroCache();
-    return cached?.vehicles || [];
-  });
+  // Inicializar y sincronizar desde Neon PostgreSQL
+  const [config, setConfig] = useState<LubricentroConfigData>(() =>
+    normalizarConfigCliente(null)
+  );
+  const [productos, setProductos] = useState<any[]>([]);
+  const [vehiculosRegistrados, setVehiculosRegistrados] = useState<any[]>([]);
   const [cargando, setCargando] = useState<boolean>(false);
   const [bannerAviso, setBannerAviso] = useState<{
     texto: string;
@@ -286,11 +257,8 @@ export default function ModuloLubricentroCatalogo({
     }, 3500);
   };
 
-  // Cargar configuración real y productos de Neon en segundo plano sin congelar la pantalla
+  // Cargar configuración real y productos de Neon PostgreSQL
   const cargarDatosLubricentro = async () => {
-    if (_lubricentroClientCache && Date.now() - _lubricentroClientCache.timestamp < 300000) {
-      return;
-    }
     try {
       setCargando(true);
       const res = await fetch("/api/taller/lubricentro?includeInactive=true", {
@@ -302,19 +270,9 @@ export default function ModuloLubricentroCatalogo({
         const cleanProducts = normalizarProductosCliente(
           Array.isArray(data.products) ? data.products : []
         );
-        const cacheObj = {
-          config: cleanConfig,
-          products: cleanProducts,
-          vehicles: Array.isArray(data.vehicles) ? data.vehicles : [],
-          timestamp: Date.now(),
-        };
-        _lubricentroClientCache = cacheObj;
-        try {
-          localStorage.setItem(LUBRICENTRO_CACHE_KEY, JSON.stringify(cacheObj));
-        } catch {}
         setConfig(cleanConfig);
         setProductos(cleanProducts);
-        setVehiculosRegistrados(cacheObj.vehicles);
+        setVehiculosRegistrados(Array.isArray(data.vehicles) ? data.vehicles : []);
       }
     } catch (err) {
       console.error("Error cargando Lubricentro desde Neon:", err);
@@ -325,6 +283,13 @@ export default function ModuloLubricentroCatalogo({
 
   useEffect(() => {
     void cargarDatosLubricentro();
+    const handleCatalogoActualizado = () => {
+      void cargarDatosLubricentro();
+    };
+    window.addEventListener("taller-catalogo-actualizado", handleCatalogoActualizado);
+    return () => {
+      window.removeEventListener("taller-catalogo-actualizado", handleCatalogoActualizado);
+    };
   }, []);
 
   // Categorías y subcategorías activas ordenadas
@@ -1460,22 +1425,38 @@ export default function ModuloLubricentroCatalogo({
     return map;
   }, [ordenActiva, itemsOrden, carritoDirecto, productos]);
 
+  // Ítems de Lubricentro en la orden activa
+  const itemsLubricentroEnOrden = useMemo(() => {
+    return (itemsOrden || []).filter((it) => {
+      const cat = String(it.category || "").toLowerCase();
+      const idStr = String(it.id || "");
+      const code = String(it.code || "");
+      return (
+        cat.includes("lubricentro") ||
+        idStr.startsWith("lub-") ||
+        idStr.startsWith("it_lub") ||
+        code.startsWith("LUB-") ||
+        productos.some((p) => p.id === it.productId || (p.code && p.code === code))
+      );
+    });
+  }, [itemsOrden, productos]);
+
   const totalUnidadesCarrito = useMemo(() => {
     if (ordenActiva) {
-      return itemsOrden.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
+      return itemsLubricentroEnOrden.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
     }
     return carritoDirecto.reduce((acc, it) => acc + it.qty, 0);
-  }, [ordenActiva, itemsOrden, carritoDirecto]);
+  }, [ordenActiva, itemsLubricentroEnOrden, carritoDirecto]);
 
   const totalMontoCarrito = useMemo(() => {
     if (ordenActiva) {
-      return itemsOrden.reduce(
+      return itemsLubricentroEnOrden.reduce(
         (acc, it) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1),
         0
       );
     }
     return carritoDirecto.reduce((acc, it) => acc + it.price * it.qty, 0);
-  }, [ordenActiva, itemsOrden, carritoDirecto]);
+  }, [ordenActiva, itemsLubricentroEnOrden, carritoDirecto]);
 
   // Viscosidades disponibles para filtro rápido de 1 toque
   const viscosidadesRapidas = useMemo(() => {
@@ -1502,7 +1483,7 @@ export default function ModuloLubricentroCatalogo({
       {/* Banner de confirmación / error */}
       {bannerAviso && (
         <div
-          className={`p-2.5 sm:p-3 rounded-xl border text-xs font-bold flex items-center justify-between gap-2 shadow-xs ${
+          className={`p-2.5 sm:p-3 rounded-xl border text-xs font-normal flex items-center justify-between gap-2 shadow-xs ${
             bannerAviso.tipo === "ok"
               ? "bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-500/15 dark:border-emerald-500/40 dark:text-emerald-200"
               : "bg-rose-50 border-rose-300 text-rose-800 dark:bg-rose-500/15 dark:border-rose-500/40 dark:text-rose-200"
@@ -1512,7 +1493,7 @@ export default function ModuloLubricentroCatalogo({
           <button
             type="button"
             onClick={() => setBannerAviso(null)}
-            className="text-xs font-black px-2 cursor-pointer"
+            className="text-xs font-normal px-2 cursor-pointer"
           >
             ✕
           </button>
@@ -1520,25 +1501,25 @@ export default function ModuloLubricentroCatalogo({
       )}
 
       {/* =====================================================================
-          NIVEL 1: CATEGORÍAS PRINCIPALES (Deslizable en móvil, sin repetición)
+          NIVEL 1: CATEGORÍAS PRINCIPALES (2 columnas en móvil, 6 en desktop, cubriendo todo el ancho)
           ===================================================================== */}
-      <div className="flex overflow-x-auto sm:grid sm:grid-cols-6 gap-1.5 sm:gap-2 pb-1 sm:pb-0 no-scrollbar">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full">
         <button
           type="button"
           onClick={() => handleCambiarCategoria("ALL")}
-          className={`shrink-0 sm:shrink h-9 sm:h-10 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 ${
+          className={`flex-1 min-w-[100px] sm:min-w-[120px] h-9 sm:h-10 px-3 rounded-xl border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
             categoriaActivaId === "ALL"
               ? "bg-blue-600 border-blue-500 text-white shadow-xs"
-              : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
+              : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
           }`}
         >
           <span className="text-sm leading-none shrink-0">✨</span>
-          <span className="truncate">Todo</span>
+          <span className="whitespace-nowrap">Todo</span>
           <span
-            className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
+            className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-normal shrink-0 ${
               categoriaActivaId === "ALL"
-                ? "bg-white/20 text-white"
-                : "bg-zinc-100 dark:bg-white/10 text-zinc-500 dark:text-zinc-400"
+                ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
             }`}
           >
             {productos.filter((p) => p.active !== false).length}
@@ -1554,20 +1535,26 @@ export default function ModuloLubricentroCatalogo({
               key={cat.id}
               type="button"
               onClick={() => handleCambiarCategoria(cat.id)}
-              className={`shrink-0 sm:shrink h-9 sm:h-10 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 ${
+              className={`flex-1 min-w-[105px] sm:min-w-[125px] h-9 sm:h-10 px-3 rounded-xl border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
                 sel
-                  ? "bg-blue-50/95 dark:bg-blue-500/20 border-blue-500 dark:border-blue-400 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/40"
-                  : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
+                  ? "bg-blue-600 border-blue-500 text-white shadow-xs"
+                  : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
               }`}
             >
               <span className="text-base leading-none shrink-0">{cat.icon}</span>
-              <span className="truncate">{cat.label}</span>
+              <span className="whitespace-nowrap">{cat.label}</span>
               {enPedido > 0 ? (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-emerald-500 text-white shrink-0">
+                <span className="px-1.5 py-0.5 rounded-md text-xs leading-none tabular-nums font-normal bg-emerald-500 text-white shrink-0">
                   {enPedido}
                 </span>
               ) : (
-                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-semibold shrink-0">
+                <span
+                  className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-normal shrink-0 ${
+                    sel
+                      ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                      : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
+                  }`}
+                >
                   {totalCat}
                 </span>
               )}
@@ -1577,25 +1564,25 @@ export default function ModuloLubricentroCatalogo({
       </div>
 
       {/* =====================================================================
-          NIVEL 2: SUBCATEGORÍAS DE LA CATEGORÍA ACTIVA (1 fila deslizable en móvil)
+          NIVEL 2: SUBCATEGORÍAS DE LA CATEGORÍA ACTIVA (Cubriendo todo el ancho con flex-1)
           ===================================================================== */}
       {categoriaActivaId !== "ALL" && subcategoriasActivas.length > 0 && (
-        <div className="flex overflow-x-auto sm:flex-wrap items-center gap-1.5 w-full pb-1 sm:pb-0 no-scrollbar">
+        <div className="flex flex-wrap items-center gap-1.5 w-full">
           <button
             type="button"
             onClick={() => handleCambiarSubcategoria("ALL")}
-            className={`shrink-0 h-8 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs ${
+            className={`flex-1 min-w-[95px] sm:min-w-[110px] h-8 sm:h-8.5 px-3 rounded-lg border text-xs font-normal flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs ${
               subcategoriaActivaId === "ALL"
-                ? "bg-blue-600 border-blue-500 text-white font-bold shadow-xs"
-                : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
+                ? "bg-blue-600 border-blue-500 text-white font-normal shadow-xs"
+                : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
             }`}
           >
             <span>Todos</span>
             <span
-              className={`text-[10px] px-1.5 rounded-full ${
+              className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
                 subcategoriaActivaId === "ALL"
-                  ? "bg-white/20 text-white"
-                  : "bg-zinc-100 dark:bg-white/10 text-zinc-500 dark:text-zinc-400"
+                  ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                  : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
               }`}
             >
               {conteoProductosPorCategoria[categoriaActivaId] || 0}
@@ -1610,20 +1597,26 @@ export default function ModuloLubricentroCatalogo({
                 key={sub.id}
                 type="button"
                 onClick={() => handleCambiarSubcategoria(sub.id)}
-                className={`shrink-0 h-8 px-2.5 sm:px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs ${
+                className={`flex-1 min-w-[95px] sm:min-w-[110px] h-8 sm:h-8.5 px-2.5 sm:px-3 rounded-lg border text-xs font-normal flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs ${
                   activa
-                    ? "bg-blue-600 border-blue-500 text-white font-bold shadow-xs"
-                    : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
+                    ? "bg-blue-600 border-blue-500 text-white font-normal shadow-xs"
+                    : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
                 }`}
               >
                 <span className="text-sm leading-none shrink-0">{sub.icon}</span>
-                <span className="truncate">{sub.label}</span>
+                <span className="whitespace-nowrap">
+                  {sub.label
+                    .replace(/^De\s+/i, "")
+                    .replace(/^Líquido\s+(de\s+)?/i, "")
+                    .replace(/^Valvulina\s*\/\s*/i, "")
+                    .split(/[\s/]+/)[0]}
+                </span>
                 {countSub > 0 && (
                   <span
-                    className={`text-[10px] px-1.5 rounded-full ${
+                    className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
                       activa
-                        ? "bg-white/20 text-white"
-                        : "bg-zinc-100 dark:bg-white/10 text-zinc-500 dark:text-zinc-400"
+                        ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                        : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
                     }`}
                   >
                     {countSub}
@@ -1639,8 +1632,8 @@ export default function ModuloLubricentroCatalogo({
           TIENDA UNIFICADA Y AUTOMÁTICA (Muestra productos al instante sin escribir)
           ===================================================================== */}
       <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 shadow-2xs">
-        {/* Barra superior: Buscador + Contador + Acciones rápidas */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        {/* Barra superior: Buscador + Desplegable de Base (Sintético / Semisintético / Mineral) + Carrito */}
+        <div className="flex items-center justify-between gap-2">
           <div className="relative flex-1">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">
               🔍
@@ -1649,13 +1642,7 @@ export default function ModuloLubricentroCatalogo({
               type="text"
               value={busquedaTexto}
               onChange={(e) => setBusquedaTexto(e.target.value)}
-              placeholder={`Buscar en ${
-                categoriaActivaId === "ALL"
-                  ? "todo el lubricentro"
-                  : subcategoriaSeleccionadaObj
-                  ? `${categoriaSeleccionadaObj?.label} › ${subcategoriaSeleccionadaObj.label}`
-                  : categoriaSeleccionadaObj?.label || "la tienda"
-              } (ej. 10W-30, Mobil, W610, DOT 4)...`}
+              placeholder="Buscar..."
               className="w-full h-9 pl-8 pr-8 rounded-lg bg-zinc-50/80 dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
             />
             {busquedaTexto && (
@@ -1669,84 +1656,55 @@ export default function ModuloLubricentroCatalogo({
             )}
           </div>
 
-          <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
-            <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
-              {productosFiltrados.length}{" "}
-              {productosFiltrados.length === 1 ? "producto" : "productos"}
-            </span>
-
-            <div className="flex items-center gap-1.5">
-              {totalUnidadesCarrito > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setDrawerCarritoAbierto(true)}
-                  className="h-8 px-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
-                >
-                  <span>🛒</span>
-                  <span>{totalUnidadesCarrito}</span>
-                  <span className="font-mono">${totalMontoCarrito.toFixed(2)}</span>
-                </button>
-              )}
-
+          {basesRapidas.length > 0 && (
+            <div ref={menuFiltroRef} className="relative shrink-0">
               <button
                 type="button"
-                onClick={() => {
-                  setProductoAEditar(null);
-                  setModalProductoFormAbierto(true);
-                }}
-                className="h-8 px-2.5 rounded-lg bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-[11px] font-bold flex items-center gap-1 cursor-pointer active:scale-95 transition-all"
-                title="Crear nuevo producto en catálogo"
-              >
-                <span>+</span>
-                <span className="hidden xs:inline">Producto</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Chips de filtro rápido de 1 toque: Viscosidad y Base (solo cuando aplica, deslizable en móvil) */}
-        {categoriaActivaId !== "ALL" &&
-          (viscosidadesRapidas.length > 0 || basesRapidas.length > 0) &&
-          (schemaType === "transmision" ||
-            subcategoriaActivaId === "ALL" ||
-            subSchemaType === "aceite_motor") && (
-            <div className="flex overflow-x-auto items-center gap-1.5 pt-0.5 pb-1 no-scrollbar border-t border-zinc-100 dark:border-white/5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 shrink-0 mr-0.5">
-                Viscosidad:
-              </span>
-              <button
-                type="button"
-                onClick={() => setFiltroViscosidad("")}
-                className={`shrink-0 h-7 px-2 rounded-md border text-[11px] font-bold cursor-pointer transition-all ${
-                  !filtroViscosidad
-                    ? "bg-blue-50 dark:bg-blue-500/20 border-blue-400 text-blue-700 dark:text-blue-300"
-                    : "bg-zinc-50 dark:bg-white/[0.03] border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400"
+                onClick={() => setMenuFiltroAbierto((prev) => !prev)}
+                className={`h-9 px-3 rounded-lg border text-xs font-normal flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs select-none active:scale-95 ${
+                  filtroBase
+                    ? "bg-amber-500 border-amber-500 text-white font-normal shadow-xs"
+                    : menuFiltroAbierto
+                    ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/40 text-blue-700 dark:text-blue-300"
+                    : "bg-zinc-50/80 dark:bg-black/40 hover:bg-zinc-100 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
                 }`}
               >
-                Todas
+                <span className="truncate max-w-[110px] sm:max-w-none">
+                  {filtroBase || "Base"}
+                </span>
+                <svg
+                  className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                    menuFiltroAbierto ? "rotate-180" : ""
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
-              {viscosidadesRapidas.map((v) => {
-                const val = v.value || v.label;
-                const act = filtroViscosidad.toUpperCase() === val.toUpperCase();
-                return (
+
+              {menuFiltroAbierto && (
+                <div className="absolute right-0 top-full mt-1.5 w-44 rounded-xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/10 shadow-xl dark:shadow-2xl backdrop-blur-md p-1.5 space-y-0.5 z-40 animate-fade-in">
                   <button
-                    key={v.id}
                     type="button"
-                    onClick={() => setFiltroViscosidad(act ? "" : val)}
-                    className={`shrink-0 h-7 px-2 rounded-md border text-[11px] font-mono font-bold cursor-pointer transition-all active:scale-95 ${
-                      act
-                        ? "bg-blue-600 border-blue-500 text-white shadow-2xs"
-                        : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
+                    onClick={() => {
+                      setFiltroBase("");
+                      setMenuFiltroAbierto(false);
+                    }}
+                    className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-normal flex items-center justify-between transition-colors cursor-pointer ${
+                      !filtroBase
+                        ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-normal"
+                        : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
                     }`}
                   >
-                    {v.label}
+                    <span>Todas las bases</span>
+                    {!filtroBase && <span className="text-xs">✓</span>}
                   </button>
-                );
-              })}
 
-              {basesRapidas.length > 0 && (
-                <>
-                  <span className="text-zinc-300 dark:text-white/15 mx-1 shrink-0">|</span>
+                  <div className="my-1 border-t border-zinc-100 dark:border-white/5" />
+
                   {basesRapidas.map((b) => {
                     const val = b.value || b.label;
                     const act = filtroBase.toLowerCase() === val.toLowerCase();
@@ -1754,21 +1712,29 @@ export default function ModuloLubricentroCatalogo({
                       <button
                         key={b.id}
                         type="button"
-                        onClick={() => setFiltroBase(act ? "" : val)}
-                        className={`shrink-0 h-7 px-2 rounded-md border text-[11px] font-semibold cursor-pointer transition-all active:scale-95 ${
+                        onClick={() => {
+                          setFiltroBase(act ? "" : val);
+                          setMenuFiltroAbierto(false);
+                        }}
+                        className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-normal flex items-center justify-between transition-colors cursor-pointer ${
                           act
-                            ? "bg-amber-500 border-amber-500 text-white font-bold shadow-2xs"
-                            : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
+                            ? "bg-amber-500/20 text-amber-600 dark:text-amber-300 font-normal"
+                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
                         }`}
                       >
-                        {b.label}
+                        <span>{b.label}</span>
+                        {act && <span className="text-xs">✓</span>}
                       </button>
                     );
                   })}
-                </>
+                </div>
               )}
             </div>
           )}
+
+
+        </div>
+
 
         {/* Chips de filtros activos con botón de limpieza rápida */}
         {chipsFiltrosActivos.length > 0 && (
@@ -1776,13 +1742,13 @@ export default function ModuloLubricentroCatalogo({
             {chipsFiltrosActivos.map((chip) => (
               <span
                 key={chip.key}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-[11px] font-semibold text-blue-700 dark:text-blue-300"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-[11px] font-normal text-blue-700 dark:text-blue-300"
               >
                 <span>{chip.label}</span>
                 <button
                   type="button"
                   onClick={chip.onClear}
-                  className="hover:text-rose-500 font-bold pl-0.5 cursor-pointer"
+                  className="hover:text-rose-500 font-normal pl-0.5 cursor-pointer"
                 >
                   ✕
                 </button>
@@ -1791,7 +1757,7 @@ export default function ModuloLubricentroCatalogo({
             <button
               type="button"
               onClick={limpiarTodosLosFiltros}
-              className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline px-1.5 cursor-pointer"
+              className="text-[11px] font-normal text-rose-600 dark:text-rose-400 hover:underline px-1.5 cursor-pointer"
             >
               Limpiar filtros
             </button>
@@ -1799,34 +1765,7 @@ export default function ModuloLubricentroCatalogo({
         )}
 
         {/* Grid de productos automático, intuitivo y táctil para móvil y escritorio */}
-        {productosFiltrados.length === 0 ? (
-          <div className="p-6 rounded-xl bg-zinc-50/70 dark:bg-white/[0.01] border border-dashed border-zinc-200 dark:border-white/10 text-center space-y-2 text-zinc-400">
-            <span className="text-2xl block">🔍</span>
-            <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-300">
-              No hay productos con este filtro en la vista actual.
-            </p>
-            <div className="flex items-center justify-center gap-2 pt-1">
-              {chipsFiltrosActivos.length > 0 && (
-                <button
-                  type="button"
-                  onClick={limpiarTodosLosFiltros}
-                  className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
-                >
-                  Quitar filtros
-                </button>
-              )}
-              {categoriaActivaId !== "ALL" && (
-                <button
-                  type="button"
-                  onClick={() => handleCambiarCategoria("ALL")}
-                  className="h-8 px-3 rounded-lg bg-zinc-200/80 dark:bg-white/10 text-zinc-800 dark:text-zinc-200 text-xs font-bold cursor-pointer"
-                >
-                  Ver todo el catálogo
-                </button>
-              )}
-            </div>
-          </div>
-        ) : (
+        {productosFiltrados.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3">
             {productosFiltrados.map((prod) => {
               const { presentation, price, variantes } = obtenerPresentacionYPrecio(prod);
@@ -1864,11 +1803,11 @@ export default function ModuloLubricentroCatalogo({
 
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-center justify-between gap-1">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 truncate">
+                        <span className="text-[10px] font-normal uppercase tracking-wider text-blue-600 dark:text-blue-400 truncate">
                           {prod.brand || "Lubricentro"}
                         </span>
                         {estaEnPedido && (
-                          <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-emerald-500 text-white shrink-0">
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-normal bg-emerald-500 text-white shrink-0">
                             ✓ {qtyEnPedido} en pedido
                           </span>
                         )}
@@ -1876,7 +1815,7 @@ export default function ModuloLubricentroCatalogo({
 
                       <h4
                         onClick={() => setProductoDetalleModal(prod)}
-                        className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 line-clamp-2 leading-snug cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+                        className="text-xs font-normal text-zinc-900 dark:text-zinc-100 line-clamp-2 leading-snug cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
                       >
                         {prod.name}
                       </h4>
@@ -1884,22 +1823,22 @@ export default function ModuloLubricentroCatalogo({
                       {/* Badges rápidos de viscosidad / base / referencia */}
                       <div className="flex flex-wrap items-center gap-1 pt-0.5">
                         {prod.viscosity && (
-                          <span className="px-1.5 py-0.2 rounded bg-zinc-100 dark:bg-white/10 text-[10px] font-mono font-bold text-zinc-700 dark:text-zinc-300">
+                          <span className="px-1.5 py-0.2 rounded bg-zinc-100 dark:bg-white/10 text-[10px] font-mono font-normal text-zinc-700 dark:text-zinc-300">
                             {prod.viscosity}
                           </span>
                         )}
                         {prod.lubricantBase && (
-                          <span className="px-1.5 py-0.2 rounded bg-amber-50 dark:bg-amber-500/15 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                          <span className="px-1.5 py-0.2 rounded bg-amber-50 dark:bg-amber-500/15 text-[10px] font-normal text-amber-700 dark:text-amber-300">
                             {prod.lubricantBase}
                           </span>
                         )}
                         {prod.fluidClass && (
-                          <span className="px-1.5 py-0.2 rounded bg-sky-50 dark:bg-sky-500/15 text-[10px] font-semibold text-sky-700 dark:text-sky-300">
+                          <span className="px-1.5 py-0.2 rounded bg-sky-50 dark:bg-sky-500/15 text-[10px] font-normal text-sky-700 dark:text-sky-300">
                             {prod.fluidClass}
                           </span>
                         )}
                         {prod.capacityAh && (
-                          <span className="px-1.5 py-0.2 rounded bg-purple-50 dark:bg-purple-500/15 text-[10px] font-semibold text-purple-700 dark:text-purple-300">
+                          <span className="px-1.5 py-0.2 rounded bg-purple-50 dark:bg-purple-500/15 text-[10px] font-normal text-purple-700 dark:text-purple-300">
                             {prod.capacityAh}
                           </span>
                         )}
@@ -1919,7 +1858,7 @@ export default function ModuloLubricentroCatalogo({
                             onClick={() =>
                               setPresPorProducto((prev) => ({ ...prev, [prod.id]: v.id }))
                             }
-                            className={`flex-1 min-w-[70px] h-6 px-2 rounded-md border text-[10px] font-bold cursor-pointer transition-all ${
+                            className={`flex-1 min-w-[70px] h-6 px-2 rounded-md border text-[10px] font-normal cursor-pointer transition-all ${
                               selVar
                                 ? "bg-blue-600 border-blue-500 text-white"
                                 : "bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300"
@@ -1935,7 +1874,7 @@ export default function ModuloLubricentroCatalogo({
                   {/* Pie de tarjeta: Precio + Presentación + Botón / Stepper automático (- qty +) */}
                   <div className="pt-2 border-t border-zinc-100 dark:border-white/5 flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <span className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400 block leading-none">
+                      <span className="text-sm font-mono font-normal text-emerald-600 dark:text-emerald-400 block leading-none">
                         ${price.toFixed(2)}
                       </span>
                       <span className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate block mt-0.5">
@@ -1951,12 +1890,12 @@ export default function ModuloLubricentroCatalogo({
                           onClick={() =>
                             void handleAjustarCantidadProducto(prod, -1, presentation, price)
                           }
-                          className="w-7 h-7 rounded-md bg-white dark:bg-black/40 hover:bg-rose-50 dark:hover:bg-rose-500/20 text-zinc-800 dark:text-white font-black text-xs flex items-center justify-center cursor-pointer active:scale-90 transition-all"
+                          className="w-7 h-7 rounded-md bg-white dark:bg-black/40 hover:bg-rose-50 dark:hover:bg-rose-500/20 text-zinc-800 dark:text-white font-normal text-xs flex items-center justify-center cursor-pointer active:scale-90 transition-all"
                           title="Restar 1"
                         >
                           −
                         </button>
-                        <span className="w-6 text-center text-xs font-mono font-extrabold text-emerald-800 dark:text-emerald-200">
+                        <span className="w-6 text-center text-xs font-mono font-normal text-emerald-800 dark:text-emerald-200">
                           {qtyEnPedido}
                         </span>
                         <button
@@ -1965,7 +1904,7 @@ export default function ModuloLubricentroCatalogo({
                           onClick={() =>
                             void handleAjustarCantidadProducto(prod, 1, presentation, price)
                           }
-                          className="w-7 h-7 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center justify-center cursor-pointer active:scale-90 transition-all"
+                          className="w-7 h-7 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-normal text-xs flex items-center justify-center cursor-pointer active:scale-90 transition-all"
                           title="Sumar 1"
                         >
                           +
@@ -1978,7 +1917,7 @@ export default function ModuloLubricentroCatalogo({
                         onClick={() =>
                           void handleAjustarCantidadProducto(prod, 1, presentation, price)
                         }
-                        className="h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1 shrink-0 transition-all cursor-pointer active:scale-95 shadow-2xs disabled:opacity-50"
+                        className="h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal flex items-center gap-1 shrink-0 transition-all cursor-pointer active:scale-95 shadow-2xs disabled:opacity-50"
                       >
                         <span>+</span>
                         <span>{agregandoId === prod.id ? "..." : "Agregar"}</span>
@@ -2001,36 +1940,32 @@ export default function ModuloLubricentroCatalogo({
           <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/20 border border-blue-200 dark:border-blue-500/30 flex items-center justify-center text-sm shrink-0">
             🛒
           </div>
-          <div className="min-w-0">
-            <span className="text-xs font-bold text-zinc-900 dark:text-white block truncate">
-              {totalUnidadesCarrito > 0
-                ? `${totalUnidadesCarrito} ${
-                    totalUnidadesCarrito === 1 ? "producto seleccionado" : "productos seleccionados"
-                  }`
-                : "Ningún producto seleccionado"}
+          <div className="min-w-0 leading-snug">
+            <span className="text-sm sm:text-base font-normal text-zinc-900 dark:text-white block truncate">
+              {totalUnidadesCarrito} {totalUnidadesCarrito === 1 ? "producto" : "productos"}
             </span>
-            <span className="text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-400 block">
+            <span className="text-sm sm:text-base font-normal text-emerald-600 dark:text-emerald-400 block">
               Total: ${totalMontoCarrito.toFixed(2)}
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {totalUnidadesCarrito > 0 && (
+          {onIrASiguiente && (
             <button
               type="button"
-              onClick={() => setDrawerCarritoAbierto(true)}
-              className="h-9 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-zinc-200 text-xs font-bold cursor-pointer active:scale-95 transition-all"
+              onClick={onIrAAvisoYFirma}
+              className="h-9 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-normal cursor-pointer active:scale-95 transition-all"
             >
-              Ver detalle
+              ✍️ Firmar
             </button>
           )}
           <button
             type="button"
-            onClick={onIrAAvisoYFirma}
-            className="h-9 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer shadow-xs active:scale-95 transition-all"
+            onClick={onIrASiguiente || onIrAAvisoYFirma}
+            className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-normal cursor-pointer shadow-xs active:scale-95 transition-all"
           >
-            Siguiente (Aviso y Firma) →
+            Siguiente →
           </button>
         </div>
       </div>
@@ -2050,7 +1985,7 @@ export default function ModuloLubricentroCatalogo({
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-3">
                 <div>
-                  <h3 className="text-base font-bold">🛒 Carrito de Lubricentro</h3>
+                  <h3 className="text-base font-normal">🛒 Carrito de Lubricentro</h3>
                   <p className="text-xs text-zinc-500">
                     {ordenActiva?.id
                       ? `Sincronizado con Orden Activa #${ordenActiva.orderNumber || ordenActiva.plate}`
@@ -2060,7 +1995,7 @@ export default function ModuloLubricentroCatalogo({
                 <button
                   type="button"
                   onClick={() => setDrawerCarritoAbierto(false)}
-                  className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-white/5 text-xs font-bold cursor-pointer"
+                  className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-white/5 text-xs font-normal cursor-pointer"
                 >
                   ✕
                 </button>
@@ -2080,14 +2015,14 @@ export default function ModuloLubricentroCatalogo({
                         className="p-3 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex items-center justify-between gap-2"
                       >
                         <div className="min-w-0">
-                          <span className="text-xs font-bold block truncate">
+                          <span className="text-xs font-normal block truncate">
                             {it.name}
                           </span>
                           <span className="text-[11px] font-mono text-zinc-500">
                             {it.qty || 1} x ${Number(it.price || 0).toFixed(2)} ={" "}
-                            <strong className="text-zinc-900 dark:text-white">
+                            <span className="text-zinc-900 dark:text-white">
                               ${((Number(it.qty) || 1) * Number(it.price || 0)).toFixed(2)}
-                            </strong>
+                            </span>
                           </span>
                         </div>
                         <button
@@ -2097,7 +2032,7 @@ export default function ModuloLubricentroCatalogo({
                               itemsOrden.filter((x) => x.id !== it.id)
                             )
                           }
-                          className="text-rose-600 text-xs font-bold px-2 cursor-pointer"
+                          className="text-rose-600 text-xs font-normal px-2 cursor-pointer"
                         >
                           ✕
                         </button>
@@ -2126,14 +2061,14 @@ export default function ModuloLubricentroCatalogo({
                           className="p-3 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex items-center justify-between gap-2"
                         >
                           <div className="min-w-0">
-                            <span className="text-xs font-bold block truncate">
+                            <span className="text-xs font-normal block truncate">
                               {c.name} ({c.presentation})
                             </span>
                             <span className="text-[11px] font-mono text-zinc-500">
                               {c.qty} x ${c.price.toFixed(2)} ={" "}
-                              <strong className="text-zinc-900 dark:text-white">
+                              <span className="text-zinc-900 dark:text-white">
                                 ${(c.qty * c.price).toFixed(2)}
-                              </strong>
+                              </span>
                             </span>
                           </div>
                           <button
@@ -2143,7 +2078,7 @@ export default function ModuloLubricentroCatalogo({
                                 prev.filter((x) => x.key !== c.key)
                               )
                             }
-                            className="text-rose-600 text-xs font-bold px-2 cursor-pointer"
+                            className="text-rose-600 text-xs font-normal px-2 cursor-pointer"
                           >
                             ✕
                           </button>
@@ -2158,7 +2093,7 @@ export default function ModuloLubricentroCatalogo({
             <div className="pt-4 border-t border-zinc-200 dark:border-white/10 space-y-3">
               {ordenActiva?.id ? (
                 <>
-                  <div className="flex items-center justify-between text-sm font-bold">
+                  <div className="flex items-center justify-between text-sm font-normal">
                     <span>Subtotal Orden:</span>
                     <span className="font-mono text-blue-600 dark:text-blue-400">
                       $
@@ -2177,14 +2112,14 @@ export default function ModuloLubricentroCatalogo({
                       setDrawerCarritoAbierto(false);
                       onIrAAvisoYFirma();
                     }}
-                    className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
+                    className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer"
                   >
                     Ir a Aviso, Firma y Enviar a POS →
                   </button>
                 </>
               ) : (
                 <>
-                  <div className="flex items-center justify-between text-sm font-bold">
+                  <div className="flex items-center justify-between text-sm font-normal">
                     <span>Total Carrito:</span>
                     <span className="font-mono text-blue-600 dark:text-blue-400">
                       ${totalMontoCarrito.toFixed(2)}
@@ -2194,7 +2129,7 @@ export default function ModuloLubricentroCatalogo({
                     type="button"
                     disabled={carritoDirecto.length === 0 || enviandoPedidoPos}
                     onClick={handleEnviarCarritoDirectoAPos}
-                    className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-300 text-white text-xs font-bold cursor-pointer"
+                    className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-300 text-white text-xs font-normal cursor-pointer"
                   >
                     {enviandoPedidoPos
                       ? "Validando stock y enviando a POS..."

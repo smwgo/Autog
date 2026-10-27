@@ -13,6 +13,8 @@ export interface InspeccionVehiculoProps {
   onUpdateOrden?: (updated: UnifiedOrder) => void;
   onGenerarPdf?: () => void;
   onContinuar?: () => void;
+  textoContinuar?: string;
+  onFirmarDirecto?: () => void;
   onVolver?: () => void;
   mostrarToast?: (msg: string, tipo?: "ok" | "err") => void;
 }
@@ -375,6 +377,8 @@ export default function InspeccionVehiculo({
   onUpdateOrden,
   onGenerarPdf,
   onContinuar,
+  textoContinuar,
+  onFirmarDirecto,
   onVolver,
   mostrarToast = (msg) => console.log(msg),
 }: InspeccionVehiculoProps) {
@@ -418,12 +422,6 @@ export default function InspeccionVehiculo({
   const [hallazgos, setHallazgos] = useState<InspectionFinding[]>(() => {
     if (Array.isArray(ordenActiva?.inspectionFindings) && ordenActiva.inspectionFindings.length > 0) {
       return ordenActiva.inspectionFindings;
-    }
-    if (ordenActiva?.id && typeof window !== "undefined") {
-      try {
-        const saved = JSON.parse(localStorage.getItem(`taller_findings_${ordenActiva.id}`) || "null");
-        if (Array.isArray(saved) && saved.length > 0) return saved;
-      } catch {}
     }
     return [];
   });
@@ -668,20 +666,9 @@ export default function InspeccionVehiculo({
 
     if (orderChanged) {
       prevFindingsJsonRef.current = incomingJson;
-      // Cambio de orden: cargar hallazgos de la nueva orden (o del respaldo en localStorage)
+      // Cambio de orden: cargar hallazgos de la nueva orden desde Neon PostgreSQL
       if (Array.isArray(incomingFindings) && incomingFindings.length > 0) {
         setHallazgos(incomingFindings);
-      } else if (orderId) {
-        try {
-          const localBackup = JSON.parse(localStorage.getItem(`taller_findings_${orderId}`) || "null");
-          if (Array.isArray(localBackup) && localBackup.length > 0) {
-            setHallazgos(localBackup);
-          } else {
-            setHallazgos([]);
-          }
-        } catch {
-          setHallazgos([]);
-        }
       } else {
         setHallazgos([]);
       }
@@ -721,11 +708,7 @@ export default function InspeccionVehiculo({
 
       const currentReqId = ++syncRequestIdRef.current;
 
-      // 1. Inmediato y Optimista: guardar en localStorage y actualizar la orden en memoria
-      try {
-        localStorage.setItem(`taller_findings_${ordenActiva.id}`, JSON.stringify(nuevosHallazgos));
-      } catch {}
-
+      // 1. Inmediato y Optimista: actualizar la orden en memoria y persistir en Neon PostgreSQL
       prevFindingsJsonRef.current = JSON.stringify(nuevosHallazgos);
 
       if (onUpdateOrden) {
@@ -948,11 +931,6 @@ export default function InspeccionVehiculo({
     });
     hallazgosRef.current = actualizados;
     setHallazgos(actualizados);
-    if (ordenActiva?.id) {
-      try {
-        localStorage.setItem(`taller_findings_${ordenActiva.id}`, JSON.stringify(actualizados));
-      } catch {}
-    }
     if (debounceSyncPinRef.current) clearTimeout(debounceSyncPinRef.current);
     debounceSyncPinRef.current = setTimeout(() => {
       sincronizarHallazgosNeon(actualizados);
@@ -975,11 +953,6 @@ export default function InspeccionVehiculo({
     });
     hallazgosRef.current = actualizados;
     setHallazgos(actualizados);
-    if (ordenActiva?.id) {
-      try {
-        localStorage.setItem(`taller_findings_${ordenActiva.id}`, JSON.stringify(actualizados));
-      } catch {}
-    }
     if (debounceSyncPinRef.current) clearTimeout(debounceSyncPinRef.current);
     debounceSyncPinRef.current = setTimeout(() => {
       sincronizarHallazgosNeon(actualizados);
@@ -1606,11 +1579,6 @@ export default function InspeccionVehiculo({
     });
     hallazgosRef.current = actualizadosInit;
     setHallazgos(actualizadosInit);
-    if (ordenActiva?.id) {
-      try {
-        localStorage.setItem(`taller_findings_${ordenActiva.id}`, JSON.stringify(actualizadosInit));
-      } catch {}
-    }
     mostrarToast("✓ Nota de audio grabada y asociada.");
 
     try {
@@ -2369,9 +2337,41 @@ ${urlSeguimiento}`;
           =================================================================== */}
       {seccionActiva === "carroceria" ? (
         <div className="space-y-3 animate-fade-in">
+          {/* BOTONES DE PERSPECTIVAS DE CARROCERÍA (5 Vistas: Frontal, Trasera, Lat. Izq, Lat. Der, Superior) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+            {VISTAS_CARROCERIA.map((v) => {
+              const active = vistaActiva === v.id;
+              const cantVista = hallazgos.filter((h) => h.vista === v.id).length;
+              return (
+                <button
+                  key={v.id}
+                  id={`vista-tab-${v.id}`}
+                  type="button"
+                  onClick={() => {
+                    setVistaActiva(v.id);
+                    setPinSeleccionadoId(null);
+                    setPopoverAbierto(false);
+                  }}
+                  className={`h-10 px-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer text-xs font-bold active:scale-95 shadow-2xs ${
+                    active
+                      ? "bg-cyan-50 dark:bg-cyan-500/20 border-cyan-400 dark:border-cyan-500/40 text-cyan-700 dark:text-cyan-200 ring-1 ring-cyan-400/40 shadow-sm"
+                      : "bg-white dark:bg-white/[0.03] hover:bg-zinc-50 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 shadow-2xs"
+                  }`}
+                >
+                  <div className="p-0.5 rounded-md">{v.icon}</div>
+                  <span className="truncate">{v.label}</span>
+                  {cantVista > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+                      {cantVista}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
-      {/* LIENZO DEL VEHÍCULO CON PINES NUMERADOS */}
-      <div className="relative rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-white/10 p-1 sm:p-5 overflow-hidden select-none shadow-sm dark:shadow-none w-full">
+          {/* LIENZO DEL VEHÍCULO CON PINES NUMERADOS */}
+          <div className="relative rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-white/10 p-1 sm:p-5 overflow-hidden select-none shadow-sm dark:shadow-none w-full">
 
 
         <div
@@ -2408,148 +2408,7 @@ ${urlSeguimiento}`;
             <span>{lienzoOscuro ? "🌙 Neón 3D" : "☀️ Plano CAD"}</span>
           </button>
 
-          {/* Navegación de perspectivas y flechas en esquina superior izquierda */}
-          {!modoColocandoPin && !pinReubicandoId && (() => {
-            const infoVistaActual = SECUENCIA_VISTAS.find((v) => v.id === vistaActiva) || SECUENCIA_VISTAS[0];
-            return (
-              <div
-                ref={menuVistasRef}
-                onClick={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
-                onTouchEnd={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-                className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-30 flex items-center select-none"
-              >
-                {/* Control centralizado de navegación de vistas (Compacto en móvil y escritorio) */}
-                <div
-                  className={`flex items-center rounded-full border shadow-lg backdrop-blur-xl transition-all duration-200 p-0.5 sm:p-1 ${
-                    lienzoOscuro
-                      ? "bg-slate-950/90 border-white/15 hover:border-white/25 text-zinc-100 shadow-black/60 ring-1 ring-white/5"
-                      : "bg-white/95 border-zinc-300 hover:border-zinc-400 text-zinc-800 shadow-zinc-900/10 ring-1 ring-black/5"
-                  }`}
-                >
-                  {/* Flecha Anterior (Para atrás / Izquierda) */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navegarVista(-1);
-                    }}
-                    onTouchStart={(e) => e.stopPropagation()}
-                    onTouchEnd={(e) => e.stopPropagation()}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    title="Perspectiva anterior"
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/15 dark:hover:bg-white/15 transition-all cursor-pointer active:scale-90"
-                  >
-                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                    </svg>
-                  </button>
 
-                  {/* Selector con nombre de vista actual */}
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setMenuVistasAbierto((prev) => !prev);
-                      }}
-                      onTouchStart={(e) => e.stopPropagation()}
-                      onTouchEnd={(e) => e.stopPropagation()}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-full flex items-center gap-1.5 cursor-pointer hover:bg-white/10 active:scale-95 transition-all"
-                    >
-                      <span className="text-cyan-400 shrink-0 flex items-center justify-center [&>svg]:w-3.5 [&>svg]:h-3.5 sm:[&>svg]:w-4 sm:[&>svg]:h-4">
-                        {infoVistaActual.icon}
-                      </span>
-                      <span className="text-xs sm:text-xs font-bold tracking-wide">
-                        {infoVistaActual.short}
-                      </span>
-                      <svg
-                        className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-zinc-400 transition-transform duration-200 ${
-                          menuVistasAbierto ? "rotate-180 text-cyan-400" : ""
-                        }`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        strokeWidth={2.5}
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-
-                    {/* Menú flotante de selección de vista */}
-                    {menuVistasAbierto && (
-                      <div
-                        onClick={(e) => e.stopPropagation()}
-                        onTouchStart={(e) => e.stopPropagation()}
-                        onTouchEnd={(e) => e.stopPropagation()}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        className={`absolute left-0 top-full mt-1.5 w-44 sm:w-48 rounded-xl border p-1 sm:p-1.5 shadow-2xl backdrop-blur-2xl z-50 animate-fade-in ${
-                          lienzoOscuro
-                            ? "bg-slate-950/95 border-white/20 text-zinc-100 shadow-black/80 ring-1 ring-white/10"
-                            : "bg-white/95 border-zinc-200 text-zinc-800 shadow-xl"
-                        }`}
-                      >
-                        <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                          Perspectiva:
-                        </div>
-                        {SECUENCIA_VISTAS.map((v) => {
-                          const esActivo = vistaActiva === v.id;
-                          return (
-                            <button
-                              key={`dropdown-v-${v.id}`}
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                cambiarVista(v.id);
-                              }}
-                              onTouchStart={(e) => e.stopPropagation()}
-                              onTouchEnd={(e) => e.stopPropagation()}
-                              onPointerDown={(e) => e.stopPropagation()}
-                              className={`w-full flex items-center justify-between px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-semibold transition-all text-left cursor-pointer ${
-                                esActivo
-                                  ? "bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30"
-                                  : "text-zinc-300 hover:text-white hover:bg-white/10"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className={`[&>svg]:w-3.5 [&>svg]:h-3.5 ${esActivo ? "text-cyan-400" : "opacity-80"}`}>
-                                  {v.icon}
-                                </span>
-                                <span>{v.label}</span>
-                              </div>
-                              {esActivo && (
-                                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Flecha Siguiente (Adelante / Derecha) */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navegarVista(1);
-                    }}
-                    onTouchStart={(e) => e.stopPropagation()}
-                    onTouchEnd={(e) => e.stopPropagation()}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    title="Siguiente perspectiva"
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/15 dark:hover:bg-white/15 transition-all cursor-pointer active:scale-90"
-                  >
-                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            );
-          })()}
 
           {/* Banner de modo colocación de nuevo Pin */}
           {modoColocandoPin && (
@@ -2878,6 +2737,46 @@ ${urlSeguimiento}`;
               </div>
             )}
 
+            {/* 6 BOTONES DE SUBCATEGORÍA / SUBSISTEMA (Motor, Frenos, Suspensión, Eléctrico, A/C) */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+              {(SUBCATEGORIAS_SISTEMA[seccionActiva] || []).map((sub, idx) => {
+                const subActualId = subCategoriaPorSistema[seccionActiva] || (SUBCATEGORIAS_SISTEMA[seccionActiva] || [])[0]?.id;
+                const esActivo = subActualId === sub.id;
+                const listaSubs = SUBCATEGORIAS_SISTEMA[seccionActiva] || [];
+                const cantSub = hallazgos.filter(
+                  (h) =>
+                    h.vista === seccionActiva &&
+                    (sub.id === "Manual"
+                      ? (h.zona || "").includes("·") &&
+                        !listaSubs.some(
+                          (s) => s.id !== "Manual" && (h.zona || "").endsWith(`· ${s.id}`)
+                        )
+                      : (h.zona || "").endsWith(`· ${sub.id}`))
+                ).length;
+
+                return (
+                  <button
+                    key={`sub-${sub.id}`}
+                    type="button"
+                    onClick={() => cambiarSubcategoria(sub.id)}
+                    className={`h-10 px-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer text-xs font-bold active:scale-95 shadow-2xs ${
+                      esActivo
+                        ? "bg-cyan-50 dark:bg-cyan-500/20 border-cyan-400 dark:border-cyan-500/40 text-cyan-700 dark:text-cyan-200 ring-1 ring-cyan-400/40 shadow-sm"
+                        : "bg-white dark:bg-white/[0.03] hover:bg-zinc-50 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 shadow-2xs"
+                    }`}
+                  >
+                    <span>{sub.icon}</span>
+                    <span className="truncate">{sub.id}</span>
+                    {cantSub > 0 && (
+                      <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+                        {cantSub}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
             {/* LIENZO 3D INTERACTIVO DEL SISTEMA (Tocar para marcar pines) */}
             <div
               onClick={handleTocarLienzo}
@@ -2913,165 +2812,7 @@ ${urlSeguimiento}`;
                 <span>{lienzoOscuro ? "🌙 Neón 3D" : "☀️ Plano CAD"}</span>
               </button>
 
-              {/* Navegación de subcategorías con flechas en esquina superior izquierda (Igual que Carrocería) */}
-              {!modoColocandoPin && !pinReubicandoId && (() => {
-                const listaSubs = SUBCATEGORIAS_SISTEMA[seccionActiva] || [];
-                if (listaSubs.length === 0) return null;
-                const subActualId = subCategoriaPorSistema[seccionActiva] || listaSubs[0].id;
-                const infoSubActual = listaSubs.find((s) => s.id === subActualId) || listaSubs[0];
 
-                return (
-                  <div
-                    ref={menuSubcategoriasRef}
-                    onClick={(e) => e.stopPropagation()}
-                    onTouchStart={(e) => e.stopPropagation()}
-                    onTouchEnd={(e) => e.stopPropagation()}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    className="absolute top-3 left-3 z-30 flex items-center select-none"
-                  >
-                    {/* Control centralizado de navegación con flechas */}
-                    <div
-                      className={`flex items-center rounded-full border shadow-2xl backdrop-blur-2xl transition-all duration-200 p-1.5 sm:p-1 ${
-                        lienzoOscuro
-                          ? "bg-slate-950/95 border-white/20 hover:border-white/30 text-zinc-100 shadow-black/70 ring-1 ring-white/10"
-                          : "bg-white/95 border-zinc-300 hover:border-zinc-400 text-zinc-800 shadow-zinc-900/15 ring-1 ring-black/5"
-                      }`}
-                    >
-                      {/* Flecha Anterior */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navegarSubcategoria(-1);
-                        }}
-                        onTouchStart={(e) => e.stopPropagation()}
-                        onTouchEnd={(e) => e.stopPropagation()}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        title="Anterior subcategoría"
-                        className="w-12 h-12 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-zinc-200 hover:text-white hover:bg-white/15 dark:hover:bg-white/15 transition-all cursor-pointer active:scale-90"
-                      >
-                        <svg className="w-6 h-6 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                        </svg>
-                      </button>
-
-                      {/* Selector con nombre de subcategoría actual */}
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setMenuSubcategoriasAbierto((prev) => !prev);
-                          }}
-                          onTouchStart={(e) => e.stopPropagation()}
-                          onTouchEnd={(e) => e.stopPropagation()}
-                          onPointerDown={(e) => e.stopPropagation()}
-                          className="h-12 sm:h-9 px-4 sm:px-3 rounded-full flex items-center gap-2.5 sm:gap-1.5 cursor-pointer hover:bg-white/10 active:scale-95 transition-all"
-                        >
-                          <span className="text-base sm:text-sm shrink-0 flex items-center justify-center">
-                            {infoSubActual.icon}
-                          </span>
-                          <span className="text-base sm:text-xs md:text-sm font-black tracking-wide">
-                            {infoSubActual.id}
-                          </span>
-                          <svg
-                            className={`w-4 h-4 sm:w-3.5 sm:h-3.5 text-zinc-400 transition-transform duration-200 ${
-                              menuSubcategoriasAbierto ? "rotate-180 text-cyan-400" : ""
-                            }`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            strokeWidth={2.5}
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-
-                        {/* Menú flotante de selección de subcategoría */}
-                        {menuSubcategoriasAbierto && (
-                          <div
-                            onClick={(e) => e.stopPropagation()}
-                            onTouchStart={(e) => e.stopPropagation()}
-                            onTouchEnd={(e) => e.stopPropagation()}
-                            onPointerDown={(e) => e.stopPropagation()}
-                            className={`absolute left-0 top-full mt-2 w-64 sm:w-52 rounded-2xl border p-2 sm:p-1.5 shadow-2xl backdrop-blur-2xl z-50 animate-fade-in ${
-                              lienzoOscuro
-                                ? "bg-slate-950/95 border-white/20 text-zinc-100 shadow-black/80 ring-1 ring-white/10"
-                                : "bg-white/95 border-zinc-200 text-zinc-800 shadow-xl"
-                            }`}
-                          >
-                            <div className="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-zinc-400">
-                              {sistemaActual.name}:
-                            </div>
-                            {listaSubs.map((sub, idx) => {
-                              const esActivo = subActualId === sub.id;
-                              const cantSub = hallazgos.filter(
-                                (h) => h.vista === seccionActiva && (
-                                  sub.id === "Manual"
-                                    ? (h.zona || "").includes("·") && !listaSubs.some((s) => s.id !== "Manual" && (h.zona || "").endsWith(`· ${s.id}`))
-                                    : (h.zona || "").endsWith(`· ${sub.id}`)
-                                )
-                              ).length;
-
-                              return (
-                                <button
-                                  key={`dropdown-sub-${sub.id}`}
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    cambiarSubcategoria(sub.id);
-                                  }}
-                                  onTouchStart={(e) => e.stopPropagation()}
-                                  onTouchEnd={(e) => e.stopPropagation()}
-                                  onPointerDown={(e) => e.stopPropagation()}
-                                  className={`w-full flex items-center justify-between px-4 py-3 sm:px-3 sm:py-2 rounded-xl text-base sm:text-xs font-semibold transition-all text-left cursor-pointer ${
-                                    esActivo
-                                      ? "bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30"
-                                      : "text-zinc-300 hover:text-white hover:bg-white/10"
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <span className="text-base">{sub.icon}</span>
-                                    <span>{idx + 1}. {sub.id}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
-                                    {cantSub > 0 && (
-                                      <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
-                                        {cantSub}
-                                      </span>
-                                    )}
-                                    {esActivo && (
-                                      <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
-                                    )}
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Flecha Siguiente */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navegarSubcategoria(1);
-                        }}
-                        onTouchStart={(e) => e.stopPropagation()}
-                        onTouchEnd={(e) => e.stopPropagation()}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        title="Siguiente subcategoría"
-                        className="w-12 h-12 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-zinc-200 hover:text-white hover:bg-white/15 dark:hover:bg-white/15 transition-all cursor-pointer active:scale-90"
-                      >
-                        <svg className="w-6 h-6 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })()}
 
               {/* Banner de modo colocación de nuevo Pin */}
               {modoColocandoPin && (
@@ -3163,18 +2904,18 @@ ${urlSeguimiento}`;
                 return (
                   <div className="absolute inset-0 p-2 sm:p-4 pointer-events-none z-10">
                     <svg viewBox="0 0 1376 768" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
-                      <circle cx={zona.x} cy={zona.y} r="58" fill="#fbbf24" fillOpacity="0.18" className="animate-pulse" />
-                      <circle cx={zona.x} cy={zona.y} r="46" fill="none" stroke="#fbbf24" strokeWidth="6" />
-                      <circle cx={zona.x} cy={zona.y} r="62" fill="none" stroke="#fbbf24" strokeWidth="3" strokeDasharray="10 10" />
+                      <circle cx={zona.x} cy={zona.y} r="58" fill="#f43f5e" fillOpacity="0.25" className="animate-pulse" />
+                      <circle cx={zona.x} cy={zona.y} r="46" fill="none" stroke="#f43f5e" strokeWidth="10" />
+                      <circle cx={zona.x} cy={zona.y} r="64" fill="none" stroke="#f43f5e" strokeWidth="5" strokeDasharray="10 10" />
                       <text
                         x={labelX}
                         y={labelY}
                         textAnchor="middle"
-                        fontSize="38"
-                        fontWeight="700"
+                        fontSize="36"
+                        fontWeight="500"
                         fill="#fff"
                         stroke="#000"
-                        strokeWidth="8"
+                        strokeWidth="3"
                         paintOrder="stroke"
                       >
                         {subActual}
@@ -3608,15 +3349,27 @@ ${urlSeguimiento}`;
           </button>
         ) : <div />}
 
-        {onContinuar && (
-          <button
-            type="button"
-            onClick={onContinuar}
-            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white dark:bg-purple-500/20 dark:hover:bg-purple-500/30 dark:border dark:border-purple-500/40 dark:text-purple-300 text-xs font-bold transition-all cursor-pointer shadow-sm"
-          >
-            Siguiente →
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {onFirmarDirecto && (
+            <button
+              type="button"
+              onClick={onFirmarDirecto}
+              className="px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10 transition-all cursor-pointer"
+            >
+              ✍️ Firmar
+            </button>
+          )}
+
+          {onContinuar && (
+            <button
+              type="button"
+              onClick={onContinuar}
+              className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white dark:bg-purple-500/20 dark:hover:bg-purple-500/30 dark:border dark:border-purple-500/40 dark:text-purple-300 text-xs font-bold transition-all cursor-pointer shadow-sm"
+            >
+              {textoContinuar || "Siguiente →"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

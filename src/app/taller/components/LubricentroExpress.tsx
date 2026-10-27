@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from "react";
+import Link from "next/link";
 import ModalPresupuestoPdf from "@/components/taller/ModalPresupuestoPdf";
 import ModuloLubricentroCatalogo from "./ModuloLubricentroCatalogo";
 import ModuloCarWashCatalogo from "./ModuloCarWashCatalogo";
@@ -15,6 +16,7 @@ export interface LubricentroExpressProps {
   mostrarToast: (msg: string, tipo?: "ok" | "err") => void;
   onOrdenCreada?: (orden: any) => void;
   onCambiarATaller?: () => void;
+  onCambiarModulo?: (modulo: "taller" | "lubricentro" | "carwash" | "tecnicentro") => void;
   ordenActiva?: any;
   modoEspecialidad?: "lubricentro" | "carwash" | "tecnicentro";
   triggerAbrirConfig?: number;
@@ -525,6 +527,8 @@ export default function LubricentroExpress({
   serviciosCatalogo = [],
   mostrarToast,
   onOrdenCreada,
+  onCambiarATaller,
+  onCambiarModulo,
   ordenActiva,
   modoEspecialidad = "lubricentro",
   triggerAbrirConfig,
@@ -533,6 +537,11 @@ export default function LubricentroExpress({
   // CONTROL DE ETAPAS (2: Servicios Express, 4: Firma)
   // =========================================================================
   const [etapaActiva, setEtapaActiva] = useState<number>(2);
+
+  // Asegurar que al cambiar de especialidad comience siempre en el catálogo (etapa 2)
+  useEffect(() => {
+    setEtapaActiva(2);
+  }, [modoEspecialidad]);
 
   // =========================================================================
   // ETAPA 1: INGRESO LUBRICENTRO (NIVEL ACEITE, KM, PRÓXIMO CAMBIO, CHECKLIST, FOTOS R2)
@@ -1265,6 +1274,11 @@ export default function LubricentroExpress({
                   await sincronizarOrdenLubricentro({ items: nuevosItems });
                 }
               }}
+              onIrASiguiente={() => {
+                if (onCambiarModulo) onCambiarModulo("carwash");
+                else setEtapaActiva(4);
+              }}
+              nombreSiguiente="Car Wash"
               onIrAAvisoYFirma={() => setEtapaActiva(4)}
             />
           </div>
@@ -1282,6 +1296,11 @@ export default function LubricentroExpress({
                   await sincronizarOrdenLubricentro({ items: nuevosItems });
                 }
               }}
+              onIrASiguiente={() => {
+                if (onCambiarModulo) onCambiarModulo("tecnicentro");
+                else setEtapaActiva(4);
+              }}
+              nombreSiguiente="Tecnicentro"
               onIrAAvisoYFirma={() => setEtapaActiva(4)}
             />
           </div>
@@ -1319,26 +1338,17 @@ export default function LubricentroExpress({
         <div className="w-full space-y-4 animate-fade-in">
           <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/[0.08] space-y-4 shadow-xl">
             {/* Cabecera */}
-            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/[0.08] pb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-base">📲</span>
-                <h4 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-wider">
-                  Aviso y Firma
-                </h4>
-              </div>
-              {ordenActiva && (
-                <span className="font-mono text-xs text-zinc-600 dark:text-zinc-400">
-                  {ordenActiva.plate ? `Placa: ${ordenActiva.plate} • ` : ""}Orden #
-                  {String(ordenActiva.orderNumber || ordenActiva.id).replace(/^(?:OT|LUB)-\d{4}-/i, "")}
-                </span>
-              )}
+            <div className="flex items-center border-b border-zinc-200 dark:border-white/[0.08] pb-3">
+              <h4 className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-white">
+                Firma
+              </h4>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
               {/* Columna Izquierda: Estado y Aviso */}
               <div className="lg:col-span-5 space-y-3">
                 <div className="p-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/5 space-y-2 shadow-xs">
-                  <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block">Estado:</span>
+                  <span className="text-xs font-normal text-zinc-700 dark:text-zinc-300 block">Estado:</span>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                     {ESTADOS_LUBRICENTRO.map((st, idx) => {
                       const sel =
@@ -1348,15 +1358,15 @@ export default function LubricentroExpress({
                           .includes(st.name.toLowerCase().replace(/^\d+\s*/, ""));
 
                       const coloresActivoPorIndice = [
-                        "bg-amber-100 text-amber-800 border-amber-400 dark:bg-amber-500/25 dark:text-amber-200 dark:border-amber-400/60 ring-1 ring-amber-400/40 font-semibold shadow-sm",
-                        "bg-blue-100 text-blue-800 border-blue-400 dark:bg-blue-500/25 dark:text-blue-200 dark:border-blue-400/60 ring-1 ring-blue-400/40 font-semibold shadow-sm",
-                        "bg-rose-100 text-rose-800 border-rose-400 dark:bg-rose-500/25 dark:text-rose-200 dark:border-rose-400/60 ring-1 ring-rose-400/40 font-semibold shadow-sm",
-                        "bg-emerald-100 text-emerald-800 border-emerald-400 dark:bg-emerald-500/25 dark:text-emerald-200 dark:border-emerald-400/60 ring-1 ring-emerald-400/40 font-semibold shadow-sm",
-                        "bg-purple-100 text-purple-800 border-purple-400 dark:bg-purple-500/25 dark:text-purple-200 dark:border-purple-400/60 ring-1 ring-purple-400/40 font-semibold shadow-sm",
+                        "bg-amber-100 text-amber-800 border-amber-400 dark:bg-amber-500/25 dark:text-amber-200 dark:border-amber-400/60 ring-1 ring-amber-400/40 font-normal shadow-sm",
+                        "bg-blue-100 text-blue-800 border-blue-400 dark:bg-blue-500/25 dark:text-blue-200 dark:border-blue-400/60 ring-1 ring-blue-400/40 font-normal shadow-sm",
+                        "bg-rose-100 text-rose-800 border-rose-400 dark:bg-rose-500/25 dark:text-rose-200 dark:border-rose-400/60 ring-1 ring-rose-400/40 font-normal shadow-sm",
+                        "bg-emerald-100 text-emerald-800 border-emerald-400 dark:bg-emerald-500/25 dark:text-emerald-200 dark:border-emerald-400/60 ring-1 ring-emerald-400/40 font-normal shadow-sm",
+                        "bg-purple-100 text-purple-800 border-purple-400 dark:bg-purple-500/25 dark:text-purple-200 dark:border-purple-400/60 ring-1 ring-purple-400/40 font-normal shadow-sm",
                       ];
                       const estiloActivo = coloresActivoPorIndice[idx % coloresActivoPorIndice.length];
                       const estiloPlomo =
-                        "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-zinc-200 dark:border-white/10";
+                        "bg-zinc-100 hover:bg-zinc-200 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-zinc-200 dark:border-white/10 font-normal";
 
                       return (
                         <button
@@ -1374,27 +1384,17 @@ export default function LubricentroExpress({
                   </div>
                 </div>
 
-                {/* Aviso WhatsApp + Sticker QR */}
+                {/* Aviso WhatsApp */}
                 <div className="p-3.5 rounded-xl bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/5 space-y-2 shadow-xs">
-                  <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block">Aviso:</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={handleEnviarWhatsAppLubricentro}
-                      className="h-9 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 border border-emerald-300 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                    >
-                      <span>💬</span>
-                      <span>WhatsApp</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMostrarModalStickerQr(true)}
-                      className="h-9 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25 border border-amber-300 dark:border-amber-500/35 text-amber-700 dark:text-amber-300 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                    >
-                      <span>🏷️</span>
-                      <span>Sticker QR</span>
-                    </button>
-                  </div>
+                  <span className="text-xs font-normal text-zinc-700 dark:text-zinc-300 block">Aviso:</span>
+                  <button
+                    type="button"
+                    onClick={handleEnviarWhatsAppLubricentro}
+                    className="w-full h-9 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 border border-emerald-300 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-normal transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 shadow-sm"
+                  >
+                    <span>💬</span>
+                    <span>WhatsApp</span>
+                  </button>
                 </div>
               </div>
 
@@ -1528,39 +1528,54 @@ export default function LubricentroExpress({
               </div>
             </div>
 
-            {/* Pie: Pasar a POS */}
-            <div className="pt-3 border-t border-zinc-200 dark:border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-normal">
-                <span>Cobro en POS.</span>
-              </div>
+            {/* Pie: Pasar a Propuesta */}
+            <div className="pt-3 border-t border-zinc-200 dark:border-white/[0.08] flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEtapaActiva(2)}
+                className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-700 dark:bg-white/5 dark:hover:bg-white/10 dark:border-transparent dark:text-zinc-300 text-xs font-normal cursor-pointer"
+              >
+                Anterior
+              </button>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                <button
-                  type="button"
-                  onClick={() => setEtapaActiva(2)}
-                  className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-700 dark:bg-white/5 dark:hover:bg-white/10 dark:border-transparent dark:text-zinc-300 text-xs font-normal cursor-pointer"
-                >
-                  Anterior
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handlePasarAPosLubricentro(false)}
-                  disabled={guardandoPasarPos}
-                  className="px-4 py-2 rounded-xl text-xs font-normal bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 dark:border-emerald-500/35 dark:text-emerald-300 transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
-                >
-                  <span>
-                    {guardandoPasarPos
-                      ? "Procesando..."
-                      : ordenActiva &&
-                        (ordenActiva.posRequestId ||
-                          ordenActiva.status === "EN_CAJA" ||
-                          ordenActiva.status?.toLowerCase().includes("caja"))
-                      ? "✓ Pasada a POS"
-                      : "🚀 Pasar a POS"}
-                  </span>
-                </button>
-              </div>
+              <button
+                type="button"
+                disabled={guardandoFirma}
+                onClick={async () => {
+                  if (ordenActiva) {
+                    setGuardandoFirma(true);
+                    try {
+                      let firmaDataUrl: string | undefined;
+                      if (tieneTrazosFirmaRef.current && canvasFirmaRef.current) {
+                        firmaDataUrl = canvasFirmaRef.current.toDataURL("image/png");
+                      }
+                      const res = await fetch("/api/taller/operacion", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          action: "PASAR_A_PROPUESTA",
+                          orderId: ordenActiva.id,
+                          quoteSignatureUrl: modoFirma === "ACEPTACION" ? firmaDataUrl : undefined,
+                          deliverySignatureUrl: modoFirma === "ENTREGA" ? firmaDataUrl : undefined,
+                          signedBy: ordenActiva.client || "Cliente",
+                          nextOilChangeKm: kmProximoCambio ? Number(kmProximoCambio) : undefined,
+                        }),
+                      });
+                      const data = await res.json();
+                      if (data.success && data.activeOrder) {
+                        onOrdenCreada?.(data.activeOrder);
+                      }
+                    } catch {}
+                    setGuardandoFirma(false);
+                  }
+                  window.location.href = "/presupuestos";
+                }}
+                className="px-4 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-700 dark:bg-sky-500/15 dark:hover:bg-sky-500/25 dark:border-sky-500/35 dark:text-sky-300 text-xs font-normal backdrop-blur-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                title="Pasar a Propuesta"
+              >
+                <span>📋</span>
+                <span>Pasar a Propuesta</span>
+              </button>
             </div>
           </div>
         </div>
