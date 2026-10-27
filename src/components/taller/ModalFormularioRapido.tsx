@@ -57,9 +57,9 @@ const ESPECIALIDADES_INFO = [
     id: "carwash" as EspecialidadTipo,
     label: "Car Wash",
     tipoBackend: "Lavado" as const,
-    color: "cyan",
-    activeClass: "bg-cyan-600 text-white shadow-lg shadow-cyan-500/30 border-cyan-500",
-    badgeClass: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30",
+    color: "purple",
+    activeClass: "bg-purple-500/15 text-purple-600 dark:text-purple-300 shadow-sm shadow-purple-500/10 border-purple-500/30",
+    badgeClass: "bg-purple-500/10 text-purple-400 border-purple-500/30",
     presets: ["Lavado", "Completo", "Encerado", "Motor", "Salón", "Chasis", "Pulido"],
     icon: (
       <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>

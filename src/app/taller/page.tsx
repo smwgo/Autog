@@ -704,12 +704,12 @@ export const MODULOS_ESPECIALIDADES = [
     shortName: "Car Wash",
     name: "Car Wash & Detailing",
     desc: "Lavado premium, aspirado y estética",
-    color: "cyan",
-    bgClass: "bg-cyan-500/10 dark:bg-cyan-500/15",
-    borderClass: "border-cyan-500/30 dark:border-cyan-400/35",
-    textClass: "text-cyan-600 dark:text-cyan-300",
-    shadowClass: "shadow-sm shadow-cyan-500/10",
-    dotClass: "bg-cyan-500",
+    color: "purple",
+    bgClass: "bg-purple-500/10 dark:bg-purple-500/15",
+    borderClass: "border-purple-500/30 dark:border-purple-400/35",
+    textClass: "text-purple-600 dark:text-purple-300",
+    shadowClass: "shadow-sm shadow-purple-500/10",
+    dotClass: "bg-purple-500",
     svg: (className = "w-4 h-4") => (
       <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
@@ -5175,11 +5175,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 <button
                   type="button"
                   onClick={handlePrevModulo}
-                  className="h-11 w-8 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors shrink-0 z-10 active:scale-95 cursor-pointer rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5"
+                  className="h-9 w-8 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors shrink-0 z-10 active:scale-95 cursor-pointer rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5"
                   title="Anterior especialidad"
                   aria-label="Anterior"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
@@ -5190,7 +5190,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   onScroll={handleMobileSliderScroll}
                   className="flex-1 flex overflow-x-auto snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden touch-pan-x"
                 >
-                  {MODULOS_ESPECIALIDADES.map((mod, idx) => {
+                  {MODULOS_ESPECIALIDADES.map((mod) => {
                     const isActivo = moduloTaller === mod.id;
                     return (
                       <div
@@ -5200,42 +5200,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                         <button
                           type="button"
                           onClick={() => setModuloTaller(mod.id)}
-                          className={`w-full h-11 px-2.5 rounded-xl flex items-center justify-between transition-all select-none cursor-pointer ${
+                          className={`w-full h-9 px-3.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 transition-all select-none cursor-pointer ${
                             isActivo
-                              ? `${mod.bgClass} border ${mod.borderClass} text-white shadow-md ${mod.shadowClass} scale-[1.01]`
-                              : "bg-zinc-100/80 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 border border-transparent"
+                              ? `${mod.bgClass} border ${mod.borderClass} text-white shadow-lg ${mod.shadowClass} scale-[1.01]`
+                              : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
                           }`}
                         >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span
-                              className={`p-1.5 rounded-lg shrink-0 ${
-                                isActivo
-                                  ? "bg-white/20 text-white"
-                                  : "bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-zinc-300"
-                              }`}
-                            >
-                              {mod.svg("w-4 h-4")}
-                            </span>
-                            <div className="text-left min-w-0">
-                              <div className="text-xs font-bold leading-tight truncate">{mod.name}</div>
-                              <div
-                                className={`text-[10px] leading-tight truncate ${
-                                  isActivo ? "text-white/80" : "text-zinc-400 dark:text-zinc-500"
-                                }`}
-                              >
-                                {mod.desc}
-                              </div>
-                            </div>
-                          </div>
-                          <div
-                            className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ml-1 ${
-                              isActivo
-                                ? "bg-black/25 text-white"
-                                : "bg-zinc-200 dark:bg-white/10 text-zinc-400"
-                            }`}
-                          >
-                            {idx + 1}/4
-                          </div>
+                          {mod.svg("w-4 h-4 shrink-0")}
+                          <span className="whitespace-nowrap">{mod.shortName}</span>
                         </button>
                       </div>
                     );
@@ -5246,11 +5218,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 <button
                   type="button"
                   onClick={handleNextModulo}
-                  className="h-11 w-8 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors shrink-0 z-10 active:scale-95 cursor-pointer rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5"
+                  className="h-9 w-8 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors shrink-0 z-10 active:scale-95 cursor-pointer rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5"
                   title="Siguiente especialidad"
                   aria-label="Siguiente"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
@@ -5309,8 +5281,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     onClick={() => setModuloTaller(mod.id)}
                     className={`h-9 px-3.5 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                       isActivo
-                        ? `${mod.bgClass} border ${mod.borderClass} text-white shadow-lg ${mod.shadowClass} scale-[1.01]`
-                        : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
+                        ? `${mod.bgClass} border ${mod.borderClass} ${mod.textClass} ${mod.shadowClass} backdrop-blur-sm`
+                        : "border border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
                     }`}
                     title={mod.name}
                   >
