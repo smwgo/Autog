@@ -464,6 +464,7 @@ export default function InspeccionVehiculo({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuVistasAbierto]);
+
   const [tipoSeleccionado, setTipoSeleccionado] = useState("Rayón");
   const [observacionTexto, setObservacionTexto] = useState("");
   const [subiendoFotoPin, setSubiendoFotoPin] = useState(false);
@@ -547,6 +548,43 @@ export default function InspeccionVehiculo({
       }
     }
   }, [seccionActiva]);
+
+  const [menuSubcategoriasAbierto, setMenuSubcategoriasAbierto] = useState<boolean>(false);
+  const menuSubcategoriasRef = useRef<HTMLDivElement | null>(null);
+
+  const cambiarSubcategoria = useCallback(
+    (nuevaSub: string) => {
+      setSubCategoriaPorSistema((prev) => ({ ...prev, [seccionActiva]: nuevaSub }));
+      setPinSeleccionadoId(null);
+      setPopoverAbierto(false);
+      setMenuSubcategoriasAbierto(false);
+    },
+    [seccionActiva]
+  );
+
+  const navegarSubcategoria = useCallback(
+    (direccion: 1 | -1) => {
+      const lista = SUBCATEGORIAS_SISTEMA[seccionActiva] || [];
+      if (lista.length === 0) return;
+      const subActual = subCategoriaPorSistema[seccionActiva] || lista[0].id;
+      const indexActual = lista.findIndex((s) => s.id === subActual);
+      const total = lista.length;
+      const nuevoIndex = (indexActual + direccion + total) % total;
+      cambiarSubcategoria(lista[nuevoIndex].id);
+    },
+    [seccionActiva, subCategoriaPorSistema, cambiarSubcategoria]
+  );
+
+  useEffect(() => {
+    if (!menuSubcategoriasAbierto) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuSubcategoriasRef.current && !menuSubcategoriasRef.current.contains(e.target as Node)) {
+        setMenuSubcategoriasAbierto(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuSubcategoriasAbierto]);
 
   const [evaluacionesPlantilla, setEvaluacionesPlantilla] = useState<Record<string, any>>({});
 
@@ -741,9 +779,8 @@ export default function InspeccionVehiculo({
   const handleTocarLienzo = (
     e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>
   ) => {
-    const esToque = "touches" in e || "changedTouches" in e;
-    // Un toque libre se registra con el clic que sigue al toque (evita duplicados y pines al hacer scroll)
-    if (!modoColocandoPin && !pinReubicandoId && esToque) {
+    // Solo permitir colocar o reubicar un pin cuando se haya presionado previamente "+ Generar" o "Reubicar"
+    if (!modoColocandoPin && !pinReubicandoId) {
       return;
     }
     const ahora = Date.now();
@@ -2334,14 +2371,14 @@ ${urlSeguimiento}`;
         <div className="space-y-3 animate-fade-in">
 
       {/* LIENZO DEL VEHÍCULO CON PINES NUMERADOS */}
-      <div className="relative rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-white/10 p-3 sm:p-5 overflow-hidden select-none shadow-sm dark:shadow-none">
+      <div className="relative rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-white/10 p-1 sm:p-5 overflow-hidden select-none shadow-sm dark:shadow-none w-full">
 
 
         <div
           onClick={handleTocarLienzo}
           onTouchEnd={handleTocarLienzo}
           style={{ touchAction: "manipulation" }}
-          className={`relative w-full h-72 sm:h-96 rounded-xl border flex items-center justify-center overflow-hidden group transition-all ${
+          className={`relative w-full aspect-[16/10] sm:aspect-auto sm:h-96 min-h-[240px] rounded-xl border flex items-center justify-center overflow-hidden group transition-all ${
             lienzoOscuro
               ? "bg-slate-950 border-cyan-500/30 shadow-[0_0_35px_rgba(6,182,212,0.12)]"
               : "bg-slate-50 border-slate-300/80 shadow-[inset_0_2px_12px_rgba(0,0,0,0.03)] bg-[radial-gradient(#94a3b8_1.2px,transparent_1.2px)] [background-size:22px_22px]"
@@ -2362,7 +2399,7 @@ ${urlSeguimiento}`;
             onTouchEnd={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
             title="Alternar fondo: Plano Técnico CAD (Claro) / Neón 3D (Oscuro)"
-            className={`absolute top-3 right-3 z-30 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer backdrop-blur-md shadow-md ${
+            className={`absolute top-2.5 right-2.5 sm:top-3 sm:right-3 z-30 h-7 sm:h-8 px-2.5 sm:px-3 rounded-full text-[11px] sm:text-xs font-bold border transition-all flex items-center gap-1 cursor-pointer backdrop-blur-md shadow-md ${
               lienzoOscuro
                 ? "bg-slate-900/85 hover:bg-slate-800 border-cyan-500/40 text-cyan-300"
                 : "bg-white/95 hover:bg-zinc-100 border-zinc-300 text-zinc-800 shadow-sm"
@@ -2381,14 +2418,14 @@ ${urlSeguimiento}`;
                 onTouchStart={(e) => e.stopPropagation()}
                 onTouchEnd={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
-                className="absolute top-3 left-3 z-30 flex items-center select-none"
+                className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 z-30 flex items-center select-none"
               >
-                {/* Control centralizado de navegación de vistas (Grande en móvil, Moderno y Minimalista) */}
+                {/* Control centralizado de navegación de vistas (Compacto en móvil y escritorio) */}
                 <div
-                  className={`flex items-center rounded-full border shadow-2xl backdrop-blur-2xl transition-all duration-200 p-1.5 sm:p-1 ${
+                  className={`flex items-center rounded-full border shadow-lg backdrop-blur-xl transition-all duration-200 p-0.5 sm:p-1 ${
                     lienzoOscuro
-                      ? "bg-slate-950/95 border-white/20 hover:border-white/30 text-zinc-100 shadow-black/70 ring-1 ring-white/10"
-                      : "bg-white/95 border-zinc-300 hover:border-zinc-400 text-zinc-800 shadow-zinc-900/15 ring-1 ring-black/5"
+                      ? "bg-slate-950/90 border-white/15 hover:border-white/25 text-zinc-100 shadow-black/60 ring-1 ring-white/5"
+                      : "bg-white/95 border-zinc-300 hover:border-zinc-400 text-zinc-800 shadow-zinc-900/10 ring-1 ring-black/5"
                   }`}
                 >
                   {/* Flecha Anterior (Para atrás / Izquierda) */}
@@ -2402,9 +2439,9 @@ ${urlSeguimiento}`;
                     onTouchEnd={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                     title="Perspectiva anterior"
-                    className="w-12 h-12 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-zinc-200 hover:text-white hover:bg-white/15 dark:hover:bg-white/15 transition-all cursor-pointer active:scale-90"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/15 dark:hover:bg-white/15 transition-all cursor-pointer active:scale-90"
                   >
-                    <svg className="w-6 h-6 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
                     </svg>
                   </button>
@@ -2420,16 +2457,16 @@ ${urlSeguimiento}`;
                       onTouchStart={(e) => e.stopPropagation()}
                       onTouchEnd={(e) => e.stopPropagation()}
                       onPointerDown={(e) => e.stopPropagation()}
-                      className="h-12 sm:h-9 px-4 sm:px-3 rounded-full flex items-center gap-2.5 sm:gap-1.5 cursor-pointer hover:bg-white/10 active:scale-95 transition-all"
+                      className="h-7 sm:h-8 px-2 sm:px-2.5 rounded-full flex items-center gap-1.5 cursor-pointer hover:bg-white/10 active:scale-95 transition-all"
                     >
-                      <span className="text-cyan-400 shrink-0 flex items-center justify-center [&>svg]:w-6 [&>svg]:h-6 sm:[&>svg]:w-4 sm:[&>svg]:h-4">
+                      <span className="text-cyan-400 shrink-0 flex items-center justify-center [&>svg]:w-3.5 [&>svg]:h-3.5 sm:[&>svg]:w-4 sm:[&>svg]:h-4">
                         {infoVistaActual.icon}
                       </span>
-                      <span className="text-base sm:text-xs md:text-sm font-black tracking-wide">
+                      <span className="text-xs sm:text-xs font-bold tracking-wide">
                         {infoVistaActual.short}
                       </span>
                       <svg
-                        className={`w-4 h-4 sm:w-3.5 sm:h-3.5 text-zinc-400 transition-transform duration-200 ${
+                        className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-zinc-400 transition-transform duration-200 ${
                           menuVistasAbierto ? "rotate-180 text-cyan-400" : ""
                         }`}
                         fill="none"
@@ -2448,13 +2485,13 @@ ${urlSeguimiento}`;
                         onTouchStart={(e) => e.stopPropagation()}
                         onTouchEnd={(e) => e.stopPropagation()}
                         onPointerDown={(e) => e.stopPropagation()}
-                        className={`absolute left-0 top-full mt-2 w-64 sm:w-52 rounded-2xl border p-2 sm:p-1.5 shadow-2xl backdrop-blur-2xl z-50 animate-fade-in ${
+                        className={`absolute left-0 top-full mt-1.5 w-44 sm:w-48 rounded-xl border p-1 sm:p-1.5 shadow-2xl backdrop-blur-2xl z-50 animate-fade-in ${
                           lienzoOscuro
                             ? "bg-slate-950/95 border-white/20 text-zinc-100 shadow-black/80 ring-1 ring-white/10"
                             : "bg-white/95 border-zinc-200 text-zinc-800 shadow-xl"
                         }`}
                       >
-                        <div className="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-zinc-400">
+                        <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                           Perspectiva:
                         </div>
                         {SECUENCIA_VISTAS.map((v) => {
@@ -2470,20 +2507,20 @@ ${urlSeguimiento}`;
                               onTouchStart={(e) => e.stopPropagation()}
                               onTouchEnd={(e) => e.stopPropagation()}
                               onPointerDown={(e) => e.stopPropagation()}
-                              className={`w-full flex items-center justify-between px-4 py-3 sm:px-3 sm:py-2 rounded-xl text-base sm:text-xs font-semibold transition-all text-left cursor-pointer ${
+                              className={`w-full flex items-center justify-between px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-semibold transition-all text-left cursor-pointer ${
                                 esActivo
                                   ? "bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30"
                                   : "text-zinc-300 hover:text-white hover:bg-white/10"
                               }`}
                             >
-                              <div className="flex items-center gap-3">
-                                <span className={esActivo ? "text-cyan-400" : "opacity-80"}>
+                              <div className="flex items-center gap-2">
+                                <span className={`[&>svg]:w-3.5 [&>svg]:h-3.5 ${esActivo ? "text-cyan-400" : "opacity-80"}`}>
                                   {v.icon}
                                 </span>
                                 <span>{v.label}</span>
                               </div>
                               {esActivo && (
-                                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+                                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                               )}
                             </button>
                           );
@@ -2503,9 +2540,9 @@ ${urlSeguimiento}`;
                     onTouchEnd={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                     title="Siguiente perspectiva"
-                    className="w-12 h-12 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-zinc-200 hover:text-white hover:bg-white/15 dark:hover:bg-white/15 transition-all cursor-pointer active:scale-90"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/15 dark:hover:bg-white/15 transition-all cursor-pointer active:scale-90"
                   >
-                    <svg className="w-6 h-6 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                     </svg>
                   </button>
@@ -2561,7 +2598,7 @@ ${urlSeguimiento}`;
             </div>
           )}
 
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none p-2 sm:p-4">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none p-0 sm:p-3">
             <img
               ref={imagenVehiculoRef}
               src={
@@ -2587,7 +2624,7 @@ ${urlSeguimiento}`;
                 filter: "none",
                 mixBlendMode: "normal",
               }}
-              className="max-w-full max-h-full w-auto h-auto object-contain select-none inspeccion-wireframe-img drop-shadow-sm"
+              className="w-full h-full object-contain select-none inspeccion-wireframe-img drop-shadow-sm"
             />
           </div>
 
@@ -2768,7 +2805,7 @@ ${urlSeguimiento}`;
     </div>
   ) : (
     /* SISTEMAS MECÁNICOS Y ELÉCTRICOS (Motor, Frenos, Suspensión, Eléctrico) */
-    <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-white/10 space-y-4 animate-fade-in shadow-sm dark:shadow-none">
+    <div className="p-1 sm:p-5 rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-white/10 space-y-3 animate-fade-in shadow-sm dark:shadow-none w-full">
       {(() => {
         const sistemaActual = SISTEMAS_INSPECCION.find((s) => s.id === seccionActiva);
         if (!sistemaActual) return null;
@@ -2811,64 +2848,24 @@ ${urlSeguimiento}`;
                 </div>
               </div>
             ) : (
-              SUBCATEGORIAS_SISTEMA[seccionActiva] && (
-                <div className="space-y-2 pb-1">
-                  <div className="flex sm:grid sm:grid-cols-6 gap-2 overflow-x-auto no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x">
-                    {SUBCATEGORIAS_SISTEMA[seccionActiva].map((sub, idx) => {
-                      const activa = subCategoriaPorSistema[seccionActiva] === sub.id;
-                      const cantSub = hallazgos.filter(
-                        (h) => h.vista === seccionActiva && (
-                          sub.id === "Manual"
-                            ? (h.zona || "").includes("·") && !SUBCATEGORIAS_SISTEMA[seccionActiva].some((s) => s.id !== "Manual" && (h.zona || "").endsWith(`· ${s.id}`))
-                            : (h.zona || "").endsWith(`· ${sub.id}`)
-                        )
-                      ).length;
-                      return (
-                        <button
-                          key={sub.id}
-                          type="button"
-                          onClick={() => setSubCategoriaPorSistema((prev) => ({ ...prev, [seccionActiva]: sub.id }))}
-                          className={`h-10 sm:h-12 px-3 sm:px-0 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shrink-0 ${
-                            activa
-                              ? "bg-purple-50 dark:bg-purple-500/20 border-purple-400 dark:border-purple-500/40 text-purple-700 dark:text-purple-300 shadow-sm"
-                              : "bg-white dark:bg-white/[0.02] hover:bg-zinc-50 dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 shadow-sm dark:shadow-none"
-                          }`}
-                        >
-                          <div className="p-1 rounded-md bg-zinc-100 dark:bg-white/5 text-sm leading-none shrink-0">{sub.icon}</div>
-                          <span className="text-xs font-semibold whitespace-nowrap">
-                            {idx + 1}. {sub.id}
-                          </span>
-                          {cantSub > 0 && (
-                            <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center shrink-0">
-                              {cantSub}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
+              subCategoriaPorSistema[seccionActiva] === "Manual" && (
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 p-3 sm:p-3.5 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 animate-fade-in">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-sm">✏️</span>
+                    <label className="text-xs sm:text-sm font-normal text-zinc-500 dark:text-zinc-400">
+                      Subcategoría:
+                    </label>
                   </div>
-
-                  {/* Input de subcategoría manual cuando se selecciona "Manual" */}
-                  {subCategoriaPorSistema[seccionActiva] === "Manual" && (
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 p-3 sm:p-3.5 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 animate-fade-in">
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-sm">✏️</span>
-                        <label className="text-xs sm:text-sm font-normal text-zinc-500 dark:text-zinc-400">
-                          Subcategoría:
-                        </label>
-                      </div>
-                      <input
-                        type="text"
-                        value={subcategoriaManualPorSistema[seccionActiva] || ""}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setSubcategoriaManualPorSistema((prev) => ({ ...prev, [seccionActiva]: val }));
-                        }}
-                        placeholder="Ej: Inyectores"
-                        className="flex-1 h-11 sm:h-12 px-4 text-sm font-medium rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 shadow-sm"
-                      />
-                    </div>
-                  )}
+                  <input
+                    type="text"
+                    value={subcategoriaManualPorSistema[seccionActiva] || ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSubcategoriaManualPorSistema((prev) => ({ ...prev, [seccionActiva]: val }));
+                    }}
+                    placeholder="Ej: Inyectores"
+                    className="flex-1 h-11 sm:h-12 px-4 text-sm font-medium rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 shadow-sm"
+                  />
                 </div>
               )
             )}
@@ -2886,7 +2883,7 @@ ${urlSeguimiento}`;
               onClick={handleTocarLienzo}
               onTouchEnd={handleTocarLienzo}
               style={{ touchAction: "manipulation" }}
-              className={`relative w-full h-72 sm:h-96 rounded-xl border flex items-center justify-center overflow-hidden group transition-all ${
+              className={`relative w-full aspect-[16/10] sm:aspect-auto sm:h-96 min-h-[240px] rounded-xl border flex items-center justify-center overflow-hidden group transition-all ${
                 lienzoOscuro
                   ? "bg-slate-950 border-cyan-500/30 shadow-[0_0_35px_rgba(6,182,212,0.12)]"
                   : "bg-slate-50 border-slate-300/80 shadow-[inset_0_2px_12px_rgba(0,0,0,0.03)] bg-[radial-gradient(#94a3b8_1.2px,transparent_1.2px)] [background-size:22px_22px]"
@@ -2903,8 +2900,11 @@ ${urlSeguimiento}`;
                   e.stopPropagation();
                   setModoVisualLienzo(lienzoOscuro ? "claro" : "oscuro");
                 }}
+                onTouchStart={(e) => e.stopPropagation()}
+                onTouchEnd={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
                 title="Alternar fondo: Plano Técnico CAD (Claro) / Neón 3D (Oscuro)"
-                className={`absolute top-2.5 right-2.5 z-30 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all flex items-center gap-1.5 cursor-pointer backdrop-blur-md shadow-md ${
+                className={`absolute top-3 right-3 z-30 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer backdrop-blur-md shadow-md ${
                   lienzoOscuro
                     ? "bg-slate-900/85 hover:bg-slate-800 border-cyan-500/40 text-cyan-300"
                     : "bg-white/95 hover:bg-zinc-100 border-zinc-300 text-zinc-800 shadow-sm"
@@ -2912,6 +2912,166 @@ ${urlSeguimiento}`;
               >
                 <span>{lienzoOscuro ? "🌙 Neón 3D" : "☀️ Plano CAD"}</span>
               </button>
+
+              {/* Navegación de subcategorías con flechas en esquina superior izquierda (Igual que Carrocería) */}
+              {!modoColocandoPin && !pinReubicandoId && (() => {
+                const listaSubs = SUBCATEGORIAS_SISTEMA[seccionActiva] || [];
+                if (listaSubs.length === 0) return null;
+                const subActualId = subCategoriaPorSistema[seccionActiva] || listaSubs[0].id;
+                const infoSubActual = listaSubs.find((s) => s.id === subActualId) || listaSubs[0];
+
+                return (
+                  <div
+                    ref={menuSubcategoriasRef}
+                    onClick={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    onTouchEnd={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="absolute top-3 left-3 z-30 flex items-center select-none"
+                  >
+                    {/* Control centralizado de navegación con flechas */}
+                    <div
+                      className={`flex items-center rounded-full border shadow-2xl backdrop-blur-2xl transition-all duration-200 p-1.5 sm:p-1 ${
+                        lienzoOscuro
+                          ? "bg-slate-950/95 border-white/20 hover:border-white/30 text-zinc-100 shadow-black/70 ring-1 ring-white/10"
+                          : "bg-white/95 border-zinc-300 hover:border-zinc-400 text-zinc-800 shadow-zinc-900/15 ring-1 ring-black/5"
+                      }`}
+                    >
+                      {/* Flecha Anterior */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navegarSubcategoria(-1);
+                        }}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onTouchEnd={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        title="Anterior subcategoría"
+                        className="w-12 h-12 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-zinc-200 hover:text-white hover:bg-white/15 dark:hover:bg-white/15 transition-all cursor-pointer active:scale-90"
+                      >
+                        <svg className="w-6 h-6 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                        </svg>
+                      </button>
+
+                      {/* Selector con nombre de subcategoría actual */}
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMenuSubcategoriasAbierto((prev) => !prev);
+                          }}
+                          onTouchStart={(e) => e.stopPropagation()}
+                          onTouchEnd={(e) => e.stopPropagation()}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          className="h-12 sm:h-9 px-4 sm:px-3 rounded-full flex items-center gap-2.5 sm:gap-1.5 cursor-pointer hover:bg-white/10 active:scale-95 transition-all"
+                        >
+                          <span className="text-base sm:text-sm shrink-0 flex items-center justify-center">
+                            {infoSubActual.icon}
+                          </span>
+                          <span className="text-base sm:text-xs md:text-sm font-black tracking-wide">
+                            {infoSubActual.id}
+                          </span>
+                          <svg
+                            className={`w-4 h-4 sm:w-3.5 sm:h-3.5 text-zinc-400 transition-transform duration-200 ${
+                              menuSubcategoriasAbierto ? "rotate-180 text-cyan-400" : ""
+                            }`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2.5}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+
+                        {/* Menú flotante de selección de subcategoría */}
+                        {menuSubcategoriasAbierto && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
+                            onTouchEnd={(e) => e.stopPropagation()}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            className={`absolute left-0 top-full mt-2 w-64 sm:w-52 rounded-2xl border p-2 sm:p-1.5 shadow-2xl backdrop-blur-2xl z-50 animate-fade-in ${
+                              lienzoOscuro
+                                ? "bg-slate-950/95 border-white/20 text-zinc-100 shadow-black/80 ring-1 ring-white/10"
+                                : "bg-white/95 border-zinc-200 text-zinc-800 shadow-xl"
+                            }`}
+                          >
+                            <div className="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-zinc-400">
+                              {sistemaActual.name}:
+                            </div>
+                            {listaSubs.map((sub, idx) => {
+                              const esActivo = subActualId === sub.id;
+                              const cantSub = hallazgos.filter(
+                                (h) => h.vista === seccionActiva && (
+                                  sub.id === "Manual"
+                                    ? (h.zona || "").includes("·") && !listaSubs.some((s) => s.id !== "Manual" && (h.zona || "").endsWith(`· ${s.id}`))
+                                    : (h.zona || "").endsWith(`· ${sub.id}`)
+                                )
+                              ).length;
+
+                              return (
+                                <button
+                                  key={`dropdown-sub-${sub.id}`}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    cambiarSubcategoria(sub.id);
+                                  }}
+                                  onTouchStart={(e) => e.stopPropagation()}
+                                  onTouchEnd={(e) => e.stopPropagation()}
+                                  onPointerDown={(e) => e.stopPropagation()}
+                                  className={`w-full flex items-center justify-between px-4 py-3 sm:px-3 sm:py-2 rounded-xl text-base sm:text-xs font-semibold transition-all text-left cursor-pointer ${
+                                    esActivo
+                                      ? "bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30"
+                                      : "text-zinc-300 hover:text-white hover:bg-white/10"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-base">{sub.icon}</span>
+                                    <span>{idx + 1}. {sub.id}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    {cantSub > 0 && (
+                                      <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+                                        {cantSub}
+                                      </span>
+                                    )}
+                                    {esActivo && (
+                                      <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+                                    )}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Flecha Siguiente */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navegarSubcategoria(1);
+                        }}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onTouchEnd={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        title="Siguiente subcategoría"
+                        className="w-12 h-12 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-zinc-200 hover:text-white hover:bg-white/15 dark:hover:bg-white/15 transition-all cursor-pointer active:scale-90"
+                      >
+                        <svg className="w-6 h-6 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Banner de modo colocación de nuevo Pin */}
               {modoColocandoPin && (
@@ -2960,7 +3120,7 @@ ${urlSeguimiento}`;
                 </div>
               )}
 
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none p-2 sm:p-4">
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none p-0 sm:p-3">
                 <img
                   ref={imagenMecanicaRef}
                   src={
