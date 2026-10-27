@@ -6574,15 +6574,20 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
         isOpen={mostrarModalFormularioRapido}
         onClose={() => setMostrarModalFormularioRapido(false)}
         especialidadInicial={moduloTaller}
-        mecanicos={mecanicos}
-        empleadoLogueado={empleadoLogueado}
-        clientesCatalogo={clientesCatalogo}
-        onOrdenCreada={(nuevaOrden, cliente, tipo) => {
-          handleOrdenCreadaDesdeModal(nuevaOrden, cliente, tipo);
-          if (tipo === "Lubricentro") setModuloTaller("lubricentro");
-          else if (tipo === "Lavado") setModuloTaller("carwash");
-          else if (moduloTaller === "tecnicentro") setModuloTaller("tecnicentro");
-          else setModuloTaller("taller");
+        ordenActiva={ordenActiva}
+        onGuardarItems={async (itemsNuevos, esp) => {
+          if (!ordenActiva) {
+            mostrarToast("No hay vehículo seleccionado en atención", "err");
+            return;
+          }
+          const actualizados = [...(ordenActiva.items || []), ...itemsNuevos];
+          setOrdenActiva({ ...ordenActiva, items: actualizados });
+          setAutosEnPista((prev) =>
+            prev.map((o) => (o.id === ordenActiva.id ? { ...o, items: actualizados } : o))
+          );
+          await sincronizarOrdenEnNeon({ items: actualizados });
+          setModuloTaller(esp);
+          mostrarToast(`✅ ${itemsNuevos.length} trabajo(s) agregado(s) a ${ordenActiva.plate}`, "ok");
         }}
         mostrarToast={mostrarToast}
         onCambiarEspecialidad={(esp) => setModuloTaller(esp)}

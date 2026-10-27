@@ -339,33 +339,14 @@ export default function InspeccionVehiculo({
   });
   const vistaCarouselRef = useRef<HTMLDivElement | null>(null);
   const ultimoToquePinRef = useRef(0);
-  const scrollTimeoutVistaRef = useRef<NodeJS.Timeout | null>(null);
-
-  const handleVistaScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (typeof window !== "undefined" && window.innerWidth >= 640) return;
-    const container = e.currentTarget;
-    if (scrollTimeoutVistaRef.current) clearTimeout(scrollTimeoutVistaRef.current);
-    scrollTimeoutVistaRef.current = setTimeout(() => {
-      const width = container.clientWidth;
-      if (width > 0) {
-        const pageIndex = Math.round(container.scrollLeft / width);
-        const targetVista = VISTAS_CARROCERIA[pageIndex];
-        if (targetVista && targetVista.id !== vistaActiva) {
-          setVistaActiva(targetVista.id);
-          setPinSeleccionadoId(null);
-          setPopoverAbierto(false);
-        }
-      }
-    }, 80);
-  };
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth < 640 && vistaCarouselRef.current) {
       const container = vistaCarouselRef.current;
       const el = document.getElementById(`vista-tab-${vistaActiva}`);
       if (el) {
-        const targetLeft = el.offsetLeft - container.offsetLeft;
-        container.scrollTo({ left: targetLeft, behavior: "smooth" });
+        const targetLeft = el.offsetLeft - container.offsetLeft - (container.clientWidth / 2 - el.clientWidth / 2);
+        container.scrollTo({ left: Math.max(0, targetLeft), behavior: "smooth" });
       }
     }
   }, [vistaActiva]);
@@ -452,7 +433,6 @@ export default function InspeccionVehiculo({
     return "carroceria";
   });
   const seccionCarouselRef = useRef<HTMLDivElement | null>(null);
-  const scrollTimeoutSeccionRef = useRef<NodeJS.Timeout | null>(null);
 
   const cambiarSeccionActiva = (sec: SeccionInspeccionId) => {
     setSeccionActiva(sec);
@@ -461,29 +441,14 @@ export default function InspeccionVehiculo({
     } catch {}
   };
 
-  const handleSeccionScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (typeof window !== "undefined" && window.innerWidth >= 640) return;
-    const container = e.currentTarget;
-    if (scrollTimeoutSeccionRef.current) clearTimeout(scrollTimeoutSeccionRef.current);
-    scrollTimeoutSeccionRef.current = setTimeout(() => {
-      const width = container.clientWidth;
-      if (width > 0) {
-        const pageIndex = Math.round(container.scrollLeft / width);
-        const targetSis = SISTEMAS_INSPECCION[pageIndex];
-        if (targetSis && targetSis.id !== seccionActiva) {
-          cambiarSeccionActiva(targetSis.id);
-        }
-      }
-    }, 80);
-  };
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth < 640 && seccionCarouselRef.current) {
       const container = seccionCarouselRef.current;
       const el = document.getElementById(`seccion-tab-${seccionActiva}`);
       if (el) {
-        const targetLeft = el.offsetLeft - container.offsetLeft;
-        container.scrollTo({ left: targetLeft, behavior: "smooth" });
+        const targetLeft = el.offsetLeft - container.offsetLeft - (container.clientWidth / 2 - el.clientWidth / 2);
+        container.scrollTo({ left: Math.max(0, targetLeft), behavior: "smooth" });
       }
     }
   }, [seccionActiva]);
@@ -2170,8 +2135,7 @@ ${urlSeguimiento}`;
       <div className="space-y-1.5 pb-2 border-b border-zinc-200 dark:border-white/10">
         <div
           ref={seccionCarouselRef}
-          onScroll={handleSeccionScroll}
-          className="flex sm:grid sm:grid-cols-6 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
+          className="flex sm:grid sm:grid-cols-6 gap-2 overflow-x-auto no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
         >
           {SISTEMAS_INSPECCION.map((sis) => {
             const active = seccionActiva === sis.id;
@@ -2204,33 +2168,18 @@ ${urlSeguimiento}`;
                 id={`seccion-tab-${sis.id}`}
                 type="button"
                 onClick={() => cambiarSeccionActiva(sis.id)}
-                className={`h-11 sm:h-10 px-3 sm:px-4 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer text-sm sm:text-xs font-semibold shrink-0 active:scale-95 w-full min-w-full sm:min-w-0 sm:w-auto snap-center ${
+                className={`h-10 px-3 sm:px-4 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer text-xs font-semibold shrink-0 active:scale-95 ${
                   active
                     ? "bg-purple-50 dark:bg-purple-500/20 border-purple-400 dark:border-purple-500/40 text-purple-700 dark:text-purple-200 shadow-sm"
                     : "bg-white dark:bg-white/[0.02] hover:bg-zinc-50 dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 shadow-sm dark:shadow-none"
                 }`}
               >
-                <span className="text-base sm:text-sm">{sis.icon}</span>
-                <span>{sis.shortName}</span>
+                <span className="text-sm">{sis.icon}</span>
+                <span className="whitespace-nowrap">{sis.shortName}</span>
                 {badge}
               </button>
             );
           })}
-        </div>
-
-        {/* Puntos de paginación solo en móvil para ver la sección y deslizar */}
-        <div className="flex sm:hidden items-center justify-center gap-1.5 pt-0.5">
-          {SISTEMAS_INSPECCION.map((sis) => (
-            <button
-              key={sis.id}
-              type="button"
-              onClick={() => cambiarSeccionActiva(sis.id)}
-              aria-label={`Ir a ${sis.shortName}`}
-              className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                seccionActiva === sis.id ? "w-5 bg-purple-500" : "w-1.5 bg-zinc-300 dark:bg-white/20"
-              }`}
-            />
-          ))}
         </div>
       </div>
 
@@ -2246,8 +2195,7 @@ ${urlSeguimiento}`;
       <div className="space-y-1.5 pb-1">
         <div
           ref={vistaCarouselRef}
-          onScroll={handleVistaScroll}
-          className="flex sm:grid sm:grid-cols-5 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
+          className="flex sm:grid sm:grid-cols-5 gap-2 overflow-x-auto no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
         >
           {VISTAS_CARROCERIA.map((v) => {
             const active = vistaActiva === v.id;
@@ -2262,41 +2210,22 @@ ${urlSeguimiento}`;
                   setPinSeleccionadoId(null);
                   setPopoverAbierto(false);
                 }}
-                className={`h-11 sm:h-12 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shrink-0 px-3 sm:px-0 w-full min-w-full sm:min-w-0 sm:w-auto snap-center ${
+                className={`h-10 sm:h-12 px-3 sm:px-0 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shrink-0 ${
                   active
                     ? "bg-purple-50 dark:bg-purple-500/20 border-purple-400 dark:border-purple-500/40 text-purple-700 dark:text-purple-300 shadow-sm"
                     : "bg-white dark:bg-white/[0.02] hover:bg-zinc-50 dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 shadow-sm dark:shadow-none"
                 }`}
               >
-                <div className="p-1 rounded-md bg-zinc-100 dark:bg-white/5 text-zinc-700 dark:text-white">{v.icon}</div>
-                <span className="text-sm sm:text-xs font-semibold">{v.label}</span>
+                <div className="p-1 rounded-md bg-zinc-100 dark:bg-white/5 text-zinc-700 dark:text-white shrink-0">{v.icon}</div>
+                <span className="text-xs font-semibold whitespace-nowrap">{v.label}</span>
                 {cantVista > 0 && (
-                  <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+                  <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center shrink-0">
                     {cantVista}
                   </span>
                 )}
               </button>
             );
           })}
-        </div>
-
-        {/* Puntos de paginación solo en móvil para ver la vista y deslizar */}
-        <div className="flex sm:hidden items-center justify-center gap-1.5 pt-0.5">
-          {VISTAS_CARROCERIA.map((v) => (
-            <button
-              key={v.id}
-              type="button"
-              onClick={() => {
-                setVistaActiva(v.id);
-                setPinSeleccionadoId(null);
-                setPopoverAbierto(false);
-              }}
-              aria-label={`Ir a ${v.label}`}
-              className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                vistaActiva === v.id ? "w-5 bg-purple-500" : "w-1.5 bg-zinc-300 dark:bg-white/20"
-              }`}
-            />
-          ))}
         </div>
       </div>
 
@@ -2632,7 +2561,7 @@ ${urlSeguimiento}`;
             ) : (
               SUBCATEGORIAS_SISTEMA[seccionActiva] && (
                 <div className="space-y-2 pb-1">
-                  <div className="flex sm:grid sm:grid-cols-6 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar touch-pan-x">
+                  <div className="flex sm:grid sm:grid-cols-6 gap-2 overflow-x-auto no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x">
                     {SUBCATEGORIAS_SISTEMA[seccionActiva].map((sub, idx) => {
                       const activa = subCategoriaPorSistema[seccionActiva] === sub.id;
                       const cantSub = hallazgos.filter(
@@ -2647,37 +2576,24 @@ ${urlSeguimiento}`;
                           key={sub.id}
                           type="button"
                           onClick={() => setSubCategoriaPorSistema((prev) => ({ ...prev, [seccionActiva]: sub.id }))}
-                          className={`h-11 sm:h-12 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shrink-0 px-3 sm:px-0 w-full min-w-full sm:min-w-0 sm:w-auto snap-center ${
+                          className={`h-10 sm:h-12 px-3 sm:px-0 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shrink-0 ${
                             activa
                               ? "bg-purple-50 dark:bg-purple-500/20 border-purple-400 dark:border-purple-500/40 text-purple-700 dark:text-purple-300 shadow-sm"
                               : "bg-white dark:bg-white/[0.02] hover:bg-zinc-50 dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 shadow-sm dark:shadow-none"
                           }`}
                         >
-                          <div className="p-1 rounded-md bg-zinc-100 dark:bg-white/5 text-sm leading-none">{sub.icon}</div>
-                          <span className="text-sm sm:text-xs font-semibold">
+                          <div className="p-1 rounded-md bg-zinc-100 dark:bg-white/5 text-sm leading-none shrink-0">{sub.icon}</div>
+                          <span className="text-xs font-semibold whitespace-nowrap">
                             {idx + 1}. {sub.id}
                           </span>
                           {cantSub > 0 && (
-                            <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+                            <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center shrink-0">
                               {cantSub}
                             </span>
                           )}
                         </button>
                       );
                     })}
-                  </div>
-                  <div className="flex sm:hidden items-center justify-center gap-1.5 pt-0.5">
-                    {SUBCATEGORIAS_SISTEMA[seccionActiva].map((sub) => (
-                      <button
-                        key={sub.id}
-                        type="button"
-                        onClick={() => setSubCategoriaPorSistema((prev) => ({ ...prev, [seccionActiva]: sub.id }))}
-                        aria-label={`Ir a ${sub.id}`}
-                        className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                          subCategoriaPorSistema[seccionActiva] === sub.id ? "w-5 bg-purple-500" : "w-1.5 bg-zinc-300 dark:bg-white/20"
-                        }`}
-                      />
-                    ))}
                   </div>
 
                   {/* Input de subcategoría manual cuando se selecciona "Manual" */}
