@@ -306,6 +306,68 @@ const VISTAS_CARROCERIA: { id: VistaVehiculoId; label: string; icon: React.React
   },
 ];
 
+const SECUENCIA_VISTAS: { id: VistaVehiculoId; label: string; short: string; icon: React.ReactNode }[] = [
+  {
+    id: "frontal",
+    label: "Frontal",
+    short: "Frontal",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 14.25l2.25-6.75h12l2.25 6.75M3.75 14.25h16.5M3.75 14.25v4.5h16.5v-4.5" />
+        <circle cx="7.5" cy="16.5" r="1.5" />
+        <circle cx="16.5" cy="16.5" r="1.5" />
+      </svg>
+    ),
+  },
+  {
+    id: "lateral_der",
+    label: "Lateral Derecho",
+    short: "Lat. Der",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 15.75l-2.25-4.5H9l-4.5 4.5v3h18v-3Z" />
+        <circle cx="8" cy="18.75" r="2.25" />
+        <circle cx="18" cy="18.75" r="2.25" />
+      </svg>
+    ),
+  },
+  {
+    id: "trasera",
+    label: "Trasera",
+    short: "Trasera",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l1.5-6h13.5l1.5 6M3.75 13.5h16.5M3.75 13.5v5.25h16.5V13.5" />
+        <rect x="7" y="15" width="10" height="2" rx="1" />
+      </svg>
+    ),
+  },
+  {
+    id: "lateral_izq",
+    label: "Lateral Izquierdo",
+    short: "Lat. Izq",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l2.25-4.5h10.5l4.5 4.5v3h-18v-3Z" />
+        <circle cx="6" cy="18.75" r="2.25" />
+        <circle cx="16" cy="18.75" r="2.25" />
+      </svg>
+    ),
+  },
+  {
+    id: "superior",
+    label: "Superior",
+    short: "Superior",
+    icon: (
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+        <rect x="6" y="3" width="12" height="18" rx="4" strokeLinecap="round" strokeLinejoin="round" />
+        <line x1="6" y1="8" x2="18" y2="8" strokeLinecap="round" />
+        <line x1="6" y1="16" x2="18" y2="16" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+];
+
 export default function InspeccionVehiculo({
   ordenActiva,
   productosCatalogo = [],
@@ -317,6 +379,7 @@ export default function InspeccionVehiculo({
   mostrarToast = (msg) => console.log(msg),
 }: InspeccionVehiculoProps) {
   const [vistaActiva, setVistaActiva] = useState<VistaVehiculoId>("frontal");
+
   const [subCategoriaPorSistema, setSubCategoriaPorSistema] = useState<Record<string, string>>({
     motor: SUBCATEGORIAS_SISTEMA.motor[0].id,
     frenos: SUBCATEGORIAS_SISTEMA.frenos[0].id,
@@ -369,6 +432,36 @@ export default function InspeccionVehiculo({
 
   // Estados para popover y detalle multimedia del pin activo
   const [popoverAbierto, setPopoverAbierto] = useState(false);
+  const [menuVistasAbierto, setMenuVistasAbierto] = useState<boolean>(false);
+  const menuVistasRef = useRef<HTMLDivElement | null>(null);
+
+  const cambiarVista = useCallback((nuevaVista: VistaVehiculoId) => {
+    setVistaActiva(nuevaVista);
+    setPinSeleccionadoId(null);
+    setPopoverAbierto(false);
+    setMenuVistasAbierto(false);
+  }, []);
+
+  const navegarVista = useCallback(
+    (direccion: 1 | -1) => {
+      const indexActual = SECUENCIA_VISTAS.findIndex((v) => v.id === vistaActiva);
+      const total = SECUENCIA_VISTAS.length;
+      const nuevoIndex = (indexActual + direccion + total) % total;
+      cambiarVista(SECUENCIA_VISTAS[nuevoIndex].id);
+    },
+    [vistaActiva, cambiarVista]
+  );
+
+  useEffect(() => {
+    if (!menuVistasAbierto) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuVistasRef.current && !menuVistasRef.current.contains(e.target as Node)) {
+        setMenuVistasAbierto(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuVistasAbierto]);
   const [tipoSeleccionado, setTipoSeleccionado] = useState("Rayón");
   const [observacionTexto, setObservacionTexto] = useState("");
   const [subiendoFotoPin, setSubiendoFotoPin] = useState(false);
@@ -2215,46 +2308,6 @@ ${urlSeguimiento}`;
       {seccionActiva === "carroceria" ? (
         <div className="space-y-3 animate-fade-in">
 
-      {/* ===================================================================
-          1. ESQUEMA INTERACTIVO EN 5 VISTAS + VISTA MANUAL CON PINES NUMERADOS
-          =================================================================== */}
-      <div className="space-y-1.5 pb-1">
-        <div
-          ref={vistaCarouselRef}
-          className="flex sm:grid sm:grid-cols-5 gap-2 overflow-x-auto no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
-        >
-          {VISTAS_CARROCERIA.map((v) => {
-            const active = vistaActiva === v.id;
-            const cantVista = hallazgos.filter((h) => h.vista === v.id).length;
-            return (
-              <button
-                key={v.id}
-                id={`vista-tab-${v.id}`}
-                type="button"
-                onClick={() => {
-                  setVistaActiva(v.id);
-                  setPinSeleccionadoId(null);
-                  setPopoverAbierto(false);
-                }}
-                className={`h-10 sm:h-12 px-3 sm:px-0 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shrink-0 ${
-                  active
-                    ? "bg-purple-50 dark:bg-purple-500/20 border-purple-400 dark:border-purple-500/40 text-purple-700 dark:text-purple-300 shadow-sm"
-                    : "bg-white dark:bg-white/[0.02] hover:bg-zinc-50 dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 shadow-sm dark:shadow-none"
-                }`}
-              >
-                <div className="p-1 rounded-md bg-zinc-100 dark:bg-white/5 text-zinc-700 dark:text-white shrink-0">{v.icon}</div>
-                <span className="text-xs font-semibold whitespace-nowrap">{v.label}</span>
-                {cantVista > 0 && (
-                  <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center shrink-0">
-                    {cantVista}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* LIENZO DEL VEHÍCULO CON PINES NUMERADOS */}
       <div className="relative rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-white/10 p-3 sm:p-5 overflow-hidden select-none shadow-sm dark:shadow-none">
 
@@ -2289,6 +2342,133 @@ ${urlSeguimiento}`;
           >
             <span>{lienzoOscuro ? "🌙 Neón 3D" : "☀️ Plano CAD"}</span>
           </button>
+
+          {/* Navegación de perspectivas y flechas en esquina superior izquierda */}
+          {!modoColocandoPin && !pinReubicandoId && (() => {
+            const infoVistaActual = SECUENCIA_VISTAS.find((v) => v.id === vistaActiva) || SECUENCIA_VISTAS[0];
+            return (
+              <div
+                ref={menuVistasRef}
+                className="absolute top-2.5 left-2.5 z-30 flex items-center"
+              >
+                {/* Control centralizado de navegación de vistas (Moderno y Minimalista) */}
+                <div
+                  className={`flex items-center rounded-full border backdrop-blur-2xl shadow-lg transition-all duration-200 p-0.5 ${
+                    lienzoOscuro
+                      ? "bg-slate-950/80 border-white/10 hover:border-white/20 text-zinc-200 shadow-black/40"
+                      : "bg-white/85 border-zinc-200 hover:border-zinc-300 text-zinc-700 shadow-zinc-900/5"
+                  }`}
+                >
+                  {/* Flecha Anterior (Para atrás / Izquierda) */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navegarVista(-1);
+                    }}
+                    onTouchEnd={(e) => e.stopPropagation()}
+                    title="Perspectiva anterior"
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 dark:hover:bg-white/10 transition-all cursor-pointer active:scale-90"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                    </svg>
+                  </button>
+
+                  {/* Selector con nombre de vista actual */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMenuVistasAbierto((prev) => !prev);
+                      }}
+                      onTouchEnd={(e) => e.stopPropagation()}
+                      className="h-6 px-2 rounded-full flex items-center gap-1.5 cursor-pointer hover:bg-white/5 active:scale-95 transition-all"
+                    >
+                      <span className="text-cyan-400 shrink-0 flex items-center justify-center">
+                        {infoVistaActual.icon}
+                      </span>
+                      <span className="text-[11px] font-medium tracking-wide">
+                        {infoVistaActual.short}
+                      </span>
+                      <svg
+                        className={`w-2.5 h-2.5 text-zinc-400 transition-transform duration-200 ${
+                          menuVistasAbierto ? "rotate-180 text-cyan-400" : ""
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+
+                    {/* Menú flotante de selección de vista */}
+                    {menuVistasAbierto && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className={`absolute left-0 top-full mt-2 w-44 rounded-2xl border p-1 shadow-2xl backdrop-blur-2xl z-50 animate-fade-in ${
+                          lienzoOscuro
+                            ? "bg-slate-950/90 border-white/10 text-zinc-200 shadow-black/80"
+                            : "bg-white/95 border-zinc-200 text-zinc-800 shadow-xl"
+                        }`}
+                      >
+                        <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                          Perspectiva:
+                        </div>
+                        {SECUENCIA_VISTAS.map((v) => {
+                          const esActivo = vistaActiva === v.id;
+                          return (
+                            <button
+                              key={`dropdown-v-${v.id}`}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                cambiarVista(v.id);
+                              }}
+                              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all text-left cursor-pointer ${
+                                esActivo
+                                  ? "bg-cyan-500/15 text-cyan-300 font-semibold border border-cyan-500/25"
+                                  : "text-zinc-400 hover:text-zinc-100 hover:bg-white/5"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className={esActivo ? "text-cyan-400" : "opacity-70"}>
+                                  {v.icon}
+                                </span>
+                                <span>{v.label}</span>
+                              </div>
+                              {esActivo && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Flecha Siguiente (Adelante / Derecha) */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navegarVista(1);
+                    }}
+                    onTouchEnd={(e) => e.stopPropagation()}
+                    title="Siguiente perspectiva"
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 dark:hover:bg-white/10 transition-all cursor-pointer active:scale-90"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Banner de modo colocación de nuevo Pin */}
           {modoColocandoPin && (
