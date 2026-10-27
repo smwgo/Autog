@@ -2279,7 +2279,7 @@ ${urlSeguimiento}`;
       <div className="space-y-1.5 pb-2 border-b border-zinc-200 dark:border-white/10">
         <div
           ref={seccionCarouselRef}
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 w-full"
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 w-full"
         >
           {SISTEMAS_INSPECCION.map((sis) => {
             const active = seccionActiva === sis.id;
@@ -2312,13 +2312,13 @@ ${urlSeguimiento}`;
                 id={`seccion-tab-${sis.id}`}
                 type="button"
                 onClick={() => cambiarSeccionActiva(sis.id)}
-                className={`h-10 px-3 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer text-xs font-semibold w-full active:scale-95 ${
+                className={`h-11 sm:h-10 px-3 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer text-xs font-bold w-full active:scale-95 shadow-2xs ${
                   active
-                    ? "bg-purple-50 dark:bg-purple-500/20 border-purple-400 dark:border-purple-500/40 text-purple-700 dark:text-purple-200 shadow-sm"
-                    : "bg-white dark:bg-white/[0.02] hover:bg-zinc-50 dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 shadow-sm dark:shadow-none"
+                    ? "bg-purple-50 dark:bg-purple-500/20 border-purple-400 dark:border-purple-500/40 text-purple-700 dark:text-purple-200 ring-1 ring-purple-400/40 shadow-sm"
+                    : "bg-white dark:bg-white/[0.03] hover:bg-zinc-50 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 shadow-2xs"
                 }`}
               >
-                <span className="text-sm shrink-0">{sis.icon}</span>
+                <span className="text-base leading-none shrink-0">{sis.icon}</span>
                 <span className="truncate">{sis.shortName}</span>
                 {badge}
               </button>
