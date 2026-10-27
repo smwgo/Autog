@@ -1509,9 +1509,10 @@ async function getOrInitCarWashData() {
       });
     }
 
-    const [allWorkshopServices, activePromotions, appointments] = await Promise.all([
+    const [allWorkshopServices, activePromotions, appointments, allProducts] = await Promise.all([
       prisma.workshopService.findMany({
-        orderBy: { createdAt: "asc" },
+        where: { active: true },
+        orderBy: { name: "asc" },
       }),
       prisma.posPromotion.findMany({
         where: { active: true },
@@ -1524,6 +1525,10 @@ async function getOrInitCarWashData() {
         orderBy: { createdAt: "desc" },
         take: 150,
       }),
+      prisma.product.findMany({
+        where: { status: { not: "Inactivo" } },
+        orderBy: { name: "asc" },
+      }),
     ]);
 
     const enrichedServices = allWorkshopServices
@@ -1531,11 +1536,15 @@ async function getOrInitCarWashData() {
         if (metaMap[s.id]) return !metaMap[s.id].archived;
         const catLow = (s.category || "").toLowerCase();
         const codeLow = (s.code || "").toLowerCase();
+        const specLow = ((s as any).specialty || "").toLowerCase();
         return (
           catLow.includes("car wash") ||
           catLow.includes("carwash") ||
           catLow.includes("lavado") ||
           catLow.includes("detailing") ||
+          catLow.includes("limpieza") ||
+          specLow.includes("carwash") ||
+          specLow.includes("lavado") ||
           codeLow.startsWith("cw-")
         );
       })
@@ -1543,6 +1552,17 @@ async function getOrInitCarWashData() {
         const meta = metaMap[s.id];
         const basePrice = Number(s.price);
         const priceConfigured = meta?.priceConfigured !== undefined ? meta.priceConfigured : basePrice > 0;
+        
+        let deducedCatId = meta?.categoryId;
+        if (!deducedCatId) {
+          const n = (s.name || "").toLowerCase();
+          if (n.includes("motor")) deducedCatId = "cw_cat_motor";
+          else if (n.includes("tapicer") || n.includes("cuero")) deducedCatId = "cw_cat_tapiceria";
+          else if (n.includes("interior") || n.includes("cabina") || n.includes("aspirado")) deducedCatId = "cw_cat_interior";
+          else if (n.includes("chasis") || n.includes("completo") || n.includes("4x4") || n.includes("elevador")) deducedCatId = "cw_cat_completo";
+          else deducedCatId = "cw_cat_exterior";
+        }
+
         return {
           id: s.id,
           code: s.code,
@@ -1556,7 +1576,7 @@ async function getOrInitCarWashData() {
           requiresBay: s.requiresBay,
           active: meta?.active !== undefined ? meta.active : s.active,
           archived: Boolean(meta?.archived),
-          categoryId: meta?.categoryId || "cw_cat_exterior",
+          categoryId: deducedCatId,
           subcategoryId: meta?.subcategoryId || "cw_sub_ext_express",
           shortDescription: meta?.shortDescription || s.description || "",
           fullDescription: meta?.fullDescription || s.description || "",
@@ -1581,18 +1601,44 @@ async function getOrInitCarWashData() {
       })
       .sort((a, b) => a.order - b.order);
 
-    // Actualizar dinámicamente startingPrice y estimatedMinutes de cada categoría según servicios reales si no se fijó uno manual
+    const mappedProducts = (allProducts || []).map((p: any) => {
+      const catLow = (p.category || "").toLowerCase();
+      const nameLow = (p.name || "").toLowerCase();
+      let cwCatId = "cw_cat_exterior";
+      if (catLow.includes("interior") || nameLow.includes("interior") || nameLow.includes("ambientador") || nameLow.includes("silicona")) {
+        cwCatId = "cw_cat_interior";
+      } else if (catLow.includes("tapicer") || nameLow.includes("tapiceria") || nameLow.includes("asiento")) {
+        cwCatId = "cw_cat_tapiceria";
+      } else if (catLow.includes("motor") || nameLow.includes("motor") || nameLow.includes("desengrasante")) {
+        cwCatId = "cw_cat_motor";
+      }
+      return {
+        id: p.id,
+        code: p.code,
+        name: p.name,
+        brand: p.brand || "Insumo",
+        category: p.category || "Insumo",
+        price: Number(p.price || 0),
+        stock: Number(p.stock || 0),
+        minStock: Number(p.minStock || 0),
+        imageUrl: p.imageUrl || null,
+        type: "PART",
+        cwCategoryId: cwCatId,
+      };
+    });
+
+    // Actualizar dinámicamente startingPrice y estimatedMinutes de cada categoría según servicios y productos reales
     const categoriesWithRealStats = config.categories
       .map((cat) => {
         const catServices = enrichedServices.filter(
-          (srv) => srv.categoryId === cat.id && srv.active && srv.priceConfigured && srv.basePrice && srv.basePrice > 0
+          (srv) => srv.categoryId === cat.id && srv.active && srv.basePrice && srv.basePrice > 0
         );
-        const catPackages = config.packages.filter(
-          (pkg) => pkg.categoryId === cat.id && pkg.active && pkg.basePrice && pkg.basePrice > 0
+        const catProducts = mappedProducts.filter(
+          (p: any) => p.cwCategoryId === cat.id
         );
         const allPrices = [
           ...catServices.map((s) => Number(s.promoPrice && s.promoPrice > 0 ? s.promoPrice : s.basePrice)),
-          ...catPackages.map((p) => Number(p.promoPrice && p.promoPrice > 0 ? p.promoPrice : p.basePrice)),
+          ...catProducts.map((p) => Number(p.price)),
         ].filter((n) => n > 0);
 
         const minRealPrice = allPrices.length > 0 ? Math.min(...allPrices) : null;
@@ -1602,9 +1648,7 @@ async function getOrInitCarWashData() {
             cat.startingPrice !== null && cat.startingPrice !== undefined && cat.startingPrice > 0
               ? cat.startingPrice
               : minRealPrice,
-          servicesCount:
-            enrichedServices.filter((s) => s.categoryId === cat.id && s.active).length +
-            config.packages.filter((p) => p.categoryId === cat.id && p.active).length,
+          servicesCount: catServices.length + catProducts.length,
         };
       })
       .sort((a, b) => a.order - b.order);
@@ -1612,10 +1656,13 @@ async function getOrInitCarWashData() {
     return {
       config: {
         ...config,
+        packages: [] as CarWashPackage[],
+        addons: [] as CarWashAddon[],
         categories: categoriesWithRealStats,
       },
       metaMap,
       services: enrichedServices,
+      products: mappedProducts,
       promotions: activePromotions.map((p) => ({
         id: p.id,
         code: p.code,
@@ -1661,6 +1708,7 @@ export async function GET() {
       success: true,
       config: data.config,
       services: data.services,
+      products: data.products,
       promotions: data.promotions,
       appointments: data.appointments,
     });

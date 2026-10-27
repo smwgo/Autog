@@ -1330,7 +1330,7 @@ let serverLubricentroCache: {
   timestamp: number;
 } | null = null;
 
-export function invalidateServerLubricentroCache() {
+function invalidateServerLubricentroCache() {
   serverLubricentroCache = null;
 }
 
@@ -1339,7 +1339,6 @@ export async function GET() {
   try {
     const data = await getOrInitConfigAndMeta();
     serverLubricentroCache = null;
-
     return NextResponse.json({
       success: true,
       config: data.config,

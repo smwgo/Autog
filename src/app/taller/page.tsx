@@ -1442,19 +1442,12 @@ export default function TallerPanel() {
   }, []);
 
   useEffect(() => {
-    let cargado = false;
-    cargarOperacionInicial(true).then((ok) => {
-      cargado = ok;
-    });
-    const retryTimer = setTimeout(() => {
-      if (!cargado) cargarOperacionInicial(true);
-    }, 1500);
+    cargarOperacionInicial(true);
     const handleBranchChange = () => cargarOperacionInicial(true);
     const handleCatalogoActualizado = () => cargarOperacionInicial(false);
     window.addEventListener("autog-branch-change", handleBranchChange);
     window.addEventListener("taller-catalogo-actualizado", handleCatalogoActualizado);
     return () => {
-      clearTimeout(retryTimer);
       window.removeEventListener("autog-branch-change", handleBranchChange);
       window.removeEventListener("taller-catalogo-actualizado", handleCatalogoActualizado);
     };

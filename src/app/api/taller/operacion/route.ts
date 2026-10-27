@@ -101,12 +101,13 @@ async function ensureTallerSchema() {
       `CREATE INDEX IF NOT EXISTS "WorkshopEvidence_clientTempId_idx" ON "WorkshopEvidence"("clientTempId")`,
     ];
 
-    for (const sql of statements) {
-      await prisma.$executeRawUnsafe(sql).catch(() => {});
-    }
-    schemaEnsured = true;
+    await prisma.$executeRawUnsafe(statements.join(";\n")).catch(async () => {
+      await Promise.allSettled(statements.map((sql) => prisma.$executeRawUnsafe(sql)));
+    });
   } catch (err) {
     console.warn("Aviso al verificar esquema de Taller:", err);
+  } finally {
+    schemaEnsured = true;
   }
 }
 

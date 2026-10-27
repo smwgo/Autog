@@ -206,6 +206,7 @@ export default function ModuloCarWashCatalogo({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [config, setConfig] = useState<CarWashConfigData | null>(null);
   const [services, setServices] = useState<CarWashEnrichedService[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [promotions, setPromotions] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
 
@@ -312,6 +313,7 @@ export default function ModuloCarWashCatalogo({
       }
       setConfig(data.config);
       setServices(data.services || []);
+      setProducts(data.products || []);
       setPromotions(data.promotions || []);
       setAppointments(data.appointments || []);
       if (data.config?.bays?.[0]) {
@@ -979,17 +981,20 @@ export default function ModuloCarWashCatalogo({
   const handleAjustarCantidadItem = async (
     item: {
       id: string;
-      kind: "PACKAGE" | "SERVICE" | "ADDON";
+      kind: "PACKAGE" | "SERVICE" | "ADDON" | "PRODUCT";
       name: string;
       code: string;
       price: number;
       durationMinutes?: number;
       categoryId?: string;
+      stock?: number;
+      brand?: string;
     },
     delta: number
   ) => {
     try {
-      const code = item.code || `CW-${item.id}`;
+      const isProduct = item.kind === "PRODUCT";
+      const code = item.code || (isProduct ? `PRD-${item.id}` : `CW-${item.id}`);
       const vehLabel = currentVehicleType
         ? toSingleWord(currentVehicleType.name, CARWASH_VEH_SINGLE)
         : "Auto";
@@ -998,6 +1003,7 @@ export default function ModuloCarWashCatalogo({
         (it) =>
           it.id === item.id ||
           it.serviceId === item.id ||
+          it.productId === item.id ||
           (it.code && item.code && it.code === item.code)
       );
 
@@ -1024,28 +1030,24 @@ export default function ModuloCarWashCatalogo({
       } else if (delta > 0) {
         const priceUnit = Number(item.price || 0);
         const nuevoItem = {
-          id: `cw_${item.id}_${Date.now()}`,
+          id: isProduct ? `prod_${item.id}_${Date.now()}` : `cw_${item.id}_${Date.now()}`,
           key: `key_${item.id}_${Date.now()}`,
-          serviceId: item.id,
-          type: "SERVICE" as const,
-          category: "Lavado",
+          serviceId: isProduct ? undefined : item.id,
+          productId: isProduct ? item.id : undefined,
+          type: isProduct ? ("PART" as const) : ("SERVICE" as const),
+          category: isProduct ? (item.categoryId || "Insumo") : "Lavado",
           cwCategoryId: item.categoryId || selectedCategoryId,
-          subCategory:
-            item.kind === "PACKAGE"
-              ? "Paquete"
-              : item.kind === "ADDON"
-              ? "Extra"
-              : "Servicio",
+          subCategory: isProduct ? "Producto" : "Servicio",
           code,
-          name: `${item.name} (${vehLabel})`,
-          brand: "Car Wash",
-          presentation: item.durationMinutes ? `${item.durationMinutes} min` : "Servicio",
-          unitOfMeasure: "Servicio",
+          name: isProduct ? item.name : `${item.name} (${vehLabel})`,
+          brand: isProduct ? (item.brand || "Insumo") : "Car Wash",
+          presentation: isProduct ? "Unidad" : item.durationMinutes ? `${item.durationMinutes} min` : "Servicio",
+          unitOfMeasure: isProduct ? "Unidad" : "Servicio",
           price: priceUnit,
           total: Number((priceUnit * delta).toFixed(2)),
           qty: delta,
-          estimatedMinutes: item.durationMinutes || 30,
-          vehicleType: currentVehicleType?.name || vehLabel,
+          estimatedMinutes: isProduct ? undefined : (item.durationMinutes || 30),
+          vehicleType: isProduct ? undefined : (currentVehicleType?.name || vehLabel),
           status: "Listo" as const,
           completed: true,
           empleado_id: empleadoLogueado.id,
@@ -1054,11 +1056,11 @@ export default function ModuloCarWashCatalogo({
         await onActualizarItemsOrden([...listaActual, nuevoItem]);
       }
     } catch {
-      mostrarToast("Error al actualizar servicio de Car Wash", "err");
+      mostrarToast("Error al actualizar ítem en la orden", "err");
     }
   };
 
-  // Lista unificada y automática de servicios, paquetes y extras (se muestra al instante sin escribir)
+  // Lista unificada y automática de servicios y productos REALES del POS
   const itemsFiltradosAutomaticos = useMemo(() => {
     const q = searchQuery
       .toLowerCase()
@@ -1078,7 +1080,7 @@ export default function ModuloCarWashCatalogo({
 
     const list: Array<{
       id: string;
-      kind: "PACKAGE" | "SERVICE" | "ADDON";
+      kind: "SERVICE" | "PRODUCT" | "PACKAGE" | "ADDON";
       name: string;
       code: string;
       brand: string;
@@ -1089,38 +1091,13 @@ export default function ModuloCarWashCatalogo({
       isPromo?: boolean;
       categoryId?: string;
       subcategoryId?: string;
-      rawPackage?: CarWashPackage;
       rawService?: CarWashEnrichedService;
-      rawAddon?: CarWashAddon;
+      rawProduct?: any;
       imageUrl?: string;
+      stock?: number;
     }> = [];
 
-    // 1. Paquetes (si filtro de tipo lo permite)
-    if (!filtroCategoriaGeneral || filtroCategoriaGeneral === "PACKAGE") {
-      filteredPackages.forEach((pkg) => {
-        if (selectedSubcategoryId !== "TODOS") return;
-        const full = `${pkg.name} ${pkg.code} ${pkg.shortDescription || ""} ${(pkg.includedProcedures || []).join(" ")}`;
-        if (!matchText(full)) return;
-        const pInfo = computePriceForVehicle(pkg, selectedVehicleTypeId);
-        list.push({
-          id: pkg.id,
-          kind: "PACKAGE",
-          name: pkg.name,
-          code: pkg.code,
-          brand: "Paquete",
-          description: pkg.shortDescription,
-          durationMinutes: pkg.estimatedMinutes,
-          price: pInfo.unitPrice ?? 0,
-          originalPrice: pInfo.originalPrice,
-          isPromo: pInfo.isPromo,
-          categoryId: pkg.categoryId,
-          rawPackage: pkg,
-          imageUrl: pkg.imageUrl,
-        });
-      });
-    }
-
-    // 2. Servicios individuales
+    // 1. Servicios REALES del POS
     if (!filtroCategoriaGeneral || filtroCategoriaGeneral === "SERVICE") {
       filteredServices.forEach((srv) => {
         const full = `${srv.name} ${srv.code} ${srv.shortDescription || ""} ${srv.fullDescription || ""} ${(srv.includesList || []).join(" ")}`;
@@ -1135,7 +1112,7 @@ export default function ModuloCarWashCatalogo({
           brand: catObj?.name ? toSingleWord(catObj.name, CARWASH_CAT_SINGLE) : "Servicio",
           description: srv.shortDescription || srv.fullDescription,
           durationMinutes: srv.estimatedMinutes || 30,
-          price: pInfo.unitPrice ?? 0,
+          price: pInfo.unitPrice ?? srv.basePrice ?? srv.price ?? 0,
           originalPrice: pInfo.originalPrice,
           isPromo: pInfo.isPromo,
           categoryId: srv.categoryId,
@@ -1146,29 +1123,29 @@ export default function ModuloCarWashCatalogo({
       });
     }
 
-    // 3. Adicionales / Extras (cuando está en Todas o filtró por Extras)
-    if (
-      (!filtroCategoriaGeneral && selectedCategoryId === "TODOS") ||
-      filtroCategoriaGeneral === "ADDON"
-    ) {
-      activeAddons.forEach((add) => {
-        const full = `${add.name} ${add.code} ${add.description || ""}`;
+    // 2. Productos e Insumos REALES del POS
+    if (!filtroCategoriaGeneral || filtroCategoriaGeneral === "PRODUCT") {
+      products.forEach((prod) => {
+        const full = `${prod.name} ${prod.code} ${prod.brand || ""} ${prod.category || ""}`;
         if (!matchText(full)) return;
-        const pInfo = computePriceForVehicle(add, selectedVehicleTypeId);
+        if (selectedCategoryId !== "TODOS" && prod.cwCategoryId && prod.cwCategoryId !== selectedCategoryId) {
+          return;
+        }
         list.push({
-          id: add.id,
-          kind: "ADDON",
-          name: add.name,
-          code: add.code,
-          brand: "Extra",
-          description: add.description,
-          durationMinutes: add.estimatedMinutes || 15,
-          price: pInfo.unitPrice ?? 0,
-          originalPrice: pInfo.originalPrice,
-          isPromo: pInfo.isPromo,
-          categoryId: "cw_cat_adicionales",
-          rawAddon: add,
-          imageUrl: add.imageUrl,
+          id: prod.id,
+          kind: "PRODUCT",
+          name: prod.name,
+          code: prod.code,
+          brand: prod.category || prod.brand || "Producto",
+          description: prod.brand ? `Marca: ${prod.brand}` : "Producto del POS",
+          durationMinutes: undefined,
+          price: Number(prod.price || 0),
+          originalPrice: null,
+          isPromo: false,
+          categoryId: prod.cwCategoryId,
+          imageUrl: prod.imageUrl,
+          stock: prod.stock,
+          rawProduct: prod,
         });
       });
     }
@@ -1177,30 +1154,27 @@ export default function ModuloCarWashCatalogo({
   }, [
     searchQuery,
     filtroCategoriaGeneral,
-    filteredPackages,
     filteredServices,
-    activeAddons,
+    products,
     selectedVehicleTypeId,
     selectedCategoryId,
-    selectedSubcategoryId,
     config,
   ]);
 
-  // Conteos por categoría y subcategoría para los pills superiores
+  // Conteos por categoría para los pills superiores basados en datos reales
   const conteoPorCategoria = useMemo(() => {
     const map: Record<string, number> = {};
-    (config?.packages || []).forEach((p) => {
-      if (p.active && p.categoryId) {
-        map[p.categoryId] = (map[p.categoryId] || 0) + 1;
-      }
-    });
     services.forEach((s) => {
       if (s.active && !s.archived && s.categoryId) {
         map[s.categoryId] = (map[s.categoryId] || 0) + 1;
       }
     });
+    products.forEach((p) => {
+      const catId = p.cwCategoryId || "cw_cat_exterior";
+      map[catId] = (map[catId] || 0) + 1;
+    });
     return map;
-  }, [config?.packages, services]);
+  }, [services, products]);
 
   const conteoPorSubcategoria = useMemo(() => {
     const map: Record<string, number> = {};
@@ -1220,9 +1194,11 @@ export default function ModuloCarWashCatalogo({
       return (
         cat === "Lavado" ||
         cat === "Car Wash" ||
+        cat === "Insumo" ||
         code.startsWith("CW-") ||
-        code.startsWith("PKG-CW-") ||
-        code.startsWith("ADD-CW-")
+        code.startsWith("PRD-") ||
+        Boolean(it.productId) ||
+        Boolean(it.serviceId)
       );
     });
   }, [itemsOrden]);
@@ -1240,11 +1216,10 @@ export default function ModuloCarWashCatalogo({
 
   const totalCatalogoCount = useMemo(() => {
     return (
-      (config?.packages || []).filter((p) => p.active).length +
       services.filter((s) => s.active && !s.archived).length +
-      (config?.addons || []).filter((a) => a.active).length
+      products.length
     );
-  }, [config?.packages, services, config?.addons]);
+  }, [services, products]);
 
   if (loading && !config) {
     return (
@@ -1445,12 +1420,12 @@ export default function ModuloCarWashCatalogo({
               }`}
             >
               <span className="truncate">
-                {filtroCategoriaGeneral === "PACKAGE"
-                  ? "Paquetes"
-                  : filtroCategoriaGeneral === "SERVICE"
+                {filtroCategoriaGeneral === "SERVICE"
                   ? "Servicios"
-                  : filtroCategoriaGeneral === "ADDON"
-                  ? "Extras"
+                  : filtroCategoriaGeneral === "PRODUCT"
+                  ? "Productos"
+                  : filtroCategoriaGeneral === "PACKAGE"
+                  ? "Paquetes"
                   : "Tipo"}
               </span>
               <svg
@@ -1470,9 +1445,9 @@ export default function ModuloCarWashCatalogo({
               <div className="absolute right-0 top-full mt-1.5 w-44 rounded-xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/10 shadow-xl dark:shadow-2xl backdrop-blur-md p-1.5 space-y-0.5 z-40 animate-fade-in">
                 {[
                   { id: "", label: "Todos los tipos", icon: "✨" },
-                  { id: "PACKAGE", label: "Paquetes", icon: "📦" },
-                  { id: "SERVICE", label: "Servicios", icon: "🚿" },
-                  { id: "ADDON", label: "Extras", icon: "➕" },
+                  { id: "SERVICE", label: "Servicios (POS)", icon: "🚿" },
+                  { id: "PRODUCT", label: "Productos (POS)", icon: "📦" },
+                  { id: "PACKAGE", label: "Paquetes", icon: "🏷️" },
                 ].map((opt) => {
                   const act = filtroCategoriaGeneral === opt.id;
                   return (
@@ -1533,14 +1508,12 @@ export default function ModuloCarWashCatalogo({
                   <div className="flex items-start gap-2.5">
                     <div
                       onClick={() => {
-                        if (item.rawPackage) {
-                          setDetailModalItem({ item: item.rawPackage, kind: "PACKAGE" });
-                        } else if (item.rawService) {
+                        if (item.rawService) {
                           setDetailModalItem({ item: item.rawService, kind: "SERVICE" });
                         }
                       }}
                       className="w-14 h-16 sm:w-16 sm:h-18 rounded-lg bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-white/5 flex items-center justify-center p-1.5 shrink-0 overflow-hidden cursor-pointer"
-                      title="Ver detalle del servicio"
+                      title={item.kind === "PRODUCT" ? "Producto del POS" : "Ver detalle del servicio"}
                     >
                       {item.imageUrl ? (
                         <img
@@ -1550,11 +1523,7 @@ export default function ModuloCarWashCatalogo({
                         />
                       ) : (
                         <span className="text-2xl">
-                          {item.kind === "PACKAGE"
-                            ? "📦"
-                            : item.kind === "ADDON"
-                            ? "✨"
-                            : "🚿"}
+                          {item.kind === "PRODUCT" ? "📦" : "🚿"}
                         </span>
                       )}
                     </div>
@@ -1563,14 +1532,12 @@ export default function ModuloCarWashCatalogo({
                       <div className="flex items-center justify-between gap-1">
                         <span
                           className={`text-[10px] font-normal uppercase tracking-wider truncate ${
-                            item.kind === "PACKAGE"
-                              ? "text-amber-600 dark:text-amber-400"
-                              : item.kind === "ADDON"
-                              ? "text-purple-600 dark:text-purple-400"
+                            item.kind === "PRODUCT"
+                              ? "text-emerald-600 dark:text-emerald-400"
                               : "text-blue-600 dark:text-blue-400"
                           }`}
                         >
-                          {item.brand}
+                          {item.kind === "PRODUCT" ? "PRODUCTO" : item.brand}
                         </span>
                         {estaEnPedido && (
                           <span className="px-1.5 py-0.2 rounded text-[9px] font-normal bg-emerald-500 text-white shrink-0">
@@ -1581,9 +1548,7 @@ export default function ModuloCarWashCatalogo({
 
                       <h4
                         onClick={() => {
-                          if (item.rawPackage) {
-                            setDetailModalItem({ item: item.rawPackage, kind: "PACKAGE" });
-                          } else if (item.rawService) {
+                          if (item.rawService) {
                             setDetailModalItem({ item: item.rawService, kind: "SERVICE" });
                           }
                         }}
@@ -1592,16 +1557,26 @@ export default function ModuloCarWashCatalogo({
                         {item.name}
                       </h4>
 
-                      {/* Badges rápidos de duración y tipo de vehículo */}
+                      {/* Badges de duración o stock */}
                       <div className="flex flex-wrap items-center gap-1 pt-0.5">
-                        {item.durationMinutes && (
+                        {item.durationMinutes ? (
                           <span className="px-1.5 py-0.2 rounded bg-zinc-100 dark:bg-white/10 text-[10px] font-mono font-normal text-zinc-700 dark:text-zinc-300">
                             ⏱ {item.durationMinutes} min
                           </span>
+                        ) : null}
+                        {item.stock !== undefined ? (
+                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-normal ${
+                            item.stock > 0
+                              ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                              : "bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300"
+                          }`}>
+                            {item.stock > 0 ? `📦 Stock: ${item.stock}` : "⚠️ Sin stock"}
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.2 rounded bg-sky-50 dark:bg-sky-500/15 text-[10px] font-normal text-sky-700 dark:text-sky-300">
+                            {currentVehicleType?.icon || "🚗"} {vehLabelCorto}
+                          </span>
                         )}
-                        <span className="px-1.5 py-0.2 rounded bg-sky-50 dark:bg-sky-500/15 text-[10px] font-normal text-sky-700 dark:text-sky-300">
-                          {currentVehicleType?.icon || "🚗"} {vehLabelCorto}
-                        </span>
                       </div>
                     </div>
                   </div>
@@ -1620,7 +1595,7 @@ export default function ModuloCarWashCatalogo({
                         )}
                       </div>
                       <span className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate block mt-0.5">
-                        Tarifa {vehLabelCorto}
+                        {item.kind === "PRODUCT" ? "Precio unitario" : `Tarifa ${vehLabelCorto}`}
                       </span>
                     </div>
 
