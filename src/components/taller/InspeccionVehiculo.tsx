@@ -132,13 +132,6 @@ export const SISTEMAS_INSPECCION: SeccionInspeccionConfig[] = [
       { id: "ac_ventilacion", label: "Soplador, salidas de aire y temperatura de salida", modo: "semaforo" },
     ],
   },
-  {
-    id: "personalizado",
-    name: "Manual / Personalizado",
-    shortName: "Manual",
-    icon: "✏️",
-    description: "Inspección libre con categoría y subcategorías ingresadas manualmente",
-  },
 ];
 
 export const PLANTILLAS_INSPECCION: InspectionTemplate[] = SISTEMAS_INSPECCION
@@ -316,15 +309,6 @@ const VISTAS_CARROCERIA: { id: VistaVehiculoId; label: string; icon: React.React
       </svg>
     ),
   },
-  {
-    id: "manual",
-    label: "6. Manual",
-    icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
-      </svg>
-    ),
-  },
 ];
 
 export default function InspeccionVehiculo({
@@ -465,7 +449,7 @@ export default function InspeccionVehiculo({
     if (typeof window !== "undefined") {
       try {
         const saved = localStorage.getItem("taller_seccion_activa") as SeccionInspeccionId;
-        if (saved && ["carroceria", "motor", "frenos", "suspension", "electrico", "aire", "personalizado"].includes(saved)) {
+        if (saved && ["carroceria", "motor", "frenos", "suspension", "electrico", "aire"].includes(saved)) {
           return saved;
         }
       } catch {}
@@ -2192,7 +2176,7 @@ ${urlSeguimiento}`;
         <div
           ref={seccionCarouselRef}
           onScroll={handleSeccionScroll}
-          className="flex sm:grid sm:grid-cols-7 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
+          className="flex sm:grid sm:grid-cols-6 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
         >
           {SISTEMAS_INSPECCION.map((sis) => {
             const active = seccionActiva === sis.id;
@@ -2268,7 +2252,7 @@ ${urlSeguimiento}`;
         <div
           ref={vistaCarouselRef}
           onScroll={handleVistaScroll}
-          className="flex sm:grid sm:grid-cols-6 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
+          className="flex sm:grid sm:grid-cols-5 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar scroll-smooth [WebkitOverflowScrolling:touch] touch-pan-x"
         >
           {VISTAS_CARROCERIA.map((v) => {
             const active = vistaActiva === v.id;
@@ -2300,25 +2284,6 @@ ${urlSeguimiento}`;
             );
           })}
         </div>
-
-        {/* Input para ingresar la subcategoría manual de Carrocería */}
-        {vistaActiva === "manual" && (
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 p-3 sm:p-3.5 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 animate-fade-in">
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-sm">✏️</span>
-              <label className="text-xs sm:text-sm font-normal text-zinc-500 dark:text-zinc-400">
-                Subcategoría:
-              </label>
-            </div>
-            <input
-              type="text"
-              value={subcategoriaManualCarroceria}
-              onChange={(e) => setSubcategoriaManualCarroceria(e.target.value)}
-              placeholder="Ej: Techo solar"
-              className="flex-1 h-11 sm:h-12 px-4 text-sm font-medium rounded-xl bg-white dark:bg-black/40 border border-zinc-300 dark:border-white/10 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 shadow-sm"
-            />
-          </div>
-        )}
 
         {/* Puntos de paginación solo en móvil para ver la vista y deslizar */}
         <div className="flex sm:hidden items-center justify-center gap-1.5 pt-0.5">

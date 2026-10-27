@@ -9,6 +9,7 @@ import InspeccionVehiculo from "@/components/taller/InspeccionVehiculo";
 import ModalNuevaOrdenTrabajo from "@/components/taller/ModalNuevaOrdenTrabajo";
 import ModalPresupuestoPdf from "@/components/taller/ModalPresupuestoPdf";
 import LubricentroExpress from "./components/LubricentroExpress";
+import ModalCategoriasTaller from "./components/ModalCategoriasTaller";
 import { getClientActiveBranch, getClientUserBranch } from "@/lib/branch";
 import { VoiceNoteRecord } from "@/lib/transcription";
 
@@ -680,6 +681,16 @@ export default function TallerPanel() {
 
   // SELECTOR SUPERIOR 4 EN 1: TALLER MECÁNICO, LUBRICENTRO, CAR WASH Y TECNICENTRO
   const [moduloTaller, setModuloTaller] = useState<"taller" | "lubricentro" | "carwash" | "tecnicentro">("taller");
+  const [triggerAbrirConfig, setTriggerAbrirConfig] = useState<number>(0);
+  const [modalConfigTallerAbierto, setModalConfigTallerAbierto] = useState<boolean>(false);
+
+  const handleAbrirCategoriasModuloActivo = () => {
+    if (moduloTaller === "taller") {
+      setModalConfigTallerAbierto(true);
+    } else {
+      setTriggerAbrirConfig((prev) => prev + 1);
+    }
+  };
 
   // FLOTANTE NUEVA ORDEN DE TRABAJO (SOLO SE ABRE AL PULSAR BOTÓN NUEVA ORDEN)
   const [mostrarModalNuevaOrden, setMostrarModalNuevaOrden] = useState(false);
@@ -1211,7 +1222,7 @@ export default function TallerPanel() {
   const ordenesCarouselRef = useRef<HTMLDivElement | null>(null);
   const ordenesCarouselScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const mostrarToast = useCallback((_texto: string, _tipo: "ok" | "err" = "ok") => {
+  const mostrarToast = useCallback((_texto: string, _tipo: "ok" | "err" | "info" = "ok") => {
     // Desactivado: sin etiquetas flotantes verde ni roja al realizar acciones
   }, []);
 
@@ -5119,48 +5130,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               <span className="whitespace-nowrap">Tecnicentro</span>
             </button>
           </div>
-
-          {/* Lado derecho: Botones Nueva Orden y Lista de Autos */}
-          <div className="hidden items-center gap-1.5 sm:gap-2.5 shrink-0">
-            {/* 1. Botón + Nueva Orden (Página Completa) */}
-            <Link
-              href="/taller/nueva-orden"
-              className="h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-blue-600/25 active:scale-95 shrink-0"
-              title="Nueva Orden"
-            >
-              <span className="text-base sm:text-lg font-bold leading-none">+</span>
-              <span className="text-xs sm:text-sm hidden sm:inline">Nueva Orden</span>
-            </Link>
-
-            {/* 2. Botón Lista de Autos */}
-            <button
-              type="button"
-              onClick={() => setMostrarModalAutosAtencion(true)}
-              className="h-8 sm:h-9 px-2 sm:px-3 rounded-xl bg-white dark:bg-[#111113] hover:bg-zinc-100 dark:hover:bg-white/[0.08] border border-zinc-200 dark:border-white/15 text-zinc-700 dark:text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:border-zinc-300 dark:hover:border-white/25 active:scale-95 shrink-0"
-              title="Ver autos y órdenes en atención"
-            >
-              <svg
-                className="w-4 h-4 text-zinc-500 dark:text-zinc-300"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
-                />
-              </svg>
-              {autosEnPista.length > 0 && (
-                <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40 text-[11px] sm:text-xs font-bold font-mono flex items-center justify-center">
-                  {autosEnPista.length}
-                </span>
-              )}
-            </button>
-
-
-          </div>
         </div>
 
         {/* ===================================================================
@@ -5214,7 +5183,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
           )}
 
           {/* VISTAS SEGÚN EL SELECTOR: TALLER, LUBRICENTRO, CAR WASH O TECNICENTRO */}
-          {moduloTaller !== "taller" ? (
+          <div className={moduloTaller !== "taller" ? "block w-full" : "hidden"}>
             <LubricentroExpress
               empleadoLogueado={empleadoLogueado}
               mecanicos={mecanicos}
@@ -5223,15 +5192,17 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               serviciosCatalogo={serviciosDb}
               mostrarToast={mostrarToast}
               ordenActiva={ordenActiva}
-              modoEspecialidad={moduloTaller}
+              modoEspecialidad={moduloTaller === "taller" ? "lubricentro" : moduloTaller}
+              triggerAbrirConfig={triggerAbrirConfig}
               onOrdenCreada={(orden) => {
                 setAutosEnPista((prev) => [orden, ...prev.filter((o) => o.id !== orden.id)]);
                 setOrdenActiva(orden);
               }}
               onCambiarATaller={() => setModuloTaller("taller")}
             />
-          ) : (
-            <>
+          </div>
+
+          <div className={moduloTaller === "taller" ? "block w-full" : "hidden"}>
           {/* ===================================================================
               VISTA DE CADA ETAPA ACTIVA (ALTURA DINÁMICA SIN ESPACIOS VACÍOS)
               =================================================================== */}
@@ -5526,8 +5497,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               </div>
             )}
           </div>
-            </>
-          )}
+          </div>
         </section>
 
       </main>
@@ -6439,6 +6409,21 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
         mecanicos={mecanicos}
         clientesCatalogo={clientesCatalogo}
         onOrdenCreada={handleOrdenCreadaDesdeModal}
+        mostrarToast={mostrarToast}
+      />
+
+      {/* Modal de Categorías y Presets de Taller Mecánico */}
+      <ModalCategoriasTaller
+        isOpen={modalConfigTallerAbierto}
+        onClose={() => setModalConfigTallerAbierto(false)}
+        serviciosDb={serviciosDb}
+        ordenActiva={ordenActiva}
+        onAgregarServicioAOrden={(nuevoItem) => {
+          if (!ordenActiva) return;
+          const itemsNuevos = [...(ordenActiva.items || []), nuevoItem];
+          setOrdenActiva({ ...ordenActiva, items: itemsNuevos });
+          void sincronizarOrdenEnNeon({ items: itemsNuevos });
+        }}
         mostrarToast={mostrarToast}
       />
 

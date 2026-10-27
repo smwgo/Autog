@@ -2,6 +2,9 @@
 
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import ModalPresupuestoPdf from "@/components/taller/ModalPresupuestoPdf";
+import ModuloLubricentroCatalogo from "./ModuloLubricentroCatalogo";
+import ModuloCarWashCatalogo from "./ModuloCarWashCatalogo";
+import ModuloTecnicentroCatalogo from "./ModuloTecnicentroCatalogo";
 
 export interface LubricentroExpressProps {
   empleadoLogueado: { id: string; nombre: string };
@@ -14,6 +17,7 @@ export interface LubricentroExpressProps {
   onCambiarATaller?: () => void;
   ordenActiva?: any;
   modoEspecialidad?: "lubricentro" | "carwash" | "tecnicentro";
+  triggerAbrirConfig?: number;
 }
 
 export interface ServicioExpressItem {
@@ -523,6 +527,7 @@ export default function LubricentroExpress({
   onOrdenCreada,
   ordenActiva,
   modoEspecialidad = "lubricentro",
+  triggerAbrirConfig,
 }: LubricentroExpressProps) {
   // =========================================================================
   // CONTROL DE ETAPAS (2: Servicios Express, 4: Firma)
@@ -1243,446 +1248,61 @@ export default function LubricentroExpress({
   return (
     <div className="space-y-5 animate-fade-in text-zinc-900 dark:text-white">
       {/* ===================================================================
-          ETAPA 2: LUBRICACIÓN Y SERVICIOS EXPRESS (5 ESTACIONES DE 1 TOQUE)
+          ETAPA 2: MÓDULOS DE ESPECIALIDAD (PRE-MONTADOS PARA CAMBIO INSTANTÁNEO 0ms)
           =================================================================== */}
       {etapaActiva === 2 && (
-        <div className="w-full space-y-4 animate-fade-in">
-{/* 1. BARRA DE CATEGORÍAS PRINCIPALES SEGÚN LA ESPECIALIDAD ACTIVA */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            {categoriasActivas.map((cat) => {
-              const sel = estacionActiva === cat.id;
-              const count = conteoPorCategoria[cat.id] || 0;
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setEstacionActiva(cat.id)}
-                  className={`h-11 sm:h-12 px-3 rounded-xl border text-xs sm:text-sm font-semibold flex items-center justify-between gap-2 transition-all cursor-pointer active:scale-95 ${
-                    sel
-                      ? "bg-amber-50 dark:bg-amber-500/20 border-amber-400 dark:border-amber-500/50 text-amber-800 dark:text-amber-300 shadow-sm ring-1 ring-amber-500/20 font-bold"
-                      : "bg-white hover:bg-zinc-50 dark:bg-white/[0.03] dark:hover:bg-white/[0.07] border-zinc-200 dark:border-white/[0.08] text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 shadow-xs"
-                  }`}
-                >
-                  <span className="flex items-center gap-2 truncate">
-                    <span className="text-base sm:text-lg leading-none">{cat.icon}</span>
-                    <span className="truncate">{cat.label}</span>
-                  </span>
-                  {count > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-amber-500 text-black font-mono text-[11px] font-bold shrink-0">
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+        <>
+          <div className={modoEspecialidad === "lubricentro" ? "block w-full" : "hidden"}>
+            <ModuloLubricentroCatalogo
+              empleadoLogueado={empleadoLogueado}
+              ordenActiva={ordenActiva}
+              itemsOrden={itemsOrden}
+              mostrarToast={mostrarToast}
+              triggerAbrirConfig={triggerAbrirConfig}
+              onActualizarItemsOrden={async (nuevosItems) => {
+                if (ordenActiva) {
+                  onOrdenCreada?.({ ...ordenActiva, items: nuevosItems });
+                  await sincronizarOrdenLubricentro({ items: nuevosItems });
+                }
+              }}
+              onIrAAvisoYFirma={() => setEtapaActiva(4)}
+            />
           </div>
 
-          {/* 2. BARRA DE SUBCATEGORÍAS DINÁMICA (IDÉNTICO A TALLER MECÁNICO) */}
-          {subCategoriasActivas.length > 0 && (
-            <div className="space-y-1.5 pb-1">
-              <div className="flex sm:grid sm:grid-cols-4 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar touch-pan-x">
-                {subCategoriasActivas.map((sub, idx) => {
-                  const activa = subCategoriaActiva === sub.id;
-                  const cantSub = conteoPorSubcategoria[sub.id] || 0;
-                  return (
-                    <button
-                      key={sub.id}
-                      type="button"
-                      onClick={() =>
-                        setSubCategoriaPorEstacion((prev) => ({
-                          ...prev,
-                          [estacionActiva]: sub.id,
-                        }))
-                      }
-                      className={`h-11 sm:h-12 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shrink-0 px-3 sm:px-0 w-full min-w-full sm:min-w-0 sm:w-auto snap-center ${
-                        activa
-                          ? "bg-amber-50 dark:bg-amber-500/20 border-amber-400 dark:border-amber-500/50 text-amber-800 dark:text-amber-300 shadow-sm font-bold"
-                          : "bg-white hover:bg-zinc-50 dark:bg-white/[0.02] dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/5 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 shadow-xs"
-                      }`}
-                    >
-                      <div className="p-1 rounded-md bg-zinc-100 dark:bg-white/5 text-sm leading-none">{sub.icon}</div>
-                      <span className="text-sm sm:text-xs font-semibold">
-                        {sub.label}
-                      </span>
-                      {cantSub > 0 && (
-                        <span className="w-4 h-4 rounded-full bg-amber-500 text-black text-[9px] font-bold flex items-center justify-center">
-                          {cantSub}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Puntos de paginación solo en móvil */}
-              <div className="flex sm:hidden items-center justify-center gap-1.5 pt-0.5">
-                {subCategoriasActivas.map((sub) => (
-                  <button
-                    key={sub.id}
-                    type="button"
-                    onClick={() =>
-                      setSubCategoriaPorEstacion((prev) => ({
-                        ...prev,
-                        [estacionActiva]: sub.id,
-                      }))
-                    }
-                    aria-label={`Ir a ${sub.label}`}
-                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                      subCategoriaActiva === sub.id ? "w-5 bg-amber-500" : "w-1.5 bg-zinc-300 dark:bg-white/20"
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 3. VISTA Y CONTENIDO DE CADA SUBCATEGORÍA ACTIVA */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/[0.08] space-y-4 shadow-xs">
-            {/* CASO ESPECIAL: Aceite de Motor (con selector de base, galones y viscosidades) */}
-            {subCategoriaActiva === "lub_aceite_motor" ? (
-              <div className="space-y-4 animate-fade-in">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <span className="text-xs text-zinc-700 dark:text-zinc-400 font-semibold">Base del lubricante:</span>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {["Sintético", "Semi-Sintético", "Mineral"].map((base) => {
-                        const sel = tipoBase === base;
-                        return (
-                          <button
-                            key={base}
-                            type="button"
-                            onClick={() => setTipoBase(base)}
-                            className={`h-9 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                              sel
-                                ? "bg-amber-50 dark:bg-amber-500/20 border-amber-400 dark:border-amber-500/50 text-amber-800 dark:text-amber-300 shadow-xs font-bold"
-                                : "bg-white hover:bg-zinc-100 dark:bg-black/30 border-zinc-300 dark:border-white/10 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white shadow-xs"
-                            }`}
-                          >
-                            {base}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <span className="text-xs text-zinc-700 dark:text-zinc-400 font-semibold">Cantidad (Galones):</span>
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {[1, 2, 3, 4, 5].map((cant) => (
-                        <button
-                          key={cant}
-                          type="button"
-                          onClick={() => setGalonesAceite(cant)}
-                          className={`h-9 rounded-xl border font-mono text-xs font-bold transition-all cursor-pointer ${
-                            galonesAceite === cant
-                              ? "bg-blue-50 dark:bg-blue-500/20 border-blue-400 dark:border-blue-500/50 text-blue-800 dark:text-blue-300 shadow-xs font-bold"
-                              : "bg-white hover:bg-zinc-100 dark:bg-black/30 border-zinc-300 dark:border-white/10 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white shadow-xs"
-                          }`}
-                        >
-                          {cant} Gal
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-white/5">
-                  <span className="text-xs text-zinc-700 dark:text-zinc-400 font-semibold block">
-                    Viscosidad de Aceite (toca para agregar / quitar de la orden):
-                  </span>
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                    {[
-                      { visc: "0W-20", price: 42 },
-                      { visc: "5W-30", price: 38 },
-                      { visc: "10W-30", price: 28 },
-                      { visc: "10W-40", price: 28 },
-                      { visc: "15W-40", price: 26 },
-                      { visc: "20W-50", price: 22 },
-                    ].map(({ visc, price }) => {
-                      const code = `ACEITE-${visc}`;
-                      const name = `Aceite Motor ${visc} ${tipoBase} (${galonesAceite} Gal)`;
-                      const marcado = itemsOrden.some((i) => i.code === code);
-                      return (
-                        <button
-                          key={visc}
-                          type="button"
-                          onClick={() => {
-                            setViscosidad(visc);
-                            void handleToggleItemLubricentro({
-                              code,
-                              name,
-                              category: "Lubricantes",
-                              subCategory: "lub_aceite_motor",
-                              price: price * galonesAceite,
-                              type: "PART",
-                              qty: 1,
-                            });
-                          }}
-                          className={`h-11 rounded-xl border font-mono text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                            marcado
-                              ? "bg-amber-500 text-white border-amber-600 dark:bg-amber-500/25 dark:border-amber-400/60 dark:text-amber-200 ring-2 ring-amber-500/30 shadow-sm font-black"
-                              : "bg-white hover:bg-zinc-100 dark:bg-black/30 border-zinc-300 dark:border-white/10 text-zinc-800 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white shadow-xs"
-                          }`}
-                        >
-                          <span>{marcado ? "✓" : "+"}</span>
-                          <span>{visc}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            ) : subCategoriaActiva === "tc_lla_inspeccion" ? (
-              /* CASO ESPECIAL: Inspección por Rueda en Tecnicentro */
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center animate-fade-in">
-                <div className="md:col-span-5 flex flex-col items-center justify-center p-4 rounded-2xl bg-zinc-100 dark:bg-black/40 border border-zinc-200 dark:border-white/10 space-y-3">
-                  <span className="text-[11px] text-zinc-600 dark:text-zinc-400 font-semibold uppercase tracking-wider">
-                    Selecciona Rueda ({ruedaSeleccionada})
-                  </span>
-                  <div className="w-48 flex flex-col gap-4">
-                    <div className="flex justify-between">
-                      {(["DI", "DD"] as const).map((r) => (
-                        <button
-                          key={r}
-                          type="button"
-                          onClick={() => setRuedaSeleccionada(r)}
-                          className={`w-14 h-14 rounded-xl border font-mono text-xs font-bold cursor-pointer transition-all ${
-                            ruedaSeleccionada === r ? "bg-sky-50 border-sky-400 text-sky-800 dark:bg-sky-500/25 dark:border-sky-400 dark:text-sky-200 shadow-sm font-bold" : "bg-white hover:bg-zinc-100 dark:bg-white/[0.03] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-400 shadow-xs"
-                          }`}
-                        >
-                          {r}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="flex justify-between">
-                      {(["TI", "TD"] as const).map((r) => (
-                        <button
-                          key={r}
-                          type="button"
-                          onClick={() => setRuedaSeleccionada(r)}
-                          className={`w-14 h-14 rounded-xl border font-mono text-xs font-bold cursor-pointer transition-all ${
-                            ruedaSeleccionada === r ? "bg-sky-50 border-sky-400 text-sky-800 dark:bg-sky-500/25 dark:border-sky-400 dark:text-sky-200 shadow-sm font-bold" : "bg-white hover:bg-zinc-100 dark:bg-white/[0.03] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-400 shadow-xs"
-                          }`}
-                        >
-                          {r}
-                        </button>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setRuedaSeleccionada("REP")}
-                      className={`h-8 rounded-xl border font-mono text-xs font-bold cursor-pointer transition-all ${
-                        ruedaSeleccionada === "REP" ? "bg-sky-50 border-sky-400 text-sky-800 dark:bg-sky-500/25 dark:border-sky-400 dark:text-sky-200 shadow-sm font-bold" : "bg-white hover:bg-zinc-100 dark:bg-white/[0.03] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-400 shadow-xs"
-                      }`}
-                    >
-                      REP: Repuesto
-                    </button>
-                  </div>
-                </div>
-
-                <div className="md:col-span-7 space-y-2.5">
-                  <span className="text-xs text-zinc-700 dark:text-zinc-400 block font-semibold">
-                    Servicios rápidos para rueda {ruedaSeleccionada}:
-                  </span>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { code: `TC-PARCHE-${ruedaSeleccionada}`, name: `Parche Llanta (${ruedaSeleccionada})`, price: 5 },
-                      { code: `TC-VULC-${ruedaSeleccionada}`, name: `Vulcanizado (${ruedaSeleccionada})`, price: 8 },
-                      { code: `TC-MONT-${ruedaSeleccionada}`, name: `Montaje Llanta (${ruedaSeleccionada})`, price: 6 },
-                      { code: `TC-BAL-${ruedaSeleccionada}`, name: `Balanceo (${ruedaSeleccionada})`, price: 5 },
-                    ].map((s) => {
-                      const sel = tieneServicioEnOrden(s.code, s.name);
-                      return (
-                        <button
-                          key={s.code}
-                          type="button"
-                          onClick={() =>
-                            handleToggleItemLubricentro({
-                              code: s.code,
-                              name: s.name,
-                              category: "Llantera",
-                              subCategory: "tc_lla_inspeccion",
-                              price: s.price,
-                              type: "SERVICE",
-                            })
-                          }
-                          className={`p-3 rounded-xl border text-xs font-medium text-left flex items-center justify-between gap-2 cursor-pointer transition-all ${
-                            sel ? "bg-sky-50 border-sky-400 text-sky-900 dark:bg-sky-500/20 dark:border-sky-400/50 dark:text-sky-200 shadow-xs font-bold" : "bg-white hover:bg-zinc-100 dark:bg-black/30 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white shadow-xs"
-                          }`}
-                        >
-                          <span className="truncate">{s.name}</span>
-                          <span>{sel ? "✓" : "+"}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            ) : subCategoriaActiva === "lub_bat_diagnostico" || subCategoriaActiva === "tc_bat_test" ? (
-              /* CASO ESPECIAL: Test de Batería con foto de garantía R2 */
-              <div className="space-y-4 animate-fade-in">
-                <div className="p-4 rounded-2xl bg-zinc-100 dark:bg-black/40 border border-zinc-200 dark:border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">⚡</span>
-                      <div>
-                        <span className="text-sm font-semibold text-zinc-900 dark:text-white block">Test Computarizado de Batería</span>
-                        <span className="text-xs text-zinc-600 dark:text-zinc-400">Verificación de CCA, alternador y arranque</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 pt-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleToggleItemLubricentro({
-                            code: "BAT-DIAG-EXPRESS",
-                            name: "Diagnóstico Batería & Alternador",
-                            category: "Baterías",
-                            subCategory: subCategoriaActiva,
-                            price: 8,
-                            type: "SERVICE",
-                          })
-                        }
-                        className={`px-3 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer ${
-                          tieneServicioEnOrden("BAT-DIAG-EXPRESS", "Diagnóstico Batería & Alternador")
-                            ? "bg-purple-50 border-purple-400 text-purple-800 dark:bg-purple-500/25 dark:border-purple-400 dark:text-purple-200 shadow-xs font-bold"
-                            : "bg-white hover:bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 shadow-xs"
-                        }`}
-                      >
-                        {tieneServicioEnOrden("BAT-DIAG-EXPRESS", "Diagnóstico Batería & Alternador") ? "✓ Test Marcado ($8)" : "+ Marcar Test ($8)"}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/5 space-y-2">
-                    <span className="text-xs text-zinc-400 block font-medium">Foto de serie / prueba / garantía R2:</span>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] text-zinc-300 truncate">
-                        {fotoBateriaR2 ? "✓ Foto guardada en R2" : "Sin foto adjunta"}
-                      </span>
-                      <input
-                        ref={inputFotoBateriaRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleSubirFotoBateriaR2}
-                        className="hidden"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => inputFotoBateriaRef.current?.click()}
-                        disabled={subiendoFotoBateria}
-                        className="px-3 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-xs font-semibold cursor-pointer shrink-0"
-                      >
-                        {subiendoFotoBateria ? "Subiendo..." : "📷 Subir Foto"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Lista de presets complementarios de diagnóstico */}
-                {(ITEMS_POR_SUBCATEGORIA[subCategoriaActiva] || []).length > 0 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2">
-                    {(ITEMS_POR_SUBCATEGORIA[subCategoriaActiva] || []).map((item) => {
-                      const sel = tieneServicioEnOrden(item.code, item.name);
-                      return (
-                        <button
-                          key={item.code}
-                          type="button"
-                          onClick={() =>
-                            handleToggleItemLubricentro({
-                              code: item.code,
-                              name: item.name,
-                              category: "Baterías",
-                              subCategory: subCategoriaActiva,
-                              price: item.price,
-                              type: item.type,
-                            })
-                          }
-                          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 ${
-                            sel
-                              ? "bg-purple-50 dark:bg-purple-500/20 border-purple-400 dark:border-purple-400/50 text-purple-950 dark:text-white ring-1 ring-purple-400/30 shadow-sm"
-                              : "bg-white hover:bg-zinc-50 dark:bg-black/30 border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.05] shadow-xs"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-xl">{item.icon}</span>
-                            <span className="text-xs font-bold text-purple-300">${item.price}</span>
-                          </div>
-                          <div>
-                            <span className="text-xs sm:text-sm font-semibold block">{item.name}</span>
-                            <span className="text-[11px] text-zinc-400">{item.desc}</span>
-                          </div>
-                          <div className="flex justify-end">
-                            <span className={`px-2 py-0.5 rounded-lg text-xs font-bold ${sel ? "bg-purple-600 text-white dark:bg-purple-500/30 dark:text-purple-200" : "bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400"}`}>
-                              {sel ? "✓ En Orden" : "+ Agregar"}
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            ) : (
-              /* CASO GENERAL: Cuadrícula responsiva de presets de la subcategoría */
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-fade-in">
-                {(ITEMS_POR_SUBCATEGORIA[subCategoriaActiva] || []).map((item) => {
-                  const sel = tieneServicioEnOrden(item.code, item.name);
-                  return (
-                    <button
-                      key={item.code}
-                      type="button"
-                      onClick={() =>
-                        handleToggleItemLubricentro({
-                          code: item.code,
-                          name: item.name,
-                          category: modoEspecialidad === "carwash" ? "Lavado" : modoEspecialidad === "tecnicentro" ? "Tecnicentro" : "Lubricentro",
-                          subCategory: subCategoriaActiva,
-                          price: item.price,
-                          type: item.type,
-                        })
-                      }
-                      className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 ${
-                        sel
-                          ? "bg-amber-50 border-amber-400 text-amber-950 dark:bg-amber-500/15 dark:border-amber-500/45 dark:text-white ring-1 ring-amber-400/30 shadow-sm"
-                          : "bg-white hover:bg-zinc-50 dark:bg-black/30 border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.05] shadow-xs"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xl">{item.icon}</span>
-                        <span className="text-xs font-bold text-amber-700 dark:text-amber-300">${item.price}</span>
-                      </div>
-                      <div>
-                        <span className="text-xs sm:text-sm font-semibold block text-zinc-900 dark:text-white">{item.name}</span>
-                        <span className="text-[11px] text-zinc-600 dark:text-zinc-400">{item.desc}</span>
-                      </div>
-                      <div className="flex justify-end">
-                        <span
-                          className={`px-2 py-0.5 rounded-lg text-xs font-bold ${
-                            sel ? "bg-amber-500 text-white dark:bg-amber-500/30 dark:text-amber-200" : "bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400"
-                          }`}
-                        >
-                          {sel ? "✓ En Orden" : "+ Agregar"}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+          <div className={modoEspecialidad === "carwash" ? "block w-full" : "hidden"}>
+            <ModuloCarWashCatalogo
+              empleadoLogueado={empleadoLogueado}
+              ordenActiva={ordenActiva}
+              itemsOrden={itemsOrden}
+              mostrarToast={mostrarToast}
+              triggerAbrirConfig={triggerAbrirConfig}
+              onActualizarItemsOrden={async (nuevosItems) => {
+                if (ordenActiva) {
+                  onOrdenCreada?.({ ...ordenActiva, items: nuevosItems });
+                  await sincronizarOrdenLubricentro({ items: nuevosItems });
+                }
+              }}
+              onIrAAvisoYFirma={() => setEtapaActiva(4)}
+            />
           </div>
 
-                    {/* Navegación Etapa 2 */}
-          <div className="flex items-center justify-end pt-2">
-            <button
-              type="button"
-              onClick={() => setEtapaActiva(4)}
-              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white dark:bg-amber-500/20 dark:hover:bg-amber-500/30 dark:border dark:border-amber-500/40 dark:text-amber-300 text-xs font-semibold cursor-pointer shadow-sm active:scale-95 transition-all"
-            >
-              Siguiente (Aviso y Firma) →
-            </button>
+          <div className={modoEspecialidad === "tecnicentro" ? "block w-full" : "hidden"}>
+            <ModuloTecnicentroCatalogo
+              empleadoLogueado={empleadoLogueado}
+              ordenActiva={ordenActiva}
+              itemsOrden={itemsOrden}
+              mostrarToast={mostrarToast}
+              triggerAbrirConfig={triggerAbrirConfig}
+              onActualizarItemsOrden={async (nuevosItems) => {
+                if (ordenActiva) {
+                  onOrdenCreada?.({ ...ordenActiva, items: nuevosItems });
+                  await sincronizarOrdenLubricentro({ items: nuevosItems });
+                }
+              }}
+              onIrAAvisoYFirma={() => setEtapaActiva(4)}
+            />
           </div>
-        </div>
+        </>
       )}
 
       {/* Modal Presupuesto PDF */}
