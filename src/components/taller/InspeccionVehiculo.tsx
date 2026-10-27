@@ -463,8 +463,34 @@ export default function InspeccionVehiculo({
   );
 
   // Estados de carga y error para la imagen 3D del vehículo (compatibilidad móvil)
-  const [imagenCargando, setImagenCargando] = useState<boolean>(true);
+  const [imagenCargando, setImagenCargando] = useState<boolean>(false);
   const [imagenError, setImagenError] = useState<boolean>(false);
+
+  // Precarga inmediata en memoria de todos los esquemas 3D para cambio instantáneo en móvil
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const urls = [
+      "/images/inspeccion/auto_3d_frontal.jpg",
+      "/images/inspeccion/auto_3d_trasera.jpg",
+      "/images/inspeccion/auto_3d_superior.jpg",
+      "/images/inspeccion/auto_3d_motor.jpg",
+      "/images/inspeccion/auto_3d_frenos.jpg",
+      "/images/inspeccion/auto_3d_suspension.jpg",
+      "/images/inspeccion/auto_3d_electrico.jpg",
+      "/images/inspeccion/auto_3d_frontal_cad.png",
+      "/images/inspeccion/auto_3d_trasera_cad.png",
+      "/images/inspeccion/auto_3d_superior_cad.png",
+      "/images/inspeccion/auto_3d_motor_cad.png",
+      "/images/inspeccion/auto_3d_frenos_cad.png",
+      "/images/inspeccion/auto_3d_suspension_cad.png",
+      "/images/inspeccion/auto_3d_electrico_cad.png",
+    ];
+    urls.forEach((src) => {
+      const img = new window.Image();
+      img.decoding = "sync";
+      img.src = src;
+    });
+  }, []);
 
   // Detección reactiva de modo claro/oscuro para renderizado de esquemas 3D
   const [isDark, setIsDark] = useState<boolean>(true);
@@ -488,7 +514,7 @@ export default function InspeccionVehiculo({
   const lienzoOscuro = modoVisualLienzo === "auto" ? isDark : modoVisualLienzo === "oscuro";
 
   useEffect(() => {
-    setImagenCargando(true);
+    setImagenCargando(false);
     setImagenError(false);
   }, [vistaActiva, seccionActiva, subCategoriaPorSistema]);
 
@@ -2322,7 +2348,8 @@ ${urlSeguimiento}`;
               }
               alt={`Vehículo 3D ${vistaActiva}`}
               loading="eager"
-              decoding="async"
+              decoding="sync"
+              fetchPriority="high"
               onLoad={() => {
                 setImagenCargando(false);
                 setImagenError(false);
@@ -2335,7 +2362,7 @@ ${urlSeguimiento}`;
                 filter: "none",
                 mixBlendMode: "normal",
               }}
-              className="max-w-full max-h-full w-auto h-auto object-contain select-none transition-all duration-300 inspeccion-wireframe-img drop-shadow-sm"
+              className="max-w-full max-h-full w-auto h-auto object-contain select-none inspeccion-wireframe-img drop-shadow-sm"
             />
           </div>
 
@@ -2723,7 +2750,8 @@ ${urlSeguimiento}`;
                   }
                   alt={`${sistemaActual.name} 3D`}
                   loading="eager"
-                  decoding="async"
+                  decoding="sync"
+                  fetchPriority="high"
                   onLoad={() => {
                     setImagenCargando(false);
                     setImagenError(false);
@@ -2736,7 +2764,7 @@ ${urlSeguimiento}`;
                     filter: "none",
                     mixBlendMode: "normal",
                   }}
-                  className="max-w-full max-h-full w-auto h-auto object-contain select-none transition-all duration-300 inspeccion-wireframe-img drop-shadow-sm"
+                  className="max-w-full max-h-full w-auto h-auto object-contain select-none inspeccion-wireframe-img drop-shadow-sm"
                 />
               </div>
 
