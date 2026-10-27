@@ -2349,10 +2349,10 @@ ${urlSeguimiento}`;
                 id={`seccion-tab-${sis.id}`}
                 type="button"
                 onClick={() => cambiarSeccionActiva(sis.id)}
-                className={`h-11 sm:h-10 px-3 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer text-xs font-bold w-full active:scale-95 shadow-2xs ${
+                className={`h-10 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all shadow-2xs active:scale-95 ${
                   active
-                    ? "bg-purple-50 dark:bg-purple-500/20 border-purple-400 dark:border-purple-500/40 text-purple-700 dark:text-purple-200 ring-1 ring-purple-400/40 shadow-sm"
-                    : "bg-white dark:bg-white/[0.03] hover:bg-zinc-50 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 shadow-2xs"
+                    ? "bg-blue-50/90 dark:bg-blue-500/20 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/40 font-bold"
+                    : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
                 }`}
               >
                 <span className="text-base leading-none shrink-0">{sis.icon}</span>
