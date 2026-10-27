@@ -17,6 +17,7 @@ interface Product {
   minStock: number;
   location?: string | null;
   status: string;
+  imageUrl?: string | null;
   createdAt: string;
 }
 
@@ -39,6 +40,9 @@ export default function CatalogoPage() {
   const [guardando, setGuardando] = useState(false);
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
 
+  const [subiendoFotoModal, setSubiendoFotoModal] = useState(false);
+  const [errorFotoModal, setErrorFotoModal] = useState<string | null>(null);
+
   // Form State
   const [form, setForm] = useState({
     code: "",
@@ -49,6 +53,7 @@ export default function CatalogoPage() {
     stock: "0",
     minStock: "5",
     location: "",
+    imageUrl: "",
   });
 
   const cargarProductos = useCallback(async () => {
@@ -104,7 +109,9 @@ export default function CatalogoPage() {
       stock: "0",
       minStock: "5",
       location: "",
+      imageUrl: "",
     });
+    setErrorFotoModal(null);
     setMostrarModalNuevo(true);
   };
 
@@ -119,7 +126,50 @@ export default function CatalogoPage() {
       stock: prod.stock.toString(),
       minStock: prod.minStock?.toString() || "5",
       location: prod.location || "",
+      imageUrl: prod.imageUrl || "",
     });
+    setErrorFotoModal(null);
+  };
+
+  const handleSubirFotoModal = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setErrorFotoModal("El archivo seleccionado debe ser una imagen válida (JPG, PNG, WEBP, AVIF).");
+      return;
+    }
+
+    if (file.size > 8 * 1024 * 1024) {
+      setErrorFotoModal("La imagen no debe superar los 8 MB.");
+      return;
+    }
+
+    setErrorFotoModal(null);
+    setSubiendoFotoModal(true);
+
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "productos");
+
+      const res = await fetch("/api/storage/upload", {
+        method: "POST",
+        body: fd,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data?.url) {
+        throw new Error(data?.error || "Error al subir la imagen al servidor.");
+      }
+
+      setForm((prev) => ({ ...prev, imageUrl: data.url }));
+    } catch (err: any) {
+      setErrorFotoModal(err?.message || "No se pudo subir la foto.");
+    } finally {
+      setSubiendoFotoModal(false);
+    }
   };
 
   const guardarNuevoProducto = async (e: React.FormEvent) => {
@@ -536,9 +586,17 @@ export default function CatalogoPage() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        {/* Icono de producto estilo factura */}
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30">
-                          📦
+                        {/* Icono / Foto de producto */}
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-2xs">
+                          {item.imageUrl ? (
+                            <img
+                              src={item.imageUrl}
+                              alt={item.name}
+                              className="w-full h-full object-contain p-1"
+                            />
+                          ) : (
+                            <span className="text-xl">📦</span>
+                          )}
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -626,17 +684,32 @@ export default function CatalogoPage() {
                           key={item.id}
                           className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors"
                         >
-                          <td className="py-3.5 px-4">
-                            <div className="font-bold text-zinc-900 dark:text-white mb-0.5">{item.name}</div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-mono bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
-                                {item.code}
-                              </span>
-                              {item.brand && (
-                                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                                  {item.brand}
-                                </span>
-                              )}
+                          <td className="py-3.5 px-4 font-medium">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+                                {item.imageUrl ? (
+                                  <img
+                                    src={item.imageUrl}
+                                    alt={item.name}
+                                    className="w-full h-full object-contain p-0.5"
+                                  />
+                                ) : (
+                                  <span className="text-base">📦</span>
+                                )}
+                              </div>
+                              <div>
+                                <div className="font-bold text-zinc-900 dark:text-white mb-0.5">{item.name}</div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-mono bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                                    {item.code}
+                                  </span>
+                                  {item.brand && (
+                                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                                      {item.brand}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </td>
                           <td className="py-3.5 px-4">
@@ -727,7 +800,49 @@ export default function CatalogoPage() {
                 </button>
               </div>
 
-              <form onSubmit={productoAEditar ? guardarEdicion : guardarNuevoProducto} className="space-y-4">
+              <form onSubmit={productoAEditar ? guardarEdicion : guardarNuevoProducto} className="p-6 space-y-4">
+                {/* Foto del Producto */}
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
+                    Foto del Producto
+                  </label>
+                  <div className="flex items-center gap-3.5 p-3 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/40">
+                    <div className="relative w-14 h-14 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 overflow-hidden flex items-center justify-center shrink-0">
+                      {form.imageUrl ? (
+                        <>
+                          <img src={form.imageUrl} alt="Preview" className="w-full h-full object-contain p-1" />
+                          <button
+                            type="button"
+                            onClick={() => setForm((prev) => ({ ...prev, imageUrl: "" }))}
+                            className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center cursor-pointer shadow-xs"
+                            title="Quitar foto"
+                          >
+                            ✕
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-xl text-zinc-400">📷</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <label className={`h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 ${subiendoFotoModal ? "opacity-60 pointer-events-none" : ""}`}>
+                          <span>{subiendoFotoModal ? "Subiendo..." : form.imageUrl ? "Cambiar Foto" : "Subir Imagen"}</span>
+                          <input type="file" accept="image/*" disabled={subiendoFotoModal} onChange={handleSubirFotoModal} className="hidden" />
+                        </label>
+                      </div>
+                      <input
+                        type="url"
+                        placeholder="O pega URL de imagen..."
+                        value={form.imageUrl}
+                        onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                        className="w-full h-7 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs outline-none focus:border-blue-500 font-mono text-zinc-700 dark:text-zinc-300"
+                      />
+                      {errorFotoModal && <p className="text-[11px] text-rose-500 font-medium">⚠️ {errorFotoModal}</p>}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">

@@ -668,6 +668,8 @@ model Customer {
   phone              String
   email              String?
   address            String?
+  avatar             String?
+  imageUrl           String?
   vip                Boolean         @default(false)
   notes              String?
   branch             String          @default("PRINCIPAL")
@@ -695,6 +697,7 @@ model Vehicle {
   color                String?
   mileage              Int?
   nextOilChangeMileage Int?
+  imageUrl             String?
   photosJson           String?         @default("[]")
   vin                  String?
   fuelType             String?         @default("Gasolina")

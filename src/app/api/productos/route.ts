@@ -103,7 +103,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { code, name, brand, category = "General", price, stock = 0, minStock = 5, location } = body;
+    const { code, name, brand, category = "General", price, costPrice, stock = 0, minStock = 5, location, imageUrl } = body;
     const rawCode = (code || "").toString().trim();
     const codigoLimpio = rawCode
       ? rawCode.toUpperCase()
@@ -131,6 +131,9 @@ export async function POST(request: Request) {
     const numStock = parseInt(stock?.toString() || "0", 10) || 0;
     const numMinStock = parseInt(minStock?.toString() || "5", 10) || 5;
     const numPrice = parseFloat(price?.toString() || "0") || 0;
+    const numCostPrice = costPrice !== undefined && costPrice !== null && costPrice !== ""
+      ? parseFloat(costPrice.toString())
+      : null;
     const status = calcularEstado(numStock, numMinStock);
 
     const nuevoProducto = await prisma.product.create({
@@ -140,9 +143,11 @@ export async function POST(request: Request) {
         brand: brand?.trim() || null,
         category: category?.trim() || "General",
         price: numPrice,
+        costPrice: numCostPrice,
         stock: numStock,
         minStock: numMinStock,
         location: location?.trim() || null,
+        imageUrl: imageUrl ? imageUrl.trim() : null,
         status,
       },
     });
@@ -164,7 +169,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, code, name, brand, category, price, stock, minStock = 5, location } = body;
+    const { id, code, name, brand, category, price, costPrice, stock, minStock = 5, location, imageUrl } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, error: "ID de producto requerido" }, { status: 400 });
@@ -173,6 +178,9 @@ export async function PUT(request: Request) {
     const numStock = parseInt(stock.toString(), 10) || 0;
     const numMinStock = parseInt(minStock?.toString() || "5", 10) || 5;
     const numPrice = parseFloat(price.toString()) || 0;
+    const numCostPrice = costPrice !== undefined && costPrice !== null && costPrice !== ""
+      ? parseFloat(costPrice.toString())
+      : undefined;
     const status = calcularEstado(numStock, numMinStock);
 
     const actualizado = await prisma.product.update({
@@ -183,9 +191,11 @@ export async function PUT(request: Request) {
         brand: brand !== undefined ? brand.trim() : undefined,
         category: category ? category.trim() : undefined,
         price: numPrice,
+        costPrice: numCostPrice,
         stock: numStock,
         minStock: numMinStock,
         location: location !== undefined ? location.trim() : undefined,
+        imageUrl: imageUrl !== undefined ? (imageUrl ? imageUrl.trim() : null) : undefined,
         status,
       },
     });

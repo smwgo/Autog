@@ -31,6 +31,8 @@ interface Customer {
   lastVisit?: string | null;
   branch?: string;
   assignedToSucursal?: boolean;
+  avatar?: string | null;
+  imageUrl?: string | null;
   createdAt: string;
   vehicles: Vehicle[];
 }
@@ -428,12 +430,20 @@ export default function GestionClientes() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border ${
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border overflow-hidden ${
                         row.type === 'Empresa'
                           ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30'
                           : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30'
                       }`}>
-                        {row.type === 'Empresa' ? '🏢' : row.name.charAt(0).toUpperCase()}
+                        {row.avatar || row.imageUrl ? (
+                          <img
+                            src={row.avatar || row.imageUrl || ""}
+                            alt={row.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          row.type === 'Empresa' ? '🏢' : row.name.charAt(0).toUpperCase()
+                        )}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -607,8 +617,16 @@ export default function GestionClientes() {
                     <tr key={row.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/20 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border ${row.type === 'Empresa' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30' : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30'}`}>
-                            {row.type === 'Empresa' ? '🏢' : row.name.charAt(0).toUpperCase()}
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border overflow-hidden ${row.type === 'Empresa' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/30' : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30'}`}>
+                            {row.avatar || row.imageUrl ? (
+                              <img
+                                src={row.avatar || row.imageUrl || ""}
+                                alt={row.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              row.type === 'Empresa' ? '🏢' : row.name.charAt(0).toUpperCase()
+                            )}
                           </div>
                           <div>
                             <div className="flex items-center gap-1.5 flex-wrap">

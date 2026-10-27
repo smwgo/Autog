@@ -660,6 +660,78 @@ function formatearFechaIngreso(dateStr?: string | null): string {
   }
 }
 
+// ============================================================================
+// ESPECIALIDADES DEL SELECTOR (TALLER, LUBRICENTRO, CAR WASH, TECNICENTRO)
+// ============================================================================
+export const MODULOS_ESPECIALIDADES = [
+  {
+    id: "taller" as const,
+    shortName: "Taller",
+    name: "Taller Mecánico",
+    desc: "Mecánica general y diagnóstico",
+    color: "blue",
+    bgClass: "bg-blue-600",
+    borderClass: "border-blue-400/50",
+    shadowClass: "shadow-blue-600/30",
+    dotClass: "bg-blue-500",
+    svg: (className = "w-4 h-4") => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.07a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091.455.087.935-.012 1.39" />
+      </svg>
+    ),
+  },
+  {
+    id: "lubricentro" as const,
+    shortName: "Lubricentro",
+    name: "Lubricentro Express",
+    desc: "Cambio de aceite, filtros y fluidos",
+    color: "amber",
+    bgClass: "bg-amber-600",
+    borderClass: "border-amber-400/50",
+    shadowClass: "shadow-amber-600/30",
+    dotClass: "bg-amber-500",
+    svg: (className = "w-4 h-4") => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
+      </svg>
+    ),
+  },
+  {
+    id: "carwash" as const,
+    shortName: "Car Wash",
+    name: "Car Wash & Detailing",
+    desc: "Lavado premium, aspirado y estética",
+    color: "cyan",
+    bgClass: "bg-cyan-600",
+    borderClass: "border-cyan-400/50",
+    shadowClass: "shadow-cyan-600/30",
+    dotClass: "bg-cyan-500",
+    svg: (className = "w-4 h-4") => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+      </svg>
+    ),
+  },
+  {
+    id: "tecnicentro" as const,
+    shortName: "Tecnicentro",
+    name: "Tecnicentro Automotriz",
+    desc: "Llantas, alineación, balanceo y baterías",
+    color: "emerald",
+    bgClass: "bg-emerald-600",
+    borderClass: "border-emerald-400/50",
+    shadowClass: "shadow-emerald-600/30",
+    dotClass: "bg-emerald-500",
+    svg: (className = "w-4 h-4") => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+        <circle cx="12" cy="12" r="9" />
+        <circle cx="12" cy="12" r="3" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v6m0 6v6M3 12h6m6 0h6" />
+      </svg>
+    ),
+  },
+];
+
 export default function TallerPanel() {
   const router = useRouter();
 
@@ -681,6 +753,56 @@ export default function TallerPanel() {
 
   // SELECTOR SUPERIOR 4 EN 1: TALLER MECÁNICO, LUBRICENTRO, CAR WASH Y TECNICENTRO
   const [moduloTaller, setModuloTaller] = useState<"taller" | "lubricentro" | "carwash" | "tecnicentro">("taller");
+  const mobileSliderRef = useRef<HTMLDivElement>(null);
+  const isProgrammaticScroll = useRef(false);
+
+  // Sincronizar el scroll del selector móvil cuando moduloTaller cambia
+  useEffect(() => {
+    const idx = MODULOS_ESPECIALIDADES.findIndex((m) => m.id === moduloTaller);
+    if (idx !== -1 && mobileSliderRef.current) {
+      const container = mobileSliderRef.current;
+      const itemWidth = container.clientWidth;
+      if (itemWidth > 0) {
+        const targetLeft = idx * itemWidth;
+        if (Math.abs(container.scrollLeft - targetLeft) > 5) {
+          isProgrammaticScroll.current = true;
+          container.scrollTo({
+            left: targetLeft,
+            behavior: "smooth",
+          });
+          const timer = setTimeout(() => {
+            isProgrammaticScroll.current = false;
+          }, 350);
+          return () => clearTimeout(timer);
+        }
+      }
+    }
+  }, [moduloTaller]);
+
+  const handleMobileSliderScroll = () => {
+    if (isProgrammaticScroll.current || !mobileSliderRef.current) return;
+    const container = mobileSliderRef.current;
+    const width = container.clientWidth;
+    if (width <= 0) return;
+    const index = Math.round(container.scrollLeft / width);
+    const target = MODULOS_ESPECIALIDADES[index];
+    if (target && target.id !== moduloTaller) {
+      setModuloTaller(target.id);
+    }
+  };
+
+  const handlePrevModulo = () => {
+    const currentIdx = MODULOS_ESPECIALIDADES.findIndex((m) => m.id === moduloTaller);
+    const prevIdx = currentIdx > 0 ? currentIdx - 1 : MODULOS_ESPECIALIDADES.length - 1;
+    setModuloTaller(MODULOS_ESPECIALIDADES[prevIdx].id);
+  };
+
+  const handleNextModulo = () => {
+    const currentIdx = MODULOS_ESPECIALIDADES.findIndex((m) => m.id === moduloTaller);
+    const nextIdx = currentIdx < MODULOS_ESPECIALIDADES.length - 1 ? currentIdx + 1 : 0;
+    setModuloTaller(MODULOS_ESPECIALIDADES[nextIdx].id);
+  };
+
   const [triggerAbrirConfig, setTriggerAbrirConfig] = useState<number>(0);
   const [modalConfigTallerAbierto, setModalConfigTallerAbierto] = useState<boolean>(false);
 
@@ -1328,11 +1450,14 @@ export default function TallerPanel() {
     try {
       const cached = JSON.parse(localStorage.getItem("taller_pista_cache") || "null");
       if (Array.isArray(cached) && cached.length > 0) {
+        const cleanCached = cached.map((o: UnifiedOrder) =>
+          o.orderNumber === "ORD-POS-6734" ? { ...o, orderNumber: "868675" } : o
+        );
         const savedId = localStorage.getItem("taller_orden_activa_id");
-        setAutosEnPista((prev) => (prev.length > 0 ? prev : cached));
+        setAutosEnPista((prev) => (prev.length > 0 ? prev : cleanCached));
         setOrdenActiva((prev) => {
-          if (prev) return prev;
-          const found = cached.find((o: UnifiedOrder) => o.id === savedId) || cached[0];
+          if (prev) return prev.orderNumber === "ORD-POS-6734" ? { ...prev, orderNumber: "868675" } : prev;
+          const found = cleanCached.find((o: UnifiedOrder) => o.id === savedId) || cleanCached[0];
           if (found && found.id) {
             try {
               const savedFindings = JSON.parse(localStorage.getItem(`taller_findings_${found.id}`) || "null");
@@ -4708,7 +4833,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
     VISTAS_INSPECCION.find((v) => v.id === etapa3VistaActiva) || VISTAS_INSPECCION[0];
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-[#050505] text-zinc-900 dark:text-white font-sans pb-28 md:pb-12 selection:bg-blue-500/30">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-[#141A22] text-zinc-900 dark:text-white font-sans pb-28 md:pb-12 selection:bg-blue-500/30">
       <Header />
 
 
@@ -4746,8 +4871,18 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     <span className="block text-base sm:text-sm font-bold sm:font-semibold leading-tight text-zinc-900 dark:text-white">
                       Orden de Servicio
                     </span>
-                    <span className="block text-xs sm:text-[11px] font-mono leading-tight text-zinc-500 dark:text-zinc-400 mt-0.5">
-                      #{ordenActiva.orderNumber}
+                    <span className="block text-sm sm:text-sm font-mono font-normal leading-tight text-zinc-500 dark:text-zinc-400 mt-0.5">
+                      {(() => {
+                        const raw = String(ordenActiva.orderNumber || "").trim();
+                        const num = raw
+                          .replace(/^#+/, "")
+                          .replace(/^OT\s*#?\s*/i, "")
+                          .replace(/^ORD-[A-Z0-9]+-/i, "")
+                          .replace(/^ORD-/i, "")
+                          .replace(/^OT-\d{4}-/i, "")
+                          .trim();
+                        return `#${num || raw}`;
+                      })()}
                     </span>
                   </span>
                 </div>
@@ -4765,23 +4900,23 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 Taller Mecánico
               </span>
             )}
-            <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+            <div className="flex items-center gap-2 shrink-0 ml-auto">
               <Link
                 href="/taller/nueva-orden"
                 aria-label="Nueva Orden"
-                className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white font-semibold flex items-center justify-center transition-all cursor-pointer shadow-lg shadow-blue-600/25 active:scale-95"
-                title="Orden"
+                className="w-10 h-10 sm:w-9 sm:h-9 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400/40 text-white font-semibold flex items-center justify-center transition-all cursor-pointer shadow-lg shadow-blue-600/25 active:scale-95 shrink-0"
+                title="Nueva Orden"
               >
                 <span className="text-xl sm:text-lg font-bold leading-none">+</span>
               </Link>
               <button
                 type="button"
                 onClick={() => setMostrarModalAutosAtencion(true)}
-                className="h-9 px-2.5 sm:h-8 sm:px-2 rounded-xl bg-white dark:bg-[#111113] hover:bg-zinc-100 dark:hover:bg-white/[0.08] border border-zinc-200 dark:border-white/15 text-zinc-700 dark:text-white flex items-center gap-1.5 sm:gap-1 transition-all cursor-pointer shadow-sm active:scale-95"
+                className="relative w-10 h-10 sm:w-9 sm:h-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border border-emerald-500/30 dark:border-emerald-500/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
                 title="Ver autos y órdenes en atención"
               >
                 <svg
-                  className="w-4.5 h-4.5 sm:w-4 sm:h-4 text-zinc-500 dark:text-zinc-300"
+                  className="w-5 h-5 sm:w-4.5 sm:h-4.5 text-emerald-600 dark:text-emerald-400"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -4795,7 +4930,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   />
                 </svg>
                 {autosEnPista.length > 0 && (
-                  <span className="w-5.5 h-5.5 sm:w-5 sm:h-5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40 text-xs sm:text-[11px] font-bold font-mono flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] sm:min-w-4 sm:h-4 px-1 rounded-full bg-emerald-500/25 dark:bg-emerald-500/30 border border-emerald-500/50 text-emerald-700 dark:text-emerald-300 text-[10px] sm:text-[9px] font-bold font-mono flex items-center justify-center shadow-sm backdrop-blur-sm">
                     {autosEnPista.length}
                   </span>
                 )}
@@ -5026,109 +5161,137 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             FILA 2: MÁS ABAJO ESOS BOTONES (SELECTOR 4 EN 1 + BOTONES ACCIÓN)
             =================================================================== */}
         <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 py-1">
-          {/* SELECTOR SUPERIOR 4 EN 1: Taller, Lubricentro, Car Wash y Tecnicentro */}
-          <div className="w-full sm:w-fit flex items-center p-1 rounded-2xl bg-white/80 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl gap-0.5 sm:gap-1 shrink-0 overflow-x-auto max-w-full">
-            <button
-              type="button"
-              onClick={() => setModuloTaller("taller")}
-              className={`h-9 min-w-0 flex-1 sm:flex-none px-1 sm:px-3.5 rounded-xl text-[10px] sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 ${
-                moduloTaller === "taller"
-                  ? "bg-blue-600 border border-blue-400/40 text-white shadow-lg shadow-blue-600/30 scale-[1.01]"
-                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-              }`}
-              title="Taller Mecánico"
-            >
-              <svg
-                className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.75}
+          {/* SELECTOR SUPERIOR 4 EN 1: VISTA MÓVIL (DESLIZABLE UNO A UNO) */}
+          <div className="block sm:hidden w-full select-none">
+            <div className="relative flex items-center bg-white/90 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 rounded-2xl p-1 shadow-sm backdrop-blur-md">
+              {/* Botón flecha izquierda */}
+              <button
+                type="button"
+                onClick={handlePrevModulo}
+                className="h-11 w-9 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors shrink-0 z-10 active:scale-95 cursor-pointer rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5"
+                title="Anterior especialidad"
+                aria-label="Anterior"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.07a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091.455.087.935-.012 1.39"
-                />
-              </svg>
-              <span className="whitespace-nowrap">Taller</span>
-            </button>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setModuloTaller("lubricentro")}
-              className={`h-9 min-w-0 flex-1 sm:flex-none px-1 sm:px-3.5 rounded-xl text-[10px] sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 ${
-                moduloTaller === "lubricentro"
-                  ? "bg-amber-600 border border-amber-400/40 text-white shadow-lg shadow-amber-600/30 scale-[1.01]"
-                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-              }`}
-              title="Lubricentro Express"
-            >
-              <svg
-                className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.75}
+              {/* Contenedor deslizable uno a uno */}
+              <div
+                ref={mobileSliderRef}
+                onScroll={handleMobileSliderScroll}
+                className="flex-1 flex overflow-x-auto snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden touch-pan-x"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z"
-                />
-              </svg>
-              <span className="whitespace-nowrap">Lubricentro</span>
-            </button>
+                {MODULOS_ESPECIALIDADES.map((mod, idx) => {
+                  const isActivo = moduloTaller === mod.id;
+                  return (
+                    <div
+                      key={mod.id}
+                      className="w-full shrink-0 snap-center px-1"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setModuloTaller(mod.id)}
+                        className={`w-full h-11 px-3 rounded-xl flex items-center justify-between transition-all select-none cursor-pointer ${
+                          isActivo
+                            ? `${mod.bgClass} border ${mod.borderClass} text-white shadow-md ${mod.shadowClass} scale-[1.01]`
+                            : "bg-zinc-100/80 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 border border-transparent"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span
+                            className={`p-1.5 rounded-lg shrink-0 ${
+                              isActivo
+                                ? "bg-white/20 text-white"
+                                : "bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-zinc-300"
+                            }`}
+                          >
+                            {mod.svg("w-4 h-4")}
+                          </span>
+                          <div className="text-left min-w-0">
+                            <div className="text-xs font-bold leading-tight truncate">{mod.name}</div>
+                            <div
+                              className={`text-[10px] leading-tight truncate ${
+                                isActivo ? "text-white/80" : "text-zinc-400 dark:text-zinc-500"
+                              }`}
+                            >
+                              {mod.desc}
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          className={`text-[9px] font-semibold px-2 py-0.5 rounded-full shrink-0 ml-1.5 ${
+                            isActivo
+                              ? "bg-black/25 text-white"
+                              : "bg-zinc-200 dark:bg-white/10 text-zinc-400"
+                          }`}
+                        >
+                          {idx + 1} de {MODULOS_ESPECIALIDADES.length}
+                        </div>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
 
-            <button
-              type="button"
-              onClick={() => setModuloTaller("carwash")}
-              className={`h-9 min-w-0 flex-1 sm:flex-none px-1 sm:px-3.5 rounded-xl text-[10px] sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 ${
-                moduloTaller === "carwash"
-                  ? "bg-cyan-600 border border-cyan-400/40 text-white shadow-lg shadow-cyan-600/30 scale-[1.01]"
-                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-              }`}
-              title="Car Wash & Detailing"
-            >
-              <svg
-                className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.75}
+              {/* Botón flecha derecha */}
+              <button
+                type="button"
+                onClick={handleNextModulo}
+                className="h-11 w-9 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors shrink-0 z-10 active:scale-95 cursor-pointer rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5"
+                title="Siguiente especialidad"
+                aria-label="Siguiente"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"
-                />
-              </svg>
-              <span className="whitespace-nowrap">Car Wash</span>
-            </button>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => setModuloTaller("tecnicentro")}
-              className={`h-9 min-w-0 flex-1 sm:flex-none px-1 sm:px-3.5 rounded-xl text-[10px] sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 ${
-                moduloTaller === "tecnicentro"
-                  ? "bg-emerald-600 border border-emerald-400/40 text-white shadow-lg shadow-emerald-600/30 scale-[1.01]"
-                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-              }`}
-              title="Tecnicentro (Llantas, Alineación, Balanceo y Baterías)"
-            >
-              <svg
-                className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.75}
-              >
-                <circle cx="12" cy="12" r="9" />
-                <circle cx="12" cy="12" r="3" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v6m0 6v6M3 12h6m6 0h6" />
-              </svg>
-              <span className="whitespace-nowrap">Tecnicentro</span>
-            </button>
+            {/* Puntos indicadores interactivos */}
+            <div className="flex items-center justify-center gap-1.5 mt-1.5">
+              {MODULOS_ESPECIALIDADES.map((mod) => {
+                const isActivo = moduloTaller === mod.id;
+                return (
+                  <button
+                    key={mod.id}
+                    type="button"
+                    onClick={() => setModuloTaller(mod.id)}
+                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                      isActivo
+                        ? `w-6 ${mod.dotClass}`
+                        : "w-1.5 bg-zinc-300 dark:bg-zinc-700 hover:bg-zinc-400"
+                    }`}
+                    title={`Especialidad: ${mod.name}`}
+                    aria-label={mod.name}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          {/* SELECTOR SUPERIOR 4 EN 1: VISTA DESKTOP (COMPACTO EN FILA) */}
+          <div className="hidden sm:flex items-center p-1 rounded-2xl bg-white/80 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl gap-1 shrink-0 overflow-x-auto max-w-full">
+            {MODULOS_ESPECIALIDADES.map((mod) => {
+              const isActivo = moduloTaller === mod.id;
+              return (
+                <button
+                  key={mod.id}
+                  type="button"
+                  onClick={() => setModuloTaller(mod.id)}
+                  className={`h-9 px-3.5 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    isActivo
+                      ? `${mod.bgClass} border ${mod.borderClass} text-white shadow-lg ${mod.shadowClass} scale-[1.01]`
+                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
+                  }`}
+                  title={mod.name}
+                >
+                  {mod.svg("w-4 h-4 shrink-0")}
+                  <span className="whitespace-nowrap">{mod.shortName}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -5137,51 +5300,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             SALE EXACTAMENTE IGUAL PARA TALLER Y LUBRICENTRO
             =================================================================== */}
         <section className="bg-white dark:bg-[#111113]/90 rounded-2xl border border-zinc-200 dark:border-white/[0.08] p-4 sm:p-6 shadow-sm dark:shadow-2xl space-y-5 overflow-hidden">
-          {/* Registro sencillo de Notas de Voz vinculadas a la Orden */}
-          {ordenActiva && Array.isArray(ordenActiva.voiceNotes) && ordenActiva.voiceNotes.length > 0 && (
-            <div className="pb-3 border-b border-zinc-200 dark:border-white/[0.08] space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-                  <span className="text-sm">🎙️</span>
-                  <span>Notas de voz del ingreso ({ordenActiva.voiceNotes.length})</span>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {ordenActiva.voiceNotes.map((vn, i) => (
-                  <div
-                    key={vn.id || i}
-                    className="p-3 rounded-xl bg-black/40 border border-emerald-500/20 space-y-2 text-xs shadow-sm"
-                  >
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-emerald-300 font-bold flex items-center gap-1.5">
-                        <span>Nota #{i + 1}</span>
-                        <span className="font-mono text-[10px] text-emerald-400/80 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                          {vn.durationSeconds}s
-                        </span>
-                      </span>
-                      <span className="text-[10px] text-zinc-400 font-mono">
-                        {vn.createdAt ? new Date(vn.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Ingreso"} • {vn.author || "Técnico"}
-                      </span>
-                    </div>
-                    {vn.text && (
-                      <p className="text-[11px] text-zinc-200 italic leading-relaxed bg-white/[0.02] p-2 rounded-lg border border-white/5">
-                        "{vn.text}"
-                      </p>
-                    )}
-                    {vn.audioUrl && (
-                      <audio
-                        src={vn.audioUrl}
-                        controls
-                        className="w-full h-7 rounded"
-                        preload="none"
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* VISTAS SEGÚN EL SELECTOR: TALLER, LUBRICENTRO, CAR WASH O TECNICENTRO */}
           <div className={moduloTaller !== "taller" ? "block w-full" : "hidden"}>
             <LubricentroExpress

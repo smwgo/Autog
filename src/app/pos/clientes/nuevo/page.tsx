@@ -27,6 +27,11 @@ function NuevoClienteContent() {
   const [email, setEmail] = useState("");
   const [direccion, setDireccion] = useState("");
 
+  // Foto de Perfil / Logo
+  const [fotoCliente, setFotoCliente] = useState("");
+  const [subiendoFotoCliente, setSubiendoFotoCliente] = useState(false);
+  const [errorFotoCliente, setErrorFotoCliente] = useState<string | null>(null);
+
   // Paso 2: Vehículo
   const [asociarVehiculo, setAsociarVehiculo] = useState<boolean>(true);
   const [placa, setPlaca] = useState("");
@@ -35,6 +40,83 @@ function NuevoClienteContent() {
   const [anio, setAnio] = useState("2024");
   const [kilometraje, setKilometraje] = useState("");
   const [combustible, setCombustible] = useState("Gasolina");
+
+  // Foto de Vehículo
+  const [fotoVehiculo, setFotoVehiculo] = useState("");
+  const [subiendoFotoVehiculo, setSubiendoFotoVehiculo] = useState(false);
+  const [errorFotoVehiculo, setErrorFotoVehiculo] = useState<string | null>(null);
+
+  // Subir foto de cliente / empresa a Cloudflare R2 o storage API
+  const handleSubirFotoCliente = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setErrorFotoCliente("Por favor selecciona un archivo de imagen válido.");
+      return;
+    }
+
+    try {
+      setSubiendoFotoCliente(true);
+      setErrorFotoCliente(null);
+
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "clientes");
+
+      const res = await fetch("/api/storage/upload", {
+        method: "POST",
+        body: fd,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data?.url) {
+        throw new Error(data?.error || "Error al subir la foto.");
+      }
+
+      setFotoCliente(data.url);
+    } catch (err: any) {
+      setErrorFotoCliente(err?.message || "No se pudo subir la foto del cliente.");
+    } finally {
+      setSubiendoFotoCliente(false);
+    }
+  };
+
+  // Subir foto de vehículo
+  const handleSubirFotoVehiculo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setErrorFotoVehiculo("Por favor selecciona un archivo de imagen válido.");
+      return;
+    }
+
+    try {
+      setSubiendoFotoVehiculo(true);
+      setErrorFotoVehiculo(null);
+
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "vehiculos");
+
+      const res = await fetch("/api/storage/upload", {
+        method: "POST",
+        body: fd,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data?.url) {
+        throw new Error(data?.error || "Error al subir la foto.");
+      }
+
+      setFotoVehiculo(data.url);
+    } catch (err: any) {
+      setErrorFotoVehiculo(err?.message || "No se pudo subir la foto del vehículo.");
+    } finally {
+      setSubiendoFotoVehiculo(false);
+    }
+  };
 
   // Cargar cliente existente si es edición
   useEffect(() => {
@@ -55,6 +137,7 @@ function NuevoClienteContent() {
             setTelefono(c.phone || "");
             setEmail(c.email || "");
             setDireccion(c.address || "");
+            setFotoCliente(c.avatar || c.imageUrl || "");
 
             if (c.vehicles && c.vehicles.length > 0) {
               setAsociarVehiculo(true);
@@ -65,6 +148,17 @@ function NuevoClienteContent() {
               setAnio(v.year ? String(v.year) : "2024");
               setKilometraje(v.mileage ? String(v.mileage) : "");
               setCombustible(v.fuelType || "Gasolina");
+
+              let vPhoto = v.imageUrl || "";
+              if (!vPhoto && v.photosJson) {
+                try {
+                  const parsed = typeof v.photosJson === "string" ? JSON.parse(v.photosJson) : v.photosJson;
+                  if (Array.isArray(parsed) && parsed.length > 0) vPhoto = parsed[0];
+                } catch {
+                  // ignorar error de json
+                }
+              }
+              setFotoVehiculo(vPhoto || "");
             } else {
               setAsociarVehiculo(false);
             }
@@ -112,6 +206,9 @@ function NuevoClienteContent() {
         address: direccion.trim() || undefined,
         esVip,
         vip: esVip,
+        avatar: fotoCliente.trim() || undefined,
+        imageUrl: fotoCliente.trim() || undefined,
+        fotoCliente: fotoCliente.trim() || undefined,
         branch: sedeActual,
       };
 
@@ -122,6 +219,8 @@ function NuevoClienteContent() {
         payload.anio = anio ? parseInt(anio, 10) : undefined;
         payload.kilometraje = kilometraje ? parseInt(kilometraje.replace(/\D/g, ""), 10) : undefined;
         payload.combustible = combustible;
+        payload.fotoVehiculo = fotoVehiculo.trim() || undefined;
+        payload.vehicleImageUrl = fotoVehiculo.trim() || undefined;
       }
 
       const res = await fetch("/api/clientes", {
@@ -287,6 +386,69 @@ function NuevoClienteContent() {
                     </div>
                   </div>
 
+                  {/* Foto de Perfil o Logo */}
+                  <div className="flex justify-center py-1">
+                    <div className="relative group">
+                      <label
+                        className={`relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-dashed ${
+                          fotoCliente
+                            ? "border-blue-500/50 dark:border-blue-500/50"
+                            : "border-zinc-300 dark:border-zinc-700 hover:border-blue-500 dark:hover:border-blue-400"
+                        } flex flex-col items-center justify-center overflow-hidden shadow-sm cursor-pointer transition-all duration-200 active:scale-95 ${
+                          subiendoFotoCliente ? "opacity-60 pointer-events-none" : ""
+                        }`}
+                        title="Subir foto"
+                      >
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={subiendoFotoCliente}
+                          onChange={handleSubirFotoCliente}
+                          className="hidden"
+                        />
+
+                        {subiendoFotoCliente ? (
+                          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                        ) : fotoCliente ? (
+                          <>
+                            <img
+                              src={fotoCliente}
+                              alt="Foto de perfil"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white backdrop-blur-[1px]">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <circle cx="12" cy="13" r="3" />
+                              </svg>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500 group-hover:text-blue-500 transition-colors">
+                            <span className="text-3xl">
+                              {tipoCliente === "Empresa" ? "🏢" : "👤"}
+                            </span>
+                          </div>
+                        )}
+                      </label>
+
+                      {fotoCliente && !subiendoFotoCliente && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setFotoCliente("");
+                          }}
+                          title="Eliminar foto"
+                          className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center text-xs font-bold shadow-md cursor-pointer transition-transform active:scale-90 z-10"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Campos de Entrada */}
                   <div className="space-y-3.5 sm:space-y-4 pt-1">
                     {/* Nombres y Apellidos arriba */}
@@ -449,6 +611,67 @@ function NuevoClienteContent() {
 
                   {asociarVehiculo && (
                     <div className="space-y-3.5 sm:space-y-4 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800/80 animate-in fade-in duration-200">
+                      {/* Foto del Vehículo */}
+                      <div className="flex justify-center py-1">
+                        <div className="relative group">
+                          <label
+                            className={`relative w-44 sm:w-52 h-28 sm:h-32 rounded-2xl bg-zinc-100 dark:bg-zinc-950 border-2 border-dashed ${
+                              fotoVehiculo
+                                ? "border-blue-500/50"
+                                : "border-zinc-300 dark:border-zinc-800 hover:border-blue-500"
+                            } flex flex-col items-center justify-center overflow-hidden shadow-xs cursor-pointer transition-all duration-200 active:scale-95 ${
+                              subiendoFotoVehiculo ? "opacity-60 pointer-events-none" : ""
+                            }`}
+                            title="Subir foto del vehículo"
+                          >
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={subiendoFotoVehiculo}
+                              onChange={handleSubirFotoVehiculo}
+                              className="hidden"
+                            />
+
+                            {subiendoFotoVehiculo ? (
+                              <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                            ) : fotoVehiculo ? (
+                              <>
+                                <img
+                                  src={fotoVehiculo}
+                                  alt="Vehículo"
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white backdrop-blur-[1px]">
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                    <circle cx="12" cy="13" r="3" />
+                                  </svg>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500 group-hover:text-blue-500 transition-colors">
+                                <span className="text-3xl">🚗</span>
+                              </div>
+                            )}
+                          </label>
+
+                          {fotoVehiculo && !subiendoFotoVehiculo && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setFotoVehiculo("");
+                              }}
+                              title="Eliminar foto"
+                              className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center text-xs font-bold shadow-md cursor-pointer transition-transform active:scale-90 z-10"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                         <div>
                           <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">

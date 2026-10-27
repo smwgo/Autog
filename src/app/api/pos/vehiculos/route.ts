@@ -59,6 +59,8 @@ export async function GET(request: Request) {
         mileage: v.mileage || null,
         vin: v.vin || null,
         fuelType: v.fuelType || "Gasolina",
+        imageUrl: (v as any).imageUrl || null,
+        photosJson: (v as any).photosJson || null,
         customerId: v.customerId,
         customerName: v.customer?.name || tInfo?.client || "Consumidor Final",
         customerPhone: v.customer?.phone || tInfo?.clientPhone || null,
@@ -142,7 +144,10 @@ export async function POST(request: Request) {
       customerName,
       customerPhone,
       customerId,
+      imageUrl,
+      fotoVehiculo,
     } = body;
+    const photoUrl = imageUrl || fotoVehiculo || null;
 
     if (!plate || !brand || !model) {
       return NextResponse.json(
@@ -212,11 +217,24 @@ export async function POST(request: Request) {
         vin: vin ? vin.trim().toUpperCase() : null,
         fuelType: fuelType || "Gasolina",
         customerId: finalCustomerId,
+        imageUrl: photoUrl || null,
       },
       include: {
         customer: true,
       },
     });
+
+    if (photoUrl) {
+      try {
+        await prisma.$executeRawUnsafe(
+          'UPDATE "Vehicle" SET "imageUrl" = $1 WHERE "id" = $2',
+          photoUrl,
+          nuevoVehiculo.id
+        );
+      } catch (errDb) {
+        console.warn("Aviso al actualizar imageUrl en Vehicle:", errDb);
+      }
+    }
 
     return NextResponse.json(
       {
@@ -239,7 +257,8 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, plate, brand, model, year, color, mileage, vin, fuelType, customerName, customerPhone } = body;
+    const { id, plate, brand, model, year, color, mileage, vin, fuelType, customerName, customerPhone, imageUrl, fotoVehiculo } = body;
+    const photoUrl = imageUrl !== undefined ? imageUrl : fotoVehiculo;
 
     if (!id) {
       return NextResponse.json(
@@ -257,6 +276,7 @@ export async function PUT(request: Request) {
     if (mileage !== undefined) updateData.mileage = mileage ? parseInt(mileage, 10) : 0;
     if (vin !== undefined) updateData.vin = vin ? vin.trim().toUpperCase() : null;
     if (fuelType !== undefined) updateData.fuelType = fuelType;
+    if (photoUrl !== undefined) updateData.imageUrl = photoUrl || null;
 
     // Si viene ID de taller virtual, crearlo en la DB
     if (id.startsWith("taller-")) {
@@ -304,6 +324,18 @@ export async function PUT(request: Request) {
       data: updateData,
       include: { customer: true },
     });
+
+    if (photoUrl !== undefined) {
+      try {
+        await prisma.$executeRawUnsafe(
+          'UPDATE "Vehicle" SET "imageUrl" = $1 WHERE "id" = $2',
+          photoUrl || null,
+          updated.id
+        );
+      } catch (errDb) {
+        console.warn("Aviso al actualizar raw imageUrl en Vehicle:", errDb);
+      }
+    }
 
     return NextResponse.json({
       success: true,

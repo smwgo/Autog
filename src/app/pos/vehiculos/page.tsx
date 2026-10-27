@@ -17,6 +17,8 @@ interface VehicleItem {
   mileage: number | null;
   vin: string | null;
   fuelType: string | null;
+  imageUrl?: string | null;
+  photosJson?: any;
   customerId?: string | null;
   customerName: string;
   customerPhone?: string | null;
@@ -58,6 +60,28 @@ export default function PosVehiculosPage() {
   const [formVin, setFormVin] = useState("");
   const [formClienteNombre, setFormClienteNombre] = useState("");
   const [formClienteTelefono, setFormClienteTelefono] = useState("");
+  const [formImageUrl, setFormImageUrl] = useState("");
+  const [subiendoFotoForm, setSubiendoFotoForm] = useState(false);
+
+  const handleSubirFotoModal = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setSubiendoFotoForm(true);
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "vehiculos");
+      const res = await fetch("/api/storage/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (res.ok && data?.url) {
+        setFormImageUrl(data.url);
+      }
+    } catch (err) {
+      console.error("Error al subir foto:", err);
+    } finally {
+      setSubiendoFotoForm(false);
+    }
+  };
 
   const cargarVehiculos = useCallback(async (busqueda = "", silencioso = false) => {
     try {
@@ -105,6 +129,7 @@ export default function PosVehiculosPage() {
     setFormVin("");
     setFormClienteNombre("");
     setFormClienteTelefono("");
+    setFormImageUrl("");
     setModalRegistroAbierto(true);
   };
 
@@ -121,6 +146,7 @@ export default function PosVehiculosPage() {
     setFormVin(item.vin || "");
     setFormClienteNombre(item.customerName || "");
     setFormClienteTelefono(item.customerPhone || "");
+    setFormImageUrl(item.imageUrl || "");
     setModalRegistroAbierto(true);
   };
 
@@ -145,6 +171,7 @@ export default function PosVehiculosPage() {
         vin: formVin.trim().toUpperCase() || null,
         customerName: formClienteNombre.trim() || "Cliente Mostrador",
         customerPhone: formClienteTelefono.trim() || null,
+        imageUrl: formImageUrl.trim() || null,
       };
 
       let res;
@@ -445,8 +472,16 @@ export default function PosVehiculosPage() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30">
-                          🚗
+                        <div className="w-11 h-11 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30 overflow-hidden">
+                          {v.imageUrl ? (
+                            <img
+                              src={v.imageUrl}
+                              alt={v.plate}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            "🚗"
+                          )}
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
@@ -559,9 +594,22 @@ export default function PosVehiculosPage() {
                       {vehiculosFiltrados.map((v) => (
                         <tr key={v.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition-colors">
                           <td className="py-3.5 px-4 whitespace-nowrap">
-                            <span className="font-mono font-black text-sm text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-500/20 inline-block">
-                              {v.plate}
-                            </span>
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30 overflow-hidden">
+                                {v.imageUrl ? (
+                                  <img
+                                    src={v.imageUrl}
+                                    alt={v.plate}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  "🚗"
+                                )}
+                              </div>
+                              <span className="font-mono font-black text-sm text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-500/20 inline-block">
+                                {v.plate}
+                              </span>
+                            </div>
                           </td>
                           <td className="py-3.5 px-4">
                             <span className="font-bold text-zinc-900 dark:text-white block">
@@ -687,6 +735,17 @@ export default function PosVehiculosPage() {
                 </button>
               </div>
 
+              {/* Imagen del Vehículo si tiene */}
+              {vehiculoDetalle.imageUrl && (
+                <div className="w-full h-44 rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-950">
+                  <img
+                    src={vehiculoDetalle.imageUrl}
+                    alt={vehiculoDetalle.plate}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+
               {/* Datos Técnicos en Grid */}
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/70 dark:border-zinc-800">
@@ -777,6 +836,59 @@ export default function PosVehiculosPage() {
               </div>
 
               <form onSubmit={handleGuardarVehiculo} className="space-y-3.5 text-xs">
+                {/* Foto del Vehículo en Modal */}
+                <div className="flex justify-center py-1">
+                  <div className="relative group shrink-0">
+                    <label
+                      className={`relative w-20 h-20 rounded-2xl bg-zinc-100 dark:bg-zinc-900 border-2 border-dashed ${
+                        formImageUrl
+                          ? "border-indigo-500/50"
+                          : "border-zinc-300 dark:border-zinc-700 hover:border-indigo-500"
+                      } flex items-center justify-center shrink-0 overflow-hidden cursor-pointer transition-all active:scale-95 ${
+                        subiendoFotoForm ? "opacity-60 pointer-events-none" : ""
+                      }`}
+                      title="Subir foto"
+                    >
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={subiendoFotoForm}
+                        onChange={handleSubirFotoModal}
+                        className="hidden"
+                      />
+                      {subiendoFotoForm ? (
+                        <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                      ) : formImageUrl ? (
+                        <>
+                          <img src={formImageUrl} alt="Vehículo" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
+                            Cambiar
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500">
+                          <span className="text-2xl">🚗</span>
+                        </div>
+                      )}
+                    </label>
+
+                    {formImageUrl && !subiendoFotoForm && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setFormImageUrl("");
+                        }}
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px] font-bold shadow-md cursor-pointer z-10"
+                        title="Quitar foto"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-zinc-600 dark:text-zinc-400 font-semibold mb-1">

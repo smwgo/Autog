@@ -152,7 +152,6 @@ const SUBCATEGORIAS_SISTEMA: Record<string, { id: string; icon: string }[]> = {
     { id: "Encendido", icon: "⚡" },
     { id: "Escape", icon: "💨" },
     { id: "Soportes", icon: "🔩" },
-    { id: "Manual", icon: "✏️" },
   ],
   frenos: [
     { id: "Pastillas", icon: "🟫" },
@@ -161,7 +160,6 @@ const SUBCATEGORIAS_SISTEMA: Record<string, { id: string; icon: string }[]> = {
     { id: "Calipers", icon: "🔧" },
     { id: "Pedal", icon: "🦶" },
     { id: "Mano", icon: "🅿️" },
-    { id: "Manual", icon: "✏️" },
   ],
   suspension: [
     { id: "Amortiguadores", icon: "🔽" },
@@ -170,7 +168,6 @@ const SUBCATEGORIAS_SISTEMA: Record<string, { id: string; icon: string }[]> = {
     { id: "Terminales", icon: "↔️" },
     { id: "Bujes", icon: "🔩" },
     { id: "Dirección", icon: "🛞" },
-    { id: "Manual", icon: "✏️" },
   ],
   electrico: [
     { id: "Batería", icon: "🔋" },
@@ -179,7 +176,6 @@ const SUBCATEGORIAS_SISTEMA: Record<string, { id: string; icon: string }[]> = {
     { id: "Luces", icon: "💡" },
     { id: "Tablero", icon: "📟" },
     { id: "Fusibles", icon: "🔌" },
-    { id: "Manual", icon: "✏️" },
   ],
   aire: [
     { id: "Compresor", icon: "⚙️" },
@@ -188,7 +184,6 @@ const SUBCATEGORIAS_SISTEMA: Record<string, { id: string; icon: string }[]> = {
     { id: "Fugas", icon: "💧" },
     { id: "Filtro", icon: "🌬️" },
     { id: "Ventilación", icon: "❄️" },
-    { id: "Manual", icon: "✏️" },
   ],
   personalizado: [
     { id: "Manual", icon: "✏️" },
@@ -2637,7 +2632,7 @@ ${urlSeguimiento}`;
             ) : (
               SUBCATEGORIAS_SISTEMA[seccionActiva] && (
                 <div className="space-y-2 pb-1">
-                  <div className="flex sm:grid sm:grid-cols-7 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar touch-pan-x">
+                  <div className="flex sm:grid sm:grid-cols-6 gap-2 overflow-x-auto sm:overflow-visible snap-x snap-mandatory no-scrollbar touch-pan-x">
                     {SUBCATEGORIAS_SISTEMA[seccionActiva].map((sub, idx) => {
                       const activa = subCategoriaPorSistema[seccionActiva] === sub.id;
                       const cantSub = hallazgos.filter(

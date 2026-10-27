@@ -35,6 +35,47 @@ function NuevoVehiculoContent() {
   const [color, setColor] = useState("");
   const [vin, setVin] = useState("");
 
+  // Foto de Vehículo
+  const [fotoVehiculo, setFotoVehiculo] = useState("");
+  const [subiendoFotoVehiculo, setSubiendoFotoVehiculo] = useState(false);
+  const [errorFotoVehiculo, setErrorFotoVehiculo] = useState<string | null>(null);
+
+  // Subir foto de vehículo a Cloudflare R2 o storage API
+  const handleSubirFotoVehiculo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setErrorFotoVehiculo("Por favor selecciona un archivo de imagen válido.");
+      return;
+    }
+
+    try {
+      setSubiendoFotoVehiculo(true);
+      setErrorFotoVehiculo(null);
+
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "vehiculos");
+
+      const res = await fetch("/api/storage/upload", {
+        method: "POST",
+        body: fd,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data?.url) {
+        throw new Error(data?.error || "Error al subir la foto.");
+      }
+
+      setFotoVehiculo(data.url);
+    } catch (err: any) {
+      setErrorFotoVehiculo(err?.message || "No se pudo subir la foto del vehículo.");
+    } finally {
+      setSubiendoFotoVehiculo(false);
+    }
+  };
+
   // Paso 2: Propietario / Cliente
   const [asociarCliente, setAsociarCliente] = useState<boolean>(true);
   const [clientesDisponibles, setClientesDisponibles] = useState<ClienteItem[]>([]);
@@ -79,6 +120,17 @@ function NuevoVehiculoContent() {
             setKilometraje(v.mileage ? String(v.mileage) : "");
             setColor(v.color || "");
             setVin(v.vin || "");
+
+            let vPhoto = v.imageUrl || "";
+            if (!vPhoto && v.photosJson) {
+              try {
+                const parsed = typeof v.photosJson === "string" ? JSON.parse(v.photosJson) : v.photosJson;
+                if (Array.isArray(parsed) && parsed.length > 0) vPhoto = parsed[0];
+              } catch {
+                // ignorar
+              }
+            }
+            setFotoVehiculo(vPhoto || "");
 
             if (v.customerName && v.customerName !== "Cliente Mostrador" && v.customerName !== "Consumidor Final") {
               setAsociarCliente(true);
@@ -150,6 +202,8 @@ function NuevoVehiculoContent() {
         mileage: kilometraje ? parseInt(kilometraje.replace(/\D/g, ""), 10) : 0,
         color: color.trim() || null,
         vin: vin.trim().toUpperCase() || null,
+        imageUrl: fotoVehiculo.trim() || null,
+        fotoVehiculo: fotoVehiculo.trim() || null,
         customerId: asociarCliente && clienteSeleccionadoId ? clienteSeleccionadoId : undefined,
         customerName: asociarCliente ? nombreCliente.trim() || "Cliente Mostrador" : "Cliente Mostrador",
         customerPhone: asociarCliente ? telefonoCliente.trim() || null : null,
@@ -349,6 +403,67 @@ function NuevoVehiculoContent() {
 
                   {/* Bloque de Formulario con la estética exacta */}
                   <div className="space-y-3.5 sm:space-y-4 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-zinc-950/60 border border-zinc-800/80">
+                    {/* Foto del Vehículo */}
+                    <div className="flex justify-center py-1">
+                      <div className="relative group">
+                        <label
+                          className={`relative w-44 sm:w-52 h-28 sm:h-32 rounded-2xl bg-zinc-950 border-2 border-dashed ${
+                            fotoVehiculo
+                              ? "border-blue-500/50"
+                              : "border-zinc-800 hover:border-blue-500"
+                          } flex flex-col items-center justify-center overflow-hidden shadow-xs cursor-pointer transition-all duration-200 active:scale-95 ${
+                            subiendoFotoVehiculo ? "opacity-60 pointer-events-none" : ""
+                          }`}
+                          title="Subir foto del vehículo"
+                        >
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={subiendoFotoVehiculo}
+                            onChange={handleSubirFotoVehiculo}
+                            className="hidden"
+                          />
+
+                          {subiendoFotoVehiculo ? (
+                            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                          ) : fotoVehiculo ? (
+                            <>
+                              <img
+                                src={fotoVehiculo}
+                                alt="Vehículo"
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white backdrop-blur-[1px]">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                  <circle cx="12" cy="13" r="3" />
+                                </svg>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center text-zinc-500 group-hover:text-blue-400 transition-colors">
+                              <span className="text-3xl">🚗</span>
+                            </div>
+                          )}
+                        </label>
+
+                        {fotoVehiculo && !subiendoFotoVehiculo && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setFotoVehiculo("");
+                            }}
+                            title="Eliminar foto"
+                            className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center text-xs font-bold shadow-md cursor-pointer transition-transform active:scale-90 z-10"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-zinc-300 mb-1.5">

@@ -16,6 +16,21 @@ async function ensureCustomerBranchSchema() {
         `ALTER TABLE "Customer" ADD COLUMN IF NOT EXISTS "assignedToSucursal" BOOLEAN NOT NULL DEFAULT false`
       )
       .catch(() => {});
+    await prisma
+      .$executeRawUnsafe(
+        `ALTER TABLE "Customer" ADD COLUMN IF NOT EXISTS "avatar" TEXT`
+      )
+      .catch(() => {});
+    await prisma
+      .$executeRawUnsafe(
+        `ALTER TABLE "Customer" ADD COLUMN IF NOT EXISTS "imageUrl" TEXT`
+      )
+      .catch(() => {});
+    await prisma
+      .$executeRawUnsafe(
+        `ALTER TABLE "Vehicle" ADD COLUMN IF NOT EXISTS "imageUrl" TEXT`
+      )
+      .catch(() => {});
     customerBranchSchemaEnsured = true;
   } catch {}
 }
@@ -69,24 +84,56 @@ export async function GET(request: Request) {
     });
 
     // Consultar branch y assignedToSucursal directo de Neon para máxima compatibilidad
+    // Consultar branch, assignedToSucursal, avatar e imageUrl directo de Neon
     const branchRows = (await prisma
-      .$queryRawUnsafe(`SELECT "id", "branch", "assignedToSucursal" FROM "Customer"`)
+      .$queryRawUnsafe(`SELECT "id", "branch", "assignedToSucursal", "avatar", "imageUrl" FROM "Customer"`)
       .catch(() => [])) as any[];
-    const branchMap = new Map<string, { branch: string; assignedToSucursal: boolean }>();
+    const branchMap = new Map<string, { branch: string; assignedToSucursal: boolean; avatar: string | null; imageUrl: string | null }>();
     branchRows.forEach((r) => {
       branchMap.set(r.id, {
         branch: r.branch || "PRINCIPAL",
         assignedToSucursal: Boolean(r.assignedToSucursal),
+        avatar: r.avatar || r.imageUrl || null,
+        imageUrl: r.imageUrl || r.avatar || null,
+      });
+    });
+
+    const vehicleExtraRows = (await prisma
+      .$queryRawUnsafe(`SELECT "id", "imageUrl", "photosJson" FROM "Vehicle"`)
+      .catch(() => [])) as any[];
+    const vehicleExtraMap = new Map<string, { imageUrl: string | null; photosJson: string }>();
+    vehicleExtraRows.forEach((r) => {
+      let parsedPhoto = r.imageUrl || null;
+      if (!parsedPhoto && r.photosJson) {
+        try {
+          const arr = JSON.parse(r.photosJson);
+          if (Array.isArray(arr) && arr.length > 0) parsedPhoto = arr[0];
+        } catch {}
+      }
+      vehicleExtraMap.set(r.id, {
+        imageUrl: parsedPhoto,
+        photosJson: r.photosJson || "[]",
       });
     });
 
     const customers = rawCustomers
       .map((c) => {
-        const bInfo = branchMap.get(c.id) || { branch: "PRINCIPAL", assignedToSucursal: false };
+        const bInfo = branchMap.get(c.id) || { branch: "PRINCIPAL", assignedToSucursal: false, avatar: null, imageUrl: null };
+        const vehiclesConFotos = (c.vehicles || []).map((v) => {
+          const vExtra = vehicleExtraMap.get(v.id);
+          return {
+            ...v,
+            imageUrl: vExtra?.imageUrl || null,
+            photosJson: vExtra?.photosJson || "[]",
+          };
+        });
         return {
           ...c,
           branch: bInfo.branch,
           assignedToSucursal: bInfo.assignedToSucursal,
+          avatar: bInfo.avatar,
+          imageUrl: bInfo.imageUrl,
+          vehicles: vehiclesConFotos,
         };
       })
       .filter((c) => {
@@ -192,6 +239,9 @@ export async function POST(request: Request) {
       telefono,
       email,
       direccion,
+      avatar,
+      imageUrl,
+      fotoCliente,
       esVip = false,
       notas,
       placa,
@@ -202,6 +252,8 @@ export async function POST(request: Request) {
       kilometraje,
       vin,
       combustible,
+      fotoVehiculo,
+      vehicleImageUrl,
     } = body;
 
     const rawIdent = (identificacion || "").toString().trim();
@@ -236,6 +288,9 @@ export async function POST(request: Request) {
 
     await ensureCustomerBranchSchema();
 
+    const finalCustomerPhoto = (fotoCliente || avatar || imageUrl || "").toString().trim() || null;
+    const finalVehiclePhoto = (fotoVehiculo || vehicleImageUrl || "").toString().trim() || null;
+
     const clienteCreado = await prisma.customer.create({
       data: {
         identification: finalIdent,
@@ -258,6 +313,7 @@ export async function POST(request: Request) {
                   mileage: kilometraje ? parseInt(kilometraje, 10) : null,
                   vin: vin?.trim() || null,
                   fuelType: combustible || "Gasolina",
+                  photosJson: finalVehiclePhoto ? JSON.stringify([finalVehiclePhoto]) : "[]",
                 },
               ],
             }
@@ -267,6 +323,23 @@ export async function POST(request: Request) {
         vehicles: true,
       },
     });
+
+    if (finalCustomerPhoto) {
+      await prisma.$executeRawUnsafe(
+        `UPDATE "Customer" SET "avatar" = $2, "imageUrl" = $2 WHERE "id" = $1`,
+        clienteCreado.id,
+        finalCustomerPhoto
+      ).catch(() => {});
+    }
+
+    if (tieneVehiculo && finalVehiclePhoto && clienteCreado.vehicles?.[0]?.id) {
+      await prisma.$executeRawUnsafe(
+        `UPDATE "Vehicle" SET "imageUrl" = $2, "photosJson" = $3 WHERE "id" = $1`,
+        clienteCreado.vehicles[0].id,
+        finalVehiclePhoto,
+        JSON.stringify([finalVehiclePhoto])
+      ).catch(() => {});
+    }
 
     await prisma
       .$executeRawUnsafe(
@@ -281,8 +354,15 @@ export async function POST(request: Request) {
       success: true,
       cliente: {
         ...clienteCreado,
+        avatar: finalCustomerPhoto,
+        imageUrl: finalCustomerPhoto,
         branch: branchOrigen,
         assignedToSucursal: asignadoSucursal,
+        vehicles: (clienteCreado.vehicles || []).map((v) => ({
+          ...v,
+          imageUrl: finalVehiclePhoto,
+          photosJson: finalVehiclePhoto ? JSON.stringify([finalVehiclePhoto]) : "[]",
+        })),
       },
     }, { status: 201 });
   } catch (error: any) {
@@ -364,12 +444,18 @@ export async function PUT(request: Request) {
       vip,
       notes,
       identification,
+      avatar,
+      imageUrl,
+      fotoCliente,
       placa,
       marca,
       modelo,
       anio,
       kilometraje,
       combustible,
+      color,
+      fotoVehiculo,
+      vehicleImageUrl,
     } = body;
 
     if (!id) {
@@ -423,7 +509,19 @@ export async function PUT(request: Request) {
       },
     });
 
+    // Actualizar foto de cliente si se envió
+    const finalCustomerPhoto = fotoCliente !== undefined ? fotoCliente : (avatar !== undefined ? avatar : imageUrl);
+    if (finalCustomerPhoto !== undefined) {
+      await prisma.$executeRawUnsafe(
+        `UPDATE "Customer" SET "avatar" = $2, "imageUrl" = $2 WHERE "id" = $1`,
+        id,
+        finalCustomerPhoto ? String(finalCustomerPhoto).trim() : null
+      ).catch(() => {});
+    }
+
     // Actualizar o crear vehículo si se envió placa
+    const finalVehiclePhoto = fotoVehiculo !== undefined ? fotoVehiculo : vehicleImageUrl;
+
     if (placa && placa.trim().length > 0) {
       const placaLimpia = placa.trim().toUpperCase();
       const existingVehicle = clienteActualizado.vehicles[0];
@@ -438,10 +536,19 @@ export async function PUT(request: Request) {
             year: anio ? parseInt(String(anio), 10) : undefined,
             mileage: kilometraje ? parseInt(String(kilometraje).replace(/\D/g, ""), 10) : undefined,
             fuelType: combustible || "Gasolina",
+            color: color ? String(color).trim() : undefined,
+            photosJson: finalVehiclePhoto !== undefined ? (finalVehiclePhoto ? JSON.stringify([String(finalVehiclePhoto).trim()]) : "[]") : undefined,
           },
         });
+        if (finalVehiclePhoto !== undefined) {
+          await prisma.$executeRawUnsafe(
+            `UPDATE "Vehicle" SET "imageUrl" = $2 WHERE "id" = $1`,
+            existingVehicle.id,
+            finalVehiclePhoto ? String(finalVehiclePhoto).trim() : null
+          ).catch(() => {});
+        }
       } else {
-        await prisma.vehicle.create({
+        const nuevoV = await prisma.vehicle.create({
           data: {
             customerId: id,
             plate: placaLimpia,
@@ -450,9 +557,25 @@ export async function PUT(request: Request) {
             year: anio ? parseInt(String(anio), 10) : undefined,
             mileage: kilometraje ? parseInt(String(kilometraje).replace(/\D/g, ""), 10) : undefined,
             fuelType: combustible || "Gasolina",
+            color: color ? String(color).trim() : undefined,
+            photosJson: finalVehiclePhoto ? JSON.stringify([String(finalVehiclePhoto).trim()]) : "[]",
           },
         });
+        if (finalVehiclePhoto) {
+          await prisma.$executeRawUnsafe(
+            `UPDATE "Vehicle" SET "imageUrl" = $2 WHERE "id" = $1`,
+            nuevoV.id,
+            String(finalVehiclePhoto).trim()
+          ).catch(() => {});
+        }
       }
+    } else if (finalVehiclePhoto !== undefined && clienteActualizado.vehicles[0]) {
+      await prisma.$executeRawUnsafe(
+        `UPDATE "Vehicle" SET "imageUrl" = $2, "photosJson" = $3 WHERE "id" = $1`,
+        clienteActualizado.vehicles[0].id,
+        finalVehiclePhoto ? String(finalVehiclePhoto).trim() : null,
+        finalVehiclePhoto ? JSON.stringify([String(finalVehiclePhoto).trim()]) : "[]"
+      ).catch(() => {});
     }
 
     const clienteFinal = await prisma.customer.findUnique({
@@ -460,7 +583,14 @@ export async function PUT(request: Request) {
       include: { vehicles: true },
     });
 
-    return NextResponse.json({ success: true, cliente: clienteFinal });
+    return NextResponse.json({
+      success: true,
+      cliente: {
+        ...clienteFinal,
+        avatar: finalCustomerPhoto !== undefined ? finalCustomerPhoto : (clienteFinal as any)?.avatar,
+        imageUrl: finalCustomerPhoto !== undefined ? finalCustomerPhoto : (clienteFinal as any)?.imageUrl,
+      },
+    });
   } catch (error: any) {
     console.error("Error al actualizar cliente en Neon:", error);
     return NextResponse.json(
