@@ -2383,12 +2383,12 @@ ${urlSeguimiento}`;
                 onPointerDown={(e) => e.stopPropagation()}
                 className="absolute top-3 left-3 z-30 flex items-center select-none"
               >
-                {/* Control centralizado de navegación de vistas (Más grande, Moderno y Minimalista) */}
+                {/* Control centralizado de navegación de vistas (Grande en móvil, Moderno y Minimalista) */}
                 <div
-                  className={`flex items-center rounded-full border shadow-xl backdrop-blur-2xl transition-all duration-200 p-1 ${
+                  className={`flex items-center rounded-full border shadow-xl backdrop-blur-2xl transition-all duration-200 p-1 sm:p-1 ${
                     lienzoOscuro
-                      ? "bg-slate-950/85 border-white/15 hover:border-white/25 text-zinc-100 shadow-black/50"
-                      : "bg-white/90 border-zinc-200 hover:border-zinc-300 text-zinc-800 shadow-zinc-900/10"
+                      ? "bg-slate-950/90 border-white/20 hover:border-white/30 text-zinc-100 shadow-black/60 ring-1 ring-white/10"
+                      : "bg-white/95 border-zinc-300 hover:border-zinc-400 text-zinc-800 shadow-zinc-900/10 ring-1 ring-black/5"
                   }`}
                 >
                   {/* Flecha Anterior (Para atrás / Izquierda) */}
@@ -2402,9 +2402,9 @@ ${urlSeguimiento}`;
                     onTouchEnd={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                     title="Perspectiva anterior"
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/15 dark:hover:bg-white/15 transition-all cursor-pointer active:scale-90"
+                    className="w-11 h-11 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/15 dark:hover:bg-white/15 transition-all cursor-pointer active:scale-90"
                   >
-                    <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <svg className="w-5 h-5 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
                     </svg>
                   </button>
@@ -2420,22 +2420,22 @@ ${urlSeguimiento}`;
                       onTouchStart={(e) => e.stopPropagation()}
                       onTouchEnd={(e) => e.stopPropagation()}
                       onPointerDown={(e) => e.stopPropagation()}
-                      className="h-8 sm:h-9 px-3 sm:px-3.5 rounded-full flex items-center gap-2 cursor-pointer hover:bg-white/10 active:scale-95 transition-all"
+                      className="h-11 sm:h-9 px-3.5 sm:px-3 rounded-full flex items-center gap-2 sm:gap-1.5 cursor-pointer hover:bg-white/10 active:scale-95 transition-all"
                     >
-                      <span className="text-cyan-400 shrink-0 flex items-center justify-center scale-110">
+                      <span className="text-cyan-400 shrink-0 flex items-center justify-center scale-125 sm:scale-110">
                         {infoVistaActual.icon}
                       </span>
-                      <span className="text-xs sm:text-sm font-semibold tracking-wide">
+                      <span className="text-sm sm:text-xs md:text-sm font-bold tracking-wide">
                         {infoVistaActual.short}
                       </span>
                       <svg
-                        className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 ${
+                        className={`w-4 h-4 sm:w-3.5 sm:h-3.5 text-zinc-400 transition-transform duration-200 ${
                           menuVistasAbierto ? "rotate-180 text-cyan-400" : ""
                         }`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
-                        strokeWidth={2}
+                        strokeWidth={2.5}
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                       </svg>
@@ -2448,13 +2448,13 @@ ${urlSeguimiento}`;
                         onTouchStart={(e) => e.stopPropagation()}
                         onTouchEnd={(e) => e.stopPropagation()}
                         onPointerDown={(e) => e.stopPropagation()}
-                        className={`absolute left-0 top-full mt-2 w-48 sm:w-52 rounded-2xl border p-1.5 shadow-2xl backdrop-blur-2xl z-50 animate-fade-in ${
+                        className={`absolute left-0 top-full mt-2 w-56 sm:w-52 rounded-2xl border p-2 sm:p-1.5 shadow-2xl backdrop-blur-2xl z-50 animate-fade-in ${
                           lienzoOscuro
-                            ? "bg-slate-950/95 border-white/15 text-zinc-100 shadow-black/80"
+                            ? "bg-slate-950/95 border-white/20 text-zinc-100 shadow-black/80 ring-1 ring-white/10"
                             : "bg-white/95 border-zinc-200 text-zinc-800 shadow-xl"
                         }`}
                       >
-                        <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                        <div className="px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
                           Perspectiva:
                         </div>
                         {SECUENCIA_VISTAS.map((v) => {
@@ -2470,9 +2470,9 @@ ${urlSeguimiento}`;
                               onTouchStart={(e) => e.stopPropagation()}
                               onTouchEnd={(e) => e.stopPropagation()}
                               onPointerDown={(e) => e.stopPropagation()}
-                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all text-left cursor-pointer ${
+                              className={`w-full flex items-center justify-between px-3.5 py-2.5 sm:px-3 sm:py-2 rounded-xl text-sm sm:text-xs font-semibold transition-all text-left cursor-pointer ${
                                 esActivo
-                                  ? "bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/30"
+                                  ? "bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30"
                                   : "text-zinc-300 hover:text-white hover:bg-white/10"
                               }`}
                             >
@@ -2503,9 +2503,9 @@ ${urlSeguimiento}`;
                     onTouchEnd={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                     title="Siguiente perspectiva"
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/15 dark:hover:bg-white/15 transition-all cursor-pointer active:scale-90"
+                    className="w-11 h-11 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/15 dark:hover:bg-white/15 transition-all cursor-pointer active:scale-90"
                   >
-                    <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <svg className="w-5 h-5 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                     </svg>
                   </button>
