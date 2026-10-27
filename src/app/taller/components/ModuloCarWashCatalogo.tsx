@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import type {
   CarWashConfigData,
   CarWashCategory,
@@ -40,6 +40,102 @@ const HORARIOS_DISPONIBLES = [
   "05:00 PM",
 ];
 
+const CARWASH_CAT_SINGLE: Record<string, string> = {
+  "Todas": "Todas",
+  "Lavado exterior": "Exterior",
+  "Lavado interior": "Interior",
+  "Lavado completo": "Completo",
+  "Lavado premium": "Premium",
+  "Limpieza de tapicería": "Tapicería",
+  "Limpieza de tapiceria": "Tapicería",
+  "Limpieza de motor": "Motor",
+  "Lavado de motor": "Motor",
+  "Detailing automotriz": "Detailing",
+  "Encerado y pulido": "Encerado",
+  "Lavado de motos": "Motos",
+  "Lavado de camionetas y vehículos grandes": "Camionetas",
+  "Desinfección y eliminación de olores": "Desinfección",
+  "Servicios adicionales": "Extras",
+};
+
+// Categorías principales de un car wash / lavadora de vehículos (1 palabra cada una)
+const PRINCIPAL_CATEGORY_IDS = [
+  "cw_cat_exterior",
+  "cw_cat_interior",
+  "cw_cat_completo",
+  "cw_cat_premium",
+  "cw_cat_tapiceria",
+  "cw_cat_motor",
+];
+
+// Tipos de vehículo en una sola palabra
+const CARWASH_VEH_SINGLE: Record<string, string> = {
+  "Motocicleta": "Moto",
+  "Moto": "Moto",
+  "Automóvil pequeño": "Auto",
+  "Sedán": "Auto",
+  "Sedan": "Auto",
+  "Hatchback": "Auto",
+  "Auto": "Auto",
+  "SUV": "SUV",
+  "SUV / Crossover": "SUV",
+  "Camioneta": "Camioneta",
+  "Camioneta grande": "Camioneta",
+  "Camión liviano": "Pesado",
+  "Furgoneta": "Pesado",
+  "Vehículo de mayor tamaño": "Pesado",
+  "Pesado": "Pesado",
+};
+
+// Tipos de vehículo principales de una lavadora de vehículos (1 palabra cada una)
+const PRINCIPAL_VEHICLE_IDS = [
+  "vt_moto",
+  "vt_sedan",
+  "vt_suv",
+  "vt_camioneta",
+  "vt_mayor_tamano",
+];
+
+const CARWASH_SUB_SINGLE: Record<string, string> = {
+  "Todos los tipos": "Todos",
+  "Todos los servicios": "Todos",
+  "Premium Ejecutivo": "Ejecutivo",
+  "Full Spa": "Spa",
+  "Exterior Express": "Express",
+  "Espuma Activa": "Espuma",
+  "Aspirado y Cabina": "Aspirado",
+  "Interior Detallado": "Detallado",
+  "Completo Estándar": "Estándar",
+  "Completo + Chasis": "Chasis",
+  "Tapicería de Tela": "Tela",
+  "Asientos de Cuero": "Cuero",
+  "Detailing Interior": "Interior",
+  "Detailing Exterior": "Exterior",
+  "Motor Dieléctrico": "Dieléctrico",
+  "Motos Urbanas / Scooter": "Urbana",
+  "Alta Cilindrada / Touring": "Touring",
+  "SUV y 3 Filas": "Familiar",
+  "Pickups 4x4 y Furgonetas": "Pickups",
+  "Cabina con Ozono": "Ozono",
+  "Ductos A/C y Antibacterial": "Antibacterial",
+  "Complementos Rápidos": "Rápidos",
+};
+
+function toSingleWord(text: string, mapDict?: Record<string, string>): string {
+  if (!text) return "";
+  if (mapDict && mapDict[text]) return mapDict[text];
+  const cleaned = text
+    .replace(/^Lavado\s+(de\s+)?/i, "")
+    .replace(/^Limpieza\s+de\s+/i, "")
+    .replace(/^Servicio\s+(de\s+)?/i, "")
+    .replace(/^Servicios\s+(de\s+)?/i, "")
+    .replace(/^Automóvil\s+/i, "")
+    .replace(/^Todos\s+los\s+(tipos|servicios)/i, "Todos")
+    .trim();
+  const first = cleaned.split(/[\s/+,&]+/)[0];
+  return first || text;
+}
+
 function computePriceForVehicle(
   item: {
     basePrice?: number | null;
@@ -53,7 +149,16 @@ function computePriceForVehicle(
   if (item.priceConfigured === false) {
     return { unitPrice: null, originalPrice: null, isPromo: false };
   }
-  const vtVal = item.priceByVehicleType?.[vehicleTypeId];
+  let vtVal = item.priceByVehicleType?.[vehicleTypeId];
+  if (vtVal === undefined || vtVal === null || vtVal <= 0) {
+    if (vehicleTypeId === "vt_sedan" || vehicleTypeId === "vt_auto_pequeno" || vehicleTypeId === "vt_hatchback") {
+      vtVal = item.priceByVehicleType?.["vt_sedan"] ?? item.priceByVehicleType?.["vt_auto_pequeno"] ?? item.priceByVehicleType?.["vt_hatchback"];
+    } else if (vehicleTypeId === "vt_camioneta" || vehicleTypeId === "vt_camioneta_grande") {
+      vtVal = item.priceByVehicleType?.["vt_camioneta"] ?? item.priceByVehicleType?.["vt_camioneta_grande"];
+    } else if (vehicleTypeId === "vt_mayor_tamano" || vehicleTypeId === "vt_furgoneta") {
+      vtVal = item.priceByVehicleType?.["vt_mayor_tamano"] ?? item.priceByVehicleType?.["vt_furgoneta"];
+    }
+  }
   const baseVal =
     item.basePrice !== undefined && item.basePrice !== null
       ? Number(item.basePrice)
@@ -136,6 +241,48 @@ export default function ModuloCarWashCatalogo({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("TODOS");
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>("TODOS");
   const [searchQuery, setSearchQuery] = useState<string>("");
+
+  const [manualServicioTexto, setManualServicioTexto] = useState<string>("");
+  const [manualServicioPrecio, setManualServicioPrecio] = useState<string>("");
+  const [manualUnidad, setManualUnidad] = useState<string>("Servicio");
+  const [manualCantidad, setManualCantidad] = useState<number>(1);
+  const [dropdownUnidadAbierto, setDropdownUnidadAbierto] = useState<boolean>(false);
+  const menuUnidadRef = useRef<HTMLDivElement>(null);
+
+  // Vista de Catálogo General
+  const [verTodoElCatalogo, setVerTodoElCatalogo] = useState<boolean>(false);
+  const [filtroCategoriaGeneral, setFiltroCategoriaGeneral] = useState<string>("");
+  const [menuFiltroAbierto, setMenuFiltroAbierto] = useState<boolean>(false);
+  const menuFiltroRef = useRef<HTMLDivElement>(null);
+
+  // Selección múltiple en la tienda
+  const [itemsSeleccionadosTiendaIds, setItemsSeleccionadosTiendaIds] = useState<string[]>([]);
+  const [agregandoVarios, setAgregandoVarios] = useState<boolean>(false);
+
+  // Dropdown para horario de reserva
+  const [dropdownHorarioAbierto, setDropdownHorarioAbierto] = useState<boolean>(false);
+  const menuHorarioRef = useRef<HTMLDivElement>(null);
+
+  // Cerrar menús desplegables al hacer clic afuera
+  useEffect(() => {
+    const handleClickAfuera = (e: MouseEvent) => {
+      if (menuFiltroRef.current && !menuFiltroRef.current.contains(e.target as Node)) {
+        setMenuFiltroAbierto(false);
+      }
+      if (menuUnidadRef.current && !menuUnidadRef.current.contains(e.target as Node)) {
+        setDropdownUnidadAbierto(false);
+      }
+      if (menuHorarioRef.current && !menuHorarioRef.current.contains(e.target as Node)) {
+        setDropdownHorarioAbierto(false);
+      }
+    };
+    if (menuFiltroAbierto || dropdownUnidadAbierto || dropdownHorarioAbierto) {
+      document.addEventListener("mousedown", handleClickAfuera);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickAfuera);
+    };
+  }, [menuFiltroAbierto, dropdownUnidadAbierto, dropdownHorarioAbierto]);
 
   // Selecciones activas de Car Wash
   const [selectedPackageIds, setSelectedPackageIds] = useState<string[]>([]);
@@ -310,14 +457,43 @@ export default function ModuloCarWashCatalogo({
   ]);
 
   const activeCategories = useMemo(
-    () => (config?.categories || []).filter((c) => c.active).sort((a, b) => a.order - b.order),
+    () =>
+      (config?.categories || [])
+        .filter(
+          (c) =>
+            c.active &&
+            (PRINCIPAL_CATEGORY_IDS.includes(c.id) ||
+              PRINCIPAL_CATEGORY_IDS.some((pid) => c.slug?.includes(pid.replace("cw_cat_", ""))))
+        )
+        .sort((a, b) => {
+          const idxA = PRINCIPAL_CATEGORY_IDS.indexOf(a.id);
+          const idxB = PRINCIPAL_CATEGORY_IDS.indexOf(b.id);
+          if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+          return a.order - b.order;
+        }),
     [config]
   );
 
-  const activeVehicleTypes = useMemo(
-    () => (config?.vehicleTypes || []).filter((v) => v.active).sort((a, b) => a.order - b.order),
-    [config]
-  );
+  const activeVehicleTypes = useMemo(() => {
+    const list = (config?.vehicleTypes || []).filter((v) => v.active);
+    const principales = list.filter(
+      (v) =>
+        v.id === "vt_moto" ||
+        v.id === "vt_sedan" ||
+        v.id === "vt_suv" ||
+        v.id === "vt_camioneta" ||
+        v.id === "vt_mayor_tamano" ||
+        (v.id === "vt_furgoneta" && !list.some((x) => x.id === "vt_mayor_tamano"))
+    );
+    const result = principales.length > 0 ? principales : list;
+    const orderMap = ["vt_moto", "vt_sedan", "vt_suv", "vt_camioneta", "vt_mayor_tamano", "vt_furgoneta"];
+    return result.sort((a, b) => {
+      const idxA = orderMap.indexOf(a.id);
+      const idxB = orderMap.indexOf(b.id);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      return a.order - b.order;
+    });
+  }, [config]);
 
   const currentVehicleType: CarWashVehicleType | undefined = useMemo(
     () =>
@@ -331,6 +507,48 @@ export default function ModuloCarWashCatalogo({
       .filter((s) => s.active && s.categoryId === selectedCategoryId)
       .sort((a, b) => a.order - b.order);
   }, [config, selectedCategoryId]);
+
+  // Adaptar panel Manual automáticamente al seleccionar categoría, subcategoría o tipo de vehículo
+  useEffect(() => {
+    let nombre = "";
+    let precio = 0;
+
+    if (selectedSubcategoryId && selectedSubcategoryId !== "TODOS") {
+      const sub = config?.subcategories?.find((s) => s.id === selectedSubcategoryId);
+      if (sub) {
+        nombre = sub.name;
+        const srv = services.find((s) => s.subcategoryId === sub.id);
+        if (srv) {
+          const pr = computePriceForVehicle(srv, selectedVehicleTypeId).unitPrice;
+          if (pr) precio = pr;
+        }
+      }
+    } else if (selectedCategoryId && selectedCategoryId !== "TODOS") {
+      const cat = config?.categories?.find((c) => c.id === selectedCategoryId);
+      if (cat) {
+        nombre = cat.name;
+        const srv = services.find((s) => s.categoryId === cat.id);
+        if (srv) {
+          const pr = computePriceForVehicle(srv, selectedVehicleTypeId).unitPrice;
+          if (pr) precio = pr;
+        }
+      }
+    } else {
+      nombre = "Lavado Completo";
+      const srv = services[0];
+      if (srv) {
+        const pr = computePriceForVehicle(srv, selectedVehicleTypeId).unitPrice;
+        if (pr) precio = pr;
+      }
+    }
+
+    if (nombre) {
+      setManualServicioTexto(nombre);
+      setManualServicioPrecio(precio > 0 ? precio.toFixed(2) : "");
+      setManualUnidad("Servicio");
+      setManualCantidad(1);
+    }
+  }, [selectedCategoryId, selectedSubcategoryId, selectedVehicleTypeId, config, services]);
 
   // Conjunto de IDs de adicionales que ya están incluidos sin costo en los paquetes seleccionados
   const addonsIncludedInSelectedPackages = useMemo(() => {
@@ -354,11 +572,14 @@ export default function ModuloCarWashCatalogo({
     return config.packages
       .filter((pkg) => {
         if (!pkg.active) return false;
-        if (
-          pkg.applicableVehicleTypes?.length > 0 &&
-          !pkg.applicableVehicleTypes.includes(selectedVehicleTypeId)
-        ) {
-          return false;
+        if (pkg.applicableVehicleTypes?.length > 0) {
+          const appList = pkg.applicableVehicleTypes;
+          const match =
+            appList.includes(selectedVehicleTypeId) ||
+            (selectedVehicleTypeId === "vt_sedan" && (appList.includes("vt_auto_pequeno") || appList.includes("vt_hatchback"))) ||
+            (selectedVehicleTypeId === "vt_camioneta" && appList.includes("vt_camioneta_grande")) ||
+            (selectedVehicleTypeId === "vt_mayor_tamano" && appList.includes("vt_furgoneta"));
+          if (!match) return false;
         }
         if (selectedCategoryId !== "TODOS" && pkg.categoryId !== selectedCategoryId) {
           // Si seleccionó "cw_cat_completo", "cw_cat_premium", "cw_cat_detailing" o "cw_cat_exterior", muestra los de esa categoría
@@ -379,11 +600,14 @@ export default function ModuloCarWashCatalogo({
     return services
       .filter((srv) => {
         if (!srv.active || srv.archived) return false;
-        if (
-          srv.applicableVehicleTypes?.length > 0 &&
-          !srv.applicableVehicleTypes.includes(selectedVehicleTypeId)
-        ) {
-          return false;
+        if (srv.applicableVehicleTypes?.length > 0) {
+          const appList = srv.applicableVehicleTypes;
+          const match =
+            appList.includes(selectedVehicleTypeId) ||
+            (selectedVehicleTypeId === "vt_sedan" && (appList.includes("vt_auto_pequeno") || appList.includes("vt_hatchback"))) ||
+            (selectedVehicleTypeId === "vt_camioneta" && appList.includes("vt_camioneta_grande")) ||
+            (selectedVehicleTypeId === "vt_mayor_tamano" && appList.includes("vt_furgoneta"));
+          if (!match) return false;
         }
         if (selectedCategoryId !== "TODOS" && srv.categoryId !== selectedCategoryId) {
           return false;
@@ -669,6 +893,182 @@ export default function ModuloCarWashCatalogo({
     }
   };
 
+  // Guardar en pedido desde Car Wash (selección o manual)
+  const handleGuardarServicioManualEnOrden = async () => {
+    if (confirmingOrder) return;
+    setConfirmingOrder(true);
+    try {
+      const texto = manualServicioTexto.trim();
+      const precioNum = Math.max(0, parseFloat(manualServicioPrecio) || 0);
+      const cantidad = Math.max(1, manualCantidad || 1);
+      const totalManual = Number((precioNum * cantidad).toFixed(2));
+
+      const itemsParaGuardar: any[] = [];
+
+      // 1. Agregar servicios seleccionados del catálogo si hay
+      if (serverCalculation?.lines?.length > 0) {
+        serverCalculation.lines
+          .filter((line: any) => !line.alreadyIncludedInPackage)
+          .forEach((line: any) => {
+            itemsParaGuardar.push({
+              id: line.id,
+              code: line.code,
+              name: line.name,
+              category: "Lavado",
+              subCategory: line.subCategory || "Car Wash",
+              price: Number(line.unitPrice),
+              total: Number(line.unitPrice),
+              qty: 1,
+              type: "SERVICE",
+              estimatedMinutes: line.estimatedMinutes,
+              vehicleType: currentVehicleType?.name || "",
+              status: "Listo",
+              completed: true,
+              empleado_id: empleadoLogueado.id,
+              empleado_nombre: empleadoLogueado.nombre,
+            });
+          });
+      }
+
+      // 2. Agregar servicio manual si se escribió
+      if (texto) {
+        const code = `CW-MAN-${Math.floor(100 + Math.random() * 900)}`;
+        const cantTexto = `${cantidad} ${manualUnidad}`;
+        itemsParaGuardar.push({
+          id: `sol_cw_${Date.now()}`,
+          key: `cw_${Date.now()}`,
+          code,
+          name: `${texto} (${cantTexto} - ${currentVehicleType?.name || "General"})`,
+          category: "Lavado",
+          subCategory: "Manual",
+          price: precioNum,
+          total: totalManual,
+          qty: cantidad,
+          unitOfMeasure: manualUnidad,
+          type: "SERVICE",
+          vehicleType: currentVehicleType?.name || "",
+          status: "Listo",
+          completed: true,
+          empleado_id: empleadoLogueado.id,
+          empleado_nombre: empleadoLogueado.nombre,
+        });
+      }
+
+      if (itemsParaGuardar.length === 0) {
+        mostrarToast("Selecciona un servicio o escribe uno manualmente", "err");
+        return;
+      }
+
+      // Conservar ítems de otras áreas (ej. Lubricentro)
+      const nonCarWashItems = (itemsOrden || []).filter((it) => {
+        const code = String(it.code || "");
+        const cat = String(it.category || "");
+        return (
+          cat !== "Lavado" &&
+          cat !== "Car Wash" &&
+          !code.startsWith("CW-") &&
+          !code.startsWith("PKG-CW-") &&
+          !code.startsWith("ADD-CW-")
+        );
+      });
+
+      const merged = [...nonCarWashItems, ...itemsParaGuardar];
+      await onActualizarItemsOrden(merged);
+
+      const totalVal = itemsParaGuardar.reduce((acc, curr) => acc + (Number(curr.total || curr.price) || 0), 0);
+      mostrarToast(
+        `✓ ${itemsParaGuardar.length} servicio(s) de Car Wash guardados en la orden ($${totalVal.toFixed(2)})`,
+        "ok"
+      );
+
+      // Limpiar campos
+      setManualServicioTexto("");
+      setManualServicioPrecio("");
+      setSelectedPackageIds([]);
+      setSelectedServiceIds([]);
+      setSelectedAddonIds([]);
+      setServerCalculation(null);
+    } finally {
+      setConfirmingOrder(false);
+    }
+  };
+
+  // Agregar múltiples servicios seleccionados a la orden
+  const handleAgregarVariosSeleccionados = async () => {
+    if (agregandoVarios || itemsSeleccionadosTiendaIds.length === 0) return;
+    try {
+      setAgregandoVarios(true);
+      const seleccionados = itemsTienda.filter((it) =>
+        itemsSeleccionadosTiendaIds.includes(it.id)
+      );
+      if (seleccionados.length === 0) return;
+
+      const nuevosItems: any[] = seleccionados.map((item) => {
+        const code = item.code || `CW-${Math.floor(100 + Math.random() * 900)}`;
+        return {
+          id: `cw_${item.id}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          key: `key_${item.id}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          type: "SERVICE",
+          category: "Lavado",
+          subCategory: item.kind === "PACKAGE" ? "Paquete" : item.kind === "ADDON" ? "Extra" : "Servicio",
+          code,
+          name: `${item.name} (${currentVehicleType?.name || "General"})`,
+          brand: "Car Wash",
+          presentation: "Servicio",
+          unitOfMeasure: "Servicio",
+          price: Number(item.price || 0),
+          total: Number(item.price || 0),
+          qty: 1,
+          status: "Listo",
+          completed: true,
+          empleado_id: empleadoLogueado.id,
+          empleado_nombre: empleadoLogueado.nombre,
+        };
+      });
+
+      const actualizados = [...(itemsOrden || []), ...nuevosItems];
+      await onActualizarItemsOrden(actualizados);
+      mostrarToast(`✓ ${nuevosItems.length} servicios de Car Wash agregados`, "ok");
+      setItemsSeleccionadosTiendaIds([]);
+    } catch {
+      mostrarToast("Error al agregar servicios", "err");
+    } finally {
+      setAgregandoVarios(false);
+    }
+  };
+
+  // Agregar un producto/servicio directamente al pedido
+  const handleAgregarDirectoItem = async (item: any) => {
+    try {
+      const code = item.code || `CW-${Math.floor(100 + Math.random() * 900)}`;
+      const nuevoItem = {
+        id: `cw_${item.id}_${Date.now()}`,
+        key: `key_${item.id}_${Date.now()}`,
+        type: "SERVICE",
+        category: "Lavado",
+        subCategory: item.kind === "PACKAGE" ? "Paquete" : item.kind === "ADDON" ? "Extra" : "Servicio",
+        code,
+        name: `${item.name} (${currentVehicleType?.name || "General"})`,
+        brand: "Car Wash",
+        presentation: "Servicio",
+        unitOfMeasure: "Servicio",
+        price: Number(item.price || 0),
+        total: Number(item.price || 0),
+        qty: 1,
+        status: "Listo",
+        completed: true,
+        empleado_id: empleadoLogueado.id,
+        empleado_nombre: empleadoLogueado.nombre,
+      };
+
+      const actualizados = [...(itemsOrden || []), nuevoItem];
+      await onActualizarItemsOrden(actualizados);
+      mostrarToast(`✓ Agregado: ${item.name}`, "ok");
+    } catch {
+      mostrarToast("Error al agregar servicio", "err");
+    }
+  };
+
   if (loading && !config) {
     return (
       <div className="p-8 rounded-3xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 text-center space-y-3 animate-pulse">
@@ -700,1032 +1100,1114 @@ export default function ModuloCarWashCatalogo({
   const totalSelectionsCount =
     selectedPackageIds.length + selectedServiceIds.length + selectedAddonIds.length;
 
+  const itemsTienda = useMemo(() => {
+    const q = searchQuery
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+
+    // "no debe salir hasta que busque"
+    if (!q) {
+      return [];
+    }
+
+    const terms = q.split(/\s+/).filter(Boolean);
+
+    const matchText = (text: string) => {
+      const norm = (text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      return terms.every((t) => norm.includes(t));
+    };
+
+    const list: Array<{
+      id: string;
+      kind: "PACKAGE" | "SERVICE" | "ADDON";
+      name: string;
+      code: string;
+      description?: string;
+      durationMinutes?: number;
+      price: number;
+      rawPackage?: CarWashPackage;
+      rawService?: CarWashEnrichedService;
+      rawAddon?: CarWashAddon;
+      imageUrl?: string;
+      isSelected: boolean;
+    }> = [];
+
+    filteredPackages.forEach((pkg) => {
+      const full = `${pkg.name} ${pkg.code} ${pkg.shortDescription || ""} ${(pkg.includedProcedures || []).join(" ")}`;
+      if (!matchText(full)) return;
+      const pr = computePriceForVehicle(pkg, selectedVehicleTypeId).unitPrice ?? 0;
+      list.push({
+        id: pkg.id,
+        kind: "PACKAGE",
+        name: pkg.name,
+        code: pkg.code,
+        description: pkg.shortDescription,
+        durationMinutes: pkg.estimatedMinutes,
+        price: pr,
+        rawPackage: pkg,
+        imageUrl: pkg.imageUrl,
+        isSelected: itemsSeleccionadosTiendaIds.includes(pkg.id) || selectedPackageIds.includes(pkg.id),
+      });
+    });
+
+    filteredServices.forEach((srv) => {
+      const full = `${srv.name} ${srv.code} ${srv.shortDescription || ""} ${srv.fullDescription || ""} ${(srv.includesList || []).join(" ")}`;
+      if (!matchText(full)) return;
+      const pr = computePriceForVehicle(srv, selectedVehicleTypeId).unitPrice ?? 0;
+      list.push({
+        id: srv.id,
+        kind: "SERVICE",
+        name: srv.name,
+        code: srv.code,
+        description: srv.shortDescription || srv.fullDescription,
+        durationMinutes: srv.estimatedMinutes || 30,
+        price: pr,
+        rawService: srv,
+        imageUrl: srv.imageUrl,
+        isSelected: itemsSeleccionadosTiendaIds.includes(srv.id) || selectedServiceIds.includes(srv.id),
+      });
+    });
+
+    activeAddons.forEach((add) => {
+      const full = `${add.name} ${add.code} ${add.description || ""}`;
+      if (!matchText(full)) return;
+      const pr = computePriceForVehicle(add, selectedVehicleTypeId).unitPrice ?? 0;
+      list.push({
+        id: add.id,
+        kind: "ADDON",
+        name: add.name,
+        code: add.code,
+        description: add.description,
+        durationMinutes: add.estimatedMinutes || 15,
+        price: pr,
+        rawAddon: add,
+        imageUrl: add.imageUrl,
+        isSelected: itemsSeleccionadosTiendaIds.includes(add.id) || selectedAddonIds.includes(add.id),
+      });
+    });
+
+    return list;
+  }, [
+    searchQuery,
+    filteredPackages,
+    filteredServices,
+    activeAddons,
+    selectedVehicleTypeId,
+    itemsSeleccionadosTiendaIds,
+    selectedPackageIds,
+    selectedServiceIds,
+    selectedAddonIds,
+  ]);
+
+  // Todos los ítems para el Catálogo General (sin precio en la vista de tarjetas)
+  const todosLosItemsCatalogo = useMemo(() => {
+    if (!config) return [];
+    const q = searchQuery
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+
+    const terms = q.split(/\s+/).filter(Boolean);
+    const matchText = (text: string) => {
+      if (!terms.length) return true;
+      const norm = (text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      return terms.every((t) => norm.includes(t));
+    };
+
+    const list: Array<{
+      id: string;
+      kind: "PACKAGE" | "SERVICE" | "ADDON";
+      name: string;
+      code: string;
+      brand?: string;
+      presentation?: string;
+      description?: string;
+      durationMinutes?: number;
+      price: number;
+      imageUrl?: string;
+      categoryId?: string;
+    }> = [];
+
+    (config.packages || []).forEach((pkg) => {
+      if (!pkg.active) return;
+      if (filtroCategoriaGeneral && pkg.categoryId !== filtroCategoriaGeneral) return;
+      const full = `${pkg.name} ${pkg.code} ${pkg.shortDescription || ""}`;
+      if (!matchText(full)) return;
+      const pr = computePriceForVehicle(pkg, selectedVehicleTypeId).unitPrice ?? 0;
+      list.push({
+        id: pkg.id,
+        kind: "PACKAGE",
+        name: pkg.name,
+        code: pkg.code,
+        brand: "Paquete",
+        description: pkg.shortDescription,
+        durationMinutes: pkg.estimatedMinutes,
+        price: pr,
+        imageUrl: pkg.imageUrl,
+        categoryId: pkg.categoryId,
+        presentation: `${pkg.estimatedMinutes || 45} min · Paquete`,
+      });
+    });
+
+    services.forEach((srv) => {
+      if (!srv.active || srv.archived) return;
+      if (filtroCategoriaGeneral && srv.categoryId !== filtroCategoriaGeneral) return;
+      const full = `${srv.name} ${srv.code} ${srv.shortDescription || ""} ${srv.fullDescription || ""}`;
+      if (!matchText(full)) return;
+      const pr = computePriceForVehicle(srv, selectedVehicleTypeId).unitPrice ?? 0;
+      const catObj = config.categories?.find((c) => c.id === srv.categoryId);
+      list.push({
+        id: srv.id,
+        kind: "SERVICE",
+        name: srv.name,
+        code: srv.code,
+        brand: catObj?.name ? toSingleWord(catObj.name, CARWASH_CAT_SINGLE) : "Car Wash",
+        description: srv.shortDescription || srv.fullDescription,
+        durationMinutes: srv.estimatedMinutes || 30,
+        price: pr,
+        imageUrl: srv.imageUrl,
+        categoryId: srv.categoryId,
+        presentation: `${srv.estimatedMinutes || 30} min · Servicio`,
+      });
+    });
+
+    (config.addons || []).forEach((add) => {
+      if (!add.active) return;
+      if (filtroCategoriaGeneral && filtroCategoriaGeneral !== "cw_cat_adicionales") return;
+      const full = `${add.name} ${add.code} ${add.description || ""}`;
+      if (!matchText(full)) return;
+      const pr = computePriceForVehicle(add, selectedVehicleTypeId).unitPrice ?? 0;
+      list.push({
+        id: add.id,
+        kind: "ADDON",
+        name: add.name,
+        code: add.code,
+        brand: "Extra",
+        description: add.description,
+        durationMinutes: add.estimatedMinutes || 15,
+        price: pr,
+        imageUrl: add.imageUrl,
+        categoryId: "cw_cat_adicionales",
+        presentation: `${add.estimatedMinutes || 15} min · Adicional`,
+      });
+    });
+
+    return list;
+  }, [config, services, searchQuery, filtroCategoriaGeneral, selectedVehicleTypeId]);
+
+  const totalCalculado = useMemo(() => {
+    let sum = 0;
+    if (serverCalculation?.total != null) {
+      sum = Number(serverCalculation.total);
+    } else {
+      (config?.packages || [])
+        .filter((p) => selectedPackageIds.includes(p.id))
+        .forEach((p) => {
+          sum += computePriceForVehicle(p, selectedVehicleTypeId).unitPrice ?? 0;
+        });
+      services
+        .filter((s) => selectedServiceIds.includes(s.id))
+        .forEach((s) => {
+          sum += computePriceForVehicle(s, selectedVehicleTypeId).unitPrice ?? 0;
+        });
+      (config?.addons || [])
+        .filter((a) => selectedAddonIds.includes(a.id))
+        .forEach((a) => {
+          sum += computePriceForVehicle(a, selectedVehicleTypeId).unitPrice ?? 0;
+        });
+    }
+    const valManual = (parseFloat(manualServicioPrecio) || 0) * (manualCantidad || 1);
+    return sum + valManual;
+  }, [
+    serverCalculation,
+    config,
+    services,
+    selectedPackageIds,
+    selectedServiceIds,
+    selectedAddonIds,
+    manualServicioPrecio,
+    manualCantidad,
+  ]);
+
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-3.5 animate-fade-in">
       {/* =====================================================================
-          BARRA SUPERIOR: BUSCADOR + ACCIONES ADMINISTRATIVAS + PASOS (1 AL 5)
+          FILA 1: CATEGORÍAS PRINCIPALES (Color, Porte y Diseño Taller y Lubricentro)
           ===================================================================== */}
-      <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-sm space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🚿</span>
-              <h2 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white tracking-tight">
-                Car Wash, Detailing & Servicios Automotrices
-              </h2>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                100% Configurable
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 w-full">
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedCategoryId("TODOS");
+            setSelectedSubcategoryId("TODOS");
+          }}
+          className={`h-10 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all shadow-2xs active:scale-95 ${
+            selectedCategoryId === "TODOS"
+              ? "bg-blue-50/90 dark:bg-blue-500/20 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/40 font-bold"
+              : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
+          }`}
+        >
+          <span className="text-base leading-none shrink-0">🚿</span>
+          <span className="truncate">Todas</span>
+        </button>
+        {activeCategories.map((cat) => {
+          const activa = selectedCategoryId === cat.id;
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => {
+                setSelectedCategoryId(cat.id);
+                setSelectedSubcategoryId("TODOS");
+              }}
+              className={`h-10 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all shadow-2xs active:scale-95 ${
+                activa
+                  ? "bg-blue-50/90 dark:bg-blue-500/20 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/40 font-bold"
+                  : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
+              }`}
+            >
+              <span className="text-base leading-none shrink-0">{cat.icon || "🚿"}</span>
+              <span className="truncate">{toSingleWord(cat.name, CARWASH_CAT_SINGLE)}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* =====================================================================
+          FILA 2: SELECTOR DE TIPO DE VEHÍCULO (Color, Porte y Diseño Taller y Lubricentro)
+          ===================================================================== */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 w-full">
+        {activeVehicleTypes.map((vt) => {
+          const activa = selectedVehicleTypeId === vt.id;
+          return (
+            <button
+              key={vt.id}
+              type="button"
+              onClick={() => setSelectedVehicleTypeId(vt.id)}
+              className={`h-10 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all shadow-2xs active:scale-95 ${
+                activa
+                  ? "bg-blue-50/90 dark:bg-blue-500/20 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/40 font-bold"
+                  : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
+              }`}
+            >
+              <span className="text-base leading-none shrink-0">{vt.icon || "🚗"}</span>
+              <span className="truncate">{toSingleWord(vt.name, CARWASH_VEH_SINGLE)}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* =====================================================================
+          FILA 3: CONTENIDO EN TRES COLUMNAS O CATÁLOGO GENERAL
+          ===================================================================== */}
+      {!verTodoElCatalogo ? (
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-start">
+          {/* 1. PANEL IZQUIERDO: Categoría y modalidades */}
+          <div className="md:col-span-4 lg:col-span-3 p-3.5 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-2.5 shadow-2xs">
+            <div className="flex items-center gap-2 px-0.5 pb-2 border-b border-zinc-100 dark:border-white/5 text-zinc-900 dark:text-white font-normal text-xs sm:text-sm">
+              <span className="text-sm text-blue-600 dark:text-blue-400">←</span>
+              <span className="text-base">
+                {activeCategories.find((c) => c.id === selectedCategoryId)?.icon || "🚿"}
               </span>
+              <span className="truncate">Categoría</span>
             </div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-              Selecciona el tamaño del vehículo, elige categoría, paquete o servicio y personaliza tus complementos.
-            </p>
+
+            <div className="space-y-1.5">
+              {activeSubcategories.length > 0 ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSubcategoryId("TODOS")}
+                    className={`w-full p-2 rounded-lg border flex items-center justify-between gap-2 text-left transition-all cursor-pointer active:scale-98 ${
+                      selectedSubcategoryId === "TODOS"
+                        ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/50 text-blue-900 dark:text-blue-200 shadow-2xs ring-1 ring-blue-400/30"
+                        : "bg-zinc-50/70 hover:bg-zinc-100/80 dark:bg-white/[0.02] dark:hover:bg-white/[0.05] border-zinc-200/80 dark:border-white/5 text-zinc-700 dark:text-zinc-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-8 h-8 rounded-md border flex items-center justify-center text-sm shrink-0 bg-white dark:bg-black/30 border-zinc-200 dark:border-white/10">
+                        ✨
+                      </div>
+                      <span className="text-xs font-semibold truncate">Todos</span>
+                    </div>
+                    <span className="text-xs shrink-0 font-bold">›</span>
+                  </button>
+                  {activeSubcategories.map((sub) => {
+                    const isSelected = selectedSubcategoryId === sub.id;
+                    return (
+                      <button
+                        key={sub.id}
+                        type="button"
+                        onClick={() => setSelectedSubcategoryId(sub.id)}
+                        className={`w-full p-2 rounded-lg border flex items-center justify-between gap-2 text-left transition-all cursor-pointer active:scale-98 ${
+                          isSelected
+                            ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/50 text-blue-900 dark:text-blue-200 shadow-2xs ring-1 ring-blue-400/30"
+                            : "bg-zinc-50/70 hover:bg-zinc-100/80 dark:bg-white/[0.02] dark:hover:bg-white/[0.05] border-zinc-200/80 dark:border-white/5 text-zinc-700 dark:text-zinc-300"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div
+                            className={`w-8 h-8 rounded-md border flex items-center justify-center text-sm shrink-0 ${
+                              isSelected
+                                ? "bg-blue-100 dark:bg-blue-500/25 border-blue-300 dark:border-blue-400/40 text-blue-700 dark:text-blue-200"
+                                : "bg-white dark:bg-black/30 border-zinc-200 dark:border-white/10"
+                            }`}
+                          >
+                            {sub.icon || "🚿"}
+                          </div>
+                          <span
+                            className={`text-xs font-semibold truncate ${
+                              isSelected
+                                ? "text-blue-700 dark:text-blue-300 font-bold"
+                                : "text-zinc-700 dark:text-zinc-200"
+                            }`}
+                          >
+                            {toSingleWord(sub.name, CARWASH_SUB_SINGLE)}
+                          </span>
+                        </div>
+                        <span
+                          className={`text-xs shrink-0 font-bold ${
+                            isSelected ? "text-blue-600 dark:text-blue-400" : "text-zinc-400 dark:text-zinc-500"
+                          }`}
+                        >
+                          ›
+                        </span>
+                      </button>
+                    );
+                  })}
+                </>
+              ) : (
+                activeCategories.map((cat) => {
+                  const isSelected = selectedCategoryId === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategoryId(cat.id);
+                        setSelectedSubcategoryId("TODOS");
+                      }}
+                      className={`w-full p-2 rounded-lg border flex items-center justify-between gap-2 text-left transition-all cursor-pointer active:scale-98 ${
+                        isSelected
+                          ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/50 text-blue-900 dark:text-blue-200 shadow-2xs ring-1 ring-blue-400/30"
+                          : "bg-zinc-50/70 hover:bg-zinc-100/80 dark:bg-white/[0.02] dark:hover:bg-white/[0.05] border-zinc-200/80 dark:border-white/5 text-zinc-700 dark:text-zinc-300"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div
+                          className={`w-8 h-8 rounded-md border flex items-center justify-center text-sm shrink-0 ${
+                            isSelected
+                              ? "bg-blue-100 dark:bg-blue-500/25 border-blue-300 dark:border-blue-400/40 text-blue-700 dark:text-blue-200"
+                              : "bg-white dark:bg-black/30 border-zinc-200 dark:border-white/10"
+                          }`}
+                        >
+                          {cat.icon || "🚿"}
+                        </div>
+                        <span
+                          className={`text-xs font-semibold truncate ${
+                            isSelected
+                              ? "text-blue-700 dark:text-blue-300 font-bold"
+                              : "text-zinc-700 dark:text-zinc-200"
+                          }`}
+                        >
+                          {toSingleWord(cat.name, CARWASH_CAT_SINGLE)}
+                        </span>
+                      </div>
+                      <span
+                        className={`text-xs shrink-0 font-bold ${
+                          isSelected ? "text-blue-600 dark:text-blue-400" : "text-zinc-400 dark:text-zinc-500"
+                        }`}
+                      >
+                        ›
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
           </div>
 
-          {/* Botones de Administración Manual */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative flex-1 sm:w-64">
+          {/* 2. PANEL CENTRAL: Tienda de Car Wash */}
+          <div className="md:col-span-8 lg:col-span-5 p-3.5 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 shadow-2xs">
+            {/* Header del panel central */}
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-zinc-100 dark:border-white/5">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-sm text-blue-600 dark:text-blue-400 shrink-0">🏪</span>
+                <h3 className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-white truncate">
+                  Tienda
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setVerTodoElCatalogo(true)}
+                className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:underline flex items-center gap-1 cursor-pointer whitespace-nowrap"
+              >
+                <span>Ver todo</span>
+                <span>›</span>
+              </button>
+            </div>
+
+            {/* Input de Búsqueda */}
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="🔍 Buscar lavado, detailing, código..."
-                className="w-full h-9 pl-3 pr-8 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/40 text-xs text-zinc-900 dark:text-white"
+                placeholder="Buscar..."
+                className="w-full h-9 pl-8 pr-7 rounded-lg bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
               />
               {searchQuery && (
                 <button
                   type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-zinc-400 hover:text-zinc-700 cursor-pointer"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setItemsSeleccionadosTiendaIds([]);
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white text-xs cursor-pointer"
                 >
                   ✕
                 </button>
               )}
             </div>
 
-            <button
-              type="button"
-              onClick={() => setServiceFormModal({ open: true, service: null })}
-              title="Registrar nuevo servicio"
-              className="h-9 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-black text-xs font-black flex items-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap transition-all"
-            >
-              <span>➕</span>
-              <span>Servicio</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Barra de los 5 Pasos del Proceso de Selección del Cliente */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-2 border-t border-zinc-100 dark:border-white/5">
-          {[
-            {
-              step: 1 as const,
-              title: "Paso 1. Vehículo",
-              sub: currentVehicleType ? `${currentVehicleType.icon} ${currentVehicleType.name}` : "Elegir tamaño",
-            },
-            {
-              step: 2 as const,
-              title: "Paso 2. Lavado / Paquete",
-              sub: `${selectedPackageIds.length + selectedServiceIds.length} elegido(s)`,
-            },
-            {
-              step: 3 as const,
-              title: "Paso 3. Complementos",
-              sub: `${selectedAddonIds.length} adicional(es)`,
-            },
-            {
-              step: 4 as const,
-              title: "Paso 4. Resumen",
-              sub: serverCalculation
-                ? `$${Number(serverCalculation.total).toFixed(2)} • ${serverCalculation.totalMinutes} min`
-                : "Ver desglose",
-            },
-            {
-              step: 5 as const,
-              title: "Paso 5. Continuar",
-              sub: "Orden / POS / Reserva",
-            },
-          ].map((s) => {
-            const active = activeStep === s.step;
-            return (
-              <button
-                key={s.step}
-                type="button"
-                onClick={() => {
-                  setActiveStep(s.step);
-                  const el = document.getElementById(`cw-step-${s.step}`);
-                  if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                }}
-                className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer ${
-                  active
-                    ? "bg-amber-50 dark:bg-amber-500/20 border-amber-400 text-amber-900 dark:text-amber-200 shadow-xs"
-                    : "bg-zinc-50/70 hover:bg-zinc-100 dark:bg-black/30 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
-                }`}
-              >
-                <span className="text-[11px] font-black uppercase tracking-wider block truncate">
-                  {s.title}
-                </span>
-                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 block truncate mt-0.5">
-                  {s.sub}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* =====================================================================
-          PASO 1: SELECCIONAR TIPO DE VEHÍCULO (SECCIÓN 3 DEL PROMPT)
-          ===================================================================== */}
-      <div
-        id="cw-step-1"
-        className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-xs space-y-3"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-amber-500 text-black text-xs font-black flex items-center justify-center">
-              1
-            </span>
-            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-zinc-900 dark:text-white">
-              Selecciona el Tipo o Tamaño del Vehículo
-            </h3>
-          </div>
-          <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-            Las tarifas se ajustan automáticamente según el vehículo seleccionado
-          </span>
-        </div>
-
-        <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2">
-          {activeVehicleTypes.map((vt) => {
-            const isSel = vt.id === selectedVehicleTypeId;
-            return (
-              <button
-                key={vt.id}
-                type="button"
-                onClick={() => {
-                  setSelectedVehicleTypeId(vt.id);
-                  setActiveStep(2);
-                }}
-                title={vt.description}
-                className={`p-2.5 rounded-2xl border flex flex-col items-center justify-center text-center gap-1 transition-all cursor-pointer active:scale-95 ${
-                  isSel
-                    ? "bg-amber-500 text-black border-amber-600 font-black shadow-md ring-2 ring-amber-500/30"
-                    : "bg-zinc-50 hover:bg-zinc-100 dark:bg-black/30 dark:hover:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
-                }`}
-              >
-                <span className="text-xl sm:text-2xl leading-none">{vt.icon}</span>
-                <span className="text-[11px] leading-tight line-clamp-2 font-bold">{vt.name}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* =====================================================================
-          SECCIÓN 1: LAS 12 TARJETAS PRINCIPALES DE CATEGORÍAS DE SERVICIOS
-          ===================================================================== */}
-      <div
-        id="cw-step-2"
-        className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-xs space-y-4"
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-amber-500 text-black text-xs font-black flex items-center justify-center">
-              2
-            </span>
-            <div>
-              <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-zinc-900 dark:text-white">
-                Categorías Principales de Lavado & Estética Automotriz
-              </h3>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                Haz clic en cualquier tarjeta para filtrar sus servicios o ver todas las opciones
-              </p>
-            </div>
-          </div>
-
-          {selectedCategoryId !== "TODOS" && (
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedCategoryId("TODOS");
-                setSelectedSubcategoryId("TODOS");
-              }}
-              className="px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-bold cursor-pointer self-start sm:self-auto"
-            >
-              ✕ Mostrar todas las categorías ({activeCategories.length})
-            </button>
-          )}
-        </div>
-
-        {/* Grid adaptable de las 12 tarjetas visuales de categorías */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5">
-          {activeCategories.map((cat) => {
-            const isSelected = selectedCategoryId === cat.id;
-            return (
-              <div
-                key={cat.id}
-                onClick={() => {
-                  if (cat.id === "cw_cat_adicionales") {
-                    setSelectedCategoryId(cat.id);
-                    setActiveStep(3);
-                    const el = document.getElementById("cw-step-3");
-                    if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                  } else {
-                    setSelectedCategoryId(isSelected ? "TODOS" : cat.id);
-                    setSelectedSubcategoryId("TODOS");
-                  }
-                }}
-                className={`group rounded-2xl border overflow-hidden flex flex-col justify-between transition-all cursor-pointer ${
-                  isSelected
-                    ? "bg-amber-50/90 dark:bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/40 shadow-lg"
-                    : "bg-white hover:bg-zinc-50/80 dark:bg-black/30 dark:hover:bg-white/[0.04] border-zinc-200 dark:border-white/10 shadow-xs hover:shadow-md"
-                }`}
-              >
-                {/* Imagen representativa + badges */}
-                <div className="relative h-32 w-full bg-zinc-900 overflow-hidden">
-                  <img
-                    src={cat.imageUrl || FALLBACK_CARWASH_IMG}
-                    alt={cat.name}
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = FALLBACK_CARWASH_IMG;
-                    }}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 opacity-90"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
-
-                  <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-1">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        cat.availability === "Disponible"
-                          ? "bg-emerald-500/90 text-white"
-                          : cat.availability === "No disponible"
-                          ? "bg-rose-500/90 text-white"
-                          : "bg-amber-500/90 text-black"
-                      }`}
-                    >
-                      {cat.availability}
-                    </span>
-
-                    {cat.estimatedMinutes && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-black/65 text-white backdrop-blur-xs">
-                        ⏱️ ~{cat.estimatedMinutes} min
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-lg leading-none">{cat.icon}</span>
-                      <h4 className="text-xs sm:text-sm font-black text-white truncate">
-                        {cat.name}
-                      </h4>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Descripción corta + precio inicial + botón Ver servicios */}
-                <div className="p-3.5 flex-1 flex flex-col justify-between gap-3">
-                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">
-                    {cat.shortDescription}
-                  </p>
-
-                  <div className="pt-2 border-t border-zinc-100 dark:border-white/5 flex items-center justify-between gap-2">
-                    <div>
-                      <span className="text-[10px] uppercase tracking-wider text-zinc-400 block">
-                        Precio inicial
-                      </span>
-                      {cat.startingPrice && cat.startingPrice > 0 ? (
-                        <span className="text-sm font-black text-amber-600 dark:text-amber-400 font-mono">
-                          Desde ${Number(cat.startingPrice).toFixed(2)}
-                        </span>
-                      ) : (
-                        <span className="text-[11px] font-semibold text-zinc-400">
-                          Por configurar
-                        </span>
-                      )}
-                    </div>
-
-                    <span
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                        isSelected
-                          ? "bg-amber-500 text-black shadow-xs"
-                          : "bg-zinc-100 group-hover:bg-amber-500 group-hover:text-black dark:bg-white/10 text-zinc-800 dark:text-zinc-200"
-                      }`}
-                    >
-                      {isSelected ? "✓ Viendo" : "Ver servicios"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Subcategorías de la categoría seleccionada */}
-        {activeSubcategories.length > 0 && (
-          <div className="pt-2 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-              Subcategorías:
-            </span>
-            <button
-              type="button"
-              onClick={() => setSelectedSubcategoryId("TODOS")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer ${
-                selectedSubcategoryId === "TODOS"
-                  ? "bg-amber-500 text-black"
-                  : "bg-zinc-100 dark:bg-white/10 text-zinc-700 dark:text-zinc-300"
-              }`}
-            >
-              Todas
-            </button>
-            {activeSubcategories.map((sub) => (
-              <button
-                key={sub.id}
-                type="button"
-                onClick={() => setSelectedSubcategoryId(sub.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer ${
-                  selectedSubcategoryId === sub.id
-                    ? "bg-amber-500 text-black"
-                    : "bg-zinc-100 dark:bg-white/10 text-zinc-700 dark:text-zinc-300"
-                }`}
-              >
-                <span>{sub.icon}</span>
-                <span>{sub.name}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* =====================================================================
-          SECCIÓN 4: PAQUETES COMERCIALES DE LAVADO CONFIGURABLES
-          ===================================================================== */}
-      {filteredPackages.length > 0 && selectedCategoryId !== "cw_cat_adicionales" && (
-        <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-zinc-900 dark:text-white flex items-center gap-2">
-                <span>💎</span> Paquetes Comerciales de Lavado y Detailing (
-                {currentVehicleType?.name})
-              </h3>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                Combos configurables con múltiples procedimientos incluidos y ahorro automático en complementos
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setConfigModalOpen(true)}
-              className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
-            >
-              ✏️ Configurar paquetes
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredPackages.map((pkg) => {
-              const isSelected = selectedPackageIds.includes(pkg.id);
-              const priceInfo = computePriceForVehicle(pkg, selectedVehicleTypeId);
-              return (
-                <div
-                  key={pkg.id}
-                  className={`rounded-2xl border overflow-hidden flex flex-col justify-between transition-all ${
-                    isSelected
-                      ? "bg-amber-50/90 dark:bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/40 shadow-lg"
-                      : "bg-zinc-50/60 dark:bg-black/30 border-zinc-200 dark:border-white/10 shadow-xs hover:shadow-md"
-                  }`}
+            {/* Barra de Selección Múltiple y Acciones */}
+            {searchQuery.trim() && itemsTienda.length > 0 && (
+              <div className="flex items-center justify-between gap-2 px-0.5 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (itemsSeleccionadosTiendaIds.length === itemsTienda.length) {
+                      setItemsSeleccionadosTiendaIds([]);
+                    } else {
+                      setItemsSeleccionadosTiendaIds(itemsTienda.map((it) => it.id));
+                    }
+                  }}
+                  className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1.5 cursor-pointer select-none"
                 >
-                  <div>
-                    <div className="relative h-36 w-full bg-zinc-900 overflow-hidden">
-                      <img
-                        src={pkg.imageUrl || FALLBACK_CARWASH_IMG}
-                        alt={pkg.name}
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).src = FALLBACK_CARWASH_IMG;
-                        }}
-                        className="w-full h-full object-cover opacity-90"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+                  <input
+                    type="checkbox"
+                    checked={
+                      itemsTienda.length > 0 &&
+                      itemsSeleccionadosTiendaIds.length === itemsTienda.length
+                    }
+                    onChange={() => {}}
+                    className="w-3.5 h-3.5 rounded border-zinc-300 dark:border-white/20 text-blue-600 focus:ring-blue-500 cursor-pointer pointer-events-none"
+                  />
+                  <span>
+                    {itemsSeleccionadosTiendaIds.length === itemsTienda.length
+                      ? "Deseleccionar"
+                      : "Seleccionar todos"}
+                  </span>
+                </button>
 
-                      <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between">
-                        {pkg.badgeText ? (
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500 text-black">
-                            {pkg.badgeText}
-                          </span>
-                        ) : (
-                          <span />
-                        )}
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-black/65 text-white">
-                          ⏱️ {pkg.estimatedMinutes} min
-                        </span>
+                {itemsSeleccionadosTiendaIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleAgregarVariosSeleccionados}
+                    disabled={agregandoVarios}
+                    className="h-7 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] flex items-center gap-1 shadow-2xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <span>+</span>
+                    <span>
+                      {agregandoVarios
+                        ? "Agregando..."
+                        : `Agregar (${itemsSeleccionadosTiendaIds.length})`}
+                    </span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Lista de Servicios / Paquetes / Adicionales (solo visible cuando se busca) */}
+            <div className="space-y-2 max-h-[580px] overflow-y-auto pr-0.5">
+              {!searchQuery.trim() ? null : itemsTienda.length === 0 ? (
+                <div className="p-6 rounded-xl bg-zinc-50/70 dark:bg-white/[0.01] border border-dashed border-zinc-200 dark:border-white/10 text-center space-y-1.5 text-zinc-400">
+                  <span className="text-xl block">🔍</span>
+                  <p className="text-xs font-semibold">No se encontraron servicios ni paquetes para esta búsqueda.</p>
+                </div>
+              ) : (
+                itemsTienda.map((item) => {
+                  const isChecked = itemsSeleccionadosTiendaIds.includes(item.id);
+                  return (
+                    <div
+                      key={`${item.kind}-${item.id}`}
+                      onClick={() => {
+                        setItemsSeleccionadosTiendaIds((prev) =>
+                          prev.includes(item.id)
+                            ? prev.filter((id) => id !== item.id)
+                            : [...prev, item.id]
+                        );
+                        setManualServicioTexto(item.name);
+                        setManualServicioPrecio(item.price.toFixed(2));
+                      }}
+                      className={`p-2.5 sm:p-3 rounded-lg border flex items-center justify-between gap-3 transition-all cursor-pointer group shadow-2xs ${
+                        isChecked || item.isSelected
+                          ? "bg-blue-50/80 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/50 ring-1 ring-blue-400/30"
+                          : "bg-white dark:bg-white/[0.02] hover:bg-zinc-50/70 dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/10 hover:border-blue-400/50"
+                      }`}
+                    >
+                      {/* Checkbox de selección múltiple */}
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setItemsSeleccionadosTiendaIds((prev) =>
+                            prev.includes(item.id)
+                              ? prev.filter((id) => id !== item.id)
+                              : [...prev, item.id]
+                          );
+                        }}
+                        className="pr-1 flex items-center"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}}
+                          className="w-4 h-4 rounded border-zinc-300 dark:border-white/20 text-blue-600 focus:ring-blue-500 cursor-pointer pointer-events-none"
+                        />
                       </div>
 
-                      <div className="absolute bottom-2.5 left-3 right-3 flex items-end justify-between gap-2">
-                        <div>
-                          <span className="text-[10px] font-mono text-zinc-300 block">
-                            {pkg.code}
+                      <div className="w-11 h-13 sm:w-12 sm:h-14 rounded-md bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-white/5 flex items-center justify-center p-1 shrink-0 overflow-hidden">
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain" />
+                        ) : (
+                          <span className="text-xl">
+                            {item.kind === "PACKAGE" ? "📦" : item.kind === "ADDON" ? "✨" : "🚿"}
                           </span>
-                          <h4 className="text-sm sm:text-base font-black text-white">
-                            {pkg.name}
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0 space-y-0.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="text-[11px] sm:text-xs font-normal text-zinc-800 dark:text-zinc-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
+                            {item.name}
                           </h4>
-                        </div>
-                        <div className="text-right">
-                          {priceInfo.unitPrice ? (
-                            <span className="text-lg font-black text-amber-400 font-mono">
-                              ${priceInfo.unitPrice.toFixed(2)}
+                          {item.kind === "PACKAGE" && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                              Paquete
                             </span>
-                          ) : (
-                            <span className="text-[11px] text-amber-300 font-bold">
-                              Sin precio
+                          )}
+                          {item.kind === "ADDON" && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+                              Extra
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
+                          {item.durationMinutes ? `⏱ ${item.durationMinutes} min · ` : ""}
+                          {item.description || item.code}
+                        </p>
+                        <div className="pt-0.5 flex items-center gap-2">
+                          <span className="text-xs sm:text-sm font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                            $ {item.price.toFixed(2)}
+                          </span>
+                          {currentVehicleType && (
+                            <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                              ({currentVehicleType.name})
                             </span>
                           )}
                         </div>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleAgregarDirectoItem(item);
+                        }}
+                        className="h-8 px-3 rounded-lg border text-xs font-bold flex items-center gap-1 shrink-0 transition-all cursor-pointer active:scale-95 shadow-2xs bg-blue-100/80 hover:bg-blue-200/80 dark:bg-blue-500/20 dark:hover:bg-blue-500/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/30"
+                      >
+                        <span>+</span>
+                        <span>Agregar</span>
+                      </button>
                     </div>
-
-                    <div className="p-4 space-y-2.5">
-                      <p className="text-xs text-zinc-600 dark:text-zinc-300">
-                        {pkg.shortDescription}
-                      </p>
-                      <ul className="space-y-1">
-                        {(pkg.includedProcedures || []).slice(0, 4).map((proc, idx) => (
-                          <li
-                            key={idx}
-                            className="text-[11px] text-zinc-700 dark:text-zinc-300 flex items-start gap-1.5"
-                          >
-                            <span className="text-emerald-500 font-bold">✓</span>
-                            <span>{proc}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div className="px-4 pb-4 pt-2 border-t border-zinc-200/70 dark:border-white/5 flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setDetailModalItem({ item: pkg, kind: "PACKAGE" })}
-                      className="px-3 py-2 rounded-xl border border-zinc-300 dark:border-white/15 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5 cursor-pointer"
-                    >
-                      Ver detalles
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleTogglePackage(pkg)}
-                      className={`flex-1 py-2 px-3 rounded-xl text-xs font-black cursor-pointer transition-all ${
-                        isSelected
-                          ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                          : "bg-amber-500 hover:bg-amber-600 text-black shadow-xs"
-                      }`}
-                    >
-                      {isSelected ? "✓ Paquete Seleccionado" : "+ Seleccionar Paquete"}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* =====================================================================
-          CATÁLOGO DE SERVICIOS INDIVIDUALES DE LA CATEGORÍA SELECCIONADA
-          ===================================================================== */}
-      {selectedCategoryId !== "cw_cat_adicionales" && (
-        <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-zinc-900 dark:text-white">
-                🧼 Servicios de Lavado y Estética Disponibles ({filteredServices.length})
-              </h3>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                Tarifas calculadas para: <strong>{currentVehicleType?.name}</strong>
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() =>
-                setServiceFormModal({
-                  open: true,
-                  service:
-                    selectedCategoryId !== "TODOS"
-                      ? { categoryId: selectedCategoryId }
-                      : null,
+                  );
                 })
-              }
-              className="px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-bold cursor-pointer"
-            >
-              + Agregar servicio aquí
-            </button>
+              )}
+            </div>
           </div>
 
-          {filteredServices.length === 0 ? (
-            <div className="p-8 rounded-2xl bg-zinc-50 dark:bg-black/20 border border-dashed border-zinc-300 dark:border-white/10 text-center space-y-2">
-              <p className="text-sm font-bold text-zinc-600 dark:text-zinc-400">
-                No se encontraron servicios registrados para este filtro o tipo de vehículo.
-              </p>
+          {/* 3. PANEL DERECHO: MANUAL */}
+          <div className="md:col-span-12 lg:col-span-4 p-3.5 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 shadow-2xs">
+            <h3 className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-white pb-2 border-b border-zinc-100 dark:border-white/5">
+              Manual
+            </h3>
+
+            {/* Tipo de servicio */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 block">
+                Tipo de servicio
+              </label>
+              <input
+                type="text"
+                value={manualServicioTexto}
+                onChange={(e) => setManualServicioTexto(e.target.value)}
+                placeholder="Campo editable..."
+                className="w-full h-8 px-2.5 rounded-lg bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
+              />
+            </div>
+
+            {/* Unidad de medida (Desplegable moderno y minimalista en modo oscuro) */}
+            <div ref={menuUnidadRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setDropdownUnidadAbierto((prev) => !prev)}
+                className={`w-full h-8 px-2.5 rounded-lg border text-xs font-semibold flex items-center justify-between transition-all cursor-pointer shadow-2xs select-none active:scale-98 ${
+                  dropdownUnidadAbierto
+                    ? "bg-blue-50/50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/50 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/30"
+                    : "bg-white dark:bg-black/40 hover:bg-zinc-50 dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
+                }`}
+              >
+                <span>{manualUnidad || "Servicio"}</span>
+                <span
+                  className={`text-[9px] text-zinc-400 transition-transform duration-200 ${
+                    dropdownUnidadAbierto ? "rotate-180 text-blue-500 dark:text-blue-400" : ""
+                  }`}
+                >
+                  ▾
+                </span>
+              </button>
+
+              {dropdownUnidadAbierto && (
+                <div className="absolute left-0 right-0 top-full mt-1.5 rounded-xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/10 shadow-xl dark:shadow-2xl backdrop-blur-md p-1.5 space-y-0.5 z-40 animate-fade-in">
+                  {["Servicio", "Vehículo", "Lavado", "Hora"].map((u) => {
+                    const isSelected = manualUnidad === u;
+                    return (
+                      <button
+                        key={u}
+                        type="button"
+                        onClick={() => {
+                          setManualUnidad(u);
+                          setDropdownUnidadAbierto(false);
+                        }}
+                        className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                          isSelected
+                            ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold"
+                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
+                        }`}
+                      >
+                        <span>{u}</span>
+                        {isSelected && (
+                          <span className="text-xs text-blue-600 dark:text-blue-400 font-bold">
+                            ✓
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Cantidad con botones stepper */}
+            <div className="p-2.5 rounded-lg bg-blue-50/40 dark:bg-blue-950/20 border border-blue-300/60 dark:border-blue-500/30 flex items-center justify-between">
+              <span className="text-xs font-bold text-zinc-900 dark:text-white">
+                Cantidad
+              </span>
+              <div className="flex items-center gap-1 bg-white dark:bg-black/40 rounded-lg border border-zinc-200 dark:border-white/10 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setManualCantidad((prev) => Math.max(1, prev - 1))}
+                  className="w-6 h-6 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-white font-bold text-xs flex items-center justify-center cursor-pointer shadow-2xs"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  step={1}
+                  min={1}
+                  value={manualCantidad}
+                  onChange={(e) => setManualCantidad(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  className="w-10 text-center font-mono font-bold text-xs bg-transparent text-zinc-900 dark:text-white focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setManualCantidad((prev) => prev + 1)}
+                  className="w-6 h-6 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-white font-bold text-xs flex items-center justify-center cursor-pointer shadow-2xs"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Valor */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 block">
+                Valor
+              </label>
+              <div className="relative">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={manualServicioPrecio}
+                  onChange={(e) => setManualServicioPrecio(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full h-8 pl-6 pr-2.5 rounded-lg bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs font-mono font-semibold text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
+                />
+              </div>
+            </div>
+
+            {/* Información estimada */}
+            <div className="pt-1 space-y-1 text-xs text-zinc-500 dark:text-zinc-400">
+              <div className="flex items-center justify-between">
+                <span>Vehículo:</span>
+                <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                  {currentVehicleType?.name || "General"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Tiempo estimado:</span>
+                <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                  ⏱ {serverCalculation?.estimatedMinutes || 30} min
+                </span>
+              </div>
+            </div>
+
+            {/* Total */}
+            <div className="p-3 rounded-lg bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/80 dark:border-white/5 flex items-center justify-between">
+              <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">Total</span>
+              <span className="text-sm font-black font-mono text-emerald-600 dark:text-emerald-400">
+                $ {totalCalculado.toFixed(2)}
+              </span>
+            </div>
+
+            {/* Botones Cancelar y Guardar en pedido */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedCategoryId("TODOS");
-                  setSelectedSubcategoryId("TODOS");
-                  setSearchQuery("");
+                  setManualServicioTexto("");
+                  setManualServicioPrecio("");
+                  setManualCantidad(1);
+                  setManualUnidad("Servicio");
+                  setSelectedPackageIds([]);
+                  setSelectedServiceIds([]);
+                  setSelectedAddonIds([]);
+                  setServerCalculation(null);
                 }}
-                className="px-4 py-2 rounded-xl bg-amber-500 text-black text-xs font-bold cursor-pointer"
+                className="h-8 rounded-lg border border-zinc-200 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-xs font-bold text-zinc-600 dark:text-zinc-300 transition-all cursor-pointer shadow-2xs"
               >
-                Ver todos los servicios
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={
+                  confirmingOrder ||
+                  (totalSelectionsCount === 0 &&
+                    (!manualServicioTexto.trim() || !(parseFloat(manualServicioPrecio) > 0)))
+                }
+                onClick={() => void handleGuardarServicioManualEnOrden()}
+                className="h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-xs disabled:opacity-50"
+              >
+                {confirmingOrder ? "Guardando..." : "Guardar en pedido"}
               </button>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredServices.map((srv) => {
-                const isSelected = selectedServiceIds.includes(srv.id);
-                const priceInfo = computePriceForVehicle(srv, selectedVehicleTypeId);
-                return (
-                  <div
-                    key={srv.id}
-                    className={`rounded-2xl border overflow-hidden flex flex-col justify-between transition-all ${
-                      isSelected
-                        ? "bg-amber-50/90 dark:bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/40 shadow-lg"
-                        : "bg-white dark:bg-black/30 border-zinc-200 dark:border-white/10 shadow-xs hover:shadow-md"
-                    }`}
-                  >
-                    <div>
-                      <div className="relative h-40 w-full bg-zinc-900 overflow-hidden">
-                        <img
-                          src={srv.imageUrl || FALLBACK_CARWASH_IMG}
-                          alt={srv.name}
-                          onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).src = FALLBACK_CARWASH_IMG;
-                          }}
-                          className="w-full h-full object-cover opacity-90"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                        <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              srv.availability === "Disponible"
-                                ? "bg-emerald-500/90 text-white"
-                                : srv.availability === "No disponible"
-                                ? "bg-rose-500/90 text-white"
-                                : "bg-amber-500/90 text-black"
-                            }`}
-                          >
-                            {srv.availability}
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-black/65 text-white">
-                              ⏱️ {srv.estimatedMinutes} min
-                            </span>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setServiceFormModal({ open: true, service: srv });
-                              }}
-                              title="Editar servicio"
-                              className="w-7 h-7 rounded-full bg-white/90 hover:bg-white text-zinc-900 text-xs flex items-center justify-center shadow-xs cursor-pointer"
-                            >
-                              ✏️
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="absolute bottom-2.5 left-3 right-3 flex items-end justify-between gap-2">
-                          <div className="min-w-0">
-                            <span className="text-[10px] font-mono text-zinc-300 block">
-                              {srv.code}
-                            </span>
-                            <h4 className="text-sm font-black text-white leading-snug line-clamp-2">
-                              {srv.name}
-                            </h4>
-                          </div>
-                          <div className="text-right shrink-0">
-                            {priceInfo.unitPrice ? (
-                              <div>
-                                {priceInfo.isPromo && priceInfo.originalPrice && (
-                                  <span className="text-[10px] line-through text-zinc-400 block">
-                                    ${priceInfo.originalPrice.toFixed(2)}
-                                  </span>
-                                )}
-                                <span className="text-lg font-black text-amber-400 font-mono">
-                                  ${priceInfo.unitPrice.toFixed(2)}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-[10px] font-bold text-amber-300">
-                                Pendiente precio
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-4 space-y-2.5">
-                        <p className="text-xs text-zinc-600 dark:text-zinc-300 line-clamp-2">
-                          {srv.shortDescription || srv.fullDescription}
-                        </p>
-
-                        {srv.includesList?.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {srv.includesList.slice(0, 3).map((inc, i) => (
-                              <span
-                                key={i}
-                                className="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-white/5 text-[10px] text-zinc-700 dark:text-zinc-300 font-medium"
-                              >
-                                ✓ {inc}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="px-4 pb-4 pt-2 border-t border-zinc-100 dark:border-white/5 flex items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setDetailModalItem({ item: srv, kind: "SERVICE" })}
-                        className="px-3 py-2 rounded-xl border border-zinc-300 dark:border-white/15 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5 cursor-pointer"
-                      >
-                        Ver detalles
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={srv.availability === "No disponible" || !priceInfo.unitPrice}
-                        onClick={() => handleToggleService(srv)}
-                        className={`flex-1 py-2 px-3 rounded-xl text-xs font-black cursor-pointer transition-all ${
-                          isSelected
-                            ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                            : "bg-amber-500 hover:bg-amber-600 text-black shadow-xs"
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
-                      >
-                        {isSelected ? "✓ Seleccionado" : "+ Seleccionar"}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* =====================================================================
-          PASO 3: SERVICIOS ADICIONALES / COMPLEMENTOS OPCIONALES (SECCIÓN 5)
-          ===================================================================== */}
-      <div
-        id="cw-step-3"
-        className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-xs space-y-4"
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-amber-500 text-black text-xs font-black flex items-center justify-center">
-              3
-            </span>
-            <div>
-              <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-zinc-900 dark:text-white">
-                Servicios Adicionales y Complementos Opcionales
-              </h3>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                Los complementos que ya forman parte de tu paquete se marcan como incluidos ($0.00) para evitar cobro doble.
-              </p>
-            </div>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setConfigModalOpen(true)}
-            className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer self-start sm:self-auto"
-          >
-            ✏️ Administrar adicionales
-          </button>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {activeAddons.map((addon) => {
-            const includedPkgName = addonsIncludedInSelectedPackages[addon.id];
-            const isSelected = selectedAddonIds.includes(addon.id);
-            const priceInfo = computePriceForVehicle(addon, selectedVehicleTypeId);
-            return (
-              <div
-                key={addon.id}
-                onClick={() => handleToggleAddon(addon)}
-                className={`p-3 rounded-2xl border flex flex-col justify-between gap-2.5 transition-all cursor-pointer ${
-                  includedPkgName
-                    ? "bg-emerald-50/80 dark:bg-emerald-500/15 border-emerald-400 dark:border-emerald-500/40"
-                    : isSelected
-                    ? "bg-amber-50 dark:bg-amber-500/20 border-amber-500 ring-2 ring-amber-500/30 shadow-md"
-                    : "bg-zinc-50/70 hover:bg-zinc-100 dark:bg-black/30 border-zinc-200 dark:border-white/10"
-                }`}
-              >
-                <div className="flex items-start gap-2.5">
-                  <img
-                    src={addon.imageUrl || FALLBACK_CARWASH_IMG}
-                    alt={addon.name}
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = FALLBACK_CARWASH_IMG;
-                    }}
-                    className="w-12 h-12 rounded-xl object-cover shrink-0 border border-zinc-200 dark:border-white/10"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <span className="text-xs font-bold text-zinc-900 dark:text-white block leading-snug">
-                      {addon.name}
-                    </span>
-                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-2 mt-0.5">
-                      {addon.description}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-zinc-200/60 dark:border-white/5 flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-semibold text-zinc-500">
-                    ⏱️ +{addon.estimatedMinutes} min{" "}
-                    {!addon.canBeStandalone && "• Requiere lavado"}
-                  </span>
-
-                  {includedPkgName ? (
-                    <span className="px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-[10px] font-bold">
-                      ✓ Incluido ($0)
-                    </span>
-                  ) : (
-                    <span
-                      className={`px-2.5 py-1 rounded-lg text-xs font-black font-mono ${
-                        isSelected
-                          ? "bg-amber-500 text-black"
-                          : "bg-white dark:bg-white/10 text-amber-600 dark:text-amber-400"
-                      }`}
-                    >
-                      {isSelected ? "✓ " : "+"}$
-                      {priceInfo.unitPrice ? priceInfo.unitPrice.toFixed(2) : "0.00"}
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* =====================================================================
-          PASOS 4 Y 5: RESUMEN DESGLOSADO (VALIDADO EN SERVIDOR) + CONTINUAR / RESERVA
-          ===================================================================== */}
-      <div
-        id="cw-step-4"
-        className="p-5 sm:p-6 rounded-3xl bg-zinc-900 text-white border border-white/10 shadow-xl space-y-5"
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-          <div className="flex items-center gap-2.5">
-            <span className="w-7 h-7 rounded-full bg-amber-500 text-black text-xs font-black flex items-center justify-center">
-              4
-            </span>
+      ) : (
+        /* VISTA COMPLETA: TODA LA TIENDA Y CATÁLOGO GENERAL DE CAR WASH */
+        <div className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 shadow-2xs">
+          <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-zinc-100 dark:border-white/5">
             <div>
-              <h3 className="text-sm sm:text-base font-black uppercase tracking-wider">
-                Resumen de Selección, Tiempo Estimado y Tarifas Validadas
+              <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                <span>🏪</span>
+                <span>Catálogo</span>
               </h3>
-              <p className="text-xs text-zinc-400">
-                Vehículo seleccionado:{" "}
-                <strong className="text-amber-400">
-                  {currentVehicleType?.icon} {currentVehicleType?.name}
-                </strong>
-                {ordenActiva?.plate ? ` • Placa: ${ordenActiva.plate}` : ""}
-              </p>
             </div>
-          </div>
-
-          {totalSelectionsCount > 0 && (
             <button
               type="button"
-              onClick={() => {
-                setSelectedPackageIds([]);
-                setSelectedServiceIds([]);
-                setSelectedAddonIds([]);
-                setServerCalculation(null);
-              }}
-              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-zinc-300 cursor-pointer self-start sm:self-auto"
+              onClick={() => setVerTodoElCatalogo(false)}
+              className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer transition-all shrink-0 shadow-xs active:scale-95"
             >
-              🗑️ Limpiar selección
+              ← Volver
             </button>
-          )}
-        </div>
-
-        {totalSelectionsCount === 0 ? (
-          <div className="py-6 text-center text-zinc-400 text-xs sm:text-sm">
-            Aún no has seleccionado ningún paquete o servicio de Car Wash. Elige una tarjeta arriba para ver el desglose automático.
           </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-            {/* Lista de ítems seleccionados */}
-            <div className="lg:col-span-7 space-y-2">
-              {(serverCalculation?.lines || []).map((line: any) => (
-                <div
-                  key={`${line.kind}-${line.id}`}
-                  className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-between gap-3"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/20 text-amber-300">
-                        {line.kind === "PACKAGE"
-                          ? "PAQUETE"
-                          : line.kind === "SERVICE"
-                          ? "SERVICIO"
-                          : "ADICIONAL"}
-                      </span>
-                      <span className="text-xs sm:text-sm font-bold text-white truncate">
-                        {line.name}
-                      </span>
-                    </div>
-                    <span className="text-[11px] text-zinc-400 block mt-0.5">
-                      Código: {line.code} • Tiempo estimado: {line.estimatedMinutes} min
-                    </span>
-                  </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
-                    {line.alreadyIncludedInPackage ? (
-                      <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-bold">
-                        Incluido ($0.00)
-                      </span>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar..."
+                className="w-full h-9 pl-8 pr-7 rounded-lg bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white text-xs cursor-pointer"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <div ref={menuFiltroRef} className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setMenuFiltroAbierto((prev) => !prev)}
+                className={`h-9 px-3 rounded-lg border text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all shadow-2xs select-none active:scale-95 ${
+                  menuFiltroAbierto || filtroCategoriaGeneral
+                    ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/40 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/20"
+                    : "bg-white dark:bg-black/40 hover:bg-zinc-50 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
+                }`}
+              >
+                <span>
+                  {activeCategories.find((c) => c.id === filtroCategoriaGeneral)?.name
+                    ? toSingleWord(activeCategories.find((c) => c.id === filtroCategoriaGeneral)!.name, CARWASH_CAT_SINGLE)
+                    : "Todos"}
+                </span>
+                <span
+                  className={`text-[9px] text-zinc-400 transition-transform duration-200 ${
+                    menuFiltroAbierto ? "rotate-180" : ""
+                  }`}
+                >
+                  ▾
+                </span>
+              </button>
+
+              {menuFiltroAbierto && (
+                <div className="absolute right-0 top-full mt-1.5 w-44 rounded-xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/10 shadow-xl dark:shadow-2xl backdrop-blur-md p-1.5 space-y-0.5 z-40 animate-fade-in">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFiltroCategoriaGeneral("");
+                      setMenuFiltroAbierto(false);
+                    }}
+                    className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                      !filtroCategoriaGeneral
+                        ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold"
+                        : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
+                    }`}
+                  >
+                    <span>Todos</span>
+                    {!filtroCategoriaGeneral && <span className="text-xs">✓</span>}
+                  </button>
+
+                  <div className="my-1 border-t border-zinc-100 dark:border-white/5" />
+
+                  {activeCategories.map((cat) => {
+                    const activa = filtroCategoriaGeneral === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          setFiltroCategoriaGeneral(cat.id);
+                          setMenuFiltroAbierto(false);
+                        }}
+                        className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                          activa
+                            ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold"
+                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm shrink-0">{cat.icon || "🚿"}</span>
+                          <span className="truncate">{toSingleWord(cat.name, CARWASH_CAT_SINGLE)}</span>
+                        </div>
+                        {activa && <span className="text-xs">✓</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Grid de servicios y paquetes sin precio con diseño estándar */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {todosLosItemsCatalogo.map((item) => (
+              <div
+                key={`${item.kind}-${item.id}`}
+                className="p-3 rounded-lg bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 hover:border-blue-400/50 dark:hover:border-blue-500/40 flex flex-col justify-between gap-2.5 transition-all shadow-2xs"
+              >
+                <div>
+                  <div className="h-24 rounded-md bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-white/5 flex items-center justify-center p-2 mb-1.5 overflow-hidden">
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain" />
                     ) : (
-                      <span className="font-mono text-sm font-black text-amber-400">
-                        ${Number(line.unitPrice).toFixed(2)}
+                      <span className="text-2xl">
+                        {item.kind === "PACKAGE" ? "📦" : item.kind === "ADDON" ? "✨" : "🚿"}
                       </span>
                     )}
                   </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 block truncate">
+                    {item.brand || (item.kind === "PACKAGE" ? "Paquete" : item.kind === "ADDON" ? "Extra" : "Servicio")}
+                  </span>
+                  <h4 className="text-xs font-normal text-zinc-800 dark:text-zinc-200 line-clamp-2 mt-0.5 leading-snug">
+                    {item.name}
+                  </h4>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
+                    {item.presentation || (item.durationMinutes ? `⏱ ${item.durationMinutes} min` : "1 Servicio")}
+                  </p>
                 </div>
-              ))}
 
-              {/* Promociones activas disponibles */}
-              {promotions.length > 0 && (
-                <div className="pt-2 flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-zinc-400">Promociones activas:</span>
-                  {promotions.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => setPromoCodeInput(p.code)}
-                      className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold cursor-pointer"
-                    >
-                      🏷️ {p.code} ({p.title})
-                    </button>
-                  ))}
+                <div className="pt-2 border-t border-zinc-100 dark:border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => void handleAgregarDirectoItem(item)}
+                    className="w-full h-8 px-3 rounded-lg bg-blue-100/80 hover:bg-blue-200/80 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 text-xs font-bold cursor-pointer transition-all shadow-2xs active:scale-95 flex items-center justify-center gap-1"
+                  >
+                    + Agregar
+                  </button>
                 </div>
-              )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL RESERVA DE BAHÍA */}
+      {showBookingPanel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="w-full max-w-md p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-white/5">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📅</span>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                  Reservar Bahía de Lavado
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBookingPanel(false)}
+                className="w-7 h-7 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                ✕
+              </button>
             </div>
 
-            {/* Totales y Paso 5: Acciones de Continuación */}
-            <div
-              id="cw-step-5"
-              className="lg:col-span-5 p-4 rounded-2xl bg-black/50 border border-white/10 space-y-3"
-            >
-              <div className="flex items-center justify-between text-xs text-zinc-300">
-                <span>⏱️ Duración total estimada:</span>
-                <strong className="font-mono text-sm text-white">
-                  {serverCalculation?.totalMinutes || 0} min
-                </strong>
-              </div>
-
-              <div className="flex items-center justify-between text-xs text-zinc-300">
-                <span>Subtotal servicios:</span>
-                <span className="font-mono">
-                  ${Number(serverCalculation?.subtotal || 0).toFixed(2)}
-                </span>
-              </div>
-
-              {serverCalculation?.promoDiscount > 0 && (
-                <div className="flex items-center justify-between text-xs text-emerald-400">
-                  <span>Descuento promoción ({serverCalculation?.appliedPromotion?.code}):</span>
-                  <span className="font-mono">
-                    -${Number(serverCalculation.promoDiscount).toFixed(2)}
-                  </span>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Fecha
+                  </label>
+                  <input
+                    type="date"
+                    value={bookingDate}
+                    onChange={(e) => setBookingDate(e.target.value)}
+                    className="w-full h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none"
+                  />
                 </div>
-              )}
-
-              <div className="flex items-center justify-between text-xs text-zinc-400">
-                <span>
-                  Impuestos ({serverCalculation?.taxRate || config.taxRatePercent}%{" "}
-                  {config.pricesIncludeTax ? "incluido" : "adicional"}):
-                </span>
-                <span className="font-mono">
-                  ${Number(serverCalculation?.taxAmount || 0).toFixed(2)}
-                </span>
-              </div>
-
-              <div className="pt-2 border-t border-white/10 flex items-baseline justify-between">
-                <span className="text-sm font-black uppercase tracking-wider text-amber-400">
-                  Total Validado:
-                </span>
-                <span className="text-2xl font-black font-mono text-amber-400">
-                  {calculatingServer
-                    ? "..."
-                    : `$${Number(serverCalculation?.total || 0).toFixed(2)}`}
-                </span>
-              </div>
-
-              {/* Botones del Paso 5 */}
-              <div className="space-y-2 pt-2">
-                <button
-                  type="button"
-                  disabled={confirmingOrder || calculatingServer}
-                  onClick={() => void handleConfirmSelectionToOrder(false)}
-                  className="w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-black text-xs sm:text-sm font-black shadow-md cursor-pointer transition-all"
-                >
-                  {confirmingOrder
-                    ? "Validando y guardando..."
-                    : "✓ Aplicar a la Orden Activa"}
-                </button>
-
-                <button
-                  type="button"
-                  disabled={confirmingOrder || calculatingServer}
-                  onClick={() => void handleConfirmSelectionToOrder(true)}
-                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black text-xs sm:text-sm font-black shadow-md cursor-pointer transition-all"
-                >
-                  📲 Aplicar y Continuar a Aviso / Firma / POS →
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowBookingPanel((prev) => !prev)}
-                  className="w-full py-2 px-4 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white text-xs font-bold cursor-pointer transition-all"
-                >
-                  📅 {showBookingPanel ? "Ocultar Reserva de Bahía" : "Agendar Reserva de Fecha y Hora en Bahía"}
-                </button>
-              </div>
-
-              {/* Panel integrado de Reserva Real reutilizando ClientAppointment */}
-              {showBookingPanel && (
-                <div className="p-3.5 rounded-xl bg-white/[0.04] border border-white/10 space-y-3 mt-2 animate-fade-in">
-                  <span className="text-xs font-bold text-amber-300 block">
-                    📅 Reservar Bahía de Lavado (Disponibilidad Real)
-                  </span>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[10px] text-zinc-400 block mb-1">Fecha</label>
-                      <input
-                        type="date"
-                        value={bookingDate}
-                        onChange={(e) => setBookingDate(e.target.value)}
-                        className="w-full h-8 px-2 rounded-lg bg-black/60 border border-white/15 text-xs text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-zinc-400 block mb-1">Bahía</label>
-                      <select
-                        value={bookingBay}
-                        onChange={(e) => setBookingBay(e.target.value)}
-                        className="w-full h-8 px-2 rounded-lg bg-zinc-900 border border-white/15 text-xs text-white"
-                      >
-                        {(config.bays || ["Bahía Lavado 1"]).map((b) => (
-                          <option key={b} value={b}>
-                            {b}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] text-zinc-400 block mb-1">
-                      Horario (verifica ocupación real)
-                    </label>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {HORARIOS_DISPONIBLES.map((slot) => {
-                        const occupied = appointments.some(
-                          (a) =>
-                            a.date === bookingDate &&
-                            a.timeSlot === slot &&
-                            a.bay === bookingBay &&
-                            a.status !== "Cancelada"
-                        );
-                        const sel = bookingTimeSlot === slot;
+                <div ref={menuHorarioRef} className="relative">
+                  <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Horario
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setDropdownHorarioAbierto((prev) => !prev)}
+                    className="w-full h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white flex items-center justify-between cursor-pointer shadow-2xs"
+                  >
+                    <span>{bookingTimeSlot}</span>
+                    <span className={`text-[9px] text-zinc-400 transition-transform duration-200 ${dropdownHorarioAbierto ? "rotate-180 text-blue-500" : ""}`}>
+                      ▾
+                    </span>
+                  </button>
+                  {dropdownHorarioAbierto && (
+                    <div className="absolute left-0 right-0 top-full mt-1.5 max-h-48 overflow-y-auto rounded-xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/10 shadow-xl dark:shadow-2xl backdrop-blur-md p-1.5 space-y-0.5 z-50 animate-fade-in">
+                      {HORARIOS_DISPONIBLES.map((h) => {
+                        const isSelected = bookingTimeSlot === h;
                         return (
                           <button
-                            key={slot}
+                            key={h}
                             type="button"
-                            disabled={occupied}
-                            onClick={() => setBookingTimeSlot(slot)}
-                            className={`py-1.5 px-2 rounded-lg text-[11px] font-mono font-bold cursor-pointer ${
-                              occupied
-                                ? "bg-rose-500/20 border border-rose-500/30 text-rose-300 line-through cursor-not-allowed"
-                                : sel
-                                ? "bg-amber-500 text-black"
-                                : "bg-black/50 border border-white/10 text-zinc-300 hover:bg-white/10"
+                            onClick={() => {
+                              setBookingTimeSlot(h);
+                              setDropdownHorarioAbierto(false);
+                            }}
+                            className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                              isSelected
+                                ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold"
+                                : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
                             }`}
                           >
-                            {slot}
+                            <span>{h}</span>
+                            {isSelected && (
+                              <span className="text-xs text-blue-600 dark:text-blue-400 font-bold">✓</span>
+                            )}
                           </button>
                         );
                       })}
                     </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    disabled={savingBooking}
-                    onClick={() => void handleConfirmBayReservation()}
-                    className="w-full py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-black text-xs font-black cursor-pointer"
-                  >
-                    {savingBooking ? "Registrando reserva..." : "✓ Confirmar Reserva en Bahía"}
-                  </button>
-
-                  {lastBookingConfirmed && (
-                    <div className="p-2.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-[11px] text-emerald-200">
-                      ✓ Reserva <strong>#{lastBookingConfirmed.appointmentNumber}</strong> registrada para el{" "}
-                      {lastBookingConfirmed.date} a las {lastBookingConfirmed.timeSlot} ({lastBookingConfirmed.bay}).
-                    </div>
                   )}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  Bahía de Lavado
+                </label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(config.bays || ["Bahía Lavado 1", "Bahía Lavado 2"]).map((bay) => (
+                    <button
+                      key={bay}
+                      type="button"
+                      onClick={() => setBookingBay(bay)}
+                      className={`p-2 rounded-lg border text-xs font-semibold text-center cursor-pointer transition-all ${
+                        bookingBay === bay
+                          ? "bg-blue-600 text-white border-blue-500 shadow-2xs"
+                          : "bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
+                      }`}
+                    >
+                      {bay}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
+                  Notas u Observaciones
+                </label>
+                <input
+                  type="text"
+                  value={bookingNotes}
+                  onChange={(e) => setBookingNotes(e.target.value)}
+                  placeholder="Ej: Cliente espera en sala..."
+                  className="w-full h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none"
+                />
+              </div>
+
+              {lastBookingConfirmed && (
+                <div className="p-2.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-[11px] text-emerald-800 dark:text-emerald-300">
+                  ✓ Reserva <strong>#{lastBookingConfirmed.appointmentNumber}</strong> confirmada para el {lastBookingConfirmed.date} ({lastBookingConfirmed.timeSlot}).
                 </div>
               )}
             </div>
-          </div>
-        )}
-      </div>
 
-      {/* =====================================================================
-          MODALES DE DETALLE, FORMULARIO DE SERVICIO Y CONFIGURACIÓN MANUAL
-          ===================================================================== */}
+            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-zinc-100 dark:border-white/5">
+              <button
+                type="button"
+                onClick={() => setShowBookingPanel(false)}
+                className="h-8 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                disabled={savingBooking}
+                onClick={async () => {
+                  await handleConfirmBayReservation();
+                }}
+                className="h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
+              >
+                {savingBooking ? "Guardando..." : "Confirmar Reserva"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODALES ADMINISTRATIVOS */}
       {detailModalItem && (
         <ModalDetalleServicioCarWash
           item={detailModalItem.item}

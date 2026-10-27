@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import type {
   LubricentroConfigData,
   LubPresentationVariant,
@@ -291,6 +291,30 @@ export default function ModuloLubricentroCatalogo({
   const [precioMin, setPrecioMin] = useState<string>("");
   const [precioMax, setPrecioMax] = useState<string>("");
   const [verTodoElCatalogo, setVerTodoElCatalogo] = useState<boolean>(false);
+  const [filtroCategoriaGeneral, setFiltroCategoriaGeneral] = useState<string>("");
+  const [menuFiltroAbierto, setMenuFiltroAbierto] = useState<boolean>(false);
+  const menuFiltroRef = useRef<HTMLDivElement>(null);
+
+  // Dropdown moderno para unidad de medida en el panel manual
+  const [dropdownUnidadAbierto, setDropdownUnidadAbierto] = useState<boolean>(false);
+  const menuUnidadRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickAfuera = (e: MouseEvent) => {
+      if (menuFiltroRef.current && !menuFiltroRef.current.contains(e.target as Node)) {
+        setMenuFiltroAbierto(false);
+      }
+      if (menuUnidadRef.current && !menuUnidadRef.current.contains(e.target as Node)) {
+        setDropdownUnidadAbierto(false);
+      }
+    };
+    if (menuFiltroAbierto || dropdownUnidadAbierto) {
+      document.addEventListener("mousedown", handleClickAfuera);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickAfuera);
+    };
+  }, [menuFiltroAbierto, dropdownUnidadAbierto]);
 
   // Buscador de compatibilidad por vehículo
   const [mostrarBuscadorVehiculo, setMostrarBuscadorVehiculo] = useState<boolean>(false);
@@ -317,13 +341,16 @@ export default function ModuloLubricentroCatalogo({
   const [itemServicioSeleccionadoId, setItemServicioSeleccionadoId] = useState<string>("srv_cambio_aceite_motor");
   const [busquedaTienda, setBusquedaTienda] = useState<string>("");
 
-  // Modal Registrar Aceite Manualmente (Imagen 2)
+  // Modal / Panel Registrar Aceite Manualmente (A Granel - Envío a Presupuesto)
   const [modalAceiteManualAbierto, setModalAceiteManualAbierto] = useState<boolean>(false);
-  const [manualTipoAceite, setManualTipoAceite] = useState<"shell_5w30" | "castrol_10w40" | "otro">("shell_5w30");
-  const [manualOtroTexto, setManualOtroTexto] = useState<string>("");
-  const [manualUnidad, setManualUnidad] = useState<"Litros" | "Galón">("Litros");
+  const [manualAceiteTexto, setManualAceiteTexto] = useState<string>("Shell Helix Ultra 5W-30");
+  const [manualUnidad, setManualUnidad] = useState<string>("Litros");
   const [manualCantidad, setManualCantidad] = useState<number>(4.5);
-  const [manualPrecioUnitario, setManualPrecioUnitario] = useState<number>(25.70);
+  const [manualPrecio, setManualPrecio] = useState<string>("");
+
+  // Selección múltiple de productos en la tienda
+  const [productosSeleccionadosIds, setProductosSeleccionadosIds] = useState<string[]>([]);
+  const [agregandoVarios, setAgregandoVarios] = useState<boolean>(false);
 
   // Modales administrativos
   const [productoDetalleModal, setProductoDetalleModal] = useState<any | null>(null);
@@ -421,6 +448,37 @@ export default function ModuloLubricentroCatalogo({
   const schemaType = categoriaSeleccionadaObj?.schemaType || "aceites";
   const subSchemaType = subcategoriaSeleccionadaObj?.subSchemaType || "aceite_motor";
 
+  // Sub-servicios e ítems del panel izquierdo según la subcategoría seleccionada
+  const subServiciosActuales = useMemo(() => {
+    if (SERVICIOS_POR_SUBCATEGORIA[subcategoriaActivaId]) {
+      return SERVICIOS_POR_SUBCATEGORIA[subcategoriaActivaId];
+    }
+    return [
+      {
+        id: `srv_${subcategoriaActivaId}`,
+        label: subcategoriaSeleccionadaObj?.label || "Servicio",
+        icon: subcategoriaSeleccionadaObj?.icon || "🛢️",
+        filtro: subcategoriaActivaId,
+      },
+    ];
+  }, [subcategoriaActivaId, subcategoriaSeleccionadaObj]);
+
+  const itemServicioSeleccionadoObj = useMemo(() => {
+    return (
+      subServiciosActuales.find((s) => s.id === itemServicioSeleccionadoId) ||
+      subServiciosActuales[0]
+    );
+  }, [subServiciosActuales, itemServicioSeleccionadoId]);
+
+  useEffect(() => {
+    if (subServiciosActuales.length > 0) {
+      const existe = subServiciosActuales.some((s) => s.id === itemServicioSeleccionadoId);
+      if (!existe) {
+        setItemServicioSeleccionadoId(subServiciosActuales[0].id);
+      }
+    }
+  }, [subServiciosActuales, itemServicioSeleccionadoId]);
+
   // Limpiar filtros incompatibles al cambiar de categoría o subcategoría
   const handleCambiarCategoria = (catId: string) => {
     setCategoriaActivaId(catId);
@@ -443,6 +501,367 @@ export default function ModuloLubricentroCatalogo({
     setFiltroTipoGrasa("");
     setFiltroAplicacionGrasa("");
   };
+
+  // Configuración dinámica del panel Manual adaptada al ítem seleccionado en el panel izquierdo (Columna 1) o categoría
+  const configManualSegunCategoria = useMemo(() => {
+    const filtro = itemServicioSeleccionadoObj?.filtro || "";
+    const label = itemServicioSeleccionadoObj?.label || "";
+
+    // 1. Detección específica por el ítem de servicio activo en la Columna 1
+    if (filtro === "aceite_motor") {
+      return {
+        labelCampo: "Tipo de aceite",
+        placeholder: "Ej: Shell Helix Ultra 5W-30...",
+        unidades: ["Litros", "Galón", "Granel", "Cuarto"],
+        defaultUnidad: "Litros",
+        defaultCantidad: 4.5,
+        stepCantidad: 0.5,
+        minCantidad: 0.5,
+        defaultTexto: "Shell Helix Ultra 5W-30",
+        categoryName: "Lubricentro - Aceite a Granel",
+        subCategory: "lub_aceite_motor",
+      };
+    }
+
+    if (filtro === "filtro_aceite") {
+      return {
+        labelCampo: "Tipo de filtro de aceite",
+        placeholder: "Ej: Filtro de Aceite Blindado W 610/3...",
+        unidades: ["Unidad", "Juego"],
+        defaultUnidad: "Unidad",
+        defaultCantidad: 1,
+        stepCantidad: 1,
+        minCantidad: 1,
+        defaultTexto: "Filtro de Aceite",
+        categoryName: "Lubricentro - Filtros",
+        subCategory: "lub_fil_aceite",
+      };
+    }
+
+    if (filtro === "filtro_aire") {
+      return {
+        labelCampo: "Tipo de filtro de aire",
+        placeholder: "Ej: Filtro de Aire Panel C 26 013...",
+        unidades: ["Unidad", "Juego"],
+        defaultUnidad: "Unidad",
+        defaultCantidad: 1,
+        stepCantidad: 1,
+        minCantidad: 1,
+        defaultTexto: "Filtro de Aire",
+        categoryName: "Lubricentro - Filtros",
+        subCategory: "lub_fil_aire",
+      };
+    }
+
+    if (filtro === "filtro_combustible") {
+      return {
+        labelCampo: "Tipo de filtro de combustible",
+        placeholder: "Ej: Filtro Combustible en Línea WK 820/1...",
+        unidades: ["Unidad", "Juego"],
+        defaultUnidad: "Unidad",
+        defaultCantidad: 1,
+        stepCantidad: 1,
+        minCantidad: 1,
+        defaultTexto: "Filtro de Combustible",
+        categoryName: "Lubricentro - Filtros",
+        subCategory: "lub_fil_combustible",
+      };
+    }
+
+    if (filtro === "filtro_cabina") {
+      return {
+        labelCampo: "Tipo de filtro de cabina (A/C)",
+        placeholder: "Ej: Filtro Cabina Antipolen / Carbón...",
+        unidades: ["Unidad", "Juego"],
+        defaultUnidad: "Unidad",
+        defaultCantidad: 1,
+        stepCantidad: 1,
+        minCantidad: 1,
+        defaultTexto: "Filtro de Cabina",
+        categoryName: "Lubricentro - Filtros",
+        subCategory: "lub_fil_cabina",
+      };
+    }
+
+    if (filtro === "filtro_trans") {
+      return {
+        labelCampo: "Tipo de filtro de transmisión",
+        placeholder: "Ej: Filtro Caja Automática ATF...",
+        unidades: ["Unidad", "Kit"],
+        defaultUnidad: "Unidad",
+        defaultCantidad: 1,
+        stepCantidad: 1,
+        minCantidad: 1,
+        defaultTexto: "Filtro de Transmisión",
+        categoryName: "Lubricentro - Transmisión",
+        subCategory: "lub_trans_automatica",
+      };
+    }
+
+    if (filtro === "flush") {
+      return {
+        labelCampo: "Tipo de lavado / Engine Flush",
+        placeholder: "Ej: Lavado Interno Flush Plus 300ml...",
+        unidades: ["Unidad", "Litros", "Servicio"],
+        defaultUnidad: "Unidad",
+        defaultCantidad: 1,
+        stepCantidad: 1,
+        minCantidad: 1,
+        defaultTexto:
+          label.toLowerCase().includes("descarb")
+            ? "Descarbonizado de Motor"
+            : label.toLowerCase().includes("enjuague")
+            ? "Enjuague de Motor"
+            : "Lavado de Motor Interno",
+        categoryName: "Lubricentro - Lavado / Flush",
+        subCategory: "lub_flush",
+      };
+    }
+
+    if (filtro === "limpieza" || filtro === "humo" || filtro === "octano") {
+      return {
+        labelCampo: `Tipo de ${label ? label.toLowerCase() : "aditivo"}`,
+        placeholder: `Ej: Aditivo ${label || "Especial"}...`,
+        unidades: ["Unidad", "Bote", "Servicio"],
+        defaultUnidad: "Unidad",
+        defaultCantidad: 1,
+        stepCantidad: 1,
+        minCantidad: 1,
+        defaultTexto: label ? `Aditivo ${label}` : "Aditivo",
+        categoryName: "Lubricentro - Aditivos",
+        subCategory: "lub_aditivos",
+      };
+    }
+
+    if (filtro === "inyectores") {
+      return {
+        labelCampo: "Tipo de limpieza de inyectores",
+        placeholder: "Ej: Limpieza de Inyectores Boya / Aditivo...",
+        unidades: ["Unidad", "Bote", "Servicio"],
+        defaultUnidad: "Unidad",
+        defaultCantidad: 1,
+        stepCantidad: 1,
+        minCantidad: 1,
+        defaultTexto: "Limpieza de Inyectores",
+        categoryName: "Lubricentro - Inyectores",
+        subCategory: "lub_limpieza_combustible",
+      };
+    }
+
+    if (
+      filtro === "valvulina" ||
+      filtro === "atf" ||
+      filtro === "cvt" ||
+      filtro === "manual" ||
+      filtro === "diferencial"
+    ) {
+      return {
+        labelCampo: `Tipo de fluido / ${label || "Valvulina"}`,
+        placeholder: `Ej: Fluido ${label || "Transmisión"} Sintético...`,
+        unidades: ["Litros", "Galón", "Cuarto"],
+        defaultUnidad: "Litros",
+        defaultCantidad: 2.0,
+        stepCantidad: 0.5,
+        minCantidad: 0.5,
+        defaultTexto: `Fluido ${label || "Valvulina"}`,
+        categoryName: "Lubricentro - Transmisión",
+        subCategory: subcategoriaActivaId || "lub_valvulina",
+      };
+    }
+
+    if (filtro === "frenos") {
+      return {
+        labelCampo: "Tipo de líquido de frenos",
+        placeholder: "Ej: Líquido Frenos Bosch DOT 4...",
+        unidades: ["Unidad", "Litros", "Servicio"],
+        defaultUnidad: "Unidad",
+        defaultCantidad: 1,
+        stepCantidad: 1,
+        minCantidad: 1,
+        defaultTexto:
+          label.toLowerCase().includes("purga")
+            ? "Purga Líquido de Frenos"
+            : "Líquido de Frenos DOT 4",
+        categoryName: "Lubricentro - Frenos",
+        subCategory: "lub_frenos_aceite",
+      };
+    }
+
+    if (filtro === "coolant") {
+      return {
+        labelCampo: "Tipo de refrigerante / Coolant",
+        placeholder: "Ej: Refrigerante Rojo 50/50...",
+        unidades: ["Galón", "Litros", "Unidad", "Servicio"],
+        defaultUnidad: "Galón",
+        defaultCantidad: 1,
+        stepCantidad: 0.5,
+        minCantidad: 0.5,
+        defaultTexto:
+          label.toLowerCase().includes("lavado")
+            ? "Lavado Sistema Refrigeración"
+            : "Refrigerante Coolant 50/50",
+        categoryName: "Lubricentro - Fluidos",
+        subCategory: "lub_refrigerante_aceite",
+      };
+    }
+
+    if (filtro === "hidraulico") {
+      return {
+        labelCampo: "Tipo de fluido hidráulico / Dirección",
+        placeholder: "Ej: Fluido Dirección Hidráulica Dexron...",
+        unidades: ["Litros", "Unidad", "Cuarto", "Servicio"],
+        defaultUnidad: "Litros",
+        defaultCantidad: 1.0,
+        stepCantidad: 0.5,
+        minCantidad: 0.5,
+        defaultTexto:
+          label.toLowerCase().includes("purga")
+            ? "Purga Dirección Hidráulica"
+            : "Fluido Dirección Hidráulica",
+        categoryName: "Lubricentro - Fluidos",
+        subCategory: "lub_hidraulico_aceite",
+      };
+    }
+
+    if (filtro === "grasa") {
+      return {
+        labelCampo: `Grasa para ${label.toLowerCase()}`,
+        placeholder: `Ej: Grasa ${label} Alta Temperatura...`,
+        unidades: ["Unidad", "Libras", "Kilos", "Tubo"],
+        defaultUnidad: "Unidad",
+        defaultCantidad: 1,
+        stepCantidad: 1,
+        minCantidad: 1,
+        defaultTexto: `Grasa para ${label}`,
+        categoryName: "Lubricentro - Grasas",
+        subCategory: "lub_grasa",
+      };
+    }
+
+    if (filtro === "plumas") {
+      return {
+        labelCampo: "Plumillas limpiaparabrisas",
+        placeholder: 'Ej: Par Plumillas Bosch 24"/18"...',
+        unidades: ["Par", "Unidad"],
+        defaultUnidad: "Par",
+        defaultCantidad: 1,
+        stepCantidad: 1,
+        minCantidad: 1,
+        defaultTexto: "Plumillas Limpiaparabrisas",
+        categoryName: "Lubricentro - Limpiaparabrisas",
+        subCategory: "lub_flu_limpiaparabrisas",
+      };
+    }
+
+    if (filtro === "shampoo") {
+      return {
+        labelCampo: "Shampoo limpiaparabrisas",
+        placeholder: "Ej: Shampoo Concentrado Limpiaparabrisas...",
+        unidades: ["Unidad", "Litros"],
+        defaultUnidad: "Unidad",
+        defaultCantidad: 1,
+        stepCantidad: 1,
+        minCantidad: 1,
+        defaultTexto: "Shampoo Limpiaparabrisas",
+        categoryName: "Lubricentro - Limpiaparabrisas",
+        subCategory: "lub_flu_limpiaparabrisas",
+      };
+    }
+
+    if (filtro === "baterias" || categoriaActivaId === "lub_baterias") {
+      return {
+        labelCampo: "Tipo de batería",
+        placeholder: "Ej: Batería Bosch S6 12V 75Ah...",
+        unidades: ["Unidad"],
+        defaultUnidad: "Unidad",
+        defaultCantidad: 1,
+        stepCantidad: 1,
+        minCantidad: 1,
+        defaultTexto: "Batería 12V 75Ah",
+        categoryName: "Lubricentro - Baterías",
+        subCategory: "lub_bat_agm",
+      };
+    }
+
+    // 2. Fallbacks basados en categoría
+    switch (categoriaActivaId) {
+      case "lub_aceite":
+        return {
+          labelCampo: "Tipo de aceite",
+          placeholder: "Ej: Shell Helix Ultra 5W-30...",
+          unidades: ["Litros", "Galón", "Granel"],
+          defaultUnidad: "Litros",
+          defaultCantidad: 4.5,
+          stepCantidad: 0.5,
+          minCantidad: 0.5,
+          defaultTexto: "Shell Helix Ultra 5W-30",
+          categoryName: "Lubricentro - Aceite a Granel",
+          subCategory: "lub_aceite_motor",
+        };
+      case "lub_transmision":
+        return {
+          labelCampo: "Tipo de fluido / Valvulina",
+          placeholder: "Ej: Valvulina 75W-90, ATF Full Sintético...",
+          unidades: ["Litros", "Galón", "Cuarto"],
+          defaultUnidad: "Litros",
+          defaultCantidad: 2.0,
+          stepCantidad: 0.5,
+          minCantidad: 0.5,
+          defaultTexto: "Valvulina 75W-90",
+          categoryName: "Lubricentro - Transmisión",
+          subCategory: "lub_valvulina",
+        };
+      case "lub_filtros":
+        return {
+          labelCampo: "Tipo de filtro",
+          placeholder: "Ej: Filtro de Aceite Blindado W 610/3...",
+          unidades: ["Unidad", "Juego"],
+          defaultUnidad: "Unidad",
+          defaultCantidad: 1,
+          stepCantidad: 1,
+          minCantidad: 1,
+          defaultTexto: "Filtro de Aceite",
+          categoryName: "Lubricentro - Filtros",
+          subCategory: "lub_fil_aceite",
+        };
+      case "lub_fluidos":
+        return {
+          labelCampo: "Tipo de fluido",
+          placeholder: "Ej: Refrigerante 50/50, Líquido Frenos DOT 4...",
+          unidades: ["Litros", "Galón", "Unidad"],
+          defaultUnidad: "Litros",
+          defaultCantidad: 1.0,
+          stepCantidad: 0.5,
+          minCantidad: 0.5,
+          defaultTexto: "Refrigerante 50/50",
+          categoryName: "Lubricentro - Fluidos",
+          subCategory: "lub_refrigerante_aceite",
+        };
+      default:
+        return {
+          labelCampo: `Tipo de ${label || categoriaSeleccionadaObj?.label?.toLowerCase() || "producto"}`,
+          placeholder: "Campo editable...",
+          unidades: ["Unidad", "Litros", "Galón", "Granel"],
+          defaultUnidad: "Unidad",
+          defaultCantidad: 1,
+          stepCantidad: 1,
+          minCantidad: 1,
+          defaultTexto: label || categoriaSeleccionadaObj?.label || "Manual",
+          categoryName: `Lubricentro - ${label || categoriaSeleccionadaObj?.label || "Manual"}`,
+          subCategory: subcategoriaActivaId || "manual",
+        };
+    }
+  }, [itemServicioSeleccionadoObj, categoriaActivaId, categoriaSeleccionadaObj, subcategoriaActivaId]);
+
+  // Sincronizar automáticamente el formulario Manual cuando cambia el ítem de la Columna 1 o la categoría
+  useEffect(() => {
+    if (configManualSegunCategoria) {
+      setManualAceiteTexto(configManualSegunCategoria.defaultTexto);
+      setManualUnidad(configManualSegunCategoria.defaultUnidad);
+      setManualCantidad(configManualSegunCategoria.defaultCantidad);
+      setManualPrecio("");
+    }
+  }, [itemServicioSeleccionadoId, subcategoriaActivaId, categoriaActivaId, configManualSegunCategoria]);
 
   const handleCambiarSubcategoria = (subId: string) => {
     if (!categoriaSeleccionadaObj) return;
@@ -533,7 +952,11 @@ export default function ModuloLubricentroCatalogo({
       }
 
       // Categoría y Subcategoría (salvo que "Ver todo el catálogo" esté activo)
-      if (!verTodoElCatalogo) {
+      if (verTodoElCatalogo) {
+        if (filtroCategoriaGeneral && p.lubCategoryId !== filtroCategoriaGeneral) {
+          return false;
+        }
+      } else {
         if (categoriaSeleccionadaObj && p.lubCategoryId !== categoriaSeleccionadaObj.id) {
           return false;
         }
@@ -774,6 +1197,7 @@ export default function ModuloLubricentroCatalogo({
     vehYear,
     vehEngine,
     busquedaTexto,
+    filtroCategoriaGeneral,
   ]);
 
   // Chips de filtros activos para poder eliminarlos individualmente o limpiar todo
@@ -1184,38 +1608,26 @@ export default function ModuloLubricentroCatalogo({
     setSolicitudManualPrecio("");
   };
 
-  // Guardar Aceite Manualmente (Modal Imagen 2)
+  // Guardar ítem Manualmente en Pedido (según la categoría activa)
   const handleGuardarAceiteManualEnPedido = async () => {
-    let nombreAceite = "Shell Helix 5W-30";
-    let marca = "Shell Helix";
-    let base = "Sintético";
-
-    if (manualTipoAceite === "castrol_10w40") {
-      nombreAceite = "Castrol Magnatec 10W-40";
-      marca = "Castrol";
-      base = "Semisintético";
-    } else if (manualTipoAceite === "otro") {
-      nombreAceite = manualOtroTexto.trim() || "Aceite de Motor Personalizado";
-      marca = "Personalizado";
-      base = "Manual";
-    }
-
+    const nombreItem = manualAceiteTexto.trim() || configManualSegunCategoria.defaultTexto;
     const cantidadTexto = `${manualCantidad} ${manualUnidad}`;
-    const totalCalculado = Number((manualPrecioUnitario * 1.15).toFixed(2));
+    const precioNum = Math.max(0, parseFloat(manualPrecio) || 0);
+    const totalCalculado = Number((precioNum * manualCantidad).toFixed(2));
     const code = `LUB-MAN-${Math.floor(100 + Math.random() * 900)}`;
 
     const nuevoItem = {
-      id: `sol_aceite_${Date.now()}`,
-      key: `aceite_${Date.now()}`,
+      id: `sol_man_${Date.now()}`,
+      key: `man_${Date.now()}`,
       type: "PART" as const,
-      category: "Lubricentro - Aceite",
-      subCategory: "lub_aceite_motor",
+      category: configManualSegunCategoria.categoryName,
+      subCategory: configManualSegunCategoria.subCategory,
       code,
-      name: `${nombreAceite} (${base} · ${cantidadTexto})`,
-      brand: marca,
+      name: `${nombreItem} (${cantidadTexto})`,
+      brand: "Manual",
       presentation: cantidadTexto,
       unitOfMeasure: manualUnidad,
-      price: manualPrecioUnitario,
+      price: precioNum,
       total: totalCalculado,
       qty: manualCantidad,
       status: "Listo" as const,
@@ -1227,7 +1639,12 @@ export default function ModuloLubricentroCatalogo({
     if (ordenActiva) {
       const nuevos = [...itemsOrden, nuevoItem];
       await onActualizarItemsOrden(nuevos);
-      notificar(`✓ Aceite guardado en pedido: ${nombreAceite} (${cantidadTexto}) - $${totalCalculado.toFixed(2)}`, "ok");
+      notificar(
+        precioNum > 0
+          ? `✓ Guardado en pedido: ${nombreItem} (${cantidadTexto}) - $${totalCalculado.toFixed(2)}`
+          : `✓ Guardado en pedido: ${nombreItem} (${cantidadTexto})`,
+        "ok"
+      );
     } else {
       setCarritoDirecto((prev) => [
         ...prev,
@@ -1239,17 +1656,17 @@ export default function ModuloLubricentroCatalogo({
           brand: nuevoItem.brand,
           presentation: nuevoItem.presentation,
           unitOfMeasure: nuevoItem.unitOfMeasure,
-          price: manualPrecioUnitario,
+          price: precioNum,
           qty: manualCantidad,
           maxStock: 999,
-          lubCategoryId: "lub_aceite",
-          lubSubcategoryId: "lub_aceite_motor",
+          lubCategoryId: categoriaActivaId,
+          lubSubcategoryId: subcategoriaActivaId,
         },
       ]);
-      notificar(`✓ Aceite agregado al carrito: ${nombreAceite} (${cantidadTexto}) - $${totalCalculado.toFixed(2)}`, "ok");
+      notificar(`✓ Guardado en pedido: ${nombreItem} (${cantidadTexto})`, "ok");
     }
 
-    setModalAceiteManualAbierto(false);
+    setManualPrecio("");
   };
 
   // Agregar producto directo con botón amarillo [Agregar] del catálogo
@@ -1313,6 +1730,82 @@ export default function ModuloLubricentroCatalogo({
       }
     } finally {
       setAgregandoId(null);
+    }
+  };
+
+  // Agregar múltiples productos seleccionados simultáneamente a la orden o al carrito
+  const handleAgregarVariosSeleccionados = async () => {
+    if (productosSeleccionadosIds.length === 0) return;
+    const prodsToAdd = productos.filter((p) => productosSeleccionadosIds.includes(p.id));
+    if (prodsToAdd.length === 0) return;
+
+    setAgregandoVarios(true);
+    try {
+      if (ordenActiva) {
+        const timestamp = Date.now();
+        const nuevosItems = prodsToAdd.map((prod, idx) => {
+          const precio = Number(prod.price || 0);
+          const presentacion = prod.presentation || prod.unitOfMeasure || "1 Litro";
+          return {
+            id: `it_${prod.id}_${timestamp}_${idx}`,
+            key: `key_${prod.id}_${timestamp}_${idx}`,
+            type: (prod.type || "PART") as "PART" | "SERVICE",
+            category: `Lubricentro - ${categoriaSeleccionadaObj?.label || "Catálogo"}`,
+            subCategory: subcategoriaActivaId,
+            code: prod.code,
+            productId: prod.id,
+            name: prod.name,
+            brand: prod.brand,
+            presentation: presentacion,
+            unitOfMeasure: prod.unitOfMeasure || "Unidad",
+            price: precio,
+            qty: 1,
+            status: "Listo" as const,
+            completed: true,
+            empleado_id: empleadoLogueado.id,
+            empleado_nombre: empleadoLogueado.nombre,
+          };
+        });
+
+        await onActualizarItemsOrden([...itemsOrden, ...nuevosItems]);
+        notificar(`✓ Se agregaron ${nuevosItems.length} productos a la orden`, "ok");
+      } else {
+        setCarritoDirecto((prev) => {
+          const copia = [...prev];
+          const timestamp = Date.now();
+          prodsToAdd.forEach((prod, idx) => {
+            const presentacion = prod.presentation || prod.unitOfMeasure || "1 Litro";
+            const precio = Number(prod.price || 0);
+            const existe = copia.findIndex((c) => c.productId === prod.id && c.presentation === presentacion);
+            if (existe >= 0) {
+              copia[existe] = { ...copia[existe], qty: copia[existe].qty + 1 };
+            } else {
+              copia.push({
+                key: `key_${prod.id}_${timestamp}_${idx}`,
+                productId: prod.id,
+                code: prod.code,
+                name: prod.name,
+                brand: prod.brand,
+                presentation: presentacion,
+                unitOfMeasure: prod.unitOfMeasure || "Unidad",
+                price: precio,
+                qty: 1,
+                maxStock: prod.stock || 999,
+                imageUrl: prod.imageUrl,
+                lubCategoryId: prod.lubCategoryId || categoriaActivaId,
+                lubSubcategoryId: prod.lubSubcategoryId || subcategoriaActivaId,
+              });
+            }
+          });
+          return copia;
+        });
+        notificar(`✓ Se agregaron ${prodsToAdd.length} productos al pedido`, "ok");
+      }
+      setProductosSeleccionadosIds([]);
+    } catch (err: any) {
+      notificar(err?.message || "Error al agregar productos", "err");
+    } finally {
+      setAgregandoVarios(false);
     }
   };
 
@@ -1403,162 +1896,42 @@ export default function ModuloLubricentroCatalogo({
     return map;
   }, [productos]);
 
-  // Sub-servicios e ítems del panel izquierdo según la subcategoría seleccionada
-  const subServiciosActuales = useMemo(() => {
-    if (SERVICIOS_POR_SUBCATEGORIA[subcategoriaActivaId]) {
-      return SERVICIOS_POR_SUBCATEGORIA[subcategoriaActivaId];
-    }
-    return [
-      {
-        id: `srv_${subcategoriaActivaId}`,
-        label: subcategoriaSeleccionadaObj?.label || "Servicio",
-        icon: subcategoriaSeleccionadaObj?.icon || "🛢️",
-        filtro: subcategoriaActivaId,
-      },
-    ];
-  }, [subcategoriaActivaId, subcategoriaSeleccionadaObj]);
-
-  const itemServicioSeleccionadoObj = useMemo(() => {
-    return (
-      subServiciosActuales.find((s) => s.id === itemServicioSeleccionadoId) ||
-      subServiciosActuales[0]
-    );
-  }, [subServiciosActuales, itemServicioSeleccionadoId]);
-
-  useEffect(() => {
-    if (subServiciosActuales.length > 0) {
-      const existe = subServiciosActuales.some((s) => s.id === itemServicioSeleccionadoId);
-      if (!existe) {
-        setItemServicioSeleccionadoId(subServiciosActuales[0].id);
-      }
-    }
-  }, [subServiciosActuales, itemServicioSeleccionadoId]);
-
   const productosParaMostrar = useMemo(() => {
-    const q = busquedaTexto.trim().toLowerCase();
-    const filtroTipo = itemServicioSeleccionadoObj?.filtro || "";
+    const normalize = (str: string) =>
+      (str || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+
+    const q = normalize(busquedaTexto.trim());
+    if (!q) {
+      return [];
+    }
 
     let list = productos.filter((p) => p.active !== false && p.status !== "Inactivo");
 
-    if (q) {
-      return list.filter(
-        (p) =>
-          (p.name || "").toLowerCase().includes(q) ||
-          (p.brand || "").toLowerCase().includes(q) ||
-          (p.code || "").toLowerCase().includes(q) ||
-          (p.viscosity || "").toLowerCase().includes(q)
-      );
-    }
+    const terms = q.split(/\s+/).filter(Boolean);
+    return list.filter((p) => {
+      const fullText = normalize([
+        p.name,
+        p.brand,
+        p.code,
+        p.manufacturerCode,
+        p.viscosity,
+        p.lubricantBase,
+        p.presentation,
+        p.unitOfMeasure,
+        p.description,
+        p.filterType,
+        p.filterApplication,
+        p.category,
+        p.subCategory,
+        ...(Array.isArray(p.specifications) ? p.specifications : []),
+      ].filter(Boolean).join(" "));
 
-    if (filtroTipo === "aceite_motor") {
-      list = list.filter(
-        (p) =>
-          (p.lubCategoryId === "lub_aceite" && p.lubSubcategoryId === "lub_aceite_motor") ||
-          (p.name || "").toLowerCase().includes("aceite") ||
-          p.viscosity
-      );
-    } else if (filtroTipo === "filtro_aceite") {
-      list = list.filter(
-        (p) =>
-          p.lubSubcategoryId === "lub_fil_aceite" ||
-          (p.filterType || "").toLowerCase().includes("aceite") ||
-          (p.name || "").toLowerCase().includes("filtro de aceite") ||
-          (p.name || "").toLowerCase().includes("filtro aceite")
-      );
-    } else if (filtroTipo === "filtro_aire") {
-      list = list.filter(
-        (p) =>
-          p.lubSubcategoryId === "lub_fil_aire" ||
-          (p.filterType || "").toLowerCase().includes("aire") ||
-          (p.name || "").toLowerCase().includes("filtro de aire") ||
-          (p.name || "").toLowerCase().includes("filtro aire")
-      );
-    } else if (filtroTipo === "filtro_combustible") {
-      list = list.filter(
-        (p) =>
-          p.lubSubcategoryId === "lub_fil_combustible" ||
-          (p.filterType || "").toLowerCase().includes("combustible") ||
-          (p.name || "").toLowerCase().includes("combustible") ||
-          (p.name || "").toLowerCase().includes("gasolina") ||
-          (p.name || "").toLowerCase().includes("diésel")
-      );
-    } else if (filtroTipo === "filtro_cabina") {
-      list = list.filter(
-        (p) =>
-          p.lubSubcategoryId === "lub_fil_cabina" ||
-          (p.filterType || "").toLowerCase().includes("cabina") ||
-          (p.name || "").toLowerCase().includes("cabina") ||
-          (p.name || "").toLowerCase().includes("a/c")
-      );
-    } else if (filtroTipo === "flush") {
-      list = list.filter(
-        (p) =>
-          p.lubSubcategoryId === "lub_flush" ||
-          (p.name || "").toLowerCase().includes("flush") ||
-          (p.name || "").toLowerCase().includes("lavado interno")
-      );
-    } else if (filtroTipo === "limpieza") {
-      list = list.filter(
-        (p) =>
-          p.lubSubcategoryId === "lub_aditivos" ||
-          p.lubSubcategoryId === "lub_tratamiento" ||
-          (p.name || "").toLowerCase().includes("limpieza") ||
-          (p.name || "").toLowerCase().includes("antifricción") ||
-          (p.name || "").toLowerCase().includes("ceratec")
-      );
-    } else if (filtroTipo === "valvulina") {
-      list = list.filter(
-        (p) =>
-          p.lubSubcategoryId === "lub_valvulina" ||
-          (p.name || "").toLowerCase().includes("valvulina") ||
-          (p.name || "").toLowerCase().includes("80w-90") ||
-          (p.name || "").toLowerCase().includes("85w-140") ||
-          (p.name || "").toLowerCase().includes("75w-90")
-      );
-    } else if (filtroTipo === "hidraulico") {
-      list = list.filter(
-        (p) =>
-          p.lubSubcategoryId === "lub_hidraulico_aceite" ||
-          p.lubSubcategoryId === "lub_flu_hidraulico" ||
-          (p.name || "").toLowerCase().includes("hidráulico") ||
-          (p.name || "").toLowerCase().includes("power steering") ||
-          (p.name || "").toLowerCase().includes("dirección")
-      );
-    } else if (filtroTipo === "frenos") {
-      list = list.filter(
-        (p) =>
-          p.lubSubcategoryId === "lub_frenos_aceite" ||
-          p.lubSubcategoryId === "lub_flu_frenos" ||
-          (p.name || "").toLowerCase().includes("frenos") ||
-          (p.name || "").toLowerCase().includes("dot 4") ||
-          (p.name || "").toLowerCase().includes("dot 3")
-      );
-    } else if (filtroTipo === "coolant") {
-      list = list.filter(
-        (p) =>
-          p.lubSubcategoryId === "lub_refrigerante_aceite" ||
-          p.lubSubcategoryId === "lub_flu_coolant" ||
-          (p.name || "").toLowerCase().includes("coolant") ||
-          (p.name || "").toLowerCase().includes("refrigerante")
-      );
-    } else if (filtroTipo === "inyectores") {
-      list = list.filter(
-        (p) =>
-          p.lubSubcategoryId === "lub_limpieza_combustible" ||
-          (p.name || "").toLowerCase().includes("inyector") ||
-          (p.name || "").toLowerCase().includes("injection")
-      );
-    } else {
-      const subMatch = list.filter((p) => p.lubSubcategoryId === subcategoriaActivaId);
-      if (subMatch.length > 0) {
-        list = subMatch;
-      } else {
-        list = list.filter((p) => p.lubCategoryId === categoriaActivaId);
-      }
-    }
-
-    return list;
-  }, [productos, busquedaTexto, itemServicioSeleccionadoObj, subcategoriaActivaId, categoriaActivaId]);
+      return terms.every((term) => fullText.includes(term));
+    });
+  }, [productos, busquedaTexto]);
 
   const totalUnidadesCarrito = useMemo(() => {
     return carritoDirecto.reduce((acc, it) => acc + it.qty, 0);
@@ -1613,7 +1986,6 @@ export default function ModuloLubricentroCatalogo({
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
         {categoriasActivas.map((cat) => {
           const sel = categoriaSeleccionadaObj?.id === cat.id && !verTodoElCatalogo;
-          const count = conteoProductosPorCategoria[cat.id] || 0;
           return (
             <button
               key={cat.id}
@@ -1622,27 +1994,14 @@ export default function ModuloLubricentroCatalogo({
                 setVerTodoElCatalogo(false);
                 handleCambiarCategoria(cat.id);
               }}
-              className={`h-10 px-3 rounded-lg border text-xs font-bold flex items-center justify-between gap-2 cursor-pointer transition-all shadow-2xs active:scale-95 ${
+              className={`h-10 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all shadow-2xs active:scale-95 ${
                 sel
                   ? "bg-blue-50/90 dark:bg-blue-500/20 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/40 font-bold"
                   : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
               }`}
             >
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-base leading-none shrink-0">{cat.icon}</span>
-                <span className="truncate">{cat.label}</span>
-              </div>
-              {count > 0 && (
-                <span
-                  className={`px-1.5 py-0.5 rounded-md font-mono text-[10px] font-bold shrink-0 ${
-                    sel
-                      ? "bg-blue-100 dark:bg-blue-500/30 text-blue-800 dark:text-blue-200 font-black"
-                      : "bg-zinc-100 dark:bg-white/10 text-zinc-500 dark:text-zinc-400"
-                  }`}
-                >
-                  {count}
-                </span>
-              )}
+              <span className="text-base leading-none shrink-0">{cat.icon}</span>
+              <span className="truncate">{cat.label}</span>
             </button>
           );
         })}
@@ -1768,7 +2127,10 @@ export default function ModuloLubricentroCatalogo({
               {busquedaTexto && (
                 <button
                   type="button"
-                  onClick={() => setBusquedaTexto("")}
+                  onClick={() => {
+                    setBusquedaTexto("");
+                    setProductosSeleccionadosIds([]);
+                  }}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white text-xs cursor-pointer"
                 >
                   ✕
@@ -1776,207 +2138,229 @@ export default function ModuloLubricentroCatalogo({
               )}
             </div>
 
-            {/* Lista de Productos */}
+            {/* Barra de Selección Múltiple y Acciones */}
+            {busquedaTexto.trim() && productosParaMostrar.length > 0 && (
+              <div className="flex items-center justify-between gap-2 px-0.5 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (productosSeleccionadosIds.length === productosParaMostrar.length) {
+                      setProductosSeleccionadosIds([]);
+                    } else {
+                      setProductosSeleccionadosIds(productosParaMostrar.map((p) => p.id));
+                    }
+                  }}
+                  className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1.5 cursor-pointer select-none"
+                >
+                  <input
+                    type="checkbox"
+                    checked={
+                      productosParaMostrar.length > 0 &&
+                      productosSeleccionadosIds.length === productosParaMostrar.length
+                    }
+                    onChange={() => {}}
+                    className="w-3.5 h-3.5 rounded border-zinc-300 dark:border-white/20 text-blue-600 focus:ring-blue-500 cursor-pointer pointer-events-none"
+                  />
+                  <span>
+                    {productosSeleccionadosIds.length === productosParaMostrar.length
+                      ? "Deseleccionar"
+                      : "Seleccionar todos"}
+                  </span>
+                </button>
+
+                {productosSeleccionadosIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleAgregarVariosSeleccionados}
+                    disabled={agregandoVarios}
+                    className="h-7 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] flex items-center gap-1 shadow-2xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <span>+</span>
+                    <span>
+                      {agregandoVarios
+                        ? "Agregando..."
+                        : `Agregar (${productosSeleccionadosIds.length})`}
+                    </span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Lista de Productos (solo visible cuando el usuario busca) */}
             <div className="space-y-2">
-              {productosParaMostrar.length === 0 ? (
+              {!busquedaTexto.trim() ? null : productosParaMostrar.length === 0 ? (
                 <div className="p-6 rounded-xl bg-zinc-50/70 dark:bg-white/[0.01] border border-dashed border-zinc-200 dark:border-white/10 text-center space-y-1.5 text-zinc-400">
                   <span className="text-xl block">🔍</span>
-                  <p className="text-xs font-semibold">No se encontraron productos para este ítem.</p>
+                  <p className="text-xs font-semibold">No se encontraron productos para esta búsqueda.</p>
                 </div>
               ) : (
-                productosParaMostrar.map((prod) => (
-                  <div
-                    key={prod.id}
-                    onClick={() => {
-                      if (prod.name.toLowerCase().includes("castrol")) {
-                        setManualTipoAceite("castrol_10w40");
-                        setManualPrecioUnitario(Number(prod.price || 24.5));
-                      } else if (prod.name.toLowerCase().includes("shell")) {
-                        setManualTipoAceite("shell_5w30");
-                        setManualPrecioUnitario(Number(prod.price || 25.7));
-                      } else {
-                        setManualTipoAceite("otro");
-                        setManualOtroTexto(prod.name);
-                        setManualPrecioUnitario(Number(prod.price || 20.0));
-                      }
-                    }}
-                    className="p-2.5 sm:p-3 rounded-lg bg-white dark:bg-white/[0.02] hover:bg-zinc-50/70 dark:hover:bg-white/[0.05] border border-zinc-200 dark:border-white/10 hover:border-blue-400/50 dark:hover:border-blue-500/40 flex items-center justify-between gap-3 transition-all cursor-pointer group shadow-2xs"
-                  >
-                    <div className="w-11 h-13 sm:w-12 sm:h-14 rounded-md bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-white/5 flex items-center justify-center p-1 shrink-0 overflow-hidden">
-                      {prod.imageUrl ? (
-                        <img src={prod.imageUrl} alt={prod.name} className="w-full h-full object-contain" />
-                      ) : (
-                        <span className="text-xl">🛢️</span>
-                      )}
-                    </div>
+                productosParaMostrar.map((prod) => {
+                  const isChecked = productosSeleccionadosIds.includes(prod.id);
+                  const estaEnOrden = Boolean(
+                    itemsOrden.some(
+                      (i) => i.productId === prod.id || (i.code && prod.code && i.code === prod.code)
+                    )
+                  );
 
-                    <div className="flex-1 min-w-0 space-y-0.5">
-                      <h4 className="text-[11px] sm:text-xs font-normal text-zinc-800 dark:text-zinc-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
-                        {prod.name}
-                      </h4>
-                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
-                        {prod.lubricantBase || prod.brand || "Lubricante"} · {prod.presentation || prod.unitOfMeasure || "1 Litro"}
-                      </p>
-                      <div className="pt-0.5">
-                        <span className="text-xs sm:text-sm font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                          $ {Number(prod.price || 0).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      disabled={agregandoId === prod.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (prod.name.toLowerCase().includes("castrol")) {
-                          setManualTipoAceite("castrol_10w40");
-                          setManualPrecioUnitario(Number(prod.price || 24.5));
-                        } else if (prod.name.toLowerCase().includes("shell")) {
-                          setManualTipoAceite("shell_5w30");
-                          setManualPrecioUnitario(Number(prod.price || 25.7));
-                        } else {
-                          setManualTipoAceite("otro");
-                          setManualOtroTexto(prod.name);
-                          setManualPrecioUnitario(Number(prod.price || 20.0));
-                        }
-                        handleAgregarProductoDirecto(prod);
+                  return (
+                    <div
+                      key={prod.id}
+                      onClick={() => {
+                        setProductosSeleccionadosIds((prev) =>
+                          prev.includes(prod.id)
+                            ? prev.filter((id) => id !== prod.id)
+                            : [...prev, prod.id]
+                        );
+                        setManualAceiteTexto(prod.name);
                       }}
-                      className="h-8 px-3 rounded-lg bg-blue-100/80 hover:bg-blue-200/80 dark:bg-blue-500/20 dark:hover:bg-blue-500/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 text-xs font-bold flex items-center gap-1 shrink-0 transition-all cursor-pointer active:scale-95 shadow-2xs disabled:opacity-50"
+                      className={`p-2.5 sm:p-3 rounded-lg border flex items-center justify-between gap-2.5 transition-all cursor-pointer group shadow-2xs ${
+                        isChecked
+                          ? "bg-blue-50/80 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/50 ring-1 ring-blue-400/30"
+                          : "bg-white dark:bg-white/[0.02] hover:bg-zinc-50/70 dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/10 hover:border-blue-400/50 dark:hover:border-blue-500/40"
+                      }`}
                     >
-                      <span>+</span>
-                      <span>{agregandoId === prod.id ? "..." : "Agregar"}</span>
-                    </button>
-                  </div>
-                ))
+                      {/* Checkbox de selección */}
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProductosSeleccionadosIds((prev) =>
+                            prev.includes(prod.id)
+                              ? prev.filter((id) => id !== prod.id)
+                              : [...prev, prod.id]
+                          );
+                        }}
+                        className="shrink-0 p-0.5 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}}
+                          className="w-4 h-4 rounded border-zinc-300 dark:border-white/20 text-blue-600 focus:ring-blue-500 cursor-pointer pointer-events-none"
+                        />
+                      </div>
+
+                      <div className="w-11 h-13 sm:w-12 sm:h-14 rounded-md bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-white/5 flex items-center justify-center p-1 shrink-0 overflow-hidden">
+                        {prod.imageUrl ? (
+                          <img src={prod.imageUrl} alt={prod.name} className="w-full h-full object-contain" />
+                        ) : (
+                          <span className="text-xl">🛢️</span>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0 space-y-0.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="text-[11px] sm:text-xs font-normal text-zinc-800 dark:text-zinc-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 leading-snug">
+                            {prod.name}
+                          </h4>
+                          {estaEnOrden && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 shrink-0">
+                              ✓ En orden
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
+                          {prod.lubricantBase || prod.brand || "Lubricante"} · {prod.presentation || prod.unitOfMeasure || "1 Litro"}
+                        </p>
+                        <div className="pt-0.5">
+                          <span className="text-xs sm:text-sm font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                            $ {Number(prod.price || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={agregandoId === prod.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setManualAceiteTexto(prod.name);
+                          handleAgregarProductoDirecto(prod);
+                        }}
+                        className="h-8 px-3 rounded-lg bg-blue-100/80 hover:bg-blue-200/80 dark:bg-blue-500/20 dark:hover:bg-blue-500/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 text-xs font-bold flex items-center gap-1 shrink-0 transition-all cursor-pointer active:scale-95 shadow-2xs disabled:opacity-50"
+                      >
+                        <span>+</span>
+                        <span>{agregandoId === prod.id ? "..." : "Agregar"}</span>
+                      </button>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
 
-          {/* 3. PANEL DERECHO: REGISTRAR ACEITE MANUALMENTE (Color, Porte y Diseño Taller) */}
+          {/* 3. PANEL DERECHO: MANUAL */}
           <div className="md:col-span-12 lg:col-span-4 p-3.5 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 shadow-2xs">
             <h3 className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-white pb-2 border-b border-zinc-100 dark:border-white/5">
-              Registrar Manualmente
+              Manual
             </h3>
 
-            {/* Tipo de aceite */}
+            {/* Campo principal según la categoría */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 block">
-                Tipo de aceite
+                {configManualSegunCategoria.labelCampo}
               </label>
-
-              {/* Opción 1: Shell Helix 5W-30 */}
-              <button
-                type="button"
-                onClick={() => {
-                  setManualTipoAceite("shell_5w30");
-                  setManualPrecioUnitario(25.70);
-                }}
-                className={`w-full p-2.5 rounded-lg border flex items-center justify-between text-left transition-all cursor-pointer ${
-                  manualTipoAceite === "shell_5w30"
-                    ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500 text-blue-900 dark:text-blue-200 ring-1 ring-blue-400/30 shadow-2xs"
-                    : "bg-zinc-50/70 hover:bg-zinc-100 dark:bg-white/[0.02] dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-red-600/90 text-white flex items-center justify-center text-[8px] font-bold">
-                    🔴
-                  </span>
-                  <div>
-                    <strong className="text-xs font-bold text-zinc-900 dark:text-white block">
-                      Shell Helix 5W-30
-                    </strong>
-                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Sintético</span>
-                  </div>
-                </div>
-                <span className="text-zinc-400 text-xs">⌵</span>
-              </button>
-
-              {/* Opción 2: Castrol Magnatec 10W-40 */}
-              <button
-                type="button"
-                onClick={() => {
-                  setManualTipoAceite("castrol_10w40");
-                  setManualPrecioUnitario(24.50);
-                }}
-                className={`w-full p-2.5 rounded-lg border flex items-center justify-between text-left transition-all cursor-pointer ${
-                  manualTipoAceite === "castrol_10w40"
-                    ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500 text-blue-900 dark:text-blue-200 ring-1 ring-blue-400/30 shadow-2xs"
-                    : "bg-zinc-50/70 hover:bg-zinc-100 dark:bg-white/[0.02] dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-emerald-600/90 text-white flex items-center justify-center text-[8px] font-bold">
-                    🟢
-                  </span>
-                  <div>
-                    <strong className="text-xs font-bold text-zinc-900 dark:text-white block">
-                      Castrol Magnatec 10W-40
-                    </strong>
-                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Sintético</span>
-                  </div>
-                </div>
-                <span className="text-zinc-400 text-xs">⌵</span>
-              </button>
-
-              {/* Opción 3: Otro con campo editable */}
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setManualTipoAceite("otro")}
-                  className={`h-8 px-3 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                    manualTipoAceite === "otro"
-                      ? "bg-blue-600 text-white border-blue-500 shadow-2xs"
-                      : "bg-zinc-100 dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10"
-                  }`}
-                >
-                  Otro
-                </button>
-                <input
-                  type="text"
-                  value={manualOtroTexto}
-                  onChange={(e) => {
-                    setManualOtroTexto(e.target.value);
-                    setManualTipoAceite("otro");
-                  }}
-                  placeholder="Campo editable..."
-                  className="flex-1 h-8 px-2.5 rounded-lg bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
-                />
-              </div>
+              <input
+                type="text"
+                value={manualAceiteTexto}
+                onChange={(e) => setManualAceiteTexto(e.target.value)}
+                placeholder={configManualSegunCategoria.placeholder}
+                className="w-full h-8 px-2.5 rounded-lg bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
+              />
             </div>
 
-            {/* Unidad de medida */}
-            <div className="flex items-center justify-between pt-0.5">
-              <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300">
-                Unidad de medida
-              </label>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setManualUnidad("Litros")}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
-                    manualUnidad === "Litros"
-                      ? "bg-blue-600 text-white border-blue-500 shadow-2xs"
-                      : "bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-white/10"
+            {/* Unidad de medida adaptada a la categoría (Desplegable moderno y minimalista) */}
+            <div ref={menuUnidadRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setDropdownUnidadAbierto((prev) => !prev)}
+                className={`w-full h-8 px-2.5 rounded-lg border text-xs font-semibold flex items-center justify-between transition-all cursor-pointer shadow-2xs select-none active:scale-98 ${
+                  dropdownUnidadAbierto
+                    ? "bg-blue-50/50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/50 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/30"
+                    : "bg-white dark:bg-black/40 hover:bg-zinc-50 dark:hover:bg-white/[0.05] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
+                }`}
+              >
+                <span>{manualUnidad || "Unidad"}</span>
+                <span
+                  className={`text-[9px] text-zinc-400 transition-transform duration-200 ${
+                    dropdownUnidadAbierto ? "rotate-180 text-blue-500 dark:text-blue-400" : ""
                   }`}
                 >
-                  Litros
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setManualUnidad("Galón")}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
-                    manualUnidad === "Galón"
-                      ? "bg-blue-600 text-white border-blue-500 shadow-2xs"
-                      : "bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-white/10"
-                  }`}
-                >
-                  Galón
-                </button>
-              </div>
+                  ▾
+                </span>
+              </button>
+
+              {dropdownUnidadAbierto && (
+                <div className="absolute left-0 right-0 top-full mt-1.5 rounded-xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/10 shadow-xl dark:shadow-2xl backdrop-blur-md p-1.5 space-y-0.5 z-40 animate-fade-in">
+                  {configManualSegunCategoria.unidades.map((u) => {
+                    const isSelected = manualUnidad === u;
+                    return (
+                      <button
+                        key={u}
+                        type="button"
+                        onClick={() => {
+                          setManualUnidad(u);
+                          setDropdownUnidadAbierto(false);
+                        }}
+                        className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                          isSelected
+                            ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold"
+                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
+                        }`}
+                      >
+                        <span>{u}</span>
+                        {isSelected && (
+                          <span className="text-xs text-blue-600 dark:text-blue-400 font-bold">
+                            ✓
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            {/* Cantidad (Card con borde azul Taller) */}
+            {/* Cantidad con step y min adaptados */}
             <div className="p-2.5 rounded-lg bg-blue-50/40 dark:bg-blue-950/20 border border-blue-300/60 dark:border-blue-500/30 flex items-center justify-between">
               <span className="text-xs font-bold text-zinc-900 dark:text-white">
                 Cantidad
@@ -1986,7 +2370,10 @@ export default function ModuloLubricentroCatalogo({
                   type="button"
                   onClick={() =>
                     setManualCantidad((prev) =>
-                      Math.max(0.5, Number((prev - 0.5).toFixed(1)))
+                      Math.max(
+                        configManualSegunCategoria.minCantidad,
+                        Number((prev - configManualSegunCategoria.stepCantidad).toFixed(1))
+                      )
                     )
                   }
                   className="w-6 h-6 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-white font-bold text-xs flex items-center justify-center cursor-pointer shadow-2xs"
@@ -1995,12 +2382,15 @@ export default function ModuloLubricentroCatalogo({
                 </button>
                 <input
                   type="number"
-                  step="0.5"
-                  min="0.5"
+                  step={configManualSegunCategoria.stepCantidad}
+                  min={configManualSegunCategoria.minCantidad}
                   value={manualCantidad}
                   onChange={(e) =>
                     setManualCantidad(
-                      Math.max(0.1, parseFloat(e.target.value) || 0)
+                      Math.max(
+                        configManualSegunCategoria.minCantidad,
+                        parseFloat(e.target.value) || 0
+                      )
                     )
                   }
                   className="w-10 text-center font-mono font-bold text-xs bg-transparent text-zinc-900 dark:text-white focus:outline-none"
@@ -2008,7 +2398,9 @@ export default function ModuloLubricentroCatalogo({
                 <button
                   type="button"
                   onClick={() =>
-                    setManualCantidad((prev) => Number((prev + 0.5).toFixed(1)))
+                    setManualCantidad((prev) =>
+                      Number((prev + configManualSegunCategoria.stepCantidad).toFixed(1))
+                    )
                   }
                   className="w-6 h-6 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-white font-bold text-xs flex items-center justify-center cursor-pointer shadow-2xs"
                 >
@@ -2017,20 +2409,24 @@ export default function ModuloLubricentroCatalogo({
               </div>
             </div>
 
-            {/* Precio unitario y Total */}
-            <div className="space-y-1 pt-0.5">
-              <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-                <span>Precio unitario</span>
-                <span className="font-mono font-bold text-zinc-900 dark:text-white">
-                  $ {manualPrecioUnitario.toFixed(2)}
+            {/* Valor manual */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 block">
+                Valor
+              </label>
+              <div className="relative">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">
+                  $
                 </span>
-              </div>
-
-              <div className="flex items-center justify-between text-xs sm:text-sm font-bold">
-                <span className="text-zinc-900 dark:text-white">Total</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-mono text-sm sm:text-base font-black">
-                  $ {(manualPrecioUnitario * 1.15).toFixed(2)}
-                </span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={manualPrecio}
+                  onChange={(e) => setManualPrecio(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full h-8 pl-6 pr-2.5 rounded-lg bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs font-mono font-bold text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
+                />
               </div>
             </div>
 
@@ -2039,10 +2435,10 @@ export default function ModuloLubricentroCatalogo({
               <button
                 type="button"
                 onClick={() => {
-                  setManualTipoAceite("shell_5w30");
-                  setManualOtroTexto("");
-                  setManualCantidad(4.5);
-                  setManualPrecioUnitario(25.70);
+                  setManualAceiteTexto("");
+                  setManualCantidad(configManualSegunCategoria.defaultCantidad);
+                  setManualUnidad(configManualSegunCategoria.defaultUnidad);
+                  setManualPrecio("");
                 }}
                 className="h-8 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-bold cursor-pointer transition-all border border-zinc-200 dark:border-white/10 shadow-2xs"
               >
@@ -2051,7 +2447,7 @@ export default function ModuloLubricentroCatalogo({
               <button
                 type="button"
                 onClick={handleGuardarAceiteManualEnPedido}
-                className="h-8 rounded-lg bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                className="h-8 rounded-lg bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center justify-center"
               >
                 Guardar en pedido
               </button>
@@ -2065,30 +2461,108 @@ export default function ModuloLubricentroCatalogo({
             <div>
               <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                 <span>🏪</span>
-                <span>Catálogo General de la Tienda</span>
+                <span>Catálogo</span>
               </h3>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                Explora todos los productos, aditivos, filtros y repuestos.
-              </p>
             </div>
             <button
               type="button"
               onClick={() => setVerTodoElCatalogo(false)}
               className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer transition-all shrink-0 shadow-xs active:scale-95"
             >
-              ← Volver a Lubricentro
+              ← Volver
             </button>
           </div>
 
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
-            <input
-              type="text"
-              value={busquedaTexto}
-              onChange={(e) => setBusquedaTexto(e.target.value)}
-              placeholder="Buscar en todo el catálogo..."
-              className="w-full h-9 pl-8 pr-7 rounded-lg bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
-            />
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
+              <input
+                type="text"
+                value={busquedaTexto}
+                onChange={(e) => setBusquedaTexto(e.target.value)}
+                placeholder="Buscar..."
+                className="w-full h-9 pl-8 pr-7 rounded-lg bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
+              />
+              {busquedaTexto && (
+                <button
+                  type="button"
+                  onClick={() => setBusquedaTexto("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white text-xs cursor-pointer"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <div ref={menuFiltroRef} className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setMenuFiltroAbierto((prev) => !prev)}
+                className={`h-9 px-3 rounded-lg border text-xs font-semibold flex items-center gap-2 cursor-pointer transition-all shadow-2xs select-none active:scale-95 ${
+                  menuFiltroAbierto || filtroCategoriaGeneral
+                    ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/40 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/20"
+                    : "bg-white dark:bg-black/40 hover:bg-zinc-50 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200"
+                }`}
+              >
+                <span>
+                  {categoriasActivas.find((c) => c.id === filtroCategoriaGeneral)?.label || "Todos"}
+                </span>
+                <span
+                  className={`text-[9px] text-zinc-400 transition-transform duration-200 ${
+                    menuFiltroAbierto ? "rotate-180" : ""
+                  }`}
+                >
+                  ▾
+                </span>
+              </button>
+
+              {menuFiltroAbierto && (
+                <div className="absolute right-0 top-full mt-1.5 w-44 rounded-xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/10 shadow-xl dark:shadow-2xl backdrop-blur-md p-1.5 space-y-0.5 z-40 animate-fade-in">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFiltroCategoriaGeneral("");
+                      setMenuFiltroAbierto(false);
+                    }}
+                    className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                      !filtroCategoriaGeneral
+                        ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold"
+                        : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
+                    }`}
+                  >
+                    <span>Todos</span>
+                    {!filtroCategoriaGeneral && <span className="text-xs">✓</span>}
+                  </button>
+
+                  <div className="my-1 border-t border-zinc-100 dark:border-white/5" />
+
+                  {categoriasActivas.map((cat) => {
+                    const activa = filtroCategoriaGeneral === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          setFiltroCategoriaGeneral(cat.id);
+                          setMenuFiltroAbierto(false);
+                        }}
+                        className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                          activa
+                            ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-bold"
+                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm shrink-0">{cat.icon}</span>
+                          <span className="truncate">{cat.label}</span>
+                        </div>
+                        {activa && <span className="text-xs">✓</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -2116,14 +2590,11 @@ export default function ModuloLubricentroCatalogo({
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-white/5">
-                  <span className="text-xs sm:text-sm font-mono font-black text-emerald-600 dark:text-emerald-400">
-                    $ {Number(prod.price || 0).toFixed(2)}
-                  </span>
+                <div className="pt-2 border-t border-zinc-100 dark:border-white/5">
                   <button
                     type="button"
                     onClick={() => handleAgregarProductoDirecto(prod)}
-                    className="h-8 px-3 rounded-lg bg-blue-100/80 hover:bg-blue-200/80 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 text-xs font-bold cursor-pointer transition-all shadow-2xs active:scale-95"
+                    className="w-full h-8 px-3 rounded-lg bg-blue-100/80 hover:bg-blue-200/80 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 text-xs font-bold cursor-pointer transition-all shadow-2xs active:scale-95 flex items-center justify-center gap-1"
                   >
                     + Agregar
                   </button>
