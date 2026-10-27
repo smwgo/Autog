@@ -244,7 +244,7 @@ export default function ModuloLubricentroCatalogo({
   });
 
   // ---------------------------------------------------------------------------
-  // 3. CONFIGURACIÓN MANUAL Y FILTROS DE ACEITES (Aceites -> Aceite de motor)
+  // 3. FILTROS DE ACEITES (Aceites -> Aceite de motor)
   // ---------------------------------------------------------------------------
   const [filtroBase, setFiltroBase] = useState<string>(""); // "" = Todas, o "Sintético", "Semisintético", "Mineral"
   const [cantidadRequeridaLabel, setCantidadRequeridaLabel] = useState<string>("1 galón");
@@ -258,10 +258,6 @@ export default function ModuloLubricentroCatalogo({
   const [filtroEspecificacion, setFiltroEspecificacion] = useState<string>("");
   const [filtroMarca, setFiltroMarca] = useState<string>("");
 
-  // Estado para solicitud manual escrita en la sección de aceites
-  const [solicitudManualTexto, setSolicitudManualTexto] = useState<string>("");
-  const [solicitudManualPrecio, setSolicitudManualPrecio] = useState<string>("");
-  const [modoManualTexto, setModoManualTexto] = useState<boolean>(false);
 
   // ---------------------------------------------------------------------------
   // 4. FILTROS ESPECÍFICOS PARA LAS DEMÁS CATEGORÍAS (Separados estrictamente)
@@ -295,26 +291,19 @@ export default function ModuloLubricentroCatalogo({
   const [menuFiltroAbierto, setMenuFiltroAbierto] = useState<boolean>(false);
   const menuFiltroRef = useRef<HTMLDivElement>(null);
 
-  // Dropdown moderno para unidad de medida en el panel manual
-  const [dropdownUnidadAbierto, setDropdownUnidadAbierto] = useState<boolean>(false);
-  const menuUnidadRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const handleClickAfuera = (e: MouseEvent) => {
       if (menuFiltroRef.current && !menuFiltroRef.current.contains(e.target as Node)) {
         setMenuFiltroAbierto(false);
       }
-      if (menuUnidadRef.current && !menuUnidadRef.current.contains(e.target as Node)) {
-        setDropdownUnidadAbierto(false);
-      }
     };
-    if (menuFiltroAbierto || dropdownUnidadAbierto) {
+    if (menuFiltroAbierto) {
       document.addEventListener("mousedown", handleClickAfuera);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickAfuera);
     };
-  }, [menuFiltroAbierto, dropdownUnidadAbierto]);
+  }, [menuFiltroAbierto]);
 
   // Buscador de compatibilidad por vehículo
   const [mostrarBuscadorVehiculo, setMostrarBuscadorVehiculo] = useState<boolean>(false);
@@ -341,12 +330,6 @@ export default function ModuloLubricentroCatalogo({
   const [itemServicioSeleccionadoId, setItemServicioSeleccionadoId] = useState<string>("srv_cambio_aceite_motor");
   const [busquedaTienda, setBusquedaTienda] = useState<string>("");
 
-  // Modal / Panel Registrar Aceite Manualmente (A Granel - Envío a Presupuesto)
-  const [modalAceiteManualAbierto, setModalAceiteManualAbierto] = useState<boolean>(false);
-  const [manualAceiteTexto, setManualAceiteTexto] = useState<string>("Shell Helix Ultra 5W-30");
-  const [manualUnidad, setManualUnidad] = useState<string>("Litros");
-  const [manualCantidad, setManualCantidad] = useState<number>(4.5);
-  const [manualPrecio, setManualPrecio] = useState<string>("");
 
   // Selección múltiple de productos en la tienda
   const [productosSeleccionadosIds, setProductosSeleccionadosIds] = useState<string[]>([]);
@@ -502,366 +485,7 @@ export default function ModuloLubricentroCatalogo({
     setFiltroAplicacionGrasa("");
   };
 
-  // Configuración dinámica del panel Manual adaptada al ítem seleccionado en el panel izquierdo (Columna 1) o categoría
-  const configManualSegunCategoria = useMemo(() => {
-    const filtro = itemServicioSeleccionadoObj?.filtro || "";
-    const label = itemServicioSeleccionadoObj?.label || "";
 
-    // 1. Detección específica por el ítem de servicio activo en la Columna 1
-    if (filtro === "aceite_motor") {
-      return {
-        labelCampo: "Tipo de aceite",
-        placeholder: "Ej: Shell Helix Ultra 5W-30...",
-        unidades: ["Litros", "Galón", "Granel", "Cuarto"],
-        defaultUnidad: "Litros",
-        defaultCantidad: 4.5,
-        stepCantidad: 0.5,
-        minCantidad: 0.5,
-        defaultTexto: "Shell Helix Ultra 5W-30",
-        categoryName: "Lubricentro - Aceite a Granel",
-        subCategory: "lub_aceite_motor",
-      };
-    }
-
-    if (filtro === "filtro_aceite") {
-      return {
-        labelCampo: "Tipo de filtro de aceite",
-        placeholder: "Ej: Filtro de Aceite Blindado W 610/3...",
-        unidades: ["Unidad", "Juego"],
-        defaultUnidad: "Unidad",
-        defaultCantidad: 1,
-        stepCantidad: 1,
-        minCantidad: 1,
-        defaultTexto: "Filtro de Aceite",
-        categoryName: "Lubricentro - Filtros",
-        subCategory: "lub_fil_aceite",
-      };
-    }
-
-    if (filtro === "filtro_aire") {
-      return {
-        labelCampo: "Tipo de filtro de aire",
-        placeholder: "Ej: Filtro de Aire Panel C 26 013...",
-        unidades: ["Unidad", "Juego"],
-        defaultUnidad: "Unidad",
-        defaultCantidad: 1,
-        stepCantidad: 1,
-        minCantidad: 1,
-        defaultTexto: "Filtro de Aire",
-        categoryName: "Lubricentro - Filtros",
-        subCategory: "lub_fil_aire",
-      };
-    }
-
-    if (filtro === "filtro_combustible") {
-      return {
-        labelCampo: "Tipo de filtro de combustible",
-        placeholder: "Ej: Filtro Combustible en Línea WK 820/1...",
-        unidades: ["Unidad", "Juego"],
-        defaultUnidad: "Unidad",
-        defaultCantidad: 1,
-        stepCantidad: 1,
-        minCantidad: 1,
-        defaultTexto: "Filtro de Combustible",
-        categoryName: "Lubricentro - Filtros",
-        subCategory: "lub_fil_combustible",
-      };
-    }
-
-    if (filtro === "filtro_cabina") {
-      return {
-        labelCampo: "Tipo de filtro de cabina (A/C)",
-        placeholder: "Ej: Filtro Cabina Antipolen / Carbón...",
-        unidades: ["Unidad", "Juego"],
-        defaultUnidad: "Unidad",
-        defaultCantidad: 1,
-        stepCantidad: 1,
-        minCantidad: 1,
-        defaultTexto: "Filtro de Cabina",
-        categoryName: "Lubricentro - Filtros",
-        subCategory: "lub_fil_cabina",
-      };
-    }
-
-    if (filtro === "filtro_trans") {
-      return {
-        labelCampo: "Tipo de filtro de transmisión",
-        placeholder: "Ej: Filtro Caja Automática ATF...",
-        unidades: ["Unidad", "Kit"],
-        defaultUnidad: "Unidad",
-        defaultCantidad: 1,
-        stepCantidad: 1,
-        minCantidad: 1,
-        defaultTexto: "Filtro de Transmisión",
-        categoryName: "Lubricentro - Transmisión",
-        subCategory: "lub_trans_automatica",
-      };
-    }
-
-    if (filtro === "flush") {
-      return {
-        labelCampo: "Tipo de lavado / Engine Flush",
-        placeholder: "Ej: Lavado Interno Flush Plus 300ml...",
-        unidades: ["Unidad", "Litros", "Servicio"],
-        defaultUnidad: "Unidad",
-        defaultCantidad: 1,
-        stepCantidad: 1,
-        minCantidad: 1,
-        defaultTexto:
-          label.toLowerCase().includes("descarb")
-            ? "Descarbonizado de Motor"
-            : label.toLowerCase().includes("enjuague")
-            ? "Enjuague de Motor"
-            : "Lavado de Motor Interno",
-        categoryName: "Lubricentro - Lavado / Flush",
-        subCategory: "lub_flush",
-      };
-    }
-
-    if (filtro === "limpieza" || filtro === "humo" || filtro === "octano") {
-      return {
-        labelCampo: `Tipo de ${label ? label.toLowerCase() : "aditivo"}`,
-        placeholder: `Ej: Aditivo ${label || "Especial"}...`,
-        unidades: ["Unidad", "Bote", "Servicio"],
-        defaultUnidad: "Unidad",
-        defaultCantidad: 1,
-        stepCantidad: 1,
-        minCantidad: 1,
-        defaultTexto: label ? `Aditivo ${label}` : "Aditivo",
-        categoryName: "Lubricentro - Aditivos",
-        subCategory: "lub_aditivos",
-      };
-    }
-
-    if (filtro === "inyectores") {
-      return {
-        labelCampo: "Tipo de limpieza de inyectores",
-        placeholder: "Ej: Limpieza de Inyectores Boya / Aditivo...",
-        unidades: ["Unidad", "Bote", "Servicio"],
-        defaultUnidad: "Unidad",
-        defaultCantidad: 1,
-        stepCantidad: 1,
-        minCantidad: 1,
-        defaultTexto: "Limpieza de Inyectores",
-        categoryName: "Lubricentro - Inyectores",
-        subCategory: "lub_limpieza_combustible",
-      };
-    }
-
-    if (
-      filtro === "valvulina" ||
-      filtro === "atf" ||
-      filtro === "cvt" ||
-      filtro === "manual" ||
-      filtro === "diferencial"
-    ) {
-      return {
-        labelCampo: `Tipo de fluido / ${label || "Valvulina"}`,
-        placeholder: `Ej: Fluido ${label || "Transmisión"} Sintético...`,
-        unidades: ["Litros", "Galón", "Cuarto"],
-        defaultUnidad: "Litros",
-        defaultCantidad: 2.0,
-        stepCantidad: 0.5,
-        minCantidad: 0.5,
-        defaultTexto: `Fluido ${label || "Valvulina"}`,
-        categoryName: "Lubricentro - Transmisión",
-        subCategory: subcategoriaActivaId || "lub_valvulina",
-      };
-    }
-
-    if (filtro === "frenos") {
-      return {
-        labelCampo: "Tipo de líquido de frenos",
-        placeholder: "Ej: Líquido Frenos Bosch DOT 4...",
-        unidades: ["Unidad", "Litros", "Servicio"],
-        defaultUnidad: "Unidad",
-        defaultCantidad: 1,
-        stepCantidad: 1,
-        minCantidad: 1,
-        defaultTexto:
-          label.toLowerCase().includes("purga")
-            ? "Purga Líquido de Frenos"
-            : "Líquido de Frenos DOT 4",
-        categoryName: "Lubricentro - Frenos",
-        subCategory: "lub_frenos_aceite",
-      };
-    }
-
-    if (filtro === "coolant") {
-      return {
-        labelCampo: "Tipo de refrigerante / Coolant",
-        placeholder: "Ej: Refrigerante Rojo 50/50...",
-        unidades: ["Galón", "Litros", "Unidad", "Servicio"],
-        defaultUnidad: "Galón",
-        defaultCantidad: 1,
-        stepCantidad: 0.5,
-        minCantidad: 0.5,
-        defaultTexto:
-          label.toLowerCase().includes("lavado")
-            ? "Lavado Sistema Refrigeración"
-            : "Refrigerante Coolant 50/50",
-        categoryName: "Lubricentro - Fluidos",
-        subCategory: "lub_refrigerante_aceite",
-      };
-    }
-
-    if (filtro === "hidraulico") {
-      return {
-        labelCampo: "Tipo de fluido hidráulico / Dirección",
-        placeholder: "Ej: Fluido Dirección Hidráulica Dexron...",
-        unidades: ["Litros", "Unidad", "Cuarto", "Servicio"],
-        defaultUnidad: "Litros",
-        defaultCantidad: 1.0,
-        stepCantidad: 0.5,
-        minCantidad: 0.5,
-        defaultTexto:
-          label.toLowerCase().includes("purga")
-            ? "Purga Dirección Hidráulica"
-            : "Fluido Dirección Hidráulica",
-        categoryName: "Lubricentro - Fluidos",
-        subCategory: "lub_hidraulico_aceite",
-      };
-    }
-
-    if (filtro === "grasa") {
-      return {
-        labelCampo: `Grasa para ${label.toLowerCase()}`,
-        placeholder: `Ej: Grasa ${label} Alta Temperatura...`,
-        unidades: ["Unidad", "Libras", "Kilos", "Tubo"],
-        defaultUnidad: "Unidad",
-        defaultCantidad: 1,
-        stepCantidad: 1,
-        minCantidad: 1,
-        defaultTexto: `Grasa para ${label}`,
-        categoryName: "Lubricentro - Grasas",
-        subCategory: "lub_grasa",
-      };
-    }
-
-    if (filtro === "plumas") {
-      return {
-        labelCampo: "Plumillas limpiaparabrisas",
-        placeholder: 'Ej: Par Plumillas Bosch 24"/18"...',
-        unidades: ["Par", "Unidad"],
-        defaultUnidad: "Par",
-        defaultCantidad: 1,
-        stepCantidad: 1,
-        minCantidad: 1,
-        defaultTexto: "Plumillas Limpiaparabrisas",
-        categoryName: "Lubricentro - Limpiaparabrisas",
-        subCategory: "lub_flu_limpiaparabrisas",
-      };
-    }
-
-    if (filtro === "shampoo") {
-      return {
-        labelCampo: "Shampoo limpiaparabrisas",
-        placeholder: "Ej: Shampoo Concentrado Limpiaparabrisas...",
-        unidades: ["Unidad", "Litros"],
-        defaultUnidad: "Unidad",
-        defaultCantidad: 1,
-        stepCantidad: 1,
-        minCantidad: 1,
-        defaultTexto: "Shampoo Limpiaparabrisas",
-        categoryName: "Lubricentro - Limpiaparabrisas",
-        subCategory: "lub_flu_limpiaparabrisas",
-      };
-    }
-
-    if (filtro === "baterias" || categoriaActivaId === "lub_baterias") {
-      return {
-        labelCampo: "Tipo de batería",
-        placeholder: "Ej: Batería Bosch S6 12V 75Ah...",
-        unidades: ["Unidad"],
-        defaultUnidad: "Unidad",
-        defaultCantidad: 1,
-        stepCantidad: 1,
-        minCantidad: 1,
-        defaultTexto: "Batería 12V 75Ah",
-        categoryName: "Lubricentro - Baterías",
-        subCategory: "lub_bat_agm",
-      };
-    }
-
-    // 2. Fallbacks basados en categoría
-    switch (categoriaActivaId) {
-      case "lub_aceite":
-        return {
-          labelCampo: "Tipo de aceite",
-          placeholder: "Ej: Shell Helix Ultra 5W-30...",
-          unidades: ["Litros", "Galón", "Granel"],
-          defaultUnidad: "Litros",
-          defaultCantidad: 4.5,
-          stepCantidad: 0.5,
-          minCantidad: 0.5,
-          defaultTexto: "Shell Helix Ultra 5W-30",
-          categoryName: "Lubricentro - Aceite a Granel",
-          subCategory: "lub_aceite_motor",
-        };
-      case "lub_transmision":
-        return {
-          labelCampo: "Tipo de fluido / Valvulina",
-          placeholder: "Ej: Valvulina 75W-90, ATF Full Sintético...",
-          unidades: ["Litros", "Galón", "Cuarto"],
-          defaultUnidad: "Litros",
-          defaultCantidad: 2.0,
-          stepCantidad: 0.5,
-          minCantidad: 0.5,
-          defaultTexto: "Valvulina 75W-90",
-          categoryName: "Lubricentro - Transmisión",
-          subCategory: "lub_valvulina",
-        };
-      case "lub_filtros":
-        return {
-          labelCampo: "Tipo de filtro",
-          placeholder: "Ej: Filtro de Aceite Blindado W 610/3...",
-          unidades: ["Unidad", "Juego"],
-          defaultUnidad: "Unidad",
-          defaultCantidad: 1,
-          stepCantidad: 1,
-          minCantidad: 1,
-          defaultTexto: "Filtro de Aceite",
-          categoryName: "Lubricentro - Filtros",
-          subCategory: "lub_fil_aceite",
-        };
-      case "lub_fluidos":
-        return {
-          labelCampo: "Tipo de fluido",
-          placeholder: "Ej: Refrigerante 50/50, Líquido Frenos DOT 4...",
-          unidades: ["Litros", "Galón", "Unidad"],
-          defaultUnidad: "Litros",
-          defaultCantidad: 1.0,
-          stepCantidad: 0.5,
-          minCantidad: 0.5,
-          defaultTexto: "Refrigerante 50/50",
-          categoryName: "Lubricentro - Fluidos",
-          subCategory: "lub_refrigerante_aceite",
-        };
-      default:
-        return {
-          labelCampo: `Tipo de ${label || categoriaSeleccionadaObj?.label?.toLowerCase() || "producto"}`,
-          placeholder: "Campo editable...",
-          unidades: ["Unidad", "Litros", "Galón", "Granel"],
-          defaultUnidad: "Unidad",
-          defaultCantidad: 1,
-          stepCantidad: 1,
-          minCantidad: 1,
-          defaultTexto: label || categoriaSeleccionadaObj?.label || "Manual",
-          categoryName: `Lubricentro - ${label || categoriaSeleccionadaObj?.label || "Manual"}`,
-          subCategory: subcategoriaActivaId || "manual",
-        };
-    }
-  }, [itemServicioSeleccionadoObj, categoriaActivaId, categoriaSeleccionadaObj, subcategoriaActivaId]);
-
-  // Sincronizar automáticamente el formulario Manual cuando cambia el ítem de la Columna 1 o la categoría
-  useEffect(() => {
-    if (configManualSegunCategoria) {
-      setManualAceiteTexto(configManualSegunCategoria.defaultTexto);
-      setManualUnidad(configManualSegunCategoria.defaultUnidad);
-      setManualCantidad(configManualSegunCategoria.defaultCantidad);
-      setManualPrecio("");
-    }
-  }, [itemServicioSeleccionadoId, subcategoriaActivaId, categoriaActivaId, configManualSegunCategoria]);
 
   const handleCambiarSubcategoria = (subId: string) => {
     if (!categoriaSeleccionadaObj) return;
@@ -1533,141 +1157,6 @@ export default function ModuloLubricentroCatalogo({
     }
   };
 
-  // Agregar requerimiento / solicitud manual en la sección de aceites
-  const handleAgregarSolicitudManual = async () => {
-    const cantTexto =
-      cantidadPersonalizadaActiva && cantidadPersonalizadaValor
-        ? `${cantidadPersonalizadaValor} ${cantidadPersonalizadaUnidad}`
-        : cantidadRequeridaLabel || "1 galón";
-
-    const textoAuto = [
-      filtroViscosidad ? `Aceite ${filtroViscosidad}` : "Aceite de Motor",
-      filtroBase || "",
-      `(${cantTexto})`,
-    ]
-      .filter(Boolean)
-      .join(" ");
-
-    const texto = solicitudManualTexto.trim() || textoAuto;
-    if (!texto) return;
-
-    const precioNum = Math.max(0, parseFloat(solicitudManualPrecio) || 0);
-    const code = `LUB-MAN-${Math.floor(100 + Math.random() * 900)}`;
-
-    const nuevoItem = {
-      id: `sol_man_${Date.now()}`,
-      key: `man_${Date.now()}`,
-      type: "PART" as const,
-      category: `Lubricentro - ${categoriaSeleccionadaObj?.label || "Aceites"}`,
-      subCategory: subcategoriaActivaId,
-      code,
-      name: texto,
-      presentation: cantTexto || "Manual",
-      unitOfMeasure:
-        cantidadPersonalizadaActiva && cantidadPersonalizadaUnidad
-          ? cantidadPersonalizadaUnidad
-          : cantidadRequeridaLabel.includes("cuarto")
-          ? "Cuarto (Qt)"
-          : cantidadRequeridaLabel.includes("litro")
-          ? "Litro"
-          : "Galón",
-      price: precioNum,
-      qty: 1,
-      status: "Listo" as const,
-      completed: true,
-      empleado_id: empleadoLogueado.id,
-      empleado_nombre: empleadoLogueado.nombre,
-    };
-
-    if (ordenActiva) {
-      const nuevos = [...itemsOrden, nuevoItem];
-      await onActualizarItemsOrden(nuevos);
-      notificar(`✓ Requerimiento agregado a la orden: ${texto}`, "ok");
-    } else {
-      setCarritoDirecto((prev) => [
-        ...prev,
-        {
-          key: nuevoItem.key,
-          productId: nuevoItem.id,
-          code: nuevoItem.code,
-          name: nuevoItem.name,
-          brand: "Manual",
-          presentation: nuevoItem.presentation,
-          unitOfMeasure: nuevoItem.unitOfMeasure,
-          price: precioNum,
-          qty: 1,
-          maxStock: 999,
-          lubCategoryId: categoriaActivaId,
-          lubSubcategoryId: subcategoriaActivaId,
-        },
-      ]);
-      notificar(`✓ Requerimiento agregado al carrito: ${texto}`, "ok");
-    }
-
-    setSolicitudManualTexto("");
-    setSolicitudManualPrecio("");
-  };
-
-  // Guardar ítem Manualmente en Pedido (según la categoría activa)
-  const handleGuardarAceiteManualEnPedido = async () => {
-    const nombreItem = manualAceiteTexto.trim() || configManualSegunCategoria.defaultTexto;
-    const cantidadTexto = `${manualCantidad} ${manualUnidad}`;
-    const precioNum = Math.max(0, parseFloat(manualPrecio) || 0);
-    const totalCalculado = Number((precioNum * manualCantidad).toFixed(2));
-    const code = `LUB-MAN-${Math.floor(100 + Math.random() * 900)}`;
-
-    const nuevoItem = {
-      id: `sol_man_${Date.now()}`,
-      key: `man_${Date.now()}`,
-      type: "PART" as const,
-      category: configManualSegunCategoria.categoryName,
-      subCategory: configManualSegunCategoria.subCategory,
-      code,
-      name: `${nombreItem} (${cantidadTexto})`,
-      brand: "Manual",
-      presentation: cantidadTexto,
-      unitOfMeasure: manualUnidad,
-      price: precioNum,
-      total: totalCalculado,
-      qty: manualCantidad,
-      status: "Listo" as const,
-      completed: true,
-      empleado_id: empleadoLogueado.id,
-      empleado_nombre: empleadoLogueado.nombre,
-    };
-
-    if (ordenActiva) {
-      const nuevos = [...itemsOrden, nuevoItem];
-      await onActualizarItemsOrden(nuevos);
-      notificar(
-        precioNum > 0
-          ? `✓ Guardado en pedido: ${nombreItem} (${cantidadTexto}) - $${totalCalculado.toFixed(2)}`
-          : `✓ Guardado en pedido: ${nombreItem} (${cantidadTexto})`,
-        "ok"
-      );
-    } else {
-      setCarritoDirecto((prev) => [
-        ...prev,
-        {
-          key: nuevoItem.key,
-          productId: nuevoItem.id,
-          code: nuevoItem.code,
-          name: nuevoItem.name,
-          brand: nuevoItem.brand,
-          presentation: nuevoItem.presentation,
-          unitOfMeasure: nuevoItem.unitOfMeasure,
-          price: precioNum,
-          qty: manualCantidad,
-          maxStock: 999,
-          lubCategoryId: categoriaActivaId,
-          lubSubcategoryId: subcategoriaActivaId,
-        },
-      ]);
-      notificar(`✓ Guardado en pedido: ${nombreItem} (${cantidadTexto})`, "ok");
-    }
-
-    setManualPrecio("");
-  };
 
   // Agregar producto directo con botón amarillo [Agregar] del catálogo
   const handleAgregarProductoDirecto = async (prod: any) => {
@@ -2211,7 +1700,6 @@ export default function ModuloLubricentroCatalogo({
                             ? prev.filter((id) => id !== prod.id)
                             : [...prev, prod.id]
                         );
-                        setManualAceiteTexto(prod.name);
                       }}
                       className={`p-2.5 sm:p-3 rounded-lg border flex items-center justify-between gap-2.5 transition-all cursor-pointer group shadow-2xs ${
                         isChecked
@@ -2273,7 +1761,6 @@ export default function ModuloLubricentroCatalogo({
                         disabled={agregandoId === prod.id}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setManualAceiteTexto(prod.name);
                           handleAgregarProductoDirecto(prod);
                         }}
                         className="h-8 px-3 rounded-lg bg-blue-100/80 hover:bg-blue-200/80 dark:bg-blue-500/20 dark:hover:bg-blue-500/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 text-xs font-bold flex items-center gap-1 shrink-0 transition-all cursor-pointer active:scale-95 shadow-2xs disabled:opacity-50"
