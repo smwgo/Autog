@@ -17,15 +17,37 @@ export default function ModalPresupuestoPdf({
   abierto,
   onCerrar,
   orden,
-  tallerNombre = "TALLER AUTOMOTRIZ ESPECIALIZADO",
+  tallerNombre = "Auto / G",
   tallerDireccion = "Av. Principal y Panamericana Norte",
   tallerTelefono = "+593 99 999 9999",
   tallerRuc = "1790000000001",
 }: ModalPresupuestoPdfProps) {
   if (!abierto || !orden) return null;
 
-  const items = orden.items || [];
+  const rawItems: OrderItem[] =
+    orden.items && orden.items.length > 0
+      ? orden.items
+      : Array.isArray((orden as any).services)
+      ? (orden as any).services.map((srv: any, idx: number) =>
+          typeof srv === "string"
+            ? { id: `srv_${idx}`, name: srv, qty: 1, price: 0, type: "SERVICE" }
+            : {
+                id: srv.id || `srv_${idx}`,
+                name: srv.name || srv.title || "Servicio",
+                qty: srv.qty || 1,
+                price: srv.price || 0,
+                type: "SERVICE",
+              }
+        )
+      : [];
+
+  const items = rawItems;
   const hallazgos = orden.inspectionFindings || [];
+  const firmaCliente =
+    orden.quoteSignatureUrl ||
+    orden.deliverySignatureUrl ||
+    orden.receptionSignatureUrl;
+  const nombreFinalTaller = "Auto / G";
 
   // Agrupar hallazgos por sección
   const secciones = [
@@ -70,20 +92,30 @@ export default function ModalPresupuestoPdf({
   ].filter((s) => s.items.length > 0);
 
   // Totales
-  const subtotal = items.reduce(
+  const subtotalCalculado = items.reduce(
     (sum, it) => sum + (Number(it.price) || 0) * (Number(it.qty) || 1),
     0
   );
+  const totalBase = subtotalCalculado > 0 ? subtotalCalculado : Number(orden.totalCost) || 0;
   const descuento = Number(orden.discountAmount) || 0;
+  const subtotal = subtotalCalculado > 0 ? subtotalCalculado : Math.max(0, totalBase / 1.15);
   const subtotalConDescuento = Math.max(0, subtotal - descuento);
-  const iva = Number(orden.taxAmount) || subtotalConDescuento * 0.15; // 15% IVA default
-  const total = subtotalConDescuento + iva;
+  const iva = Number(orden.taxAmount) || (subtotalCalculado > 0 ? subtotalConDescuento * 0.15 : Math.max(0, totalBase - subtotal));
+  const total = subtotalCalculado > 0 ? subtotalConDescuento + iva : totalBase;
 
   const fechaEmision = new Date().toLocaleDateString("es-EC", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+
+  const codigoLimpio = (orden.quoteNumber || orden.orderNumber || "00001")
+    .replace(/#/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const codigoOrdenFormateado = codigoLimpio.startsWith("COT") || codigoLimpio.startsWith("OT")
+    ? codigoLimpio
+    : `OT-${codigoLimpio}`;
 
   const handleImprimir = () => {
     if (typeof window !== "undefined") {
@@ -93,7 +125,7 @@ export default function ModalPresupuestoPdf({
 
   const handleEnviarWhatsApp = () => {
     const telDigits = (orden.clientPhone || "").replace(/\D/g, "");
-    const msg = `Hola *${orden.client || "Cliente"}*, le adjuntamos el *Presupuesto Oficial* de su vehículo *${orden.vehicle || ""}* (${orden.plate || ""}) con Orden *#${orden.orderNumber}*.\n\n*Total a pagar:* $${total.toFixed(2)} USD.\n\nContáctenos para cualquier duda o confirmación del trabajo.`;
+    const msg = `Hola *${orden.client || "Cliente"}*, le adjuntamos la *Solicitud de Orden de Trabajo (Propuesta)* de su vehículo *${orden.vehicle || ""}* (${orden.plate || ""}) con Orden *#${codigoOrdenFormateado}*.\n\n*Total estimado:* $${total.toFixed(2)} USD.\n\nQuedamos a su disposición para cualquier duda o confirmación del trabajo.`;
     const waUrl = telDigits
       ? `https://wa.me/${telDigits.startsWith("593") || telDigits.length > 10 ? telDigits : `593${telDigits.replace(/^0/, "")}`}?text=${encodeURIComponent(msg)}`
       : `https://wa.me/?text=${encodeURIComponent(msg)}`;
@@ -101,17 +133,47 @@ export default function ModalPresupuestoPdf({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-fade-in">
-      <div className="relative w-full max-w-4xl bg-white text-zinc-900 rounded-2xl shadow-2xl p-4 sm:p-8 space-y-6 my-auto print:p-0 print:m-0 print:shadow-none print:w-full">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-fade-in print:bg-white print:p-0 print:static">
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @media print {
+              body * {
+                visibility: hidden !important;
+              }
+              #presupuesto-pdf-content, #presupuesto-pdf-content * {
+                visibility: visible !important;
+              }
+              #presupuesto-pdf-content {
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 16px !important;
+                background: white !important;
+                color: black !important;
+                box-shadow: none !important;
+                border: none !important;
+              }
+            }
+          `,
+        }}
+      />
+      <div
+        id="presupuesto-pdf-content"
+        className="relative w-full max-w-4xl bg-white text-zinc-900 rounded-2xl shadow-2xl p-4 sm:p-8 space-y-6 my-auto print:p-0 print:m-0 print:shadow-none print:w-full"
+      >
         {/* ===================================================================
-            CABECERA DEL DOCUMENTO PDF / IMPRESIÓN
+            CABECERA DEL DOCUMENTO PDF / IMPRESIÓN TIPO FACTURA
             =================================================================== */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-zinc-900 pb-4">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-2xl">🔧</span>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-900 uppercase">
-                {tallerNombre}
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-900">
+                {nombreFinalTaller}
               </h1>
             </div>
             <p className="text-xs text-zinc-600 mt-1">
@@ -120,16 +182,34 @@ export default function ModalPresupuestoPdf({
             <p className="text-xs text-zinc-600">{tallerDireccion}</p>
           </div>
 
-          <div className="text-left sm:text-right bg-zinc-100 p-3 rounded-xl border border-zinc-200">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-500 block">
-              Documento de Cotización
+          <div className="text-left sm:text-right bg-zinc-50 p-3.5 rounded-xl border border-zinc-200 min-w-[220px]">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-600 block">
+              Solicitud de Orden de Trabajo
             </span>
-            <span className="text-base sm:text-lg font-mono font-black text-zinc-900 block">
-              PRESUPUESTO #{orden.orderNumber}
+            <span className="text-[9px] uppercase font-bold tracking-wider text-blue-600 block">
+              Propuesta de Servicio
+            </span>
+            <span className="text-base sm:text-lg font-mono font-black text-zinc-900 block mt-0.5">
+              #{codigoOrdenFormateado}
             </span>
             <span className="text-xs text-zinc-600 font-medium block mt-0.5">
               Fecha: {fechaEmision}
             </span>
+            <div className="mt-1.5 flex items-center justify-start sm:justify-end">
+              {orden.quoteStatus === "Aprobado" ||
+              orden.status === "Aprobado" ||
+              orden.quoteStatus === "ACEPTADO" ? (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-emerald-50 border border-emerald-300 text-emerald-800 text-[10px] font-bold uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                  ✓ Aprobado
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-50 border border-amber-300 text-amber-800 text-[10px] font-bold uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+                  Solicitado / Pendiente
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -140,7 +220,10 @@ export default function ModalPresupuestoPdf({
           <div>
             <span className="text-[10px] text-zinc-500 font-semibold block uppercase">Cliente</span>
             <span className="font-bold text-zinc-900 block truncate">{orden.client || "Consumidor Final"}</span>
-            <span className="text-zinc-600 font-mono text-[11px]">{orden.clientPhone || "Sin teléfono"}</span>
+            <span className="text-zinc-600 font-mono text-[11px] block">{orden.clientPhone || "Sin teléfono"}</span>
+            {orden.clientIdDoc && (
+              <span className="text-zinc-500 font-mono text-[10px] block">RUC/CI: {orden.clientIdDoc}</span>
+            )}
           </div>
           <div>
             <span className="text-[10px] text-zinc-500 font-semibold block uppercase">Vehículo</span>
@@ -239,7 +322,7 @@ export default function ModalPresupuestoPdf({
           <div className="flex items-center justify-between border-b pb-1">
             <h2 className="text-xs font-black uppercase tracking-wider text-zinc-900 flex items-center gap-1.5">
               <span>💼</span>
-              <span>2. Trabajos, Servicios y Repuestos Cotizados</span>
+              <span>2. Trabajos, Servicios y Repuestos Solicitados</span>
             </h2>
             <span className="text-[11px] font-mono text-zinc-500">
               {items.length} {items.length === 1 ? "ítem" : "ítems"}
@@ -286,7 +369,7 @@ export default function ModalPresupuestoPdf({
                                 : "bg-blue-100 text-blue-800"
                             }`}
                           >
-                            {esRepuesto ? "Repuesto" : "Mano de Obra"}
+                            {esRepuesto ? "Repuesto" : "Mano de Obra / Servicio"}
                           </span>
                         </td>
                         <td className="py-2 px-3 text-right font-mono text-zinc-700">
@@ -333,7 +416,7 @@ export default function ModalPresupuestoPdf({
               <span className="font-mono font-semibold">${iva.toFixed(2)}</span>
             </div>
             <div className="border-t border-zinc-300 pt-1.5 flex justify-between text-sm font-black text-zinc-900">
-              <span>TOTAL:</span>
+              <span>TOTAL ESTIMADO (PROPUESTA):</span>
               <span className="font-mono text-base text-emerald-700 font-black">
                 ${total.toFixed(2)}
               </span>
@@ -344,27 +427,31 @@ export default function ModalPresupuestoPdf({
         {/* Firmas de Conformidad */}
         <div className="pt-6 border-t-2 border-zinc-900 grid grid-cols-2 gap-8 text-center text-xs">
           <div>
-            <div className="h-12 border-b border-zinc-400 mb-1 flex items-center justify-center">
+            <div className="h-14 border-b border-zinc-400 mb-1 flex items-center justify-center">
               <span className="text-[11px] text-zinc-400 italic">Firma del Asesor Técnico</span>
             </div>
             <p className="font-bold text-zinc-900">{orden.mechanic || "Responsable de Taller"}</p>
-            <p className="text-[10px] text-zinc-500">Taller Automotriz</p>
+            <p className="text-[10px] text-zinc-500">{nombreFinalTaller}</p>
           </div>
 
           <div>
-            <div className="h-12 border-b border-zinc-400 mb-1 flex items-center justify-center">
-              {orden.receptionSignatureUrl ? (
+            <div className="h-14 border-b border-zinc-400 mb-1 flex items-center justify-center">
+              {firmaCliente ? (
                 <img
-                  src={orden.receptionSignatureUrl}
+                  src={firmaCliente}
                   alt="Firma Cliente"
-                  className="max-h-11 object-contain"
+                  className="max-h-12 object-contain"
                 />
               ) : (
-                <span className="text-[11px] text-zinc-400 italic">Firma de Aprobación</span>
+                <span className="text-[11px] text-zinc-400 italic">Firma de Conformidad / Aprobación</span>
               )}
             </div>
-            <p className="font-bold text-zinc-900">{orden.client || "Cliente"}</p>
-            <p className="text-[10px] text-zinc-500">Aceptación de Presupuesto</p>
+            <p className="font-bold text-zinc-900">{orden.quoteSignedBy || orden.deliverySignedBy || orden.client || "Cliente"}</p>
+            <p className="text-[10px] text-zinc-500">
+              {orden.quoteApprovedAt
+                ? `Aprobado el ${new Date(orden.quoteApprovedAt).toLocaleDateString("es-EC")}`
+                : "Aceptación de Solicitud / Propuesta"}
+            </p>
           </div>
         </div>
 

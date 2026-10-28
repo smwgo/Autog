@@ -183,6 +183,17 @@ export default function PanelPresupuestosPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderId, quoteStatus: nuevoEstado }),
       });
+      if (!res.ok) {
+        let errText = `Error (${res.status})`;
+        try {
+          const errData = await res.json();
+          errText = errData.error || errText;
+        } catch {
+          // El servidor devolvió HTML (404/500)
+        }
+        mostrarToast(errText, "err");
+        return;
+      }
       const data = await res.json();
       if (data.success) {
         mostrarToast(data.message, "ok");
@@ -239,6 +250,17 @@ export default function PanelPresupuestosPage() {
       if (filtroTipo !== "TODOS") params.set("tipo", filtroTipo);
 
       const res = await fetch(`/api/presupuestos/ordenes?${params.toString()}`);
+      if (!res.ok) {
+        let errText = `Error al consultar órdenes (${res.status})`;
+        try {
+          const errData = await res.json();
+          errText = errData.error || errText;
+        } catch {
+          // El servidor devolvió HTML (404/500)
+        }
+        mostrarToast(errText, "err");
+        return;
+      }
       const data = await res.json();
 
       if (data.success) {
@@ -533,7 +555,7 @@ export default function PanelPresupuestosPage() {
                                 : "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30"
                             }`}
                           >
-                            {esAprobado ? "Listo POS" : "Por Cotizar"}
+                            {esAprobado ? "✓ Aprobado" : "En Espera"}
                           </span>
                         </div>
 
@@ -562,11 +584,11 @@ export default function PanelPresupuestosPage() {
                                   handleCambiarEstadoPropuesta(orden.id, "Pendiente");
                                 }}
                                 disabled={cambiandoEstadoId === orden.id}
-                                className="h-9 px-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-700 dark:text-amber-400 font-semibold text-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                                title="Poner en espera para que en taller salga '● Enviado'"
+                                className="h-9 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer shadow-xs disabled:opacity-50"
+                                title="Propuesta Aprobada (clic para poner En Espera)"
                               >
-                                <span>⏸</span>
-                                <span>{cambiandoEstadoId === orden.id ? "..." : "Esperar"}</span>
+                                <span>✓</span>
+                                <span>{cambiandoEstadoId === orden.id ? "..." : "Aprobado"}</span>
                               </button>
                             ) : (
                               <button
@@ -576,11 +598,11 @@ export default function PanelPresupuestosPage() {
                                   handleCambiarEstadoPropuesta(orden.id, "Aprobado");
                                 }}
                                 disabled={cambiandoEstadoId === orden.id}
-                                className="h-9 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer shadow-xs disabled:opacity-50"
-                                title="Aprobar para que en taller salga '✓ Aprobado'"
+                                className="h-9 px-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-700 dark:text-amber-400 font-semibold text-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                title="Propuesta En Espera (clic para Aprobar)"
                               >
-                                <span>✓</span>
-                                <span>{cambiandoEstadoId === orden.id ? "..." : "Aprobar"}</span>
+                                <span>⏸</span>
+                                <span>{cambiandoEstadoId === orden.id ? "..." : "En Espera"}</span>
                               </button>
                             )}
                             <button
@@ -715,7 +737,7 @@ export default function PanelPresupuestosPage() {
                                       : "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30"
                                   }`}
                                 >
-                                  {esAprobado ? "Listo POS" : "Por Cotizar"}
+                                  {esAprobado ? "✓ Aprobado" : "En Espera"}
                                 </span>
                               </td>
                               <td className="py-3.5 px-4 text-right font-black text-zinc-900 dark:text-white font-mono whitespace-nowrap">
@@ -731,11 +753,11 @@ export default function PanelPresupuestosPage() {
                                         handleCambiarEstadoPropuesta(orden.id, "Pendiente");
                                       }}
                                       disabled={cambiandoEstadoId === orden.id}
-                                      className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-700 dark:text-amber-400 text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                                      title="Poner en espera para que en taller salga '● Enviado'"
+                                      className="px-2.5 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-xs disabled:opacity-50"
+                                      title="Propuesta Aprobada (clic para poner En Espera)"
                                     >
-                                      <span>⏸</span>
-                                      <span>{cambiandoEstadoId === orden.id ? "..." : "Esperar"}</span>
+                                      <span>✓</span>
+                                      <span>{cambiandoEstadoId === orden.id ? "..." : "Aprobado"}</span>
                                     </button>
                                   ) : (
                                     <button
@@ -745,11 +767,11 @@ export default function PanelPresupuestosPage() {
                                         handleCambiarEstadoPropuesta(orden.id, "Aprobado");
                                       }}
                                       disabled={cambiandoEstadoId === orden.id}
-                                      className="px-2.5 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-xs disabled:opacity-50"
-                                      title="Aprobar propuesta para que en taller salga '✓ Aprobado'"
+                                      className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-700 dark:text-amber-400 text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                                      title="Propuesta En Espera (clic para Aprobar)"
                                     >
-                                      <span>✓</span>
-                                      <span>{cambiandoEstadoId === orden.id ? "..." : "Aprobar"}</span>
+                                      <span>⏸</span>
+                                      <span>{cambiandoEstadoId === orden.id ? "..." : "En Espera"}</span>
                                     </button>
                                   )}
 

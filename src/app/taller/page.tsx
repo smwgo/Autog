@@ -5155,12 +5155,27 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               {(ordenActiva.quoteStatus === "Aprobado" ||
                 ordenActiva.status === "Aprobado" ||
                 ordenActiva.quoteStatus === "ACEPTADO") && (
-                <div
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl sm:rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider shadow-sm animate-fade-in shrink-0"
-                  title="Propuesta Aprobada - Listo para empezar a trabajar"
-                >
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                  <span>✓ Aprobado</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setModalPresupuestoPdfAbierto(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl sm:rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-semibold shadow-sm animate-fade-in transition-all cursor-pointer active:scale-95 shrink-0"
+                    title="Ver e Imprimir PDF de la Solicitud de Orden (Propuesta)"
+                  >
+                    <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-6 4h4" />
+                    </svg>
+                    <span>PDF Solicitud</span>
+                  </button>
+
+                  <div
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl sm:rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider shadow-sm animate-fade-in shrink-0"
+                    title="Propuesta Aprobada - Listo para empezar a trabajar"
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                    <span>✓ Aprobado</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -5266,12 +5281,26 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       ordenActiva.status === "EN_CAJA";
 
                     return esAprobado ? (
-                      <div
-                        title="Propuesta Aprobada"
-                        className="h-10 px-3 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-sm animate-fade-in backdrop-blur-md ml-auto select-none"
-                      >
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                        <span>✓ Aprobado</span>
+                      <div className="flex items-center gap-1.5 ml-auto shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setModalPresupuestoPdfAbierto(true)}
+                          className="h-10 px-2.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-semibold flex items-center gap-1 shrink-0 shadow-sm transition-all cursor-pointer active:scale-95"
+                          title="Ver e Imprimir PDF tipo factura"
+                        >
+                          <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-6 4h4" />
+                          </svg>
+                          <span>PDF</span>
+                        </button>
+                        <div
+                          title="Propuesta Aprobada"
+                          className="h-10 px-3 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-sm animate-fade-in backdrop-blur-md select-none"
+                        >
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                          <span>✓ Aprobado</span>
+                        </div>
                       </div>
                     ) : (
                       <div
@@ -5374,12 +5403,27 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     ordenActiva.status === "EN_CAJA";
 
                   return esAprobado ? (
-                    <div
-                      title="Propuesta Aprobada"
-                      className="ml-auto h-9 px-3.5 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 shadow-sm backdrop-blur-md shrink-0 animate-fade-in select-none"
-                    >
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                      <span>✓ Aprobado</span>
+                    <div className="flex items-center gap-2 ml-auto shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setModalPresupuestoPdfAbierto(true)}
+                        className="h-9 px-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-semibold flex items-center gap-1.5 shadow-sm backdrop-blur-md transition-all cursor-pointer active:scale-95"
+                        title="Ver e Imprimir PDF de la Solicitud de Orden (Propuesta)"
+                      >
+                        <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-6 4h4" />
+                        </svg>
+                        <span>PDF Solicitud</span>
+                      </button>
+
+                      <div
+                        title="Propuesta Aprobada"
+                        className="h-9 px-3.5 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 shadow-sm backdrop-blur-md shrink-0 animate-fade-in select-none"
+                      >
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                        <span>✓ Aprobado</span>
+                      </div>
                     </div>
                   ) : (
                     <div
@@ -5456,10 +5500,34 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               <div className="w-full space-y-4 animate-fade-in">
                 <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/[0.08] space-y-4 shadow-sm dark:shadow-xl">
                   {/* Cabecera */}
-                  <div className="flex items-center border-b border-zinc-200 dark:border-white/[0.08] pb-3">
+                  <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/[0.08] pb-3">
                     <h4 className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-white">
                       Firma
                     </h4>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setModalPresupuestoPdfAbierto(true)}
+                        className="h-8 px-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                        title="Ver e Imprimir PDF de la Solicitud de Orden (Propuesta)"
+                      >
+                        <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-6 4h4" />
+                        </svg>
+                        <span>PDF Solicitud</span>
+                      </button>
+
+                      {ordenActiva &&
+                        (ordenActiva.quoteStatus === "Aprobado" ||
+                          ordenActiva.status === "Aprobado" ||
+                          ordenActiva.quoteStatus === "ACEPTADO") && (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider shadow-xs">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                            ✓ Aprobado
+                          </span>
+                        )}
+                    </div>
                   </div>
 
                   {/* Contenido en 2 columnas */}
@@ -6241,6 +6309,23 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
         </div>
       )}
 
+      {/* Modal Presupuesto Tipo Factura PDF */}
+      <ModalPresupuestoPdf
+        abierto={modalPresupuestoPdfAbierto}
+        tallerNombre="Auto / G"
+        orden={
+          ordenActiva
+            ? {
+                ...ordenActiva,
+                workshopName: "Auto / G",
+                items: etapa4Items && etapa4Items.length > 0 ? etapa4Items : ordenActiva.items || [],
+                quoteSignatureUrl: etapa7FirmaDataUrl || ordenActiva.quoteSignatureUrl,
+              }
+            : null
+        }
+        onCerrar={() => setModalPresupuestoPdfAbierto(false)}
+      />
+
       {/* =====================================================================
           MODAL DE IMPRESIÓN Y EMISIÓN DE DOCUMENTOS (PDF, TICKET, ETIQUETA QR)
           ===================================================================== */}
@@ -6280,7 +6365,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 <div className="space-y-4 text-xs">
                   <div className="flex items-start justify-between border-b border-zinc-200 pb-3">
                     <div>
-                      <h2 className="text-lg font-bold text-zinc-900 tracking-tight">TALLER AUTOMOTRIZ</h2>
+                      <h2 className="text-lg font-bold text-zinc-900 tracking-tight">Auto / G</h2>
                       <p className="text-[11px] text-zinc-500">Orden de Servicio & Control de Calidad</p>
                     </div>
                     <div className="text-right font-mono">
@@ -6380,7 +6465,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               {modalImpresionDoc === "TICKET" && (
                 <div className="font-mono text-[11px] space-y-2 max-w-xs mx-auto text-zinc-800">
                   <div className="text-center border-b border-dashed border-zinc-400 pb-2">
-                    <h3 className="font-bold text-sm">TALLER AUTOMOTRIZ</h3>
+                    <h3 className="font-bold text-sm">Auto / G</h3>
                     <p className="text-[10px]">COMPROBANTE DE SERVICIO</p>
                     <p className="text-[10px]">#{ordenActiva.orderNumber} • {new Date().toLocaleDateString("es-EC")}</p>
                   </div>

@@ -1059,7 +1059,17 @@ export default function LubricentroExpress({
       <ModalPresupuestoPdf
         abierto={modalPresupuestoPdfAbierto}
         onCerrar={() => setModalPresupuestoPdfAbierto(false)}
-        orden={ordenActiva}
+        tallerNombre="Auto / G"
+        orden={
+          ordenEfectiva
+            ? {
+                ...ordenEfectiva,
+                workshopName: "Auto / G",
+                items: itemsOrden && itemsOrden.length > 0 ? itemsOrden : ordenEfectiva.items || [],
+                quoteSignatureUrl: firmaDataUrl || ordenEfectiva.quoteSignatureUrl,
+              }
+            : ordenActiva
+        }
       />
 
       {/* ===================================================================
@@ -1073,14 +1083,29 @@ export default function LubricentroExpress({
               <h4 className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-white">
                 Firma
               </h4>
-              {(ordenActiva?.quoteStatus === "Aprobado" ||
-                ordenActiva?.status === "Aprobado" ||
-                ordenActiva?.quoteStatus === "ACEPTADO") && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider shadow-xs">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                  ✓ Aprobado
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setModalPresupuestoPdfAbierto(true)}
+                  className="h-8 px-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                  title="Ver e Imprimir PDF de la Solicitud de Orden (Propuesta)"
+                >
+                  <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-6 4h4" />
+                  </svg>
+                  <span>PDF Solicitud</span>
+                </button>
+
+                {(ordenActiva?.quoteStatus === "Aprobado" ||
+                  ordenActiva?.status === "Aprobado" ||
+                  ordenActiva?.quoteStatus === "ACEPTADO") && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider shadow-xs">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                    ✓ Aprobado
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">

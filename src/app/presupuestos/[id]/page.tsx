@@ -28,7 +28,7 @@ interface ItemPropuesta {
   supplierPhone?: string;
   purchaseStatus?: string;
   notes?: string;
-  inStock?: boolean; // true = en stock taller, false = comprar a proveedor externo
+  inStock?: boolean; // true = sí hay en bodega taller, false = pedir a proveedor externo
   origin?: EspecialidadTipo;
   imageUrl?: string | null;
 }
@@ -66,99 +66,20 @@ interface OrdenDetalleCompleta {
   mechanic: string;
   status: string;
   progress: number;
+  mileage?: number | string | null;
+  fuelLevel?: string | null;
   notes?: string;
   dateIn?: string;
+  createdAt?: any;
   quoteNumber: string;
   quoteStatus: string;
+  quoteApprovedAt?: string | null;
+  quoteTaxRate?: number;
+  quoteDiscount?: number;
   items: ItemPropuesta[];
   services: ServicioPropuesta[];
   evidencias: EvidenciaItem[];
 }
-
-export const ESPECIALIDADES = [
-  {
-    id: "TODOS" as const,
-    shortName: "Todos",
-    name: "Todas las Especialidades",
-    color: "zinc",
-    bgClass: "bg-zinc-500/10 dark:bg-white/10",
-    borderClass: "border-zinc-500/30 dark:border-white/20",
-    textClass: "text-zinc-900 dark:text-white",
-    shadowClass: "shadow-sm shadow-zinc-500/10",
-    dotClass: "bg-zinc-500",
-    svg: (className = "w-4 h-4") => (
-      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25a2.25 2.25 0 01-13.5 18v-2.25z" />
-      </svg>
-    ),
-  },
-  {
-    id: "TALLER" as const,
-    shortName: "Taller",
-    name: "Taller Mecánico",
-    color: "blue",
-    bgClass: "bg-blue-500/10 dark:bg-blue-500/15",
-    borderClass: "border-blue-500/30 dark:border-blue-400/35",
-    textClass: "text-blue-600 dark:text-blue-300",
-    shadowClass: "shadow-sm shadow-blue-500/10",
-    dotClass: "bg-blue-500",
-    svg: (className = "w-4 h-4") => (
-      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.07a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091.455.087.935-.012 1.39" />
-      </svg>
-    ),
-  },
-  {
-    id: "LUBRICENTRO" as const,
-    shortName: "Lubricentro",
-    name: "Lubricentro Express",
-    color: "amber",
-    bgClass: "bg-amber-500/10 dark:bg-amber-500/15",
-    borderClass: "border-amber-500/30 dark:border-amber-400/35",
-    textClass: "text-amber-600 dark:text-amber-300",
-    shadowClass: "shadow-sm shadow-amber-500/10",
-    dotClass: "bg-amber-500",
-    svg: (className = "w-4 h-4") => (
-      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
-      </svg>
-    ),
-  },
-  {
-    id: "CARWASH" as const,
-    shortName: "Car Wash",
-    name: "Car Wash & Detailing",
-    color: "purple",
-    bgClass: "bg-purple-500/10 dark:bg-purple-500/15",
-    borderClass: "border-purple-500/30 dark:border-purple-400/35",
-    textClass: "text-purple-600 dark:text-purple-300",
-    shadowClass: "shadow-sm shadow-purple-500/10",
-    dotClass: "bg-purple-500",
-    svg: (className = "w-4 h-4") => (
-      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
-      </svg>
-    ),
-  },
-  {
-    id: "TECNICENTRO" as const,
-    shortName: "Tecnicentro",
-    name: "Tecnicentro Automotriz",
-    color: "emerald",
-    bgClass: "bg-emerald-500/10 dark:bg-emerald-500/15",
-    borderClass: "border-emerald-500/30 dark:border-emerald-400/35",
-    textClass: "text-emerald-600 dark:text-emerald-300",
-    shadowClass: "shadow-sm shadow-emerald-500/10",
-    dotClass: "bg-emerald-500",
-    svg: (className = "w-4 h-4") => (
-      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <circle cx="12" cy="12" r="9" />
-        <circle cx="12" cy="12" r="3" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v3m0 12v3M3 12h3m12 0h3" />
-      </svg>
-    ),
-  },
-];
 
 function deducirEspecialidad(nombre: string, categoria: string = ""): EspecialidadTipo {
   const texto = `${nombre} ${categoria}`.toLowerCase();
@@ -174,6 +95,39 @@ function deducirEspecialidad(nombre: string, categoria: string = ""): Especialid
   return "TALLER";
 }
 
+function renderBadgeEspecialidad(origen?: EspecialidadTipo) {
+  switch (origen) {
+    case "LUBRICENTRO":
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300">
+          <span>🛢️</span>
+          <span>Lubricentro</span>
+        </span>
+      );
+    case "CARWASH":
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-cyan-500/15 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300">
+          <span>🚿</span>
+          <span>Car Wash</span>
+        </span>
+      );
+    case "TECNICENTRO":
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+          <span>⚙️</span>
+          <span>Tecnicentro</span>
+        </span>
+      );
+    default:
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-blue-500/15 border border-blue-500/30 text-blue-700 dark:text-blue-300">
+          <span>🔧</span>
+          <span>Taller</span>
+        </span>
+      );
+  }
+}
+
 export default function PaginaDetallePropuesta() {
   const params = useParams();
   const router = useRouter();
@@ -183,11 +137,13 @@ export default function PaginaDetallePropuesta() {
   const [error, setError] = useState("");
   const [orden, setOrden] = useState<OrdenDetalleCompleta | null>(null);
   const [proveedores, setProveedores] = useState<any[]>([]);
-  const [especialidadFiltro, setEspecialidadFiltro] = useState<EspecialidadTipo | "TODOS">("TODOS");
 
-  // Estado editable de repuestos y servicios
+  // Estado editable de repuestos, servicios y notas
   const [repuestos, setRepuestos] = useState<ItemPropuesta[]>([]);
   const [servicios, setServicios] = useState<ServicioPropuesta[]>([]);
+  const [notasFactura, setNotasFactura] = useState("");
+  const [porcentajeIva, setPorcentajeIva] = useState(15);
+  const [porcentajeDescuento, setPorcentajeDescuento] = useState(0);
 
   // Notificaciones y modales
   const [toast, setToast] = useState<{ msg: string; tipo: "ok" | "err" } | null>(null);
@@ -197,6 +153,8 @@ export default function PaginaDetallePropuesta() {
   const [modalNuevoRepuesto, setModalNuevoRepuesto] = useState(false);
   const [modalNuevoServicio, setModalNuevoServicio] = useState(false);
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
+  const [esAprobadoLocal, setEsAprobadoLocal] = useState<boolean | null>(null);
+  const [cambiandoEstado, setCambiandoEstado] = useState(false);
 
   // Formulario rápido para nuevo repuesto
   const [nuevoNombre, setNuevoNombre] = useState("");
@@ -225,11 +183,23 @@ export default function PaginaDetallePropuesta() {
         setCargando(true);
         setError("");
         const res = await fetch(`/api/presupuestos/detalle?id=${encodeURIComponent(id)}`);
+        if (!res.ok) {
+          let errText = `Error (${res.status})`;
+          try {
+            const errJson = await res.json();
+            errText = errJson.error || errText;
+          } catch {}
+          setError(errText);
+          return;
+        }
         const data = await res.json();
         if (data.success && data.order) {
           const ord = data.order;
           setOrden(ord);
           setProveedores(data.proveedores || []);
+          setNotasFactura(ord.notes || "");
+          setPorcentajeIva(Number(ord.quoteTaxRate ?? 15));
+          setPorcentajeDescuento(Number(ord.quoteDiscount ?? 0));
 
           // Inicializar repuestos con origen deducido y flag de inStock
           const itemsInit = (ord.items || []).map((it: any) => ({
@@ -292,7 +262,7 @@ export default function PaginaDetallePropuesta() {
     );
   };
 
-  // Modificar switch En Stock vs Comprar a Proveedor
+  // Modificar Casillero: Sí hay en Bodega (Taller) vs Pedir a Proveedor Externo
   const handleToggleStock = (itemId: string) => {
     setRepuestos((prev) =>
       prev.map((it) => {
@@ -302,6 +272,7 @@ export default function PaginaDetallePropuesta() {
             ...it,
             inStock: nextStock,
             purchaseStatus: nextStock ? "STOCK_LOCAL" : "POR_PEDIR",
+            supplierName: nextStock ? "Bodega Taller" : (it.supplierName === "Bodega Taller" ? "Proveedor General" : it.supplierName),
           };
         }
         return it;
@@ -334,35 +305,45 @@ export default function PaginaDetallePropuesta() {
     );
   };
 
-  // Totales financieros calculados en tiempo real
+  // Totales financieros calculados en tiempo real estilo liquidación de Factura
   const calculos = useMemo(() => {
-    const totalCostoRepuestos = repuestos.reduce((acc, it) => acc + (it.inStock ? 0 : it.subtotalCosto), 0);
-    const totalVentaRepuestos = repuestos.reduce((acc, it) => acc + it.subtotalVenta, 0);
-    const totalVentaServicios = servicios.reduce((acc, sv) => acc + sv.price, 0);
-    const totalPvpCliente = Number((totalVentaRepuestos + totalVentaServicios).toFixed(2));
-    const margenTotal = Number((totalPvpCliente - totalCostoRepuestos).toFixed(2));
-    const margenPorcentaje = totalPvpCliente > 0 ? Math.round((margenTotal / totalPvpCliente) * 100) : 0;
+    const subtotalRepuestos = repuestos.reduce((acc, it) => acc + (it.price * it.qty), 0);
+    const subtotalServicios = servicios.reduce((acc, sv) => acc + sv.price, 0);
+    const subtotalBruto = Number((subtotalRepuestos + subtotalServicios).toFixed(2));
+
+    const descuento = Number((subtotalBruto * (porcentajeDescuento / 100)).toFixed(2));
+    const subtotalNeto = Math.max(0, Number((subtotalBruto - descuento).toFixed(2)));
+
+    const iva = Number((subtotalNeto * (porcentajeIva / 100)).toFixed(2));
+    const totalFacturaCliente = Number((subtotalNeto + iva).toFixed(2));
+
+    // Solo se pagan a proveedores los repuestos que NO están en bodega
+    const itemsPorComprar = repuestos.filter((r) => !r.inStock);
+    const itemsEnBodega = repuestos.filter((r) => r.inStock);
+
+    const totalCostoComprasExternas = Number(
+      itemsPorComprar.reduce((acc, it) => acc + (it.costPrice * it.qty), 0).toFixed(2)
+    );
+
+    // Margen para el taller = PVP Neto - Costos de Compras Externas
+    const margenNetoTaller = Number((subtotalNeto - totalCostoComprasExternas).toFixed(2));
+    const margenPorcentaje = subtotalNeto > 0 ? Math.round((margenNetoTaller / subtotalNeto) * 100) : 0;
 
     return {
-      totalCostoCompras: totalCostoRepuestos,
-      totalPvpCliente,
-      margenTotal,
+      subtotalRepuestos,
+      subtotalServicios,
+      subtotalBruto,
+      descuento,
+      subtotalNeto,
+      iva,
+      totalFacturaCliente,
+      totalCostoComprasExternas,
+      margenNetoTaller,
       margenPorcentaje,
-      itemsPorComprar: repuestos.filter((r) => !r.inStock),
-      itemsEnStock: repuestos.filter((r) => r.inStock),
+      itemsPorComprar,
+      itemsEnBodega,
     };
-  }, [repuestos, servicios]);
-
-  // Filtrar ítems y servicios según la especialidad seleccionada
-  const repuestosVisibles = useMemo(() => {
-    if (especialidadFiltro === "TODOS") return repuestos;
-    return repuestos.filter((it) => it.origin === especialidadFiltro);
-  }, [repuestos, especialidadFiltro]);
-
-  const serviciosVisibles = useMemo(() => {
-    if (especialidadFiltro === "TODOS") return servicios;
-    return servicios.filter((sv) => sv.origin === especialidadFiltro);
-  }, [servicios, especialidadFiltro]);
+  }, [repuestos, servicios, porcentajeDescuento, porcentajeIva]);
 
   // Guardar Cambios en Neon PostgreSQL
   const handleGuardarBorrador = async () => {
@@ -376,12 +357,22 @@ export default function PaginaDetallePropuesta() {
           orderId: orden.id,
           items: repuestos,
           services: servicios,
+          notes: notasFactura,
           quoteStatus: orden.quoteStatus || "Cotizando",
         }),
       });
+      if (!res.ok) {
+        let errText = `Error al guardar (${res.status})`;
+        try {
+          const errJson = await res.json();
+          errText = errJson.error || errText;
+        } catch {}
+        mostrarToast(errText, "err");
+        return;
+      }
       const data = await res.json();
       if (data.success) {
-        mostrarToast("Cambios guardados correctamente.");
+        mostrarToast("Factura / Presupuesto guardado correctamente.");
       } else {
         mostrarToast(data.error || "No se pudo guardar.", "err");
       }
@@ -396,7 +387,7 @@ export default function PaginaDetallePropuesta() {
   const handleAutorizarYEnviarAPos = async () => {
     if (!orden) return;
     if (repuestos.length === 0 && servicios.length === 0) {
-      mostrarToast("Agrega al menos un repuesto o servicio antes de autorizar.", "err");
+      mostrarToast("Agrega al menos un ítem o servicio a la factura antes de autorizar.", "err");
       return;
     }
     try {
@@ -408,8 +399,18 @@ export default function PaginaDetallePropuesta() {
           orderId: orden.id,
           items: repuestos,
           services: servicios,
+          notes: notasFactura,
         }),
       });
+      if (!res.ok) {
+        let errText = `Error al transferir a POS (${res.status})`;
+        try {
+          const errJson = await res.json();
+          errText = errJson.error || errText;
+        } catch {}
+        mostrarToast(errText, "err");
+        return;
+      }
       const data = await res.json();
       if (data.success) {
         mostrarToast("¡Presupuesto autorizado y enviado a Caja POS con éxito!");
@@ -457,7 +458,7 @@ export default function PaginaDetallePropuesta() {
     setNuevoPvp("0");
     setNuevaCantidad("1");
     setModalNuevoRepuesto(false);
-    mostrarToast("Repuesto agregado al expediente.");
+    mostrarToast("Ítem agregado a la factura.");
   };
 
   // Agregar nuevo servicio
@@ -476,7 +477,11 @@ export default function PaginaDetallePropuesta() {
     setNuevoServicioNombre("");
     setNuevoServicioPrecio("0");
     setModalNuevoServicio(false);
-    mostrarToast("Servicio técnico agregado.");
+    mostrarToast("Mano de obra agregada a la factura.");
+  };
+
+  const handleImprimir = () => {
+    window.print();
   };
 
   if (cargando) {
@@ -486,7 +491,7 @@ export default function PaginaDetallePropuesta() {
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center space-y-3">
             <div className="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-sm text-zinc-400">Cargando expediente de la propuesta...</p>
+            <p className="text-sm text-zinc-400">Cargando factura proforma del vehículo...</p>
           </div>
         </div>
       </div>
@@ -498,14 +503,14 @@ export default function PaginaDetallePropuesta() {
       <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white flex flex-col">
         <Header />
         <div className="flex-1 flex items-center justify-center p-6">
-          <div className="max-w-md w-full bg-[#111113] border border-rose-500/30 rounded-3xl p-6 text-center space-y-4">
+          <div className="max-w-md w-full bg-white dark:bg-[#111113] border border-rose-500/30 rounded-3xl p-6 text-center space-y-4 shadow-xl">
             <div className="text-3xl">⚠️</div>
-            <h2 className="text-lg font-bold text-white">{error || "Propuesta no disponible"}</h2>
+            <h2 className="text-lg font-bold text-zinc-900 dark:text-white">{error || "Factura / Presupuesto no disponible"}</h2>
             <Link
               href="/presupuestos"
               className="inline-flex h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold items-center justify-center transition-all cursor-pointer"
             >
-              ← Volver a Propuestas
+              ← Volver a Presupuestos
             </Link>
           </div>
         </div>
@@ -513,16 +518,42 @@ export default function PaginaDetallePropuesta() {
     );
   }
 
-  const esAprobado = orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA";
+  const esAprobado = esAprobadoLocal !== null ? esAprobadoLocal : (orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA");
+
+  const limpiarNumeroOrden = (val?: string | number | null) => {
+    if (!val) return "";
+    return String(val).replace(/\bOT\b/gi, "").replace(/#+/g, "").trim();
+  };
+
+  const handleToggleEstado = async () => {
+    if (cambiandoEstado) return;
+    const nuevoEstado = esAprobado ? "Pendiente" : "Aprobado";
+    try {
+      setCambiandoEstado(true);
+      const res = await fetch("/api/presupuestos/estado", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: orden.id, quoteStatus: nuevoEstado }),
+      });
+      if (res.ok) {
+        setEsAprobadoLocal(nuevoEstado === "Aprobado");
+        mostrarToast(`Estado: ${nuevoEstado === "Aprobado" ? "Aprobado" : "En Espera"}`);
+      } else {
+        mostrarToast("No se pudo cambiar el estado", "err");
+      }
+    } catch {
+      mostrarToast("Error de conexión al cambiar estado", "err");
+    } finally {
+      setCambiandoEstado(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black font-sans pb-32 text-zinc-900 dark:text-white selection:bg-blue-500/30">
-      <Header />
-
+    <div className="min-h-screen bg-zinc-100 dark:bg-[#08080a] font-sans pb-36 text-zinc-900 dark:text-white selection:bg-blue-500/30">
       {/* Toast Notificaciones */}
       {toast && (
         <div
-          className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded-2xl shadow-2xl backdrop-blur-md border text-xs font-semibold flex items-center gap-2 animate-bounce ${
+          className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded-2xl shadow-2xl backdrop-blur-md border text-xs font-semibold flex items-center gap-2 animate-bounce print:hidden ${
             toast.tipo === "ok"
               ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
               : "bg-rose-500/15 border-rose-500/30 text-rose-700 dark:text-rose-300"
@@ -533,413 +564,773 @@ export default function PaginaDetallePropuesta() {
         </div>
       )}
 
-      {/* Subheader / Ficha del Vehículo y Estado */}
-      <section className="border-b border-zinc-200 dark:border-white/10 bg-white dark:bg-[#0a0a0c]/80 backdrop-blur-md sticky top-16 z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3">
-          {/* Navegación y Datos del Auto */}
-          <div className="flex items-center gap-3 min-w-0">
-            <Link
-              href="/presupuestos"
-              title="Volver a lista de propuestas"
-              className="w-10 h-10 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 flex items-center justify-center text-zinc-600 dark:text-zinc-300 transition-all cursor-pointer active:scale-95 shrink-0"
-            >
-              ←
-            </Link>
+      {/* CABECERA Y BARRA DE ACCIONES FIJAS SUPERIORES (NO SE IMPRIME, INMÓVIL AL SCROLL) */}
+      <div className="print:hidden sticky top-0 z-40 bg-white dark:bg-[#08080a] shadow-xs">
+        <Header />
 
-            <div className="min-w-0 space-y-0.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-0.5 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400 font-mono text-xs font-bold border border-blue-500/30">
-                  #{orden.orderNumber}
-                </span>
-                <span className="px-2.5 py-0.5 rounded-lg bg-zinc-100 dark:bg-white/10 text-zinc-800 dark:text-white font-mono text-xs font-bold border border-zinc-200 dark:border-white/10 uppercase">
-                  {orden.plate}
-                </span>
-                <h1 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white truncate">
-                  {orden.vehicle}
-                </h1>
+        {/* Barra de Herramientas y Acciones Superior */}
+        <section className="border-b border-zinc-200 dark:border-white/10 bg-white/95 dark:bg-[#0c0c0e]/95 backdrop-blur-md">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-start sm:items-center gap-3 min-w-0">
+              <Link
+                href="/presupuestos"
+                title="Volver al panel de presupuestos"
+                className="w-10 h-10 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 flex items-center justify-center text-zinc-600 dark:text-zinc-300 transition-all cursor-pointer active:scale-95 shrink-0 mt-0.5 sm:mt-0"
+              >
+                ←
+              </Link>
+
+              <div className="min-w-0 space-y-0.5">
+                {/* 1. Orden de Servicio */}
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-zinc-500 dark:text-zinc-400 font-semibold">Orden de Servicio:</span>
+                  <span className="font-mono font-bold px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+                    #{limpiarNumeroOrden(orden.orderNumber)}
+                  </span>
+                </div>
+
+                {/* 2. Placa */}
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-zinc-500 dark:text-zinc-400 font-semibold">Placa:</span>
+                  <span className="font-mono font-black uppercase px-2 py-0.5 rounded-md bg-zinc-200 dark:bg-white/10 text-zinc-800 dark:text-white border border-zinc-300 dark:border-white/10">
+                    {orden.plate}
+                  </span>
+                </div>
+
+                {/* 3. Vehículo y Cliente */}
+                <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300 flex-wrap">
+                  <span>
+                    Vehículo: <strong className="font-bold text-zinc-900 dark:text-white">{orden.vehicle}</strong>
+                  </span>
+                  <span className="text-zinc-400 dark:text-zinc-500">•</span>
+                  <span>
+                    Cliente: <strong className="font-bold text-zinc-900 dark:text-white">{orden.client}</strong>
+                  </span>
+                </div>
               </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
-                Cliente: <strong className="text-zinc-800 dark:text-zinc-200">{orden.client}</strong> {orden.clientPhone && `• Tel: ${orden.clientPhone}`} • Mecánico: <strong className="text-zinc-800 dark:text-zinc-200">{orden.mechanic}</strong>
+            </div>
+
+            <div className="flex items-center gap-2 ml-auto shrink-0">
+              <button
+                type="button"
+                onClick={handleImprimir}
+                className="w-10 h-10 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-base transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs shrink-0"
+                title="Imprimir Proforma"
+                aria-label="Imprimir Proforma"
+              >
+                <span>🖨️</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setModalWhatsApp(true)}
+                className="w-10 h-10 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-base transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs shrink-0"
+                title="Catálogo Proveedores WhatsApp"
+                aria-label="Catálogo Proveedores WhatsApp"
+              >
+                <span>📲</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={cambiandoEstado}
+                onClick={handleToggleEstado}
+                className={`w-10 h-10 rounded-xl border flex items-center justify-center text-sm font-black shadow-xs shrink-0 transition-all active:scale-95 cursor-pointer disabled:opacity-50 ${
+                  esAprobado
+                    ? "bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
+                    : "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                }`}
+                title={esAprobado ? "Propuesta Aprobada (clic para poner En Espera)" : "Propuesta En Espera (clic para Aprobar)"}
+                aria-label={esAprobado ? "Estado: Aprobado" : "Estado: En Espera"}
+              >
+                <span>{cambiandoEstado ? "..." : (esAprobado ? "✓" : "⏳")}</span>
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* DOCUMENTO PRINCIPAL FORMATO FACTURA / PROFORMA */}
+      <main className="max-w-6xl mx-auto p-3 sm:p-6 md:p-8 mt-4 sm:mt-6 print:m-0 print:p-0 print:max-w-none">
+        <div className="bg-white dark:bg-[#0f0f13] border border-zinc-200 dark:border-white/10 rounded-3xl p-5 sm:p-8 md:p-10 shadow-2xl space-y-8 print:border-none print:shadow-none print:p-4 print:rounded-none">
+          
+          {/* CABECERA DE LA FACTURA */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pb-6 border-b border-zinc-200 dark:border-white/10">
+            <div>
+              <div className="flex items-center gap-3">
+                {/* Logotipo Oficial Auto / G */}
+                <div className="w-11 h-11 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-md shadow-blue-500/25 shrink-0">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-1.5 text-2xl font-black tracking-tight leading-none">
+                    <span className="text-blue-600 dark:text-blue-500">Auto</span>
+                    <span className="text-zinc-400 dark:text-zinc-500 font-light px-0.5">/</span>
+                    <span className="text-zinc-900 dark:text-white">G</span>
+                  </div>
+                  <p className="text-xs sm:text-sm font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mt-1">
+                    Centro Automotriz
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="sm:text-right w-full sm:w-auto p-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 space-y-1.5 shrink-0">
+              <div className="flex items-center gap-2 sm:justify-end flex-wrap">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/25">
+                  Propuesta
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                    esAprobado
+                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                      : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                  }`}
+                >
+                  {esAprobado ? "✓ Aprobado" : "⏳ En Espera"}
+                </span>
+              </div>
+              <h3 className="text-base sm:text-lg font-mono font-black text-zinc-900 dark:text-white pt-1">
+                {orden.quoteNumber ? orden.quoteNumber.replace(/\bOT\b/gi, "").replace(/#+/g, "").trim() : `COT-${limpiarNumeroOrden(orden.orderNumber)}`}
+              </h3>
+              <p className="text-sm sm:text-base font-semibold text-zinc-700 dark:text-zinc-200 pt-0.5">
+                Fecha: <strong className="font-bold text-zinc-900 dark:text-white">{orden.dateIn ? new Date(orden.dateIn).toLocaleDateString("es-EC", { year: "numeric", month: "long", day: "numeric" }) : new Date().toLocaleDateString("es-EC", { year: "numeric", month: "long", day: "numeric" })}</strong>
               </p>
             </div>
           </div>
 
-          {/* Etiqueta de Estado y Acciones Rápidas */}
-          <div className="flex items-center gap-2.5 ml-auto">
-            <button
-              type="button"
-              onClick={() => setModalWhatsApp(true)}
-              className="h-10 px-3.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-sm"
-              title="Generar catálogo con fotos grandes para proveedores"
-            >
-              <span>📲</span>
-              <span className="hidden sm:inline">Catálogo Proveedores WhatsApp</span>
-            </button>
-
-            <span
-              className={`h-10 px-3.5 rounded-xl border flex items-center gap-1.5 text-xs font-bold ${
-                esAprobado
-                  ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
-                  : "bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-400"
-              }`}
-            >
-              <span className={`w-2 h-2 rounded-full ${esAprobado ? "bg-emerald-400" : "bg-amber-400"} animate-pulse`} />
-              <span>{esAprobado ? "✓ Aprobado" : "Enviado"}</span>
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {/* Contenedor Principal */}
-      <main className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8 space-y-6">
-        {/* Selector Superior de Especialidad idéntico a Taller (Taller, Lubricentro, Car Wash, Tecnicentro + Engranaje) */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center p-1 rounded-2xl bg-white/80 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl gap-1 shrink-0 overflow-x-auto max-w-full">
-              {ESPECIALIDADES.map((mod) => {
-                const isActivo = especialidadFiltro === mod.id;
-                const countItems =
-                  mod.id === "TODOS"
-                    ? repuestos.length + servicios.length
-                    : repuestos.filter((r) => r.origin === mod.id).length + servicios.filter((s) => s.origin === mod.id).length;
-
-                return (
-                  <button
-                    key={mod.id}
-                    type="button"
-                    onClick={() => setEspecialidadFiltro(mod.id)}
-                    className={`h-9 px-3.5 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                      isActivo
-                        ? `${mod.bgClass} border ${mod.borderClass} ${mod.textClass} ${mod.shadowClass} backdrop-blur-sm`
-                        : "border border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-                    }`}
-                    title={mod.name}
-                  >
-                    {mod.svg("w-4 h-4 shrink-0")}
-                    <span className="whitespace-nowrap">{mod.shortName}</span>
-                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${isActivo ? "bg-white/20" : "bg-zinc-200 dark:bg-white/10"}`}>
-                      {countItems}
-                    </span>
-                  </button>
-                );
-              })}
+          {/* FICHA TÉCNICA DEL CLIENTE Y VEHÍCULO (ESTILO FACTURA) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Cuadro Cliente */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-2">
+              <div className="flex items-center justify-between pb-1 border-b border-zinc-200 dark:border-white/5">
+                <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>👤</span>
+                  <span>Datos del Cliente</span>
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
+                  Titular
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                <div>
+                  <span className="text-zinc-400 block text-[10px]">Cliente / Razón Social:</span>
+                  <strong className="text-zinc-900 dark:text-white font-semibold text-sm">{orden.client}</strong>
+                </div>
+                <div>
+                  <span className="text-zinc-400 block text-[10px]">Cédula / RUC:</span>
+                  <span className="font-mono text-zinc-700 dark:text-zinc-300 font-semibold">{orden.clientIdDoc || "9999999999"}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-400 block text-[10px]">Teléfono / WhatsApp:</span>
+                  <span className="font-mono text-zinc-700 dark:text-zinc-300">{orden.clientPhone || "S/N"}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-400 block text-[10px]">Estado Operativo:</span>
+                  <span className="text-blue-600 dark:text-blue-400 font-semibold">{orden.status || "En Taller"}</span>
+                </div>
+              </div>
             </div>
 
-            {/* BOTÓN ENGRANAJE IDÉNTICO A TALLER */}
-            <button
-              type="button"
-              className="h-11 w-11 flex items-center justify-center rounded-2xl bg-white/80 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-all cursor-pointer group shrink-0"
-              title="Especialidades del Taller"
-              aria-label="Especialidades"
-            >
-              <svg
-                className="w-5 h-5 transition-transform duration-300 group-hover:rotate-45"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.8}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setModalNuevoRepuesto(true)}
-              className="h-9 px-3.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 border border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 text-xs font-bold transition-all cursor-pointer active:scale-95 flex items-center gap-1"
-            >
-              <span>+</span>
-              <span>Repuesto / Insumo</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setModalNuevoServicio(true)}
-              className="h-9 px-3.5 rounded-xl bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20 border border-purple-200 dark:border-purple-500/30 text-purple-600 dark:text-purple-400 text-xs font-bold transition-all cursor-pointer active:scale-95 flex items-center gap-1"
-            >
-              <span>+</span>
-              <span>Servicio Técnico</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Sección 1: Repuestos & Insumos */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-              <span>⚙️</span>
-              <span>Repuestos e Insumos ({repuestosVisibles.length})</span>
-            </h2>
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">
-              Marca si está en bodega o si se compra a proveedor
-            </span>
-          </div>
-
-          {repuestosVisibles.length === 0 ? (
-            <div className="p-8 text-center bg-white dark:bg-[#111113] rounded-2xl border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 text-xs">
-              No hay repuestos registrados para esta especialidad.
+            {/* Cuadro Vehículo */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-2">
+              <div className="flex items-center justify-between pb-1 border-b border-zinc-200 dark:border-white/5">
+                <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>🚗</span>
+                  <span>Datos del Vehículo</span>
+                </span>
+                <span className="text-xs font-mono font-black px-2 py-0.5 rounded-md bg-amber-400 text-black border border-amber-500 uppercase">
+                  {orden.plate}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                <div>
+                  <span className="text-zinc-400 block text-[10px]">Marca / Modelo / Año:</span>
+                  <strong className="text-zinc-900 dark:text-white font-semibold text-sm">{orden.vehicle}</strong>
+                </div>
+                <div>
+                  <span className="text-zinc-400 block text-[10px]">Mecánico Responsable:</span>
+                  <span className="text-zinc-700 dark:text-zinc-300 font-semibold">{orden.mechanic || "Taller Principal"}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-400 block text-[10px]">Kilometraje Actual:</span>
+                  <span className="font-mono text-zinc-700 dark:text-zinc-300">
+                    {orden.mileage ? `${Number(orden.mileage).toLocaleString()} km` : "N/D"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-zinc-400 block text-[10px]">Combustible / Estado:</span>
+                  <span className="text-zinc-700 dark:text-zinc-300">
+                    Tanque: {orden.fuelLevel || "1/2"}
+                  </span>
+                </div>
+              </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3">
-              {repuestosVisibles.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-white dark:bg-[#111113] rounded-2xl border border-zinc-200 dark:border-white/10 p-4 shadow-sm hover:border-zinc-300 dark:hover:border-white/20 transition-all flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4"
+          </div>
+
+          {/* TABLA PRINCIPAL DE FACTURA: TODO LO QUE SE PIDIÓ (REPUESTOS, INSUMOS, SERVICIOS) */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white flex items-center gap-2">
+                  <span>📋</span>
+                  <span>Detalle de Factura & Presupuesto</span>
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Consolidado completo de todo lo pedido (Taller, Lubricentro, Car Wash y Tecnicentro).
+                </p>
+              </div>
+
+              {/* Botones para agregar líneas directamente a la factura */}
+              <div className="flex items-center gap-2 print:hidden flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setModalNuevoRepuesto(true)}
+                  className="h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
-                  {/* Datos del Repuesto & Switch de Stock */}
-                  <div className="flex items-start gap-3.5 flex-1 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/25 text-blue-500 dark:text-blue-400 flex items-center justify-center text-lg shrink-0">
-                      {item.origin === "LUBRICENTRO" ? "🛢️" : item.origin === "CARWASH" ? "🚿" : item.origin === "TECNICENTRO" ? "⚙️" : "🔧"}
-                    </div>
+                  <span>+</span>
+                  <span>Agregar Repuesto / Insumo</span>
+                </button>
 
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-white/10">
-                          {item.origin || "Taller"}
-                        </span>
-                        <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white truncate">
-                          {item.name}
-                        </h3>
-                      </div>
+                <button
+                  type="button"
+                  onClick={() => setModalNuevoServicio(true)}
+                  className="h-9 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <span>+</span>
+                  <span>Agregar Mano de Obra</span>
+                </button>
+              </div>
+            </div>
 
-                      {/* Selector Stock Taller vs Pedir Proveedor */}
-                      <div className="flex items-center gap-2 pt-1 flex-wrap">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleStock(item.id)}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 border ${
-                            item.inStock
-                              ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300"
-                              : "bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-300"
-                          }`}
+            {/* Banner Informativo del Casillero */}
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 text-xs text-zinc-600 dark:text-zinc-300 gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center font-bold text-xs shrink-0">
+                  ℹ️
+                </span>
+                <span>
+                  Usa el <strong>Casillero de Disponibilidad</strong> en cada repuesto para definir si <span className="text-emerald-600 dark:text-emerald-400 font-bold">sí hay en bodega</span> o si <span className="text-amber-600 dark:text-amber-400 font-bold">hay que pedirlo a proveedores externos</span>.
+                </span>
+              </div>
+              <div className="flex items-center gap-3 font-mono text-xs font-semibold">
+                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                  <span>📦</span> {calculos.itemsEnBodega.length} en Bodega
+                </span>
+                <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                  <span>🚚</span> {calculos.itemsPorComprar.length} a Proveedor
+                </span>
+              </div>
+            </div>
+
+            {/* TABLA ESTILO FACTURA PROFORMA */}
+            <div className="border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden bg-white dark:bg-[#121216] shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                      <th className="py-3 px-3 w-10 text-center">#</th>
+                      <th className="py-3 px-3 w-28">Área / Origen</th>
+                      <th className="py-3 px-3 min-w-[220px]">Descripción del Ítem / Servicio</th>
+                      <th className="py-3 px-3 w-64 text-center">
+                        Disponibilidad (Casillero)
+                      </th>
+                      <th className="py-3 px-2 w-20 text-center">Cant.</th>
+                      <th className="py-3 px-3 w-24 text-right">Costo Unit.</th>
+                      <th className="py-3 px-3 w-24 text-right">PVP Unit.</th>
+                      <th className="py-3 px-3 w-24 text-right">Subtotal</th>
+                      <th className="py-3 px-3 w-24 text-right print:hidden">Margen</th>
+                      <th className="py-3 px-2 w-10 text-center print:hidden"></th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-zinc-200 dark:divide-white/5 text-xs">
+                    {repuestos.length === 0 && servicios.length === 0 ? (
+                      <tr>
+                        <td colSpan={10} className="py-12 text-center text-zinc-400 text-sm">
+                          No hay repuestos ni servicios agregados en esta orden.
+                        </td>
+                      </tr>
+                    ) : null}
+
+                    {/* LÍNEAS DE REPUESTOS E INSUMOS */}
+                    {repuestos.map((item, idx) => {
+                      const itemNum = idx + 1;
+                      return (
+                        <tr
+                          key={item.id}
+                          className="hover:bg-zinc-50/80 dark:hover:bg-white/[0.02] transition-colors group"
                         >
-                          <span>{item.inStock ? "📦 En Stock Taller" : "🚚 Por Comprar Externo"}</span>
-                        </button>
+                          {/* 1. Número */}
+                          <td className="py-3 px-3 text-center font-mono font-bold text-zinc-400">
+                            {itemNum}
+                          </td>
 
-                        {!item.inStock && (
-                          <select
-                            value={item.supplierName || "Proveedor General"}
-                            onChange={(e) => handleUpdateSupplier(item.id, e.target.value)}
-                            className="h-7 px-2 rounded-lg bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-white/10 text-xs text-zinc-700 dark:text-zinc-200 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          >
-                            <option value="Proveedor General">Proveedor General</option>
-                            <option value="Bosch Store">Bosch Store</option>
-                            <option value="Repuestos Pichincha">Repuestos Pichincha</option>
-                            <option value="Llantera Express">Llantera Express</option>
-                            <option value="Distribuidora de Lubricantes">Distribuidora de Lubricantes</option>
-                            {proveedores.map((p) => (
-                              <option key={p.id} value={p.name}>
-                                {p.name}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                          {/* 2. Área / Especialidad (Taller, Lubricentro, Car Wash, Tecnicentro) */}
+                          <td className="py-3 px-3">
+                            {renderBadgeEspecialidad(item.origin)}
+                          </td>
 
-                  {/* Cantidad, Costo, PVP y Margen */}
-                  <div className="flex items-center justify-between md:justify-end gap-3 sm:gap-4 shrink-0 flex-wrap pt-2 md:pt-0 border-t md:border-t-0 border-zinc-100 dark:border-white/5">
-                    {/* Stepper Cantidad */}
-                    <div className="flex items-center border border-zinc-200 dark:border-white/10 rounded-xl overflow-hidden bg-zinc-50 dark:bg-black">
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateQty(item.id, -1)}
-                        className="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors font-bold text-xs"
-                      >
-                        -
-                      </button>
-                      <span className="w-8 text-center text-xs font-mono font-bold text-zinc-900 dark:text-white">
-                        {item.qty}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateQty(item.id, 1)}
-                        className="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors font-bold text-xs"
-                      >
-                        +
-                      </button>
-                    </div>
+                          {/* 3. Descripción */}
+                          <td className="py-3 px-3">
+                            <div className="space-y-0.5">
+                              <span className="font-bold text-zinc-900 dark:text-white block">
+                                {item.name}
+                              </span>
+                              <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-mono">
+                                <span>{item.code || `REP-${itemNum}`}</span>
+                                {item.notes && <span>• {item.notes}</span>}
+                              </div>
+                            </div>
+                          </td>
 
-                    {/* Costo de Compra */}
-                    <div className="w-24">
-                      <label className="text-[10px] text-zinc-400 block mb-0.5">Costo Unit ($)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={item.costPrice}
-                        onChange={(e) => handleUpdatePrice(item.id, "costPrice", e.target.value)}
-                        className="w-full h-8 px-2 rounded-lg bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-white/10 text-xs font-mono font-bold text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
-                    </div>
+                          {/* 4. CASILLERO DE DISPONIBILIDAD (SÍ HAY EN BODEGA VS PEDIR A PROVEEDOR EXTERNO) */}
+                          <td className="py-3 px-3">
+                            <div className="flex flex-col gap-1.5 items-center justify-center">
+                              {/* Casillero / Switch interactivo */}
+                              <label
+                                className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                                  item.inStock
+                                    ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
+                                    : "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={item.inStock}
+                                    onChange={() => handleToggleStock(item.id)}
+                                    className="w-4 h-4 rounded-md accent-emerald-600 cursor-pointer"
+                                  />
+                                  <span>{item.inStock ? "Sí hay en Bodega" : "Pedir a Proveedor"}</span>
+                                </div>
+                                <span className="text-[10px] uppercase font-bold tracking-wider opacity-80">
+                                  {item.inStock ? "Bodega" : "Externo"}
+                                </span>
+                              </label>
 
-                    {/* PVP Venta Cliente */}
-                    <div className="w-24">
-                      <label className="text-[10px] text-zinc-400 block mb-0.5">PVP Venta ($)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={item.price}
-                        onChange={(e) => handleUpdatePrice(item.id, "price", e.target.value)}
-                        className="w-full h-8 px-2 rounded-lg bg-zinc-50 dark:bg-black border border-emerald-500/30 text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                      />
-                    </div>
+                              {/* Si es externo, selector del proveedor asignado */}
+                              {!item.inStock && (
+                                <select
+                                  value={item.supplierName || "Proveedor General"}
+                                  onChange={(e) => handleUpdateSupplier(item.id, e.target.value)}
+                                  className="w-full h-7 px-2 rounded-lg bg-zinc-50 dark:bg-black border border-amber-500/30 text-[11px] text-zinc-700 dark:text-zinc-200 font-medium focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                  title="Proveedor asignado"
+                                >
+                                  <option value="Proveedor General">📦 Proveedor General</option>
+                                  <option value="Bosch Store">Bosch Store</option>
+                                  <option value="Repuestos Pichincha">Repuestos Pichincha</option>
+                                  <option value="Llantera Express">Llantera Express</option>
+                                  <option value="Distribuidora de Lubricantes">Distribuidora Lubricantes</option>
+                                  {proveedores.map((p) => (
+                                    <option key={p.id} value={p.name}>
+                                      {p.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                          </td>
 
-                    {/* Margen */}
-                    <div className="w-24 text-right">
-                      <label className="text-[10px] text-zinc-400 block mb-0.5">Margen</label>
-                      <span className={`text-xs font-mono font-black ${item.margin >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
-                        ${item.margin.toFixed(2)} ({item.marginPercent}%)
-                      </span>
-                    </div>
+                          {/* 5. Cantidad */}
+                          <td className="py-3 px-2 text-center">
+                            <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-black print:border-none print:bg-transparent">
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateQty(item.id, -1)}
+                                className="w-6 h-7 flex items-center justify-center text-zinc-500 hover:text-black dark:hover:text-white font-bold text-xs print:hidden"
+                              >
+                                -
+                              </button>
+                              <span className="w-7 text-center font-mono font-bold text-zinc-900 dark:text-white">
+                                {item.qty}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateQty(item.id, 1)}
+                                className="w-6 h-7 flex items-center justify-center text-zinc-500 hover:text-black dark:hover:text-white font-bold text-xs print:hidden"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </td>
 
-                    {/* Eliminar */}
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteItem(item.id)}
-                      className="w-8 h-8 rounded-lg text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 flex items-center justify-center transition-colors cursor-pointer text-sm"
-                      title="Eliminar repuesto"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              ))}
+                          {/* 6. Costo Unitario */}
+                          <td className="py-3 px-3 text-right">
+                            <div className="print:hidden">
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={item.costPrice}
+                                onChange={(e) => handleUpdatePrice(item.id, "costPrice", e.target.value)}
+                                className="w-20 h-7 px-1.5 text-right rounded-lg bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-white/10 font-mono font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
+                              />
+                            </div>
+                            <span className="hidden print:inline font-mono">
+                              ${Number(item.costPrice).toFixed(2)}
+                            </span>
+                          </td>
+
+                          {/* 7. PVP Unitario */}
+                          <td className="py-3 px-3 text-right">
+                            <div className="print:hidden">
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={item.price}
+                                onChange={(e) => handleUpdatePrice(item.id, "price", e.target.value)}
+                                className="w-20 h-7 px-1.5 text-right rounded-lg bg-zinc-50 dark:bg-black border border-emerald-500/30 font-mono font-bold text-emerald-600 dark:text-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs"
+                              />
+                            </div>
+                            <span className="hidden print:inline font-mono font-bold">
+                              ${Number(item.price).toFixed(2)}
+                            </span>
+                          </td>
+
+                          {/* 8. Subtotal */}
+                          <td className="py-3 px-3 text-right font-mono font-black text-zinc-900 dark:text-white">
+                            ${item.subtotalVenta.toFixed(2)}
+                          </td>
+
+                          {/* 9. Margen */}
+                          <td className="py-3 px-3 text-right font-mono text-[11px] font-bold print:hidden">
+                            <span className={item.margin >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500"}>
+                              ${item.margin.toFixed(2)} ({item.marginPercent}%)
+                            </span>
+                          </td>
+
+                          {/* 10. Eliminar */}
+                          <td className="py-3 px-2 text-center print:hidden">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteItem(item.id)}
+                              className="w-7 h-7 rounded-lg text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 inline-flex items-center justify-center transition-colors cursor-pointer text-xs"
+                              title="Eliminar repuesto"
+                            >
+                              ✕
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {/* LÍNEAS DE SERVICIOS / MANO DE OBRA */}
+                    {servicios.map((sv, idx) => {
+                      const itemNum = repuestos.length + idx + 1;
+                      return (
+                        <tr
+                          key={sv.id}
+                          className="hover:bg-zinc-50/80 dark:hover:bg-white/[0.02] transition-colors group bg-purple-500/[0.02]"
+                        >
+                          {/* 1. Número */}
+                          <td className="py-3 px-3 text-center font-mono font-bold text-zinc-400">
+                            {itemNum}
+                          </td>
+
+                          {/* 2. Área / Especialidad */}
+                          <td className="py-3 px-3">
+                            {renderBadgeEspecialidad(sv.origin)}
+                          </td>
+
+                          {/* 3. Descripción del Servicio */}
+                          <td className="py-3 px-3">
+                            <div className="space-y-0.5">
+                              <span className="font-bold text-zinc-900 dark:text-white block">
+                                {sv.name}
+                              </span>
+                              <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-mono">
+                                <span>{sv.code || `SRV-${idx + 1}`}</span>
+                                <span>• Mano de Obra Técnica</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* 4. Casillero para Mano de Obra */}
+                          <td className="py-3 px-3 text-center">
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/25 text-purple-700 dark:text-purple-300 font-semibold text-xs">
+                              <span>👨‍🔧 Mano de Obra Taller</span>
+                              <span className="text-[10px] text-zinc-400 font-normal">
+                                ({sv.mechanic || orden.mechanic})
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* 5. Cantidad */}
+                          <td className="py-3 px-2 text-center font-mono font-bold text-zinc-900 dark:text-white">
+                            1
+                          </td>
+
+                          {/* 6. Costo Unitario */}
+                          <td className="py-3 px-3 text-right font-mono text-zinc-400 text-xs">
+                            $0.00
+                          </td>
+
+                          {/* 7. PVP Unitario */}
+                          <td className="py-3 px-3 text-right">
+                            <div className="print:hidden">
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={sv.price}
+                                onChange={(e) => handleUpdateServicePrice(sv.id, e.target.value)}
+                                className="w-20 h-7 px-1.5 text-right rounded-lg bg-zinc-50 dark:bg-black border border-purple-500/30 font-mono font-bold text-purple-600 dark:text-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-500 text-xs"
+                              />
+                            </div>
+                            <span className="hidden print:inline font-mono font-bold">
+                              ${Number(sv.price).toFixed(2)}
+                            </span>
+                          </td>
+
+                          {/* 8. Subtotal */}
+                          <td className="py-3 px-3 text-right font-mono font-black text-zinc-900 dark:text-white">
+                            ${Number(sv.price).toFixed(2)}
+                          </td>
+
+                          {/* 9. Margen */}
+                          <td className="py-3 px-3 text-right font-mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400 print:hidden">
+                            ${Number(sv.price).toFixed(2)} (100%)
+                          </td>
+
+                          {/* 10. Eliminar */}
+                          <td className="py-3 px-2 text-center print:hidden">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteService(sv.id)}
+                              className="w-7 h-7 rounded-lg text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 inline-flex items-center justify-center transition-colors cursor-pointer text-xs"
+                              title="Eliminar servicio"
+                            >
+                              ✕
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          )}
-        </section>
-
-        {/* Sección 2: Servicios & Mano de Obra */}
-        <section className="space-y-3 pt-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-              <span>👨‍🔧</span>
-              <span>Servicios Técnicos & Mano de Obra ({serviciosVisibles.length})</span>
-            </h2>
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">
-              Mantenimientos, diagnósticos y servicios
-            </span>
           </div>
 
-          {serviciosVisibles.length === 0 ? (
-            <div className="p-8 text-center bg-white dark:bg-[#111113] rounded-2xl border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 text-xs">
-              No hay servicios registrados para esta especialidad.
+          {/* LIQUIDACIÓN DE LA FACTURA & TOTALES */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-zinc-200 dark:border-white/10">
+            {/* Izquierda: Observaciones y Control de Compras a Proveedores */}
+            <div className="space-y-4">
+              {/* Observaciones */}
+              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-2">
+                <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                  <span>📝</span>
+                  <span>Términos y Observaciones de la Proforma</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={notasFactura}
+                  onChange={(e) => setNotasFactura(e.target.value)}
+                  placeholder="Garantía de repuestos e insumos, validez de la oferta (15 días), recomendaciones técnicas..."
+                  className="w-full p-2.5 rounded-xl bg-white dark:bg-black border border-zinc-200 dark:border-white/10 text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-500 print:border-none print:p-0"
+                />
+              </div>
+
+              {/* Resumen de Compras a Proveedores Externos (Control Interno de Taller) */}
+              <div className="p-4 rounded-2xl bg-amber-500/[0.06] border border-amber-500/20 space-y-2.5 print:hidden">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                    <span>🚚</span>
+                    <span>Requerimientos a Proveedores Externos</span>
+                  </span>
+                  <span className="text-xs font-mono font-black text-amber-700 dark:text-amber-300">
+                    {calculos.itemsPorComprar.length} repuestos
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                  Costo total estimado que el taller debe pagar a proveedores:{" "}
+                  <strong className="text-zinc-900 dark:text-white font-mono font-bold">
+                    ${calculos.totalCostoComprasExternas.toFixed(2)}
+                  </strong>
+                </p>
+                {calculos.itemsPorComprar.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setModalWhatsApp(true)}
+                    className="w-full h-8 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>💬 Enviar lista a Proveedores por WhatsApp</span>
+                  </button>
+                ) : (
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold block">
+                    ✓ Todos los repuestos de esta factura están disponibles en Bodega.
+                  </span>
+                )}
+              </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3">
-              {serviciosVisibles.map((sv) => (
-                <div
-                  key={sv.id}
-                  className="bg-white dark:bg-[#111113] rounded-2xl border border-zinc-200 dark:border-white/10 p-4 shadow-sm hover:border-zinc-300 dark:hover:border-white/20 transition-all flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/25 text-purple-500 dark:text-purple-400 flex items-center justify-center text-lg shrink-0">
-                      🛠️
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-white/10">
-                          {sv.origin || "Taller"}
-                        </span>
-                        <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
-                          {sv.name}
-                        </h4>
-                      </div>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                        Técnico asignado: <strong className="text-zinc-800 dark:text-zinc-200">{sv.mechanic || orden.mechanic}</strong>
-                      </p>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
-                    <div className="w-28 text-right">
-                      <label className="text-[10px] text-zinc-400 block mb-0.5">Precio Servicio ($)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={sv.price}
-                        onChange={(e) => handleUpdateServicePrice(sv.id, e.target.value)}
-                        className="w-full h-8 px-2 rounded-lg bg-zinc-50 dark:bg-black border border-purple-500/30 text-xs font-mono font-bold text-purple-600 dark:text-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-500 text-right"
-                      />
-                    </div>
+            {/* Derecha: Liquidación Financiera de Factura */}
+            <div className="p-5 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-3 font-mono">
+              <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
+                <span>Subtotal Repuestos e Insumos:</span>
+                <span className="font-bold text-zinc-900 dark:text-white">
+                  ${calculos.subtotalRepuestos.toFixed(2)}
+                </span>
+              </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteService(sv.id)}
-                      className="w-8 h-8 rounded-lg text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 flex items-center justify-center transition-colors cursor-pointer text-sm"
-                      title="Eliminar servicio"
-                    >
-                      ✕
-                    </button>
+              <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
+                <span>Subtotal Mano de Obra y Servicios:</span>
+                <span className="font-bold text-zinc-900 dark:text-white">
+                  ${calculos.subtotalServicios.toFixed(2)}
+                </span>
+              </div>
+
+              <div className="h-px bg-zinc-200 dark:bg-white/10" />
+
+              <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
+                <span>Subtotal Bruto:</span>
+                <span className="font-black text-zinc-900 dark:text-white text-sm">
+                  ${calculos.subtotalBruto.toFixed(2)}
+                </span>
+              </div>
+
+              {/* Descuento editable */}
+              <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
+                <div className="flex items-center gap-2 font-sans">
+                  <span>Descuento:</span>
+                  <div className="inline-flex items-center gap-1 print:hidden">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={porcentajeDescuento}
+                      onChange={(e) => setPorcentajeDescuento(parseFloat(e.target.value) || 0)}
+                      className="w-12 h-6 px-1 text-center rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-xs font-mono font-bold"
+                    />
+                    <span className="text-[10px]">%</span>
                   </div>
                 </div>
-              ))}
+                <span className="text-rose-500 font-bold">
+                  -${calculos.descuento.toFixed(2)}
+                </span>
+              </div>
+
+              {/* IVA editable */}
+              <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
+                <div className="flex items-center gap-2 font-sans">
+                  <span>IVA ({porcentajeIva}%):</span>
+                  <div className="inline-flex items-center gap-1 print:hidden">
+                    <select
+                      value={porcentajeIva}
+                      onChange={(e) => setPorcentajeIva(Number(e.target.value))}
+                      className="h-6 px-1 rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-[11px] font-mono"
+                    >
+                      <option value={15}>15%</option>
+                      <option value={12}>12%</option>
+                      <option value={0}>0%</option>
+                    </select>
+                  </div>
+                </div>
+                <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                  ${calculos.iva.toFixed(2)}
+                </span>
+              </div>
+
+              {/* TOTAL FACTURA / PRESUPUESTO */}
+              <div className="p-4 rounded-xl bg-blue-600/10 border border-blue-600/30 flex items-center justify-between">
+                <div>
+                  <span className="text-xs uppercase font-sans font-black text-blue-700 dark:text-blue-300 block">
+                    TOTAL FACTURA PROFORMA
+                  </span>
+                  <span className="text-[10px] text-zinc-500 font-sans">
+                    Precio total final para el cliente
+                  </span>
+                </div>
+                <span className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400">
+                  ${calculos.totalFacturaCliente.toFixed(2)}
+                </span>
+              </div>
+
+              {/* RENTABILIDAD / MARGEN TALLER (Solo visible internamente) */}
+              <div className="p-3 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/25 flex items-center justify-between text-xs print:hidden">
+                <span className="font-sans font-bold text-emerald-800 dark:text-emerald-300">
+                  Utilidad Neta del Taller:
+                </span>
+                <span className="font-black text-emerald-600 dark:text-emerald-400">
+                  ${calculos.margenNetoTaller.toFixed(2)} ({calculos.margenPorcentaje}%)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* EVIDENCIAS Y FOTOS DE INSPECCIÓN */}
+          {orden.evidencias && orden.evidencias.length > 0 && (
+            <div className="space-y-3 pt-6 border-t border-zinc-200 dark:border-white/10 print:hidden">
+              <h4 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                <span>📸</span>
+                <span>Evidencias y Fotos de Inspección ({orden.evidencias.length})</span>
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                {orden.evidencias.map((ev) => (
+                  <div
+                    key={ev.id}
+                    onClick={() => setFotoZoom(ev.url)}
+                    className="h-28 rounded-2xl bg-zinc-100 dark:bg-[#111113] border border-zinc-200 dark:border-white/10 overflow-hidden cursor-pointer relative group shadow-xs"
+                  >
+                    <img src={ev.url} alt="Evidencia" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs text-white font-bold">
+                      🔍 Ver
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
-        </section>
 
-        {/* Sección 3: Evidencias y Fotos de Inspección */}
-        {orden.evidencias && orden.evidencias.length > 0 && (
-          <section className="space-y-3 pt-2">
-            <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-              <span>📸</span>
-              <span>Evidencias y Fotos de Inspección ({orden.evidencias.length})</span>
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-              {orden.evidencias.map((ev) => (
-                <div
-                  key={ev.id}
-                  onClick={() => setFotoZoom(ev.url)}
-                  className="h-28 rounded-2xl bg-zinc-100 dark:bg-[#111113] border border-zinc-200 dark:border-white/10 overflow-hidden cursor-pointer relative group shadow-sm"
-                >
-                  <img src={ev.url} alt="Evidencia" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs text-white font-bold">
-                    🔍 Ver
-                  </div>
-                </div>
-              ))}
+          {/* FIRMAS EN FACTURA (Visible en impresión o PDF) */}
+          <div className="hidden print:grid grid-cols-2 gap-12 pt-16 mt-8 border-t border-zinc-300 text-center text-xs">
+            <div className="space-y-2">
+              <div className="border-b border-black w-48 mx-auto" />
+              <p className="font-bold">Firma del Cliente</p>
+              <p className="text-[10px] text-zinc-500">Aceptación de Presupuesto y Repuestos</p>
             </div>
-          </section>
-        )}
+            <div className="space-y-2">
+              <div className="border-b border-black w-48 mx-auto" />
+              <p className="font-bold">AutoG Centro Automotriz</p>
+              <p className="text-[10px] text-zinc-500">Mecánico: {orden.mechanic}</p>
+            </div>
+          </div>
+        </div>
       </main>
 
-      {/* Barra Inferior Sticky con Resumen Financiero y Acciones */}
-      <footer className="fixed bottom-0 left-0 right-0 z-30 bg-white/90 dark:bg-[#0a0a0c]/90 backdrop-blur-xl border-t border-zinc-200 dark:border-white/10 p-3 sm:p-4 shadow-2xl">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4">
-          {/* Métricas Financieras */}
+      {/* BARRA INFERIOR STICKY CON ACCIONES (NO SE IMPRIME) */}
+      <footer className="print:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-[#0c0c0e]/95 backdrop-blur-xl border-t border-zinc-200 dark:border-white/10 p-3 sm:p-4 shadow-2xl">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4">
+          {/* Métricas Rápidas */}
           <div className="flex items-center justify-between md:justify-start gap-4 sm:gap-6 text-xs font-mono">
             <div>
-              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-sans">Costo Compras</span>
+              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-sans">Compras Externas</span>
               <span className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white">
-                ${calculos.totalCostoCompras.toFixed(2)}
+                ${calculos.totalCostoComprasExternas.toFixed(2)}
               </span>
             </div>
 
             <div className="h-8 w-px bg-zinc-200 dark:bg-white/10" />
 
             <div>
-              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-sans">PVP Total Cliente</span>
+              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-sans">PVP Total Factura</span>
               <span className="text-base sm:text-lg font-black text-blue-600 dark:text-blue-400">
-                ${calculos.totalPvpCliente.toFixed(2)}
+                ${calculos.totalFacturaCliente.toFixed(2)}
               </span>
             </div>
 
             <div className="h-8 w-px bg-zinc-200 dark:bg-white/10" />
 
             <div>
-              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-sans">Margen</span>
+              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-sans">Margen Taller</span>
               <span className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400">
-                ${calculos.margenTotal.toFixed(2)} ({calculos.margenPorcentaje}%)
+                ${calculos.margenNetoTaller.toFixed(2)} ({calculos.margenPorcentaje}%)
               </span>
             </div>
           </div>
@@ -952,7 +1343,7 @@ export default function PaginaDetallePropuesta() {
               onClick={handleGuardarBorrador}
               className="h-11 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-xs font-bold transition-all active:scale-95 cursor-pointer disabled:opacity-50"
             >
-              {guardando ? "Guardando..." : "💾 Guardar Cambios"}
+              {guardando ? "Guardando..." : "💾 Guardar Presupuesto"}
             </button>
 
             <button
@@ -968,7 +1359,7 @@ export default function PaginaDetallePropuesta() {
         </div>
       </footer>
 
-      {/* Modal Catálogo WhatsApp para Proveedores */}
+      {/* MODAL CATÁLOGO WHATSAPP PARA PROVEEDORES */}
       {modalWhatsApp && (
         <div
           onClick={() => setModalWhatsApp(false)}
@@ -985,20 +1376,19 @@ export default function PaginaDetallePropuesta() {
                   <span>Catálogo Digital para Proveedores</span>
                 </h3>
                 <p className="text-xs text-zinc-400">
-                  Comparte fotos grandes y requerimientos sin precios de venta ni datos confidenciales.
+                  Comparte especificaciones y fotos grandes sin precios de venta ni datos confidenciales.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setModalWhatsApp(false)}
-                className="w-8 h-8 rounded-xl bg-white/5 text-zinc-400 hover:text-white flex items-center justify-center"
+                className="w-8 h-8 rounded-xl bg-white/5 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             <div className="space-y-3">
-              {/* Opción 1: Pedido Individual */}
               <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-white">1. Pedido de este Vehículo ({orden.plate})</span>
@@ -1033,16 +1423,15 @@ export default function PaginaDetallePropuesta() {
                 </div>
               </div>
 
-              {/* Opción 2: Consolidado del Día */}
               <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white">2. Consolidado de Pedidos del Día</span>
+                  <span className="text-xs font-bold text-white">2. Consolidado del Día</span>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 font-bold">
                     Del Día
                   </span>
                 </div>
                 <p className="text-xs text-zinc-400">
-                  Agrupa todos los repuestos por comprar de todos los vehículos recibidos hoy.
+                  Agrupa todos los repuestos por comprar de todos los vehículos recibidos hoy en el taller.
                 </p>
                 <div className="pt-2 flex items-center gap-2">
                   <a
@@ -1072,7 +1461,7 @@ export default function PaginaDetallePropuesta() {
         </div>
       )}
 
-      {/* Modal Agregar Nuevo Repuesto */}
+      {/* MODAL AGREGAR NUEVO REPUESTO A LA FACTURA */}
       {modalNuevoRepuesto && (
         <div
           onClick={() => setModalNuevoRepuesto(false)}
@@ -1080,14 +1469,14 @@ export default function PaginaDetallePropuesta() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#111113] border border-white/10 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-scale-up"
+            className="bg-[#111113] border border-white/10 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-scale-up text-white"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-white">+ Agregar Repuesto / Insumo</h3>
+              <h3 className="text-base font-bold text-white">+ Agregar Repuesto / Insumo a Factura</h3>
               <button
                 type="button"
                 onClick={() => setModalNuevoRepuesto(false)}
-                className="w-8 h-8 rounded-xl bg-white/5 text-zinc-400 hover:text-white flex items-center justify-center"
+                className="w-8 h-8 rounded-xl bg-white/5 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"
               >
                 ✕
               </button>
@@ -1095,10 +1484,10 @@ export default function PaginaDetallePropuesta() {
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-zinc-400 block mb-1">Descripción del Repuesto</label>
+                <label className="text-xs text-zinc-400 block mb-1">Descripción del Repuesto o Producto</label>
                 <input
                   type="text"
-                  placeholder="Ej: Filtro de Aceite Bosch Original"
+                  placeholder="Ej: Pastillas de Freno Bosch Delanteras"
                   value={nuevoNombre}
                   onChange={(e) => setNuevoNombre(e.target.value)}
                   className="w-full h-10 px-3 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -1128,7 +1517,7 @@ export default function PaginaDetallePropuesta() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-zinc-400 block mb-1">PVP ($)</label>
+                  <label className="text-xs text-zinc-400 block mb-1">PVP Venta ($)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -1142,11 +1531,11 @@ export default function PaginaDetallePropuesta() {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs text-zinc-400 block mb-1">Especialidad</label>
+                  <label className="text-xs text-zinc-400 block mb-1">Área / Origen</label>
                   <select
                     value={nuevoOrigen}
                     onChange={(e) => setNuevoOrigen(e.target.value as EspecialidadTipo)}
-                    className="w-full h-10 px-2 rounded-xl bg-black border border-white/10 text-xs text-white"
+                    className="w-full h-10 px-2 rounded-xl bg-black border border-white/10 text-xs text-white cursor-pointer"
                   >
                     <option value="TALLER">🔧 Taller</option>
                     <option value="LUBRICENTRO">🛢️ Lubricentro</option>
@@ -1156,17 +1545,17 @@ export default function PaginaDetallePropuesta() {
                 </div>
 
                 <div>
-                  <label className="text-xs text-zinc-400 block mb-1">Disponibilidad</label>
+                  <label className="text-xs text-zinc-400 block mb-1">Disponibilidad (Casillero)</label>
                   <button
                     type="button"
                     onClick={() => setNuevoEnStock(!nuevoEnStock)}
-                    className={`w-full h-10 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
+                    className={`w-full h-10 rounded-xl text-xs font-bold border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
                       nuevoEnStock
                         ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400"
                         : "bg-amber-500/15 border-amber-500/40 text-amber-400"
                     }`}
                   >
-                    {nuevoEnStock ? "📦 En Stock" : "🚚 Por Comprar"}
+                    <span>{nuevoEnStock ? "📦 Sí hay en Bodega" : "🚚 Pedir a Proveedor"}</span>
                   </button>
                 </div>
               </div>
@@ -1178,7 +1567,7 @@ export default function PaginaDetallePropuesta() {
                     type="text"
                     value={nuevoProveedor}
                     onChange={(e) => setNuevoProveedor(e.target.value)}
-                    placeholder="Nombre del proveedor"
+                    placeholder="Nombre del proveedor externo"
                     className="w-full h-10 px-3 rounded-xl bg-black border border-white/10 text-xs text-white"
                   />
                 </div>
@@ -1190,7 +1579,7 @@ export default function PaginaDetallePropuesta() {
                   onClick={handleAgregarRepuesto}
                   className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-600/30 cursor-pointer"
                 >
-                  Agregar Repuesto
+                  Agregar a la Factura
                 </button>
               </div>
             </div>
@@ -1198,7 +1587,7 @@ export default function PaginaDetallePropuesta() {
         </div>
       )}
 
-      {/* Modal Agregar Nuevo Servicio */}
+      {/* MODAL AGREGAR NUEVO SERVICIO / MANO DE OBRA */}
       {modalNuevoServicio && (
         <div
           onClick={() => setModalNuevoServicio(false)}
@@ -1206,14 +1595,14 @@ export default function PaginaDetallePropuesta() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#111113] border border-white/10 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-scale-up"
+            className="bg-[#111113] border border-white/10 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-scale-up text-white"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-white">+ Agregar Servicio Técnico</h3>
+              <h3 className="text-base font-bold text-white">+ Agregar Mano de Obra / Servicio</h3>
               <button
                 type="button"
                 onClick={() => setModalNuevoServicio(false)}
-                className="w-8 h-8 rounded-xl bg-white/5 text-zinc-400 hover:text-white flex items-center justify-center"
+                className="w-8 h-8 rounded-xl bg-white/5 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"
               >
                 ✕
               </button>
@@ -1221,10 +1610,10 @@ export default function PaginaDetallePropuesta() {
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-zinc-400 block mb-1">Nombre del Servicio</label>
+                <label className="text-xs text-zinc-400 block mb-1">Descripción del Servicio Técnico</label>
                 <input
                   type="text"
-                  placeholder="Ej: Cambio de Aceite y Filtros"
+                  placeholder="Ej: Cambio de Pastillas y Rectificación de Discos"
                   value={nuevoServicioNombre}
                   onChange={(e) => setNuevoServicioNombre(e.target.value)}
                   className="w-full h-10 px-3 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
@@ -1245,11 +1634,11 @@ export default function PaginaDetallePropuesta() {
                 </div>
 
                 <div>
-                  <label className="text-xs text-zinc-400 block mb-1">Especialidad</label>
+                  <label className="text-xs text-zinc-400 block mb-1">Área / Origen</label>
                   <select
                     value={nuevoServicioOrigen}
                     onChange={(e) => setNuevoServicioOrigen(e.target.value as EspecialidadTipo)}
-                    className="w-full h-10 px-2 rounded-xl bg-black border border-white/10 text-xs text-white"
+                    className="w-full h-10 px-2 rounded-xl bg-black border border-white/10 text-xs text-white cursor-pointer"
                   >
                     <option value="TALLER">🔧 Taller</option>
                     <option value="LUBRICENTRO">🛢️ Lubricentro</option>
@@ -1265,7 +1654,7 @@ export default function PaginaDetallePropuesta() {
                   onClick={handleAgregarServicio}
                   className="w-full h-10 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-md shadow-purple-600/30 cursor-pointer"
                 >
-                  Agregar Servicio
+                  Agregar a la Factura
                 </button>
               </div>
             </div>
@@ -1273,7 +1662,7 @@ export default function PaginaDetallePropuesta() {
         </div>
       )}
 
-      {/* Zoom Foto Evidencia */}
+      {/* ZOOM FOTO EVIDENCIA */}
       {fotoZoom && (
         <div
           onClick={() => setFotoZoom(null)}

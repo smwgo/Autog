@@ -3141,7 +3141,7 @@ ${urlSeguimiento}`;
               {/* Encabezado Corporativo con Logo */}
               <div className="flex items-start justify-between border-b-2 border-zinc-900 pb-4">
                 <div>
-                  <h1 className="text-2xl font-black text-zinc-900 tracking-tight">TALLER AUTOMOTRIZ AUTOG</h1>
+                  <h1 className="text-2xl font-black text-zinc-900 tracking-tight">Auto / G</h1>
                   <p className="text-xs text-zinc-600 font-medium">Inspección de Entrada & Registro Inicial de Daños</p>
                   <p className="text-[11px] text-zinc-500 mt-1">Av. Central 1234 • Soporte y Garaje Oficial</p>
                 </div>

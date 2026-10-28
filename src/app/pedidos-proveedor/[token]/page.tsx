@@ -45,6 +45,15 @@ export default function PaginaCatalogoProveedor() {
           : `/api/presupuestos/whatsapp-catalogo?orderId=${encodeURIComponent(token)}`;
 
         const res = await fetch(endpoint);
+        if (!res.ok) {
+          let errText = `Error (${res.status})`;
+          try {
+            const errJson = await res.json();
+            errText = errJson.error || errText;
+          } catch {}
+          setError(errText);
+          return;
+        }
         const data = await res.json();
 
         if (data.success) {
