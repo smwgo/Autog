@@ -36,14 +36,15 @@ export async function GET(req: Request) {
     if (!isR2Configured()) {
       // Intentar obtener desde fallback en base de datos si existe
       try {
-        const rows: any[] = await prisma.$queryRawUnsafe(
-          `SELECT "r2Key", "mimeType", "metadataJson" FROM "WorkshopEvidence" WHERE "r2Key" = $1 LIMIT 1`,
-          safeKey
-        );
-        if (rows.length > 0) {
-          const meta = rows[0].metadataJson ? JSON.parse(rows[0].metadataJson) : {};
+        const rows = (await prisma.workshopEvidence.findMany({
+          where: { r2Key: safeKey },
+          take: 1,
+        }).catch(() => [])) as any[];
+        if (rows && rows.length > 0) {
+          const rawMeta = rows[0].metadataJson;
+          const meta = rawMeta ? (typeof rawMeta === "string" ? JSON.parse(rawMeta) : rawMeta) : {};
           if (meta.inline && meta.dataUrl) {
-            return NextResponse.redirect(meta.dataUrl);
+            return NextResponse.redirect(new URL(meta.dataUrl), 307);
           }
         }
       } catch {}
@@ -59,7 +60,7 @@ export async function GET(req: Request) {
 
     // Generar URL firmada temporal con expiración de 1 hora
     const signedUrl = await getSignedDownloadUrl(safeKey, 3600);
-    return NextResponse.redirect(signedUrl);
+    return NextResponse.redirect(new URL(signedUrl), 307);
   } catch (error: any) {
     console.error("Error al generar enlace seguro de Cloudflare R2:", error);
     return NextResponse.json(

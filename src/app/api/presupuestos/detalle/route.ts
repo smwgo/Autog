@@ -22,30 +22,61 @@ export async function GET(request: Request) {
 
     return await withRetry(async () => {
       // 1. Obtener la orden principal
-      const rows: any[] = await prisma.$queryRawUnsafe(
-        `SELECT * FROM "WorkshopOrder" WHERE "id" = $1 OR "orderNumber" = $1 LIMIT 1`,
-        id
-      );
+      let order: any = null;
+      try {
+        order = await prisma.workshopOrder.findFirst({
+          where: {
+            OR: [
+              { id },
+              { orderNumber: id },
+              { orderNumber: id.replace(/\bOT\b/gi, "").replace(/#+/g, "").trim() },
+            ],
+          },
+        });
+      } catch {
+        order = null;
+      }
 
-      if (rows.length === 0) {
+      if (!order) {
+        const rows = (await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopOrder" WHERE "id" = $1 OR "orderNumber" = $1 LIMIT 1`,
+          id
+        ).catch(() => [])) as any[];
+        if (rows && rows.length > 0) order = rows[0];
+      }
+
+      if (!order) {
         return NextResponse.json(
           { success: false, error: "Orden no encontrada" },
           { status: 404 }
         );
       }
 
-      const order = rows[0];
-
       // 2. Obtener todas las evidencias multimedia asociadas desde Neon
-      const evRows = ((await prisma.$queryRawUnsafe(
-        `SELECT * FROM "WorkshopEvidence" 
-         WHERE ("orderId" = $1 OR "orderNumber" = $2 OR "plate" ILIKE $3)
-           AND "uploadStatus" = 'COMPLETED'
-         ORDER BY "createdAt" ASC`,
-        order.id,
-        order.orderNumber,
-        (order.plate || "").trim()
-      ).catch(() => [])) as any[]) || [];
+      let evRows: any[] = [];
+      try {
+        evRows = await prisma.workshopEvidence.findMany({
+          where: {
+            OR: [
+              { orderId: order.id },
+              { orderNumber: order.orderNumber },
+              { plate: { contains: order.plate || "" } },
+            ],
+            uploadStatus: "COMPLETED",
+          },
+          orderBy: { createdAt: "asc" },
+        });
+      } catch {
+        evRows = ((await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopEvidence" 
+           WHERE ("orderId" = $1 OR "orderNumber" = $2 OR "plate" ILIKE $3)
+             AND "uploadStatus" = 'COMPLETED'
+           ORDER BY "createdAt" ASC`,
+          order.id,
+          order.orderNumber,
+          (order.plate || "").trim()
+        ).catch(() => [])) as any[]) || [];
+      }
 
       const evidencias = evRows.map((ev: any) => ({
         id: ev.id,
@@ -82,6 +113,70 @@ export async function GET(request: Request) {
       try {
         receptionInventory = typeof order.receptionInventoryJson === "string" ? JSON.parse(order.receptionInventoryJson) : (order.receptionInventoryJson || []);
       } catch { receptionInventory = []; }
+
+      // 3.1 Unificar fotos guardadas en WorkshopOrder (receptionPhotos, evidencePhotos, photosJson, hallazgos de inspección)
+      let receptionPhotos: string[] = [];
+      let evidencePhotos: string[] = [];
+      let photosJson: string[] = [];
+
+      try {
+        receptionPhotos = typeof order.receptionPhotosJson === "string" ? JSON.parse(order.receptionPhotosJson) : (order.receptionPhotosJson || []);
+      } catch { receptionPhotos = []; }
+
+      try {
+        evidencePhotos = typeof order.evidencePhotosJson === "string" ? JSON.parse(order.evidencePhotosJson) : (order.evidencePhotosJson || []);
+      } catch { evidencePhotos = []; }
+
+      try {
+        photosJson = typeof order.photosJson === "string" ? JSON.parse(order.photosJson) : (order.photosJson || []);
+      } catch { photosJson = []; }
+
+      const findingPhotos: string[] = [];
+      if (Array.isArray(inspectionFindings)) {
+        for (const f of inspectionFindings) {
+          if (Array.isArray(f?.photos)) {
+            for (const p of f.photos) {
+              if (typeof p === "string" && p.trim()) findingPhotos.push(p.trim());
+              else if (p && typeof p.url === "string") findingPhotos.push(p.url.trim());
+            }
+          }
+          if (typeof f?.photoUrl === "string" && f.photoUrl.trim()) {
+            findingPhotos.push(f.photoUrl.trim());
+          }
+        }
+      }
+
+      const seenUrls = new Set(evidencias.map((e: any) => e.url));
+      const todasLasFotosOrden = [
+        ...(Array.isArray(receptionPhotos) ? receptionPhotos : []),
+        ...(Array.isArray(evidencePhotos) ? evidencePhotos : []),
+        ...(Array.isArray(photosJson) ? photosJson : []),
+        ...findingPhotos,
+      ];
+
+      todasLasFotosOrden.forEach((foto, i) => {
+        if (!foto || typeof foto !== "string") return;
+        const urlNormal = foto.startsWith("http") || foto.startsWith("/") || foto.startsWith("data:")
+          ? foto
+          : `/api/storage/download?key=${encodeURIComponent(foto)}`;
+        if (!seenUrls.has(urlNormal) && !seenUrls.has(foto)) {
+          seenUrls.add(urlNormal);
+          seenUrls.add(foto);
+          evidencias.push({
+            id: `foto_ord_${i}_${Date.now()}`,
+            type: "image",
+            r2Key: foto,
+            mimeType: "image/jpeg",
+            fileSizeBytes: 0,
+            durationSeconds: null,
+            transcriptionText: null,
+            transcriptionStatus: "NOT_APPLICABLE",
+            uploadedBy: order.mechanic || "Taller",
+            url: urlNormal,
+            createdAt: order.createdAt ? new Date(order.createdAt).toISOString() : null,
+          });
+        }
+      });
 
       // Normalizar estructura de repuestos para presupuestos y compras
       const repuestosNormalizados = items.map((it: any, index: number) => {
@@ -123,9 +218,17 @@ export async function GET(request: Request) {
       }));
 
       // 4. Obtener proveedores disponibles para el autocompletado
-      const proveedores = ((await prisma.$queryRawUnsafe(
-        `SELECT "id", "name", "contact", "phone", "email" FROM "Supplier" WHERE "status" = 'Activo' ORDER BY "name" ASC`
-      ).catch(() => [])) as any[]) || [];
+      let proveedores: any[] = [];
+      try {
+        proveedores = await prisma.supplier.findMany({
+          where: { status: "Activo" },
+          orderBy: { name: "asc" },
+        });
+      } catch {
+        proveedores = ((await prisma.$queryRawUnsafe(
+          `SELECT "id", "name", "contact", "phone", "email" FROM "Supplier" WHERE "status" = 'Activo' ORDER BY "name" ASC`
+        ).catch(() => [])) as any[]) || [];
+      }
 
       return NextResponse.json({
         success: true,
@@ -157,6 +260,9 @@ export async function GET(request: Request) {
           inspectionFindings,
           receptionInventory,
           evidencias,
+          photos: todasLasFotosOrden,
+          evidencePhotos,
+          receptionPhotos,
         },
         proveedores,
       });

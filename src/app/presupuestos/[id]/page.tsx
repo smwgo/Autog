@@ -79,6 +79,9 @@ interface OrdenDetalleCompleta {
   items: ItemPropuesta[];
   services: ServicioPropuesta[];
   evidencias: EvidenciaItem[];
+  photos?: string[];
+  evidencePhotos?: string[];
+  receptionPhotos?: string[];
 }
 
 function deducirEspecialidad(nombre: string, categoria: string = ""): EspecialidadTipo {
@@ -99,28 +102,28 @@ function renderBadgeEspecialidad(origen?: EspecialidadTipo) {
   switch (origen) {
     case "LUBRICENTRO":
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-normal bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300">
           <span>🛢️</span>
           <span>Lubricentro</span>
         </span>
       );
     case "CARWASH":
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-cyan-500/15 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-normal bg-cyan-500/15 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300">
           <span>🚿</span>
           <span>Car Wash</span>
         </span>
       );
     case "TECNICENTRO":
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-normal bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
           <span>⚙️</span>
           <span>Tecnicentro</span>
         </span>
       );
     default:
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-blue-500/15 border border-blue-500/30 text-blue-700 dark:text-blue-300">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-normal bg-blue-500/15 border border-blue-500/30 text-blue-700 dark:text-blue-300">
           <span>🔧</span>
           <span>Taller</span>
         </span>
@@ -155,6 +158,7 @@ export default function PaginaDetallePropuesta() {
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
   const [esAprobadoLocal, setEsAprobadoLocal] = useState<boolean | null>(null);
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
 
   // Formulario rápido para nuevo repuesto
   const [nuevoNombre, setNuevoNombre] = useState("");
@@ -173,6 +177,37 @@ export default function PaginaDetallePropuesta() {
   const mostrarToast = (msg: string, tipo: "ok" | "err" = "ok") => {
     setToast({ msg, tipo });
     setTimeout(() => setToast(null), 3500);
+  };
+
+  const copiarAlPortapapeles = async (texto: string, mensajeExito = "Enlace copiado al portapapeles.") => {
+    try {
+      if (typeof navigator !== "undefined" && navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(texto);
+        mostrarToast(mensajeExito);
+        return;
+      }
+    } catch {
+      // Fallback a textarea si la Clipboard API está bloqueada por permisos
+    }
+
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = texto;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      textArea.style.top = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const copiado = document.execCommand("copy");
+      document.body.removeChild(textArea);
+      if (copiado) {
+        mostrarToast(mensajeExito);
+        return;
+      }
+    } catch {}
+
+    mostrarToast("No se pudo copiar automáticamente.", "err");
   };
 
   // Cargar datos de la orden desde Neon PostgreSQL
@@ -344,6 +379,97 @@ export default function PaginaDetallePropuesta() {
       itemsEnBodega,
     };
   }, [repuestos, servicios, porcentajeDescuento, porcentajeIva]);
+
+  // Lista deduplicada de fotos de inspección y evidencias
+  const fotosVehiculo = useMemo(() => {
+    if (!orden) return [];
+    const list: string[] = [];
+    if (orden.photos && Array.isArray(orden.photos)) {
+      list.push(...orden.photos);
+    }
+    if (orden.evidencePhotos && Array.isArray(orden.evidencePhotos)) {
+      list.push(...orden.evidencePhotos);
+    }
+    if (orden.receptionPhotos && Array.isArray(orden.receptionPhotos)) {
+      list.push(...orden.receptionPhotos);
+    }
+    if (typeof (orden as any).receptionPhotosJson === "string") {
+      try {
+        const parsed = JSON.parse((orden as any).receptionPhotosJson);
+        if (Array.isArray(parsed)) list.push(...parsed);
+      } catch {}
+    }
+    if (typeof (orden as any).evidencePhotosJson === "string") {
+      try {
+        const parsed = JSON.parse((orden as any).evidencePhotosJson);
+        if (Array.isArray(parsed)) list.push(...parsed);
+      } catch {}
+    }
+    if (typeof (orden as any).photosJson === "string") {
+      try {
+        const parsed = JSON.parse((orden as any).photosJson);
+        if (Array.isArray(parsed)) list.push(...parsed);
+      } catch {}
+    }
+    if (orden.evidencias && Array.isArray(orden.evidencias)) {
+      for (const ev of orden.evidencias) {
+        if (ev.url && (ev.type === "image" || !ev.type || !ev.url.includes(".mp3"))) {
+          list.push(ev.url);
+        }
+      }
+    }
+    return Array.from(new Set(list.filter(Boolean)));
+  }, [orden]);
+
+  // Subir fotos directamente desde la propuesta a Cloudflare R2
+  const handleSubirFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !orden) return;
+    setSubiendoFoto(true);
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("orderId", orden.id);
+        formData.append("orderNumber", orden.orderNumber);
+        formData.append("plate", orden.plate);
+        formData.append("folder", "taller_evidencia");
+        formData.append("tipo", "image");
+        formData.append("uploadedBy", orden.mechanic || "Taller");
+
+        const res = await fetch("/api/storage/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.success && data.url) {
+          const nuevaUrl = data.url;
+          setOrden((prev) => {
+            if (!prev) return prev;
+            const nuevasEvs = [
+              ...(prev.evidencias || []),
+              {
+                id: data.evidenceId || `ev_${Date.now()}_${i}`,
+                type: "image" as const,
+                url: nuevaUrl,
+                mimeType: file.type || "image/jpeg",
+                createdAt: new Date().toISOString(),
+              },
+            ];
+            const nuevasFotos = [...(prev.photos || []), nuevaUrl];
+            return { ...prev, evidencias: nuevasEvs, photos: nuevasFotos };
+          });
+          mostrarToast("Foto agregada con éxito.");
+        }
+      }
+    } catch (err: any) {
+      mostrarToast("Error al subir foto: " + (err.message || ""), "err");
+    } finally {
+      setSubiendoFoto(false);
+      e.target.value = "";
+    }
+  };
 
   // Guardar Cambios en Neon PostgreSQL
   const handleGuardarBorrador = async () => {
@@ -694,20 +820,20 @@ export default function PaginaDetallePropuesta() {
                   {esAprobado ? "✓ Aprobado" : "⏳ En Espera"}
                 </span>
               </div>
-              <h3 className="text-base sm:text-lg font-mono font-black text-zinc-900 dark:text-white pt-1">
-                {orden.quoteNumber ? orden.quoteNumber.replace(/\bOT\b/gi, "").replace(/#+/g, "").trim() : `COT-${limpiarNumeroOrden(orden.orderNumber)}`}
+              <h3 className="text-base sm:text-lg font-mono font-normal text-zinc-900 dark:text-white pt-1">
+                {orden.quoteNumber ? orden.quoteNumber.replace(/\bOT\s*#?/gi, "").replace(/-\s+/, "-").trim() : `COT-${limpiarNumeroOrden(orden.orderNumber)}`}
               </h3>
-              <p className="text-sm sm:text-base font-semibold text-zinc-700 dark:text-zinc-200 pt-0.5">
-                Fecha: <strong className="font-bold text-zinc-900 dark:text-white">{orden.dateIn ? new Date(orden.dateIn).toLocaleDateString("es-EC", { year: "numeric", month: "long", day: "numeric" }) : new Date().toLocaleDateString("es-EC", { year: "numeric", month: "long", day: "numeric" })}</strong>
+              <p className="text-sm sm:text-base font-normal text-zinc-600 dark:text-zinc-400 pt-0.5">
+                Fecha: {orden.dateIn ? new Date(orden.dateIn).toLocaleDateString("es-EC", { year: "numeric", month: "long", day: "numeric" }) : new Date().toLocaleDateString("es-EC", { year: "numeric", month: "long", day: "numeric" })}
               </p>
             </div>
           </div>
 
-          {/* FICHA TÉCNICA DEL CLIENTE Y VEHÍCULO (ESTILO FACTURA) */}
+          {/* FICHA TÉCNICA DEL CLIENTE Y VEHÍCULO (DATOS ORDENADOS) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Cuadro Cliente */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-2">
-              <div className="flex items-center justify-between pb-1 border-b border-zinc-200 dark:border-white/5">
+            <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-white/5">
                 <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
                   <span>👤</span>
                   <span>Datos del Cliente</span>
@@ -716,29 +842,42 @@ export default function PaginaDetallePropuesta() {
                   Titular
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                <div>
-                  <span className="text-zinc-400 block text-[10px]">Cliente / Razón Social:</span>
-                  <strong className="text-zinc-900 dark:text-white font-semibold text-sm">{orden.client}</strong>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#111113] border border-zinc-200/80 dark:border-white/10 flex flex-col justify-between min-h-[58px] shadow-2xs">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Cliente / Razón Social</span>
+                  <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate mt-0.5" title={orden.client}>{orden.client}</span>
                 </div>
-                <div>
-                  <span className="text-zinc-400 block text-[10px]">Cédula / RUC:</span>
-                  <span className="font-mono text-zinc-700 dark:text-zinc-300 font-semibold">{orden.clientIdDoc || "9999999999"}</span>
+                <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#111113] border border-zinc-200/80 dark:border-white/10 flex flex-col justify-between min-h-[58px] shadow-2xs">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Cédula / RUC</span>
+                  <span className="text-xs sm:text-sm font-mono font-bold text-zinc-800 dark:text-zinc-200 mt-0.5">{orden.clientIdDoc || "9999999999"}</span>
                 </div>
-                <div>
-                  <span className="text-zinc-400 block text-[10px]">Teléfono / WhatsApp:</span>
-                  <span className="font-mono text-zinc-700 dark:text-zinc-300">{orden.clientPhone || "S/N"}</span>
+                <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#111113] border border-zinc-200/80 dark:border-white/10 flex flex-col justify-between min-h-[58px] shadow-2xs">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Teléfono / WhatsApp</span>
+                  <span className="text-xs sm:text-sm font-mono font-medium text-zinc-800 dark:text-zinc-200 mt-0.5">{orden.clientPhone || "S/N"}</span>
                 </div>
-                <div>
-                  <span className="text-zinc-400 block text-[10px]">Estado Operativo:</span>
-                  <span className="text-blue-600 dark:text-blue-400 font-semibold">{orden.status || "En Taller"}</span>
+                <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#111113] border border-zinc-200/80 dark:border-white/10 flex flex-col justify-between min-h-[58px] shadow-2xs">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Estado Operativo</span>
+                  <span className="text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400 truncate mt-0.5">{orden.status || "En Taller"}</span>
+                </div>
+              </div>
+
+              {/* Observaciones / Motivo de Ingreso del Cliente */}
+              <div className="pt-2 border-t border-zinc-200 dark:border-white/5 space-y-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 flex items-center gap-1">
+                  <span>📝</span>
+                  <span>Motivo de Ingreso / Observaciones</span>
+                </span>
+                <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#111113] border border-zinc-200/80 dark:border-white/10 min-h-[58px] flex items-center text-xs text-zinc-700 dark:text-zinc-300 shadow-2xs">
+                  <p className="line-clamp-2">
+                    {orden.notes || "Revisión general, mantenimiento preventivo e inspección técnica vehicular."}
+                  </p>
                 </div>
               </div>
             </div>
 
             {/* Cuadro Vehículo */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-2">
-              <div className="flex items-center justify-between pb-1 border-b border-zinc-200 dark:border-white/5">
+            <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-white/5">
                 <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
                   <span>🚗</span>
                   <span>Datos del Vehículo</span>
@@ -747,29 +886,159 @@ export default function PaginaDetallePropuesta() {
                   {orden.plate}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                <div>
-                  <span className="text-zinc-400 block text-[10px]">Marca / Modelo / Año:</span>
-                  <strong className="text-zinc-900 dark:text-white font-semibold text-sm">{orden.vehicle}</strong>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#111113] border border-zinc-200/80 dark:border-white/10 flex flex-col justify-between min-h-[58px] shadow-2xs">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Marca / Modelo / Año</span>
+                  <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate mt-0.5" title={orden.vehicle}>{orden.vehicle}</span>
                 </div>
-                <div>
-                  <span className="text-zinc-400 block text-[10px]">Mecánico Responsable:</span>
-                  <span className="text-zinc-700 dark:text-zinc-300 font-semibold">{orden.mechanic || "Taller Principal"}</span>
+                <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#111113] border border-zinc-200/80 dark:border-white/10 flex flex-col justify-between min-h-[58px] shadow-2xs">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Mecánico Responsable</span>
+                  <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate mt-0.5" title={orden.mechanic || "Taller Principal"}>
+                    {orden.mechanic || "Taller Principal"}
+                  </span>
                 </div>
-                <div>
-                  <span className="text-zinc-400 block text-[10px]">Kilometraje Actual:</span>
-                  <span className="font-mono text-zinc-700 dark:text-zinc-300">
+                <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#111113] border border-zinc-200/80 dark:border-white/10 flex flex-col justify-between min-h-[58px] shadow-2xs">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Kilometraje Actual</span>
+                  <span className="text-xs sm:text-sm font-mono font-bold text-zinc-800 dark:text-zinc-200 mt-0.5">
                     {orden.mileage ? `${Number(orden.mileage).toLocaleString()} km` : "N/D"}
                   </span>
                 </div>
-                <div>
-                  <span className="text-zinc-400 block text-[10px]">Combustible / Estado:</span>
-                  <span className="text-zinc-700 dark:text-zinc-300">
-                    Tanque: {orden.fuelLevel || "1/2"}
+                <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#111113] border border-zinc-200/80 dark:border-white/10 flex flex-col justify-between min-h-[58px] shadow-2xs">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Combustible / Estado</span>
+                  <span className="text-xs sm:text-sm font-medium text-zinc-800 dark:text-zinc-200 mt-0.5">
+                    Tanque: <strong className="font-bold">{orden.fuelLevel || "1/2"}</strong>
                   </span>
                 </div>
               </div>
+
+              {/* Fotos del Vehículo integradas directamente en la tarjeta */}
+              <div className="pt-2 border-t border-zinc-200 dark:border-white/5 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 flex items-center gap-1">
+                    <span>📷</span>
+                    <span>Fotos del Vehículo ({fotosVehiculo.length})</span>
+                  </span>
+                  <label className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1 print:hidden">
+                    <span>+ Subir foto</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      disabled={subiendoFoto}
+                      onChange={handleSubirFoto}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                {fotosVehiculo.length > 0 ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {fotosVehiculo.map((fotoUrl, idx) => (
+                      <div
+                        key={`veh-mini-${idx}`}
+                        onClick={() => setFotoZoom(fotoUrl)}
+                        className="group relative aspect-4/3 rounded-xl overflow-hidden border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-black/40 cursor-pointer shadow-2xs hover:border-blue-500 transition-all"
+                      >
+                        <img
+                          src={fotoUrl}
+                          alt={`Vehículo ${idx + 1}`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
+                          🔍 Ver
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <label className="p-3 rounded-xl border border-dashed border-zinc-300 dark:border-white/10 flex items-center justify-center gap-2 text-zinc-400 text-xs hover:border-blue-500 hover:text-blue-500 transition-all cursor-pointer">
+                    <span>📷</span>
+                    <span>Sin fotos registradas. Clic para subir fotos del auto.</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      disabled={subiendoFoto}
+                      onChange={handleSubirFoto}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
             </div>
+          </div>
+
+          {/* FOTOS DE INSPECCIÓN Y EVIDENCIAS DEL VEHÍCULO */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-white/5">
+              <div className="flex items-center gap-2">
+                <span className="text-base">📸</span>
+                <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white tracking-wide">
+                  Fotos de Inspección & Evidencias del Vehículo
+                </span>
+                <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                  {fotosVehiculo.length} {fotosVehiculo.length === 1 ? "foto" : "fotos"}
+                </span>
+              </div>
+
+              {/* Botón para subir fotos directamente */}
+              <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 print:hidden">
+                <span>📷</span>
+                <span>{subiendoFoto ? "Subiendo..." : "Subir Foto"}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  disabled={subiendoFoto}
+                  onChange={handleSubirFoto}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            {fotosVehiculo.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 pt-1">
+                {fotosVehiculo.map((fotoUrl, idx) => (
+                  <div
+                    key={`foto-${idx}`}
+                    onClick={() => setFotoZoom(fotoUrl)}
+                    className="group relative aspect-4/3 rounded-xl overflow-hidden border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-black/40 cursor-pointer shadow-2xs hover:shadow-md hover:border-blue-500/50 transition-all"
+                  >
+                    <img
+                      src={fotoUrl}
+                      alt={`Foto ${idx + 1}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1">
+                      <span>🔍</span>
+                      <span>Ver</span>
+                    </div>
+                    <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-mono text-white/90">
+                      #{idx + 1}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-6 px-4 rounded-xl border border-dashed border-zinc-300 dark:border-white/10 flex flex-col items-center justify-center text-center text-zinc-400">
+                <span className="text-3xl mb-1">📸</span>
+                <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                  No hay fotos registradas para este vehículo aún.
+                </p>
+                <label className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-200 hover:bg-zinc-300 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-zinc-200 text-xs font-bold transition-all cursor-pointer print:hidden">
+                  <span>+ Agregar fotos de inspección</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    disabled={subiendoFoto}
+                    onChange={handleSubirFoto}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            )}
           </div>
 
           {/* TABLA PRINCIPAL DE FACTURA: TODO LO QUE SE PIDIÓ (REPUESTOS, INSUMOS, SERVICIOS) */}
@@ -778,11 +1047,8 @@ export default function PaginaDetallePropuesta() {
               <div>
                 <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white flex items-center gap-2">
                   <span>📋</span>
-                  <span>Detalle de Factura & Presupuesto</span>
+                  <span>Detalle</span>
                 </h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  Consolidado completo de todo lo pedido (Taller, Lubricentro, Car Wash y Tecnicentro).
-                </p>
               </div>
 
               {/* Botones para agregar líneas directamente a la factura */}
@@ -793,7 +1059,7 @@ export default function PaginaDetallePropuesta() {
                   className="h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
                   <span>+</span>
-                  <span>Agregar Repuesto / Insumo</span>
+                  <span>Repuesto</span>
                 </button>
 
                 <button
@@ -802,49 +1068,29 @@ export default function PaginaDetallePropuesta() {
                   className="h-9 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
                   <span>+</span>
-                  <span>Agregar Mano de Obra</span>
+                  <span>Servicio</span>
                 </button>
-              </div>
-            </div>
-
-            {/* Banner Informativo del Casillero */}
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 text-xs text-zinc-600 dark:text-zinc-300 gap-3 flex-wrap">
-              <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center font-bold text-xs shrink-0">
-                  ℹ️
-                </span>
-                <span>
-                  Usa el <strong>Casillero de Disponibilidad</strong> en cada repuesto para definir si <span className="text-emerald-600 dark:text-emerald-400 font-bold">sí hay en bodega</span> o si <span className="text-amber-600 dark:text-amber-400 font-bold">hay que pedirlo a proveedores externos</span>.
-                </span>
-              </div>
-              <div className="flex items-center gap-3 font-mono text-xs font-semibold">
-                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                  <span>📦</span> {calculos.itemsEnBodega.length} en Bodega
-                </span>
-                <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                  <span>🚚</span> {calculos.itemsPorComprar.length} a Proveedor
-                </span>
               </div>
             </div>
 
             {/* TABLA ESTILO FACTURA PROFORMA */}
             <div className="border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden bg-white dark:bg-[#121216] shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+              <div className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                <table className="w-full text-left border-collapse table-auto">
                   <thead>
-                    <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                      <th className="py-3 px-3 w-10 text-center">#</th>
-                      <th className="py-3 px-3 w-28">Área / Origen</th>
-                      <th className="py-3 px-3 min-w-[220px]">Descripción del Ítem / Servicio</th>
-                      <th className="py-3 px-3 w-64 text-center">
-                        Disponibilidad (Casillero)
+                    <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] text-xs font-normal text-zinc-600 dark:text-zinc-400">
+                      <th className="py-2.5 px-2 w-8 text-center font-normal">#</th>
+                      <th className="py-2.5 px-2 w-24 font-normal">Área</th>
+                      <th className="py-2.5 px-2 min-w-[170px] font-normal">Descripción</th>
+                      <th className="py-2.5 px-2 w-44 text-center font-normal">
+                        Disponibilidad
                       </th>
-                      <th className="py-3 px-2 w-20 text-center">Cant.</th>
-                      <th className="py-3 px-3 w-24 text-right">Costo Unit.</th>
-                      <th className="py-3 px-3 w-24 text-right">PVP Unit.</th>
-                      <th className="py-3 px-3 w-24 text-right">Subtotal</th>
-                      <th className="py-3 px-3 w-24 text-right print:hidden">Margen</th>
-                      <th className="py-3 px-2 w-10 text-center print:hidden"></th>
+                      <th className="py-2.5 px-1.5 w-14 text-center font-normal">Cant.</th>
+                      <th className="py-2.5 px-2 w-20 text-right font-normal">Costo</th>
+                      <th className="py-2.5 px-2 w-20 text-right font-normal">PVP</th>
+                      <th className="py-2.5 px-2 w-20 text-right font-normal">Subtotal</th>
+                      <th className="py-2.5 px-2 w-20 text-right print:hidden font-normal">Margen</th>
+                      <th className="py-2.5 px-1.5 w-8 text-center print:hidden"></th>
                     </tr>
                   </thead>
 
@@ -908,7 +1154,7 @@ export default function PaginaDetallePropuesta() {
                                   />
                                   <span>{item.inStock ? "Sí hay en Bodega" : "Pedir a Proveedor"}</span>
                                 </div>
-                                <span className="text-[10px] uppercase font-bold tracking-wider opacity-80">
+                                <span className="text-[11px] font-normal opacity-80">
                                   {item.inStock ? "Bodega" : "Externo"}
                                 </span>
                               </label>
@@ -1053,8 +1299,8 @@ export default function PaginaDetallePropuesta() {
 
                           {/* 4. Casillero para Mano de Obra */}
                           <td className="py-3 px-3 text-center">
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/25 text-purple-700 dark:text-purple-300 font-semibold text-xs">
-                              <span>👨‍🔧 Mano de Obra Taller</span>
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/25 text-purple-700 dark:text-purple-300 font-normal text-xs">
+                              <span>👨‍🔧 Servicio</span>
                               <span className="text-[10px] text-zinc-400 font-normal">
                                 ({sv.mechanic || orden.mechanic})
                               </span>
@@ -1119,86 +1365,36 @@ export default function PaginaDetallePropuesta() {
           </div>
 
           {/* LIQUIDACIÓN DE LA FACTURA & TOTALES */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-zinc-200 dark:border-white/10">
-            {/* Izquierda: Observaciones y Control de Compras a Proveedores */}
-            <div className="space-y-4">
-              {/* Observaciones */}
-              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-2">
-                <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
-                  <span>📝</span>
-                  <span>Términos y Observaciones de la Proforma</span>
-                </label>
-                <textarea
-                  rows={3}
-                  value={notasFactura}
-                  onChange={(e) => setNotasFactura(e.target.value)}
-                  placeholder="Garantía de repuestos e insumos, validez de la oferta (15 días), recomendaciones técnicas..."
-                  className="w-full p-2.5 rounded-xl bg-white dark:bg-black border border-zinc-200 dark:border-white/10 text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-500 print:border-none print:p-0"
-                />
-              </div>
-
-              {/* Resumen de Compras a Proveedores Externos (Control Interno de Taller) */}
-              <div className="p-4 rounded-2xl bg-amber-500/[0.06] border border-amber-500/20 space-y-2.5 print:hidden">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
-                    <span>🚚</span>
-                    <span>Requerimientos a Proveedores Externos</span>
-                  </span>
-                  <span className="text-xs font-mono font-black text-amber-700 dark:text-amber-300">
-                    {calculos.itemsPorComprar.length} repuestos
-                  </span>
-                </div>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                  Costo total estimado que el taller debe pagar a proveedores:{" "}
-                  <strong className="text-zinc-900 dark:text-white font-mono font-bold">
-                    ${calculos.totalCostoComprasExternas.toFixed(2)}
-                  </strong>
-                </p>
-                {calculos.itemsPorComprar.length > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => setModalWhatsApp(true)}
-                    className="w-full h-8 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <span>💬 Enviar lista a Proveedores por WhatsApp</span>
-                  </button>
-                ) : (
-                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold block">
-                    ✓ Todos los repuestos de esta factura están disponibles en Bodega.
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Derecha: Liquidación Financiera de Factura */}
-            <div className="p-5 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-3 font-mono">
+          <div className="flex justify-end pt-4 border-t border-zinc-200 dark:border-white/10">
+            {/* Liquidación Financiera de Propuesta */}
+            <div className="w-full md:w-1/2 max-w-lg p-5 rounded-2xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-3 font-sans">
               <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
-                <span>Subtotal Repuestos e Insumos:</span>
-                <span className="font-bold text-zinc-900 dark:text-white">
+                <span className="font-normal">Subtotal Repuestos e Insumos:</span>
+                <span className="font-medium text-zinc-900 dark:text-white">
                   ${calculos.subtotalRepuestos.toFixed(2)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
-                <span>Subtotal Mano de Obra y Servicios:</span>
-                <span className="font-bold text-zinc-900 dark:text-white">
+                <span className="font-normal">Subtotal Mano de Obra y Servicios:</span>
+                <span className="font-medium text-zinc-900 dark:text-white">
                   ${calculos.subtotalServicios.toFixed(2)}
                 </span>
               </div>
 
               <div className="h-px bg-zinc-200 dark:bg-white/10" />
 
-              <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
-                <span>Subtotal Bruto:</span>
-                <span className="font-black text-zinc-900 dark:text-white text-sm">
+              <div className="flex items-center justify-between text-xs text-zinc-700 dark:text-zinc-300">
+                <span className="font-normal">Subtotal Bruto:</span>
+                <span className="font-semibold text-zinc-900 dark:text-white text-sm">
                   ${calculos.subtotalBruto.toFixed(2)}
                 </span>
               </div>
 
               {/* Descuento editable */}
               <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
-                <div className="flex items-center gap-2 font-sans">
-                  <span>Descuento:</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-normal">Descuento:</span>
                   <div className="inline-flex items-center gap-1 print:hidden">
                     <input
                       type="number"
@@ -1206,25 +1402,25 @@ export default function PaginaDetallePropuesta() {
                       max="100"
                       value={porcentajeDescuento}
                       onChange={(e) => setPorcentajeDescuento(parseFloat(e.target.value) || 0)}
-                      className="w-12 h-6 px-1 text-center rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-xs font-mono font-bold"
+                      className="w-12 h-6 px-1 text-center rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-xs font-normal"
                     />
                     <span className="text-[10px]">%</span>
                   </div>
                 </div>
-                <span className="text-rose-500 font-bold">
+                <span className="text-rose-500 font-medium">
                   -${calculos.descuento.toFixed(2)}
                 </span>
               </div>
 
               {/* IVA editable */}
               <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
-                <div className="flex items-center gap-2 font-sans">
-                  <span>IVA ({porcentajeIva}%):</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-normal">IVA ({porcentajeIva}%):</span>
                   <div className="inline-flex items-center gap-1 print:hidden">
                     <select
                       value={porcentajeIva}
                       onChange={(e) => setPorcentajeIva(Number(e.target.value))}
-                      className="h-6 px-1 rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-[11px] font-mono"
+                      className="h-6 px-1 rounded bg-white dark:bg-black border border-zinc-300 dark:border-white/10 text-[11px]"
                     >
                       <option value={15}>15%</option>
                       <option value={12}>12%</option>
@@ -1232,58 +1428,61 @@ export default function PaginaDetallePropuesta() {
                     </select>
                   </div>
                 </div>
-                <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                <span className="font-medium text-zinc-800 dark:text-zinc-200">
                   ${calculos.iva.toFixed(2)}
                 </span>
               </div>
 
-              {/* TOTAL FACTURA / PRESUPUESTO */}
+              {/* TOTAL PROPUESTA */}
               <div className="p-4 rounded-xl bg-blue-600/10 border border-blue-600/30 flex items-center justify-between">
                 <div>
-                  <span className="text-xs uppercase font-sans font-black text-blue-700 dark:text-blue-300 block">
-                    TOTAL FACTURA PROFORMA
+                  <span className="text-sm font-semibold text-blue-700 dark:text-blue-300 block">
+                    Total Propuesta
                   </span>
-                  <span className="text-[10px] text-zinc-500 font-sans">
+                  <span className="text-[11px] text-zinc-500 font-normal">
                     Precio total final para el cliente
                   </span>
                 </div>
-                <span className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400">
+                <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                   ${calculos.totalFacturaCliente.toFixed(2)}
                 </span>
               </div>
 
               {/* RENTABILIDAD / MARGEN TALLER (Solo visible internamente) */}
               <div className="p-3 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/25 flex items-center justify-between text-xs print:hidden">
-                <span className="font-sans font-bold text-emerald-800 dark:text-emerald-300">
+                <span className="font-normal text-emerald-800 dark:text-emerald-300">
                   Utilidad Neta del Taller:
                 </span>
-                <span className="font-black text-emerald-600 dark:text-emerald-400">
+                <span className="font-medium text-emerald-600 dark:text-emerald-400">
                   ${calculos.margenNetoTaller.toFixed(2)} ({calculos.margenPorcentaje}%)
                 </span>
               </div>
             </div>
           </div>
 
-          {/* EVIDENCIAS Y FOTOS DE INSPECCIÓN */}
-          {orden.evidencias && orden.evidencias.length > 0 && (
+          {/* AUDIOS Y NOTAS DE VOZ (SI EXISTEN) */}
+          {orden.evidencias && orden.evidencias.some((e) => e.type === "audio" || e.url?.includes(".mp3")) && (
             <div className="space-y-3 pt-6 border-t border-zinc-200 dark:border-white/10 print:hidden">
               <h4 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                <span>📸</span>
-                <span>Evidencias y Fotos de Inspección ({orden.evidencias.length})</span>
+                <span>🎙️</span>
+                <span>Notas de Voz y Audios de Inspección</span>
               </h4>
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                {orden.evidencias.map((ev) => (
-                  <div
-                    key={ev.id}
-                    onClick={() => setFotoZoom(ev.url)}
-                    className="h-28 rounded-2xl bg-zinc-100 dark:bg-[#111113] border border-zinc-200 dark:border-white/10 overflow-hidden cursor-pointer relative group shadow-xs"
-                  >
-                    <img src={ev.url} alt="Evidencia" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs text-white font-bold">
-                      🔍 Ver
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {orden.evidencias
+                  .filter((e) => e.type === "audio" || e.url?.includes(".mp3"))
+                  .map((ev) => (
+                    <div
+                      key={ev.id}
+                      className="p-3 rounded-2xl bg-zinc-100 dark:bg-[#111113] border border-zinc-200 dark:border-white/10 space-y-2 shadow-xs"
+                    >
+                      <audio controls src={ev.url} className="w-full h-8" />
+                      {ev.transcriptionText && (
+                        <p className="text-xs text-zinc-600 dark:text-zinc-400 italic">
+                          "{ev.transcriptionText}"
+                        </p>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
           )}
@@ -1310,8 +1509,8 @@ export default function PaginaDetallePropuesta() {
           {/* Métricas Rápidas */}
           <div className="flex items-center justify-between md:justify-start gap-4 sm:gap-6 text-xs font-mono">
             <div>
-              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-sans">Compras Externas</span>
-              <span className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white">
+              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-sans">Compras</span>
+              <span className="text-base sm:text-lg font-normal text-zinc-900 dark:text-white">
                 ${calculos.totalCostoComprasExternas.toFixed(2)}
               </span>
             </div>
@@ -1319,8 +1518,8 @@ export default function PaginaDetallePropuesta() {
             <div className="h-8 w-px bg-zinc-200 dark:bg-white/10" />
 
             <div>
-              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-sans">PVP Total Factura</span>
-              <span className="text-base sm:text-lg font-black text-blue-600 dark:text-blue-400">
+              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-sans">Total</span>
+              <span className="text-base sm:text-lg font-normal text-blue-600 dark:text-blue-400">
                 ${calculos.totalFacturaCliente.toFixed(2)}
               </span>
             </div>
@@ -1328,8 +1527,8 @@ export default function PaginaDetallePropuesta() {
             <div className="h-8 w-px bg-zinc-200 dark:bg-white/10" />
 
             <div>
-              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-sans">Margen Taller</span>
-              <span className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400">
+              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-sans">Margen</span>
+              <span className="text-base sm:text-lg font-normal text-emerald-600 dark:text-emerald-400">
                 ${calculos.margenNetoTaller.toFixed(2)} ({calculos.margenPorcentaje}%)
               </span>
             </div>
@@ -1341,19 +1540,18 @@ export default function PaginaDetallePropuesta() {
               type="button"
               disabled={guardando}
               onClick={handleGuardarBorrador}
-              className="h-11 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-xs font-bold transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+              className="h-10 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-xs font-normal transition-all active:scale-95 cursor-pointer disabled:opacity-50"
             >
-              {guardando ? "Guardando..." : "💾 Guardar Presupuesto"}
+              {guardando ? "Guardando..." : "Guardar"}
             </button>
 
             <button
               type="button"
               disabled={autorizando}
               onClick={handleAutorizarYEnviarAPos}
-              className="h-11 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-lg shadow-emerald-600/30 transition-all active:scale-95 cursor-pointer flex items-center gap-2 disabled:opacity-50"
+              className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center disabled:opacity-50"
             >
-              <span>🚀</span>
-              <span>{autorizando ? "Transfiriendo..." : "Autorizar Cobro y Pasar a POS →"}</span>
+              <span>{autorizando ? "Transfiriendo..." : "Autorizar"}</span>
             </button>
           </div>
         </div>
@@ -1363,40 +1561,37 @@ export default function PaginaDetallePropuesta() {
       {modalWhatsApp && (
         <div
           onClick={() => setModalWhatsApp(false)}
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#111113] border border-white/10 rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl animate-scale-up"
+            className="bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
-                <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                   <span>📲</span>
                   <span>Catálogo Digital para Proveedores</span>
                 </h3>
-                <p className="text-xs text-zinc-400">
-                  Comparte especificaciones y fotos grandes sin precios de venta ni datos confidenciales.
-                </p>
               </div>
               <button
                 type="button"
                 onClick={() => setModalWhatsApp(false)}
-                className="w-8 h-8 rounded-xl bg-white/5 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"
+                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
               >
                 ✕
               </button>
             </div>
 
             <div className="space-y-3">
-              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2">
+              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white">1. Pedido de este Vehículo ({orden.plate})</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-bold">
+                  <span className="text-xs font-bold text-zinc-900 dark:text-white">1. Pedido de este Vehículo ({orden.plate})</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-400 font-bold">
                     Individual
                   </span>
                 </div>
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-zinc-600 dark:text-zinc-400">
                   Envía únicamente los {calculos.itemsPorComprar.length} repuestos requeridos para el {orden.vehicle}.
                 </p>
                 <div className="pt-2 flex items-center gap-2">
@@ -1406,31 +1601,28 @@ export default function PaginaDetallePropuesta() {
                     )}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/20"
+                    className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/20 active:scale-95"
                   >
                     <span>💬 Enviar por WhatsApp</span>
                   </a>
                   <button
                     type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/pedidos-proveedor/${orden.id}`);
-                      mostrarToast("Enlace copiado al portapapeles.");
-                    }}
-                    className="h-9 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold cursor-pointer"
+                    onClick={() => copiarAlPortapapeles(`${window.location.origin}/pedidos-proveedor/${orden.id}`, "Enlace copiado al portapapeles.")}
+                    className="h-9 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-white text-xs font-semibold cursor-pointer transition-colors"
                   >
                     Copiar Link
                   </button>
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2">
+              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white">2. Consolidado del Día</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 font-bold">
+                  <span className="text-xs font-bold text-zinc-900 dark:text-white">2. Consolidado del Día</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-400 font-bold">
                     Del Día
                   </span>
                 </div>
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-zinc-600 dark:text-zinc-400">
                   Agrupa todos los repuestos por comprar de todos los vehículos recibidos hoy en el taller.
                 </p>
                 <div className="pt-2 flex items-center gap-2">
@@ -1440,17 +1632,14 @@ export default function PaginaDetallePropuesta() {
                     )}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="h-9 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-purple-600/20"
+                    className="h-9 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-purple-600/20 active:scale-95"
                   >
                     <span>💬 Enviar Consolidado</span>
                   </a>
                   <button
                     type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/pedidos-proveedor/diario`);
-                      mostrarToast("Enlace del día copiado.");
-                    }}
-                    className="h-9 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold cursor-pointer"
+                    onClick={() => copiarAlPortapapeles(`${window.location.origin}/pedidos-proveedor/diario`, "Enlace del día copiado.")}
+                    className="h-9 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-white text-xs font-semibold cursor-pointer transition-colors"
                   >
                     Copiar Link
                   </button>
@@ -1461,22 +1650,22 @@ export default function PaginaDetallePropuesta() {
         </div>
       )}
 
-      {/* MODAL AGREGAR NUEVO REPUESTO A LA FACTURA */}
+      {/* MODAL AGREGAR NUEVO REPUESTO */}
       {modalNuevoRepuesto && (
         <div
           onClick={() => setModalNuevoRepuesto(false)}
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#111113] border border-white/10 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-scale-up text-white"
+            className="bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-white">+ Agregar Repuesto / Insumo a Factura</h3>
+              <h3 className="text-base font-bold text-zinc-900 dark:text-white">+ Agregar Repuesto</h3>
               <button
                 type="button"
                 onClick={() => setModalNuevoRepuesto(false)}
-                className="w-8 h-8 rounded-xl bg-white/5 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"
+                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
               >
                 ✕
               </button>
@@ -1484,58 +1673,60 @@ export default function PaginaDetallePropuesta() {
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-zinc-400 block mb-1">Descripción del Repuesto o Producto</label>
+                <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
+                  Descripción del Repuesto o Producto
+                </label>
                 <input
                   type="text"
                   placeholder="Ej: Pastillas de Freno Bosch Delanteras"
                   value={nuevoNombre}
                   onChange={(e) => setNuevoNombre(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 />
               </div>
 
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="text-xs text-zinc-400 block mb-1">Cantidad</label>
+                  <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Cantidad</label>
                   <input
                     type="number"
                     min="1"
                     value={nuevaCantidad}
                     onChange={(e) => setNuevaCantidad(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl bg-black border border-white/10 text-xs text-white font-mono"
+                    className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-zinc-400 block mb-1">Costo ($)</label>
+                  <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Costo ($)</label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     value={nuevoCosto}
                     onChange={(e) => setNuevoCosto(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl bg-black border border-white/10 text-xs text-white font-mono"
+                    className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-zinc-400 block mb-1">PVP Venta ($)</label>
+                  <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">PVP Venta ($)</label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     value={nuevoPvp}
                     onChange={(e) => setNuevoPvp(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl bg-black border border-emerald-500/30 text-xs text-emerald-400 font-mono"
+                    className="w-full h-10 px-3 rounded-xl bg-emerald-50/50 dark:bg-black border border-emerald-500/40 text-xs text-emerald-700 dark:text-emerald-400 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs text-zinc-400 block mb-1">Área / Origen</label>
+                  <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Área / Origen</label>
                   <select
                     value={nuevoOrigen}
                     onChange={(e) => setNuevoOrigen(e.target.value as EspecialidadTipo)}
-                    className="w-full h-10 px-2 rounded-xl bg-black border border-white/10 text-xs text-white cursor-pointer"
+                    className="w-full h-10 px-2 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   >
                     <option value="TALLER">🔧 Taller</option>
                     <option value="LUBRICENTRO">🛢️ Lubricentro</option>
@@ -1545,14 +1736,14 @@ export default function PaginaDetallePropuesta() {
                 </div>
 
                 <div>
-                  <label className="text-xs text-zinc-400 block mb-1">Disponibilidad (Casillero)</label>
+                  <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Disponibilidad</label>
                   <button
                     type="button"
                     onClick={() => setNuevoEnStock(!nuevoEnStock)}
-                    className={`w-full h-10 rounded-xl text-xs font-bold border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`w-full h-10 rounded-xl text-xs font-semibold border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
                       nuevoEnStock
-                        ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400"
-                        : "bg-amber-500/15 border-amber-500/40 text-amber-400"
+                        ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-400"
+                        : "bg-amber-50 dark:bg-amber-500/15 border-amber-300 dark:border-amber-500/40 text-amber-800 dark:text-amber-400"
                     }`}
                   >
                     <span>{nuevoEnStock ? "📦 Sí hay en Bodega" : "🚚 Pedir a Proveedor"}</span>
@@ -1562,13 +1753,13 @@ export default function PaginaDetallePropuesta() {
 
               {!nuevoEnStock && (
                 <div>
-                  <label className="text-xs text-zinc-400 block mb-1">Proveedor Externo</label>
+                  <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Proveedor Externo</label>
                   <input
                     type="text"
                     value={nuevoProveedor}
                     onChange={(e) => setNuevoProveedor(e.target.value)}
                     placeholder="Nombre del proveedor externo"
-                    className="w-full h-10 px-3 rounded-xl bg-black border border-white/10 text-xs text-white"
+                    className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>
               )}
@@ -1577,9 +1768,9 @@ export default function PaginaDetallePropuesta() {
                 <button
                   type="button"
                   onClick={handleAgregarRepuesto}
-                  className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-600/30 cursor-pointer"
+                  className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-600/30 cursor-pointer active:scale-95"
                 >
-                  Agregar a la Factura
+                  Agregar Repuesto
                 </button>
               </div>
             </div>
@@ -1591,18 +1782,18 @@ export default function PaginaDetallePropuesta() {
       {modalNuevoServicio && (
         <div
           onClick={() => setModalNuevoServicio(false)}
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#111113] border border-white/10 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-scale-up text-white"
+            className="bg-white dark:bg-[#111113] border border-zinc-200 dark:border-white/10 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-scale-up text-zinc-900 dark:text-white"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-white">+ Agregar Mano de Obra / Servicio</h3>
+              <h3 className="text-base font-bold text-zinc-900 dark:text-white">+ Agregar Servicio</h3>
               <button
                 type="button"
                 onClick={() => setModalNuevoServicio(false)}
-                className="w-8 h-8 rounded-xl bg-white/5 text-zinc-400 hover:text-white flex items-center justify-center cursor-pointer"
+                className="w-8 h-8 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex items-center justify-center cursor-pointer transition-colors"
               >
                 ✕
               </button>
@@ -1610,35 +1801,37 @@ export default function PaginaDetallePropuesta() {
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-zinc-400 block mb-1">Descripción del Servicio Técnico</label>
+                <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">
+                  Descripción del Servicio Técnico
+                </label>
                 <input
                   type="text"
                   placeholder="Ej: Cambio de Pastillas y Rectificación de Discos"
                   value={nuevoServicioNombre}
                   onChange={(e) => setNuevoServicioNombre(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl bg-black border border-white/10 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  className="w-full h-10 px-3 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs text-zinc-400 block mb-1">Precio Servicio ($)</label>
+                  <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Precio Servicio ($)</label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     value={nuevoServicioPrecio}
                     onChange={(e) => setNuevoServicioPrecio(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl bg-black border border-purple-500/30 text-xs text-purple-400 font-mono"
+                    className="w-full h-10 px-3 rounded-xl bg-purple-50/50 dark:bg-black border border-purple-500/40 text-xs text-purple-700 dark:text-purple-400 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs text-zinc-400 block mb-1">Área / Origen</label>
+                  <label className="text-xs text-zinc-600 dark:text-zinc-400 font-medium block mb-1">Área / Origen</label>
                   <select
                     value={nuevoServicioOrigen}
                     onChange={(e) => setNuevoServicioOrigen(e.target.value as EspecialidadTipo)}
-                    className="w-full h-10 px-2 rounded-xl bg-black border border-white/10 text-xs text-white cursor-pointer"
+                    className="w-full h-10 px-2 rounded-xl bg-zinc-50 dark:bg-black border border-zinc-300 dark:border-white/10 text-xs text-zinc-900 dark:text-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
                   >
                     <option value="TALLER">🔧 Taller</option>
                     <option value="LUBRICENTRO">🛢️ Lubricentro</option>
@@ -1652,9 +1845,9 @@ export default function PaginaDetallePropuesta() {
                 <button
                   type="button"
                   onClick={handleAgregarServicio}
-                  className="w-full h-10 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-md shadow-purple-600/30 cursor-pointer"
+                  className="w-full h-10 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-md shadow-purple-600/30 cursor-pointer active:scale-95"
                 >
-                  Agregar a la Factura
+                  Agregar Servicio
                 </button>
               </div>
             </div>

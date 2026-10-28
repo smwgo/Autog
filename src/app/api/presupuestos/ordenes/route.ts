@@ -138,7 +138,15 @@ export async function GET(request: Request) {
 
       query += ` ORDER BY o."createdAt" DESC LIMIT 150`;
 
-      const rows: any[] = await prisma.$queryRawUnsafe(query, ...params);
+      let rows: any[] = [];
+      try {
+        rows = (await prisma.$queryRawUnsafe(query, ...params)) as any[];
+      } catch {
+        rows = (await prisma.workshopOrder.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 150,
+        }).catch(() => [])) as any[];
+      }
 
       // Mapear órdenes con cálculo de totales y desglose de repuestos y servicios
       const ordenes = rows.map((r: any) => {
