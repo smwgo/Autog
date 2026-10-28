@@ -10,6 +10,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 const MIRROR_FILE_PATH = path.join(process.cwd(), "prisma", "neon-local-mirror.json");
+const CIRCUIT_BREAKER_TTL_MS = 300000; // 5 minutos para evitar bloqueos continuos cuando Neon no responde
 
 const MODEL_DEFAULTS: Record<string, () => Record<string, any>> = {
   workshopOrder: () => ({
@@ -110,137 +111,11 @@ function generateCuid(): string {
 }
 
 function getInitialSeedMirror(): Record<string, any[]> {
-  const nowIso = new Date().toISOString();
-  const custId = "cust_pos6064";
-  const vehId = "veh_pos6064";
   return {
-    customer: [
-      {
-        id: custId,
-        identification: "1790012345001",
-        name: "Carlos Mendoza",
-        type: "Personal",
-        phone: "0991234567",
-        email: "carlos.mendoza@email.com",
-        address: "Av. Principal y Naciones Unidas",
-        vip: true,
-        branch: "PRINCIPAL",
-        assignedToSucursal: false,
-        lastVisit: nowIso,
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      },
-    ],
-    vehicle: [
-      {
-        id: vehId,
-        customerId: custId,
-        plate: "POS-6064",
-        vehicleType: "SUV",
-        brand: "Toyota",
-        model: "Fortuner 4x4",
-        year: 2023,
-        color: "Blanco Perlado",
-        mileage: 42500,
-        nextOilChangeMileage: 47500,
-        photosJson: "[]",
-        fuelType: "Gasolina",
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      },
-    ],
-    workshopOrder: [
-      {
-        id: "ord_pos6064",
-        orderNumber: "00001",
-        customerId: custId,
-        vehicleId: vehId,
-        vehicle: "Toyota Fortuner 4x4 2023",
-        plate: "POS-6064",
-        client: "Carlos Mendoza",
-        clientPhone: "0991234567",
-        clientIdDoc: "1790012345001",
-        mechanic: "Hernan Marquez",
-        status: "01 En Pista",
-        progress: 25,
-        mileage: 42500,
-        nextOilChangeKm: 47500,
-        fuelLevel: "1/2",
-        generalCondition: "Bueno",
-        receptionInventoryJson: "[]",
-        inspectionFindingsJson: "[]",
-        inspectionChecklistJson: "{}",
-        itemsJson: "[]",
-        receptionPhotosJson: "[]",
-        evidencePhotosJson: "[]",
-        voiceNotesJson: "[]",
-        dateIn: nowIso,
-        durationMinutes: 45,
-        estimatedOut: "Hoy",
-        totalCost: 0,
-        quoteStatus: "Borrador",
-        quoteTaxRate: 15,
-        quoteDiscount: 0,
-        quoteDiscountType: "PERCENT",
-        assignedTechniciansJson: JSON.stringify([
-          { name: "Hernan Marquez", notified: true, notifiedAt: nowIso },
-        ]),
-        internalChatJson: "[]",
-        technicianHoursJson: "[]",
-        statusColor: "amber",
-        trackingPin: "6064",
-        customStatusesJson: "[]",
-        statusHistoryJson: "[]",
-        deliveryChecklistJson: "{}",
-        deliveryStatus: "Pendiente de Firma",
-        paymentsJson: "[]",
-        stockDeducted: false,
-        branch: "PRINCIPAL",
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      },
-    ],
-    employee: [
-      {
-        id: "emp_hernan",
-        name: "Hernan Marquez",
-        email: "hernan@autog.com",
-        phone: "0990001111",
-        role: "Jefe de Taller",
-        department: "TALLER",
-        location: "Sede Principal",
-        lastLogin: "Hoy",
-        status: "Activo",
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      },
-      {
-        id: "emp_carlos",
-        name: "Carlos Rodríguez",
-        email: "carlos@autog.com",
-        phone: "0990002222",
-        role: "Especialista Mecánico",
-        department: "TALLER",
-        location: "Sede Principal",
-        lastLogin: "Hoy",
-        status: "Activo",
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      },
-      {
-        id: "emp_mateo",
-        name: "Mateo Silva",
-        email: "mateo@autog.com",
-        phone: "0990003333",
-        role: "Técnico Lubricentro & Car Wash",
-        department: "TALLER",
-        location: "Sede Principal",
-        lastLogin: "Hoy",
-        status: "Activo",
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      },
-    ],
+    customer: [],
+    vehicle: [],
+    workshopOrder: [],
+    employee: [],
     workshopService: [],
     product: [],
     systemSetting: [],
@@ -250,23 +125,36 @@ function getInitialSeedMirror(): Record<string, any[]> {
     workshopHistory: [],
     workshopEvidence: [],
     orderRequest: [],
+    user: [],
+    cashRegister: [],
+    sale: [],
+    clientInvoice: [],
+    auditLog: [],
   };
 }
 
+let lastMirrorMtime = 0;
+
 function loadMirrorDb(): Record<string, any[]> {
-  if (globalForPrisma.mirrorDb) {
-    return globalForPrisma.mirrorDb;
-  }
   try {
     if (fs.existsSync(MIRROR_FILE_PATH)) {
-      const raw = fs.readFileSync(MIRROR_FILE_PATH, "utf8");
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object") {
-        globalForPrisma.mirrorDb = parsed;
-        return parsed;
+      const stat = fs.statSync(MIRROR_FILE_PATH);
+      if (!globalForPrisma.mirrorDb || stat.mtimeMs !== lastMirrorMtime) {
+        const raw = fs.readFileSync(MIRROR_FILE_PATH, "utf8");
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          globalForPrisma.mirrorDb = parsed;
+          lastMirrorMtime = stat.mtimeMs;
+          return parsed;
+        }
+      } else {
+        return globalForPrisma.mirrorDb;
       }
     }
   } catch {}
+  if (globalForPrisma.mirrorDb) {
+    return globalForPrisma.mirrorDb;
+  }
   const initial = getInitialSeedMirror();
   globalForPrisma.mirrorDb = initial;
   saveMirrorDb(initial);
@@ -281,7 +169,10 @@ function saveMirrorDb(db?: Record<string, any[]>) {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(MIRROR_FILE_PATH, JSON.stringify(target, null, 2), "utf8");
+    const raw = JSON.stringify(target, null, 2);
+    fs.writeFileSync(MIRROR_FILE_PATH, raw, "utf8");
+    const stat = fs.statSync(MIRROR_FILE_PATH);
+    lastMirrorMtime = stat.mtimeMs;
   } catch {}
 }
 
@@ -630,6 +521,21 @@ function executeMirrorRawQuery(queryOrStrings: any, params: any[] = []): any[] {
   const modelName = sqlTableToModelName(fromMatch[1]);
   const rows = [...(db[modelName] || [])];
 
+  const distinctMatch = sql.match(/SELECT\s+DISTINCT\s+"?([A-Za-z0-9_]+)"?/i);
+  if (distinctMatch) {
+    const col = distinctMatch[1];
+    const seen = new Set();
+    const result: any[] = [];
+    for (const r of rows) {
+      const val = r[col];
+      if (val !== undefined && val !== null && !seen.has(val)) {
+        seen.add(val);
+        result.push({ [col]: val });
+      }
+    }
+    return result;
+  }
+
   // Filter by $1 if WHERE "id" = $1 or UPPER("plate") = $1
   if (params.length > 0 && params[0] !== undefined) {
     const p1 = String(params[0]);
@@ -842,11 +748,8 @@ function createModelProxy(modelName: string) {
                 return res;
               }
             } catch (err: any) {
-              if (isNeonConnectionOrQuotaError(err)) {
-                globalForPrisma.neonCircuitOpenUntil = Date.now() + 60000;
-                return executeMirrorOperation(modelName, method, args);
-              }
-              throw err;
+              globalForPrisma.neonCircuitOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
+              return executeMirrorOperation(modelName, method, args);
             }
           }
 
@@ -876,7 +779,7 @@ export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
               return await rawClient.$transaction(fnOrArray, options);
             } catch (err: any) {
               if (isNeonConnectionOrQuotaError(err)) {
-                globalForPrisma.neonCircuitOpenUntil = Date.now() + 60000;
+                globalForPrisma.neonCircuitOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
                 return await fnOrArray(prisma);
               }
               throw err;
@@ -899,7 +802,7 @@ export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
           return await rawClient[key](...args);
         } catch (err: any) {
           if (isNeonConnectionOrQuotaError(err)) {
-            globalForPrisma.neonCircuitOpenUntil = Date.now() + 60000;
+            globalForPrisma.neonCircuitOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
             return executeMirrorRawExecute(args[0], args.slice(1));
           }
           throw err;
@@ -918,7 +821,7 @@ export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
           return await rawClient[key](...args);
         } catch (err: any) {
           if (isNeonConnectionOrQuotaError(err)) {
-            globalForPrisma.neonCircuitOpenUntil = Date.now() + 60000;
+            globalForPrisma.neonCircuitOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
             return executeMirrorRawQuery(args[0], args.slice(1));
           }
           throw err;
@@ -951,8 +854,13 @@ export async function withRetry<T>(fn: () => Promise<T>, retries = 1, delayMs = 
     } catch (err: any) {
       lastError = err;
       if (isNeonConnectionOrQuotaError(err)) {
-        globalForPrisma.neonCircuitOpenUntil = Date.now() + 60000;
-        break;
+        globalForPrisma.neonCircuitOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
+        try {
+          return await fn();
+        } catch (innerErr) {
+          lastError = innerErr;
+          break;
+        }
       }
       if (i < retries) {
         await new Promise((r) => setTimeout(r, delayMs * (i + 1)));

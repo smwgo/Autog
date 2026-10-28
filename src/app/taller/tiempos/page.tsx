@@ -98,9 +98,9 @@ export default function ControlTiemposPage() {
 
   useEffect(() => {
     fetch("/api/taller/ordenes", { cache: "no-store" })
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (d.success && Array.isArray(d.orders) && d.orders.length > 0) {
+        if (d?.success && Array.isArray(d.orders) && d.orders.length > 0) {
           setOrdenesActivas(d.orders);
           const first = d.orders[0];
           setTimerOrderId(first.id);

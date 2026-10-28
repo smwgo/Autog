@@ -245,8 +245,9 @@ export default function ModalFormularioRapido({
       setBusquedaDropdown("");
 
       fetch("/api/taller/operacion?estructuraEspecialidades=true", { cache: "no-store" })
-        .then((r) => r.json())
+        .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
+          if (!data) return;
           if (data?.success && data.estructuraEspecialidades) {
             setEstructuraDb(data.estructuraEspecialidades);
             const defs = obtenerDefaultsEspecialidad(
@@ -449,8 +450,12 @@ export default function ModalFormularioRapido({
           items: itemsAConstruir,
         }),
       });
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => "");
+        throw new Error(`Error en el servidor (${res.status}): ${errorText.slice(0, 100)}`);
+      }
       const data = await res.json();
-      if (!res.ok || !data?.success) {
+      if (!data?.success) {
         throw new Error(data?.error || "Error al guardar en Neon PostgreSQL");
       }
 

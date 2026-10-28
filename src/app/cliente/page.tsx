@@ -783,10 +783,14 @@ export default function ClientePanel() {
       formData.append("file", file);
       formData.append("folder", "chat-cliente");
 
-      const res = await fetch("/api/upload", {
+      const res = await fetch("/api/storage/upload", {
         method: "POST",
         body: formData,
       });
+
+      if (!res.ok) {
+        throw new Error(`Error en servidor (${res.status})`);
+      }
 
       const data = await res.json();
       if (data.success && data.url) {

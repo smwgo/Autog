@@ -459,9 +459,9 @@ export default function CatalogoPage() {
                         </svg>
                       )}
                     </button>
-                    {categories.map((cat) => (
+                    {Array.from(new Set(categories.map((c) => String(c).trim()).filter(Boolean))).map((cat, idx) => (
                       <button
-                        key={cat}
+                        key={`cat-prod-${cat}-${idx}`}
                         type="button"
                         onClick={() => {
                           setSelectedCategory(cat);

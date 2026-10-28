@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 let cachedProducts: any[] | null = null;
 let lastCacheTime = 0;
-const CACHE_TTL_MS = 30000; // 30 segundos
+const CACHE_TTL_MS = 1000; // 1 segundo para reflejar cambios reales de inmediato
 
 function calcularEstado(stock: number, minStock: number = 5): string {
   if (stock <= 0) return "Agotado";

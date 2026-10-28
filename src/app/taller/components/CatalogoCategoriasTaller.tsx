@@ -38,14 +38,7 @@ export const CATEGORIAS_TALLER_MAESTRAS: CategoriaTallerConfig[] = [
       { id: "Bujes", label: "Bujes" },
       { id: "Geometría", label: "Geometría" },
     ],
-    presets: [
-      { code: "SUS-001", name: "Cambio de amortiguadores delanteros (par)", price: 40.0, subCategory: "Suspensión" },
-      { code: "SUS-002", name: "Cambio de amortiguadores posteriores (par)", price: 35.0, subCategory: "Suspensión" },
-      { code: "SUS-003", name: "Cambio de terminales y rótulas de dirección", price: 30.0, subCategory: "Dirección" },
-      { code: "SUS-004", name: "Cambio de bujes trapecio / barra estabilizadora", price: 35.0, subCategory: "Bujes" },
-      { code: "SUS-005", name: "Reparación / Cambio cremallera de dirección", price: 80.0, subCategory: "Dirección" },
-      { code: "SUS-006", name: "Alineación computarizada y balanceo por eje", price: 25.0, subCategory: "Geometría" },
-    ],
+    presets: [],
   },
   {
     id: "electrico",
@@ -62,14 +55,7 @@ export const CATEGORIAS_TALLER_MAESTRAS: CategoriaTallerConfig[] = [
       { id: "Sensores", label: "Sensores" },
       { id: "Iluminación", label: "Iluminación" },
     ],
-    presets: [
-      { code: "ELE-001", name: "Diagnóstico y cambio de batería", price: 12.0, subCategory: "Batería" },
-      { code: "ELE-002", name: "Mantenimiento / Reparación de alternador", price: 45.0, subCategory: "Carga" },
-      { code: "ELE-003", name: "Mantenimiento / Reparación motor de arranque", price: 45.0, subCategory: "Arranque" },
-      { code: "ELE-004", name: "Reparación de cableado y cortocircuitos", price: 30.0, subCategory: "Cableado" },
-      { code: "ELE-005", name: "Diagnóstico de sensores (Oxígeno, MAF, CKP)", price: 25.0, subCategory: "Sensores" },
-      { code: "ELE-006", name: "Regulación y cambio de faros / focos LED", price: 15.0, subCategory: "Iluminación" },
-    ],
+    presets: [],
   },
   {
     id: "transmision",
@@ -83,12 +69,7 @@ export const CATEGORIAS_TALLER_MAESTRAS: CategoriaTallerConfig[] = [
       { id: "Caja", label: "Caja" },
       { id: "Transmisión", label: "Transmisión" },
     ],
-    presets: [
-      { code: "TRA-001", name: "Cambio de kit de embrague (disco, plato, collarín)", price: 80.0, subCategory: "Embrague" },
-      { code: "TRA-002", name: "Bajada y reparación de caja de cambios manual", price: 95.0, subCategory: "Caja" },
-      { code: "TRA-003", name: "Cambio de guardapolvos y puntas de palier", price: 35.0, subCategory: "Transmisión" },
-      { code: "TRA-004", name: "Cambio de bomba / bombín de embrague", price: 25.0, subCategory: "Embrague" },
-    ],
+    presets: [],
   },
   {
     id: "aire",
@@ -103,12 +84,7 @@ export const CATEGORIAS_TALLER_MAESTRAS: CategoriaTallerConfig[] = [
       { id: "Compresor", label: "Compresor" },
       { id: "Higienización", label: "Higienización" },
     ],
-    presets: [
-      { code: "AIR-001", name: "Carga de gas refrigerante R134a y aceite compresor", price: 35.0, subCategory: "Refrigeración" },
-      { code: "AIR-002", name: "Detección de fugas con tinte UV y vacío", price: 20.0, subCategory: "Diagnóstico" },
-      { code: "AIR-003", name: "Mantenimiento / Cambio de compresor de A/C", price: 60.0, subCategory: "Compresor" },
-      { code: "AIR-004", name: "Limpieza y desinfección de evaporador y ductos", price: 25.0, subCategory: "Higienización" },
-    ],
+    presets: [],
   },
   {
     id: "diagnostico",
@@ -122,13 +98,7 @@ export const CATEGORIAS_TALLER_MAESTRAS: CategoriaTallerConfig[] = [
       { id: "Compresión", label: "Compresión" },
       { id: "Inspección", label: "Inspección" },
     ],
-    presets: [
-      { code: "DIA-001", name: "Escáner computarizado multi-marca", price: 20.0, subCategory: "Diagnóstico" },
-      { code: "DIA-002", name: "Diagnóstico integral y reseteo de fallas", price: 18.0, subCategory: "Diagnóstico" },
-      { code: "DIA-003", name: "Prueba de compresión de cilindros", price: 25.0, subCategory: "Compresión" },
-      { code: "DIA-004", name: "Prueba de vacío del motor", price: 20.0, subCategory: "Diagnóstico" },
-      { code: "DIA-005", name: "Inspección pre-compra completa", price: 30.0, subCategory: "Inspección" },
-    ],
+    presets: [],
   },
   {
     id: "mantenimiento",
@@ -145,14 +115,7 @@ export const CATEGORIAS_TALLER_MAESTRAS: CategoriaTallerConfig[] = [
       { id: "Preventivo", label: "Preventivo" },
       { id: "Filtros", label: "Filtros" },
     ],
-    presets: [
-      { code: "MAN-001", name: "Afinamiento electrónico general", price: 35.0, subCategory: "Afinamiento" },
-      { code: "MAN-002", name: "Limpieza y calibración de inyectores por ultrasonido", price: 30.0, subCategory: "Inyección" },
-      { code: "MAN-003", name: "Limpieza de cuerpo de aceleración y sensor MAF", price: 20.0, subCategory: "Admisión" },
-      { code: "MAN-004", name: "Cambio de bujías y cables de alta", price: 18.0, subCategory: "Encendido" },
-      { code: "MAN-005", name: "Mantenimiento preventivo por kilometraje", price: 40.0, subCategory: "Preventivo" },
-      { code: "MAN-006", name: "Cambio de filtros de aire, cabina y combustible", price: 15.0, subCategory: "Filtros" },
-    ],
+    presets: [],
   },
   {
     id: "frenos",
@@ -168,14 +131,7 @@ export const CATEGORIAS_TALLER_MAESTRAS: CategoriaTallerConfig[] = [
       { id: "Fluidos", label: "Fluidos" },
       { id: "Hidráulica", label: "Hidráulica" },
     ],
-    presets: [
-      { code: "FRE-001", name: "Cambio de pastillas de freno delanteras", price: 25.0, subCategory: "Pastillas" },
-      { code: "FRE-002", name: "Rectificación de discos delanteros (par)", price: 30.0, subCategory: "Discos" },
-      { code: "FRE-003", name: "Cambio de zapatas y rectificación de tambores", price: 28.0, subCategory: "Tambores" },
-      { code: "FRE-004", name: "Purgado y cambio total de líquido de frenos DOT4", price: 18.0, subCategory: "Fluidos" },
-      { code: "FRE-005", name: "Mantenimiento general de 4 ruedas y calipers", price: 45.0, subCategory: "Pastillas" },
-      { code: "FRE-006", name: "Reparación o cambio de bombines y pistones caliper", price: 35.0, subCategory: "Hidráulica" },
-    ],
+    presets: [],
   },
   {
     id: "motor",
@@ -192,14 +148,7 @@ export const CATEGORIAS_TALLER_MAESTRAS: CategoriaTallerConfig[] = [
       { id: "Refrigeración", label: "Refrigeración" },
       { id: "Motor Mayor", label: "Motor Mayor" },
     ],
-    presets: [
-      { code: "MOT-001", name: "Cambio de faja / kit de distribución", price: 75.0, subCategory: "Distribución" },
-      { code: "MOT-002", name: "Cambio de empaquetadura tapa válvulas", price: 30.0, subCategory: "Empaques" },
-      { code: "MOT-003", name: "Cambio de retenes de cigüeñal y árbol levas", price: 40.0, subCategory: "Retenes" },
-      { code: "MOT-004", name: "Reparación y cepillado de culata", price: 120.0, subCategory: "Culata" },
-      { code: "MOT-005", name: "Cambio de bomba de agua y termostato", price: 45.0, subCategory: "Refrigeración" },
-      { code: "MOT-006", name: "Reparación completa de motor (Overhaul)", price: 300.0, subCategory: "Motor Mayor" },
-    ],
+    presets: [],
   },
 ];
 
@@ -242,24 +191,26 @@ export default function CatalogoCategoriasTaller({
     setSubcategoriaSeleccionadaId("TODOS");
   };
 
-  // Combinar presets maestros con servicios cargados desde la base de datos
+  // Cero Mock Data: solo servicios reales registrados en Neon PostgreSQL
   const todosLosServiciosDeCategoria = useMemo(() => {
-    const base = [...categoriaActiva.presets];
-    const codigosExistentes = new Set(base.map((b) => b.code));
+    const base: PresetTaller[] = [];
+    const codigosExistentes = new Set<string>();
 
     serviciosDb.forEach((s: any) => {
       const matchCat =
         !s.category ||
-        s.category.toLowerCase().includes(categoriaActiva.id) ||
+        s.category.toLowerCase().includes(categoriaActiva.id.toLowerCase()) ||
         s.category.toLowerCase().includes(categoriaActiva.title.toLowerCase()) ||
         s.category.toLowerCase().includes(categoriaActiva.shortName.toLowerCase());
 
-      if (s.code && !codigosExistentes.has(s.code) && matchCat) {
+      const code = s.code || `SRV-${s.id}`;
+      if (!codigosExistentes.has(code) && matchCat) {
+        codigosExistentes.add(code);
         base.push({
-          code: s.code,
+          code,
           name: s.name || s.title || "Servicio",
-          price: Number(s.price) || 20.0,
-          subCategory: s.category || categoriaActiva.title,
+          price: Number(s.price) || 0,
+          subCategory: s.subCategory || s.category || categoriaActiva.title,
         });
       }
     });

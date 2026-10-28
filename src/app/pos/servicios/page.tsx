@@ -63,7 +63,7 @@ export default function ServiciosPosPage() {
 
       setServicios(data.servicios || []);
       if (data.categories) {
-        setCategories(data.categories);
+        setCategories(Array.from(new Set(data.categories)));
       }
       if (data.warning) {
         setWarningMessage(data.warning);
@@ -280,9 +280,9 @@ export default function ServiciosPosPage() {
                         </svg>
                       )}
                     </button>
-                    {categories.map((cat) => (
+                    {Array.from(new Set(categories.map((c) => String(c).trim()).filter(Boolean))).map((cat, idx) => (
                       <button
-                        key={cat}
+                        key={`srv-cat-${cat}-${idx}`}
                         type="button"
                         onClick={() => {
                           setSelectedCategory(cat);

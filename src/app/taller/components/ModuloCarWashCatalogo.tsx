@@ -968,12 +968,19 @@ export default function ModuloCarWashCatalogo({
   };
 
   // Ajustar (+1 / -1) la cantidad de un servicio/paquete/extra de Car Wash directamente en la orden
-  const obtenerCantidadEnPedido = (item: { id: string; code: string }) => {
+  const obtenerCantidadEnPedido = (item: { id: string; code?: string; kind?: string }) => {
+    const isProduct = item.kind === "PRODUCT";
+    const expectedCode = item.code || (isProduct ? `PRD-${item.id}` : `CW-${item.id}`);
     const matches = (itemsOrden || []).filter(
       (it) =>
         it.id === item.id ||
+        it.id === `prod_${item.id}` ||
+        it.id === `cw_${item.id}` ||
+        it.id?.startsWith?.(`prod_${item.id}_`) ||
+        it.id?.startsWith?.(`cw_${item.id}_`) ||
+        it.productId === item.id ||
         it.serviceId === item.id ||
-        (it.code && item.code && it.code === item.code)
+        (it.code && expectedCode && it.code === expectedCode)
     );
     return matches.reduce((sum, it) => sum + (Number(it.qty) || 1), 0);
   };
@@ -1002,9 +1009,13 @@ export default function ModuloCarWashCatalogo({
       const idx = listaActual.findIndex(
         (it) =>
           it.id === item.id ||
+          it.id === `prod_${item.id}` ||
+          it.id === `cw_${item.id}` ||
+          it.id?.startsWith?.(`prod_${item.id}_`) ||
+          it.id?.startsWith?.(`cw_${item.id}_`) ||
           it.serviceId === item.id ||
           it.productId === item.id ||
-          (it.code && item.code && it.code === item.code)
+          (it.code && code && it.code === code)
       );
 
       if (idx >= 0) {
@@ -1498,7 +1509,14 @@ export default function ModuloCarWashCatalogo({
               return (
                 <div
                   key={`${item.kind}-${item.id}`}
-                  className={`p-2.5 sm:p-3 rounded-xl border flex flex-col justify-between gap-2 transition-all shadow-2xs ${
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.closest("button") || target.closest("[data-prevent-card-click]")) {
+                      return;
+                    }
+                    void handleAjustarCantidadItem(item, 1);
+                  }}
+                  className={`p-2.5 sm:p-3 rounded-xl border flex flex-col justify-between gap-2 transition-all shadow-2xs cursor-pointer select-none ${
                     estaEnPedido
                       ? "bg-emerald-50/40 dark:bg-emerald-500/[0.08] border-emerald-400 dark:border-emerald-500/50 ring-1 ring-emerald-400/30"
                       : "bg-white dark:bg-white/[0.02] hover:border-blue-400/60 dark:hover:border-blue-500/40 border-zinc-200 dark:border-white/10"
@@ -1507,6 +1525,7 @@ export default function ModuloCarWashCatalogo({
                   {/* Fila superior: icono/imagen + info */}
                   <div className="flex items-start gap-2.5">
                     <div
+                      data-prevent-card-click
                       onClick={() => {
                         if (item.rawService) {
                           setDetailModalItem({ item: item.rawService, kind: "SERVICE" });
@@ -1547,6 +1566,7 @@ export default function ModuloCarWashCatalogo({
                       </div>
 
                       <h4
+                        data-prevent-card-click
                         onClick={() => {
                           if (item.rawService) {
                             setDetailModalItem({ item: item.rawService, kind: "SERVICE" });

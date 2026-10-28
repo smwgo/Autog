@@ -74,9 +74,9 @@ export default function MisTareasPage() {
 
   useEffect(() => {
     fetch("/api/taller/ordenes", { cache: "no-store" })
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (d.success && Array.isArray(d.orders)) {
+        if (d?.success && Array.isArray(d.orders)) {
           setOrdenesActivas(d.orders);
         }
       })

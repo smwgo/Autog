@@ -67,7 +67,7 @@ export default function LoginPage() {
             </Link>
             <Link href="/presupuestos" className="flex flex-col items-center justify-center p-3 rounded-xl border border-sky-300 dark:border-sky-700/60 bg-sky-50/50 dark:bg-sky-950/20 hover:bg-sky-100 dark:hover:bg-sky-900/30 transition-colors group text-center shadow-xs">
               <span className="text-lg mb-1 group-hover:scale-110 transition-transform">📋</span>
-              <span className="text-[10px] font-bold text-sky-700 dark:text-sky-300">Presupuestos</span>
+              <span className="text-[10px] font-bold text-sky-700 dark:text-sky-300">Propuestas</span>
             </Link>
             <Link href="/pos" className="flex flex-col items-center justify-center p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 transition-colors group text-center">
               <span className="text-lg mb-1 group-hover:scale-110 transition-transform">🛒</span>

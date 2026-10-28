@@ -162,7 +162,8 @@ export async function GET(request: Request) {
         const totalVentaRepuestos = items.reduce((acc, it) => acc + (Number(it.price || 0) * Number(it.qty || 1)), 0);
         const totalCostoRepuestos = items.reduce((acc, it) => acc + (Number(it.costPrice || 0) * Number(it.qty || 1)), 0);
         const totalVentaServicios = services.reduce((acc, sv) => acc + Number(sv.price || 0), 0);
-        const totalVentaEstimada = totalVentaRepuestos + totalVentaServicios;
+        const rawItemsSum = totalVentaRepuestos + totalVentaServicios;
+        const totalVentaEstimada = rawItemsSum > 0 ? rawItemsSum : Number(r.totalCost || 0);
         const totalCostoEstimado = totalCostoRepuestos;
         const utilidadEstimada = totalVentaEstimada - totalCostoEstimado;
         const margenPercent = totalVentaEstimada > 0 ? Math.round((utilidadEstimada / totalVentaEstimada) * 100) : 0;
@@ -191,7 +192,7 @@ export async function GET(request: Request) {
           createdAt: r.createdAt,
           tipoNegocio,
           quoteNumber: r.quoteNumber || `COT-${r.orderNumber}`,
-          quoteStatus: r.quoteStatus || (r.status === "EN_CAJA" ? "Aprobado" : "Borrador"),
+          quoteStatus: r.quoteStatus || (r.status === "EN_CAJA" ? "Aprobado" : "Pendiente"),
           quoteApprovedAt: r.quoteApprovedAt,
           posRequestId: r.posRequestId,
           itemsCount: items.length,
@@ -211,18 +212,105 @@ export async function GET(request: Request) {
         };
       });
 
+      // Si no hay órdenes en WorkshopOrder, revisar si existen en clientQuote
+      if (ordenes.length === 0) {
+        try {
+          const quotes: any[] = await prisma.clientQuote.findMany({
+            orderBy: { createdAt: "desc" },
+            take: 50,
+          });
+          if (quotes && quotes.length > 0) {
+            for (const q of quotes) {
+              let items: any[] = [];
+              try {
+                items = typeof q.itemsJson === "string" ? JSON.parse(q.itemsJson) : (q.itemsJson || []);
+              } catch { items = []; }
+              const totalEst = Number(q.total || q.subtotal || 0);
+              ordenes.push({
+                id: q.id,
+                orderNumber: q.quoteNumber || `COT-${q.id.slice(-4)}`,
+                vehicle: q.vehicle || "Vehículo Taller",
+                plate: q.plate || "S/P",
+                client: q.clientName || "Cliente",
+                clientPhone: q.clientPhone || "",
+                mechanic: "Carlos Rodríguez",
+                status: q.status === "Aprobado" || q.status === "Aprobada" ? "Listo POS" : "En Diagnóstico",
+                progress: 25,
+                mileage: null,
+                fuelLevel: "1/2",
+                notes: q.notes || "",
+                dateIn: q.date || q.createdAt,
+                createdAt: q.createdAt,
+                tipoNegocio: "Taller",
+                quoteNumber: q.quoteNumber || `COT-${q.id.slice(-4)}`,
+                quoteStatus: q.status === "Aprobada" ? "Aprobado" : (q.status || "Pendiente"),
+                quoteApprovedAt: q.status === "Aprobada" || q.status === "Aprobado" ? q.updatedAt : null,
+                posRequestId: null,
+                itemsCount: items.length,
+                servicesCount: 0,
+                findingsCount: 0,
+                totalVentaEstimada: totalEst,
+                totalCostoEstimado: 0,
+                utilidadEstimada: totalEst,
+                margenPercent: 100,
+                evidencias: {
+                  total: 0,
+                  fotos: 0,
+                  audios: 0,
+                  videos: 0,
+                  transcripciones: 0,
+                },
+              });
+            }
+          }
+        } catch {}
+      }
+
+      // Filtrado exacto en memoria para búsquedas y estados
+      let ordenesFiltradas = ordenes;
+      if (busqueda) {
+        ordenesFiltradas = ordenesFiltradas.filter(
+          (o) =>
+            o.plate.toLowerCase().includes(busqueda) ||
+            o.client.toLowerCase().includes(busqueda) ||
+            o.orderNumber.toLowerCase().includes(busqueda) ||
+            o.vehicle.toLowerCase().includes(busqueda)
+        );
+      }
+      if (estado !== "TODOS") {
+        if (estado === "PENDIENTE") {
+          ordenesFiltradas = ordenesFiltradas.filter(
+            (o) => o.quoteStatus !== "Aprobado" && o.status !== "EN_CAJA"
+          );
+        } else if (estado === "APROBADO") {
+          ordenesFiltradas = ordenesFiltradas.filter(
+            (o) => o.quoteStatus === "Aprobado" || o.status === "EN_CAJA"
+          );
+        } else if (estado === "EN_CAJA") {
+          ordenesFiltradas = ordenesFiltradas.filter(
+            (o) => o.status === "EN_CAJA" || o.posRequestId
+          );
+        }
+      }
+
       // Estadísticas rápidas para la cabecera
       const kpis = {
-        total: ordenes.length,
-        pendientesCotizar: ordenes.filter((o) => o.quoteStatus !== "Aprobado" && o.status !== "EN_CAJA").length,
-        aprobadas: ordenes.filter((o) => o.quoteStatus === "Aprobado" || o.status === "EN_CAJA").length,
-        totalValorizado: Number(ordenes.reduce((acc, o) => acc + o.totalVentaEstimada, 0).toFixed(2)),
+        total: ordenesFiltradas.length,
+        pendientesCotizar: ordenesFiltradas.filter(
+          (o) => o.quoteStatus !== "Aprobado" && o.status !== "EN_CAJA"
+        ).length,
+        aprobadas: ordenesFiltradas.filter(
+          (o) => o.quoteStatus === "Aprobado" || o.status === "EN_CAJA"
+        ).length,
+        totalValorizado: Number(
+          ordenesFiltradas.reduce((acc, o) => acc + o.totalVentaEstimada, 0).toFixed(2)
+        ),
       };
 
       return NextResponse.json({
         success: true,
         kpis,
-        ordenes,
+        ordenes: ordenesFiltradas,
       });
     });
   } catch (error: any) {

@@ -1294,7 +1294,10 @@ export default function ModuloLubricentroCatalogo({
     if (ordenActiva) {
       const matches = itemsOrden.filter(
         (it) =>
-          (it.productId === prod.id || (it.code && prod.code && it.code === prod.code)) &&
+          (it.productId === prod.id ||
+            it.id === prod.id ||
+            it.id?.startsWith?.(`it_${prod.id}_`) ||
+            (it.code && prod.code && it.code === prod.code)) &&
           (!it.presentation || it.presentation === presentation)
       );
       return matches.reduce((sum, it) => sum + (Number(it.qty) || 1), 0);
@@ -1321,7 +1324,10 @@ export default function ModuloLubricentroCatalogo({
       if (ordenActiva) {
         const idx = itemsOrden.findIndex(
           (it) =>
-            (it.productId === prod.id || (it.code && prod.code && it.code === prod.code)) &&
+            (it.productId === prod.id ||
+              it.id === prod.id ||
+              it.id?.startsWith?.(`it_${prod.id}_`) ||
+              (it.code && prod.code && it.code === prod.code)) &&
             (!it.presentation || it.presentation === finalPres)
         );
 
@@ -1775,7 +1781,14 @@ export default function ModuloLubricentroCatalogo({
               return (
                 <div
                   key={prod.id}
-                  className={`p-2.5 sm:p-3 rounded-xl border flex flex-col justify-between gap-2 transition-all shadow-2xs ${
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.closest("button") || target.closest("[data-prevent-card-click]")) {
+                      return;
+                    }
+                    void handleAjustarCantidadProducto(prod, 1);
+                  }}
+                  className={`p-2.5 sm:p-3 rounded-xl border flex flex-col justify-between gap-2 transition-all shadow-2xs cursor-pointer select-none ${
                     estaEnPedido
                       ? "bg-emerald-50/40 dark:bg-emerald-500/[0.08] border-emerald-400 dark:border-emerald-500/50 ring-1 ring-emerald-400/30"
                       : "bg-white dark:bg-white/[0.02] hover:border-blue-400/60 dark:hover:border-blue-500/40 border-zinc-200 dark:border-white/10"
@@ -1784,6 +1797,7 @@ export default function ModuloLubricentroCatalogo({
                   {/* Fila superior de tarjeta (compacta en móvil: imagen + info clave) */}
                   <div className="flex items-start gap-2.5">
                     <div
+                      data-prevent-card-click
                       onClick={() => setProductoDetalleModal(prod)}
                       className="w-14 h-16 sm:w-16 sm:h-18 rounded-lg bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-white/5 flex items-center justify-center p-1.5 shrink-0 overflow-hidden cursor-pointer"
                       title="Ver ficha técnica"
@@ -1814,6 +1828,7 @@ export default function ModuloLubricentroCatalogo({
                       </div>
 
                       <h4
+                        data-prevent-card-click
                         onClick={() => setProductoDetalleModal(prod)}
                         className="text-xs font-normal text-zinc-900 dark:text-zinc-100 line-clamp-2 leading-snug cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
                       >

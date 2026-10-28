@@ -1351,6 +1351,25 @@ export default function TallerPanel() {
   const [toastMensaje, setToastMensaje] = useState<{ tipo: "ok" | "err"; texto: string } | null>(null);
   const [modalConfirmPos, setModalConfirmPos] = useState<any | null>(null);
   const [modalYaPasadaPos, setModalYaPasadaPos] = useState(false);
+  const [modalPropuestaEnviada, setModalPropuestaEnviada] = useState(false);
+  const [fotoVehiculoModal, setFotoVehiculoModal] = useState<{
+    url: string;
+    photos: string[];
+    index: number;
+    vehiculo: string;
+    placa: string;
+    cliente?: string;
+    anio?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!fotoVehiculoModal) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFotoVehiculoModal(null);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [fotoVehiculoModal]);
 
   const fileInputRecepcionRef = useRef<HTMLInputElement | null>(null);
   const fileInputEvidenciaRef = useRef<HTMLInputElement | null>(null);
@@ -1368,9 +1387,9 @@ export default function TallerPanel() {
     if (!ordenActiva?.plate) return;
     let cancel = false;
     fetch(`/api/taller/operacion?q=${encodeURIComponent(ordenActiva.plate)}`)
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (cancel) return;
+        if (cancel || !data) return;
         const countHistory = Array.isArray(data.history) ? data.history.length : 0;
         const total = countHistory > 0 ? countHistory + 1 : 1;
         setVecesAtendido(total);
@@ -3796,9 +3815,9 @@ Hola *${clienteNom}*, actualización de su vehículo *${vehiculoDesc}* (Placa: *
     }
   };
 
-  // Sincronización en tiempo real en Etapa 4 para reflejar cuando el cliente firme desde su Panel Cliente
+  // Sincronización en tiempo real para reflejar cuando se apruebe el presupuesto en /presupuestos o panel cliente
   useEffect(() => {
-    if (etapaActiva !== 4 || !ordenActiva?.id) return;
+    if (!ordenActiva?.id) return;
     const pollTimer = setInterval(async () => {
       try {
         const res = await fetch("/api/taller/operacion");
@@ -3811,7 +3830,8 @@ Hola *${clienteNom}*, actualización de su vehículo *${vehiculoDesc}* (Placa: *
             (fresh.quoteSignatureUrl !== ordenActiva.quoteSignatureUrl ||
               fresh.deliverySignatureUrl !== ordenActiva.deliverySignatureUrl ||
               fresh.deliveryStatus !== ordenActiva.deliveryStatus ||
-              fresh.quoteStatus !== ordenActiva.quoteStatus)
+              fresh.quoteStatus !== ordenActiva.quoteStatus ||
+              fresh.status !== ordenActiva.status)
           ) {
             setOrdenActiva(fresh);
             setAutosEnPista(data.autosEnPista);
@@ -3821,12 +3841,12 @@ Hola *${clienteNom}*, actualización de su vehículo *${vehiculoDesc}* (Placa: *
     }, 4000);
     return () => clearInterval(pollTimer);
   }, [
-    etapaActiva,
     ordenActiva?.id,
     ordenActiva?.quoteSignatureUrl,
     ordenActiva?.deliverySignatureUrl,
     ordenActiva?.deliveryStatus,
     ordenActiva?.quoteStatus,
+    ordenActiva?.status,
   ]);
 
   // Autogeneración del Informe Técnico en base a trabajos ejecutados en etapas previas
@@ -4790,7 +4810,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
     VISTAS_INSPECCION.find((v) => v.id === etapa3VistaActiva) || VISTAS_INSPECCION[0];
 
   return (
-    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-[#141A22] text-zinc-900 dark:text-white font-sans pb-28 md:pb-12 selection:bg-blue-500/30 overflow-x-hidden max-w-full">
+    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white font-sans pb-28 md:pb-12 selection:bg-blue-500/30 overflow-x-hidden max-w-full">
       <Header />
 
 
@@ -4988,9 +5008,10 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       console.error("No se pudieron cargar las fotos del vehículo:", error);
                     }
                   }
-                  const fotoVehiculo = [...fotosVehiculo, ...(auto.receptionPhotos || [])].find(
-                    (foto) => /^(data:image\/|https?:\/\/|\/|blob:)/i.test(foto.trim())
+                  const todasLasFotos = [...fotosVehiculo, ...(auto.receptionPhotos || [])].filter(
+                    (foto): foto is string => typeof foto === "string" && /^(data:image\/|https?:\/\/|\/|blob:)/i.test(foto.trim())
                   );
+                  const fotoVehiculo = todasLasFotos[0];
                   const nombreVehiculo = anioVehiculo
                     ? auto.vehicle.replace(String(anioVehiculo), "").trim()
                     : auto.vehicle;
@@ -5018,7 +5039,28 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           : "bg-white dark:bg-[#111113] border-zinc-200 dark:border-white/10"
                       }`}
                     >
-                      <span className="relative w-16 h-14 sm:w-14 sm:h-12 rounded-xl sm:rounded-lg shrink-0 bg-blue-100/60 dark:bg-white/5 text-blue-600 dark:text-zinc-400 flex items-center justify-center overflow-hidden border border-blue-200/50 dark:border-transparent">
+                      <span
+                        role={fotoVehiculo ? "button" : undefined}
+                        tabIndex={fotoVehiculo ? 0 : undefined}
+                        title={fotoVehiculo ? "🔍 Clic para ampliar foto del vehículo en grande" : undefined}
+                        onClick={(e) => {
+                          if (fotoVehiculo) {
+                            e.stopPropagation();
+                            setFotoVehiculoModal({
+                              url: fotoVehiculo,
+                              photos: todasLasFotos.length > 0 ? todasLasFotos : [fotoVehiculo],
+                              index: 0,
+                              vehiculo: nombreVehiculo,
+                              placa: auto.plate,
+                              cliente: auto.client,
+                              anio: anioVehiculo,
+                            });
+                          }
+                        }}
+                        className={`relative w-16 h-14 sm:w-14 sm:h-12 rounded-xl sm:rounded-lg shrink-0 bg-blue-100/60 dark:bg-white/5 text-blue-600 dark:text-zinc-400 flex items-center justify-center overflow-hidden border border-blue-200/50 dark:border-transparent group/thumb ${
+                          fotoVehiculo ? "cursor-zoom-in hover:ring-2 hover:ring-blue-500/80 hover:scale-[1.04] transition-all" : ""
+                        }`}
+                      >
                         <svg
                           className="w-8 h-8 sm:w-7 sm:h-7"
                           fill="none"
@@ -5030,14 +5072,22 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                           <path strokeLinecap="round" strokeLinejoin="round" d="m5 11 1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11M3.5 11h17v7h-17zM6.5 18v1.5M17.5 18v1.5" />
                         </svg>
                         {fotoVehiculo && (
-                          <img
-                            src={fotoVehiculo}
-                            alt={`Vehículo ${auto.vehicle}`}
-                            onError={(event) => {
-                              event.currentTarget.style.display = "none";
-                            }}
-                            className="absolute inset-0 w-full h-full rounded-xl sm:rounded-lg object-cover"
-                          />
+                          <>
+                            <img
+                              src={fotoVehiculo}
+                              alt={`Vehículo ${auto.vehicle}`}
+                              onError={(event) => {
+                                event.currentTarget.style.display = "none";
+                              }}
+                              className="absolute inset-0 w-full h-full rounded-xl sm:rounded-lg object-cover transition-transform duration-200 group-hover/thumb:scale-110"
+                            />
+                            {/* Overlay con icono de lupa al pasar el cursor */}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-white">
+                              <svg className="w-5 h-5 drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                              </svg>
+                            </div>
+                          </>
                         )}
                       </span>
                       <span className="min-w-0 flex-1">
@@ -5100,6 +5150,19 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   </span>
                 )}
               </div>
+
+              {/* ETIQUETA EN LA PARTE SUPERIOR: APROBADO PARA EMPEZAR A TRABAJAR */}
+              {(ordenActiva.quoteStatus === "Aprobado" ||
+                ordenActiva.status === "Aprobado" ||
+                ordenActiva.quoteStatus === "ACEPTADO") && (
+                <div
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl sm:rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider shadow-sm animate-fade-in shrink-0"
+                  title="Propuesta Aprobada - Listo para empezar a trabajar"
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                  <span>✓ Aprobado</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -5186,6 +5249,41 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </button>
+
+              {/* Etiqueta Estado de Propuesta Móvil: Enviado (en espera sin marca) o ✓ Aprobado (con marca) */}
+              {ordenActiva &&
+                (ordenActiva.quoteStatus === "Pendiente" ||
+                  ordenActiva.quoteStatus === "Aprobado" ||
+                  ordenActiva.quoteStatus === "ACEPTADO" ||
+                  ordenActiva.status === "Aprobado" ||
+                  ordenActiva.status === "EN_CAJA" ||
+                  ordenActiva.quoteSignatureUrl) && (
+                  (() => {
+                    const esAprobado =
+                      ordenActiva.quoteStatus === "Aprobado" ||
+                      ordenActiva.quoteStatus === "ACEPTADO" ||
+                      ordenActiva.status === "Aprobado" ||
+                      ordenActiva.status === "EN_CAJA";
+
+                    return esAprobado ? (
+                      <div
+                        title="Propuesta Aprobada"
+                        className="h-10 px-3 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-sm animate-fade-in backdrop-blur-md ml-auto select-none"
+                      >
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                        <span>✓ Aprobado</span>
+                      </div>
+                    ) : (
+                      <div
+                        title="Propuesta enviada - En espera de aprobación"
+                        className="h-10 px-3 rounded-lg bg-amber-500/15 border border-amber-500/35 text-amber-600 dark:text-amber-400 text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow-sm animate-fade-in backdrop-blur-md ml-auto select-none"
+                      >
+                        <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse" />
+                        <span>Enviado</span>
+                      </div>
+                    );
+                  })()
+                )}
             </div>
 
             {/* Puntos indicadores interactivos */}
@@ -5210,53 +5308,90 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             </div>
           </div>
 
-          {/* SELECTOR SUPERIOR 4 EN 1: VISTA DESKTOP (COMPACTO EN FILA + BOTÓN ENGRANAJE) */}
-          <div className="hidden sm:flex items-center gap-2 shrink-0">
-            <div className="flex items-center p-1 rounded-2xl bg-white/80 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl gap-1 shrink-0 overflow-x-auto max-w-full">
-              {MODULOS_ESPECIALIDADES.map((mod) => {
-                const isActivo = moduloTaller === mod.id;
-                return (
-                  <button
-                    key={mod.id}
-                    type="button"
-                    onClick={() => setModuloTaller(mod.id)}
-                    className={`h-9 px-3.5 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                      isActivo
-                        ? `${mod.bgClass} border ${mod.borderClass} ${mod.textClass} ${mod.shadowClass} backdrop-blur-sm`
-                        : "border border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-                    }`}
-                    title={mod.name}
-                  >
-                    {mod.svg("w-4 h-4 shrink-0")}
-                    <span className="whitespace-nowrap">{mod.shortName}</span>
-                  </button>
-                );
-              })}
+          {/* SELECTOR SUPERIOR 4 EN 1: VISTA DESKTOP (COMPACTO EN FILA + BOTÓN ENGRANAJE + PROPUESTA A LA DERECHA) */}
+          <div className="hidden sm:flex items-center justify-between w-full gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center p-1 rounded-2xl bg-white/80 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl gap-1 shrink-0 overflow-x-auto max-w-full">
+                {MODULOS_ESPECIALIDADES.map((mod) => {
+                  const isActivo = moduloTaller === mod.id;
+                  return (
+                    <button
+                      key={mod.id}
+                      type="button"
+                      onClick={() => setModuloTaller(mod.id)}
+                      className={`h-9 px-3.5 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        isActivo
+                          ? `${mod.bgClass} border ${mod.borderClass} ${mod.textClass} ${mod.shadowClass} backdrop-blur-sm`
+                          : "border border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
+                      }`}
+                      title={mod.name}
+                    >
+                      {mod.svg("w-4 h-4 shrink-0")}
+                      <span className="whitespace-nowrap">{mod.shortName}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* BOTÓN ENGRANAJE: REGISTRO MANUAL / MODO FORMULARIO */}
+              <button
+                type="button"
+                onClick={() => setMostrarModalFormularioRapido(true)}
+                className="h-11 w-11 flex items-center justify-center rounded-2xl bg-white/80 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-all cursor-pointer group shrink-0"
+                title="Registro Manual (Modo Formulario)"
+                aria-label="Abrir formulario manual"
+              >
+                <svg
+                  className="w-5 h-5 transition-transform duration-300 group-hover:rotate-45"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.8}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
             </div>
 
-            {/* BOTÓN ENGRANAJE: REGISTRO MANUAL / MODO FORMULARIO */}
-            <button
-              type="button"
-              onClick={() => setMostrarModalFormularioRapido(true)}
-              className="h-11 w-11 flex items-center justify-center rounded-2xl bg-white/80 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-all cursor-pointer group shrink-0"
-              title="Registro Manual (Modo Formulario)"
-              aria-label="Abrir formulario manual"
-            >
-              <svg
-                className="w-5 h-5 transition-transform duration-300 group-hover:rotate-45"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.8}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </button>
+            {/* A LADO DERECHO: ETIQUETA DE PROPUESTA (ENVIADO / ✓ APROBADO) */}
+            {ordenActiva &&
+              (ordenActiva.quoteStatus === "Pendiente" ||
+                ordenActiva.quoteStatus === "Aprobado" ||
+                ordenActiva.quoteStatus === "ACEPTADO" ||
+                ordenActiva.status === "Aprobado" ||
+                ordenActiva.status === "EN_CAJA" ||
+                ordenActiva.quoteSignatureUrl) && (
+                (() => {
+                  const esAprobado =
+                    ordenActiva.quoteStatus === "Aprobado" ||
+                    ordenActiva.quoteStatus === "ACEPTADO" ||
+                    ordenActiva.status === "Aprobado" ||
+                    ordenActiva.status === "EN_CAJA";
+
+                  return esAprobado ? (
+                    <div
+                      title="Propuesta Aprobada"
+                      className="ml-auto h-9 px-3.5 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 shadow-sm backdrop-blur-md shrink-0 animate-fade-in select-none"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                      <span>✓ Aprobado</span>
+                    </div>
+                  ) : (
+                    <div
+                      title="Propuesta enviada - En espera de aprobación"
+                      className="ml-auto h-9 px-3.5 rounded-lg bg-amber-500/15 border border-amber-500/35 text-amber-600 dark:text-amber-400 text-xs font-semibold flex items-center gap-1.5 shadow-sm backdrop-blur-md shrink-0 animate-fade-in select-none"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse" />
+                      <span>Enviado</span>
+                    </div>
+                  );
+                })()
+              )}
           </div>
         </div>
 
@@ -5548,6 +5683,17 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                               body: JSON.stringify({
                                 action: "PASAR_A_PROPUESTA",
                                 orderId: ordenActiva.id,
+                                orderNumber: ordenActiva.orderNumber,
+                                plate: ordenActiva.plate,
+                                vehicle: ordenActiva.vehicle,
+                                client: ordenActiva.client,
+                                clientPhone: ordenActiva.clientPhone,
+                                mechanic: ordenActiva.mechanic,
+                                items: ordenActiva.items,
+                                services: (ordenActiva as any).services || [],
+                                totalCost: ordenActiva.totalCost,
+                                notes: ordenActiva.notes,
+                                quoteStatus: "Pendiente",
                                 quoteSignatureUrl: modoFirma === "ACEPTACION" ? firmaDataUrl : undefined,
                                 deliverySignatureUrl: modoFirma === "ENTREGA" ? firmaDataUrl : undefined,
                                 signedBy: ordenActiva.client || "Cliente",
@@ -5559,17 +5705,23 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                               setAutosEnPista((prev) =>
                                 prev.map((o) => (o.id === data.activeOrder.id ? data.activeOrder : o))
                               );
+                              setModalPropuestaEnviada(true);
+                            } else {
+                              mostrarToast(data.error || "No se pudo procesar la propuesta", "err");
                             }
-                          } catch {}
-                          setGuardandoEtapa7(false);
+                          } catch (err) {
+                            console.error("Error al pasar a propuesta:", err);
+                            mostrarToast("Error al conectar con la base de datos", "err");
+                          } finally {
+                            setGuardandoEtapa7(false);
+                          }
                         }
-                        router.push("/presupuestos");
                       }}
                       className="px-4 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-700 dark:bg-sky-500/15 dark:hover:bg-sky-500/25 dark:border-sky-500/35 dark:text-sky-300 text-xs font-normal backdrop-blur-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
-                      title="Pasar a Propuesta"
+                      title="Presupuesto"
                     >
                       <span>📋</span>
-                      <span>Pasar a Propuesta</span>
+                      <span>Presupuesto</span>
                     </button>
                   </div>
                 </div>
@@ -5947,6 +6099,42 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODAL FLOTANTE CONFIRMACIÓN DE ENVÍO DE PROPUESTA (SE QUEDA AQUÍ MISMO)
+          ===================================================================== */}
+      {modalPropuestaEnviada && (
+        <div
+          onClick={() => setModalPropuestaEnviada(false)}
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#111113] border border-emerald-500/30 rounded-2xl max-w-xs w-full p-5 space-y-3 text-center shadow-2xl animate-scale-up"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto text-xl font-bold shadow-lg shadow-emerald-500/10">
+              ✓
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm sm:text-base font-bold text-white">
+                Su propuesta fue enviada
+              </h3>
+              <p className="text-xs text-zinc-400">
+                Placa <strong className="text-zinc-200 font-mono">{ordenActiva?.plate || "registrada"}</strong>
+              </p>
+            </div>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setModalPropuestaEnviada(false)}
+                className="w-full h-9 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold cursor-pointer transition-all active:scale-95 shadow-md shadow-emerald-600/30"
+              >
+                Aceptar
+              </button>
             </div>
           </div>
         </div>
@@ -6542,6 +6730,144 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
         mostrarToast={mostrarToast}
         onCambiarEspecialidad={(esp) => setModuloTaller(esp)}
       />
+
+      {/* =====================================================================
+          MODAL FLOTANTE DE FOTO AMPLIADA DE VEHÍCULO
+          ===================================================================== */}
+      {fotoVehiculoModal && (
+        <div
+          onClick={() => setFotoVehiculoModal(null)}
+          className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200 cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-3xl w-full bg-[#111116] border border-white/15 rounded-3xl overflow-hidden shadow-2xl flex flex-col cursor-default animate-in zoom-in-95 duration-150"
+          >
+            {/* Header del modal */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-white/[0.02]">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="w-9 h-9 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/30 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base sm:text-lg font-bold text-white truncate">
+                      {fotoVehiculoModal.vehiculo || "Vehículo"}
+                    </h3>
+                    <span className="font-mono text-xs px-2.5 py-0.5 rounded-lg bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold shrink-0">
+                      {fotoVehiculoModal.placa}
+                    </span>
+                    {fotoVehiculoModal.anio && (
+                      <span className="text-xs px-2 py-0.5 rounded-md bg-white/5 text-zinc-400 border border-white/10">
+                        {fotoVehiculoModal.anio}
+                      </span>
+                    )}
+                  </div>
+                  {fotoVehiculoModal.cliente && (
+                    <p className="text-xs text-zinc-400 truncate mt-0.5">
+                      Cliente: <strong className="text-zinc-200">{fotoVehiculoModal.cliente}</strong>
+                    </p>
+                  )}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFotoVehiculoModal(null)}
+                className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white flex items-center justify-center transition-all cursor-pointer text-base shrink-0"
+                title="Cerrar (Esc)"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Contenedor de la foto ampliada */}
+            <div className="relative bg-black/70 flex items-center justify-center p-3 sm:p-6 min-h-[300px] max-h-[72vh] overflow-hidden select-none">
+              <img
+                src={fotoVehiculoModal.photos[fotoVehiculoModal.index] || fotoVehiculoModal.url}
+                alt={fotoVehiculoModal.vehiculo || "Vehículo ampliado"}
+                className="max-h-[68vh] w-auto max-w-full object-contain rounded-2xl shadow-2xl border border-white/10"
+              />
+
+              {/* Controles para cambiar de foto si hay más de 1 */}
+              {fotoVehiculoModal.photos.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFotoVehiculoModal((prev) => {
+                        if (!prev) return null;
+                        const prevIdx = (prev.index - 1 + prev.photos.length) % prev.photos.length;
+                        return { ...prev, index: prevIdx, url: prev.photos[prevIdx] };
+                      });
+                    }}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/20 flex items-center justify-center shadow-lg transition-transform active:scale-95 cursor-pointer"
+                    title="Foto anterior"
+                  >
+                    ❮
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFotoVehiculoModal((prev) => {
+                        if (!prev) return null;
+                        const nextIdx = (prev.index + 1) % prev.photos.length;
+                        return { ...prev, index: nextIdx, url: prev.photos[nextIdx] };
+                      });
+                    }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/20 flex items-center justify-center shadow-lg transition-transform active:scale-95 cursor-pointer"
+                    title="Foto siguiente"
+                  >
+                    ❯
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Footer con miniaturas (si hay varias) y botón de cierre */}
+            <div className="flex items-center justify-between px-5 py-3.5 border-t border-white/10 bg-white/[0.02] flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                {fotoVehiculoModal.photos.length > 1 ? (
+                  <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+                    {fotoVehiculoModal.photos.map((p, pIdx) => (
+                      <button
+                        key={pIdx}
+                        type="button"
+                        onClick={() => setFotoVehiculoModal((prev) => prev ? { ...prev, index: pIdx, url: p } : null)}
+                        className={`w-10 h-9 rounded-lg overflow-hidden border transition-all cursor-pointer ${
+                          pIdx === fotoVehiculoModal.index
+                            ? "border-blue-500 ring-2 ring-blue-500/50 scale-105"
+                            : "border-white/15 opacity-60 hover:opacity-100"
+                        }`}
+                      >
+                        <img src={p} alt="" className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                    <span className="text-xs text-zinc-400 font-mono ml-2">
+                      {fotoVehiculoModal.index + 1} / {fotoVehiculoModal.photos.length}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-xs text-zinc-400">
+                    💡 Haz clic en cualquier parte fuera o presiona <kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono text-zinc-300 text-[10px]">ESC</kbd> para cerrar
+                  </span>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setFotoVehiculoModal(null)}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-600/30 cursor-pointer ml-auto"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <TallerMobileNav />
     </div>

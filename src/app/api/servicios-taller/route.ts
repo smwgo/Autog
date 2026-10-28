@@ -73,7 +73,7 @@ export async function GET(request: Request) {
           select: { category: true },
           distinct: ["category"],
         });
-        const categories = categoriesRaw.map((c: any) => c.category);
+        const categories = Array.from(new Set(categoriesRaw.map((c: any) => c.category).filter(Boolean)));
 
         return NextResponse.json({
           success: true,
@@ -105,7 +105,7 @@ export async function GET(request: Request) {
         const servicios: any = await prisma.$queryRawUnsafe(query, ...params);
 
         const catRows: any = await prisma.$queryRawUnsafe('SELECT DISTINCT "category" FROM "WorkshopService" ORDER BY "category" ASC');
-        const categories = catRows.map((r: any) => r.category);
+        const categories = Array.from(new Set(catRows.map((r: any) => r.category).filter(Boolean)));
 
         return NextResponse.json({
           success: true,

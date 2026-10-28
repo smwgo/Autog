@@ -1159,49 +1159,8 @@ async function getOrInitConfigAndMeta() {
       } catch {}
     }
 
-    // Sembrar productos iniciales de Lubricentro en prisma.product solo la primera vez de forma aditiva y segura
-    if (!seededOnce) {
-      for (const item of INITIAL_LUBRICENTRO_PRODUCTS) {
-        const existing = await prisma.product.findUnique({
-          where: { code: item.code },
-        });
-        const prod = existing
-          ? existing
-          : await prisma.product.create({
-              data: {
-                code: item.code,
-                name: item.name,
-                brand: item.brand,
-                category: item.category,
-                price: item.price,
-                costPrice: item.costPrice,
-                stock: item.stock,
-                minStock: item.minStock,
-                location: item.location,
-                status: calcularEstadoStock(item.stock, item.minStock, true),
-              },
-            });
-
-        if (!metaMap[prod.id]) {
-          metaMap[prod.id] = {
-            ...item.meta,
-            productId: prod.id,
-            code: prod.code,
-          };
-        }
-      }
-
-      await prisma.systemSetting.upsert({
-        where: { id: META_SETTING_ID },
-        update: {
-          configJson: JSON.stringify({ seededOnce: true, items: metaMap }),
-        },
-        create: {
-          id: META_SETTING_ID,
-          configJson: JSON.stringify({ seededOnce: true, items: metaMap }),
-        },
-      });
-    }
+    // Modo de datos 100% reales: no inyectar productos demo ficticios automáticamente.
+    // Solo se utilizan los productos registrados voluntariamente por el usuario.
 
     const [allProducts, vehicles] = await Promise.all([
       prisma.product.findMany({

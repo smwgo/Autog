@@ -1220,9 +1220,12 @@ export default function ModuloTecnicentroCatalogo({
       const listaActual = [...(itemsOrden || [])];
       const idxExistente = listaActual.findIndex(
         (it) =>
-          (it.code && it.code === code) ||
+          it.id === item.id ||
           it.serviceId === item.id ||
-          it.id === `tec_${item.id}`
+          it.productId === item.id ||
+          it.id === `tec_${item.id}` ||
+          it.id?.startsWith?.(`tec_${item.id}_`) ||
+          (it.code && it.code === code)
       );
 
       if (idxExistente >= 0) {
@@ -1882,16 +1885,26 @@ export default function ModuloTecnicentroCatalogo({
               const code = item.code || `TC-${item.id}`;
               const enOrden = (itemsOrden || []).find(
                 (it) =>
-                  (it.code && it.code === code) ||
+                  it.id === item.id ||
                   it.serviceId === item.id ||
-                  it.id === `tec_${item.id}`
+                  it.productId === item.id ||
+                  it.id === `tec_${item.id}` ||
+                  it.id?.startsWith?.(`tec_${item.id}_`) ||
+                  (it.code && it.code === code)
               );
               const cantEnOrden = enOrden ? Number(enOrden.qty) || 1 : 0;
 
               return (
                 <div
                   key={`${item.kind}-${item.id}`}
-                  className={`p-2.5 sm:p-3 rounded-xl border flex flex-col justify-between gap-2.5 transition-all ${
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.closest("button") || target.closest("[data-prevent-card-click]")) {
+                      return;
+                    }
+                    void handleAjustarCantidadItem(item, 1);
+                  }}
+                  className={`p-2.5 sm:p-3 rounded-xl border flex flex-col justify-between gap-2.5 transition-all cursor-pointer select-none ${
                     cantEnOrden > 0
                       ? "bg-blue-50/60 dark:bg-blue-500/10 border-blue-400 dark:border-blue-500/60 ring-1 ring-blue-400/30"
                       : "bg-white dark:bg-white/[0.02] hover:border-blue-400/50 border-zinc-200 dark:border-white/10"
@@ -1900,6 +1913,7 @@ export default function ModuloTecnicentroCatalogo({
                   {/* Parte superior: Imagen/Icono + Info */}
                   <div className="flex items-start gap-2.5">
                     <div
+                      data-prevent-card-click
                       onClick={() => {
                         if (item.kind === "PACKAGE" && item.rawPackage) {
                           setDetailModal({ item: item.rawPackage, kind: "PACKAGE" });

@@ -817,35 +817,7 @@ export async function GET(request: Request) {
           ? allClientes.filter((c: any) => c.branch === "PRINCIPAL")
           : allClientes;
 
-      let finalEmployeesRows = employeesRows;
-      if (finalEmployeesRows.length === 0) {
-        const seedEmployees = [
-          { email: "hernan.marquez@autog.com", name: "Hernan Marquez", role: "Jefe de Taller", department: "TALLER" },
-          { email: "carlos.rodriguez@autog.com", name: "Carlos Rodríguez", role: "Mecánico Senior", department: "TALLER" },
-          { email: "luis.martinez@autog.com", name: "Luis Martínez", role: "Técnico Lubricentro", department: "TALLER" },
-          { email: "ana.torres@autog.com", name: "Ana Torres", role: "Inspectora Técnica", department: "TALLER" },
-          { email: "miguel.angel@autog.com", name: "Miguel Ángel", role: "Especialista Eléctrico", department: "TALLER" },
-        ];
-        for (const emp of seedEmployees) {
-          await prisma.employee
-            .upsert({
-              where: { email: emp.email },
-              update: {},
-              create: {
-                email: emp.email,
-                name: emp.name,
-                role: emp.role,
-                department: emp.department,
-                status: "Activo",
-              },
-            })
-            .catch(() => {});
-        }
-        finalEmployeesRows = (await prisma
-          .$queryRawUnsafe(`SELECT * FROM "Employee" WHERE "status" = 'Activo' ORDER BY "name" ASC`)
-          .catch(() => [])) as any[];
-      }
-
+      const finalEmployeesRows = employeesRows;
       const mecanicosList = finalEmployeesRows.map((e: any) => e.name).filter(Boolean);
       const estructuraEspecialidades = await obtenerOCrearEstructuraEspecialidades();
 
@@ -4207,7 +4179,7 @@ export async function POST(request: Request) {
       // =========================================================================
       // ACCIÓN 10: PASAR ORDEN A PROPUESTA (/presupuestos) EN NEON POSTGRESQL
       // =========================================================================
-      if (action === "PASAR_A_PROPUESTA") {
+      if (action === "PASAR_A_PROPUESTA" || action === "PASAR_A_PRESUPUESTO") {
         const {
           orderId,
           quoteSignatureUrl,
@@ -4222,30 +4194,109 @@ export async function POST(request: Request) {
           );
         }
 
+        let rawOrder: any = null;
         const existingRows: any[] = await prisma.$queryRawUnsafe(
           `SELECT * FROM "WorkshopOrder" WHERE "id" = $1 OR "orderNumber" = $1 LIMIT 1`,
           orderId
         );
 
-        if (existingRows.length === 0) {
-          return NextResponse.json(
-            { success: false, error: "Orden no encontrada en Neon PostgreSQL." },
-            { status: 404 }
+        if (existingRows.length > 0) {
+          rawOrder = existingRows[0];
+        } else if (body.plate) {
+          const byPlate: any[] = await prisma.$queryRawUnsafe(
+            `SELECT * FROM "WorkshopOrder" WHERE UPPER("plate") = UPPER($1) ORDER BY "updatedAt" DESC LIMIT 1`,
+            String(body.plate).toUpperCase()
           );
+          if (byPlate.length > 0) rawOrder = byPlate[0];
         }
 
-        const rawOrder = existingRows[0];
-        const mapped = mapOrderRow(rawOrder);
+        const incomingItems = Array.isArray(body.items) ? body.items : [];
+        const finalPlate = (body.plate || rawOrder?.plate || "S/P").toUpperCase();
+        const finalVehicle = body.vehicle || rawOrder?.vehicle || "Vehículo Taller";
+        const finalClient = body.client || rawOrder?.client || "Cliente Taller";
+        const finalPhone = body.clientPhone || rawOrder?.clientPhone || "";
+        const finalOrderNumber =
+          rawOrder?.orderNumber ||
+          body.orderNumber ||
+          `OT-${Date.now().toString().slice(-4)}`;
         const quoteNumber =
-          rawOrder.quoteNumber ||
-          `COT-${String(rawOrder.orderNumber || rawOrder.id).replace(/^#+/, "")}`;
-        const quoteStatus =
-          rawOrder.quoteStatus && rawOrder.quoteStatus !== "Borrador"
-            ? rawOrder.quoteStatus
-            : "Pendiente";
+          rawOrder?.quoteNumber ||
+          body.quoteNumber ||
+          `COT-${String(finalOrderNumber).replace(/^#+/, "")}`;
+        const quoteStatus = body.quoteStatus || "Pendiente";
 
-        await prisma.$transaction(async (tx) => {
-          await tx.$executeRawUnsafe(
+        const itemsTotal = incomingItems.reduce(
+          (acc: number, it: any) => acc + (Number(it.price || 0) * Number(it.qty || 1)),
+          0
+        );
+        const finalTotalCost =
+          body.totalCost !== undefined && Number(body.totalCost) > 0
+            ? Number(body.totalCost)
+            : itemsTotal > 0
+            ? itemsTotal
+            : Number(rawOrder?.totalCost || 0);
+
+        if (!rawOrder) {
+          const finalId = orderId || `ord_${Date.now()}`;
+          const itemsJson = JSON.stringify(incomingItems);
+          const servicesJson = JSON.stringify(
+            body.services || incomingItems.map((i: any) => i.name || "Servicio")
+          );
+
+          await prisma.$executeRawUnsafe(
+            `INSERT INTO "WorkshopOrder" (
+              "id", "orderNumber", "vehicle", "plate", "client", "clientPhone",
+              "mechanic", "status", "progress", "itemsJson", "servicesJson",
+              "totalCost", "quoteNumber", "quoteStatus", "branch", "dateIn", "createdAt", "updatedAt"
+            ) VALUES (
+              $1, $2, $3, $4, $5, $6,
+              $7, 'En Diagnóstico', 20, $8, $9,
+              $10, $11, $12, 'PRINCIPAL', NOW(), NOW(), NOW()
+            )`,
+            finalId,
+            finalOrderNumber,
+            finalVehicle,
+            finalPlate,
+            finalClient,
+            finalPhone,
+            body.mechanic || "Carlos Rodríguez",
+            itemsJson,
+            servicesJson,
+            finalTotalCost,
+            quoteNumber,
+            quoteStatus
+          );
+
+          const newlyCreated: any[] = await prisma.$queryRawUnsafe(
+            `SELECT * FROM "WorkshopOrder" WHERE "id" = $1 LIMIT 1`,
+            finalId
+          );
+          rawOrder = newlyCreated[0] || {
+            id: finalId,
+            orderNumber: finalOrderNumber,
+            vehicle: finalVehicle,
+            plate: finalPlate,
+            client: finalClient,
+            clientPhone: finalPhone,
+            totalCost: finalTotalCost,
+            quoteNumber,
+            quoteStatus,
+            itemsJson,
+            servicesJson,
+            status: "En Diagnóstico",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+        } else {
+          const itemsJson = incomingItems.length > 0 ? JSON.stringify(incomingItems) : rawOrder.itemsJson;
+          const servicesJson =
+            body.services && Array.isArray(body.services)
+              ? JSON.stringify(body.services)
+              : incomingItems.length > 0
+              ? JSON.stringify(incomingItems.map((i: any) => i.name || "Servicio"))
+              : rawOrder.servicesJson;
+
+          await prisma.$executeRawUnsafe(
             `UPDATE "WorkshopOrder"
              SET "quoteNumber" = $2,
                  "quoteStatus" = $3,
@@ -4253,6 +4304,8 @@ export async function POST(request: Request) {
                  "deliverySignatureUrl" = COALESCE($5, "deliverySignatureUrl"),
                  "nextOilChangeKm" = COALESCE($6, "nextOilChangeKm"),
                  "totalCost" = $7,
+                 "itemsJson" = COALESCE($8, "itemsJson"),
+                 "servicesJson" = COALESCE($9, "servicesJson"),
                  "updatedAt" = NOW()
              WHERE "id" = $1`,
             rawOrder.id,
@@ -4261,10 +4314,26 @@ export async function POST(request: Request) {
             quoteSignatureUrl || null,
             deliverySignatureUrl || null,
             nextOilChangeKm ? Number(nextOilChangeKm) : null,
-            Number(mapped.totalCost || 0)
+            finalTotalCost,
+            itemsJson,
+            servicesJson
           );
 
-          await tx.clientQuote.upsert({
+          rawOrder = {
+            ...rawOrder,
+            quoteNumber,
+            quoteStatus,
+            totalCost: finalTotalCost,
+            itemsJson,
+            servicesJson,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+
+        const mapped = mapOrderRow(rawOrder);
+
+        try {
+          await prisma.clientQuote.upsert({
             where: { quoteNumber },
             update: {
               vehicle: mapped.vehicle,
@@ -4289,16 +4358,11 @@ export async function POST(request: Request) {
               notes: mapped.notes || "",
             },
           });
-        });
-
-        const updatedRows: any[] = await prisma.$queryRawUnsafe(
-          `SELECT * FROM "WorkshopOrder" WHERE "id" = $1 LIMIT 1`,
-          rawOrder.id
-        );
+        } catch {}
 
         return NextResponse.json({
           success: true,
-          activeOrder: mapOrderRow(updatedRows[0]),
+          activeOrder: mapped,
           quoteNumber,
         });
       }

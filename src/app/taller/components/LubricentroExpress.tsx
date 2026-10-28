@@ -196,300 +196,7 @@ export const SUBCATEGORIAS_POR_ESPECIALIDAD: Record<string, SubcategoriaConfig[]
 // ============================================================================
 // 3. CATÁLOGO COMPLETO DE ITEMS PRESET POR CADA SUBCATEGORÍA
 // ============================================================================
-export const ITEMS_POR_SUBCATEGORIA: Record<string, ItemPresetConfig[]> = {
-  // LUBRICENTRO - Aceite
-  lub_aditivos: [
-    { code: "LUB-ADT-INY", name: "Limpiador de Inyectores", desc: "Concentrado gasolina / diésel", icon: "🧪", price: 9, type: "PART" },
-    { code: "LUB-ADT-TRAT", name: "Tratamiento Antifricción Motor", desc: "Reduce desgaste de metales", icon: "🛡️", price: 14, type: "PART" },
-    { code: "LUB-ADT-HUMO", name: "Tratamiento Anti-Humo", desc: "Restaura compresión y sella", icon: "💨", price: 12, type: "PART" },
-  ],
-  lub_flush: [
-    { code: "LUB-FLUSH-INT", name: "Engine Flush (Lavado Interno)", desc: "Desincrusta carbón pre-cambio", icon: "🧼", price: 10, type: "PART" },
-    { code: "LUB-FLUSH-SERV", name: "Servicio de Enjuague de Motor", desc: "Ciclo de lavado y purga de cárter", icon: "⚙️", price: 12, type: "SERVICE" },
-  ],
-  lub_grasa: [
-    { code: "LUB-GRAS-LIT", name: "Grasa Multipropósito Litio", desc: "Crucetas, rodamientos y chasis", icon: "🧴", price: 6, type: "PART" },
-    { code: "LUB-GRAS-SERV", name: "Servicio de Engrase de Chasis", desc: "Puntos de engrase y rótulas", icon: "🔩", price: 8, type: "SERVICE" },
-  ],
-  // LUBRICENTRO - Transmisión
-  lub_trans_manual: [
-    { code: "LUB-TM-80W90", name: "Aceite Caja Manual 80W-90 (Galón)", desc: "Engranajes hipoidales GL-5", icon: "⚙️", price: 28, type: "PART" },
-    { code: "LUB-TM-75W90", name: "Aceite Caja Manual 75W-90 Sintético", desc: "Alta fluidez cambios suaves", icon: "⚙️", price: 34, type: "PART" },
-    { code: "LUB-TM-SERV", name: "Servicio Cambio Aceite Caja Manual", desc: "Vaciado, limpieza tapón y llenado", icon: "🔧", price: 10, type: "SERVICE" },
-  ],
-  lub_trans_automatica: [
-    { code: "LUB-TA-ATF", name: "Aceite ATF Automático Dexron III/VI", desc: "Fluido de transmisión automática", icon: "🔄", price: 16, type: "PART" },
-    { code: "LUB-TA-MERCON", name: "Aceite ATF Mercon V / Multi-Vehículo", desc: "Cajas electrónicas modernas", icon: "🔄", price: 18, type: "PART" },
-    { code: "LUB-TA-SERV", name: "Servicio Cambio Fluido ATF", desc: "Drenado y nivelación de caja", icon: "🔧", price: 15, type: "SERVICE" },
-  ],
-  lub_trans_cvt: [
-    { code: "LUB-TCVT-FLUID", name: "Aceite Transmisión CVT Sintético", desc: "Correa y poleas variables", icon: "⚡", price: 22, type: "PART" },
-    { code: "LUB-TCVT-SERV", name: "Servicio Cambio Fluido CVT", desc: "Purga y ajuste por escáner", icon: "🔧", price: 18, type: "SERVICE" },
-  ],
-  lub_trans_diferencial: [
-    { code: "LUB-DIF-85W140", name: "Aceite Diferencial 85W-140 (Galón)", desc: "Corona, piñón y diferencial 4x4", icon: "🔩", price: 30, type: "PART" },
-    { code: "LUB-DIF-SERV", name: "Servicio Cambio Aceite Diferencial", desc: "Eje delantero y trasero", icon: "🔧", price: 10, type: "SERVICE" },
-  ],
-  // LUBRICENTRO - Filtros
-  lub_fil_aceite: [
-    { code: "LUB-FIL-ACEITE", name: "Filtro de Aceite Blindado", desc: "Tipo Spin-on estándar", icon: "🛢️", price: 8, type: "PART" },
-    { code: "LUB-FIL-ACE-ELEM", name: "Filtro Aceite Cartucho / Elemento", desc: "Ecológico para motores modernos", icon: "🛢️", price: 10, type: "PART" },
-    { code: "LUB-FIL-ACE-DSL", name: "Filtro Aceite Diésel Heavy Duty", desc: "Alta retención de partículas", icon: "🚛", price: 12, type: "PART" },
-  ],
-  lub_fil_aire: [
-    { code: "LUB-FIL-AIRE", name: "Filtro de Aire Motor Convencional", desc: "Celulosa de admisión de aire", icon: "🌪️", price: 12, type: "PART" },
-    { code: "LUB-FIL-AIRE-PANEL", name: "Filtro de Aire Panel Plano", desc: "Para sedán y SUV moderno", icon: "🌪️", price: 14, type: "PART" },
-    { code: "LUB-FIL-AIRE-CIL", name: "Filtro de Aire Cilíndrico / Cono", desc: "Camionetas y alta aspiración", icon: "🌪️", price: 16, type: "PART" },
-  ],
-  lub_fil_cabina: [
-    { code: "LUB-FIL-CAB", name: "Filtro Cabina (A/C) Estándar", desc: "Retiene polvo y polen exterior", icon: "❄️", price: 14, type: "PART" },
-    { code: "LUB-FIL-CAB-CARB", name: "Filtro Cabina Carbón Activado", desc: "Neutraliza olores y smog", icon: "🛡️", price: 18, type: "PART" },
-  ],
-  lub_fil_combustible: [
-    { code: "LUB-FIL-COMB", name: "Filtro de Gasolina en Línea", desc: "Protección inyectores gasolina", icon: "⛽", price: 15, type: "PART" },
-    { code: "LUB-FIL-COMB-SUM", name: "Filtro Combustible Sumergido", desc: "En tanque de combustible", icon: "⛽", price: 22, type: "PART" },
-    { code: "LUB-FIL-COMB-DSL", name: "Filtro Trampa Diésel Decantador", desc: "Separador de agua y sedimentos", icon: "🚛", price: 20, type: "PART" },
-  ],
-  // LUBRICENTRO - Fluidos
-  lub_flu_frenos: [
-    { code: "LUB-FL-DOT4", name: "Líquido de Frenos DOT 4 Sintético", desc: "Punto ebullición elevado 260°C", icon: "🛑", price: 8, type: "PART" },
-    { code: "LUB-FL-DOT3", name: "Líquido de Frenos DOT 3", desc: "Uso general automotriz", icon: "🛑", price: 7, type: "PART" },
-    { code: "LUB-FL-FREN-SERV", name: "Servicio Purga y Cambio Líquido Frenos", desc: "Purga en 4 ruedas", icon: "🔧", price: 12, type: "SERVICE" },
-  ],
-  lub_flu_coolant: [
-    { code: "LUB-FL-COOLANT", name: "Refrigerante Coolant Concentrado (Galón)", desc: "Antioxidante 50/50 etilenglicol", icon: "🌡️", price: 12, type: "PART" },
-    { code: "LUB-FL-COOL-SERV", name: "Servicio Lavado y Cambio Refrigerante", desc: "Drenado radiador y reserva", icon: "🔧", price: 10, type: "SERVICE" },
-  ],
-  lub_flu_hidraulico: [
-    { code: "LUB-FL-HID", name: "Fluido Dirección Hidráulica", desc: "Protección cremallera y bomba", icon: "🛞", price: 10, type: "PART" },
-    { code: "LUB-FL-HID-SERV", name: "Servicio Purga Dirección Hidráulica", desc: "Elimina aire y ruido de bomba", icon: "🔧", price: 10, type: "SERVICE" },
-  ],
-  lub_flu_inyectores: [
-    { code: "LUB-INY-CLEAN", name: "Limpiador de Inyectores en Boya", desc: "Limpieza directa por riel", icon: "🧪", price: 16, type: "PART" },
-    { code: "LUB-INY-SERV", name: "Servicio Limpieza Inyectores en Riel", desc: "Descarbonizado sin desmontar", icon: "🔧", price: 15, type: "SERVICE" },
-  ],
-  // LUBRICENTRO - Baterías y Entrega
-  lub_bat_diagnostico: [
-    { code: "LUB-BAT-TEST", name: "Test Computarizado de Batería y Alternador", desc: "Medición CCA y diodos alternador", icon: "⚡", price: 8, type: "SERVICE" },
-    { code: "LUB-BAT-BORNES", name: "Limpieza y Desulfatado de Bornes", desc: "Grasa protectora dieléctrica", icon: "🧹", price: 5, type: "SERVICE" },
-  ],
-  lub_bat_nuevas: [
-    { code: "LUB-BAT-11P", name: "Batería 11 Placas 45Ah", desc: "Autos compactos con garantía", icon: "🔋", price: 65, type: "PART" },
-    { code: "LUB-BAT-13P", name: "Batería 13 Placas 60Ah", desc: "Sedán y hatchback mediano", icon: "🔋", price: 85, type: "PART" },
-    { code: "LUB-BAT-15P", name: "Batería 15 Placas 75Ah", desc: "SUV, camionetas y 4x4", icon: "🔋", price: 105, type: "PART" },
-    { code: "LUB-BAT-INSTAL", name: "Instalación de Batería con Respaldo", desc: "Conserva memorias de radio y ECU", icon: "🔧", price: 8, type: "SERVICE" },
-  ],
-  lub_bat_plumas: [
-    { code: "LUB-PLUMAS-PAR", name: "Plumas Limpiaparabrisas Delanteras (Par)", desc: "Siliconadas aerodinámicas", icon: "🌧️", price: 14, type: "PART" },
-    { code: "LUB-PLUMA-POST", name: "Pluma Limpiaparabrisas Posterior", desc: "Para compuerta trasera", icon: "🌧️", price: 8, type: "PART" },
-  ],
-  lub_bat_lavado: [
-    { code: "LUB-LAV-ENTREGA", name: "Lavado Express de Entrega", desc: "Carrocería y secado rápido de cortesía", icon: "🚿", price: 6, type: "SERVICE" },
-    { code: "LUB-ASP-ENTREGA", name: "Aspirado Rápido de Cabina", desc: "Pisos y asientos delanteros", icon: "🧹", price: 5, type: "SERVICE" },
-  ],
-
-  // --- CAR WASH ---
-  cw_lav_express: [
-    { code: "CW-EXP-EXT", name: "Lavado Express Exterior", desc: "Shampoo pH neutro y secado microfibra", icon: "🚿", price: 6, type: "SERVICE" },
-    { code: "CW-EXP-AROS", name: "Lavado Express + Aros", desc: "Limpieza profunda de llantas y rines", icon: "🛞", price: 8, type: "SERVICE" },
-    { code: "CW-EXP-MOTO", name: "Lavado Express Moto / Cuadrón", desc: "Presión controlada delicada", icon: "🏍️", price: 5, type: "SERVICE" },
-    { code: "CW-EXP-ENJUAGUE", name: "Enjuague Rápido de Presión", desc: "Retiro express de polvo y lodo", icon: "💧", price: 4, type: "SERVICE" },
-  ],
-  cw_lav_completo: [
-    { code: "CW-COMP-CHASIS", name: "Lavado Completo Carrocería + Chasis", desc: "Elevador y lavado a presión de bajos", icon: "🧽", price: 12, type: "SERVICE" },
-    { code: "CW-SNOW-FOAM", name: "Lavado Espuma Activa (Snow Foam)", desc: "Espuma densa desincrustante touchless", icon: "🫧", price: 14, type: "SERVICE" },
-    { code: "CW-COMP-FULL", name: "Lavado Integral Full (Ext + Chasis + Motor)", desc: "Limpieza profunda total", icon: "🌊", price: 22, type: "SERVICE" },
-    { code: "CW-CAMIONETA-SUV", name: "Lavado Completo Camioneta / SUV Grande", desc: "Vehículos 3 filas y pickups", icon: "🚙", price: 16, type: "SERVICE" },
-  ],
-  cw_lav_motor: [
-    { code: "CW-MOT-VAPOR", name: "Lavado de Motor al Vapor", desc: "Desengrasado seguro sin mojar sensores", icon: "⚙️", price: 15, type: "SERVICE" },
-    { code: "CW-MOT-DESENG", name: "Desengrasado Profundo de Motor y Bahía", desc: "Elimina grasa acumulada y aceite", icon: "🧼", price: 18, type: "SERVICE" },
-    { code: "CW-MOT-BARNIZ", name: "Lavado Motor + Barniz Protector Dieléctrico", desc: "Brillo mate y repelente de polvo", icon: "🛡️", price: 22, type: "SERVICE" },
-  ],
-  cw_lav_especial: [
-    { code: "CW-DESBARRE-4X4", name: "Desbarre y Desarenado Chasis 4x4", desc: "Retiro de lodo pegado en bajos", icon: "🚜", price: 20, type: "SERVICE" },
-    { code: "CW-DESALINIZADO", name: "Tratamiento Desalinizador de Chasis", desc: "Neutraliza sal marina post-playa", icon: "🏖️", price: 18, type: "SERVICE" },
-    { code: "CW-PLATON-PICKUP", name: "Lavado Balde / Platón Camioneta Pickup", desc: "Limpieza con hidrolavadora", icon: "🛻", price: 8, type: "SERVICE" },
-  ],
-  cw_int_aspirado: [
-    { code: "CW-ASP-CABINA", name: "Aspirado Profundo Interior", desc: "Asientos, alfombras y cajuela", icon: "🧹", price: 8, type: "SERVICE" },
-    { code: "CW-ASP-MALETERO", name: "Aspirado Detallado de Cajuela / Maletero", desc: "Espacio de llanta de emergencia", icon: "🧳", price: 4, type: "SERVICE" },
-    { code: "CW-SOPLADO-DUCTOS", name: "Soplado de Rendijas y Ductos A/C", desc: "Elimina polvo acumulado en rejillas", icon: "💨", price: 5, type: "SERVICE" },
-  ],
-  cw_int_tapiceria: [
-    { code: "CW-TAP-ASIENTOS", name: "Lavado en Seco Asientos Tela (4 puestos)", desc: "Extracción y desmanchado textil", icon: "🛋️", price: 20, type: "SERVICE" },
-    { code: "CW-TAP-ALFOMBRAS", name: "Lavado y Extracción Pisos / Alfombras", desc: "Elimina barro y suciedad adherida", icon: "🧽", price: 18, type: "SERVICE" },
-    { code: "CW-TAP-TECHO", name: "Limpieza Delicada de Techo / Cielo Raso", desc: "Sin despegar el tapiz original", icon: "☁️", price: 15, type: "SERVICE" },
-    { code: "CW-TAP-MANCHAS", name: "Tratamiento Desmanchador Puntual", desc: "Café, grasa, tinta y derrames", icon: "🧴", price: 8, type: "SERVICE" },
-  ],
-  cw_int_cuero: [
-    { code: "CW-CUE-CLEAN", name: "Limpieza y Humectación Asientos de Cuero", desc: "Nutre el cuero y evita cuarteaduras", icon: "🛋️", price: 18, type: "SERVICE" },
-    { code: "CW-TABLERO-UV", name: "Renovador y Protección UV Tablero / Puertas", desc: "Acabado mate no grasoso", icon: "🧴", price: 6, type: "SERVICE" },
-    { code: "CW-SELLADO-VINIL", name: "Sellado de Vinilos y Molduras Interiores", desc: "Repele el polvo por semanas", icon: "🛡️", price: 10, type: "SERVICE" },
-  ],
-  cw_int_ozono: [
-    { code: "CW-OZONO-CANON", name: "Desinfección con Cañón de Ozono", desc: "Elimina 99% bacterias, virus y ácaros", icon: "🌬️", price: 10, type: "SERVICE" },
-    { code: "CW-OLOR-HUMEDAD", name: "Tratamiento Anti-Humedad y Mascotas", desc: "Neutraliza olores de raíz", icon: "🐕", price: 12, type: "SERVICE" },
-    { code: "CW-AROMATIZANTE", name: "Aromatización de Cabina Larga Duración", desc: "Fragancias finas de diseñador", icon: "🌸", price: 4, type: "SERVICE" },
-  ],
-  cw_pul_encerado: [
-    { code: "CW-ENC-CARNAUBA", name: "Encerado a Mano con Cera Carnauba", desc: "Brillo cálido y efecto hidrofóbico", icon: "✨", price: 12, type: "SERVICE" },
-    { code: "CW-SELLADOR-LIQ", name: "Sellador Cerámico Líquido Spray", desc: "Protección UV y brillo 3 meses", icon: "💎", price: 18, type: "SERVICE" },
-    { code: "CW-CERA-EXPRESS", name: "Cera Rápida en Húmedo de Secado", desc: "Brillo express al terminar el lavado", icon: "🧴", price: 6, type: "SERVICE" },
-  ],
-  cw_pul_correccion: [
-    { code: "CW-CLAY-BAR", name: "Descontaminado con Barra de Arcilla (Clay Bar)", desc: "Retira lluvia ácida y pintura pulverizada", icon: "🧱", price: 15, type: "SERVICE" },
-    { code: "CW-PUL-1P", name: "Pulido Corrección 1 Paso (Micro-Rayas)", desc: "Elimina remolinos y marcas de lavado", icon: "🌟", price: 35, type: "SERVICE" },
-    { code: "CW-ABRILLANTADO", name: "Abrillantado Orbital Efecto Espejo", desc: "Máxima reflectividad sin hologramas", icon: "🪞", price: 25, type: "SERVICE" },
-  ],
-  cw_pul_faros: [
-    { code: "CW-FAROS-PAR", name: "Pulido y Restauración de Faros (Par)", desc: "Elimina tono amarillo y opacidad", icon: "💡", price: 15, type: "SERVICE" },
-    { code: "CW-FAROS-UV", name: "Pulido de Faros + Sellador Polímero UV", desc: "Garantía de transparencia prolongada", icon: "🛡️", price: 20, type: "SERVICE" },
-    { code: "CW-FAROS-POST", name: "Pulido de Micas / Stops Posteriores", desc: "Restaura brillo rojo original", icon: "🚨", price: 10, type: "SERVICE" },
-  ],
-  cw_pul_cristales: [
-    { code: "CW-RAIN-X", name: "Tratamiento Repelente de Lluvia Rain-X", desc: "Mejora visión en lluvia en parabrisas", icon: "🌧️", price: 10, type: "SERVICE" },
-    { code: "CW-GOTA-SECA", name: "Desmanchado de Lluvia Ácida y Gota Seca", desc: "Vidrios totalmente transparentes", icon: "🪟", price: 15, type: "SERVICE" },
-    { code: "CW-PUL-VIDRIOS", name: "Pulido Desengrasante de Parabrisas", desc: "Elimina película de aceite y grasa", icon: "✨", price: 12, type: "SERVICE" },
-  ],
-  cw_cha_grafito: [
-    { code: "CW-GRAF-CHASIS", name: "Pulverizado con Grafito de Chasis", desc: "Protector contra herrumbre y ruidos", icon: "🧴", price: 10, type: "SERVICE" },
-    { code: "CW-ACEITE-CHASIS", name: "Baño de Aceite Protector Anticorrosivo", desc: "Protección para zonas costeras", icon: "🛢️", price: 14, type: "SERVICE" },
-    { code: "CW-GRAF-ECO", name: "Grafito Ecológico No Pegajoso", desc: "No acumula tierra en guardapolvos", icon: "🌿", price: 16, type: "SERVICE" },
-  ],
-  cw_cha_engrase: [
-    { code: "CW-ENG-PUNTOS", name: "Engrase de Puntos de Chasis y Rótulas", desc: "Grasa de litio a presión", icon: "🔩", price: 10, type: "SERVICE" },
-    { code: "CW-ENG-CRUCETAS", name: "Engrase de Crucetas y Cardán", desc: "Para camionetas y vehículos de tracción", icon: "⚙️", price: 8, type: "SERVICE" },
-    { code: "CW-LUB-PUERTAS", name: "Lubricación de Bisagras y Cerraduras", desc: "Previene chirridos y desgaste", icon: "🚪", price: 5, type: "SERVICE" },
-  ],
-  cw_cha_motor: [
-    { code: "CW-BARNIZ-MOT", name: "Barniz Protector Térmico de Motor", desc: "Acabado brillante de exhibición", icon: "✨", price: 12, type: "SERVICE" },
-    { code: "CW-HIDRAT-MANG", name: "Hidratación de Mangueras y Plásticos", desc: "Evita resequedad por calor", icon: "🧪", price: 8, type: "SERVICE" },
-  ],
-  cw_cha_llantas: [
-    { code: "CW-DESCONT-AROS", name: "Descontaminante Férrico de Rines", desc: "Elimina carboncillo negro de frenos", icon: "🛞", price: 10, type: "SERVICE" },
-    { code: "CW-SILICONA-GEL", name: "Gel Silicona Larga Duración para Llantas", desc: "Negro intenso no salpica pintura", icon: "🧴", price: 4, type: "SERVICE" },
-    { code: "CW-RENO-PLASTIC", name: "Renovador de Plásticos Negros Exteriores", desc: "Restaura guardapolvos descoloridos", icon: "🛡️", price: 6, type: "SERVICE" },
-  ],
-  cw_com_basico: [
-    { code: "CW-PKG-BASICO", name: "Combo Básico (Lavado Ext + Aspirado + Llantas)", desc: "Carrocería, aspirado y silicona", icon: "🏷️", price: 12, type: "SERVICE" },
-    { code: "CW-PKG-TAXI", name: "Combo Taxi / Utilitario Rápido", desc: "Lavado express y aspirado básico", icon: "🚕", price: 10, type: "SERVICE" },
-  ],
-  cw_com_ejecutivo: [
-    { code: "CW-PKG-EJECUTIVO", name: "Combo Ejecutivo (Chasis + Carrocería + Cera)", desc: "Aspirado completo y humectación tablero", icon: "👔", price: 20, type: "SERVICE" },
-    { code: "CW-PKG-FAMILIAR", name: "Combo Familiar SUV (Completo + Ozono)", desc: "Para camionetas familiares", icon: "👨‍👩‍👧‍👦", price: 25, type: "SERVICE" },
-  ],
-  cw_com_spa: [
-    { code: "CW-PKG-SPA", name: "Combo Spa Premium (Full + Motor + Carnauba + Ozono)", desc: "Tratamiento de belleza integral", icon: "👑", price: 35, type: "SERVICE" },
-    { code: "CW-PKG-4X4", name: "Combo Extremo 4x4 (Chasis + Motor + Grafito + Lavado)", desc: "Para camionetas de trabajo o campo", icon: "🚜", price: 38, type: "SERVICE" },
-  ],
-  cw_com_detail: [
-    { code: "CW-PKG-DETAIL-INT", name: "Detailing Interior Completo", desc: "Lavado en seco asientos, alfombras, techo y ozono", icon: "🛋️", price: 55, type: "SERVICE" },
-    { code: "CW-PKG-DETAIL-FULL", name: "Full Detailing (Interior + Pulido + Sellador Cerámico)", desc: "Restauración estética total", icon: "💎", price: 95, type: "SERVICE" },
-  ],
-
-  // --- TECNICENTRO ---
-  tc_lla_parches: [
-    { code: "TC-PARCHE-TUBE", name: "Parche Tubeless Rápido", desc: "Reparación sin desmontar aro", icon: "🩹", price: 5, type: "SERVICE" },
-    { code: "TC-VULCANIZADO", name: "Vulcanizado Térmico en Caliente", desc: "Reparación profunda de lona y banda", icon: "🔥", price: 8, type: "SERVICE" },
-    { code: "TC-PARCHE-SETA", name: "Parche Tipo Seta / Paragüita", desc: "Sellado interno radial certificado", icon: "🍄", price: 10, type: "SERVICE" },
-    { code: "TC-DESMONTE", name: "Desmonte y Montaje en Enllantadora", desc: "Cuidado de aros de magnesio", icon: "⚙️", price: 4, type: "SERVICE" },
-  ],
-  tc_lla_nuevas: [
-    { code: "TC-TIRE-R1314", name: "Neumático Rin 13 / 14 Estándar", desc: "Para auto compacto y sedán económico", icon: "🛞", price: 48, type: "PART" },
-    { code: "TC-TIRE-R1516", name: "Neumático Rin 15 / 16 Sedán / SUV", desc: "Excelente agarre en seco y mojado", icon: "🛞", price: 68, type: "PART" },
-    { code: "TC-TIRE-R1718", name: "Neumático Rin 17 / 18 Camioneta / Deportivo", desc: "Alta durabilidad y rendimiento", icon: "🛞", price: 98, type: "PART" },
-    { code: "TC-TIRE-AT", name: "Neumático All-Terrain A/T 4x4", desc: "Tracción mixta asfalto y tierra", icon: "🚜", price: 135, type: "PART" },
-  ],
-  tc_lla_valvulas: [
-    { code: "TC-VALV-CAUCHO", name: "Válvula de Caucho TR414 (Unidad)", desc: "Válvula hermética estándar", icon: "🔘", price: 3, type: "PART" },
-    { code: "TC-VALV-METAL", name: "Válvula Metálica de Seguridad", desc: "Para alta presión y velocidad", icon: "🔩", price: 5, type: "PART" },
-    { code: "TC-TUERCAS-SEG", name: "Juego de Tuercas de Seguridad", desc: "Llave especial antirrobo para 4 ruedas", icon: "🔒", price: 18, type: "PART" },
-    { code: "TC-ESPARRAGOS", name: "Cambio de Espárrago de Rueda", desc: "Sustitución de perno roto", icon: "🛠️", price: 8, type: "SERVICE" },
-  ],
-  tc_ali_computarizada: [
-    { code: "TC-ALI-DEL", name: "Alineación Computarizada 3D Delantera", desc: "Eje delantero con sensores de cámara", icon: "📐", price: 15, type: "SERVICE" },
-    { code: "TC-ALI-4R", name: "Alineación Computarizada 3D 4 Ruedas", desc: "Eje delantero y trasero alineados", icon: "📐", price: 20, type: "SERVICE" },
-    { code: "TC-REG-CASTER", name: "Corrección de Cáster y Comba", desc: "Instalación de pernos excéntricos", icon: "🔧", price: 12, type: "SERVICE" },
-  ],
-  tc_ali_balanceo: [
-    { code: "TC-BAL-CLIP", name: "Balanceo por Rueda (Plomo Clip)", desc: "Para rines de hierro estándar", icon: "⚖️", price: 4, type: "SERVICE" },
-    { code: "TC-BAL-PEGADO", name: "Balanceo por Rueda (Plomo Pegado)", desc: "Para rines de magnesio y aluminio", icon: "⚖️", price: 5, type: "SERVICE" },
-    { code: "TC-BAL-4R", name: "Balanceo Electrónico de 4 Ruedas", desc: "Elimina vibraciones al volante", icon: "⚖️", price: 18, type: "SERVICE" },
-  ],
-  tc_ali_nitrogeno: [
-    { code: "TC-ROT-4R", name: "Rotación Cruzada de 4 Llantas", desc: "Desgaste parejo y mayor vida útil", icon: "🔄", price: 10, type: "SERVICE" },
-    { code: "TC-NITRO-4R", name: "Inflado y Purga con Nitrógeno (4 Ruedas)", desc: "Presión estable y menos fugas térmicas", icon: "💨", price: 10, type: "SERVICE" },
-    { code: "TC-RECARGA-NITRO", name: "Calibración y Recarga de Nitrógeno", desc: "Mantenimiento periódico de presión", icon: "💨", price: 4, type: "SERVICE" },
-  ],
-  tc_ali_combos: [
-    { code: "TC-COMBO-AB", name: "Combo Alineación 3D + Balanceo 4 Ruedas", desc: "Servicio completo recomendado cada 10,000 km", icon: "⭐", price: 32, type: "SERVICE" },
-    { code: "TC-COMBO-FULL", name: "Combo Rodaje Total (Ali + Bal + Rot + Nitro)", desc: "El mantenimiento más completo para tus neumáticos", icon: "👑", price: 42, type: "SERVICE" },
-  ],
-  tc_fre_pastillas: [
-    { code: "TC-PAST-DEL-MO", name: "Cambio de Pastillas Delanteras (Mano de Obra)", desc: "Instalación y revisión de discos", icon: "🟫", price: 15, type: "SERVICE" },
-    { code: "TC-PAST-POST-MO", name: "Cambio de Pastillas Traseras (Mano de Obra)", desc: "Instalación y purga", icon: "🟫", price: 18, type: "SERVICE" },
-    { code: "TC-ZAPATAS-MO", name: "Cambio de Zapatas de Tambor (Mano de Obra)", desc: "Limpieza y regulación de balatas", icon: "🟫", price: 20, type: "SERVICE" },
-    { code: "TC-PAST-CERAM", name: "Juego de Pastillas Cerámicas Delanteras", desc: "Frenado suave sin polvo negro", icon: "🛡️", price: 38, type: "PART" },
-  ],
-  tc_fre_discos: [
-    { code: "TC-RECT-DISCOS", name: "Rectificación de Discos de Freno (Par)", desc: "Elimina surcos y pedal vibrante", icon: "💿", price: 20, type: "SERVICE" },
-    { code: "TC-RECT-TAMBORES", name: "Rectificación de Tambores de Freno (Par)", desc: "Torneado de campana trasera", icon: "💿", price: 20, type: "SERVICE" },
-    { code: "TC-DISCOS-NUEVOS", name: "Discos de Freno Delanteros Ventilados (Par)", desc: "Repuesto nuevo de alta disipación", icon: "💿", price: 65, type: "PART" },
-  ],
-  tc_fre_liquido: [
-    { code: "TC-LIQ-DOT4", name: "Líquido de Frenos DOT 4 Sintético", desc: "Punto de ebullición 260°C", icon: "💧", price: 8, type: "PART" },
-    { code: "TC-PURGA-ELEC", name: "Purga Electrónica de Frenos por Vacío", desc: "Elimina burbujas y humedad del pedal", icon: "🔧", price: 15, type: "SERVICE" },
-    { code: "TC-BRAKE-CLEAN", name: "Limpiador Desengrasante de Frenos Spray", desc: "Limpieza de caliper y mordaza", icon: "🧼", price: 6, type: "PART" },
-  ],
-  tc_fre_calipers: [
-    { code: "TC-MANT-CALIPER", name: "Mantenimiento Pasadores de Caliper", desc: "Grasa de silicona alta temperatura", icon: "🔧", price: 12, type: "SERVICE" },
-    { code: "TC-BOMBIN-FRENO", name: "Cambio de Bombín / Cilindro de Rueda", desc: "Sustitución por fuga de líquido", icon: "🔩", price: 15, type: "SERVICE" },
-    { code: "TC-REG-MANO", name: "Regulación de Freno de Mano", desc: "Ajuste de piola y tensión de palanca", icon: "🅿️", price: 10, type: "SERVICE" },
-  ],
-  tc_sus_amortiguadores: [
-    { code: "TC-AMORT-DEL-MO", name: "Cambio de Amortiguadores Delanteros (Par)", desc: "Mano de obra con prensa de resortes", icon: "🔽", price: 40, type: "SERVICE" },
-    { code: "TC-AMORT-POST-MO", name: "Cambio de Amortiguadores Posteriores (Par)", desc: "Mano de obra", icon: "🔽", price: 30, type: "SERVICE" },
-    { code: "TC-BASES-AMORT", name: "Bases y Rodamientos de Amortiguador (Par)", desc: "Elimina ruidos al girar el volante", icon: "⚙️", price: 25, type: "PART" },
-    { code: "TC-GUARDAPOLVO-AM", name: "Guardapolvos y Topes de Rebote", desc: "Protege el vástago del amortiguador", icon: "🛡️", price: 15, type: "PART" },
-  ],
-  tc_sus_terminales: [
-    { code: "TC-TERM-DIR", name: "Cambio de Terminales de Dirección (Par)", desc: "Mano de obra e instalación", icon: "↔️", price: 25, type: "SERVICE" },
-    { code: "TC-ROTULAS-SUSP", name: "Cambio de Rótulas de Suspensión (Par)", desc: "Mano de obra e instalación", icon: "⚪", price: 30, type: "SERVICE" },
-    { code: "TC-BRAZOS-AXIALES", name: "Cambio de Axiales / Bieletas Estabilizadoras", desc: "Mano de obra e instalación", icon: "📏", price: 25, type: "SERVICE" },
-  ],
-  tc_sus_trapecios: [
-    { code: "TC-BUJES-TRAP", name: "Cambio de Bujes de Trapecio en Prensa", desc: "Bujes grandes y chicos por lado", icon: "🔩", price: 35, type: "SERVICE" },
-    { code: "TC-TRAPECIO-COMP", name: "Cambio de Trapecio / Tijera Completo", desc: "Mano de obra por lado", icon: "🔧", price: 25, type: "SERVICE" },
-    { code: "TC-BUJES-ESTAB", name: "Bujes de Barra Estabilizadora", desc: "Elimina golpes secos en baches", icon: "🔘", price: 18, type: "PART" },
-  ],
-  tc_sus_direccion: [
-    { code: "TC-GUARDAPOLVO-DIR", name: "Cambio de Guardapolvos de Cremallera", desc: "Protege los axiales de dirección", icon: "🛡️", price: 15, type: "SERVICE" },
-    { code: "TC-FLUIDO-DIR", name: "Cambio de Fluido Dirección Hidráulica", desc: "Purga completa del circuito", icon: "🛞", price: 14, type: "SERVICE" },
-    { code: "TC-AJUSTE-CREM", name: "Ajuste y Regulación de Holgura Cremallera", desc: "Elimina juego libre en el volante", icon: "⚙️", price: 20, type: "SERVICE" },
-  ],
-  tc_bat_test: [
-    { code: "TC-TEST-CCA", name: "Test Computarizado de CCA y Batería", desc: "Prueba digital de capacidad de arranque", icon: "⚡", price: 6, type: "SERVICE" },
-    { code: "TC-DIAG-CARGA", name: "Diagnóstico Sistema de Carga y Alternador", desc: "Verificación de voltaje regulado", icon: "🔄", price: 8, type: "SERVICE" },
-    { code: "TC-TEST-ARRANQUE", name: "Medición Consumo de Motor de Arranque", desc: "Detección de caída de tensión", icon: "🔑", price: 8, type: "SERVICE" },
-  ],
-  tc_bat_nuevas: [
-    { code: "TC-BAT-11P", name: "Batería Automotriz 11 Placas 45Ah", desc: "Autos compactos con 15 meses garantía", icon: "🔋", price: 65, type: "PART" },
-    { code: "TC-BAT-13P", name: "Batería Automotriz 13 Placas 60Ah", desc: "Sedán y SUV con 18 meses garantía", icon: "🔋", price: 85, type: "PART" },
-    { code: "TC-BAT-15P", name: "Batería Automotriz 15 Placas 75Ah", desc: "Camionetas y 4x4 alto ciclaje", icon: "🔋", price: 105, type: "PART" },
-    { code: "TC-BAT-AGM", name: "Batería AGM Start-Stop", desc: "Tecnología absorbente de fibra vidrio", icon: "⚡", price: 145, type: "PART" },
-  ],
-  tc_bat_bornes: [
-    { code: "TC-TERM-BRONCE", name: "Terminales de Batería de Bronce Forjado", desc: "Máxima conductividad sin sulfato", icon: "🔌", price: 8, type: "PART" },
-    { code: "TC-LIMPIEZA-BORNES", name: "Desulfatado y Protección con Grasa Dieléctrica", desc: "Limpieza química de terminales", icon: "🧹", price: 5, type: "SERVICE" },
-    { code: "TC-SOPORTE-BAT", name: "Reposición Soporte Varilla Sujetadora", desc: "Evita vibraciones de batería", icon: "🔩", price: 6, type: "PART" },
-  ],
-  tc_bat_inspeccion: [
-    { code: "TC-INSP-BAJOS", name: "Inspección Visual de Chasis, Líneas y Fugas", desc: "Revisión completa de seguridad", icon: "🔍", price: 10, type: "SERVICE" },
-    { code: "TC-INSP-ESCAPES", name: "Revisión de Soportes de Escape y Catalizador", desc: "Inspección de gomas y fugas de humo", icon: "💨", price: 8, type: "SERVICE" },
-    { code: "TC-CUBRE-CARTER", name: "Ajuste o Instalación de Protector de Cárter", desc: "Fijación con pernos de acero", icon: "🛡️", price: 8, type: "SERVICE" },
-  ],
-};
+export const ITEMS_POR_SUBCATEGORIA: Record<string, ItemPresetConfig[]> = {};
 
 const CATALOGO_BASE_LUBRICENTRO = [
   { code: "LUB-001", name: "Aceite Motor 0W-20 Sintético (Galón)", price: 42, type: "PART" as const, category: "Lubricantes" },
@@ -634,6 +341,7 @@ export default function LubricentroExpress({
   const [guardandoPasarPos, setGuardandoPasarPos] = useState<boolean>(false);
   const [modalConfirmPos, setModalConfirmPos] = useState<any | null>(null);
   const [modalYaPasadaPos, setModalYaPasadaPos] = useState<boolean>(false);
+  const [modalPropuestaEnviada, setModalPropuestaEnviada] = useState<boolean>(false);
 
   const canvasFirmaRef = useRef<HTMLCanvasElement | null>(null);
   const dibujandoFirmaRef = useRef<boolean>(false);
@@ -825,7 +533,32 @@ export default function LubricentroExpress({
   // =========================================================================
   // MANEJO DE ÍTEMS DE LUBRICENTRO EN LA ORDEN ACTIVA
   // =========================================================================
-  const itemsOrden: any[] = Array.isArray(ordenActiva?.items) ? ordenActiva.items : [];
+  const [ordenLocalBorrador, setOrdenLocalBorrador] = useState<any | null>(null);
+  const ordenEfectiva = ordenActiva || ordenLocalBorrador;
+  const itemsOrden: any[] = Array.isArray(ordenEfectiva?.items) ? ordenEfectiva.items : [];
+
+  const handleActualizarItemsOrdenGenerales = async (nuevosItems: any[]) => {
+    let ord = ordenActiva || ordenLocalBorrador;
+    if (!ord) {
+      ord = {
+        id: `ord_exp_${Date.now()}`,
+        orderNumber: `ORD-${Date.now().toString().slice(-4)}`,
+        plate: "EXPRESS",
+        vehicle: "Atención Rápida",
+        clientName: "Cliente Mostrador",
+        status: "01 En Espera",
+        items: nuevosItems,
+        dateIn: new Date().toISOString(),
+      };
+      setOrdenLocalBorrador(ord);
+      onOrdenCreada?.(ord);
+    } else {
+      const ordActualizada = { ...ord, items: nuevosItems };
+      if (!ordenActiva) setOrdenLocalBorrador(ordActualizada);
+      onOrdenCreada?.(ordActualizada);
+      await sincronizarOrdenLubricentro({ items: nuevosItems });
+    }
+  };
 
   const tieneServicioEnOrden = (codeOrKey: string, name?: string) => {
     return itemsOrden.some(
@@ -845,9 +578,20 @@ export default function LubricentroExpress({
     type: "SERVICE" | "PART";
     qty?: number;
   }) => {
-    if (!ordenActiva) {
-      mostrarToast("Selecciona o registra primero una orden", "err");
-      return;
+    let ord = ordenActiva || ordenLocalBorrador;
+    if (!ord) {
+      ord = {
+        id: `ord_exp_${Date.now()}`,
+        orderNumber: `ORD-${Date.now().toString().slice(-4)}`,
+        plate: "EXPRESS",
+        vehicle: "Atención Rápida",
+        clientName: "Cliente Mostrador",
+        status: "01 En Espera",
+        items: [],
+        dateIn: new Date().toISOString(),
+      };
+      setOrdenLocalBorrador(ord);
+      onOrdenCreada?.(ord);
     }
 
     const existe = itemsOrden.find(
@@ -877,7 +621,9 @@ export default function LubricentroExpress({
       nuevosItems = [...itemsOrden, nuevo];
     }
 
-    onOrdenCreada?.({ ...ordenActiva, items: nuevosItems });
+    const ordActualizada = { ...ord, items: nuevosItems };
+    if (!ordenActiva) setOrdenLocalBorrador(ordActualizada);
+    onOrdenCreada?.(ordActualizada);
     await sincronizarOrdenLubricentro({ items: nuevosItems });
   };
 
@@ -1264,16 +1010,11 @@ export default function LubricentroExpress({
           <div className={modoEspecialidad === "lubricentro" ? "block w-full" : "hidden"}>
             <ModuloLubricentroCatalogo
               empleadoLogueado={empleadoLogueado}
-              ordenActiva={ordenActiva}
+              ordenActiva={ordenEfectiva}
               itemsOrden={itemsOrden}
               mostrarToast={mostrarToast}
               triggerAbrirConfig={triggerAbrirConfig}
-              onActualizarItemsOrden={async (nuevosItems) => {
-                if (ordenActiva) {
-                  onOrdenCreada?.({ ...ordenActiva, items: nuevosItems });
-                  await sincronizarOrdenLubricentro({ items: nuevosItems });
-                }
-              }}
+              onActualizarItemsOrden={handleActualizarItemsOrdenGenerales}
               onIrASiguiente={() => {
                 if (onCambiarModulo) onCambiarModulo("carwash");
                 else setEtapaActiva(4);
@@ -1286,16 +1027,11 @@ export default function LubricentroExpress({
           <div className={modoEspecialidad === "carwash" ? "block w-full" : "hidden"}>
             <ModuloCarWashCatalogo
               empleadoLogueado={empleadoLogueado}
-              ordenActiva={ordenActiva}
+              ordenActiva={ordenEfectiva}
               itemsOrden={itemsOrden}
               mostrarToast={mostrarToast}
               triggerAbrirConfig={triggerAbrirConfig}
-              onActualizarItemsOrden={async (nuevosItems) => {
-                if (ordenActiva) {
-                  onOrdenCreada?.({ ...ordenActiva, items: nuevosItems });
-                  await sincronizarOrdenLubricentro({ items: nuevosItems });
-                }
-              }}
+              onActualizarItemsOrden={handleActualizarItemsOrdenGenerales}
               onIrASiguiente={() => {
                 if (onCambiarModulo) onCambiarModulo("tecnicentro");
                 else setEtapaActiva(4);
@@ -1308,16 +1044,11 @@ export default function LubricentroExpress({
           <div className={modoEspecialidad === "tecnicentro" ? "block w-full" : "hidden"}>
             <ModuloTecnicentroCatalogo
               empleadoLogueado={empleadoLogueado}
-              ordenActiva={ordenActiva}
+              ordenActiva={ordenEfectiva}
               itemsOrden={itemsOrden}
               mostrarToast={mostrarToast}
               triggerAbrirConfig={triggerAbrirConfig}
-              onActualizarItemsOrden={async (nuevosItems) => {
-                if (ordenActiva) {
-                  onOrdenCreada?.({ ...ordenActiva, items: nuevosItems });
-                  await sincronizarOrdenLubricentro({ items: nuevosItems });
-                }
-              }}
+              onActualizarItemsOrden={handleActualizarItemsOrdenGenerales}
               onIrAAvisoYFirma={() => setEtapaActiva(4)}
             />
           </div>
@@ -1338,10 +1069,18 @@ export default function LubricentroExpress({
         <div className="w-full space-y-4 animate-fade-in">
           <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/[0.08] space-y-4 shadow-xl">
             {/* Cabecera */}
-            <div className="flex items-center border-b border-zinc-200 dark:border-white/[0.08] pb-3">
+            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/[0.08] pb-3">
               <h4 className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-white">
                 Firma
               </h4>
+              {(ordenActiva?.quoteStatus === "Aprobado" ||
+                ordenActiva?.status === "Aprobado" ||
+                ordenActiva?.quoteStatus === "ACEPTADO") && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider shadow-xs">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                  ✓ Aprobado
+                </span>
+              )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -1542,39 +1281,94 @@ export default function LubricentroExpress({
                 type="button"
                 disabled={guardandoFirma}
                 onClick={async () => {
-                  if (ordenActiva) {
-                    setGuardandoFirma(true);
-                    try {
-                      let firmaDataUrl: string | undefined;
-                      if (tieneTrazosFirmaRef.current && canvasFirmaRef.current) {
-                        firmaDataUrl = canvasFirmaRef.current.toDataURL("image/png");
-                      }
-                      const res = await fetch("/api/taller/operacion", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          action: "PASAR_A_PROPUESTA",
-                          orderId: ordenActiva.id,
-                          quoteSignatureUrl: modoFirma === "ACEPTACION" ? firmaDataUrl : undefined,
-                          deliverySignatureUrl: modoFirma === "ENTREGA" ? firmaDataUrl : undefined,
-                          signedBy: ordenActiva.client || "Cliente",
-                          nextOilChangeKm: kmProximoCambio ? Number(kmProximoCambio) : undefined,
-                        }),
-                      });
-                      const data = await res.json();
-                      if (data.success && data.activeOrder) {
-                        onOrdenCreada?.(data.activeOrder);
-                      }
-                    } catch {}
+                  let ord = ordenActiva || ordenLocalBorrador;
+                  if (!ord) {
+                    mostrarToast("No hay orden activa para pasar a propuesta", "err");
+                    return;
+                  }
+                  setGuardandoFirma(true);
+                  try {
+                    let firmaDataUrl: string | undefined;
+                    if (tieneTrazosFirmaRef.current && canvasFirmaRef.current) {
+                      firmaDataUrl = canvasFirmaRef.current.toDataURL("image/png");
+                    }
+                    const res = await fetch("/api/taller/operacion", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        action: "PASAR_A_PROPUESTA",
+                        orderId: ord.id,
+                        orderNumber: ord.orderNumber,
+                        plate: ord.plate,
+                        vehicle: ord.vehicle,
+                        client: ord.client || ord.clientName || "Cliente Mostrador",
+                        clientPhone: ord.clientPhone || "",
+                        items: ord.items || [],
+                        services: ord.services || [],
+                        notes: ord.notes || "",
+                        totalCost: ord.totalCost,
+                        quoteStatus: "Pendiente",
+                        quoteSignatureUrl: modoFirma === "ACEPTACION" ? firmaDataUrl : undefined,
+                        deliverySignatureUrl: modoFirma === "ENTREGA" ? firmaDataUrl : undefined,
+                        signedBy: ord.client || "Cliente",
+                        nextOilChangeKm: kmProximoCambio ? Number(kmProximoCambio) : undefined,
+                      }),
+                    });
+                    const data = await res.json();
+                    if (data.success && data.activeOrder) {
+                      onOrdenCreada?.(data.activeOrder);
+                      setModalPropuestaEnviada(true);
+                    } else {
+                      mostrarToast(data.error || "No se pudo procesar la propuesta", "err");
+                    }
+                  } catch (err) {
+                    console.error("Error al pasar a propuesta:", err);
+                    mostrarToast("Error al conectar con la base de datos", "err");
+                  } finally {
                     setGuardandoFirma(false);
                   }
-                  window.location.href = "/presupuestos";
                 }}
                 className="px-4 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-700 dark:bg-sky-500/15 dark:hover:bg-sky-500/25 dark:border-sky-500/35 dark:text-sky-300 text-xs font-normal backdrop-blur-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
-                title="Pasar a Propuesta"
+                title="Presupuesto"
               >
                 <span>📋</span>
-                <span>Pasar a Propuesta</span>
+                <span>Presupuesto</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================
+          MODAL FLOTANTE CONFIRMACIÓN DE ENVÍO DE PROPUESTA (SE QUEDA AQUÍ MISMO)
+          =================================================================== */}
+      {modalPropuestaEnviada && (
+        <div
+          onClick={() => setModalPropuestaEnviada(false)}
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#111113] border border-emerald-500/30 rounded-2xl max-w-xs w-full p-5 space-y-3 text-center shadow-2xl animate-scale-up"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto text-xl font-bold shadow-lg shadow-emerald-500/10">
+              ✓
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm sm:text-base font-bold text-white">
+                Su propuesta fue enviada
+              </h3>
+              <p className="text-xs text-zinc-400">
+                Placa <strong className="text-zinc-200 font-mono">{ordenActiva?.plate || "registrada"}</strong>
+              </p>
+            </div>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setModalPropuestaEnviada(false)}
+                className="w-full h-9 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold cursor-pointer transition-all active:scale-95 shadow-md shadow-emerald-600/30"
+              >
+                Aceptar
               </button>
             </div>
           </div>
