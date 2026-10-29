@@ -5271,8 +5271,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   onContinuar={() => {
                     setModuloTaller("lubricentro");
                   }}
-                  textoContinuar="Siguiente (Lubricentro) →"
-                  onFirmarDirecto={() => setEtapaActiva(4)}
                   mostrarToast={mostrarToast}
                 />
               </div>

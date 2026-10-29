@@ -140,6 +140,8 @@ export default function ModuloLubricentroCatalogo({
 
   // Selección de Categoría (Fila 1: "ALL" o id de categoría) y Subcategoría (Fila 2: "ALL" o id de subcategoría)
   const [categoriaActivaId, setCategoriaActivaId] = useState<string>("lub_aceite");
+  const [mostrarCategorias, setMostrarCategorias] = useState(true);
+  const [mostrarSubcategorias, setMostrarSubcategorias] = useState(true);
   const [subcategoriaPorCat, setSubcategoriaPorCat] = useState<Record<string, string>>({
     lub_aceite: "lub_aceite_motor",
     lub_transmision: "ALL",
@@ -331,6 +333,8 @@ export default function ModuloLubricentroCatalogo({
   // Limpiar filtros incompatibles al cambiar de categoría o subcategoría
   const handleCambiarCategoria = (catId: string) => {
     setCategoriaActivaId(catId);
+    setMostrarCategorias(false);
+    setMostrarSubcategorias(true);
     setVerTodoElCatalogo(catId === "ALL");
     setFiltroViscosidad("");
     setFiltroBase("");
@@ -354,6 +358,7 @@ export default function ModuloLubricentroCatalogo({
 
   const handleCambiarSubcategoria = (subId: string) => {
     if (!categoriaSeleccionadaObj) return;
+    setMostrarSubcategorias(false);
     setSubcategoriaPorCat((prev) => ({
       ...prev,
       [categoriaSeleccionadaObj.id]: subId,
@@ -1510,63 +1515,96 @@ export default function ModuloLubricentroCatalogo({
           NIVEL 1: CATEGORÍAS PRINCIPALES (2 columnas en móvil, 6 en desktop, cubriendo todo el ancho)
           ===================================================================== */}
       <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full">
-        <button
-          type="button"
-          onClick={() => handleCambiarCategoria("ALL")}
-          className={`flex-1 min-w-[100px] sm:min-w-[120px] h-9 sm:h-10 px-3 rounded-xl border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
-            categoriaActivaId === "ALL"
-              ? "bg-blue-600 border-blue-500 text-white shadow-xs"
-              : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-          }`}
-        >
-          <span className="text-sm leading-none shrink-0">✨</span>
-          <span className="whitespace-nowrap">Todo</span>
-          <span
-            className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-normal shrink-0 ${
-              categoriaActivaId === "ALL"
-                ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
-                : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
-            }`}
-          >
-            {productos.filter((p) => p.active !== false).length}
-          </span>
-        </button>
-
-        {categoriasActivas.map((cat) => {
-          const sel = categoriaActivaId === cat.id;
-          const enPedido = conteoEnPedidoPorCategoria[cat.id] || 0;
-          const totalCat = conteoProductosPorCategoria[cat.id] || 0;
-          return (
+        {mostrarCategorias ? (
+          <>
             <button
-              key={cat.id}
               type="button"
-              onClick={() => handleCambiarCategoria(cat.id)}
-              className={`flex-1 min-w-[105px] sm:min-w-[125px] h-9 sm:h-10 px-3 rounded-xl border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
-                sel
+              onClick={() => handleCambiarCategoria("ALL")}
+              className={`flex-1 min-w-[100px] sm:min-w-[120px] h-9 sm:h-10 px-3 rounded-xl border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
+                categoriaActivaId === "ALL"
                   ? "bg-blue-600 border-blue-500 text-white shadow-xs"
                   : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
               }`}
             >
-              <span className="text-base leading-none shrink-0">{cat.icon}</span>
-              <span className="whitespace-nowrap">{cat.label}</span>
-              {enPedido > 0 ? (
-                <span className="px-1.5 py-0.5 rounded-md text-xs leading-none tabular-nums font-normal bg-emerald-500 text-white shrink-0">
-                  {enPedido}
-                </span>
-              ) : (
-                <span
-                  className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-normal shrink-0 ${
+              <span className="text-sm leading-none shrink-0">✨</span>
+              <span className="whitespace-nowrap">Todo</span>
+              <span
+                className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-normal shrink-0 ${
+                  categoriaActivaId === "ALL"
+                    ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                    : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
+                }`}
+              >
+                {productos.filter((p) => p.active !== false).length}
+              </span>
+            </button>
+
+            {categoriasActivas.map((cat) => {
+              const sel = categoriaActivaId === cat.id;
+              const enPedido = conteoEnPedidoPorCategoria[cat.id] || 0;
+              const totalCat = conteoProductosPorCategoria[cat.id] || 0;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => handleCambiarCategoria(cat.id)}
+                  className={`flex-1 min-w-[105px] sm:min-w-[125px] h-9 sm:h-10 px-3 rounded-xl border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
                     sel
-                      ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
-                      : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
+                      ? "bg-blue-600 border-blue-500 text-white shadow-xs"
+                      : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
                   }`}
                 >
-                  {totalCat}
+                  <span className="text-base leading-none shrink-0">{cat.icon}</span>
+                  <span className="whitespace-nowrap">{cat.label}</span>
+                  {enPedido > 0 ? (
+                    <span className="px-1.5 py-0.5 rounded-md text-xs leading-none tabular-nums font-normal bg-emerald-500 text-white shrink-0">
+                      {enPedido}
+                    </span>
+                  ) : (
+                    <span
+                      className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-normal shrink-0 ${
+                        sel
+                          ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                          : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
+                      }`}
+                    >
+                      {totalCat}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setMostrarCategorias(true)}
+            aria-label="Mostrar categorías"
+            className="min-w-[120px] h-9 sm:h-10 px-3 rounded-xl border bg-blue-600 border-blue-500 text-white text-xs font-normal inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-xs active:scale-95 whitespace-nowrap"
+          >
+            {categoriaActivaId === "ALL" || !categoriaSeleccionadaObj ? (
+              <>
+                <span className="text-sm leading-none shrink-0">✨</span>
+                <span>Todo</span>
+                <span className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-blue-500/25 text-blue-100 border border-blue-400/30">
+                  {productos.filter((p) => p.active !== false).length}
                 </span>
-              )}
-            </button>
-          );
-        })}
+              </>
+            ) : (
+              <>
+                <span className="text-base leading-none shrink-0">{categoriaSeleccionadaObj.icon}</span>
+                <span>{categoriaSeleccionadaObj.label}</span>
+                <span
+                  className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-blue-500/25 text-blue-100 border border-blue-400/30"
+                >
+                  {conteoEnPedidoPorCategoria[categoriaSeleccionadaObj.id] ||
+                    conteoProductosPorCategoria[categoriaSeleccionadaObj.id] ||
+                    0}
+                </span>
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* =====================================================================
@@ -1574,63 +1612,99 @@ export default function ModuloLubricentroCatalogo({
           ===================================================================== */}
       {categoriaActivaId !== "ALL" && subcategoriasActivas.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 w-full">
-          <button
-            type="button"
-            onClick={() => handleCambiarSubcategoria("ALL")}
-            className={`flex-1 min-w-[95px] sm:min-w-[110px] h-8 sm:h-8.5 px-3 rounded-lg border text-xs font-normal flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs ${
-              subcategoriaActivaId === "ALL"
-                ? "bg-blue-600 border-blue-500 text-white font-normal shadow-xs"
-                : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-            }`}
-          >
-            <span>Todos</span>
-            <span
-              className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
-                subcategoriaActivaId === "ALL"
-                  ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
-                  : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
-              }`}
-            >
-              {conteoProductosPorCategoria[categoriaActivaId] || 0}
-            </span>
-          </button>
-
-          {subcategoriasActivas.map((sub) => {
-            const activa = subcategoriaActivaId === sub.id;
-            const countSub = conteoProductosPorSubcategoria[sub.id] || 0;
-            return (
+          {mostrarSubcategorias ? (
+            <>
               <button
-                key={sub.id}
                 type="button"
-                onClick={() => handleCambiarSubcategoria(sub.id)}
-                className={`flex-1 min-w-[95px] sm:min-w-[110px] h-8 sm:h-8.5 px-2.5 sm:px-3 rounded-lg border text-xs font-normal flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs ${
-                  activa
+                onClick={() => handleCambiarSubcategoria("ALL")}
+                className={`flex-1 min-w-[95px] sm:min-w-[110px] h-8 sm:h-8.5 px-3 rounded-lg border text-xs font-normal flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs ${
+                  subcategoriaActivaId === "ALL"
                     ? "bg-blue-600 border-blue-500 text-white font-normal shadow-xs"
                     : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
                 }`}
               >
-                <span className="text-sm leading-none shrink-0">{sub.icon}</span>
-                <span className="whitespace-nowrap">
-                  {sub.label
-                    .replace(/^De\s+/i, "")
-                    .replace(/^Líquido\s+(de\s+)?/i, "")
-                    .replace(/^Valvulina\s*\/\s*/i, "")
-                    .split(/[\s/]+/)[0]}
+                <span>Todos</span>
+                <span
+                  className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
+                    subcategoriaActivaId === "ALL"
+                      ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                      : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
+                  }`}
+                >
+                  {conteoProductosPorCategoria[categoriaActivaId] || 0}
                 </span>
-                {countSub > 0 && (
-                  <span
-                    className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
+              </button>
+
+              {subcategoriasActivas.map((sub) => {
+                const activa = subcategoriaActivaId === sub.id;
+                const countSub = conteoProductosPorSubcategoria[sub.id] || 0;
+                return (
+                  <button
+                    key={sub.id}
+                    type="button"
+                    onClick={() => handleCambiarSubcategoria(sub.id)}
+                    className={`flex-1 min-w-[95px] sm:min-w-[110px] h-8 sm:h-8.5 px-2.5 sm:px-3 rounded-lg border text-xs font-normal flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs ${
                       activa
-                        ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
-                        : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
+                        ? "bg-blue-600 border-blue-500 text-white font-normal shadow-xs"
+                        : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
                     }`}
                   >
-                    {countSub}
+                    <span className="text-sm leading-none shrink-0">{sub.icon}</span>
+                    <span className="whitespace-nowrap">
+                      {sub.label
+                        .replace(/^De\s+/i, "")
+                        .replace(/^Líquido\s+(de\s+)?/i, "")
+                        .replace(/^Valvulina\s*\/\s*/i, "")
+                        .split(/[\s/]+/)[0]}
+                    </span>
+                    {countSub > 0 && (
+                      <span
+                        className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
+                          activa
+                            ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                            : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
+                        }`}
+                      >
+                        {countSub}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setMostrarSubcategorias(true)}
+              aria-label="Mostrar subcategorías"
+              className="min-w-[110px] h-8 sm:h-8.5 px-3 rounded-lg border bg-blue-600 border-blue-500 text-white text-xs font-normal inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-xs"
+            >
+              {subcategoriaActivaId === "ALL" || !subcategoriaSeleccionadaObj ? (
+                <>
+                  <span>Todos</span>
+                  <span className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-blue-500/25 text-blue-100 border border-blue-400/30">
+                    {conteoProductosPorCategoria[categoriaActivaId] || 0}
                   </span>
-                )}
-              </button>
-            );
-          })}
+                </>
+              ) : (
+                <>
+                  <span className="text-sm leading-none shrink-0">{subcategoriaSeleccionadaObj.icon}</span>
+                  <span className="whitespace-nowrap">
+                    {subcategoriaSeleccionadaObj.label
+                      .replace(/^De\s+/i, "")
+                      .replace(/^Líquido\s+(de\s+)?/i, "")
+                      .replace(/^Valvulina\s*\/\s*/i, "")
+                      .split(/[\s/]+/)[0]}
+                  </span>
+                  {(conteoProductosPorSubcategoria[subcategoriaSeleccionadaObj.id] || 0) > 0 && (
+                    <span className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-blue-500/25 text-blue-100 border border-blue-400/30">
+                      {conteoProductosPorSubcategoria[subcategoriaSeleccionadaObj.id]}
+                    </span>
+                  )}
+                </>
+              )}
+            </button>
+          )}
         </div>
       )}
 
@@ -1966,15 +2040,6 @@ export default function ModuloLubricentroCatalogo({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {onIrASiguiente && (
-            <button
-              type="button"
-              onClick={onIrAAvisoYFirma}
-              className="h-9 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-normal cursor-pointer active:scale-95 transition-all"
-            >
-              ✍️ Firmar
-            </button>
-          )}
           <button
             type="button"
             onClick={onIrASiguiente || onIrAAvisoYFirma}

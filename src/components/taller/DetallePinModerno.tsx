@@ -39,7 +39,6 @@ export interface DetallePinModernoProps {
   productosCatalogo?: any[];
   onAgregarItemPin?: (item: any) => void;
   onEliminarItemPin?: (itemId: string) => void;
-  onChangeZona?: (nuevaZona: string) => void;
 }
 
 export function DetallePinModerno({
@@ -69,7 +68,6 @@ export function DetallePinModerno({
   hallazgosDelMismoPin = [],
   onSeleccionarHallazgoPin,
   onEliminarHallazgoEspecifico,
-  onChangeZona,
 }: DetallePinModernoProps) {
   const mismoNumero = pin.pinNumber || 1;
   const listaMismoPin = hallazgosDelMismoPin.filter(
@@ -78,8 +76,9 @@ export function DetallePinModerno({
   const bloquesEvidencia = listaMismoPin.length > 0 ? listaMismoPin : [pin];
 
   const [tipoTexto, setTipoTexto] = useState(pin.tipo || tipoSeleccionado || "");
-  const [editandoZona, setEditandoZona] = useState(false);
-  const [zonaTexto, setZonaTexto] = useState(pin.zona || pin.vistaLabel || pin.vista || "");
+  const zonaActual = pin.zona || pin.vistaLabel || pin.vista || "";
+  const [zonaPrincipal, ...subcategoriaParts] = zonaActual.split("·").map((parte) => parte.trim());
+  const subcategoria = subcategoriaParts.join(" · ");
 
   // Modales para ver fotos ampliadas y reproducir videos en ventana propia
   const [videoModalUrl, setVideoModalUrl] = useState<string | null>(null);
@@ -135,7 +134,6 @@ export function DetallePinModerno({
 
   React.useEffect(() => {
     setTipoTexto(pin.tipo || tipoSeleccionado || "");
-    setZonaTexto(pin.zona || pin.vistaLabel || pin.vista || "");
   }, [pin.id, pin.tipo, pin.zona, pin.vistaLabel, pin.vista, tipoSeleccionado]);
 
   const handleCambiarTipo = (val: string) => {
@@ -202,7 +200,7 @@ export function DetallePinModerno({
         </div>
       </div>
 
-      {/* 1. SECCIÓN ZONA / SUBCATEGORÍA (EDITABLE MANUALMENTE) */}
+      {/* 1. ZONA / SUBCATEGORÍA */}
       <div className="flex items-center justify-between gap-2 rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 px-3.5 py-2.5">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div className="w-8 h-8 rounded-lg bg-blue-500/10 dark:bg-blue-400/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
@@ -214,47 +212,17 @@ export function DetallePinModerno({
               />
             </svg>
           </div>
-          <span className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 shrink-0">
-            Zona / Subcategoría
-          </span>
-          {editandoZona ? (
-            <input
-              type="text"
-              autoFocus
-              value={zonaTexto}
-              onChange={(e) => {
-                const val = e.target.value;
-                setZonaTexto(val);
-                onChangeZona?.(val);
-              }}
-              onBlur={() => setEditandoZona(false)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") setEditandoZona(false);
-              }}
-              placeholder="Zona manual..."
-              className="flex-1 min-w-0 rounded-lg bg-white dark:bg-black/40 border border-blue-400 px-2 py-0.5 text-xs text-zinc-900 dark:text-white focus:outline-none"
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setEditandoZona(true)}
-              title="Toca para editar la zona / subcategoría manualmente"
-              className="rounded-full bg-blue-500/10 dark:bg-blue-400/10 hover:bg-blue-500/20 border border-blue-500/25 px-2.5 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400 truncate flex items-center gap-1 cursor-pointer transition-colors"
-            >
-              <span className="truncate">{zonaTexto || pin.zona || pin.vistaLabel || pin.vista}</span>
-              <span className="text-[10px] opacity-70">✏️</span>
-            </button>
-          )}
+          <div className="flex min-w-0 items-center gap-1.5 text-xs sm:text-sm font-bold">
+            <span className="truncate rounded-full bg-blue-500/10 dark:bg-blue-400/10 border border-blue-500/25 px-2.5 py-1 text-blue-700 dark:text-blue-300">
+              {zonaPrincipal}
+            </span>
+            {subcategoria && (
+              <span className="truncate rounded-full bg-amber-500/10 dark:bg-amber-400/10 border border-amber-500/25 px-2.5 py-1 text-amber-700 dark:text-amber-300">
+                {subcategoria}
+              </span>
+            )}
+          </div>
         </div>
-        {!editandoZona && (
-          <button
-            type="button"
-            onClick={() => setEditandoZona(true)}
-            className="text-xs text-blue-500 dark:text-blue-400 font-bold hover:underline shrink-0"
-          >
-            Editar
-          </button>
-        )}
       </div>
 
       {/* 2. SECCIÓN DAÑO (ENTRADA MANUAL PURA) */}
@@ -326,8 +294,10 @@ export function DetallePinModerno({
               {/* Cabecera del Bloque Asociado (identifica a qué foto/grupo pertenece el texto y audio) */}
               <div className="flex items-center justify-between gap-2 border-b border-zinc-200/70 dark:border-white/10 pb-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2.5 py-1 rounded-md bg-blue-600 text-white text-xs sm:text-sm font-bold tracking-tight flex items-center gap-1.5 shadow-xs">
-                    <span className="text-sm">📎</span>
+                  <span className="px-2.5 py-1 rounded-md bg-blue-600 dark:bg-blue-500/15 text-white dark:text-blue-300 border border-transparent dark:border-blue-400/30 text-xs sm:text-sm font-bold tracking-tight flex items-center gap-1.5 shadow-xs">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.607-10.607a3 3 0 0 1 4.243 4.243L8.914 17.958a1.5 1.5 0 0 1-2.122-2.121l9.9-9.9" />
+                    </svg>
                     <span>Evidencia #{numBloque}</span>
                   </span>
 
@@ -794,7 +764,7 @@ export function DetallePinModerno({
         >
           <span className="flex items-center justify-center w-6 h-6 rounded-md bg-sky-200/60 dark:bg-sky-400/20 text-sky-600 dark:text-sky-300 text-base font-black">＋</span>
           <span>
-            Agregar otra evidencia (#{bloquesEvidencia.length + 1})
+            Evidencia #{bloquesEvidencia.length + 1}
           </span>
         </button>
       </div>

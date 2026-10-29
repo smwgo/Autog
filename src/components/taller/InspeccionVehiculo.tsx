@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo, useSyncExternalStore } from "react";
 import type { UnifiedOrder, InspectionFinding, OrderItem, FindingItemLink } from "@/app/taller/page";
 import { DetallePinModerno } from "./DetallePinModerno";
 import { comprimirImagenEnNavegador } from "@/lib/storage-client";
@@ -13,13 +13,12 @@ export interface InspeccionVehiculoProps {
   onUpdateOrden?: (updated: UnifiedOrder) => void;
   onGenerarPdf?: () => void;
   onContinuar?: () => void;
-  textoContinuar?: string;
-  onFirmarDirecto?: () => void;
   onVolver?: () => void;
   mostrarToast?: (msg: string, tipo?: "ok" | "err") => void;
 }
 
 type VistaVehiculoId = "frontal" | "trasera" | "lateral_izq" | "lateral_der" | "superior" | "manual";
+type PasoInspeccionGuiada = "sistema" | "subcategoria" | "marcar";
 
 export interface InspectionChecklistItem {
   id: string;
@@ -135,6 +134,44 @@ export const SISTEMAS_INSPECCION: SeccionInspeccionConfig[] = [
     ],
   },
 ];
+
+const inspectionSectionListeners = new Set<() => void>();
+
+function getStoredInspectionSection(): SeccionInspeccionId {
+  if (typeof window === "undefined") return "carroceria";
+
+  try {
+    const saved = window.localStorage.getItem("taller_seccion_activa");
+    return SISTEMAS_INSPECCION.find((system) => system.id === saved)?.id ?? "carroceria";
+  } catch (error) {
+    console.warn("No se pudo recuperar el sistema de inspección guardado:", error);
+    return "carroceria";
+  }
+}
+
+function getServerInspectionSection(): SeccionInspeccionId {
+  return "carroceria";
+}
+
+function subscribeToInspectionSection(listener: () => void): () => void {
+  inspectionSectionListeners.add(listener);
+  window.addEventListener("storage", listener);
+
+  return () => {
+    inspectionSectionListeners.delete(listener);
+    window.removeEventListener("storage", listener);
+  };
+}
+
+function saveInspectionSection(section: SeccionInspeccionId): void {
+  try {
+    window.localStorage.setItem("taller_seccion_activa", section);
+  } catch (error) {
+    console.warn("No se pudo guardar el sistema de inspección:", error);
+  }
+
+  inspectionSectionListeners.forEach((listener) => listener());
+}
 
 export const PLANTILLAS_INSPECCION: InspectionTemplate[] = SISTEMAS_INSPECCION
   .filter((s): s is SeccionInspeccionConfig & { items: InspectionChecklistItem[] } => Boolean(s.items && s.items.length > 0))
@@ -377,8 +414,6 @@ export default function InspeccionVehiculo({
   onUpdateOrden,
   onGenerarPdf,
   onContinuar,
-  textoContinuar,
-  onFirmarDirecto,
   onVolver,
   mostrarToast = (msg) => console.log(msg),
 }: InspeccionVehiculoProps) {
@@ -515,37 +550,41 @@ export default function InspeccionVehiculo({
   }, []);
 
   // Estados para Sistemas de Inspección Total del Vehículo
-  const [seccionActiva, setSeccionActiva] = useState<SeccionInspeccionId>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("taller_seccion_activa") as SeccionInspeccionId;
-        if (saved && ["carroceria", "motor", "frenos", "suspension", "electrico", "aire"].includes(saved)) {
-          return saved;
-        }
-      } catch {}
-    }
-    return "carroceria";
-  });
-  const seccionCarouselRef = useRef<HTMLDivElement | null>(null);
+  const seccionActiva = useSyncExternalStore(
+    subscribeToInspectionSection,
+    getStoredInspectionSection,
+    getServerInspectionSection
+  );
+  const [pasoInspeccion, setPasoInspeccion] = useState<PasoInspeccionGuiada>("sistema");
+  const [desplazamientoSistemaCandidato, setDesplazamientoSistemaCandidato] = useState(0);
+  const indiceBaseSistema = Math.max(
+    0,
+    SISTEMAS_INSPECCION.findIndex((sistema) => sistema.id === seccionActiva)
+  );
+  const indiceSistemaCandidato =
+    (indiceBaseSistema + desplazamientoSistemaCandidato) % SISTEMAS_INSPECCION.length;
 
   const cambiarSeccionActiva = (sec: SeccionInspeccionId) => {
-    setSeccionActiva(sec);
-    try {
-      localStorage.setItem("taller_seccion_activa", sec);
-    } catch {}
+    saveInspectionSection(sec);
+    setDesplazamientoSistemaCandidato(0);
   };
 
+  const moverCandidatoSistema = (direccion: 1 | -1) => {
+    setDesplazamientoSistemaCandidato((offset) => {
+      const total = SISTEMAS_INSPECCION.length;
+      return (offset + direccion + total) % total;
+    });
+  };
 
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.innerWidth < 640 && seccionCarouselRef.current) {
-      const container = seccionCarouselRef.current;
-      const el = document.getElementById(`seccion-tab-${seccionActiva}`);
-      if (el) {
-        const targetLeft = el.offsetLeft - container.offsetLeft - (container.clientWidth / 2 - el.clientWidth / 2);
-        container.scrollTo({ left: Math.max(0, targetLeft), behavior: "smooth" });
-      }
-    }
-  }, [seccionActiva]);
+  const sistemaCandidato = SISTEMAS_INSPECCION[indiceSistemaCandidato];
+  const contarHallazgosSistema = (sistemaId: SeccionInspeccionId) => hallazgos.filter((hallazgo) =>
+    sistemaId === "carroceria"
+      ? ["frontal", "trasera", "lateral_izq", "lateral_der", "superior", "manual"].includes(hallazgo.vista)
+      : hallazgo.vista === sistemaId
+  ).length;
+  const subcategoriasActivas = SUBCATEGORIAS_SISTEMA[seccionActiva] || [];
+  const subcategoriaActiva = subcategoriasActivas.find((sub) => sub.id === subCategoriaPorSistema[seccionActiva])
+    || subcategoriasActivas[0];
 
   const [menuSubcategoriasAbierto, setMenuSubcategoriasAbierto] = useState<boolean>(false);
   const menuSubcategoriasRef = useRef<HTMLDivElement | null>(null);
@@ -920,22 +959,6 @@ export default function InspeccionVehiculo({
 
   const pinActual = hallazgos.find((h) => h.id === pinSeleccionadoId) || null;
   const debounceSyncPinRef = useRef<NodeJS.Timeout | null>(null);
-
-  const handleCambiarZonaPin = (pinId: string, nuevaZona: string) => {
-    const prev = hallazgosRef.current;
-    const actualizados = prev.map((h) => {
-      if (h.id === pinId) {
-        return { ...h, zona: nuevaZona };
-      }
-      return h;
-    });
-    hallazgosRef.current = actualizados;
-    setHallazgos(actualizados);
-    if (debounceSyncPinRef.current) clearTimeout(debounceSyncPinRef.current);
-    debounceSyncPinRef.current = setTimeout(() => {
-      sincronizarHallazgosNeon(actualizados);
-    }, 300);
-  };
 
   const handleGuardarDetallePin = (tipo: string, obs?: string, explicitPinId?: string) => {
     const idTarget = explicitPinId || pinSeleccionadoId;
@@ -2278,57 +2301,64 @@ ${urlSeguimiento}`;
 
   return (
     <div className="space-y-4">
-      {/* ===================================================================
-          BARRA DE SISTEMAS DEL VEHÍCULO: INSPECCIÓN TOTAL (5 SISTEMAS)
-          =================================================================== */}
-      <div className="space-y-1.5 pb-2 border-b border-zinc-200 dark:border-white/10">
-        <div
-          ref={seccionCarouselRef}
-          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 w-full"
-        >
-          {SISTEMAS_INSPECCION.map((sis) => {
-            const active = seccionActiva === sis.id;
-            let badge = null;
-            if (sis.id === "carroceria") {
-              const cantCarroceria = hallazgos.filter((h) =>
-                ["frontal", "trasera", "lateral_izq", "lateral_der", "superior", "manual"].includes(h.vista)
-              ).length;
-              if (cantCarroceria > 0) {
-                badge = (
-                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">
-                    {cantCarroceria}
-                  </span>
-                );
-              }
-            } else {
-              const cantPinesSis = hallazgos.filter((h) => h.vista === sis.id).length;
-              if (cantPinesSis > 0) {
-                badge = (
-                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">
-                    {cantPinesSis}
-                  </span>
-                );
-              }
-            }
-
-            return (
+      <div>
+        <div className="flex items-center justify-between gap-2 w-full">
+          {pasoInspeccion === "sistema" ? (
+            <>
               <button
-                key={sis.id}
-                id={`seccion-tab-${sis.id}`}
                 type="button"
-                onClick={() => cambiarSeccionActiva(sis.id)}
-                className={`h-10 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all shadow-2xs active:scale-95 ${
-                  active
-                    ? "bg-blue-50/90 dark:bg-blue-500/20 border-blue-400 dark:border-blue-500 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/40 font-bold"
-                    : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
-                }`}
+                onClick={() => moverCandidatoSistema(-1)}
+                aria-label="Sistema anterior"
+                className="h-10 w-10 shrink-0 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-300 text-xl font-bold"
               >
-                <span className="text-base leading-none shrink-0">{sis.icon}</span>
-                <span className="truncate">{sis.shortName}</span>
-                {badge}
+                ‹
               </button>
-            );
-          })}
+              <button
+                type="button"
+                onClick={() => {
+                  cambiarSeccionActiva(sistemaCandidato.id);
+                  setModoColocandoPin(false);
+                  setPasoInspeccion("subcategoria");
+                }}
+                className="min-w-0 flex-1 h-12 px-3 rounded-xl border border-blue-400 dark:border-blue-500/50 bg-blue-50 dark:bg-blue-500/15 text-blue-800 dark:text-blue-200 flex items-center justify-center gap-2 font-bold transition-all active:scale-[0.98]"
+              >
+                <span className="text-lg">{sistemaCandidato.icon}</span>
+                <span className="truncate">{sistemaCandidato.shortName}</span>
+                {contarHallazgosSistema(sistemaCandidato.id) > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px]">
+                    {contarHallazgosSistema(sistemaCandidato.id)}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => moverCandidatoSistema(1)}
+                aria-label="Sistema siguiente"
+                className="h-10 w-10 shrink-0 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-300 text-xl font-bold"
+              >
+                ›
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setDesplazamientoSistemaCandidato(0);
+                setPasoInspeccion("sistema");
+                setModoColocandoPin(false);
+              }}
+              aria-label="Volver a selección de sistema"
+              className="min-w-0 flex-1 h-11 px-3 rounded-xl border border-blue-400 dark:border-blue-500/50 bg-blue-50 dark:bg-blue-500/15 text-blue-800 dark:text-blue-200 flex items-center justify-center gap-2 font-bold transition-all active:scale-[0.98]"
+            >
+              <span className="text-lg">{SISTEMAS_INSPECCION.find((sistema) => sistema.id === seccionActiva)?.icon}</span>
+              <span className="truncate">{SISTEMAS_INSPECCION.find((sistema) => sistema.id === seccionActiva)?.shortName}</span>
+              {contarHallazgosSistema(seccionActiva) > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px]">
+                  {contarHallazgosSistema(seccionActiva)}
+                </span>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -2337,38 +2367,82 @@ ${urlSeguimiento}`;
           =================================================================== */}
       {seccionActiva === "carroceria" ? (
         <div className="space-y-3 animate-fade-in">
-          {/* BOTONES DE PERSPECTIVAS DE CARROCERÍA (5 Vistas: Frontal, Trasera, Lat. Izq, Lat. Der, Superior) */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-            {VISTAS_CARROCERIA.map((v) => {
-              const active = vistaActiva === v.id;
-              const cantVista = hallazgos.filter((h) => h.vista === v.id).length;
-              return (
-                <button
-                  key={v.id}
-                  id={`vista-tab-${v.id}`}
-                  type="button"
-                  onClick={() => {
-                    setVistaActiva(v.id);
-                    setPinSeleccionadoId(null);
-                    setPopoverAbierto(false);
-                  }}
-                  className={`h-10 px-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer text-xs font-bold active:scale-95 shadow-2xs ${
-                    active
-                      ? "bg-cyan-50 dark:bg-cyan-500/20 border-cyan-400 dark:border-cyan-500/40 text-cyan-700 dark:text-cyan-200 ring-1 ring-cyan-400/40 shadow-sm"
-                      : "bg-white dark:bg-white/[0.03] hover:bg-zinc-50 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 shadow-2xs"
-                  }`}
-                >
-                  <div className="p-0.5 rounded-md">{v.icon}</div>
-                  <span className="truncate">{v.label}</span>
-                  {cantVista > 0 && (
-                    <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
-                      {cantVista}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          {pasoInspeccion !== "sistema" && (() => {
+            const vistaActual = VISTAS_CARROCERIA.find((vista) => vista.id === vistaActiva) || VISTAS_CARROCERIA[0];
+            const indiceVista = VISTAS_CARROCERIA.findIndex((vista) => vista.id === vistaActiva);
+            const cantidadHallazgos = hallazgos.filter((hallazgo) => hallazgo.vista === vistaActual.id).length;
+            const moverVista = (direccion: 1 | -1) => {
+              const total = VISTAS_CARROCERIA.length;
+              cambiarVista(VISTAS_CARROCERIA[(indiceVista + direccion + total) % total].id);
+            };
+
+            return (
+              <div className="flex items-center justify-between gap-2 p-2 rounded-xl border border-cyan-300 dark:border-cyan-500/30 bg-cyan-50/70 dark:bg-cyan-500/[0.06]">
+                {pasoInspeccion === "subcategoria" ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => moverVista(-1)}
+                      aria-label="Vista anterior"
+                      className="h-9 w-9 shrink-0 rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-300 text-xl font-bold"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPasoInspeccion("marcar")}
+                      className="min-w-0 flex-1 h-10 px-2 rounded-lg text-cyan-800 dark:text-cyan-200 flex items-center justify-center gap-2 font-bold"
+                    >
+                      {vistaActual.icon}
+                      <span className="truncate">{vistaActual.label}</span>
+                      {cantidadHallazgos > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px]">
+                          {cantidadHallazgos}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moverVista(1)}
+                      aria-label="Vista siguiente"
+                      className="h-9 w-9 shrink-0 rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-300 text-xl font-bold"
+                    >
+                      ›
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="min-w-0 flex-1 flex sm:hidden items-center justify-center gap-2 text-sm font-bold text-cyan-800 dark:text-cyan-200">
+                      {vistaActual.icon}
+                      <span className="truncate">{vistaActual.label}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPasoInspeccion("subcategoria");
+                        setModoColocandoPin(false);
+                      }}
+                      aria-label="Volver a selección de vista"
+                      className="hidden sm:flex min-w-0 flex-1 items-center justify-center gap-2 text-sm font-bold text-cyan-800 dark:text-cyan-200"
+                    >
+                      {vistaActual.icon}
+                      <span className="truncate">{vistaActual.label}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPasoInspeccion("subcategoria");
+                        setModoColocandoPin(false);
+                      }}
+                      className="h-9 px-3 rounded-lg border border-cyan-300 dark:border-cyan-500/40 bg-white dark:bg-white/[0.04] text-xs font-bold text-cyan-800 dark:text-cyan-200 sm:hidden"
+                    >
+                      Cambiar vista
+                    </button>
+                  </>
+                )}
+              </div>
+            );
+          })()}
 
           {/* LIENZO DEL VEHÍCULO CON PINES NUMERADOS */}
           <div className="relative rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-white/10 p-1 sm:p-5 overflow-hidden select-none shadow-sm dark:shadow-none w-full">
@@ -2573,13 +2647,14 @@ ${urlSeguimiento}`;
                     setModoColocandoPin(false);
                     setPinReubicandoId(null);
                   }}
-                  className={`h-7 px-2.5 rounded-lg border font-mono text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shrink-0 active:scale-95 ${
+                  className={`h-8 px-3 rounded-lg border font-mono text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 active:scale-95 ${
                     activo
                       ? "bg-rose-500 text-white border-rose-400 shadow-sm ring-1 ring-white/30"
                       : "bg-white dark:bg-white/[0.04] hover:bg-zinc-100 dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
                   }`}
                 >
                   <span>#{p.num}</span>
+                  <span className="font-sans">Daño</span>
                   {p.items.length > 1 && (
                     <span className="w-3.5 h-3.5 rounded-full bg-cyan-400 text-black text-[9px] font-black flex items-center justify-center">
                       {p.items.length}
@@ -2590,7 +2665,7 @@ ${urlSeguimiento}`;
             })}
           </div>
 
-          <button
+          {pasoInspeccion === "marcar" && <button
             type="button"
             suppressHydrationWarning
             onClick={() => {
@@ -2605,8 +2680,8 @@ ${urlSeguimiento}`;
             }`}
           >
             <span className="text-sm font-black">+</span>
-            <span suppressHydrationWarning translate="no">{`Generar #${proximoPinNumero}`}</span>
-          </button>
+            <span suppressHydrationWarning translate="no">{modoColocandoPin ? "Toca la imagen" : "Marcar"}</span>
+          </button>}
         </div>
 
         {/* DETALLE MODERNO DEL PIN ACTIVO (Audio voz bidireccional, fotos R2 y cotización de servicios/productos) */}
@@ -2617,7 +2692,6 @@ ${urlSeguimiento}`;
             tipoSeleccionado={tipoSeleccionado}
             onToggleTipo={(tipoId) => handleToggleTipoPin(pinActual.id, tipoId)}
             onChangeTipo={(nuevoTipo) => handleCambiarTipoPinDirecto(pinActual.id, nuevoTipo)}
-            onChangeZona={(nuevaZona) => handleCambiarZonaPin(pinActual.id, nuevaZona)}
             observacionTexto={observacionTexto}
             onChangeObservacion={(texto, targetId) => {
               const idUso = targetId || pinActual.id;
@@ -2668,8 +2742,6 @@ ${urlSeguimiento}`;
       {(() => {
         const sistemaActual = SISTEMAS_INSPECCION.find((s) => s.id === seccionActiva);
         if (!sistemaActual) return null;
-
-        const cantPinesSis = hallazgos.filter((h) => h.vista === seccionActiva).length;
 
         return (
           <>
@@ -2728,54 +2800,71 @@ ${urlSeguimiento}`;
                 </div>
               )
             )}
-            {cantPinesSis > 0 && (
-              <div className="flex items-center justify-end pb-1">
-                <span className="px-2.5 py-1 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-xs font-bold flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-rose-500" />
-                  {cantPinesSis} {cantPinesSis === 1 ? "hallazgo" : "hallazgos"}
-                </span>
-              </div>
-            )}
+            {pasoInspeccion !== "sistema" && subcategoriaActiva && (() => {
+              const cantidadHallazgos = hallazgos.filter(
+                (hallazgo) =>
+                  hallazgo.vista === seccionActiva &&
+                  (subcategoriaActiva.id === "Manual"
+                    ? (hallazgo.zona || "").includes("·") &&
+                      !subcategoriasActivas.some(
+                        (sub) => sub.id !== "Manual" && (hallazgo.zona || "").endsWith(`· ${sub.id}`)
+                      )
+                    : (hallazgo.zona || "").endsWith(`· ${subcategoriaActiva.id}`))
+              ).length;
 
-            {/* 6 BOTONES DE SUBCATEGORÍA / SUBSISTEMA (Motor, Frenos, Suspensión, Eléctrico, A/C) */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-              {(SUBCATEGORIAS_SISTEMA[seccionActiva] || []).map((sub, idx) => {
-                const subActualId = subCategoriaPorSistema[seccionActiva] || (SUBCATEGORIAS_SISTEMA[seccionActiva] || [])[0]?.id;
-                const esActivo = subActualId === sub.id;
-                const listaSubs = SUBCATEGORIAS_SISTEMA[seccionActiva] || [];
-                const cantSub = hallazgos.filter(
-                  (h) =>
-                    h.vista === seccionActiva &&
-                    (sub.id === "Manual"
-                      ? (h.zona || "").includes("·") &&
-                        !listaSubs.some(
-                          (s) => s.id !== "Manual" && (h.zona || "").endsWith(`· ${s.id}`)
-                        )
-                      : (h.zona || "").endsWith(`· ${sub.id}`))
-                ).length;
-
-                return (
-                  <button
-                    key={`sub-${sub.id}`}
-                    type="button"
-                    onClick={() => cambiarSubcategoria(sub.id)}
-                    className={`h-10 px-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer text-xs font-bold active:scale-95 shadow-2xs ${
-                      esActivo
-                        ? "bg-cyan-50 dark:bg-cyan-500/20 border-cyan-400 dark:border-cyan-500/40 text-cyan-700 dark:text-cyan-200 ring-1 ring-cyan-400/40 shadow-sm"
-                        : "bg-white dark:bg-white/[0.03] hover:bg-zinc-50 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 shadow-2xs"
-                    }`}
-                  >
-                    <span>{sub.icon}</span>
-                    <span className="truncate">{sub.id}</span>
-                    {cantSub > 0 && (
-                      <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
-                        {cantSub}
+              return (
+                <div className="flex items-center justify-between gap-2 p-2 rounded-xl border border-cyan-300 dark:border-cyan-500/30 bg-cyan-50/70 dark:bg-cyan-500/[0.06]">
+                  {pasoInspeccion === "subcategoria" ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => navegarSubcategoria(-1)}
+                        aria-label="Subcategoría anterior"
+                        className="h-9 w-9 shrink-0 rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-300 text-xl font-bold"
+                      >
+                        ‹
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPasoInspeccion("marcar")}
+                        className="min-w-0 flex-1 h-10 px-2 rounded-lg text-cyan-800 dark:text-cyan-200 flex items-center justify-center gap-2 font-bold"
+                      >
+                        <span>{subcategoriaActiva.icon}</span>
+                        <span className="truncate">{subcategoriaActiva.id}</span>
+                        {cantidadHallazgos > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px]">
+                            {cantidadHallazgos}
+                          </span>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navegarSubcategoria(1)}
+                        aria-label="Subcategoría siguiente"
+                        className="h-9 w-9 shrink-0 rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-300 text-xl font-bold"
+                      >
+                        ›
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPasoInspeccion("subcategoria");
+                        setModoColocandoPin(false);
+                      }}
+                      aria-label="Volver a selección de subcategoría"
+                      className="min-w-0 flex-1 flex items-center justify-center gap-2 text-sm font-bold text-cyan-800 dark:text-cyan-200"
+                    >
+                      <span>
+                        {subcategoriaActiva.icon}
                       </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+                      <span className="truncate">{subcategoriaActiva.id}</span>
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* LIENZO 3D INTERACTIVO DEL SISTEMA (Tocar para marcar pines) */}
             <div
@@ -3011,13 +3100,14 @@ ${urlSeguimiento}`;
                         setModoColocandoPin(false);
                         setPinReubicandoId(null);
                       }}
-                      className={`h-7 px-2.5 rounded-lg border font-mono text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shrink-0 active:scale-95 ${
+                      className={`h-8 px-3 rounded-lg border font-mono text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 active:scale-95 ${
                         activo
                           ? "bg-rose-500 text-white border-rose-400 shadow-sm ring-1 ring-white/30"
                           : "bg-white dark:bg-white/[0.04] hover:bg-zinc-100 dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
                       }`}
                     >
                       <span>#{p.num}</span>
+                      <span className="font-sans">Daño</span>
                       {p.items.length > 1 && (
                         <span className="w-3.5 h-3.5 rounded-full bg-cyan-400 text-black text-[9px] font-black flex items-center justify-center">
                           {p.items.length}
@@ -3028,7 +3118,7 @@ ${urlSeguimiento}`;
                 })}
               </div>
 
-              <button
+              {pasoInspeccion === "marcar" && <button
                 type="button"
                 suppressHydrationWarning
                 onClick={() => {
@@ -3043,8 +3133,8 @@ ${urlSeguimiento}`;
                 }`}
               >
                 <span className="text-sm font-black">+</span>
-                <span suppressHydrationWarning translate="no">{`Generar #${proximoPinNumero}`}</span>
-              </button>
+                <span suppressHydrationWarning translate="no">{modoColocandoPin ? "Toca la imagen" : "Marcar"}</span>
+              </button>}
             </div>
 
             {/* DETALLE MODERNO PARA PINES DEL SISTEMA MECÁNICO O PERSONALIZADO */}
@@ -3055,7 +3145,6 @@ ${urlSeguimiento}`;
                 tipoSeleccionado={tipoSeleccionado}
                 onToggleTipo={(tipoId) => handleToggleTipoPin(pinActual.id, tipoId)}
                 onChangeTipo={(nuevoTipo) => handleCambiarTipoPinDirecto(pinActual.id, nuevoTipo)}
-                onChangeZona={(nuevaZona) => handleCambiarZonaPin(pinActual.id, nuevaZona)}
                 observacionTexto={observacionTexto}
                 onChangeObservacion={(texto, targetId) => {
                   const idUso = targetId || pinActual.id;
@@ -3350,23 +3439,13 @@ ${urlSeguimiento}`;
         ) : <div />}
 
         <div className="flex items-center gap-2">
-          {onFirmarDirecto && (
-            <button
-              type="button"
-              onClick={onFirmarDirecto}
-              className="px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10 transition-all cursor-pointer"
-            >
-              ✍️ Firmar
-            </button>
-          )}
-
           {onContinuar && (
             <button
               type="button"
               onClick={onContinuar}
               className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white dark:bg-purple-500/20 dark:hover:bg-purple-500/30 dark:border dark:border-purple-500/40 dark:text-purple-300 text-xs font-bold transition-all cursor-pointer shadow-sm"
             >
-              {textoContinuar || "Siguiente →"}
+              Siguiente
             </button>
           )}
         </div>

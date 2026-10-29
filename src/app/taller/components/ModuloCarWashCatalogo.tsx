@@ -1676,15 +1676,6 @@ export default function ModuloCarWashCatalogo({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {onIrASiguiente && (
-            <button
-              type="button"
-              onClick={onIrAAvisoYFirma}
-              className="h-9 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm font-normal cursor-pointer active:scale-95 transition-all"
-            >
-              ✍️ Firmar
-            </button>
-          )}
           <button
             type="button"
             onClick={onIrASiguiente || onIrAAvisoYFirma}
