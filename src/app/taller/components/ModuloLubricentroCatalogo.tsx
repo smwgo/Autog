@@ -2637,15 +2637,9 @@ export default function ModuloLubricentroCatalogo({
                     )}
                   </>
                 ) : (
-                  <>
-                    <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                      Sin cambio de aceite previo
-                    </p>
-                    <p className="mt-1 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-                      Registra el kilometraje y el estado de cada componente para iniciar el
-                      historial de mantenimiento de este vehículo.
-                    </p>
-                  </>
+                  <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                    Sin cambio de aceite previo
+                  </p>
                 )}
               </div>
             </div>
@@ -2655,9 +2649,6 @@ export default function ModuloLubricentroCatalogo({
                 <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                   Revisión de componentes
                 </h3>
-                <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                  Marca qué se atendió y qué queda pendiente.
-                </p>
               </div>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {COMPONENTES_SERVICIO_LUBRICENTRO.map((componente) => (

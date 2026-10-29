@@ -1,12 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import type {
   TecnicentroConfigData,
-  TecnicentroCategory,
   TecnicentroPackage,
-  TecnicentroAddon,
-  TecnicentroVehicleType,
 } from "@/app/api/taller/tecnicentro/route";
 import {
   TecnicentroEnrichedService,
@@ -24,254 +21,307 @@ export interface ModuloTecnicentroCatalogoProps {
   mostrarToast: (msg: string, tipo?: "ok" | "err") => void;
   onActualizarItemsOrden: (nuevosItems: any[]) => Promise<void>;
   onIrAAvisoYFirma: () => void;
+  onIrASiguiente?: () => void;
+  nombreSiguiente?: string;
   triggerAbrirConfig?: number;
 }
 
-const FALLBACK_TEC_IMG =
-  "https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=900&q=80";
-
-const HORARIOS_BAHIA = [
-  "08:00 AM",
-  "09:00 AM",
-  "10:00 AM",
-  "11:00 AM",
-  "12:00 PM",
-  "02:00 PM",
-  "03:00 PM",
-  "04:00 PM",
-  "05:00 PM",
-];
-
-// Las 6 categorías más importantes de Tecnicentro (1 sola palabra cada una)
-const PRINCIPAL_TECNICENTRO_CAT_IDS = [
-  "tc_cat_alineacion",
-  "tc_cat_balanceo",
-  "tc_cat_venta_neum",
-  "tc_cat_suspension",
-  "tc_cat_frenos",
-  "tc_cat_diagnostico",
-];
-
-const TECNICENTRO_CAT_SINGLE: Record<string, string> = {
-  "Todas": "Todo",
-  "Alineación": "Alineación",
-  "Alineación 3D": "Alineación",
-  "Balanceo": "Balanceo",
-  "Balanceo Dinámico": "Balanceo",
-  "Montaje y desmontaje de llantas": "Montaje",
-  "Montaje": "Montaje",
-  "Reparación de neumáticos": "Reparación",
-  "Reparación": "Reparación",
-  "Rotación de neumáticos": "Rotación",
-  "Rotación": "Rotación",
-  "Venta de Neumáticos": "Neumáticos",
-  "Venta de neumáticos": "Neumáticos",
-  "Neumáticos": "Neumáticos",
-  "Suspensión": "Suspensión",
-  "Tren Delantero & Suspensión": "Suspensión",
-  "Frenos": "Frenos",
-  "Frenos & Discos": "Frenos",
-  "Dirección": "Dirección",
-  "Diagnóstico": "Diagnóstico",
-  "Diagnóstico automotriz": "Diagnóstico",
-  "Diagnóstico Computarizado": "Diagnóstico",
-  "Revisión de tren delantero": "Delantero",
-  "Revisión de tren posterior": "Posterior",
-  "Revisión de neumáticos y presión": "Presión",
-  "Escaneo": "Escaneo",
-  "Escaneo electrónico": "Escaneo",
-  "Mantenimiento Preventivo": "Mantenimiento",
-  "Servicios Rápidos": "Rápidos",
-  "Llantera & Enllantaje": "Llantera",
-  "Otros servicios de tecnicentro": "Otros",
-};
-
-// Subcategorías más importantes por categoría principal (1 sola palabra cada una)
-const IMPORTANT_SUBCATEGORIES_BY_MAIN_CAT: Record<
-  string,
-  Array<{ id: string; name: string; icon: string }>
-> = {
-  tc_cat_alineacion: [
-    { id: "tc_sub_ali_delantero", name: "Delantera", icon: "⬆️" },
-    { id: "tc_sub_ali_4ruedas", name: "Completa", icon: "🚗" },
-    { id: "tc_sub_ali_geometria", name: "Geometría", icon: "🎯" },
-  ],
-  tc_cat_balanceo: [
-    { id: "tc_sub_bal_4ruedas", name: "Completo", icon: "🛞" },
-    { id: "tc_sub_bal_indiv", name: "Individual", icon: "1️⃣" },
-    { id: "tc_sub_bal_vibracion", name: "Vibración", icon: "〰️" },
-  ],
-  tc_cat_venta_neum: [
-    { id: "tc_sub_neu_venta", name: "Llantas", icon: "🛞" },
-    { id: "tc_sub_neu_montaje", name: "Montaje", icon: "🔧" },
-    { id: "tc_sub_neu_pinchazo", name: "Parche", icon: "🩹" },
-    { id: "tc_sub_neu_rotacion", name: "Rotación", icon: "🔄" },
-    { id: "tc_sub_neu_presion", name: "Presión", icon: "🌡️" },
-  ],
-  tc_cat_suspension: [
-    { id: "tc_sub_sus_amort", name: "Amortiguadores", icon: "🔽" },
-    { id: "tc_sub_dir_inspeccion", name: "Dirección", icon: "🎯" },
-    { id: "tc_sub_tdel_insp", name: "Delantero", icon: "🔍" },
-    { id: "tc_sub_sus_bujes", name: "Bujes", icon: "⭕" },
-    { id: "tc_sub_sus_rotulas", name: "Rótulas", icon: "🔩" },
-  ],
-  tc_cat_frenos: [
-    { id: "tc_sub_fre_pastillas", name: "Pastillas", icon: "🟫" },
-    { id: "tc_sub_fre_discos", name: "Discos", icon: "💿" },
-    { id: "tc_sub_fre_hidraulico", name: "Líquido", icon: "💧" },
-    { id: "tc_sub_fre_inspeccion", name: "Inspección", icon: "🛑" },
-  ],
-  tc_cat_diagnostico: [
-    { id: "tc_sub_diag_escaneo", name: "Escáner", icon: "💻" },
-    { id: "tc_sub_diag_sensores", name: "Sensores", icon: "📡" },
-    { id: "tc_sub_diag_informe", name: "Informe", icon: "📄" },
-  ],
-};
-
-function matchesMainCategoryTec(itemCatId?: string, selectedMainCatId?: string): boolean {
-  if (!selectedMainCatId || selectedMainCatId === "TODOS") return true;
-  if (!itemCatId) return false;
-  if (itemCatId === selectedMainCatId) return true;
-  if (selectedMainCatId === "tc_cat_venta_neum") {
-    return [
-      "tc_cat_venta_neum",
-      "tc_cat_montaje",
-      "tc_cat_reparacion_neum",
-      "tc_cat_rotacion",
-      "tc_cat_presion_neum",
-    ].includes(itemCatId);
-  }
-  if (selectedMainCatId === "tc_cat_suspension") {
-    return [
-      "tc_cat_suspension",
-      "tc_cat_direccion",
-      "tc_cat_tren_delantero",
-      "tc_cat_tren_posterior",
-    ].includes(itemCatId);
-  }
-  if (selectedMainCatId === "tc_cat_diagnostico") {
-    return ["tc_cat_diagnostico", "tc_cat_escaneo", "tc_cat_otros"].includes(itemCatId);
-  }
-  return false;
+// ============================================================================
+// DEFINICIONES DE CATEGORÍAS Y SUBCATEGORÍAS (1 sola palabra cada una)
+// ============================================================================
+export interface TecnicentroSubcatDef {
+  id: string;
+  label: string;
+  icon?: string;
+  keywords: string[];
 }
 
-function matchesSubcategoryTec(
-  srv: { categoryId?: string; subcategoryId?: string },
-  selectedSubId?: string
-): boolean {
-  if (!selectedSubId || selectedSubId === "TODOS") return true;
-  if (srv.subcategoryId === selectedSubId) return true;
-  if (
-    selectedSubId === "tc_sub_ali_4ruedas" &&
-    (srv.subcategoryId === "tc_sub_ali_ruedas" || srv.subcategoryId === "tc_sub_ali_otros")
-  )
-    return true;
-  if (
-    selectedSubId === "tc_sub_bal_4ruedas" &&
-    (srv.subcategoryId === "tc_sub_bal_ruedas" || srv.subcategoryId === "tc_sub_bal_otros")
-  )
-    return true;
-  if (selectedSubId === "tc_sub_neu_montaje" && srv.categoryId === "tc_cat_montaje") return true;
-  if (selectedSubId === "tc_sub_neu_pinchazo" && srv.categoryId === "tc_cat_reparacion_neum")
-    return true;
-  if (selectedSubId === "tc_sub_neu_rotacion" && srv.categoryId === "tc_cat_rotacion") return true;
-  if (selectedSubId === "tc_sub_neu_presion" && srv.categoryId === "tc_cat_presion_neum")
-    return true;
-  if (selectedSubId === "tc_sub_neu_venta" && srv.categoryId === "tc_cat_venta_neum") return true;
-  if (selectedSubId === "tc_sub_dir_inspeccion" && srv.categoryId === "tc_cat_direccion")
-    return true;
-  if (
-    selectedSubId === "tc_sub_tdel_insp" &&
-    (srv.categoryId === "tc_cat_tren_delantero" ||
-      srv.categoryId === "tc_cat_tren_posterior" ||
-      srv.subcategoryId === "tc_sub_sus_inspeccion")
-  )
-    return true;
-  if (selectedSubId === "tc_sub_fre_inspeccion" && srv.subcategoryId === "tc_sub_fre_tambores")
-    return true;
-  if (
-    selectedSubId === "tc_sub_diag_escaneo" &&
-    (srv.categoryId === "tc_cat_escaneo" ||
-      srv.subcategoryId === "tc_sub_diag_codigos" ||
-      srv.subcategoryId === "tc_sub_diag_sistemas")
-  )
-    return true;
-  return false;
+export interface TecnicentroCatDef {
+  id: string;
+  label: string;
+  icon: string;
+  subcategories: TecnicentroSubcatDef[];
 }
 
-const TECNICENTRO_VEH_SINGLE: Record<string, string> = {
-  "Motocicleta": "Moto",
-  "Moto": "Moto",
-  "Automóvil": "Auto",
-  "Automóvil pequeño": "Auto",
-  "Sedán": "Auto",
-  "Sedan": "Auto",
-  "Hatchback": "Auto",
-  "Auto": "Auto",
-  "Sedán / Hatchback": "Auto",
-  "SUV": "SUV",
-  "SUV / Crossover": "SUV",
-  "Camioneta": "Camioneta",
-  "Pickup": "Camioneta",
-  "Pickup / Camioneta": "Camioneta",
-  "Furgoneta": "Pesado",
-  "Van": "Pesado",
-  "Van / Utilitario": "Pesado",
-  "Camión Liviano": "Pesado",
-  "Camión": "Pesado",
-  "Utilitario / Mayor tamaño": "Pesado",
-  "Utilitario": "Pesado",
-  "Pesado": "Pesado",
-};
-
-function toSingleWord(text: string, dict: Record<string, string>): string {
-  if (!text) return "";
-  if (dict[text]) return dict[text];
-  const cleaned = text
-    .replace(/\s*\([^)]*\)/g, "")
-    .replace(/[&/\\].*$/, "")
-    .trim();
-  const first = cleaned.split(/[\s/+,&]+/)[0];
-  return first || text;
-}
-
-function matchesVehicleType(applicable?: string[], currentVtId?: string): boolean {
-  if (!applicable || applicable.length === 0) return true;
-  if (!currentVtId) return true;
-  if (applicable.includes(currentVtId)) return true;
-  if (currentVtId === "vt_sedan") {
-    if (applicable.includes("vt_automovil") || applicable.includes("vt_hatchback")) return true;
-  }
-  if (currentVtId === "vt_pesado") {
-    if (applicable.includes("vt_furgoneta")) return true;
-  }
-  return false;
-}
-
-function getPriceDisplayForItem(
-  item: {
-    pricingMode?: string;
-    quoteRequired?: boolean;
-    basePrice?: number | null;
-    promoPrice?: number | null;
-    priceByVehicleType?: Record<string, number>;
+export const TECNICENTRO_CATEGORIES: TecnicentroCatDef[] = [
+  {
+    id: "TODO",
+    label: "Todo",
+    icon: "✨",
+    subcategories: [],
   },
-  vehicleTypeId: string
-): { price: number | null; quoteRequired: boolean } {
-  if (item.pricingMode === "QUOTE_REQUIRED" || item.quoteRequired) {
-    return { price: null, quoteRequired: true };
+  {
+    id: "LLANTAS",
+    label: "Llantas",
+    icon: "🛞",
+    subcategories: [
+      { id: "TODOS", label: "Todos", icon: "✨", keywords: [] },
+      { id: "PISTERA", label: "Pistera", icon: "🛣️", keywords: ["pistera", "h/t", "ht", "asfalto", "ciudad", "highway"] },
+      { id: "MIXTA", label: "Mixta", icon: "⛰️", keywords: ["mixta", "a/t", "at", "all terrain", "todo terreno"] },
+      { id: "LODO", label: "Lodo", icon: "🚜", keywords: ["lodo", "m/t", "mt", "mud", "pantano", "fango"] },
+      { id: "CARGA", label: "Carga", icon: "🚚", keywords: ["carga", "comercial", "van", "pesada", "8pr", "10pr", "reforzada"] },
+      { id: "AROS", label: "Aros", icon: "⚙️", keywords: ["aro", "aros", "rin", "rines", "aluminio", "magnesio"] },
+    ],
+  },
+  {
+    id: "ALINEACION",
+    label: "Alineación",
+    icon: "🎯",
+    subcategories: [
+      { id: "TODOS", label: "Todos", icon: "✨", keywords: [] },
+      { id: "DELANTERA", label: "Delantera", icon: "⬆️", keywords: ["delantera", "delantero", "eje delantero", "tren delantero"] },
+      { id: "COMPLETA", label: "Completa", icon: "🚗", keywords: ["completa", "4 ruedas", "ambos ejes", "3d", "computarizada"] },
+      { id: "BALANCEO", label: "Balanceo", icon: "⚖️", keywords: ["balanceo", "plomo", "dinámico", "vibración"] },
+      { id: "ROTACION", label: "Rotación", icon: "🔄", keywords: ["rotacion", "rotación", "cruce"] },
+      { id: "CAMBER", label: "Camber", icon: "📐", keywords: ["camber", "comba", "caster", "caída", "convergencia", "geometría"] },
+    ],
+  },
+  {
+    id: "ENLLANTAJE",
+    label: "Enllantaje",
+    icon: "🔧",
+    subcategories: [
+      { id: "TODOS", label: "Todos", icon: "✨", keywords: [] },
+      { id: "MONTAJE", label: "Montaje", icon: "🔩", keywords: ["montaje", "desmontaje", "enllante", "desenllante"] },
+      { id: "PARCHE", label: "Parche", icon: "🩹", keywords: ["parche", "pinchazo", "pinchadura", "tarugo", "seta"] },
+      { id: "VULCANIZADO", label: "Vulcanizado", icon: "🔥", keywords: ["vulcanizado", "vulcanizar", "sección", "termoparche"] },
+      { id: "VALVULA", label: "Válvula", icon: "🔘", keywords: ["valvula", "válvula", "pitón", "tapon", "sensor tpms"] },
+      { id: "NITROGENO", label: "Nitrógeno", icon: "💨", keywords: ["nitrogeno", "nitrógeno", "inflado", "n2", "presión"] },
+    ],
+  },
+  {
+    id: "FRENOS",
+    label: "Frenos",
+    icon: "🛑",
+    subcategories: [
+      { id: "TODOS", label: "Todos", icon: "✨", keywords: [] },
+      { id: "PASTILLAS", label: "Pastillas", icon: "🟫", keywords: ["pastilla", "pastillas", "balata", "caliper"] },
+      { id: "DISCOS", label: "Discos", icon: "💿", keywords: ["disco", "discos", "rotor", "ventilado"] },
+      { id: "ZAPATAS", label: "Zapatas", icon: "👞", keywords: ["zapata", "zapatas", "tambor", "tambores", "cintas"] },
+      { id: "RECTIFICADO", label: "Rectificado", icon: "⚙️", keywords: ["rectificado", "rectificar", "torneado", "torno"] },
+      { id: "LIQUIDO", label: "Líquido", icon: "💧", keywords: ["liquido", "líquido", "dot3", "dot4", "dot5", "purgado"] },
+    ],
+  },
+  {
+    id: "SUSPENSION",
+    label: "Suspensión",
+    icon: "🔩",
+    subcategories: [
+      { id: "TODOS", label: "Todos", icon: "✨", keywords: [] },
+      { id: "AMORTIGUADOR", label: "Amortiguador", icon: "🔽", keywords: ["amortiguador", "amortiguadores", "puntal", "strut", "espiral"] },
+      { id: "TERMINAL", label: "Terminal", icon: "🔗", keywords: ["terminal", "terminales", "axial", "cremallera", "bieleta"] },
+      { id: "ROTULA", label: "Rótula", icon: "🔩", keywords: ["rotula", "rótula", "rótulas", "ball joint"] },
+      { id: "BUJES", label: "Bujes", icon: "⭕", keywords: ["buje", "bujes", "silentblock", "caucho", "bocina"] },
+      { id: "MESA", label: "Mesa", icon: "🔧", keywords: ["mesa", "trapecio", "brazo", "tijera", "parrilla"] },
+    ],
+  },
+  {
+    id: "BATERIAS",
+    label: "Baterías",
+    icon: "🔋",
+    subcategories: [
+      { id: "TODOS", label: "Todos", icon: "✨", keywords: [] },
+      { id: "LIVIANO", label: "Liviano", icon: "🚗", keywords: ["liviano", "auto", "12v", "45ah", "60ah", "70ah", "ns40", "ns60"] },
+      { id: "PESADO", label: "Pesado", icon: "🚚", keywords: ["pesado", "camion", "camión", "diesel", "100ah", "150ah", "24v", "n100"] },
+      { id: "CARGA", label: "Carga", icon: "⚡", keywords: ["carga", "recarga", "alternador", "arrancador", "test batería"] },
+      { id: "BORNES", label: "Bornes", icon: "🔌", keywords: ["borne", "bornes", "terminales bateria", "limpieza bornes", "sulfatado"] },
+    ],
+  },
+];
+
+// Selector de medida de rin en 1 sola palabra
+export const RINES_TECNICENTRO = [
+  { id: "Aro", label: "Aro" },
+  { id: "R13", label: "R13" },
+  { id: "R14", label: "R14" },
+  { id: "R15", label: "R15" },
+  { id: "R16", label: "R16" },
+  { id: "R17", label: "R17" },
+  { id: "R18+", label: "R18+" },
+];
+
+// Reglas de extracción de palabras clave para Tecnicentro
+const KEYWORD_RULES_TECNICENTRO: Array<{ match: RegExp; keyword: string }> = [
+  { match: /alineaci[oó]n/i, keyword: "ALINEACIÓN" },
+  { match: /balanceo/i, keyword: "BALANCEO" },
+  { match: /rotaci[oó]n/i, keyword: "ROTACIÓN" },
+  { match: /camber|comba/i, keyword: "CAMBER" },
+  { match: /montaje|desmontaje|enllant/i, keyword: "MONTAJE" },
+  { match: /parche|pinchazo/i, keyword: "PARCHE" },
+  { match: /vulcaniz/i, keyword: "VULCANIZADO" },
+  { match: /v[aá]lvula|pit[oó]n/i, keyword: "VÁLVULA" },
+  { match: /nitr[oó]geno/i, keyword: "NITRÓGENO" },
+  { match: /pastilla|balata/i, keyword: "PASTILLAS" },
+  { match: /disco/i, keyword: "DISCOS" },
+  { match: /zapata|tambor/i, keyword: "ZAPATAS" },
+  { match: /rectific/i, keyword: "RECTIFICADO" },
+  { match: /l[ií]quido.*freno|l[ií]quido/i, keyword: "LÍQUIDO" },
+  { match: /amortiguador/i, keyword: "AMORTIGUADOR" },
+  { match: /terminal|axial/i, keyword: "TERMINAL" },
+  { match: /r[oó]tula/i, keyword: "RÓTULA" },
+  { match: /buje/i, keyword: "BUJES" },
+  { match: /mesa|trapecio/i, keyword: "MESA" },
+  { match: /bater[ií]a/i, keyword: "BATERÍA" },
+  { match: /borne/i, keyword: "BORNES" },
+  { match: /aro|rin/i, keyword: "AROS" },
+];
+
+function extractKeywordTecnicentro(name: string, tireSize?: string): string {
+  if (tireSize && tireSize.length >= 5) {
+    return tireSize.replace(/\s+/g, "").toUpperCase();
   }
-  const vtVal = item.priceByVehicleType?.[vehicleTypeId];
-  if (typeof vtVal === "number" && vtVal > 0) {
-    return { price: vtVal, quoteRequired: false };
+  const sizeMatch = name.match(/(\d{3}\/\d{2}\s*R\d{2}\+?|\d{3}\/\d{2}R\d{2})/i);
+  if (sizeMatch) {
+    return sizeMatch[0].replace(/\s+/g, "").toUpperCase();
   }
-  if (item.promoPrice && item.promoPrice > 0) {
-    return { price: Number(item.promoPrice), quoteRequired: false };
+  for (const rule of KEYWORD_RULES_TECNICENTRO) {
+    if (rule.match.test(name)) {
+      return rule.keyword;
+    }
   }
-  if (item.basePrice && item.basePrice > 0) {
-    return { price: Number(item.basePrice), quoteRequired: false };
+  const cleaned = name
+    .replace(/^(Servicio|Cambio|Instalación|Revisión|Reparación|Mantenimiento)\s+(de\s+|del\s+)?/i, "")
+    .replace(/^De\s+/i, "")
+    .trim();
+  const first = cleaned.split(/[\s/+,&-_]+/)[0];
+  return (first || name).toUpperCase();
+}
+
+const FALLBACK_TEC_ICONS: Record<string, string> = {
+  ALINEACIÓN: "🎯",
+  BALANCEO: "⚖️",
+  ROTACIÓN: "🔄",
+  CAMBER: "📐",
+  MONTAJE: "🔧",
+  PARCHE: "🩹",
+  VULCANIZADO: "🔥",
+  VÁLVULA: "🔘",
+  NITRÓGENO: "💨",
+  PASTILLAS: "🟫",
+  DISCOS: "💿",
+  ZAPATAS: "👞",
+  RECTIFICADO: "⚙️",
+  LÍQUIDO: "💧",
+  AMORTIGUADOR: "🔽",
+  TERMINAL: "🔗",
+  RÓTULA: "🔩",
+  BUJES: "⭕",
+  MESA: "🔧",
+  BATERÍA: "🔋",
+  BORNES: "🔌",
+  AROS: "⚙️",
+  DEFAULT: "🛞",
+};
+
+// Servicios y productos base de Tecnicentro
+const ITEMS_BASE_TECNICENTRO = [
+  // Llantas
+  { id: "tc_neu_1856515", name: "Llanta 185/65 R15 Pistera", category: "LLANTAS", subcategory: "PISTERA", rim: "R15", price: 65.0, icon: "🛞" },
+  { id: "tc_neu_2055516", name: "Llanta 205/55 R16 Pistera", category: "LLANTAS", subcategory: "PISTERA", rim: "R16", price: 78.0, icon: "🛞" },
+  { id: "tc_neu_2657017", name: "Llanta 265/70 R17 Mixta A/T", category: "LLANTAS", subcategory: "MIXTA", rim: "R17", price: 145.0, icon: "🛞" },
+  { id: "tc_neu_2857516", name: "Llanta 285/75 R16 Lodo M/T", category: "LLANTAS", subcategory: "LODO", rim: "R16", price: 180.0, icon: "🛞" },
+  { id: "tc_neu_1957015", name: "Llanta 195/70 R15C Carga", category: "LLANTAS", subcategory: "CARGA", rim: "R15", price: 85.0, icon: "🛞" },
+  { id: "tc_aro_mag15", name: "Aro de Aluminio R15", category: "LLANTAS", subcategory: "AROS", rim: "R15", price: 95.0, icon: "⚙️" },
+  // Alineación
+  { id: "tc_ali_delantera", name: "Alineación Delantera", category: "ALINEACION", subcategory: "DELANTERA", rim: "", price: 15.0, icon: "⬆️" },
+  { id: "tc_ali_completa", name: "Alineación Completa 3D", category: "ALINEACION", subcategory: "COMPLETA", rim: "", price: 25.0, icon: "🚗" },
+  { id: "tc_bal_dinamico", name: "Balanceo Dinámico", category: "ALINEACION", subcategory: "BALANCEO", rim: "", price: 5.0, icon: "⚖️" },
+  { id: "tc_rot_ruedas", name: "Rotación de 4 Ruedas", category: "ALINEACION", subcategory: "ROTACION", rim: "", price: 8.0, icon: "🔄" },
+  { id: "tc_cam_correccion", name: "Corrección de Camber", category: "ALINEACION", subcategory: "CAMBER", rim: "", price: 18.0, icon: "📐" },
+  // Enllantaje
+  { id: "tc_enl_montaje", name: "Montaje y Desmontaje", category: "ENLLANTAJE", subcategory: "MONTAJE", rim: "", price: 4.0, icon: "🔧" },
+  { id: "tc_enl_parche", name: "Parche Tipo Seta", category: "ENLLANTAJE", subcategory: "PARCHE", rim: "", price: 6.0, icon: "🩹" },
+  { id: "tc_enl_vulcanizado", name: "Vulcanizado de Llanta", category: "ENLLANTAJE", subcategory: "VULCANIZADO", rim: "", price: 12.0, icon: "🔥" },
+  { id: "tc_enl_valvula", name: "Válvula de Aire Cromada", category: "ENLLANTAJE", subcategory: "VALVULA", rim: "", price: 2.5, icon: "🔘" },
+  { id: "tc_enl_nitrogeno", name: "Inflado con Nitrógeno", category: "ENLLANTAJE", subcategory: "NITROGENO", rim: "", price: 4.0, icon: "💨" },
+  // Frenos
+  { id: "tc_fre_pastillas", name: "Cambio Pastillas Frenos", category: "FRENOS", subcategory: "PASTILLAS", rim: "", price: 18.0, icon: "🟫" },
+  { id: "tc_fre_discos", name: "Cambio Discos de Freno", category: "FRENOS", subcategory: "DISCOS", rim: "", price: 28.0, icon: "💿" },
+  { id: "tc_fre_zapatas", name: "Cambio Zapatas Tambor", category: "FRENOS", subcategory: "ZAPATAS", rim: "", price: 22.0, icon: "👞" },
+  { id: "tc_fre_rectificado", name: "Rectificado de Discos", category: "FRENOS", subcategory: "RECTIFICADO", rim: "", price: 16.0, icon: "⚙️" },
+  { id: "tc_fre_liquido", name: "Líquido de Frenos DOT4", category: "FRENOS", subcategory: "LIQUIDO", rim: "", price: 15.0, icon: "💧" },
+  // Suspensión
+  { id: "tc_sus_amortiguador", name: "Cambio Amortiguador", category: "SUSPENSION", subcategory: "AMORTIGUADOR", rim: "", price: 25.0, icon: "🔽" },
+  { id: "tc_sus_terminal", name: "Cambio Terminal Dirección", category: "SUSPENSION", subcategory: "TERMINAL", rim: "", price: 15.0, icon: "🔗" },
+  { id: "tc_sus_rotula", name: "Cambio de Rótula", category: "SUSPENSION", subcategory: "ROTULA", rim: "", price: 16.0, icon: "🔩" },
+  { id: "tc_sus_bujes", name: "Cambio Bujes Trapecio", category: "SUSPENSION", subcategory: "BUJES", rim: "", price: 20.0, icon: "⭕" },
+  { id: "tc_sus_mesa", name: "Cambio Mesa / Trapecio", category: "SUSPENSION", subcategory: "MESA", rim: "", price: 30.0, icon: "🔧" },
+  // Baterías
+  { id: "tc_bat_liviano", name: "Batería 12V 60Ah Liviano", category: "BATERIAS", subcategory: "LIVIANO", rim: "", price: 85.0, icon: "🔋" },
+  { id: "tc_bat_pesado", name: "Batería 12V 100Ah Pesado", category: "BATERIAS", subcategory: "PESADO", rim: "", price: 140.0, icon: "🔋" },
+  { id: "tc_bat_carga", name: "Test y Carga de Batería", category: "BATERIAS", subcategory: "CARGA", rim: "", price: 5.0, icon: "⚡" },
+  { id: "tc_bat_bornes", name: "Limpieza y Cambio Bornes", category: "BATERIAS", subcategory: "BORNES", rim: "", price: 4.5, icon: "🔌" },
+];
+
+function classifyItemCategoryTec(
+  item: { name: string; code?: string; brand?: string; category?: string; categoryId?: string }
+): "LLANTAS" | "ALINEACION" | "ENLLANTAJE" | "FRENOS" | "SUSPENSION" | "BATERIAS" {
+  const text = `${item.name} ${item.code || ""} ${item.category || ""} ${item.categoryId || ""}`.toLowerCase();
+  if (text.includes("bater") || text.includes("borne") || text.includes("acumulador")) {
+    return "BATERIAS";
   }
-  return { price: null, quoteRequired: true };
+  if (text.includes("freno") || text.includes("pastilla") || text.includes("disco") || text.includes("zapata") || text.includes("balata") || text.includes("rectific")) {
+    return "FRENOS";
+  }
+  if (text.includes("suspensi") || text.includes("amortiguador") || text.includes("terminal") || text.includes("rotula") || text.includes("rótula") || text.includes("buje") || text.includes("mesa") || text.includes("trapecio")) {
+    return "SUSPENSION";
+  }
+  if (text.includes("alineaci") || text.includes("balanceo") || text.includes("rotaci") || text.includes("camber") || text.includes("geometría")) {
+    return "ALINEACION";
+  }
+  if (text.includes("enllant") || text.includes("montaje") || text.includes("desmontaje") || text.includes("parche") || text.includes("vulcaniz") || text.includes("valvula") || text.includes("válvula") || text.includes("nitrogeno") || text.includes("nitrógeno")) {
+    return "ENLLANTAJE";
+  }
+  return "LLANTAS";
+}
+
+function classifyItemSubcategoryTec(
+  category: "LLANTAS" | "ALINEACION" | "ENLLANTAJE" | "FRENOS" | "SUSPENSION" | "BATERIAS",
+  item: { name: string; code?: string }
+): string {
+  const text = `${item.name} ${item.code || ""}`.toLowerCase();
+  if (category === "LLANTAS") {
+    if (text.includes("aro") || text.includes("rin")) return "AROS";
+    if (text.includes("carga") || text.includes("van") || text.includes("comercial") || text.includes("8pr")) return "CARGA";
+    if (text.includes("lodo") || text.includes("m/t") || text.includes("mt") || text.includes("mud")) return "LODO";
+    if (text.includes("mixta") || text.includes("a/t") || text.includes("at") || text.includes("terrain")) return "MIXTA";
+    return "PISTERA";
+  }
+  if (category === "ALINEACION") {
+    if (text.includes("delantera") || text.includes("delantero")) return "DELANTERA";
+    if (text.includes("balanceo")) return "BALANCEO";
+    if (text.includes("rotaci")) return "ROTACION";
+    if (text.includes("camber") || text.includes("comba")) return "CAMBER";
+    return "COMPLETA";
+  }
+  if (category === "ENLLANTAJE") {
+    if (text.includes("parche") || text.includes("pinchazo")) return "PARCHE";
+    if (text.includes("vulcaniz")) return "VULCANIZADO";
+    if (text.includes("valvula") || text.includes("válvula")) return "VALVULA";
+    if (text.includes("nitrogeno") || text.includes("nitrógeno")) return "NITROGENO";
+    return "MONTAJE";
+  }
+  if (category === "FRENOS") {
+    if (text.includes("disco")) return "DISCOS";
+    if (text.includes("zapata") || text.includes("tambor")) return "ZAPATAS";
+    if (text.includes("rectific")) return "RECTIFICADO";
+    if (text.includes("liquido") || text.includes("líquido")) return "LIQUIDO";
+    return "PASTILLAS";
+  }
+  if (category === "SUSPENSION") {
+    if (text.includes("terminal") || text.includes("axial")) return "TERMINAL";
+    if (text.includes("rotula") || text.includes("rótula")) return "ROTULA";
+    if (text.includes("buje")) return "BUJES";
+    if (text.includes("mesa") || text.includes("trapecio")) return "MESA";
+    return "AMORTIGUADOR";
+  }
+  if (category === "BATERIAS") {
+    if (text.includes("pesad") || text.includes("camion") || text.includes("100ah")) return "PESADO";
+    if (text.includes("carga") || text.includes("recarga")) return "CARGA";
+    if (text.includes("borne")) return "BORNES";
+    return "LIVIANO";
+  }
+  return "TODOS";
 }
 
 export default function ModuloTecnicentroCatalogo({
@@ -281,99 +331,34 @@ export default function ModuloTecnicentroCatalogo({
   mostrarToast,
   onActualizarItemsOrden,
   onIrAAvisoYFirma,
+  onIrASiguiente,
   triggerAbrirConfig,
 }: ModuloTecnicentroCatalogoProps) {
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [config, setConfig] = useState<TecnicentroConfigData | null>(null);
   const [services, setServices] = useState<TecnicentroEnrichedService[]>([]);
   const [tires, setTires] = useState<TecnicentroEnrichedTire[]>([]);
-  const [vehicles, setVehicles] = useState<any[]>([]);
-  const [promotions, setPromotions] = useState<any[]>([]);
-  const [appointments, setAppointments] = useState<any[]>([]);
 
-  // Panel «Selecciona tu vehículo» (Sección 4)
-  const [selectedVehicleTypeId, setSelectedVehicleTypeId] = useState<string>("vt_sedan");
-  const [vehBrand, setVehBrand] = useState<string>("");
-  const [vehModel, setVehModel] = useState<string>("");
-  const [vehYear, setVehYear] = useState<string>("");
-  const [vehVersion, setVehVersion] = useState<string>("");
-  const [vehEngine, setVehEngine] = useState<string>("");
-  const [vehTireSize, setVehTireSize] = useState<string>("");
-  const [onlyCompatibleVerified, setOnlyCompatibleVerified] = useState<boolean>(false);
+  // Categorías y subcategorías contraíbles
+  const [categoriaActivaId, setCategoriaActivaId] = useState<string>("TODO");
+  const [mostrarCategorias, setMostrarCategorias] = useState<boolean>(true);
+  const [subcategoriaActivaId, setSubcategoriaActivaId] = useState<string>("TODOS");
+  const [mostrarSubcategorias, setMostrarSubcategorias] = useState<boolean>(true);
 
-  // Categoría y subcategoría seleccionadas
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("TODOS");
-  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>("TODOS");
+  // Selector contraíble de medida de Rin ("Aro", "R13", "R14", "R15", "R16", "R17", "R18+")
+  const [rinActivo, setRinActivo] = useState<string>("Aro");
+  const [mostrarRines, setMostrarRines] = useState<boolean>(false);
+
+  // Multiplicadores rápidos: x1, x2, x4
+  const [multiplicadorActivo, setMultiplicadorActivo] = useState<1 | 2 | 4>(1);
+
+  // Buscador del POS
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  const [verTodoElCatalogo, setVerTodoElCatalogo] = useState<boolean>(false);
-  const [filtroCategoriaGeneral, setFiltroCategoriaGeneral] = useState<string>("");
-  const [menuFiltroCatalogoAbierto, setMenuFiltroCatalogoAbierto] = useState<boolean>(false);
-  const menuFiltroCatalogoRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuFiltroCatalogoRef.current && !menuFiltroCatalogoRef.current.contains(e.target as Node)) {
-        setMenuFiltroCatalogoAbierto(false);
-      }
-    };
-    if (menuFiltroCatalogoAbierto) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [menuFiltroCatalogoAbierto]);
-
-  const [manualServicioTexto, setManualServicioTexto] = useState<string>("");
-  const [manualServicioPrecio, setManualServicioPrecio] = useState<string>("");
-  const [manualTiempoEstimado, setManualTiempoEstimado] = useState<number>(45);
-  const [manualCantidad, setManualCantidad] = useState<number>(1);
-
-  // Filtros dinámicos específicos por categoría (Sección 5)
-  const [filterAvailability, setFilterAvailability] = useState<string>("");
-  const [filterAlignmentType, setFilterAlignmentType] = useState<string>("");
-  const [filterWheelCount, setFilterWheelCount] = useState<string>("");
-  const [filterBalanceType, setFilterBalanceType] = useState<string>("");
-  const [filterTireBrand, setFilterTireBrand] = useState<string>("");
-  const [filterTireWidth, setFilterTireWidth] = useState<string>("");
-  const [filterTireProfile, setFilterTireProfile] = useState<string>("");
-  const [filterTireRim, setFilterTireRim] = useState<string>("");
-  const [filterTireIndex, setFilterTireIndex] = useState<string>("");
-  const [filterMaxPrice, setFilterMaxPrice] = useState<string>("");
-  const [filterSuspensionType, setFilterSuspensionType] = useState<string>("");
-  const [filterSuspensionComp, setFilterSuspensionComp] = useState<string>("");
-  const [filterBrakeComp, setFilterBrakeComp] = useState<string>("");
-  const [filterBrakeServiceType, setFilterBrakeServiceType] = useState<string>("");
-  const [filterDiagType, setFilterDiagType] = useState<string>("");
-  const [filterDiagSystem, setFilterDiagSystem] = useState<string>("");
-  const [filterSteeringComp, setFilterSteeringComp] = useState<string>("");
-  const [filterSteeringClass, setFilterSteeringClass] = useState<string>("");
-
-  // Selecciones del cliente
-  const [selectedPackages, setSelectedPackages] = useState<string[]>([]);
-  const [selectedServices, setSelectedServices] = useState<Record<string, number>>({});
-  const [selectedAddons, setSelectedAddons] = useState<Record<string, number>>({});
-  const [selectedTires, setSelectedTires] = useState<Record<string, number>>({});
-  const [promoCodeInput, setPromoCodeInput] = useState<string>("");
-
-  // Cálculo validado en el servidor
-  const [serverCalculation, setServerCalculation] = useState<any | null>(null);
-  const [calculatingServer, setCalculatingServer] = useState(false);
-  const [confirmingOrder, setConfirmingOrder] = useState(false);
-
-  // Reserva de Bahía (ClientAppointment)
-  const [showBookingPanel, setShowBookingPanel] = useState(false);
-  const [bookingDate, setBookingDate] = useState<string>(
-    () => new Date().toISOString().split("T")[0]
-  );
-  const [bookingTimeSlot, setBookingTimeSlot] = useState<string>("09:00 AM");
-  const [bookingBay, setBookingBay] = useState<string>("Bahía Alineación 3D #1");
-  const [savingBooking, setSavingBooking] = useState(false);
-  const [lastBooking, setLastBooking] = useState<any | null>(null);
-
-  // Modales administrativos
+  // Modales administrativos preservados
+  const [configModalOpen, setConfigModalOpen] = useState(false);
   const [detailModal, setDetailModal] = useState<{
     item: TecnicentroEnrichedService | TecnicentroPackage | TecnicentroEnrichedTire;
     kind: "SERVICE" | "PACKAGE" | "TIRE";
@@ -386,15 +371,18 @@ export default function ModuloTecnicentroCatalogo({
     open: boolean;
     tire?: Partial<TecnicentroEnrichedTire> | null;
   }>({ open: false, tire: null });
-  const [configModalOpen, setConfigModalOpen] = useState(false);
 
-  // Escuchar trigger de cabecera exterior
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (triggerAbrirConfig && triggerAbrirConfig > 0) {
       setConfigModalOpen(true);
     }
   }, [triggerAbrirConfig]);
 
+  // Cargar catálogo desde la API
   const fetchTecnicentroData = useCallback(async () => {
     try {
       if (!config) setLoading(true);
@@ -402,19 +390,13 @@ export default function ModuloTecnicentroCatalogo({
       const res = await fetch("/api/taller/tecnicentro", { cache: "no-store" });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Error al cargar el módulo Tecnicentro");
+        throw new Error(data.error || "No se pudo cargar el módulo Tecnicentro");
       }
       setConfig(data.config);
       setServices(data.services || []);
       setTires(data.tires || []);
-      setVehicles(data.vehicles || []);
-      setPromotions(data.promotions || []);
-      setAppointments(data.appointments || []);
-      if (data.config?.bays?.[0]) {
-        setBookingBay(data.config.bays[0]);
-      }
     } catch (err: any) {
-      setErrorMsg(err.message || "Error al conectar con el servidor de Tecnicentro");
+      setErrorMsg(err.message || "Error al conectar con Tecnicentro");
     } finally {
       setLoading(false);
     }
@@ -431,1104 +413,135 @@ export default function ModuloTecnicentroCatalogo({
     };
   }, [fetchTecnicentroData]);
 
-  // Pre-poblar «Selecciona tu vehículo» si hay ordenActiva
-  useEffect(() => {
-    if (!ordenActiva?.vehicle) return;
-    const vStr = String(ordenActiva.vehicle);
-    const parts = vStr.split(" ");
-    if (parts[0] && !vehBrand) setVehBrand(parts[0]);
-    if (parts[1] && !vehModel) setVehModel(parts.slice(1).join(" "));
-    const vLow = vStr.toLowerCase();
-    if (vLow.includes("hilux") || vLow.includes("d-max") || vLow.includes("pickup")) {
-      setSelectedVehicleTypeId("vt_camioneta");
-    } else if (vLow.includes("sportage") || vLow.includes("tucson") || vLow.includes("rav4") || vLow.includes("suv")) {
-      setSelectedVehicleTypeId("vt_suv");
-    } else if (vLow.includes("moto")) {
-      setSelectedVehicleTypeId("vt_motocicleta");
-    }
-  }, [ordenActiva?.vehicle]);
+  // Manejo de categorías
+  const categoriaSeleccionadaObj = useMemo(() => {
+    return TECNICENTRO_CATEGORIES.find((c) => c.id === categoriaActivaId) || TECNICENTRO_CATEGORIES[0];
+  }, [categoriaActivaId]);
 
-  // Limpiar filtros específicos cuando se cambia de categoría
-  const clearCategorySpecificFilters = () => {
-    setFilterAvailability("");
-    setFilterAlignmentType("");
-    setFilterWheelCount("");
-    setFilterBalanceType("");
-    setFilterTireBrand("");
-    setFilterTireWidth("");
-    setFilterTireProfile("");
-    setFilterTireRim("");
-    setFilterTireIndex("");
-    setFilterMaxPrice("");
-    setFilterSuspensionType("");
-    setFilterSuspensionComp("");
-    setFilterBrakeComp("");
-    setFilterBrakeServiceType("");
-    setFilterDiagType("");
-    setFilterDiagSystem("");
-    setFilterSteeringComp("");
-    setFilterSteeringClass("");
-  };
+  const subcategoriasActivas = useMemo(() => {
+    if (categoriaActivaId === "TODO") return [];
+    return categoriaSeleccionadaObj.subcategories;
+  }, [categoriaActivaId, categoriaSeleccionadaObj]);
 
-  // Validar y calcular en el servidor cuando cambian las selecciones
-  useEffect(() => {
-    if (!config) return;
-    const srvArr = Object.entries(selectedServices).map(([id, quantity]) => ({ id, quantity }));
-    const addArr = Object.entries(selectedAddons).map(([id, quantity]) => ({ id, quantity }));
-    const tireArr = Object.entries(selectedTires).map(([id, quantity]) => ({ id, quantity }));
+  const subcategoriaSeleccionadaObj = useMemo(() => {
+    if (subcategoriaActivaId === "TODOS") return null;
+    return subcategoriasActivas.find((s) => s.id === subcategoriaActivaId) || null;
+  }, [subcategoriaActivaId, subcategoriasActivas]);
 
-    if (
-      selectedPackages.length === 0 &&
-      srvArr.length === 0 &&
-      addArr.length === 0 &&
-      tireArr.length === 0
-    ) {
-      setServerCalculation(null);
-      return;
-    }
-
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      try {
-        setCalculatingServer(true);
-        const res = await fetch("/api/taller/tecnicentro", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "CALCULAR_Y_VALIDAR_SELECCION",
-            vehicleTypeId: selectedVehicleTypeId,
-            selectedPackages,
-            selectedServices: srvArr,
-            selectedAddons: addArr,
-            selectedTires: tireArr,
-            promoCode: promoCodeInput,
-          }),
-        });
-        const data = await res.json();
-        if (!cancelled && data.success) {
-          setServerCalculation(data.calculation);
-        }
-      } catch {
-      } finally {
-        if (!cancelled) setCalculatingServer(false);
-      }
-    }, 180);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [
-    config,
-    selectedVehicleTypeId,
-    selectedPackages,
-    selectedServices,
-    selectedAddons,
-    selectedTires,
-    promoCodeInput,
-  ]);
-
-  const activeCategories = useMemo(() => {
-    const list = (config?.categories || []).filter((c) => c.active);
-    const principales = list.filter((c) => PRINCIPAL_TECNICENTRO_CAT_IDS.includes(c.id));
-    const result = principales.length > 0 ? principales : list.slice(0, 6);
-    return result.sort((a, b) => {
-      const idxA = PRINCIPAL_TECNICENTRO_CAT_IDS.indexOf(a.id);
-      const idxB = PRINCIPAL_TECNICENTRO_CAT_IDS.indexOf(b.id);
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      return a.order - b.order;
-    });
-  }, [config]);
-
-  const activeVehicleTypes = useMemo(() => {
-    const list = (config?.vehicleTypes || []).filter((v) => v.active);
-    const principales = list.filter(
-      (v) =>
-        v.id === "vt_motocicleta" ||
-        v.id === "vt_sedan" ||
-        v.id === "vt_suv" ||
-        v.id === "vt_camioneta" ||
-        v.id === "vt_pesado" ||
-        (v.id === "vt_automovil" && !list.some((x) => x.id === "vt_sedan")) ||
-        (v.id === "vt_furgoneta" && !list.some((x) => x.id === "vt_pesado"))
-    );
-    const result = principales.length > 0 ? principales : list;
-    const orderMap = [
-      "vt_motocicleta",
-      "vt_sedan",
-      "vt_automovil",
-      "vt_suv",
-      "vt_camioneta",
-      "vt_pesado",
-      "vt_furgoneta",
-    ];
-    return result.sort((a, b) => {
-      const idxA = orderMap.indexOf(a.id);
-      const idxB = orderMap.indexOf(b.id);
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      return a.order - b.order;
-    });
-  }, [config]);
-
-  const currentVehicleType: TecnicentroVehicleType | undefined = useMemo(
-    () =>
-      activeVehicleTypes.find((v) => v.id === selectedVehicleTypeId) || activeVehicleTypes[0],
-    [activeVehicleTypes, selectedVehicleTypeId]
-  );
-
-  const currentCategory: TecnicentroCategory | undefined = useMemo(
-    () => activeCategories.find((c) => c.id === selectedCategoryId),
-    [activeCategories, selectedCategoryId]
-  );
-
-  const activeSubcategories = useMemo(() => {
-    if (!config || selectedCategoryId === "TODOS") return [];
-    const curated = IMPORTANT_SUBCATEGORIES_BY_MAIN_CAT[selectedCategoryId];
-    if (curated) return curated;
-    return config.subcategories
-      .filter((s) => s.active && s.categoryId === selectedCategoryId)
-      .sort((a, b) => a.order - b.order)
-      .slice(0, 5)
-      .map((s) => ({
-        id: s.id,
-        name: toSingleWord(s.name, TECNICENTRO_CAT_SINGLE),
-        icon: s.icon || "🔧",
-      }));
-  }, [config, selectedCategoryId]);
-
-  // Adaptar panel Manual automáticamente al seleccionar categoría (horizontal / vertical), subcategoría o tipo de vehículo
-  useEffect(() => {
-    let nombre = "";
-    let precio = 0;
-    let minutos = 45;
-
-    if (selectedSubcategoryId && selectedSubcategoryId !== "TODOS") {
-      const sub = config?.subcategories?.find((s) => s.id === selectedSubcategoryId);
-      const srv =
-        services.find((s) => matchesSubcategoryTec(s, selectedSubcategoryId) && s.active) ||
-        services.find((s) => matchesSubcategoryTec(s, selectedSubcategoryId));
-      if (srv) {
-        nombre = srv.name;
-        const pInfo = getPriceDisplayForItem(srv, selectedVehicleTypeId);
-        if (pInfo.price) precio = pInfo.price;
-        if (srv.estimatedMinutes) minutos = srv.estimatedMinutes;
-      } else if (sub) {
-        nombre = sub.name;
-        const catSrv = services.find((s) => s.categoryId === sub.categoryId && s.active);
-        if (catSrv) {
-          const pInfo = getPriceDisplayForItem(catSrv, selectedVehicleTypeId);
-          if (pInfo.price) precio = pInfo.price;
-          if (catSrv.estimatedMinutes) minutos = catSrv.estimatedMinutes;
-        }
-      }
-    } else if (selectedCategoryId && selectedCategoryId !== "TODOS") {
-      const cat = config?.categories?.find((c) => c.id === selectedCategoryId);
-      const srv =
-        services.find((s) => matchesMainCategoryTec(s.categoryId, selectedCategoryId) && s.active) ||
-        services.find((s) => matchesMainCategoryTec(s.categoryId, selectedCategoryId));
-      if (srv) {
-        nombre = srv.name;
-        const pInfo = getPriceDisplayForItem(srv, selectedVehicleTypeId);
-        if (pInfo.price) precio = pInfo.price;
-        if (srv.estimatedMinutes) minutos = srv.estimatedMinutes;
-      } else if (cat) {
-        nombre = cat.name;
-        if (cat.startingPrice) precio = Number(cat.startingPrice);
-        if (cat.estimatedMinutes) minutos = cat.estimatedMinutes;
-      } else if (selectedCategoryId === "tc_cat_venta_neum" && tires.length > 0) {
-        const t = tires[0];
-        nombre = t.name || `${t.brand} ${t.tireSize || ""}`.trim();
-        precio = Number(t.price) || 55;
-        minutos = 25;
-      }
-    } else {
-      // Caso "TODOS": primer servicio sugerido del catálogo
-      const firstSrv = services.find((s) => s.active) || services[0];
-      if (firstSrv) {
-        nombre = firstSrv.name;
-        const pInfo = getPriceDisplayForItem(firstSrv, selectedVehicleTypeId);
-        if (pInfo.price) precio = pInfo.price;
-        if (firstSrv.estimatedMinutes) minutos = firstSrv.estimatedMinutes;
-      } else {
-        nombre = "Alineación y Balanceo General";
-        precio = 15;
-        minutos = 35;
-      }
-    }
-
-    if (nombre) {
-      setManualServicioTexto(nombre);
-      setManualServicioPrecio(precio > 0 ? precio.toFixed(2) : "0.00");
-      setManualTiempoEstimado(minutos > 0 ? minutos : 45);
-      setManualCantidad(1);
-    }
-  }, [
-    selectedCategoryId,
-    selectedSubcategoryId,
-    selectedVehicleTypeId,
-    config,
-    services,
-    tires,
-  ]);
-
-  // Códigos de servicios y adicionales ya incluidos en paquetes seleccionados
-  const includedInPackagesInfo = useMemo(() => {
-    const srvCodes: Record<string, string> = {};
-    const addonIds: Record<string, string> = {};
-    if (!config) return { srvCodes, addonIds };
-    selectedPackages.forEach((pId) => {
-      const pkg = config.packages.find((p) => p.id === pId);
-      if (pkg) {
-        (pkg.includedServiceCodes || []).forEach((c) => {
-          srvCodes[c] = pkg.name;
-        });
-        (pkg.includedAddonIds || []).forEach((a) => {
-          addonIds[a] = pkg.name;
-        });
-      }
-    });
-    return { srvCodes, addonIds };
-  }, [config, selectedPackages]);
-
-  // Filtrado de Servicios Individuales según Categoría, Subcategoría, Vehículo y Filtros Específicos
-  const filteredServices = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    return services
-      .filter((s) => {
-        if (!s.active) return false;
-        if (
-          s.applicableVehicleTypes?.length > 0 &&
-          !s.applicableVehicleTypes.includes(selectedVehicleTypeId)
-        ) {
-          return false;
-        }
-        if (!matchesMainCategoryTec(s.categoryId, selectedCategoryId)) {
-          return false;
-        }
-        if (!matchesSubcategoryTec(s, selectedSubcategoryId)) {
-          return false;
-        }
-        if (filterAvailability && s.availability !== filterAvailability) return false;
-        if (filterAlignmentType && s.alignmentType !== filterAlignmentType) return false;
-        if (filterWheelCount && s.wheelCount !== filterWheelCount) return false;
-        if (filterBalanceType && s.balanceServiceType !== filterBalanceType) return false;
-        if (filterSuspensionType && s.suspensionInspectionType !== filterSuspensionType)
-          return false;
-        if (filterSuspensionComp && s.suspensionComponent !== filterSuspensionComp) return false;
-        if (filterBrakeComp && s.brakeComponent !== filterBrakeComp) return false;
-        if (filterBrakeServiceType && s.brakeServiceType !== filterBrakeServiceType) return false;
-        if (filterDiagType && s.diagnosticType !== filterDiagType) return false;
-        if (filterDiagSystem && s.diagnosticSystem !== filterDiagSystem) return false;
-        if (filterSteeringComp && s.steeringComponent !== filterSteeringComp) return false;
-        if (filterSteeringClass && s.steeringInspectionClass !== filterSteeringClass) return false;
-        if (filterMaxPrice && Number(filterMaxPrice) > 0) {
-          const pInfo = getPriceDisplayForItem(s, selectedVehicleTypeId);
-          if (pInfo.price && pInfo.price > Number(filterMaxPrice)) return false;
-        }
-        if (q) {
-          const hay = `${s.name} ${s.code} ${s.shortDescription} ${s.fullDescription} ${(s.includesList || []).join(" ")}`.toLowerCase();
-          if (!hay.includes(q)) return false;
-        }
-        return true;
-      })
-      .sort((a, b) => a.order - b.order);
-  }, [
-    services,
-    selectedVehicleTypeId,
-    selectedCategoryId,
-    selectedSubcategoryId,
-    filterAvailability,
-    filterAlignmentType,
-    filterWheelCount,
-    filterBalanceType,
-    filterSuspensionType,
-    filterSuspensionComp,
-    filterBrakeComp,
-    filterBrakeServiceType,
-    filterDiagType,
-    filterDiagSystem,
-    filterSteeringComp,
-    filterSteeringClass,
-    filterMaxPrice,
-    searchQuery,
-  ]);
-
-  // Filtrado de Neumáticos por Marca, Medida, Ancho, Perfil, Aro, Índice, Compatibilidad y Precio
-  const filteredTires = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    return tires.filter((t) => {
-      if (!t.active) return false;
-      if (filterTireBrand && t.brand.toLowerCase() !== filterTireBrand.toLowerCase()) return false;
-      if (filterTireWidth && t.width !== filterTireWidth) return false;
-      if (filterTireProfile && t.profile !== filterTireProfile) return false;
-      if (filterTireRim && t.rimDiameter.toUpperCase() !== filterTireRim.toUpperCase())
-        return false;
-      if (filterTireIndex) {
-        const idxCombined = `${t.loadIndex}${t.speedRating}`.toUpperCase();
-        if (!idxCombined.includes(filterTireIndex.toUpperCase())) return false;
-      }
-      if (vehTireSize && vehTireSize.trim() !== "") {
-        const normVehSize = vehTireSize.replace(/\s+/g, "").toUpperCase();
-        const normTireSize = t.tireSize.replace(/\s+/g, "").toUpperCase();
-        if (!normTireSize.includes(normVehSize)) return false;
-      }
-      if (onlyCompatibleVerified && (vehBrand || vehModel)) {
-        const hasMatch = (t.compatibilities || []).some((c) => {
-          const bMatch = !vehBrand || c.brand.toLowerCase().includes(vehBrand.toLowerCase());
-          const mMatch = !vehModel || c.model.toLowerCase().includes(vehModel.toLowerCase());
-          return bMatch && mMatch;
-        });
-        if (!hasMatch) return false;
-      }
-      if (filterMaxPrice && Number(filterMaxPrice) > 0 && t.price > Number(filterMaxPrice)) {
-        return false;
-      }
-      if (filterAvailability === "Disponible" && t.stock <= 0) return false;
-      if (q) {
-        const hay = `${t.name} ${t.brand} ${t.code} ${t.tireSize} ${t.modelRef} ${t.specifications}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [
-    tires,
-    filterTireBrand,
-    filterTireWidth,
-    filterTireProfile,
-    filterTireRim,
-    filterTireIndex,
-    vehTireSize,
-    onlyCompatibleVerified,
-    vehBrand,
-    vehModel,
-    filterMaxPrice,
-    filterAvailability,
-    searchQuery,
-  ]);
-
-  // Chips de filtros activos para poder retirarlos individualmente
-  const activeFilterChips = useMemo(() => {
-    const chips: Array<{ label: string; onRemove: () => void }> = [];
-    if (filterAvailability)
-      chips.push({ label: `Disponibilidad: ${filterAvailability}`, onRemove: () => setFilterAvailability("") });
-    if (filterAlignmentType)
-      chips.push({ label: `Alineación: ${filterAlignmentType}`, onRemove: () => setFilterAlignmentType("") });
-    if (filterWheelCount)
-      chips.push({ label: `Ruedas: ${filterWheelCount}`, onRemove: () => setFilterWheelCount("") });
-    if (filterBalanceType)
-      chips.push({ label: `Balanceo: ${filterBalanceType}`, onRemove: () => setFilterBalanceType("") });
-    if (filterTireBrand)
-      chips.push({ label: `Marca: ${filterTireBrand}`, onRemove: () => setFilterTireBrand("") });
-    if (filterTireWidth)
-      chips.push({ label: `Ancho: ${filterTireWidth}`, onRemove: () => setFilterTireWidth("") });
-    if (filterTireProfile)
-      chips.push({ label: `Perfil: ${filterTireProfile}`, onRemove: () => setFilterTireProfile("") });
-    if (filterTireRim)
-      chips.push({ label: `Aro: ${filterTireRim}`, onRemove: () => setFilterTireRim("") });
-    if (filterTireIndex)
-      chips.push({ label: `Índice: ${filterTireIndex}`, onRemove: () => setFilterTireIndex("") });
-    if (vehTireSize)
-      chips.push({ label: `Medida vehículo: ${vehTireSize}`, onRemove: () => setVehTireSize("") });
-    if (filterSuspensionComp)
-      chips.push({ label: `Suspensión: ${filterSuspensionComp}`, onRemove: () => setFilterSuspensionComp("") });
-    if (filterSuspensionType)
-      chips.push({ label: `Inspección: ${filterSuspensionType}`, onRemove: () => setFilterSuspensionType("") });
-    if (filterBrakeComp)
-      chips.push({ label: `Frenos: ${filterBrakeComp}`, onRemove: () => setFilterBrakeComp("") });
-    if (filterBrakeServiceType)
-      chips.push({ label: `Servicio freno: ${filterBrakeServiceType}`, onRemove: () => setFilterBrakeServiceType("") });
-    if (filterDiagType)
-      chips.push({ label: `Diagnóstico: ${filterDiagType}`, onRemove: () => setFilterDiagType("") });
-    if (filterDiagSystem)
-      chips.push({ label: `Sistema: ${filterDiagSystem}`, onRemove: () => setFilterDiagSystem("") });
-    if (filterSteeringComp)
-      chips.push({ label: `Dirección: ${filterSteeringComp}`, onRemove: () => setFilterSteeringComp("") });
-    if (filterSteeringClass)
-      chips.push({ label: `Clase insp.: ${filterSteeringClass}`, onRemove: () => setFilterSteeringClass("") });
-    if (filterMaxPrice)
-      chips.push({ label: `Máx $${filterMaxPrice}`, onRemove: () => setFilterMaxPrice("") });
-    return chips;
-  }, [
-    filterAvailability,
-    filterAlignmentType,
-    filterWheelCount,
-    filterBalanceType,
-    filterTireBrand,
-    filterTireWidth,
-    filterTireProfile,
-    filterTireRim,
-    filterTireIndex,
-    vehTireSize,
-    filterSuspensionComp,
-    filterSuspensionType,
-    filterBrakeComp,
-    filterBrakeServiceType,
-    filterDiagType,
-    filterDiagSystem,
-    filterSteeringComp,
-    filterSteeringClass,
-    filterMaxPrice,
-  ]);
-
-  // Toggle Servicio
-  const handleToggleService = (srv: TecnicentroEnrichedService) => {
-    if (srv.availability === "No disponible") {
-      mostrarToast("Este servicio no está disponible actualmente", "err");
-      return;
-    }
-    if (includedInPackagesInfo.srvCodes[srv.code]) {
-      mostrarToast(
-        `"${srv.name}" ya está incluido dentro de ${includedInPackagesInfo.srvCodes[srv.code]}`,
-        "ok"
-      );
-      return;
-    }
-    setSelectedServices((prev) => {
-      const next = { ...prev };
-      if (next[srv.id]) {
-        delete next[srv.id];
-      } else {
-        next[srv.id] = srv.defaultUnitsCount || 1;
-      }
-      return next;
-    });
-  };
-
-  // Toggle Paquete
-  const handleTogglePackage = (pkg: TecnicentroPackage) => {
-    if (pkg.availability === "No disponible") {
-      mostrarToast("Este paquete no está disponible", "err");
-      return;
-    }
-    setSelectedPackages((prev) =>
-      prev.includes(pkg.id) ? prev.filter((id) => id !== pkg.id) : [...prev, pkg.id]
-    );
-  };
-
-  // Toggle Adicional
-  const handleToggleAddon = (addon: TecnicentroAddon) => {
-    if (includedInPackagesInfo.addonIds[addon.id]) {
-      mostrarToast(
-        `"${addon.name}" ya está incluido sin costo en ${includedInPackagesInfo.addonIds[addon.id]}`,
-        "ok"
-      );
-      return;
-    }
-    const hasMain =
-      selectedPackages.length > 0 ||
-      Object.keys(selectedServices).length > 0 ||
-      Object.keys(selectedTires).length > 0;
-    if (!addon.canBeStandalone && !hasMain && !selectedAddons[addon.id]) {
-      mostrarToast(
-        `"${addon.name}" se contrata asociado a un servicio o neumático principal.`,
-        "err"
-      );
-      return;
-    }
-    setSelectedAddons((prev) => {
-      const next = { ...prev };
-      if (next[addon.id]) delete next[addon.id];
-      else next[addon.id] = 1;
-      return next;
-    });
-  };
-
-  // Toggle Neumático
-  const handleToggleTire = (tire: TecnicentroEnrichedTire, qty = 4) => {
-    if (tire.stock <= 0) {
-      mostrarToast("Este neumático se encuentra sin stock disponible", "err");
-      return;
-    }
-    setSelectedTires((prev) => {
-      const next = { ...prev };
-      if (next[tire.id]) {
-        delete next[tire.id];
-      } else {
-        next[tire.id] = Math.min(tire.stock, qty);
-      }
-      return next;
-    });
-  };
-
-  // Guardar servicio en Neon
-  const handleSaveServiceAdmin = async (srvPayload: any) => {
-    const res = await fetch("/api/taller/tecnicentro", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "SAVE_SERVICE", service: srvPayload }),
-    });
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      mostrarToast(data.error || "Error al guardar servicio", "err");
-      throw new Error(data.error || "Error");
-    }
-    setServices(data.services || []);
-    mostrarToast("Servicio guardado en Neon", "ok");
-  };
-
-  // Guardar neumático en Neon
-  const handleSaveTireAdmin = async (tirePayload: any) => {
-    const res = await fetch("/api/taller/tecnicentro", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "SAVE_TIRE_PRODUCT", tire: tirePayload }),
-    });
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      mostrarToast(data.error || "Error al guardar neumático", "err");
-      throw new Error(data.error || "Error");
-    }
-    setTires(data.tires || []);
-    mostrarToast("Neumático guardado en el catálogo de Neon", "ok");
-  };
-
-  // Guardar configuración general
-  const handleSaveConfigAdmin = async (updated: TecnicentroConfigData) => {
-    const res = await fetch("/api/taller/tecnicentro", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ config: updated }),
-    });
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      mostrarToast(data.error || "Error al guardar configuración", "err");
-      throw new Error(data.error || "Error");
-    }
-    setConfig(data.config);
-    setServices(data.services || []);
-    setTires(data.tires || []);
-  };
-
-  // Confirmar selección e integrar con Orden Activa / Carrito actual
-  const handleConfirmToOrder = async (advanceToSignature: boolean) => {
-    if (confirmingOrder) return;
-    const srvArr = Object.entries(selectedServices).map(([id, quantity]) => ({ id, quantity }));
-    const addArr = Object.entries(selectedAddons).map(([id, quantity]) => ({ id, quantity }));
-    const tireArr = Object.entries(selectedTires).map(([id, quantity]) => ({ id, quantity }));
-
-    if (
-      selectedPackages.length === 0 &&
-      srvArr.length === 0 &&
-      addArr.length === 0 &&
-      tireArr.length === 0
-    ) {
-      mostrarToast("Selecciona al menos un servicio, paquete o neumático", "err");
-      return;
-    }
-
-    try {
-      setConfirmingOrder(true);
-      const res = await fetch("/api/taller/tecnicentro", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "CALCULAR_Y_VALIDAR_SELECCION",
-          vehicleTypeId: selectedVehicleTypeId,
-          selectedPackages,
-          selectedServices: srvArr,
-          selectedAddons: addArr,
-          selectedTires: tireArr,
-          promoCode: promoCodeInput,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success || !data.calculation) {
-        mostrarToast(data.error || "Error al validar precios/stock en el servidor", "err");
-        return;
-      }
-
-      const calc = data.calculation;
-      setServerCalculation(calc);
-
-      const otherAreaItems = (itemsOrden || []).filter((it) => {
-        const code = String(it.code || "");
-        const cat = String(it.category || "");
-        return (
-          cat !== "Tecnicentro" &&
-          cat !== "Llantera" &&
-          cat !== "Neumáticos" &&
-          !code.startsWith("TC-") &&
-          !code.startsWith("PKG-TC-") &&
-          !code.startsWith("ADD-TC-")
-        );
-      });
-
-      const tecItems = (calc.lines || [])
-        .filter((l: any) => !l.alreadyIncludedInPackage)
-        .map((l: any) => ({
-          id: l.id,
-          code: l.code,
-          name: l.name,
-          category: l.type === "PART" ? "Llantera" : "Tecnicentro",
-          subCategory: l.subCategory,
-          price: Number(l.unitPrice),
-          qty: Number(l.quantity || 1),
-          type: l.type,
-          quoteRequired: l.quoteRequired,
-          empleado_id: empleadoLogueado.id,
-          empleado_nombre: empleadoLogueado.nombre,
-        }));
-
-      await onActualizarItemsOrden([...otherAreaItems, ...tecItems]);
-      mostrarToast(
-        `✓ ${tecItems.length} ítem(s) de Tecnicentro agregados a la orden ($${Number(
-          calc.total
-        ).toFixed(2)})`,
-        "ok"
-      );
-
-      if (advanceToSignature) {
-        onIrAAvisoYFirma();
-      }
-    } finally {
-      setConfirmingOrder(false);
-    }
-  };
-
-  const handleAgregarDirectoItem = async (item: any) => {
-    try {
-      const code = item.code || `TC-${Math.floor(100 + Math.random() * 900)}`;
-      const nuevoItem = {
-        id: `tec_${item.id}_${Date.now()}`,
-        key: `key_${item.id}_${Date.now()}`,
-        type: item.kind === "TIRE" ? "PART" : "SERVICE",
-        category: item.kind === "TIRE" ? "Neumáticos" : "Tecnicentro",
-        subCategory: item.kind === "PACKAGE" ? "Paquete" : item.kind === "ADDON" ? "Extra" : item.kind === "TIRE" ? "Neumático" : "Servicio",
-        code,
-        name: `${item.name} (${currentVehicleType?.name || "General"})`,
-        brand: item.brand || "Tecnicentro",
-        presentation: item.presentation || "Servicio",
-        unitOfMeasure: item.kind === "TIRE" ? "Unidad" : "Servicio",
-        price: Number(item.price || 0),
-        total: Number(item.price || 0),
-        qty: item.kind === "TIRE" ? 4 : 1,
-        subtotal: Number(item.price || 0) * (item.kind === "TIRE" ? 4 : 1),
-        status: "Listo",
-        completed: true,
-        empleado_id: empleadoLogueado.id,
-        empleado_nombre: empleadoLogueado.nombre,
-      };
-
-      const actualizados = [...(itemsOrden || []), nuevoItem];
-      await onActualizarItemsOrden(actualizados);
-      mostrarToast(`✓ Agregado: ${item.name}`, "ok");
-    } catch {
-      mostrarToast("Error al agregar ítem", "err");
-    }
-  };
-
-  const handleGuardarServicioManualEnOrden = useCallback(async () => {
-    if (confirmingOrder) return;
-
-    const hasCatalogSelection =
-      selectedPackages.length > 0 ||
-      Object.keys(selectedServices).length > 0 ||
-      Object.keys(selectedAddons).length > 0 ||
-      Object.keys(selectedTires).length > 0;
-    
-    // Si hay selecciones del catálogo central (paquetes, servicios, neumáticos, adicionales)
-    if (hasCatalogSelection) {
-      await handleConfirmToOrder(false);
-    }
-    
-    // Si hay un servicio manual ingresado con precio
-    if (manualServicioTexto.trim() && parseFloat(manualServicioPrecio) > 0) {
-      const precioNum = Math.max(0, parseFloat(manualServicioPrecio) || 0);
-      const nuevoItem = {
-        id: "manual-" + Date.now(),
-        nombre: manualServicioTexto.trim(),
-        descripcion: "Servicio manual personalizado",
-        precio: precioNum,
-        cantidad: manualCantidad || 1,
-        subtotal: Number((precioNum * (manualCantidad || 1)).toFixed(2)),
-        tipo: "SERVICIO",
-        area: "TECNICENTRO",
-        vehicleTypeId: selectedVehicleTypeId,
-      };
-      await onActualizarItemsOrden([...itemsOrden, nuevoItem]);
-      mostrarToast(`✓ "${manualServicioTexto.trim()}" agregado a la orden`, "ok");
-    }
-  }, [
-    confirmingOrder,
-    selectedPackages,
-    selectedServices,
-    selectedAddons,
-    selectedTires,
-    handleConfirmToOrder,
-    manualServicioTexto,
-    manualServicioPrecio,
-    manualCantidad,
-    itemsOrden,
-    onActualizarItemsOrden,
-    mostrarToast,
-    selectedVehicleTypeId,
-  ]);
-
-  // Agendar reserva real en Bahía de Tecnicentro
-  const handleBookBay = async () => {
-    if (savingBooking || !serverCalculation?.lines?.length) return;
-    try {
-      setSavingBooking(true);
-      const summary = serverCalculation.lines
-        .map((l: any) => l.name)
-        .join(" + ")
-        .slice(0, 180);
-      const vehDesc =
-        `${vehBrand} ${vehModel} ${vehYear}`.trim() ||
-        ordenActiva?.vehicle ||
-        currentVehicleType?.name ||
-        "Vehículo";
-
-      const res = await fetch("/api/taller/tecnicentro", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "CREAR_RESERVA_TECNICENTRO",
-          vehicle: vehDesc,
-          plate: ordenActiva?.plate || "S/P",
-          clientName: ordenActiva?.client || "Cliente Tecnicentro",
-          clientPhone: ordenActiva?.clientPhone || "",
-          serviceSummary: summary,
-          date: bookingDate,
-          timeSlot: bookingTimeSlot,
-          bay: bookingBay,
-          idempotencyKey: `${ordenActiva?.plate || "TC"}-${bookingDate}-${bookingTimeSlot}-${bookingBay}`,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        mostrarToast(data.error || "No se pudo agendar la bahía", "err");
-        return;
-      }
-      setLastBooking(data.appointment);
-      setAppointments((prev) => [data.appointment, ...prev]);
-      mostrarToast(
-        `📅 Reserva #${data.appointment.appointmentNumber} confirmada en ${bookingBay}`,
-        "ok"
-      );
-    } finally {
-      setSavingBooking(false);
-    }
-  };
-
-  const handleAjustarCantidadItem = async (item: any, delta: number) => {
-    try {
-      const code = item.code || `TC-${item.id}`;
-      const vehLabel = currentVehicleType
-        ? toSingleWord(currentVehicleType.name, TECNICENTRO_VEH_SINGLE)
-        : "Auto";
-      const listaActual = [...(itemsOrden || [])];
-      const idxExistente = listaActual.findIndex(
-        (it) =>
-          it.id === item.id ||
-          it.serviceId === item.id ||
-          it.productId === item.id ||
-          it.id === `tec_${item.id}` ||
-          it.id?.startsWith?.(`tec_${item.id}_`) ||
-          (it.code && it.code === code)
-      );
-
-      if (idxExistente >= 0) {
-        const actual = listaActual[idxExistente];
-        const nuevaCant = (Number(actual.qty) || 1) + delta;
-        if (nuevaCant <= 0) {
-          listaActual.splice(idxExistente, 1);
-          await onActualizarItemsOrden(listaActual);
-        } else {
-          const priceUnit = Number(item.price || actual.price || 0);
-          const actualizados = listaActual.map((it, idx) =>
-            idx === idxExistente
-              ? {
-                  ...it,
-                  qty: nuevaCant,
-                  price: priceUnit,
-                  total: Number((priceUnit * nuevaCant).toFixed(2)),
-                }
-              : it
-          );
-          await onActualizarItemsOrden(actualizados);
-        }
-      } else if (delta > 0) {
-        const priceUnit = Number(item.price || 0);
-        const nuevoItem = {
-          id: `tec_${item.id}_${Date.now()}`,
-          key: `key_${item.id}_${Date.now()}`,
-          serviceId: item.id,
-          type: item.kind === "TIRE" ? ("PART" as const) : ("SERVICE" as const),
-          category: item.kind === "TIRE" ? "Neumáticos" : "Tecnicentro",
-          subCategory:
-            item.kind === "PACKAGE"
-              ? "Paquete"
-              : item.kind === "ADDON"
-              ? "Extra"
-              : item.kind === "TIRE"
-              ? "Neumático"
-              : "Servicio",
-          code,
-          name: item.kind === "TIRE" ? item.name : `${item.name} (${vehLabel})`,
-          brand: item.brand || "Tecnicentro",
-          presentation:
-            item.presentation ||
-            (item.durationMinutes ? `${item.durationMinutes} min` : "Servicio"),
-          unitOfMeasure: item.kind === "TIRE" ? "Unidad" : "Servicio",
-          price: priceUnit,
-          total: Number((priceUnit * delta).toFixed(2)),
-          qty: delta,
-          subtotal: Number((priceUnit * delta).toFixed(2)),
-          quoteRequired: Boolean(item.quoteRequired),
-          status: "Listo" as const,
-          completed: true,
-          empleado_id: empleadoLogueado.id,
-          empleado_nombre: empleadoLogueado.nombre,
-        };
-        await onActualizarItemsOrden([...listaActual, nuevoItem]);
-      }
-    } catch {
-      mostrarToast("Error al actualizar ítem de Tecnicentro", "err");
-    }
-  };
-
-  const filteredPackages = useMemo(() => {
-    if (!config) return [];
-    const q = searchQuery.trim().toLowerCase();
-    return (config.packages || [])
-      .filter((pkg) => {
-        if (!pkg.active) return false;
-        if (!matchesVehicleType(pkg.applicableVehicleTypes, selectedVehicleTypeId)) {
-          return false;
-        }
-        if (!matchesMainCategoryTec(pkg.categoryId, selectedCategoryId)) {
-          return false;
-        }
-        if (q) {
-          const hay = `${pkg.name} ${pkg.code} ${pkg.shortDescription} ${(pkg.includedServicesList || pkg.includedServiceCodes || []).join(" ")}`.toLowerCase();
-          if (!hay.includes(q)) return false;
-        }
-        return true;
-      })
-      .sort((a, b) => a.order - b.order);
-  }, [config, selectedVehicleTypeId, selectedCategoryId, searchQuery]);
-
-  const activeAddons = useMemo(() => {
-    if (!config) return [];
-    const q = searchQuery.trim().toLowerCase();
-    return (config.addons || [])
-      .filter((add) => {
-        if (!add.active) return false;
-        if (
-          (add as any).applicableVehicleTypes?.length > 0 &&
-          !(add as any).applicableVehicleTypes.includes(selectedVehicleTypeId)
-        ) {
-          return false;
-        }
-        if (q) {
-          const hay = `${add.name} ${add.code} ${add.description}`.toLowerCase();
-          if (!hay.includes(q)) return false;
-        }
-        return true;
-      })
-      .sort((a, b) => a.order - b.order);
-  }, [config, selectedVehicleTypeId, searchQuery]);
-
-  // Catálogo unificado y automático (se muestra al instante sin necesidad de escribir en el buscador)
-  const itemsFiltradosAutomaticos = useMemo(() => {
-    const q = searchQuery
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim();
-
-    const terms = q.split(/\s+/).filter(Boolean);
-    const matchText = (text: string) => {
-      if (terms.length === 0) return true;
-      const norm = (text || "")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-      return terms.every((t) => norm.includes(t));
-    };
-
+  // Construcción unificada de ítems para el POS
+  const todosLosItemsPOS = useMemo(() => {
     const list: Array<{
       id: string;
-      kind: "PACKAGE" | "SERVICE" | "TIRE" | "ADDON";
+      kind: "SERVICE" | "PRODUCT" | "TIRE";
       name: string;
       code: string;
       brand: string;
-      presentation?: string;
-      description?: string;
-      durationMinutes?: number;
       price: number;
-      quoteRequired?: boolean;
-      rawService?: TecnicentroEnrichedService;
-      rawTire?: TecnicentroEnrichedTire;
-      rawPackage?: TecnicentroPackage;
-      rawAddon?: TecnicentroAddon;
+      durationMinutes?: number;
       imageUrl?: string;
+      categoryMapped: "LLANTAS" | "ALINEACION" | "ENLLANTAJE" | "FRENOS" | "SUSPENSION" | "BATERIAS";
+      subcategoryMapped: string;
+      keyword: string;
+      tireSize?: string;
+      rimDiameter?: string;
+      itemIcon: string;
     }> = [];
 
-    // 1. Paquetes
-    if (!filtroCategoriaGeneral || filtroCategoriaGeneral === "PACKAGE") {
-      filteredPackages.forEach((pkg) => {
-        if (selectedSubcategoryId !== "TODOS") return;
-        const full = `${pkg.name} ${pkg.code} ${pkg.shortDescription || ""} ${(pkg.includedServicesList || pkg.includedServiceCodes || []).join(" ")}`;
-        if (!matchText(full)) return;
-        const pInfo = getPriceDisplayForItem(pkg, selectedVehicleTypeId);
-        list.push({
-          id: pkg.id,
-          kind: "PACKAGE",
-          name: pkg.name,
-          code: pkg.code,
-          brand: "Paquete",
-          presentation: `${pkg.estimatedMinutes || 60} min · Paquete`,
-          description: pkg.shortDescription,
-          durationMinutes: pkg.estimatedMinutes || 60,
-          price: pInfo.price ?? 0,
-          quoteRequired: pInfo.quoteRequired,
-          rawPackage: pkg,
-          imageUrl: pkg.imageUrl,
-        });
-      });
-    }
+    const existingKeywords = new Set<string>();
 
-    // 2. Servicios individuales
-    if (!filtroCategoriaGeneral || filtroCategoriaGeneral === "SERVICE") {
-      filteredServices.forEach((srv) => {
-        const full = `${srv.name} ${srv.code} ${srv.shortDescription || ""} ${srv.fullDescription || ""} ${(srv.includesList || []).join(" ")}`;
-        if (!matchText(full)) return;
-        const pInfo = getPriceDisplayForItem(srv, selectedVehicleTypeId);
-        const catObj = config?.categories?.find((c) => c.id === srv.categoryId);
-        list.push({
-          id: srv.id,
-          kind: "SERVICE",
-          name: srv.name,
-          code: srv.code,
-          brand: catObj?.name ? toSingleWord(catObj.name, TECNICENTRO_CAT_SINGLE) : "Servicio",
-          presentation: `${srv.estimatedMinutes || 45} min`,
-          description: srv.shortDescription || srv.fullDescription,
-          durationMinutes: srv.estimatedMinutes || 45,
-          price: pInfo.price ?? 0,
-          quoteRequired: pInfo.quoteRequired,
-          rawService: srv,
-          imageUrl: srv.imageUrl,
-        });
-      });
-    }
+    // 1. Neumáticos / Llantas de la base de datos
+    tires.forEach((tire) => {
+      if (!tire.active) return;
+      const cat = "LLANTAS" as const;
+      const sub = classifyItemSubcategoryTec(cat, tire);
+      const kw = extractKeywordTecnicentro(tire.name, tire.tireSize);
+      existingKeywords.add(kw);
 
-    // 3. Neumáticos (cuando aplica la categoría o el filtro de tipo es Neumáticos)
-    const showTiresInSub =
-      selectedSubcategoryId === "TODOS" || selectedSubcategoryId === "tc_sub_neu_venta";
-    if (
-      showTiresInSub &&
-      (filtroCategoriaGeneral === "TIRE" ||
-        (!filtroCategoriaGeneral &&
-          (selectedCategoryId === "TODOS" || selectedCategoryId === "tc_cat_venta_neum")))
-    ) {
-      filteredTires.forEach((tire) => {
-        const full = `${tire.brand} ${tire.modelRef} ${tire.tireSize} ${tire.code} ${tire.rimDiameter}`;
-        if (!matchText(full)) return;
+      list.push({
+        id: tire.id,
+        kind: "TIRE",
+        name: tire.name,
+        code: tire.code,
+        brand: tire.brand || "Llanta",
+        price: Number(tire.price || 0),
+        durationMinutes: 30,
+        imageUrl: tire.imageUrl,
+        categoryMapped: cat,
+        subcategoryMapped: sub,
+        keyword: kw,
+        tireSize: tire.tireSize,
+        rimDiameter: tire.rimDiameter,
+        itemIcon: "🛞",
+      });
+    });
+
+    // 2. Servicios de Tecnicentro de la base de datos
+    services.forEach((srv) => {
+      if (!srv.active) return;
+      const cat = classifyItemCategoryTec(srv);
+      const sub = classifyItemSubcategoryTec(cat, srv);
+      const kw = extractKeywordTecnicentro(srv.name);
+      existingKeywords.add(kw);
+
+      list.push({
+        id: srv.id,
+        kind: "SERVICE",
+        name: srv.name,
+        code: srv.code,
+        brand: "Tecnicentro",
+        price: Number(srv.basePrice || srv.promoPrice || 0),
+        durationMinutes: srv.estimatedMinutes || 30,
+        imageUrl: srv.imageUrl,
+        categoryMapped: cat,
+        subcategoryMapped: sub,
+        keyword: kw,
+        itemIcon: FALLBACK_TEC_ICONS[kw] || FALLBACK_TEC_ICONS.DEFAULT,
+      });
+    });
+
+    // 3. Catálogo base complementario para garantizar cobertura total de categorías
+    ITEMS_BASE_TECNICENTRO.forEach((base) => {
+      const kw = extractKeywordTecnicentro(base.name);
+      if (!existingKeywords.has(kw)) {
         list.push({
-          id: tire.id,
-          kind: "TIRE",
-          name: `${tire.brand} ${tire.modelRef} - ${tire.tireSize}`,
-          code: tire.code,
-          brand: tire.brand || "Neumático",
-          presentation: `${tire.tireSize} · Aro ${tire.rimDiameter} · Stock: ${tire.stock}`,
-          description: `${tire.brand} · ${tire.tireSize} · Aro ${tire.rimDiameter} · Stock: ${tire.stock}`,
+          id: base.id,
+          kind: base.category === "LLANTAS" ? "TIRE" : "SERVICE",
+          name: base.name,
+          code: `TC-${base.id.toUpperCase()}`,
+          brand: "Tecnicentro",
+          price: base.price,
           durationMinutes: 30,
-          price: Number(tire.price) || 0,
-          quoteRequired: false,
-          rawTire: tire,
-          imageUrl: tire.imageUrl,
+          categoryMapped: base.category as any,
+          subcategoryMapped: base.subcategory,
+          keyword: kw,
+          rimDiameter: base.rim || undefined,
+          itemIcon: base.icon,
         });
-      });
-    }
-
-    // 4. Extras / Adicionales
-    if (
-      (!filtroCategoriaGeneral && selectedCategoryId === "TODOS") ||
-      filtroCategoriaGeneral === "ADDON"
-    ) {
-      activeAddons.forEach((add) => {
-        const full = `${add.name} ${add.code} ${add.description || ""}`;
-        if (!matchText(full)) return;
-        const pInfo = getPriceDisplayForItem(add, selectedVehicleTypeId);
-        list.push({
-          id: add.id,
-          kind: "ADDON",
-          name: add.name,
-          code: add.code,
-          brand: "Extra",
-          presentation: `${add.estimatedMinutes || 15} min · Extra`,
-          description: add.description,
-          durationMinutes: add.estimatedMinutes || 15,
-          price: pInfo.price ?? 0,
-          quoteRequired: pInfo.quoteRequired,
-          rawAddon: add,
-          imageUrl: add.imageUrl,
-        });
-      });
-    }
+      }
+    });
 
     return list;
-  }, [
-    searchQuery,
-    filtroCategoriaGeneral,
-    filteredPackages,
-    filteredServices,
-    filteredTires,
-    activeAddons,
-    selectedVehicleTypeId,
-    selectedCategoryId,
-    selectedSubcategoryId,
-    config,
-  ]);
+  }, [tires, services]);
 
-  // Conteos por las 6 categorías principales y sus subcategorías de 1 palabra
-  const conteoPorCategoria = useMemo(() => {
-    const map: Record<string, number> = {};
-    PRINCIPAL_TECNICENTRO_CAT_IDS.forEach((mainId) => {
-      let c = 0;
-      (config?.packages || []).forEach((p) => {
-        if (p.active && matchesMainCategoryTec(p.categoryId, mainId)) c++;
-      });
-      services.forEach((s) => {
-        if (s.active && matchesMainCategoryTec(s.categoryId, mainId)) c++;
-      });
-      if (mainId === "tc_cat_venta_neum") {
-        c += tires.filter((t) => t.active).length;
-      }
-      map[mainId] = c;
-    });
-    return map;
-  }, [config?.packages, services, tires]);
-
-  const conteoPorSubcategoria = useMemo(() => {
-    const map: Record<string, number> = {};
-    Object.values(IMPORTANT_SUBCATEGORIES_BY_MAIN_CAT)
-      .flat()
-      .forEach((sub) => {
-        let c = services.filter((s) => s.active && matchesSubcategoryTec(s, sub.id)).length;
-        if (sub.id === "tc_sub_neu_venta") {
-          c += tires.filter((t) => t.active).length;
-        }
-        map[sub.id] = c;
-      });
-    return map;
-  }, [services, tires]);
-
-  // Ítems de Tecnicentro/Neumáticos actualmente en la orden
+  // Ítems de Tecnicentro en la orden activa
   const itemsTecnicentroEnOrden = useMemo(() => {
     return (itemsOrden || []).filter((it) => {
       const code = String(it.code || "");
       const cat = String(it.category || "");
+      const sub = String(it.subCategory || "");
       return (
         cat === "Tecnicentro" ||
-        cat === "Llantera" ||
-        cat === "Neumáticos" ||
+        cat === "Llantas" ||
+        cat === "Alineación" ||
+        cat === "Frenos" ||
+        cat === "Suspensión" ||
+        cat === "Baterías" ||
         code.startsWith("TC-") ||
-        code.startsWith("PKG-TC-") ||
-        code.startsWith("ADD-TC-") ||
-        code.startsWith("NEUM-")
+        code.startsWith("NEU-") ||
+        code.startsWith("PRD-TC-") ||
+        sub.includes("Tecnicentro") ||
+        sub.includes("Alineación") ||
+        sub.includes("Llantas")
       );
     });
   }, [itemsOrden]);
@@ -1544,39 +557,290 @@ export default function ModuloTecnicentroCatalogo({
     );
   }, [itemsTecnicentroEnOrden]);
 
-  const totalCatalogoCount = useMemo(() => {
-    return (
-      (config?.packages || []).filter((p) => p.active).length +
-      services.filter((s) => s.active).length +
-      tires.filter((t) => t.active).length +
-      (config?.addons || []).filter((a) => a.active).length
-    );
-  }, [config?.packages, services, tires, config?.addons]);
-
-  const arosDisponibles = useMemo(() => {
-    const set = new Set<string>();
-    tires.forEach((t) => {
-      if (t.active && t.rimDiameter) set.add(t.rimDiameter.toUpperCase());
+  // Conteos por categoría
+  const conteoItemsPorCategoria = useMemo(() => {
+    const map: Record<string, number> = { TODO: todosLosItemsPOS.length };
+    todosLosItemsPOS.forEach((it) => {
+      map[it.categoryMapped] = (map[it.categoryMapped] || 0) + 1;
     });
-    return Array.from(set).sort();
-  }, [tires]);
+    return map;
+  }, [todosLosItemsPOS]);
 
-  if (loading && !config) {
+  const conteoEnPedidoPorCategoria = useMemo(() => {
+    const map: Record<string, number> = { TODO: totalUnidadesTecnicentro };
+    itemsTecnicentroEnOrden.forEach((it) => {
+      const cat = classifyItemCategoryTec({ name: it.name, code: it.code, category: it.category });
+      map[cat] = (map[cat] || 0) + (Number(it.qty) || 1);
+    });
+    return map;
+  }, [itemsTecnicentroEnOrden, totalUnidadesTecnicentro]);
+
+  // Conteos por subcategoría dentro de la categoría activa
+  const conteoItemsPorSubcategoria = useMemo(() => {
+    const map: Record<string, number> = { TODOS: conteoItemsPorCategoria[categoriaActivaId] || 0 };
+    todosLosItemsPOS.forEach((it) => {
+      if (categoriaActivaId === "TODO" || it.categoryMapped === categoriaActivaId) {
+        map[it.subcategoryMapped] = (map[it.subcategoryMapped] || 0) + 1;
+      }
+    });
+    return map;
+  }, [todosLosItemsPOS, categoriaActivaId, conteoItemsPorCategoria]);
+
+  const conteoEnPedidoPorSubcategoria = useMemo(() => {
+    const map: Record<string, number> = { TODOS: conteoEnPedidoPorCategoria[categoriaActivaId] || 0 };
+    itemsTecnicentroEnOrden.forEach((it) => {
+      const cat = classifyItemCategoryTec({ name: it.name, code: it.code, category: it.category });
+      if (categoriaActivaId === "TODO" || cat === categoriaActivaId) {
+        const sub = classifyItemSubcategoryTec(cat, { name: it.name, code: it.code });
+        map[sub] = (map[sub] || 0) + (Number(it.qty) || 1);
+      }
+    });
+    return map;
+  }, [itemsTecnicentroEnOrden, categoriaActivaId, conteoEnPedidoPorCategoria]);
+
+  // Filtro de items para el POS
+  const itemsFiltrados = useMemo(() => {
+    const q = searchQuery
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+
+    return todosLosItemsPOS.filter((item) => {
+      // Filtro de categoría
+      if (categoriaActivaId !== "TODO" && item.categoryMapped !== categoriaActivaId) {
+        return false;
+      }
+      // Filtro de subcategoría
+      if (subcategoriaActivaId !== "TODOS" && item.subcategoryMapped !== subcategoriaActivaId) {
+        return false;
+      }
+      // Filtro de Rin
+      if (rinActivo !== "Aro") {
+        if (item.categoryMapped === "LLANTAS") {
+          const itemRim = item.rimDiameter?.toUpperCase() || "";
+          const text = `${item.name} ${item.keyword}`.toUpperCase();
+          if (rinActivo === "R18+") {
+            const match18Plus = /R(18|19|20|21|22|23|24)/i.test(itemRim || text);
+            if (!match18Plus) return false;
+          } else {
+            if (!itemRim.includes(rinActivo) && !text.includes(rinActivo)) {
+              return false;
+            }
+          }
+        }
+      }
+      // Filtro de búsqueda
+      if (q) {
+        const haystack = `${item.name} ${item.keyword} ${item.code} ${item.brand} ${item.tireSize || ""}`
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "");
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [todosLosItemsPOS, categoriaActivaId, subcategoriaActivaId, rinActivo, searchQuery]);
+
+  // Cantidad de un item en el pedido actual
+  const obtenerCantidadEnPedido = (item: { id: string; code?: string }) => {
+    const matches = (itemsOrden || []).filter(
+      (it) =>
+        it.id === item.id ||
+        it.id === `tc_${item.id}` ||
+        it.id === `neu_${item.id}` ||
+        it.id?.startsWith?.(`tc_${item.id}_`) ||
+        it.id?.startsWith?.(`neu_${item.id}_`) ||
+        it.productId === item.id ||
+        it.serviceId === item.id ||
+        (it.code && item.code && it.code === item.code)
+    );
+    return matches.reduce((sum, it) => sum + (Number(it.qty) || 1), 0);
+  };
+
+  // Ajustar cantidad (+multiplicadorActivo al pulsar la tarjeta / -1 con el botón −)
+  const handleAjustarCantidadItem = async (
+    item: {
+      id: string;
+      kind: "SERVICE" | "PRODUCT" | "TIRE";
+      name: string;
+      code: string;
+      price: number;
+      durationMinutes?: number;
+      categoryMapped: string;
+      keyword: string;
+      brand?: string;
+      tireSize?: string;
+    },
+    delta: number
+  ) => {
+    try {
+      const isTire = item.kind === "TIRE";
+      const code = item.code || `TC-${item.id}`;
+      const listaActual = [...(itemsOrden || [])];
+      const idx = listaActual.findIndex(
+        (it) =>
+          it.id === item.id ||
+          it.id === `tc_${item.id}` ||
+          it.id === `neu_${item.id}` ||
+          it.id?.startsWith?.(`tc_${item.id}_`) ||
+          it.id?.startsWith?.(`neu_${item.id}_`) ||
+          it.serviceId === item.id ||
+          it.productId === item.id ||
+          (it.code && code && it.code === code)
+      );
+
+      if (idx >= 0) {
+        const actualQty = Number(listaActual[idx].qty) || 1;
+        const nextQty = actualQty + delta;
+        if (nextQty <= 0) {
+          const filtrados = listaActual.filter((_, i) => i !== idx);
+          await onActualizarItemsOrden(filtrados);
+        } else {
+          const priceUnit = Number(item.price || listaActual[idx].price || 0);
+          const actualizados = listaActual.map((it, i) =>
+            i === idx
+              ? {
+                  ...it,
+                  qty: nextQty,
+                  price: priceUnit,
+                  total: Number((priceUnit * nextQty).toFixed(2)),
+                }
+              : it
+          );
+          await onActualizarItemsOrden(actualizados);
+        }
+      } else if (delta > 0) {
+        const priceUnit = Number(item.price || 0);
+        const nuevoItem = {
+          id: isTire ? `neu_${item.id}_${Date.now()}` : `tc_${item.id}_${Date.now()}`,
+          key: `key_${item.id}_${Date.now()}`,
+          serviceId: isTire ? undefined : item.id,
+          productId: isTire ? item.id : undefined,
+          type: isTire ? ("PART" as const) : ("SERVICE" as const),
+          category: "Tecnicentro",
+          subCategory: item.categoryMapped,
+          cwCategoryId: categoriaActivaId,
+          code,
+          name: item.name,
+          brand: item.brand || "Tecnicentro",
+          presentation: isTire ? (item.tireSize || "Unidad") : `${item.durationMinutes || 30} min`,
+          unitOfMeasure: isTire ? "Unidad" : "Servicio",
+          price: priceUnit,
+          total: Number((priceUnit * delta).toFixed(2)),
+          qty: delta,
+          estimatedMinutes: item.durationMinutes || 30,
+          vehicleType: "General",
+          status: "Listo" as const,
+          completed: true,
+          empleado_id: empleadoLogueado.id,
+          empleado_nombre: empleadoLogueado.nombre,
+        };
+        await onActualizarItemsOrden([...listaActual, nuevoItem]);
+      }
+    } catch {
+      mostrarToast("Error al actualizar ítem en la orden", "err");
+    }
+  };
+
+  // Guardar configuración administrativa
+  const handleSaveConfigAdmin = async (updatedConfig: TecnicentroConfigData) => {
+    const res = await fetch("/api/taller/tecnicentro", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ config: updatedConfig }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      mostrarToast(data.error || "Error al guardar configuración", "err");
+      throw new Error(data.error || "Error");
+    }
+    setConfig(data.config);
+    setServices(data.services || []);
+  };
+
+  const handleSaveServiceAdmin = async (servicePayload: any) => {
+    const res = await fetch("/api/taller/tecnicentro", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "SAVE_SERVICE",
+        service: servicePayload,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      mostrarToast(data.error || "Error al guardar servicio", "err");
+      throw new Error(data.error || "Error");
+    }
+    setConfig(data.config);
+    setServices(data.services || []);
+    mostrarToast("Servicio guardado correctamente", "ok");
+  };
+
+  const handleDeleteServiceAdmin = async (id: string) => {
+    const res = await fetch(`/api/taller/tecnicentro?id=${encodeURIComponent(id)}&type=service`, {
+      method: "DELETE",
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      mostrarToast(data.error || "No se pudo eliminar el servicio", "err");
+      return;
+    }
+    setServices(data.services || []);
+    setServiceFormModal({ open: false, service: null });
+    mostrarToast("Servicio eliminado", "ok");
+  };
+
+  const handleSaveTireAdmin = async (tirePayload: any) => {
+    const res = await fetch("/api/taller/tecnicentro", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "SAVE_TIRE",
+        tire: tirePayload,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      mostrarToast(data.error || "Error al guardar neumático", "err");
+      throw new Error(data.error || "Error");
+    }
+    setTires(data.tires || []);
+    setTireFormModal({ open: false, tire: null });
+    mostrarToast("Neumático guardado correctamente", "ok");
+  };
+
+  const handleDeleteTireAdmin = async (id: string) => {
+    const res = await fetch(`/api/taller/tecnicentro?id=${encodeURIComponent(id)}&type=tire`, {
+      method: "DELETE",
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      mostrarToast(data.error || "No se pudo eliminar el neumático", "err");
+      return;
+    }
+    setTires(data.tires || []);
+    setTireFormModal({ open: false, tire: null });
+    mostrarToast("Neumático eliminado", "ok");
+  };
+
+  if (!mounted || (loading && !config)) {
     return (
-      <div className="p-8 rounded-3xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 text-center space-y-2 animate-pulse">
+      <div className="p-8 rounded-3xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 text-center space-y-3 animate-pulse">
         <div className="text-3xl">🛞</div>
         <p className="text-sm font-normal text-zinc-700 dark:text-zinc-300">
-          Cargando módulo Tecnicentro, alineación, balanceo, neumáticos y diagnósticos desde Neon...
+          Cargando catálogo de Tecnicentro, llantas y servicios...
         </p>
       </div>
     );
   }
 
-  if (errorMsg || !config) {
+  if (errorMsg && !config) {
     return (
       <div className="p-6 rounded-3xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-center space-y-3">
         <p className="text-sm font-normal text-rose-700 dark:text-rose-300">
-          ⚠️ {errorMsg || "Error al cargar Tecnicentro"}
+          ⚠️ {errorMsg}
         </p>
         <button
           type="button"
@@ -1589,440 +853,325 @@ export default function ModuloTecnicentroCatalogo({
     );
   }
 
-  const vehLabelCorto = currentVehicleType
-    ? toSingleWord(currentVehicleType.name, TECNICENTRO_VEH_SINGLE)
-    : "Auto";
-
   return (
-    <div className="w-full space-y-2.5 sm:space-y-3 animate-fade-in pb-4">
+    <div className="w-full space-y-2.5 sm:space-y-3 animate-fade-in pb-24 sm:pb-28">
       {/* =====================================================================
-          NIVEL 1: 6 CATEGORÍAS PRINCIPALES (Cubriendo todo el ancho igual que Lubricentro)
+          1. CATEGORÍAS PRINCIPALES CONTRAÍBLES
           ===================================================================== */}
-      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full">
-        <button
-          type="button"
-          onClick={() => {
-            setSelectedCategoryId("TODOS");
-            setSelectedSubcategoryId("TODOS");
-            clearCategorySpecificFilters();
-          }}
-          className={`flex-1 min-w-[100px] sm:min-w-[120px] h-9 sm:h-10 px-3 sm:px-4 rounded-xl border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
-            selectedCategoryId === "TODOS"
-              ? "bg-blue-600 text-white border-blue-500 shadow-xs"
-              : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-          }`}
-        >
-          <span className="text-sm leading-none shrink-0">✨</span>
-          <span className="whitespace-nowrap">Todo</span>
-          <span
-            className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-normal shrink-0 ${
-              selectedCategoryId === "TODOS"
-                ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
-                : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
-            }`}
-          >
-            {totalCatalogoCount}
-          </span>
-        </button>
-        {activeCategories.map((cat) => {
-          const activa = selectedCategoryId === cat.id;
-          const count = conteoPorCategoria[cat.id] || 0;
-          return (
+      <div className="space-y-2 rounded-2xl bg-zinc-50/80 dark:bg-black/20 p-2.5 sm:p-3 border border-zinc-200/80 dark:border-white/10 shadow-2xs">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          {mostrarCategorias ? (
+            <>
+              {TECNICENTRO_CATEGORIES.map((cat) => {
+                const sel = categoriaActivaId === cat.id;
+                const totalCat = conteoItemsPorCategoria[cat.id] || 0;
+                const enPedidoCat = conteoEnPedidoPorCategoria[cat.id] || 0;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      setCategoriaActivaId(cat.id);
+                      setSubcategoriaActivaId("TODOS");
+                      setMostrarCategorias(false);
+                      setMostrarSubcategorias(true);
+                    }}
+                    className={`flex-1 min-w-[90px] sm:min-w-[110px] h-9 sm:h-10 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
+                      sel
+                        ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
+                        : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
+                    }`}
+                  >
+                    <span className="text-sm leading-none shrink-0">{cat.icon}</span>
+                    <span className="whitespace-nowrap">{cat.label}</span>
+                    {enPedidoCat > 0 ? (
+                      <span className="px-1.5 py-0.5 rounded-md text-xs leading-none tabular-nums font-bold bg-emerald-500 text-white shrink-0">
+                        {enPedidoCat}
+                      </span>
+                    ) : (
+                      <span
+                        className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-medium shrink-0 ${
+                          sel
+                            ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30"
+                            : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
+                        }`}
+                      >
+                        {totalCat}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </>
+          ) : (
             <button
-              key={cat.id}
               type="button"
-              onClick={() => {
-                setSelectedCategoryId(cat.id);
-                setSelectedSubcategoryId("TODOS");
-                clearCategorySpecificFilters();
-              }}
-              className={`flex-1 min-w-[100px] sm:min-w-[120px] h-9 sm:h-10 px-3 sm:px-4 rounded-xl border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
-                activa
-                  ? "bg-blue-600 text-white border-blue-500 shadow-xs"
-                  : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-              }`}
+              onClick={() => setMostrarCategorias(true)}
+              aria-label="Desplegar categorías"
+              className="min-w-[110px] h-9 sm:h-10 px-3.5 rounded-xl border bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100 text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-xs active:scale-95 whitespace-nowrap"
             >
-              <span className="text-base leading-none shrink-0">{cat.icon || "🛞"}</span>
-              <span className="whitespace-nowrap">{toSingleWord(cat.name, TECNICENTRO_CAT_SINGLE)}</span>
-              {count > 0 && (
-                <span
-                  className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-normal shrink-0 ${
-                    activa
-                      ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
-                      : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
-                  }`}
-                >
-                  {count}
+              <span className="text-sm leading-none shrink-0">{categoriaSeleccionadaObj.icon}</span>
+              <span>{categoriaSeleccionadaObj.label}</span>
+              {conteoEnPedidoPorCategoria[categoriaActivaId] > 0 ? (
+                <span className="px-1.5 py-0.5 rounded-md text-xs leading-none tabular-nums font-bold bg-emerald-500 text-white shrink-0">
+                  {conteoEnPedidoPorCategoria[categoriaActivaId]}
+                </span>
+              ) : (
+                <span className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30 font-medium">
+                  {conteoItemsPorCategoria[categoriaActivaId] || 0}
                 </span>
               )}
             </button>
-          );
-        })}
-      </div>
-
-      {/* =====================================================================
-          NIVEL 2: SUBCATEGORÍAS DE LA CATEGORÍA ACTIVA (Cubriendo todo el ancho con flex-1)
-          ===================================================================== */}
-      {selectedCategoryId !== "TODOS" && activeSubcategories.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 w-full">
-          <button
-            type="button"
-            onClick={() => setSelectedSubcategoryId("TODOS")}
-            className={`flex-1 min-w-[95px] sm:min-w-[110px] h-8 sm:h-8.5 px-3 rounded-lg border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs ${
-              selectedSubcategoryId === "TODOS"
-                ? "bg-blue-600 border-blue-500 text-white shadow-xs"
-                : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-            }`}
-          >
-            <span>Todos</span>
-            <span
-              className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
-                selectedSubcategoryId === "TODOS"
-                  ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
-                  : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
-              }`}
-            >
-              {conteoPorCategoria[selectedCategoryId] || 0}
-            </span>
-          </button>
-          {activeSubcategories.map((sub) => {
-            const activa = selectedSubcategoryId === sub.id;
-            const count = conteoPorSubcategoria[sub.id] || 0;
-            return (
-              <button
-                key={sub.id}
-                type="button"
-                onClick={() => setSelectedSubcategoryId(sub.id)}
-                className={`flex-1 min-w-[95px] sm:min-w-[110px] h-8 sm:h-8.5 px-2.5 sm:px-3 rounded-lg border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs ${
-                  activa
-                    ? "bg-blue-600 border-blue-500 text-white shadow-xs"
-                    : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-                }`}
-              >
-                <span className="text-sm leading-none shrink-0">{sub.icon || "🔧"}</span>
-                <span className="whitespace-nowrap">{sub.name}</span>
-                {count > 0 && (
-                  <span
-                    className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
-                      activa
-                        ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
-                        : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
-                    }`}
-                  >
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+          )}
         </div>
-      )}
 
-      {/* =====================================================================
-          PANEL UNIFICADO: BUSCADOR + TIPO DESPLEGABLE + VEHÍCULO + CATÁLOGO AUTOMÁTICO
-          ===================================================================== */}
-      <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 shadow-2xs">
-        {/* FILA A: Buscador + Desplegable de Tipo (Paquetes / Servicios / Neumáticos / Extras) + Config */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <div className="flex items-center gap-1.5 flex-1">
-            <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">
-                🔍
-              </span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar servicio, paquete o neumático..."
-                className="w-full h-9 pl-8 pr-7 rounded-xl bg-zinc-50/80 dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 text-xs text-zinc-900 dark:text-white placeholder-zinc-400"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white text-xs cursor-pointer"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-
-            {/* Desplegable de Tipo al lado del buscador */}
-            <div ref={menuFiltroCatalogoRef} className="relative shrink-0">
-              <button
-                type="button"
-                onClick={() => setMenuFiltroCatalogoAbierto((prev) => !prev)}
-                className={`h-9 px-2.5 sm:px-3 rounded-xl border text-[11px] font-normal flex items-center gap-1.5 cursor-pointer transition-all select-none active:scale-95 ${
-                  menuFiltroCatalogoAbierto || filtroCategoriaGeneral
-                    ? "bg-blue-600 text-white border-blue-500 shadow-xs"
-                    : "bg-zinc-50/80 dark:bg-black/40 hover:bg-zinc-100 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
-                }`}
-              >
-                <span className="truncate max-w-[92px] sm:max-w-[130px]">
-                  {filtroCategoriaGeneral === "PACKAGE"
-                    ? "Paquetes"
-                    : filtroCategoriaGeneral === "SERVICE"
-                    ? "Servicios"
-                    : filtroCategoriaGeneral === "TIRE"
-                    ? "Neumáticos"
-                    : filtroCategoriaGeneral === "ADDON"
-                    ? "Extras"
-                    : "Tipo"}
-                </span>
-                <span
-                  className={`text-[9px] transition-transform duration-200 ${
-                    menuFiltroCatalogoAbierto ? "rotate-180" : ""
-                  } ${
-                    menuFiltroCatalogoAbierto || filtroCategoriaGeneral
-                      ? "text-white/90"
-                      : "text-zinc-400"
-                  }`}
-                >
-                  ▾
-                </span>
-              </button>
-
-              {menuFiltroCatalogoAbierto && (
-                <div className="absolute right-0 top-full mt-1.5 w-44 rounded-xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/10 shadow-xl dark:shadow-2xl backdrop-blur-md p-1.5 space-y-0.5 z-40 animate-fade-in">
-                  {[
-                    { id: "", label: "Todos los tipos", icon: "✨" },
-                    { id: "PACKAGE", label: "Paquetes", icon: "📦" },
-                    { id: "SERVICE", label: "Servicios", icon: "🔧" },
-                    { id: "TIRE", label: "Neumáticos", icon: "🛞" },
-                    { id: "ADDON", label: "Extras", icon: "➕" },
-                  ].map((opt) => {
-                    const activa = filtroCategoriaGeneral === opt.id;
+        {/* SUBCATEGORÍAS CONTRAÍBLES */}
+        {categoriaActivaId !== "TODO" && subcategoriasActivas.length > 0 && (
+          <div className="space-y-2 border-t border-zinc-200/80 pt-2.5 dark:border-white/10">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              {mostrarSubcategorias ? (
+                <>
+                  {subcategoriasActivas.map((sub) => {
+                    const activa = subcategoriaActivaId === sub.id;
+                    const countSub = conteoItemsPorSubcategoria[sub.id] || 0;
+                    const enPedidoSub = conteoEnPedidoPorSubcategoria[sub.id] || 0;
                     return (
                       <button
-                        key={opt.id || "ALL"}
+                        key={sub.id}
                         type="button"
                         onClick={() => {
-                          setFiltroCategoriaGeneral(opt.id);
-                          setMenuFiltroCatalogoAbierto(false);
+                          setSubcategoriaActivaId(sub.id);
+                          setMostrarSubcategorias(false);
                         }}
-                        className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-normal flex items-center justify-between transition-colors cursor-pointer ${
+                        className={`flex-1 min-w-[85px] sm:min-w-[105px] h-8 sm:h-8.5 px-2.5 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs whitespace-nowrap ${
                           activa
-                            ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-normal"
-                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
+                            ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
+                            : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
                         }`}
                       >
-                        <span className="flex items-center gap-1.5 truncate">
-                          <span>{opt.icon}</span>
-                          <span>{opt.label}</span>
-                        </span>
-                        {activa && <span className="text-xs">✓</span>}
+                        {sub.icon && <span className="text-xs leading-none shrink-0">{sub.icon}</span>}
+                        <span className="whitespace-nowrap">{sub.label}</span>
+                        {enPedidoSub > 0 ? (
+                          <span className="px-1.5 py-0.5 rounded-md text-xs leading-none tabular-nums font-bold bg-emerald-500 text-white shrink-0">
+                            {enPedidoSub}
+                          </span>
+                        ) : (
+                          <span
+                            className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 font-medium ${
+                              activa
+                                ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30"
+                                : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
+                            }`}
+                          >
+                            {countSub}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
-                </div>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setMostrarSubcategorias(true)}
+                  aria-label="Desplegar subcategorías"
+                  className="min-w-[100px] h-8 sm:h-8.5 px-3 rounded-lg border bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-xs whitespace-nowrap"
+                >
+                  {subcategoriaSeleccionadaObj?.icon && (
+                    <span className="text-xs leading-none shrink-0">{subcategoriaSeleccionadaObj.icon}</span>
+                  )}
+                  <span className="whitespace-nowrap">
+                    {subcategoriaSeleccionadaObj ? subcategoriaSeleccionadaObj.label : "Todos"}
+                  </span>
+                  {conteoEnPedidoPorSubcategoria[subcategoriaActivaId] > 0 ? (
+                    <span className="px-1.5 py-0.5 rounded-md text-xs leading-none tabular-nums font-bold bg-emerald-500 text-white shrink-0">
+                      {conteoEnPedidoPorSubcategoria[subcategoriaActivaId]}
+                    </span>
+                  ) : (
+                    <span className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30 font-medium">
+                      {conteoItemsPorSubcategoria[subcategoriaActivaId] || 0}
+                    </span>
+                  )}
+                </button>
               )}
             </div>
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* FILA C (Opcional): Chips rápidos de Aro cuando se está viendo Neumáticos */}
-        {(selectedCategoryId === "tc_cat_venta_neum" || filtroCategoriaGeneral === "TIRE") &&
-          arosDisponibles.length > 0 && (
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <span className="text-[10px] font-normal uppercase tracking-wider text-zinc-400 dark:text-zinc-500 shrink-0 mr-0.5">
-                Aro:
-              </span>
-              {arosDisponibles.map((aro) => {
-                const activo = filterTireRim.toUpperCase() === aro;
+      {/* =====================================================================
+          2. BUSCADOR + SELECTOR DE RIN CONTRAÍBLE + MULTIPLICADORES (x1, x2, x4)
+          ===================================================================== */}
+      <div className="space-y-2 rounded-2xl bg-zinc-50/80 dark:bg-black/20 p-2.5 sm:p-3 border border-zinc-200/80 dark:border-white/10 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          {/* Buscador */}
+          <div className="relative flex-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">
+              🔍
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar llanta, servicio o repuesto..."
+              className="w-full h-9 sm:h-10 pl-8 pr-8 rounded-xl bg-white dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-400 text-xs sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white text-xs cursor-pointer"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Selector contraíble de medida de Rin */}
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap shrink-0">
+            <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 hidden lg:inline-block">
+              Rin:
+            </span>
+            {mostrarRines ? (
+              <div className="flex items-center gap-1 flex-wrap">
+                {RINES_TECNICENTRO.map((r) => {
+                  const sel = rinActivo === r.id;
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => {
+                        setRinActivo(r.id);
+                        setMostrarRines(false);
+                      }}
+                      className={`h-9 sm:h-10 px-2.5 sm:px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
+                        sel
+                          ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
+                          : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
+                      }`}
+                    >
+                      <span>{r.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setMostrarRines(true)}
+                aria-label="Desplegar medida de rin"
+                className="h-9 sm:h-10 px-3.5 rounded-xl border bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100 text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-xs active:scale-95 whitespace-nowrap"
+                title="Filtrar por medida de rin"
+              >
+                <span className="text-sm leading-none shrink-0">🛞</span>
+                <span>{rinActivo}</span>
+                <span className="text-[10px] opacity-75">▾</span>
+              </button>
+            )}
+
+            {/* Multiplicadores rápidos: x1, x2, x4 */}
+            <div className="flex items-center gap-1 bg-zinc-200/60 dark:bg-white/10 p-1 rounded-xl">
+              {([1, 2, 4] as const).map((mult) => {
+                const activo = multiplicadorActivo === mult;
                 return (
                   <button
-                    key={aro}
+                    key={mult}
                     type="button"
-                    onClick={() => setFilterTireRim(activo ? "" : aro)}
-                    className={`shrink-0 h-7 px-2.5 rounded-lg border text-[11px] font-mono font-normal cursor-pointer transition-all active:scale-95 ${
+                    onClick={() => setMultiplicadorActivo(mult)}
+                    className={`h-7 sm:h-8 px-2 sm:px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       activo
-                        ? "bg-indigo-600 text-white border-indigo-500 shadow-xs"
-                        : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
+                        ? "bg-blue-600 text-white shadow-xs"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/10"
                     }`}
+                    title={`Agregar ${mult} unidad(es) por toque`}
                   >
-                    {aro}
+                    x{mult}
                   </button>
                 );
               })}
             </div>
-          )}
-
-        {/* Barra de estado y limpiar filtros */}
-        {(selectedCategoryId !== "TODOS" ||
-          selectedSubcategoryId !== "TODOS" ||
-          filtroCategoriaGeneral ||
-          filterTireRim ||
-          searchQuery.trim()) && (
-          <div className="flex items-center justify-between gap-2 pt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
-            <span>
-              Mostrando{" "}
-              <span className="text-zinc-800 dark:text-zinc-200">
-                {itemsFiltradosAutomaticos.length}
-              </span>{" "}
-              {itemsFiltradosAutomaticos.length === 1 ? "opción" : "opciones"} para{" "}
-              <span className="text-blue-600 dark:text-blue-400">{vehLabelCorto}</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedCategoryId("TODOS");
-                setSelectedSubcategoryId("TODOS");
-                setFiltroCategoriaGeneral("");
-                clearCategorySpecificFilters();
-                setSearchQuery("");
-              }}
-              className="text-[11px] font-normal text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
-            >
-              Limpiar filtros ✕
-            </button>
           </div>
-        )}
+        </div>
+      </div>
 
-        {/* GRID AUTOMÁTICO DE SERVICIOS, PAQUETES, NEUMÁTICOS Y EXTRAS */}
-        {itemsFiltradosAutomaticos.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-[600px] overflow-y-auto pr-0.5">
-            {itemsFiltradosAutomaticos.map((item) => {
-              const code = item.code || `TC-${item.id}`;
-              const enOrden = (itemsOrden || []).find(
-                (it) =>
-                  it.id === item.id ||
-                  it.serviceId === item.id ||
-                  it.productId === item.id ||
-                  it.id === `tec_${item.id}` ||
-                  it.id?.startsWith?.(`tec_${item.id}_`) ||
-                  (it.code && it.code === code)
-              );
-              const cantEnOrden = enOrden ? Number(enOrden.qty) || 1 : 0;
+      {/* =====================================================================
+          3. CUADRÍCULA DE PRODUCTOS Y SERVICIOS DEL POS
+          ===================================================================== */}
+      <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-2xs">
+        {itemsFiltrados.length === 0 ? (
+          <div className="py-12 text-center text-zinc-400 space-y-2">
+            <span className="text-3xl block">🔍</span>
+            <p className="text-sm">No se encontraron productos ni servicios en Tecnicentro</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-y-3.5 gap-x-3.5">
+            {itemsFiltrados.map((item) => {
+              const cantEnOrden = obtenerCantidadEnPedido(item);
+              const estaEnPedido = cantEnOrden > 0;
 
               return (
                 <div
                   key={`${item.kind}-${item.id}`}
-                  onClick={(e) => {
-                    const target = e.target as HTMLElement;
-                    if (target.closest("button") || target.closest("[data-prevent-card-click]")) {
-                      return;
-                    }
-                    void handleAjustarCantidadItem(item, 1);
+                  onClick={() => {
+                    void handleAjustarCantidadItem(item, multiplicadorActivo);
                   }}
-                  className={`p-2.5 sm:p-3 rounded-xl border flex flex-col justify-between gap-2.5 transition-all cursor-pointer select-none ${
-                    cantEnOrden > 0
-                      ? "bg-blue-50/60 dark:bg-blue-500/10 border-blue-400 dark:border-blue-500/60 ring-1 ring-blue-400/30"
-                      : "bg-white dark:bg-white/[0.02] hover:border-blue-400/50 border-zinc-200 dark:border-white/10"
+                  className={`group relative flex flex-col items-center justify-between p-3.5 sm:p-4 rounded-2xl border transition-all select-none cursor-pointer active:scale-[0.98] min-h-[160px] sm:min-h-[175px] shadow-2xs ${
+                    estaEnPedido
+                      ? "bg-blue-50/60 dark:bg-blue-500/[0.08] border-blue-300 dark:border-blue-400/60 ring-2 ring-blue-300/60 dark:ring-blue-400/30 shadow-xs"
+                      : "bg-white hover:bg-zinc-50/80 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-blue-200 dark:hover:border-blue-400/30"
                   }`}
                 >
-                  {/* Parte superior: Imagen/Icono + Info */}
-                  <div className="flex items-start gap-2.5">
-                    <div
-                      data-prevent-card-click
-                      onClick={() => {
-                        if (item.kind === "PACKAGE" && item.rawPackage) {
-                          setDetailModal({ item: item.rawPackage, kind: "PACKAGE" });
-                        } else if (item.kind === "TIRE" && item.rawTire) {
-                          setDetailModal({ item: item.rawTire, kind: "TIRE" });
-                        } else if (item.kind === "SERVICE" && item.rawService) {
-                          setDetailModal({ item: item.rawService, kind: "SERVICE" });
-                        }
+                  {/* Botón restar "−" arriba a la izquierda si está en el pedido */}
+                  {estaEnPedido && (
+                    <button
+                      type="button"
+                      aria-label="Restar 1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleAjustarCantidadItem(item, -1);
                       }}
-                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-white/5 flex items-center justify-center p-1 shrink-0 overflow-hidden cursor-pointer"
+                      className="absolute top-2 left-2 w-7 h-7 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 dark:hover:bg-rose-950/40 text-zinc-700 dark:text-zinc-200 text-sm font-bold flex items-center justify-center shadow-xs active:scale-90 transition-all z-10 cursor-pointer"
+                      title="Restar 1"
                     >
-                      {item.imageUrl ? (
-                        <img
-                          src={item.imageUrl}
-                          alt={item.name}
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                      ) : (
-                        <span className="text-xl">
-                          {item.kind === "TIRE"
-                            ? "🛞"
-                            : item.kind === "PACKAGE"
-                            ? "📦"
-                            : item.kind === "ADDON"
-                            ? "✨"
-                            : "🔧"}
-                        </span>
-                      )}
-                    </div>
+                      −
+                    </button>
+                  )}
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1 flex-wrap">
-                        <span
-                          className={`text-[9px] font-normal uppercase tracking-wider px-1.5 py-0.2 rounded ${
-                            item.kind === "PACKAGE"
-                              ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
-                              : item.kind === "TIRE"
-                              ? "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30"
-                              : item.kind === "ADDON"
-                              ? "bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30"
-                              : "text-blue-600 dark:text-blue-400"
-                          }`}
-                        >
-                          {item.brand}
-                        </span>
-                        {item.durationMinutes && item.kind !== "TIRE" && (
-                          <span className="px-1.5 py-0.2 rounded bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 text-[9px] font-mono font-normal">
-                            ⏱ {item.durationMinutes}m
-                          </span>
-                        )}
-                      </div>
-                      <h4 className="text-xs font-normal text-zinc-900 dark:text-white line-clamp-2 leading-snug mt-0.5">
-                        {item.name}
-                      </h4>
-                      {item.description && (
-                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 line-clamp-1 mt-0.5">
-                          {item.description}
-                        </p>
-                      )}
-                    </div>
+                  {/* Contador verde arriba a la derecha si está en el pedido */}
+                  {estaEnPedido && (
+                    <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-bold tabular-nums bg-emerald-500 text-white shadow-xs z-10">
+                      +{cantEnOrden}
+                    </span>
+                  )}
+
+                  {/* Imagen (Cloudflare R2) o Ícono central */}
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden flex items-center justify-center bg-zinc-100/80 dark:bg-black/30 border border-zinc-200/60 dark:border-white/5 shrink-0 mt-1">
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.keyword}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span className="text-3xl sm:text-4xl select-none leading-none">
+                        {item.itemIcon}
+                      </span>
+                    )}
                   </div>
 
-                  {/* Parte inferior: Precio según vehículo + Botón Agregar / Stepper */}
-                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-zinc-100 dark:border-white/5">
-                    <div className="flex items-baseline gap-1.5">
-                      {item.quoteRequired ? (
-                        <span className="text-xs font-normal text-amber-600 dark:text-amber-400">
-                          A cotizar
-                        </span>
-                      ) : (
-                        <span className="text-sm font-mono font-normal text-emerald-600 dark:text-emerald-400">
-                          ${item.price.toFixed(2)}
-                        </span>
-                      )}
-                      <span className="text-[10px] text-zinc-400 font-medium">
-                        /{item.kind === "TIRE" ? "u." : vehLabelCorto}
-                      </span>
-                    </div>
+                  {/* Una sola palabra clave o medida corta en letra grande y negrita */}
+                  <div className="w-full text-center px-1 mt-2">
+                    <span className="text-sm sm:text-base font-black tracking-wide text-zinc-900 dark:text-white uppercase truncate block">
+                      {item.keyword}
+                    </span>
+                  </div>
 
-                    {cantEnOrden > 0 ? (
-                      <div className="flex items-center gap-1 bg-blue-600 text-white rounded-xl p-0.5 shadow-xs">
-                        <button
-                          type="button"
-                          onClick={() => void handleAjustarCantidadItem(item, -1)}
-                          className="w-7 h-7 rounded-lg hover:bg-black/20 flex items-center justify-center text-sm font-normal cursor-pointer active:scale-90"
-                        >
-                          −
-                        </button>
-                        <span className="min-w-[22px] text-center text-xs font-mono font-normal">
-                          {cantEnOrden}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => void handleAjustarCantidadItem(item, 1)}
-                          className="w-7 h-7 rounded-lg hover:bg-black/20 flex items-center justify-center text-sm font-normal cursor-pointer active:scale-90"
-                        >
-                          +
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => void handleAjustarCantidadItem(item, 1)}
-                        className="h-8 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal flex items-center gap-1 cursor-pointer transition-all shadow-xs active:scale-95"
-                      >
-                        <span>+</span>
-                        <span>Agregar</span>
-                      </button>
-                    )}
+                  {/* Precio debajo */}
+                  <div className="w-full text-center mt-1">
+                    <span className="text-xs sm:text-sm font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+                      ${item.price.toFixed(2)}
+                    </span>
                   </div>
                 </div>
               );
@@ -2031,17 +1180,19 @@ export default function ModuloTecnicentroCatalogo({
         )}
       </div>
 
-      {/* BARRA INFERIOR FLOTANTE DE RESUMEN RÁPIDO (Móvil y Desktop) */}
-      <div className="sticky bottom-2 z-30 flex items-center justify-between gap-2 p-2.5 sm:p-3 rounded-xl bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border border-zinc-200 dark:border-white/15 shadow-lg">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center text-sm shrink-0">
-            🛞
+      {/* =====================================================================
+          4. BARRA INFERIOR FIJA ("X productos | Total: $XX.XX" y "Siguiente →")
+          ===================================================================== */}
+      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 p-3 sm:p-3.5 bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border-t sm:border border-zinc-200 dark:border-white/15 shadow-xl sm:rounded-2xl sm:bottom-3 sm:inset-x-4 sm:max-w-6xl sm:mx-auto pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-100 dark:bg-blue-500/20 border border-blue-300 dark:border-blue-400/40 flex items-center justify-center text-base sm:text-lg shrink-0">
+            🔧
           </div>
-          <div className="min-w-0 leading-snug">
-            <span className="text-sm sm:text-base font-normal text-zinc-900 dark:text-white block truncate">
-              {totalUnidadesTecnicentro} {totalUnidadesTecnicentro === 1 ? "servicio" : "servicios"}
+          <div className="min-w-0 leading-tight">
+            <span className="text-xs sm:text-sm font-medium text-zinc-900 dark:text-white block truncate">
+              {totalUnidadesTecnicentro} {totalUnidadesTecnicentro === 1 ? "producto" : "productos"}
             </span>
-            <span className="text-sm sm:text-base font-normal text-emerald-600 dark:text-emerald-400 block">
+            <span className="text-sm sm:text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 block tabular-nums mt-0.5">
               Total: ${totalMontoTecnicentro.toFixed(2)}
             </span>
           </div>
@@ -2050,171 +1201,52 @@ export default function ModuloTecnicentroCatalogo({
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
-            onClick={onIrAAvisoYFirma}
-            className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-normal cursor-pointer shadow-xs active:scale-95 transition-all"
+            onClick={onIrASiguiente || onIrAAvisoYFirma}
+            className="h-10 sm:h-11 px-4 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
           >
-            Siguiente →
+            <span>Siguiente</span>
+            <span>→</span>
           </button>
         </div>
       </div>
 
-      {/* MODAL RESERVA DE BAHÍA */}
-      {showBookingPanel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="w-full max-w-md p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-white/5">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">📅</span>
-                <h3 className="text-sm font-normal text-zinc-900 dark:text-white">
-                  Reservar Bahía en Tecnicentro
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowBookingPanel(false)}
-                className="w-7 h-7 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-white flex items-center justify-center cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[11px] font-normal text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Fecha
-                  </label>
-                  <input
-                    type="date"
-                    value={bookingDate}
-                    onChange={(e) => setBookingDate(e.target.value)}
-                    className="w-full h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] font-normal text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Bahía
-                  </label>
-                  <select
-                    value={bookingBay}
-                    onChange={(e) => setBookingBay(e.target.value)}
-                    className="w-full h-8 px-2 rounded-lg bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none"
-                  >
-                    {(config?.bays || ["Bahía Alineación 3D #1"]).map((b) => (
-                      <option key={b} value={b}>
-                        {b}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-normal text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Horario disponible
-                </label>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 max-h-36 overflow-y-auto p-1">
-                  {HORARIOS_BAHIA.map((slot) => {
-                    const busy = appointments.some(
-                      (a) => a.date === bookingDate && a.timeSlot === slot && a.bay === bookingBay
-                    );
-                    const isSelected = bookingTimeSlot === slot;
-                    return (
-                      <button
-                        key={slot}
-                        type="button"
-                        disabled={busy}
-                        onClick={() => setBookingTimeSlot(slot)}
-                        className={`h-7 px-1.5 rounded-md text-[11px] font-mono font-medium transition-all ${
-                          busy
-                            ? "bg-zinc-100 dark:bg-white/5 text-zinc-400 line-through cursor-not-allowed opacity-50"
-                            : isSelected
-                            ? "bg-blue-600 text-white font-normal shadow-xs"
-                            : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-zinc-200/60 dark:border-white/5 text-zinc-700 dark:text-zinc-300 cursor-pointer"
-                        }`}
-                      >
-                        {slot}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                disabled={savingBooking}
-                onClick={() => void handleBookBay()}
-                className="w-full h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-normal transition-all cursor-pointer disabled:opacity-50"
-              >
-                {savingBooking ? "Agendando..." : "✓ Confirmar Reserva"}
-              </button>
-
-              {lastBooking && (
-                <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-700 dark:text-emerald-300">
-                  ✓ Reserva #{lastBooking.appointmentNumber} agendada para el {lastBooking.date} a las {lastBooking.timeSlot} ({lastBooking.bay}).
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modales */}
-      {detailModal && (
+      {/* Modales administrativos opcionales (preservados) */}
+      {detailModal && config && (
         <ModalDetalleTecnicentro
           item={detailModal.item}
           kind={detailModal.kind}
           config={config}
-          selectedVehicleTypeId={selectedVehicleTypeId}
-          isSelected={
-            detailModal.kind === "PACKAGE"
-              ? selectedPackages.includes(detailModal.item.id)
-              : detailModal.kind === "TIRE"
-              ? Boolean(selectedTires[detailModal.item.id])
-              : Boolean(selectedServices[detailModal.item.id])
-          }
-          onToggleSelect={() => {
-            if (detailModal.kind === "PACKAGE") {
-              handleTogglePackage(detailModal.item as TecnicentroPackage);
-            } else if (detailModal.kind === "TIRE") {
-              handleToggleTire(detailModal.item as TecnicentroEnrichedTire, 4);
-            } else {
-              handleToggleService(detailModal.item as TecnicentroEnrichedService);
-            }
-          }}
-          onEdit={() => {
-            const k = detailModal.kind;
-            const it = detailModal.item;
-            setDetailModal(null);
-            if (k === "SERVICE") setServiceFormModal({ open: true, service: it as any });
-            else if (k === "TIRE") setTireFormModal({ open: true, tire: it as any });
-            else setConfigModalOpen(true);
-          }}
+          selectedVehicleTypeId="vt_sedan"
+          isSelected={false}
+          onToggleSelect={() => {}}
+          onEdit={() => {}}
           onClose={() => setDetailModal(null)}
         />
       )}
 
-      {serviceFormModal.open && (
+      {serviceFormModal.open && config && (
         <ModalServicioTecnicentroForm
           initialService={serviceFormModal.service}
           config={config}
           onSave={handleSaveServiceAdmin}
+          onDelete={handleDeleteServiceAdmin}
           onClose={() => setServiceFormModal({ open: false, service: null })}
           mostrarToast={mostrarToast}
         />
       )}
 
-      {tireFormModal.open && (
+      {tireFormModal.open && config && (
         <ModalNeumaticoProductoForm
           initialTire={tireFormModal.tire}
           config={config}
           onSave={handleSaveTireAdmin}
+          onDelete={handleDeleteTireAdmin}
           onClose={() => setTireFormModal({ open: false, tire: null })}
           mostrarToast={mostrarToast}
         />
       )}
 
-      {configModalOpen && (
+      {configModalOpen && config && (
         <ModalConfiguracionTecnicentro
           config={config}
           onSaveConfig={handleSaveConfigAdmin}

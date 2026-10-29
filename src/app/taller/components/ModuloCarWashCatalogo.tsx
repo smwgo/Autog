@@ -3,9 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import type {
   CarWashConfigData,
-  CarWashCategory,
   CarWashPackage,
-  CarWashAddon,
   CarWashVehicleType,
 } from "@/app/api/taller/carwash/route";
 import {
@@ -27,114 +25,338 @@ export interface ModuloCarWashCatalogoProps {
   triggerAbrirConfig?: number;
 }
 
-const FALLBACK_CARWASH_IMG =
-  "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?auto=format&fit=crop&w=900&q=80";
+// ============================================================================
+// DEFINICIONES DE CATEGORÍAS Y SUBCATEGORÍAS (1 sola palabra cada una)
+// ============================================================================
+export interface CarWashSubcatDef {
+  id: string;
+  label: string;
+  icon?: string;
+  keywords: string[];
+}
 
-const HORARIOS_DISPONIBLES = [
-  "08:00 AM",
-  "09:00 AM",
-  "10:00 AM",
-  "11:00 AM",
-  "12:00 PM",
-  "02:00 PM",
-  "03:00 PM",
-  "04:00 PM",
-  "05:00 PM",
+export interface CarWashCatDef {
+  id: string;
+  label: string;
+  icon: string;
+  subcategories: CarWashSubcatDef[];
+}
+
+const CARWASH_CATEGORIES: CarWashCatDef[] = [
+  {
+    id: "TODO",
+    label: "Todo",
+    icon: "✨",
+    subcategories: [],
+  },
+  {
+    id: "LAVADO",
+    label: "Lavado",
+    icon: "🚿",
+    subcategories: [
+      { id: "TODOS", label: "Todos", icon: "✨", keywords: [] },
+      { id: "EXPRES", label: "Exprés", icon: "⚡", keywords: ["expres", "express", "rápido", "rapido", "exterior"] },
+      { id: "COMPLETO", label: "Completo", icon: "🌊", keywords: ["completo", "full", "estandar", "ejecutivo", "spa", "integral"] },
+      { id: "MOTOR", label: "Motor", icon: "⚙️", keywords: ["motor", "vapor", "dielectrico", "dieléctrico"] },
+      { id: "MOTOS", label: "Motos", icon: "🏍️", keywords: ["moto", "motos", "scooter", "touring"] },
+    ],
+  },
+  {
+    id: "CHASIS",
+    label: "Chasis",
+    icon: "🔩",
+    subcategories: [
+      { id: "TODOS", label: "Todos", icon: "✨", keywords: [] },
+      { id: "AGUA", label: "Agua", icon: "💧", keywords: ["agua", "presion", "presión", "enjuague"] },
+      { id: "GRAFITADO", label: "Grafitado", icon: "🛡️", keywords: ["grafitado", "grafito", "chasis", "protector"] },
+      { id: "DESENGRASE", label: "Desengrase", icon: "🧪", keywords: ["desengrase", "desengrasante", "petroleado", "químico"] },
+      { id: "SUSPENSION", label: "Suspensión", icon: "🔧", keywords: ["suspension", "suspensión", "guardabarros", "bajos"] },
+    ],
+  },
+  {
+    id: "INTERIOR",
+    label: "Interior",
+    icon: "🧹",
+    subcategories: [
+      { id: "TODOS", label: "Todos", icon: "✨", keywords: [] },
+      { id: "ASPIRADO", label: "Aspirado", icon: "🧹", keywords: ["aspirado", "cabina", "alfombra", "maletero"] },
+      { id: "TAPICERIA", label: "Tapicería", icon: "🛋️", keywords: ["tapiceria", "tapicería", "asientos", "inyeccion", "inyección", "tela"] },
+      { id: "CUERO", label: "Cuero", icon: "🧴", keywords: ["cuero", "hidratacion", "hidratación", "piel", "nutricion"] },
+      { id: "TECHO", label: "Techo", icon: "🏠", keywords: ["techo", "cielo", "viseras", "postes"] },
+      { id: "OZONO", label: "Ozono", icon: "🌬️", keywords: ["ozono", "desinfeccion", "desinfección", "olores", "bacterias", "aire"] },
+    ],
+  },
+  {
+    id: "DETAILING",
+    label: "Detailing",
+    icon: "💎",
+    subcategories: [
+      { id: "TODOS", label: "Todos", icon: "✨", keywords: [] },
+      { id: "CERA", label: "Cera", icon: "✨", keywords: ["cera", "encerado", "carnauba", "hidrofobico"] },
+      { id: "PULIDO", label: "Pulido", icon: "🌟", keywords: ["pulido", "correccion", "corrección", "brillo", "barniz", "pasta"] },
+      { id: "FAROS", label: "Faros", icon: "💡", keywords: ["faro", "faros", "opticas", "ópticas", "restauracion faros"] },
+      { id: "GOTASECA", label: "Gotaseca", icon: "🌧️", keywords: ["gotaseca", "gota seca", "lluvia acida", "lluvia ácida", "calcarea"] },
+      { id: "AROS", label: "Aros", icon: "🛞", keywords: ["aro", "aros", "llantas", "rines", "férrico", "ferrico"] },
+    ],
+  },
+  {
+    id: "EXTRAS",
+    label: "Extras",
+    icon: "➕",
+    subcategories: [
+      { id: "TODOS", label: "Todos", icon: "✨", keywords: [] },
+      { id: "AROMA", label: "Aroma", icon: "🌸", keywords: ["aroma", "ambientador", "fragancia", "perfume", "aromatizante"] },
+      { id: "SILICONA", label: "Silicona", icon: "🧽", keywords: ["silicona", "abrillantador", "tablero", "llantilar"] },
+      { id: "SHAMPOO", label: "Shampoo", icon: "🫧", keywords: ["shampoo", "jabon", "jabón", "espuma", "snow"] },
+      { id: "MICROFIBRA", label: "Microfibra", icon: "🧣", keywords: ["microfibra", "toalla", "paño", "bayeta"] },
+    ],
+  },
 ];
 
-const CARWASH_CAT_SINGLE: Record<string, string> = {
-  "Todas": "Todas",
-  "Lavado exterior": "Exterior",
-  "Lavado interior": "Interior",
-  "Lavado completo": "Completo",
-  "Lavado premium": "Premium",
-  "Limpieza de tapicería": "Tapicería",
-  "Limpieza de tapiceria": "Tapicería",
-  "Limpieza de motor": "Motor",
-  "Lavado de motor": "Motor",
-  "Detailing automotriz": "Detailing",
-  "Encerado y pulido": "Encerado",
-  "Lavado de motos": "Motos",
-  "Lavado de camionetas y vehículos grandes": "Camionetas",
-  "Desinfección y eliminación de olores": "Desinfección",
-  "Servicios adicionales": "Extras",
-};
-
-// Categorías principales de un car wash / lavadora de vehículos (1 palabra cada una)
-const PRINCIPAL_CATEGORY_IDS = [
-  "cw_cat_exterior",
-  "cw_cat_interior",
-  "cw_cat_completo",
-  "cw_cat_tapiceria",
-  "cw_cat_motor",
+// Selector de porte / tamaño de vehículo en 1 sola palabra
+export const VEHICULOS_CARWASH = [
+  { id: "Auto", label: "Auto", icon: "🚗", vehicleTypeId: "vt_sedan" },
+  { id: "SUV", label: "SUV", icon: "🚙", vehicleTypeId: "vt_suv" },
+  { id: "Camioneta", label: "Camioneta", icon: "🛻", vehicleTypeId: "vt_camioneta" },
+  { id: "Moto", label: "Moto", icon: "🏍️", vehicleTypeId: "vt_moto" },
+  { id: "Pesado", label: "Pesado", icon: "🚐", vehicleTypeId: "vt_mayor_tamano" },
 ];
 
-// Tipos de vehículo en una sola palabra
-const CARWASH_VEH_SINGLE: Record<string, string> = {
-  "Motocicleta": "Moto",
-  "Moto": "Moto",
-  "Automóvil pequeño": "Auto",
-  "Sedán": "Auto",
-  "Sedan": "Auto",
-  "Hatchback": "Auto",
-  "Auto": "Auto",
-  "SUV": "SUV",
-  "SUV / Crossover": "SUV",
-  "Camioneta": "Camioneta",
-  "Camioneta grande": "Camioneta",
-  "Camión liviano": "Pesado",
-  "Furgoneta": "Pesado",
-  "Vehículo de mayor tamaño": "Pesado",
-  "Pesado": "Pesado",
-};
+// Combos de lavado rápido en 1 sola palabra
+export interface CarWashComboDef {
+  id: string;
+  label: string;
+  icon: string;
+  keywords: string[];
+}
 
-// Tipos de vehículo principales de una lavadora de vehículos (1 palabra cada una)
-const PRINCIPAL_VEHICLE_IDS = [
-  "vt_moto",
-  "vt_sedan",
-  "vt_suv",
-  "vt_camioneta",
-  "vt_mayor_tamano",
+export const CARWASH_COMBOS: CarWashComboDef[] = [
+  {
+    id: "combo_expres",
+    label: "Exprés",
+    icon: "⚡",
+    keywords: ["EXPRÉS", "ASPIRADO"],
+  },
+  {
+    id: "combo_completo",
+    label: "Completo",
+    icon: "🌊",
+    keywords: ["EXPRÉS", "ASPIRADO", "AGUA", "GRAFITADO", "MOTOR"],
+  },
+  {
+    id: "combo_interior",
+    label: "Interior",
+    icon: "🛋️",
+    keywords: ["TAPICERÍA", "TECHO", "OZONO"],
+  },
+  {
+    id: "combo_brillo",
+    label: "Brillo",
+    icon: "✨",
+    keywords: ["CERA", "GOTASECA", "FAROS"],
+  },
 ];
 
-const CARWASH_SUB_SINGLE: Record<string, string> = {
-  "Todos los tipos": "Todos",
-  "Todos los servicios": "Todos",
-  "Premium Ejecutivo": "Ejecutivo",
-  "Full Spa": "Spa",
-  "Exterior Express": "Express",
-  "Espuma Activa": "Espuma",
-  "Aspirado y Cabina": "Aspirado",
-  "Interior Detallado": "Detallado",
-  "Completo Estándar": "Estándar",
-  "Completo + Chasis": "Chasis",
-  "Tapicería de Tela": "Tela",
-  "Asientos de Cuero": "Cuero",
-  "Detailing Interior": "Interior",
-  "Detailing Exterior": "Exterior",
-  "Motor Dieléctrico": "Dieléctrico",
-  "Motos Urbanas / Scooter": "Urbana",
-  "Alta Cilindrada / Touring": "Touring",
-  "SUV y 3 Filas": "Familiar",
-  "Pickups 4x4 y Furgonetas": "Pickups",
-  "Cabina con Ozono": "Ozono",
-  "Ductos A/C y Antibacterial": "Antibacterial",
-  "Complementos Rápidos": "Rápidos",
-};
+// Extracción de una sola palabra clave en mayúsculas para cada tarjeta
+const KEYWORD_RULES: Array<{ match: RegExp; keyword: string }> = [
+  { match: /expr[eé]s/i, keyword: "EXPRÉS" },
+  { match: /grafitad/i, keyword: "GRAFITADO" },
+  { match: /motor/i, keyword: "MOTOR" },
+  { match: /tapicer[ií]a/i, keyword: "TAPICERÍA" },
+  { match: /gotaseca|gota\s*seca|lluvia\s*[aá]cida/i, keyword: "GOTASECA" },
+  { match: /faro/i, keyword: "FAROS" },
+  { match: /chasis/i, keyword: "CHASIS" },
+  { match: /complet/i, keyword: "COMPLETO" },
+  { match: /aspirad/i, keyword: "ASPIRADO" },
+  { match: /cuero/i, keyword: "CUERO" },
+  { match: /techo/i, keyword: "TECHO" },
+  { match: /ozono|desinfecci/i, keyword: "OZONO" },
+  { match: /cera|encerad/i, keyword: "CERA" },
+  { match: /pulid/i, keyword: "PULIDO" },
+  { match: /aro|rin/i, keyword: "AROS" },
+  { match: /desengras/i, keyword: "DESENGRASE" },
+  { match: /suspensi/i, keyword: "SUSPENSIÓN" },
+  { match: /agua|presi[oó]n/i, keyword: "AGUA" },
+  { match: /moto/i, keyword: "MOTOS" },
+  { match: /aroma|ambientador|fragancia|perfume/i, keyword: "AROMA" },
+  { match: /silicona|abrillantador/i, keyword: "SILICONA" },
+  { match: /shampoo|jab[oó]n/i, keyword: "SHAMPOO" },
+  { match: /microfibra|toalla|pa[ñn]o/i, keyword: "MICROFIBRA" },
+  { match: /vidrio|cristal/i, keyword: "VIDRIOS" },
+  { match: /espuma/i, keyword: "ESPUMA" },
+  { match: /premium/i, keyword: "PREMIUM" },
+];
 
-function toSingleWord(text: string, mapDict?: Record<string, string>): string {
-  if (!text) return "";
-  if (mapDict && mapDict[text]) return mapDict[text];
-  const cleaned = text
-    .replace(/^Lavado\s+(de\s+)?/i, "")
-    .replace(/^Limpieza\s+de\s+/i, "")
-    .replace(/^Servicio\s+(de\s+)?/i, "")
-    .replace(/^Servicios\s+(de\s+)?/i, "")
-    .replace(/^Automóvil\s+/i, "")
-    .replace(/^Todos\s+los\s+(tipos|servicios)/i, "Todos")
+function extractKeyword(name: string): string {
+  if (!name) return "SERVICIO";
+  for (const rule of KEYWORD_RULES) {
+    if (rule.match.test(name)) {
+      return rule.keyword;
+    }
+  }
+  const cleaned = name
+    .replace(/^(Lavado|Limpieza|Servicio|Tratamiento|Paquete|Aplicación|Kit)\s+(de\s+|del\s+)?/i, "")
+    .replace(/^De\s+/i, "")
     .trim();
-  const first = cleaned.split(/[\s/+,&]+/)[0];
-  return first || text;
+  const first = cleaned.split(/[\s/+,&-_]+/)[0];
+  return (first || name).toUpperCase();
+}
+
+const FALLBACK_KEYWORD_ICONS: Record<string, string> = {
+  EXPRÉS: "⚡",
+  COMPLETO: "🌊",
+  MOTOR: "⚙️",
+  MOTOS: "🏍️",
+  AGUA: "💧",
+  GRAFITADO: "🛡️",
+  DESENGRASE: "🧪",
+  SUSPENSIÓN: "🔧",
+  ASPIRADO: "🧹",
+  TAPICERÍA: "🛋️",
+  CUERO: "🧴",
+  TECHO: "🏠",
+  OZONO: "🌬️",
+  CERA: "✨",
+  PULIDO: "🌟",
+  FAROS: "💡",
+  GOTASECA: "🌧️",
+  AROS: "🛞",
+  AROMA: "🌸",
+  SILICONA: "🧽",
+  SHAMPOO: "🫧",
+  MICROFIBRA: "🧣",
+  DEFAULT: "🚿",
+};
+
+// Servicios base de Car Wash con clasificación y precios según porte
+const SERVICIOS_BASE_CARWASH = [
+  // Lavado
+  { id: "cw_base_expres", name: "Lavado Exprés", category: "LAVADO", subcategory: "EXPRES", basePrice: 6.0, estimatedMinutes: 15, icon: "⚡" },
+  { id: "cw_base_completo", name: "Lavado Completo", category: "LAVADO", subcategory: "COMPLETO", basePrice: 12.0, estimatedMinutes: 35, icon: "🌊" },
+  { id: "cw_base_motor", name: "Lavado de Motor", category: "LAVADO", subcategory: "MOTOR", basePrice: 15.0, estimatedMinutes: 20, icon: "⚙️" },
+  { id: "cw_base_motos", name: "Lavado de Motos", category: "LAVADO", subcategory: "MOTOS", basePrice: 5.0, estimatedMinutes: 15, icon: "🏍️" },
+  // Chasis
+  { id: "cw_base_agua", name: "Lavado de Chasis Agua", category: "CHASIS", subcategory: "AGUA", basePrice: 8.0, estimatedMinutes: 20, icon: "💧" },
+  { id: "cw_base_grafitado", name: "Grafitado de Chasis", category: "CHASIS", subcategory: "GRAFITADO", basePrice: 14.0, estimatedMinutes: 20, icon: "🛡️" },
+  { id: "cw_base_desengrase", name: "Desengrase de Chasis", category: "CHASIS", subcategory: "DESENGRASE", basePrice: 16.0, estimatedMinutes: 20, icon: "🧪" },
+  { id: "cw_base_suspension", name: "Lavado de Suspensión", category: "CHASIS", subcategory: "SUSPENSION", basePrice: 10.0, estimatedMinutes: 20, icon: "🔧" },
+  // Interior
+  { id: "cw_base_aspirado", name: "Aspirado Interior", category: "INTERIOR", subcategory: "ASPIRADO", basePrice: 8.0, estimatedMinutes: 15, icon: "🧹" },
+  { id: "cw_base_tapiceria", name: "Limpieza de Tapicería", category: "INTERIOR", subcategory: "TAPICERIA", basePrice: 35.0, estimatedMinutes: 30, icon: "🛋️" },
+  { id: "cw_base_cuero", name: "Nutrición de Cuero", category: "INTERIOR", subcategory: "CUERO", basePrice: 25.0, estimatedMinutes: 30, icon: "🧴" },
+  { id: "cw_base_techo", name: "Limpieza de Techo", category: "INTERIOR", subcategory: "TECHO", basePrice: 18.0, estimatedMinutes: 30, icon: "🏠" },
+  { id: "cw_base_ozono", name: "Desinfección con Ozono", category: "INTERIOR", subcategory: "OZONO", basePrice: 15.0, estimatedMinutes: 30, icon: "🌬️" },
+  // Detailing
+  { id: "cw_base_cera", name: "Encerado Carnauba", category: "DETAILING", subcategory: "CERA", basePrice: 18.0, estimatedMinutes: 30, icon: "✨" },
+  { id: "cw_base_pulido", name: "Pulido Espejo", category: "DETAILING", subcategory: "PULIDO", basePrice: 45.0, estimatedMinutes: 30, icon: "🌟" },
+  { id: "cw_base_faros", name: "Restauración de Faros", category: "DETAILING", subcategory: "FAROS", basePrice: 20.0, estimatedMinutes: 30, icon: "💡" },
+  { id: "cw_base_gotaseca", name: "Eliminación Gotaseca", category: "DETAILING", subcategory: "GOTASECA", basePrice: 25.0, estimatedMinutes: 30, icon: "🌧️" },
+  { id: "cw_base_aros", name: "Descontaminado Aros", category: "DETAILING", subcategory: "AROS", basePrice: 15.0, estimatedMinutes: 30, icon: "🛞" },
+  // Extras
+  { id: "cw_base_aroma", name: "Ambientador de Aroma", category: "EXTRAS", subcategory: "AROMA", basePrice: 4.0, estimatedMinutes: 5, icon: "🌸" },
+  { id: "cw_base_silicona", name: "Silicona para Tablero", category: "EXTRAS", subcategory: "SILICONA", basePrice: 3.5, estimatedMinutes: 5, icon: "🧽" },
+  { id: "cw_base_shampoo", name: "Shampoo Espuma Activa", category: "EXTRAS", subcategory: "SHAMPOO", basePrice: 6.5, estimatedMinutes: 5, icon: "🫧" },
+  { id: "cw_base_microfibra", name: "Toalla Microfibra", category: "EXTRAS", subcategory: "MICROFIBRA", basePrice: 4.5, estimatedMinutes: 5, icon: "🧣" },
+];
+
+function classifyItemCategory(
+  item: { name: string; code?: string; brand?: string; category?: string; categoryId?: string; description?: string }
+): "LAVADO" | "CHASIS" | "INTERIOR" | "DETAILING" | "EXTRAS" {
+  const text = `${item.name} ${item.code || ""} ${item.category || ""} ${item.categoryId || ""} ${item.description || ""}`.toLowerCase();
+  if (
+    text.includes("detailing") ||
+    text.includes("encerad") ||
+    text.includes("pulid") ||
+    text.includes("cera") ||
+    text.includes("faro") ||
+    text.includes("gotaseca") ||
+    text.includes("gota seca") ||
+    text.includes("lluvia acida") ||
+    text.includes("lluvia ácida") ||
+    text.includes("aro") ||
+    text.includes("rin")
+  ) {
+    return "DETAILING";
+  }
+  if (
+    text.includes("chasis") ||
+    text.includes("grafitad") ||
+    text.includes("grafito") ||
+    text.includes("desengrase") ||
+    text.includes("suspensi") ||
+    text.includes("bajos") ||
+    text.includes("petrolead")
+  ) {
+    return "CHASIS";
+  }
+  if (
+    text.includes("interior") ||
+    text.includes("cabina") ||
+    text.includes("aspirad") ||
+    text.includes("tapicer") ||
+    text.includes("asiento") ||
+    text.includes("cuero") ||
+    text.includes("techo") ||
+    text.includes("ozono") ||
+    text.includes("desinfecci")
+  ) {
+    return "INTERIOR";
+  }
+  if (
+    text.includes("adicional") ||
+    text.includes("extra") ||
+    text.includes("aroma") ||
+    text.includes("ambientador") ||
+    text.includes("silicona") ||
+    text.includes("shampoo") ||
+    text.includes("microfibra") ||
+    text.includes("toalla") ||
+    text.includes("insumo") ||
+    text.includes("producto")
+  ) {
+    return "EXTRAS";
+  }
+  return "LAVADO";
+}
+
+function classifyItemSubcategory(
+  category: "LAVADO" | "CHASIS" | "INTERIOR" | "DETAILING" | "EXTRAS",
+  item: { name: string; code?: string; description?: string }
+): string {
+  const text = `${item.name} ${item.code || ""} ${item.description || ""}`.toLowerCase();
+  if (category === "LAVADO") {
+    if (text.includes("moto") || text.includes("scooter")) return "MOTOS";
+    if (text.includes("motor") || text.includes("vapor") || text.includes("dielectric")) return "MOTOR";
+    if (text.includes("complet") || text.includes("full") || text.includes("ejecutiv") || text.includes("spa")) return "COMPLETO";
+    return "EXPRES";
+  }
+  if (category === "CHASIS") {
+    if (text.includes("grafitad") || text.includes("grafito")) return "GRAFITADO";
+    if (text.includes("desengras") || text.includes("petrolead")) return "DESENGRASE";
+    if (text.includes("suspensi") || text.includes("guardabarro")) return "SUSPENSION";
+    return "AGUA";
+  }
+  if (category === "INTERIOR") {
+    if (text.includes("cuero") || text.includes("piel")) return "CUERO";
+    if (text.includes("tapicer") || text.includes("inyecci") || text.includes("asiento")) return "TAPICERIA";
+    if (text.includes("techo") || text.includes("cielo")) return "TECHO";
+    if (text.includes("ozono") || text.includes("desinfecci") || text.includes("olor")) return "OZONO";
+    return "ASPIRADO";
+  }
+  if (category === "DETAILING") {
+    if (text.includes("faro") || text.includes("optica")) return "FAROS";
+    if (text.includes("gotaseca") || text.includes("gota seca") || text.includes("lluvia acida") || text.includes("calcare")) return "GOTASECA";
+    if (text.includes("aro") || text.includes("rin") || text.includes("llanta")) return "AROS";
+    if (text.includes("pulid") || text.includes("correcci") || text.includes("pasta")) return "PULIDO";
+    return "CERA";
+  }
+  if (category === "EXTRAS") {
+    if (text.includes("aroma") || text.includes("ambientador") || text.includes("perfume")) return "AROMA";
+    if (text.includes("silicona") || text.includes("abrillantador")) return "SILICONA";
+    if (text.includes("microfibra") || text.includes("toalla") || text.includes("paño")) return "MICROFIBRA";
+    return "SHAMPOO";
+  }
+  return "TODOS";
 }
 
 function computePriceForVehicle(
@@ -146,9 +368,9 @@ function computePriceForVehicle(
     priceConfigured?: boolean;
   },
   vehicleTypeId: string
-): { unitPrice: number | null; originalPrice: number | null; isPromo: boolean } {
+): { unitPrice: number; isPromo: boolean } {
   if (item.priceConfigured === false) {
-    return { unitPrice: null, originalPrice: null, isPromo: false };
+    return { unitPrice: 0, isPromo: false };
   }
   let vtVal = item.priceByVehicleType?.[vehicleTypeId];
   if (vtVal === undefined || vtVal === null || vtVal <= 0) {
@@ -160,36 +382,54 @@ function computePriceForVehicle(
       vtVal = item.priceByVehicleType?.["vt_mayor_tamano"] ?? item.priceByVehicleType?.["vt_furgoneta"];
     }
   }
-  const baseVal =
+
+  const rawBase =
     item.basePrice !== undefined && item.basePrice !== null
       ? Number(item.basePrice)
       : item.price !== undefined && item.price !== null
       ? Number(item.price)
-      : null;
+      : 0;
 
   if (typeof vtVal === "number" && vtVal > 0) {
-    if (
-      item.promoPrice &&
-      item.promoPrice > 0 &&
-      baseVal &&
-      item.promoPrice < baseVal &&
-      vtVal === baseVal
-    ) {
-      return { unitPrice: Number(item.promoPrice), originalPrice: vtVal, isPromo: true };
+    if (item.promoPrice && item.promoPrice > 0 && item.promoPrice < vtVal) {
+      return { unitPrice: Number(item.promoPrice), isPromo: true };
     }
-    return { unitPrice: vtVal, originalPrice: vtVal, isPromo: false };
+    return { unitPrice: vtVal, isPromo: false };
   }
 
-  if (!baseVal || baseVal <= 0) {
-    return { unitPrice: null, originalPrice: null, isPromo: false };
+  if (rawBase <= 0) {
+    return { unitPrice: 0, isPromo: false };
   }
 
-  if (item.promoPrice && item.promoPrice > 0 && item.promoPrice < baseVal) {
-    return { unitPrice: Number(item.promoPrice), originalPrice: baseVal, isPromo: true };
+  // Multiplicador automático según tamaño de vehículo si no hay tarifa fija cargada
+  let multiplier = 1.0;
+  if (vehicleTypeId === "vt_suv") multiplier = 1.25;
+  else if (vehicleTypeId === "vt_camioneta" || vehicleTypeId === "vt_camioneta_grande") multiplier = 1.4;
+  else if (vehicleTypeId === "vt_mayor_tamano" || vehicleTypeId === "vt_furgoneta") multiplier = 1.8;
+  else if (vehicleTypeId === "vt_moto") multiplier = 0.65;
+
+  const adjusted = Math.round(rawBase * multiplier * 100) / 100;
+  if (item.promoPrice && item.promoPrice > 0 && item.promoPrice < adjusted) {
+    return { unitPrice: Number(item.promoPrice), isPromo: true };
   }
 
-  return { unitPrice: baseVal, originalPrice: baseVal, isPromo: false };
+  return { unitPrice: adjusted, isPromo: false };
 }
+
+async function uploadImageToR2CarWash(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("folder", "carwash");
+  const res = await fetch("/api/storage/upload", {
+    method: "POST",
+    body: formData,
+  });
+  const data = await res.json();
+  if (!res.ok || !data.url) throw new Error(data.error || "Error al subir imagen");
+  return data.url;
+}
+
+type NivelAfeccion = "NORMAL" | "MODERADO" | "EXTREMO";
 
 export default function ModuloCarWashCatalogo({
   empleadoLogueado,
@@ -199,91 +439,47 @@ export default function ModuloCarWashCatalogo({
   onActualizarItemsOrden,
   onIrAAvisoYFirma,
   onIrASiguiente,
-  nombreSiguiente,
   triggerAbrirConfig,
 }: ModuloCarWashCatalogoProps) {
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [config, setConfig] = useState<CarWashConfigData | null>(null);
   const [services, setServices] = useState<CarWashEnrichedService[]>([]);
   const [products, setProducts] = useState<any[]>([]);
-  const [promotions, setPromotions] = useState<any[]>([]);
-  const [appointments, setAppointments] = useState<any[]>([]);
 
-  // Paso interactivo del flujo de selección (1 a 5)
-  const [activeStep, setActiveStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  // 1. Estados de accesos rápidos superiores
+  const [mostrarEstado, setMostrarEstado] = useState<boolean>(false);
+  const [mostrarCombos, setMostrarCombos] = useState<boolean>(false);
 
-  // Filtros y selección del cliente
+  // 2. Estados de recepción rápida en lavadora (Lodo, Pelos, Manchas, Gotaseca, Objetos, 📷)
+  const [estadoAfecciones, setEstadoAfecciones] = useState<Record<string, NivelAfeccion>>({
+    Lodo: "NORMAL",
+    Pelos: "NORMAL",
+    Manchas: "NORMAL",
+    Gotaseca: "NORMAL",
+  });
+  const [objetosVerificados, setObjetosVerificados] = useState<boolean>(false);
+  const [fotosEstado, setFotosEstado] = useState<string[]>([]);
+  const [subiendoFoto, setSubiendoFoto] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Categorías y subcategorías contraíbles
+  const [categoriaActivaId, setCategoriaActivaId] = useState<string>("TODO");
+  const [mostrarCategorias, setMostrarCategorias] = useState<boolean>(true);
+  const [subcategoriaActivaId, setSubcategoriaActivaId] = useState<string>("TODOS");
+  const [mostrarSubcategorias, setMostrarSubcategorias] = useState<boolean>(true);
+
+  // Selector contraíble de porte / tamaño de vehículo
+  const [vehiculoActivo, setVehiculoActivo] = useState<string>("Auto");
+  const [mostrarVehiculos, setMostrarVehiculos] = useState<boolean>(false);
   const [selectedVehicleTypeId, setSelectedVehicleTypeId] = useState<string>("vt_sedan");
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("TODOS");
-  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>("TODOS");
+
+  // Buscador del POS
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  const [manualServicioTexto, setManualServicioTexto] = useState<string>("");
-  const [manualServicioPrecio, setManualServicioPrecio] = useState<string>("");
-  const [manualUnidad, setManualUnidad] = useState<string>("Servicio");
-  const [manualCantidad, setManualCantidad] = useState<number>(1);
-  const [dropdownUnidadAbierto, setDropdownUnidadAbierto] = useState<boolean>(false);
-  const menuUnidadRef = useRef<HTMLDivElement>(null);
-
-  // Vista de Catálogo General
-  const [verTodoElCatalogo, setVerTodoElCatalogo] = useState<boolean>(false);
-  const [filtroCategoriaGeneral, setFiltroCategoriaGeneral] = useState<string>("");
-  const [menuFiltroAbierto, setMenuFiltroAbierto] = useState<boolean>(false);
-  const menuFiltroRef = useRef<HTMLDivElement>(null);
-
-  // Selección múltiple en la tienda
-  const [itemsSeleccionadosTiendaIds, setItemsSeleccionadosTiendaIds] = useState<string[]>([]);
-  const [agregandoVarios, setAgregandoVarios] = useState<boolean>(false);
-
-  // Dropdown para horario de reserva
-  const [dropdownHorarioAbierto, setDropdownHorarioAbierto] = useState<boolean>(false);
-  const menuHorarioRef = useRef<HTMLDivElement>(null);
-
-  // Cerrar menús desplegables al hacer clic afuera
-  useEffect(() => {
-    const handleClickAfuera = (e: MouseEvent) => {
-      if (menuFiltroRef.current && !menuFiltroRef.current.contains(e.target as Node)) {
-        setMenuFiltroAbierto(false);
-      }
-      if (menuUnidadRef.current && !menuUnidadRef.current.contains(e.target as Node)) {
-        setDropdownUnidadAbierto(false);
-      }
-      if (menuHorarioRef.current && !menuHorarioRef.current.contains(e.target as Node)) {
-        setDropdownHorarioAbierto(false);
-      }
-    };
-    if (menuFiltroAbierto || dropdownUnidadAbierto || dropdownHorarioAbierto) {
-      document.addEventListener("mousedown", handleClickAfuera);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickAfuera);
-    };
-  }, [menuFiltroAbierto, dropdownUnidadAbierto, dropdownHorarioAbierto]);
-
-  // Selecciones activas de Car Wash
-  const [selectedPackageIds, setSelectedPackageIds] = useState<string[]>([]);
-  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
-  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
-  const [promoCodeInput, setPromoCodeInput] = useState<string>("");
-
-  // Cálculo validado desde el servidor
-  const [serverCalculation, setServerCalculation] = useState<any | null>(null);
-  const [calculatingServer, setCalculatingServer] = useState(false);
-  const [confirmingOrder, setConfirmingOrder] = useState(false);
-
-  // Estado de Reserva de Bahía (ClientAppointment)
-  const [showBookingPanel, setShowBookingPanel] = useState(false);
-  const [bookingDate, setBookingDate] = useState<string>(
-    () => new Date().toISOString().split("T")[0]
-  );
-  const [bookingTimeSlot, setBookingTimeSlot] = useState<string>("09:00 AM");
-  const [bookingBay, setBookingBay] = useState<string>("Bahía Lavado 1");
-  const [bookingNotes, setBookingNotes] = useState<string>("");
-  const [savingBooking, setSavingBooking] = useState(false);
-  const [lastBookingConfirmed, setLastBookingConfirmed] = useState<any | null>(null);
-
-  // Modales administrativos y de detalle
+  // Modales
+  const [configModalOpen, setConfigModalOpen] = useState(false);
   const [detailModalItem, setDetailModalItem] = useState<{
     item: CarWashEnrichedService | CarWashPackage;
     kind: "SERVICE" | "PACKAGE";
@@ -292,7 +488,10 @@ export default function ModuloCarWashCatalogo({
     open: boolean;
     service?: Partial<CarWashEnrichedService> | null;
   }>({ open: false, service: null });
-  const [configModalOpen, setConfigModalOpen] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Escuchar trigger de cabecera exterior
   useEffect(() => {
@@ -301,7 +500,7 @@ export default function ModuloCarWashCatalogo({
     }
   }, [triggerAbrirConfig]);
 
-  // Cargar datos reales desde Neon PostgreSQL
+  // Cargar catálogo desde la API
   const fetchCarWashData = useCallback(async () => {
     try {
       if (!config) setLoading(true);
@@ -309,18 +508,13 @@ export default function ModuloCarWashCatalogo({
       const res = await fetch("/api/taller/carwash", { cache: "no-store" });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "No se pudo cargar el módulo Car Wash");
+        throw new Error(data.error || "No se pudo cargar el catálogo de Car Wash");
       }
       setConfig(data.config);
       setServices(data.services || []);
       setProducts(data.products || []);
-      setPromotions(data.promotions || []);
-      setAppointments(data.appointments || []);
-      if (data.config?.bays?.[0]) {
-        setBookingBay(data.config.bays[0]);
-      }
     } catch (err: any) {
-      setErrorMsg(err.message || "Error de conexión al cargar Car Wash");
+      setErrorMsg(err.message || "Error al conectar con Car Wash");
     } finally {
       setLoading(false);
     }
@@ -337,637 +531,310 @@ export default function ModuloCarWashCatalogo({
     };
   }, [fetchCarWashData]);
 
-  // Detectar tipo de vehículo sugerido si hay una ordenActiva con descripción de vehículo
+  // Sincronizar sugerencia de porte según el vehículo de la orden
   useEffect(() => {
-    if (!ordenActiva?.vehicle || !config?.vehicleTypes?.length) return;
+    if (!ordenActiva?.vehicle) return;
     const vText = String(ordenActiva.vehicle).toLowerCase();
     if (vText.includes("moto") || vText.includes("yamaha") || vText.includes("honda cb")) {
+      setVehiculoActivo("Moto");
       setSelectedVehicleTypeId("vt_moto");
-    } else if (vText.includes("hilux") || vText.includes("d-max") || vText.includes("amarok") || vText.includes("pickup")) {
+    } else if (vText.includes("hilux") || vText.includes("d-max") || vText.includes("amarok") || vText.includes("pickup") || vText.includes("camioneta")) {
+      setVehiculoActivo("Camioneta");
       setSelectedVehicleTypeId("vt_camioneta");
-    } else if (vText.includes("tahoe") || vText.includes("prado") || vText.includes("fortuner") || vText.includes("explorer")) {
-      setSelectedVehicleTypeId("vt_camioneta_grande");
+    } else if (vText.includes("tahoe") || vText.includes("prado") || vText.includes("fortuner") || vText.includes("furgoneta") || vText.includes("camion")) {
+      setVehiculoActivo("Pesado");
+      setSelectedVehicleTypeId("vt_mayor_tamano");
     } else if (vText.includes("sportage") || vText.includes("tucson") || vText.includes("rav4") || vText.includes("cr-v") || vText.includes("suv")) {
+      setVehiculoActivo("SUV");
       setSelectedVehicleTypeId("vt_suv");
-    } else if (vText.includes("spark") || vText.includes("picanto") || vText.includes("march")) {
-      setSelectedVehicleTypeId("vt_auto_pequeno");
-    }
-  }, [ordenActiva?.vehicle, config?.vehicleTypes?.length]);
-
-  // Sincronizar selecciones previas desde itemsOrden si ya estaban en la orden activa
-  useEffect(() => {
-    if (!config || !services.length || !itemsOrden?.length) return;
-    const pkgIds: string[] = [];
-    const srvIds: string[] = [];
-    const addIds: string[] = [];
-
-    itemsOrden.forEach((it) => {
-      const code = String(it.code || "");
-      const foundPkg = config.packages.find((p) => p.code === code);
-      if (foundPkg) pkgIds.push(foundPkg.id);
-      const foundSrv = services.find((s) => s.code === code);
-      if (foundSrv) srvIds.push(foundSrv.id);
-      const foundAdd = config.addons.find((a) => a.code === code);
-      if (foundAdd) addIds.push(foundAdd.id);
-    });
-
-    if (pkgIds.length > 0 || srvIds.length > 0 || addIds.length > 0) {
-      setSelectedPackageIds((prev) => (prev.length === 0 ? pkgIds : prev));
-      setSelectedServiceIds((prev) => (prev.length === 0 ? srvIds : prev));
-      setSelectedAddonIds((prev) => (prev.length === 0 ? addIds : prev));
-    }
-  }, [config, services, itemsOrden]);
-
-  // Validar y calcular en el servidor cada vez que cambian las selecciones o el tipo de vehículo
-  useEffect(() => {
-    if (!config) return;
-    const totalCount =
-      selectedPackageIds.length + selectedServiceIds.length + selectedAddonIds.length;
-    if (totalCount === 0) {
-      setServerCalculation(null);
-      return;
-    }
-
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      try {
-        setCalculatingServer(true);
-        const res = await fetch("/api/taller/carwash", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "CALCULAR_Y_VALIDAR_SELECCION",
-            vehicleTypeId: selectedVehicleTypeId,
-            selectedPackageIds,
-            selectedServiceIds,
-            selectedAddonIds,
-            promoCode: promoCodeInput,
-          }),
-        });
-        const data = await res.json();
-        if (!cancelled && data.success) {
-          setServerCalculation(data.calculation);
-        }
-      } catch {
-      } finally {
-        if (!cancelled) setCalculatingServer(false);
-      }
-    }, 180);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [
-    config,
-    selectedVehicleTypeId,
-    selectedPackageIds,
-    selectedServiceIds,
-    selectedAddonIds,
-    promoCodeInput,
-  ]);
-
-  const activeCategories = useMemo(
-    () =>
-      (config?.categories || [])
-        .filter(
-          (c) =>
-            c.active &&
-            c.id !== "cw_cat_premium" &&
-            !c.slug?.includes("premium") &&
-            !c.name?.toLowerCase().includes("premium") &&
-            (PRINCIPAL_CATEGORY_IDS.includes(c.id) ||
-              PRINCIPAL_CATEGORY_IDS.some((pid) => c.slug?.includes(pid.replace("cw_cat_", ""))))
-        )
-        .sort((a, b) => {
-          const idxA = PRINCIPAL_CATEGORY_IDS.indexOf(a.id);
-          const idxB = PRINCIPAL_CATEGORY_IDS.indexOf(b.id);
-          if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-          return a.order - b.order;
-        }),
-    [config]
-  );
-
-  const activeVehicleTypes = useMemo(() => {
-    const list = (config?.vehicleTypes || []).filter((v) => v.active);
-    const principales = list.filter(
-      (v) =>
-        v.id === "vt_moto" ||
-        v.id === "vt_sedan" ||
-        v.id === "vt_suv" ||
-        v.id === "vt_camioneta" ||
-        v.id === "vt_mayor_tamano" ||
-        (v.id === "vt_furgoneta" && !list.some((x) => x.id === "vt_mayor_tamano"))
-    );
-    const result = principales.length > 0 ? principales : list;
-    const orderMap = ["vt_moto", "vt_sedan", "vt_suv", "vt_camioneta", "vt_mayor_tamano", "vt_furgoneta"];
-    return result.sort((a, b) => {
-      const idxA = orderMap.indexOf(a.id);
-      const idxB = orderMap.indexOf(b.id);
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      return a.order - b.order;
-    });
-  }, [config]);
-
-  const currentVehicleType: CarWashVehicleType | undefined = useMemo(
-    () =>
-      activeVehicleTypes.find((v) => v.id === selectedVehicleTypeId) || activeVehicleTypes[0],
-    [activeVehicleTypes, selectedVehicleTypeId]
-  );
-
-  const activeSubcategories = useMemo(() => {
-    if (!config || selectedCategoryId === "TODOS") return [];
-    return config.subcategories
-      .filter((s) => s.active && s.categoryId === selectedCategoryId)
-      .sort((a, b) => a.order - b.order);
-  }, [config, selectedCategoryId]);
-
-  // Adaptar panel Manual automáticamente al seleccionar categoría, subcategoría o tipo de vehículo
-  useEffect(() => {
-    let nombre = "";
-    let precio = 0;
-
-    if (selectedSubcategoryId && selectedSubcategoryId !== "TODOS") {
-      const sub = config?.subcategories?.find((s) => s.id === selectedSubcategoryId);
-      if (sub) {
-        nombre = sub.name;
-        const srv = services.find((s) => s.subcategoryId === sub.id);
-        if (srv) {
-          const pr = computePriceForVehicle(srv, selectedVehicleTypeId).unitPrice;
-          if (pr) precio = pr;
-        }
-      }
-    } else if (selectedCategoryId && selectedCategoryId !== "TODOS") {
-      const cat = config?.categories?.find((c) => c.id === selectedCategoryId);
-      if (cat) {
-        nombre = cat.name;
-        const srv = services.find((s) => s.categoryId === cat.id);
-        if (srv) {
-          const pr = computePriceForVehicle(srv, selectedVehicleTypeId).unitPrice;
-          if (pr) precio = pr;
-        }
-      }
     } else {
-      nombre = "Lavado Completo";
-      const srv = services[0];
-      if (srv) {
-        const pr = computePriceForVehicle(srv, selectedVehicleTypeId).unitPrice;
-        if (pr) precio = pr;
-      }
+      setVehiculoActivo("Auto");
+      setSelectedVehicleTypeId("vt_sedan");
     }
+  }, [ordenActiva?.vehicle]);
 
-    if (nombre) {
-      setManualServicioTexto(nombre);
-      setManualServicioPrecio(precio > 0 ? precio.toFixed(2) : "");
-      setManualUnidad("Servicio");
-      setManualCantidad(1);
-    }
-  }, [selectedCategoryId, selectedSubcategoryId, selectedVehicleTypeId, config, services]);
+  // Manejo de categorías
+  const categoriaSeleccionadaObj = useMemo(() => {
+    return CARWASH_CATEGORIES.find((c) => c.id === categoriaActivaId) || CARWASH_CATEGORIES[0];
+  }, [categoriaActivaId]);
 
-  // Conjunto de IDs de adicionales que ya están incluidos sin costo en los paquetes seleccionados
-  const addonsIncludedInSelectedPackages = useMemo(() => {
-    const map: Record<string, string> = {};
-    if (!config) return map;
-    selectedPackageIds.forEach((pkgId) => {
-      const pkg = config.packages.find((p) => p.id === pkgId);
-      if (pkg) {
-        (pkg.includedAddonIds || []).forEach((addId) => {
-          map[addId] = pkg.name;
+  const subcategoriasActivas = useMemo(() => {
+    if (categoriaActivaId === "TODO") return [];
+    return categoriaSeleccionadaObj.subcategories;
+  }, [categoriaActivaId, categoriaSeleccionadaObj]);
+
+  const subcategoriaSeleccionadaObj = useMemo(() => {
+    if (subcategoriaActivaId === "TODOS") return null;
+    return subcategoriasActivas.find((s) => s.id === subcategoriaActivaId) || null;
+  }, [subcategoriaActivaId, subcategoriasActivas]);
+
+  const vehiculoSeleccionadoObj = useMemo(() => {
+    return VEHICULOS_CARWASH.find((v) => v.id === vehiculoActivo) || VEHICULOS_CARWASH[0];
+  }, [vehiculoActivo]);
+
+  // Construcción unificada de ítems para el POS
+  const todosLosItemsPOS = useMemo(() => {
+    const list: Array<{
+      id: string;
+      kind: "SERVICE" | "PRODUCT" | "PACKAGE" | "ADDON";
+      name: string;
+      code: string;
+      brand: string;
+      price: number;
+      durationMinutes?: number;
+      imageUrl?: string;
+      categoryMapped: "LAVADO" | "CHASIS" | "INTERIOR" | "DETAILING" | "EXTRAS";
+      subcategoryMapped: string;
+      keyword: string;
+      itemIcon: string;
+      rawService?: CarWashEnrichedService;
+    }> = [];
+
+    const existingKeywords = new Set<string>();
+
+    // 1. Servicios reales de Neon
+    services.forEach((srv) => {
+      if (!srv.active || srv.archived) return;
+      const cat = classifyItemCategory(srv);
+      const sub = classifyItemSubcategory(cat, srv);
+      const pInfo = computePriceForVehicle(srv, selectedVehicleTypeId);
+      const kw = extractKeyword(srv.name);
+      existingKeywords.add(kw);
+
+      list.push({
+        id: srv.id,
+        kind: "SERVICE",
+        name: srv.name,
+        code: srv.code,
+        brand: "Car Wash",
+        price: pInfo.unitPrice,
+        durationMinutes: srv.estimatedMinutes || 25,
+        imageUrl: srv.imageUrl,
+        categoryMapped: cat,
+        subcategoryMapped: sub,
+        keyword: kw,
+        itemIcon: FALLBACK_KEYWORD_ICONS[kw] || FALLBACK_KEYWORD_ICONS.DEFAULT,
+        rawService: srv,
+      });
+    });
+
+    // 2. Paquetes configurados
+    (config?.packages || []).forEach((pkg) => {
+      if (!pkg.active) return;
+      const cat = classifyItemCategory(pkg);
+      const sub = classifyItemSubcategory(cat, pkg);
+      const pInfo = computePriceForVehicle(pkg, selectedVehicleTypeId);
+      const kw = extractKeyword(pkg.name);
+      existingKeywords.add(kw);
+
+      list.push({
+        id: pkg.id,
+        kind: "PACKAGE",
+        name: pkg.name,
+        code: pkg.code,
+        brand: "Paquete",
+        price: pInfo.unitPrice,
+        durationMinutes: pkg.estimatedMinutes || 35,
+        imageUrl: pkg.imageUrl,
+        categoryMapped: cat,
+        subcategoryMapped: sub,
+        keyword: kw,
+        itemIcon: FALLBACK_KEYWORD_ICONS[kw] || "🏷️",
+      });
+    });
+
+    // 3. Insumos y productos del POS
+    products.forEach((prod) => {
+      const cat = classifyItemCategory(prod);
+      const sub = classifyItemSubcategory(cat, prod);
+      const kw = extractKeyword(prod.name);
+
+      list.push({
+        id: prod.id,
+        kind: "PRODUCT",
+        name: prod.name,
+        code: prod.code,
+        brand: prod.brand || "Insumo",
+        price: Number(prod.price || 0),
+        durationMinutes: 5,
+        imageUrl: prod.imageUrl,
+        categoryMapped: cat,
+        subcategoryMapped: sub,
+        keyword: kw,
+        itemIcon: FALLBACK_KEYWORD_ICONS[kw] || "📦",
+      });
+    });
+
+    // 4. Catálogo base complementario para asegurar opciones en todas las categorías
+    SERVICIOS_BASE_CARWASH.forEach((base) => {
+      const kw = extractKeyword(base.name);
+      if (!existingKeywords.has(kw)) {
+        const pInfo = computePriceForVehicle({ basePrice: base.basePrice }, selectedVehicleTypeId);
+        list.push({
+          id: base.id,
+          kind: "SERVICE",
+          name: base.name,
+          code: `CW-${base.id.toUpperCase()}`,
+          brand: "Car Wash",
+          price: pInfo.unitPrice,
+          durationMinutes: base.estimatedMinutes,
+          categoryMapped: base.category as any,
+          subcategoryMapped: base.subcategory,
+          keyword: kw,
+          itemIcon: base.icon,
         });
+      }
+    });
+
+    return list;
+  }, [services, products, config?.packages, selectedVehicleTypeId]);
+
+  // Ítems de Car Wash en la orden activa
+  const itemsCarWashEnOrden = useMemo(() => {
+    return (itemsOrden || []).filter((it) => {
+      const code = String(it.code || "");
+      const cat = String(it.category || "");
+      return (
+        cat === "Lavado" ||
+        cat === "Car Wash" ||
+        cat === "Insumo" ||
+        code.startsWith("CW-") ||
+        code.startsWith("PKG-CW-") ||
+        code.startsWith("ADD-CW-") ||
+        code.startsWith("PRD-") ||
+        Boolean(it.productId) ||
+        Boolean(it.serviceId)
+      );
+    });
+  }, [itemsOrden]);
+
+  const totalUnidadesCarWash = useMemo(() => {
+    return itemsCarWashEnOrden.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
+  }, [itemsCarWashEnOrden]);
+
+  const totalMontoCarWash = useMemo(() => {
+    return itemsCarWashEnOrden.reduce(
+      (acc, it) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1),
+      0
+    );
+  }, [itemsCarWashEnOrden]);
+
+  // Cálculo automático del tiempo estimado de lavado según los servicios seleccionados
+  const totalMinutosEstimados = useMemo(() => {
+    if (itemsCarWashEnOrden.length === 0) return 0;
+    return itemsCarWashEnOrden.reduce((sum, it) => {
+      const qty = Number(it.qty) || 1;
+      let mins = Number(it.estimatedMinutes);
+      if (!mins || mins <= 0) {
+        const kw = extractKeyword(it.name || "");
+        if (kw === "EXPRÉS" || kw === "ASPIRADO") mins = 15;
+        else if (kw === "COMPLETO") mins = 35;
+        else if (
+          kw === "CHASIS" ||
+          kw === "MOTOR" ||
+          kw === "GRAFITADO" ||
+          kw === "DESENGRASE" ||
+          kw === "AGUA" ||
+          kw === "SUSPENSIÓN"
+        )
+          mins = 20;
+        else if (
+          kw === "TAPICERÍA" ||
+          kw === "CUERO" ||
+          kw === "TECHO" ||
+          kw === "OZONO" ||
+          kw === "CERA" ||
+          kw === "PULIDO" ||
+          kw === "FAROS" ||
+          kw === "GOTASECA" ||
+          kw === "AROS"
+        )
+          mins = 30;
+        else mins = 10;
+      }
+      return sum + mins * qty;
+    }, 0);
+  }, [itemsCarWashEnOrden]);
+
+  // Persistir último servicio de este vehículo en localStorage para "⚡ Repetir"
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (itemsCarWashEnOrden.length > 0) {
+      try {
+        const key = `carwash_last_${ordenActiva?.plate || "general"}`;
+        localStorage.setItem(key, JSON.stringify(itemsCarWashEnOrden));
+      } catch {}
+    }
+  }, [itemsCarWashEnOrden, ordenActiva?.plate]);
+
+  // Conteos por categoría
+  const conteoItemsPorCategoria = useMemo(() => {
+    const map: Record<string, number> = { TODO: todosLosItemsPOS.length };
+    todosLosItemsPOS.forEach((it) => {
+      map[it.categoryMapped] = (map[it.categoryMapped] || 0) + 1;
+    });
+    return map;
+  }, [todosLosItemsPOS]);
+
+  const conteoEnPedidoPorCategoria = useMemo(() => {
+    const map: Record<string, number> = { TODO: totalUnidadesCarWash };
+    itemsCarWashEnOrden.forEach((it) => {
+      const cat = classifyItemCategory({ name: it.name, code: it.code, category: it.category });
+      map[cat] = (map[cat] || 0) + (Number(it.qty) || 1);
+    });
+    return map;
+  }, [itemsCarWashEnOrden, totalUnidadesCarWash]);
+
+  // Conteos por subcategoría dentro de la categoría activa
+  const conteoItemsPorSubcategoria = useMemo(() => {
+    const map: Record<string, number> = { TODOS: conteoItemsPorCategoria[categoriaActivaId] || 0 };
+    todosLosItemsPOS.forEach((it) => {
+      if (categoriaActivaId === "TODO" || it.categoryMapped === categoriaActivaId) {
+        map[it.subcategoryMapped] = (map[it.subcategoryMapped] || 0) + 1;
       }
     });
     return map;
-  }, [config, selectedPackageIds]);
+  }, [todosLosItemsPOS, categoriaActivaId, conteoItemsPorCategoria]);
 
-  // Paquetes filtrados según vehículo, categoría y búsqueda
-  const filteredPackages = useMemo(() => {
-    if (!config) return [];
-    const q = searchQuery.trim().toLowerCase();
-    return config.packages
-      .filter((pkg) => {
-        if (!pkg.active) return false;
-        if (pkg.applicableVehicleTypes?.length > 0) {
-          const appList = pkg.applicableVehicleTypes;
-          const match =
-            appList.includes(selectedVehicleTypeId) ||
-            (selectedVehicleTypeId === "vt_sedan" && (appList.includes("vt_auto_pequeno") || appList.includes("vt_hatchback"))) ||
-            (selectedVehicleTypeId === "vt_camioneta" && appList.includes("vt_camioneta_grande")) ||
-            (selectedVehicleTypeId === "vt_mayor_tamano" && appList.includes("vt_furgoneta"));
-          if (!match) return false;
-        }
-        if (selectedCategoryId !== "TODOS" && pkg.categoryId !== selectedCategoryId) {
-          // Si seleccionó "cw_cat_completo", "cw_cat_premium", "cw_cat_detailing" o "cw_cat_exterior", muestra los de esa categoría
-          return false;
-        }
-        if (q) {
-          const hay = `${pkg.name} ${pkg.code} ${pkg.shortDescription} ${(pkg.includedProcedures || []).join(" ")}`.toLowerCase();
-          if (!hay.includes(q)) return false;
-        }
-        return true;
-      })
-      .sort((a, b) => a.order - b.order);
-  }, [config, selectedVehicleTypeId, selectedCategoryId, searchQuery]);
-
-  // Servicios individuales filtrados según vehículo, categoría, subcategoría y búsqueda
-  const filteredServices = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    return services
-      .filter((srv) => {
-        if (!srv.active || srv.archived) return false;
-        if (srv.applicableVehicleTypes?.length > 0) {
-          const appList = srv.applicableVehicleTypes;
-          const match =
-            appList.includes(selectedVehicleTypeId) ||
-            (selectedVehicleTypeId === "vt_sedan" && (appList.includes("vt_auto_pequeno") || appList.includes("vt_hatchback"))) ||
-            (selectedVehicleTypeId === "vt_camioneta" && appList.includes("vt_camioneta_grande")) ||
-            (selectedVehicleTypeId === "vt_mayor_tamano" && appList.includes("vt_furgoneta"));
-          if (!match) return false;
-        }
-        if (selectedCategoryId !== "TODOS" && srv.categoryId !== selectedCategoryId) {
-          return false;
-        }
-        if (
-          selectedSubcategoryId !== "TODOS" &&
-          srv.subcategoryId &&
-          srv.subcategoryId !== selectedSubcategoryId
-        ) {
-          return false;
-        }
-        if (q) {
-          const hay = `${srv.name} ${srv.code} ${srv.shortDescription} ${srv.fullDescription} ${(srv.includesList || []).join(" ")}`.toLowerCase();
-          if (!hay.includes(q)) return false;
-        }
-        return true;
-      })
-      .sort((a, b) => a.order - b.order);
-  }, [services, selectedVehicleTypeId, selectedCategoryId, selectedSubcategoryId, searchQuery]);
-
-  // Adicionales filtrados
-  const activeAddons = useMemo(() => {
-    if (!config) return [];
-    const q = searchQuery.trim().toLowerCase();
-    return config.addons
-      .filter((a) => {
-        if (!a.active) return false;
-        if (
-          a.applicableVehicleTypes?.length > 0 &&
-          !a.applicableVehicleTypes.includes(selectedVehicleTypeId)
-        ) {
-          return false;
-        }
-        if (q && selectedCategoryId === "cw_cat_adicionales") {
-          const hay = `${a.name} ${a.code} ${a.description}`.toLowerCase();
-          if (!hay.includes(q)) return false;
-        }
-        return true;
-      })
-      .sort((a, b) => a.order - b.order);
-  }, [config, selectedVehicleTypeId, searchQuery, selectedCategoryId]);
-
-  // Toggle Paquete
-  const handleTogglePackage = (pkg: CarWashPackage) => {
-    if (pkg.availability === "No disponible") {
-      mostrarToast("Este paquete no se encuentra disponible actualmente", "err");
-      return;
-    }
-    const priceInfo = computePriceForVehicle(pkg, selectedVehicleTypeId);
-    if (!priceInfo.unitPrice) {
-      mostrarToast("Falta configurar el precio de este paquete antes de seleccionarlo", "err");
-      return;
-    }
-    setSelectedPackageIds((prev) =>
-      prev.includes(pkg.id) ? prev.filter((id) => id !== pkg.id) : [...prev, pkg.id]
-    );
-  };
-
-  // Toggle Servicio Individual
-  const handleToggleService = (srv: CarWashEnrichedService) => {
-    if (srv.availability === "No disponible") {
-      mostrarToast("Este servicio no está disponible actualmente", "err");
-      return;
-    }
-    const priceInfo = computePriceForVehicle(srv, selectedVehicleTypeId);
-    if (!priceInfo.unitPrice) {
-      mostrarToast("Falta configurar el precio de este servicio antes de seleccionarlo", "err");
-      return;
-    }
-    setSelectedServiceIds((prev) =>
-      prev.includes(srv.id) ? prev.filter((id) => id !== srv.id) : [...prev, srv.id]
-    );
-  };
-
-  // Toggle Adicional
-  const handleToggleAddon = (addon: CarWashAddon) => {
-    if (addonsIncludedInSelectedPackages[addon.id]) {
-      mostrarToast(
-        `"${addon.name}" ya está incluido gratis dentro de ${addonsIncludedInSelectedPackages[addon.id]}`,
-        "ok"
-      );
-      return;
-    }
-    const hasMain = selectedPackageIds.length > 0 || selectedServiceIds.length > 0;
-    if (!addon.canBeStandalone && !hasMain && !selectedAddonIds.includes(addon.id)) {
-      mostrarToast(
-        `"${addon.name}" requiere seleccionar primero un lavado o paquete principal.`,
-        "err"
-      );
-      return;
-    }
-    setSelectedAddonIds((prev) =>
-      prev.includes(addon.id) ? prev.filter((id) => id !== addon.id) : [...prev, addon.id]
-    );
-  };
-
-  // Guardar servicio creado/editado desde el modal
-  const handleSaveServiceAdmin = async (servicePayload: any) => {
-    const res = await fetch("/api/taller/carwash", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "SAVE_SERVICE",
-        service: servicePayload,
-      }),
+  const conteoEnPedidoPorSubcategoria = useMemo(() => {
+    const map: Record<string, number> = { TODOS: conteoEnPedidoPorCategoria[categoriaActivaId] || 0 };
+    itemsCarWashEnOrden.forEach((it) => {
+      const cat = classifyItemCategory({ name: it.name, code: it.code, category: it.category });
+      if (categoriaActivaId === "TODO" || cat === categoriaActivaId) {
+        const sub = classifyItemSubcategory(cat, { name: it.name, code: it.code });
+        map[sub] = (map[sub] || 0) + (Number(it.qty) || 1);
+      }
     });
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      mostrarToast(data.error || "Error al guardar servicio", "err");
-      throw new Error(data.error || "Error");
-    }
-    setConfig(data.config);
-    setServices(data.services || []);
-    mostrarToast("Servicio guardado correctamente en Neon", "ok");
-  };
+    return map;
+  }, [itemsCarWashEnOrden, categoriaActivaId, conteoEnPedidoPorCategoria]);
 
-  // Eliminar o archivar servicio desde el modal
-  const handleDeleteServiceAdmin = async (id: string) => {
-    const res = await fetch(`/api/taller/carwash?id=${encodeURIComponent(id)}&type=service`, {
-      method: "DELETE",
+  // Ítems finales filtrados para la cuadrícula del POS
+  const itemsFiltrados = useMemo(() => {
+    const q = searchQuery
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+
+    return todosLosItemsPOS.filter((item) => {
+      if (categoriaActivaId !== "TODO" && item.categoryMapped !== categoriaActivaId) {
+        return false;
+      }
+      if (subcategoriaActivaId !== "TODOS" && item.subcategoryMapped !== subcategoriaActivaId) {
+        return false;
+      }
+      if (q) {
+        const haystack = `${item.name} ${item.keyword} ${item.code} ${item.brand}`
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "");
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
     });
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      mostrarToast(data.error || "No se pudo eliminar el servicio", "err");
-      return;
-    }
-    setServices(data.services || []);
-    setServiceFormModal({ open: false, service: null });
-    mostrarToast(data.message || "Servicio actualizado", "ok");
-  };
+  }, [todosLosItemsPOS, categoriaActivaId, subcategoriaActivaId, searchQuery]);
 
-  // Guardar toda la configuración manual (Categorías, Vehículos, Paquetes, Adicionales, Reglas)
-  const handleSaveConfigAdmin = async (updatedConfig: CarWashConfigData) => {
-    const res = await fetch("/api/taller/carwash", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ config: updatedConfig }),
-    });
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      mostrarToast(data.error || "Error al guardar configuración", "err");
-      throw new Error(data.error || "Error");
-    }
-    setConfig(data.config);
-    setServices(data.services || []);
-  };
-
-  // Confirmar e integrar los servicios seleccionados con la Orden Activa / Carrito actual
-  const handleConfirmSelectionToOrder = async (advanceToSignature: boolean) => {
-    if (confirmingOrder) return;
-    if (
-      selectedPackageIds.length === 0 &&
-      selectedServiceIds.length === 0 &&
-      selectedAddonIds.length === 0
-    ) {
-      mostrarToast("Selecciona al menos un servicio, paquete o complemento", "err");
-      return;
-    }
-
-    try {
-      setConfirmingOrder(true);
-      const res = await fetch("/api/taller/carwash", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "CALCULAR_Y_VALIDAR_SELECCION",
-          vehicleTypeId: selectedVehicleTypeId,
-          selectedPackageIds,
-          selectedServiceIds,
-          selectedAddonIds,
-          promoCode: promoCodeInput,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success || !data.calculation) {
-        mostrarToast(data.error || "Error al validar precios en el servidor", "err");
-        return;
-      }
-
-      const calc = data.calculation;
-      setServerCalculation(calc);
-
-      // Conservar ítems de otras áreas (ej. Lubricentro o Tecnicentro) y reemplazar los de Car Wash
-      const nonCarWashItems = (itemsOrden || []).filter((it) => {
-        const code = String(it.code || "");
-        const cat = String(it.category || "");
-        return (
-          cat !== "Lavado" &&
-          cat !== "Car Wash" &&
-          !code.startsWith("CW-") &&
-          !code.startsWith("PKG-CW-") &&
-          !code.startsWith("ADD-CW-")
-        );
-      });
-
-      const carWashOrderItems = (calc.lines || [])
-        .filter((line: any) => !line.alreadyIncludedInPackage)
-        .map((line: any) => ({
-          id: line.id,
-          code: line.code,
-          name: line.name,
-          category: "Lavado",
-          subCategory: line.subCategory,
-          price: Number(line.unitPrice),
-          qty: 1,
-          type: "SERVICE",
-          estimatedMinutes: line.estimatedMinutes,
-          vehicleType: calc.vehicleType?.name || "",
-          empleado_id: empleadoLogueado.id,
-          empleado_nombre: empleadoLogueado.nombre,
-        }));
-
-      const merged = [...nonCarWashItems, ...carWashOrderItems];
-      await onActualizarItemsOrden(merged);
-      mostrarToast(
-        `✓ ${carWashOrderItems.length} servicio(s) de Car Wash aplicados a la orden ($${Number(
-          calc.total
-        ).toFixed(2)})`,
-        "ok"
-      );
-
-      if (advanceToSignature) {
-        onIrAAvisoYFirma();
-      }
-    } finally {
-      setConfirmingOrder(false);
-    }
-  };
-
-  // Confirmar una Reserva en Bahía de Lavado (ClientAppointment real en Neon)
-  const handleConfirmBayReservation = async () => {
-    if (savingBooking) return;
-    if (!serverCalculation || !serverCalculation.lines?.length) {
-      mostrarToast("Selecciona primero al menos un servicio o paquete para reservar", "err");
-      return;
-    }
-
-    try {
-      setSavingBooking(true);
-      const summaryNames = serverCalculation.lines
-        .map((l: any) => l.name)
-        .join(" + ")
-        .slice(0, 180);
-
-      const idempKey = `${ordenActiva?.plate || "CW"}-${bookingDate}-${bookingTimeSlot}-${bookingBay}`;
-
-      const res = await fetch("/api/taller/carwash", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "CREAR_RESERVA_CARWASH",
-          vehicle:
-            ordenActiva?.vehicle ||
-            `${currentVehicleType?.name || "Vehículo"} (${ordenActiva?.plate || "Recepción"})`,
-          plate: ordenActiva?.plate || "S/P",
-          clientName: ordenActiva?.client || "Cliente Car Wash",
-          clientPhone: ordenActiva?.clientPhone || "",
-          serviceSummary: summaryNames,
-          date: bookingDate,
-          timeSlot: bookingTimeSlot,
-          bay: bookingBay,
-          notes: bookingNotes,
-          idempotencyKey: idempKey,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        mostrarToast(data.error || "No se pudo registrar la reserva", "err");
-        return;
-      }
-
-      setLastBookingConfirmed(data.appointment);
-      setAppointments((prev) => [
-        data.appointment,
-        ...prev.filter((a) => a.id !== data.appointment.id),
-      ]);
-      mostrarToast(
-        `📅 Reserva #${data.appointment.appointmentNumber} confirmada en ${bookingBay} (${bookingDate} ${bookingTimeSlot})`,
-        "ok"
-      );
-    } finally {
-      setSavingBooking(false);
-    }
-  };
-
-  // Guardar en pedido desde Car Wash (selección o manual)
-  const handleGuardarServicioManualEnOrden = async () => {
-    if (confirmingOrder) return;
-    setConfirmingOrder(true);
-    try {
-      const texto = manualServicioTexto.trim();
-      const precioNum = Math.max(0, parseFloat(manualServicioPrecio) || 0);
-      const cantidad = Math.max(1, manualCantidad || 1);
-      const totalManual = Number((precioNum * cantidad).toFixed(2));
-
-      const itemsParaGuardar: any[] = [];
-
-      // 1. Agregar servicios seleccionados del catálogo si hay
-      if (serverCalculation?.lines?.length > 0) {
-        serverCalculation.lines
-          .filter((line: any) => !line.alreadyIncludedInPackage)
-          .forEach((line: any) => {
-            itemsParaGuardar.push({
-              id: line.id,
-              code: line.code,
-              name: line.name,
-              category: "Lavado",
-              subCategory: line.subCategory || "Car Wash",
-              price: Number(line.unitPrice),
-              total: Number(line.unitPrice),
-              qty: 1,
-              type: "SERVICE",
-              estimatedMinutes: line.estimatedMinutes,
-              vehicleType: currentVehicleType?.name || "",
-              status: "Listo",
-              completed: true,
-              empleado_id: empleadoLogueado.id,
-              empleado_nombre: empleadoLogueado.nombre,
-            });
-          });
-      }
-
-      // 2. Agregar servicio manual si se escribió
-      if (texto) {
-        const code = `CW-MAN-${Math.floor(100 + Math.random() * 900)}`;
-        const cantTexto = `${cantidad} ${manualUnidad}`;
-        itemsParaGuardar.push({
-          id: `sol_cw_${Date.now()}`,
-          key: `cw_${Date.now()}`,
-          code,
-          name: `${texto} (${cantTexto} - ${currentVehicleType?.name || "General"})`,
-          category: "Lavado",
-          subCategory: "Manual",
-          price: precioNum,
-          total: totalManual,
-          qty: cantidad,
-          unitOfMeasure: manualUnidad,
-          type: "SERVICE",
-          vehicleType: currentVehicleType?.name || "",
-          status: "Listo",
-          completed: true,
-          empleado_id: empleadoLogueado.id,
-          empleado_nombre: empleadoLogueado.nombre,
-        });
-      }
-
-      if (itemsParaGuardar.length === 0) {
-        mostrarToast("Selecciona un servicio o escribe uno manualmente", "err");
-        return;
-      }
-
-      // Conservar ítems de otras áreas (ej. Lubricentro)
-      const nonCarWashItems = (itemsOrden || []).filter((it) => {
-        const code = String(it.code || "");
-        const cat = String(it.category || "");
-        return (
-          cat !== "Lavado" &&
-          cat !== "Car Wash" &&
-          !code.startsWith("CW-") &&
-          !code.startsWith("PKG-CW-") &&
-          !code.startsWith("ADD-CW-")
-        );
-      });
-
-      const merged = [...nonCarWashItems, ...itemsParaGuardar];
-      await onActualizarItemsOrden(merged);
-
-      const totalVal = itemsParaGuardar.reduce((acc, curr) => acc + (Number(curr.total || curr.price) || 0), 0);
-      mostrarToast(
-        `✓ ${itemsParaGuardar.length} servicio(s) de Car Wash guardados en la orden ($${totalVal.toFixed(2)})`,
-        "ok"
-      );
-
-      // Limpiar campos
-      setManualServicioTexto("");
-      setManualServicioPrecio("");
-      setSelectedPackageIds([]);
-      setSelectedServiceIds([]);
-      setSelectedAddonIds([]);
-      setServerCalculation(null);
-    } finally {
-      setConfirmingOrder(false);
-    }
-  };
-
-  // Ajustar (+1 / -1) la cantidad de un servicio/paquete/extra de Car Wash directamente en la orden
+  // Obtener cantidad en la orden activa para un ítem
   const obtenerCantidadEnPedido = (item: { id: string; code?: string; kind?: string }) => {
     const isProduct = item.kind === "PRODUCT";
     const expectedCode = item.code || (isProduct ? `PRD-${item.id}` : `CW-${item.id}`);
@@ -985,6 +852,7 @@ export default function ModuloCarWashCatalogo({
     return matches.reduce((sum, it) => sum + (Number(it.qty) || 1), 0);
   };
 
+  // Ajustar cantidad (+1 / -1) de forma inmediata al tocar
   const handleAjustarCantidadItem = async (
     item: {
       id: string;
@@ -993,8 +861,7 @@ export default function ModuloCarWashCatalogo({
       code: string;
       price: number;
       durationMinutes?: number;
-      categoryId?: string;
-      stock?: number;
+      keyword: string;
       brand?: string;
     },
     delta: number
@@ -1002,9 +869,7 @@ export default function ModuloCarWashCatalogo({
     try {
       const isProduct = item.kind === "PRODUCT";
       const code = item.code || (isProduct ? `PRD-${item.id}` : `CW-${item.id}`);
-      const vehLabel = currentVehicleType
-        ? toSingleWord(currentVehicleType.name, CARWASH_VEH_SINGLE)
-        : "Auto";
+      const vehLabel = vehiculoActivo;
       const listaActual = [...(itemsOrden || [])];
       const idx = listaActual.findIndex(
         (it) =>
@@ -1040,25 +905,27 @@ export default function ModuloCarWashCatalogo({
         }
       } else if (delta > 0) {
         const priceUnit = Number(item.price || 0);
+        const displayName = isProduct ? item.name : `${item.keyword} (${vehLabel})`;
+
         const nuevoItem = {
           id: isProduct ? `prod_${item.id}_${Date.now()}` : `cw_${item.id}_${Date.now()}`,
           key: `key_${item.id}_${Date.now()}`,
           serviceId: isProduct ? undefined : item.id,
           productId: isProduct ? item.id : undefined,
           type: isProduct ? ("PART" as const) : ("SERVICE" as const),
-          category: isProduct ? (item.categoryId || "Insumo") : "Lavado",
-          cwCategoryId: item.categoryId || selectedCategoryId,
-          subCategory: isProduct ? "Producto" : "Servicio",
+          category: isProduct ? "Insumo" : "Lavado",
+          cwCategoryId: categoriaActivaId,
+          subCategory: isProduct ? "Producto" : "Car Wash",
           code,
-          name: isProduct ? item.name : `${item.name} (${vehLabel})`,
+          name: displayName,
           brand: isProduct ? (item.brand || "Insumo") : "Car Wash",
           presentation: isProduct ? "Unidad" : item.durationMinutes ? `${item.durationMinutes} min` : "Servicio",
           unitOfMeasure: isProduct ? "Unidad" : "Servicio",
           price: priceUnit,
           total: Number((priceUnit * delta).toFixed(2)),
           qty: delta,
-          estimatedMinutes: isProduct ? undefined : (item.durationMinutes || 30),
-          vehicleType: isProduct ? undefined : (currentVehicleType?.name || vehLabel),
+          estimatedMinutes: isProduct ? undefined : (item.durationMinutes || 25),
+          vehicleType: isProduct ? undefined : vehLabel,
           status: "Listo" as const,
           completed: true,
           empleado_id: empleadoLogueado.id,
@@ -1071,330 +938,600 @@ export default function ModuloCarWashCatalogo({
     }
   };
 
-  // Lista unificada y automática de servicios y productos REALES del POS
-  const itemsFiltradosAutomaticos = useMemo(() => {
-    const q = searchQuery
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim();
+  // Función 1: Repetir último servicio de Carwash para este vehículo
+  const handleRepetirUltimoServicio = async () => {
+    try {
+      let itemsRecuperados: any[] = [];
+      const keyPlate = `carwash_last_${ordenActiva?.plate || "general"}`;
 
-    const terms = q.split(/\s+/).filter(Boolean);
-    const matchText = (text: string) => {
-      if (terms.length === 0) return true;
-      const norm = (text || "")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-      return terms.every((t) => norm.includes(t));
-    };
-
-    const list: Array<{
-      id: string;
-      kind: "SERVICE" | "PRODUCT" | "PACKAGE" | "ADDON";
-      name: string;
-      code: string;
-      brand: string;
-      description?: string;
-      durationMinutes?: number;
-      price: number;
-      originalPrice?: number | null;
-      isPromo?: boolean;
-      categoryId?: string;
-      subcategoryId?: string;
-      rawService?: CarWashEnrichedService;
-      rawProduct?: any;
-      imageUrl?: string;
-      stock?: number;
-    }> = [];
-
-    // 1. Servicios REALES del POS
-    if (!filtroCategoriaGeneral || filtroCategoriaGeneral === "SERVICE") {
-      filteredServices.forEach((srv) => {
-        const full = `${srv.name} ${srv.code} ${srv.shortDescription || ""} ${srv.fullDescription || ""} ${(srv.includesList || []).join(" ")}`;
-        if (!matchText(full)) return;
-        const pInfo = computePriceForVehicle(srv, selectedVehicleTypeId);
-        const catObj = config?.categories?.find((c) => c.id === srv.categoryId);
-        list.push({
-          id: srv.id,
-          kind: "SERVICE",
-          name: srv.name,
-          code: srv.code,
-          brand: catObj?.name ? toSingleWord(catObj.name, CARWASH_CAT_SINGLE) : "Servicio",
-          description: srv.shortDescription || srv.fullDescription,
-          durationMinutes: srv.estimatedMinutes || 30,
-          price: pInfo.unitPrice ?? srv.basePrice ?? srv.price ?? 0,
-          originalPrice: pInfo.originalPrice,
-          isPromo: pInfo.isPromo,
-          categoryId: srv.categoryId,
-          subcategoryId: srv.subcategoryId,
-          rawService: srv,
-          imageUrl: srv.imageUrl,
-        });
-      });
-    }
-
-    // 2. Productos e Insumos REALES del POS
-    if (!filtroCategoriaGeneral || filtroCategoriaGeneral === "PRODUCT") {
-      products.forEach((prod) => {
-        const full = `${prod.name} ${prod.code} ${prod.brand || ""} ${prod.category || ""}`;
-        if (!matchText(full)) return;
-        if (selectedCategoryId !== "TODOS" && prod.cwCategoryId && prod.cwCategoryId !== selectedCategoryId) {
-          return;
+      if (typeof window !== "undefined") {
+        const guardado = localStorage.getItem(keyPlate) || localStorage.getItem("carwash_last_general");
+        if (guardado) {
+          try {
+            itemsRecuperados = JSON.parse(guardado);
+          } catch {}
         }
-        list.push({
-          id: prod.id,
-          kind: "PRODUCT",
-          name: prod.name,
-          code: prod.code,
-          brand: prod.category || prod.brand || "Producto",
-          description: prod.brand ? `Marca: ${prod.brand}` : "Producto del POS",
-          durationMinutes: undefined,
-          price: Number(prod.price || 0),
-          originalPrice: null,
-          isPromo: false,
-          categoryId: prod.cwCategoryId,
-          imageUrl: prod.imageUrl,
-          stock: prod.stock,
-          rawProduct: prod,
-        });
+      }
+
+      // Si no hay historial previo en localStorage, usar el servicio más representativo (Lavado Completo o Exprés)
+      if (!itemsRecuperados || itemsRecuperados.length === 0) {
+        const targetKeyword = "COMPLETO";
+        const baseItem = todosLosItemsPOS.find((it) => it.keyword === targetKeyword) || todosLosItemsPOS[0];
+        if (baseItem) {
+          const vehLabel = vehiculoActivo;
+          itemsRecuperados = [
+            {
+              id: `cw_${baseItem.id}_${Date.now()}`,
+              key: `key_${baseItem.id}_${Date.now()}`,
+              serviceId: baseItem.id,
+              type: "SERVICE",
+              category: "Lavado",
+              cwCategoryId: "LAVADO",
+              subCategory: "Car Wash",
+              code: baseItem.code,
+              name: `${baseItem.keyword} (${vehLabel})`,
+              brand: "Car Wash",
+              presentation: `${baseItem.durationMinutes || 35} min`,
+              unitOfMeasure: "Servicio",
+              price: baseItem.price,
+              total: baseItem.price,
+              qty: 1,
+              estimatedMinutes: baseItem.durationMinutes || 35,
+              vehicleType: vehLabel,
+              status: "Listo",
+              completed: true,
+              empleado_id: empleadoLogueado.id,
+              empleado_nombre: empleadoLogueado.nombre,
+            },
+          ];
+        }
+      }
+
+      if (itemsRecuperados.length === 0) {
+        mostrarToast("No hay servicios previos registrados para repetir", "err");
+        return;
+      }
+
+      // Conservar ítems que no sean de Carwash
+      const noCarwash = (itemsOrden || []).filter((it) => {
+        const cat = String(it.category || "");
+        const code = String(it.code || "");
+        return (
+          cat !== "Lavado" &&
+          cat !== "Car Wash" &&
+          !code.startsWith("CW-") &&
+          !code.startsWith("PKG-CW-") &&
+          !code.startsWith("ADD-CW-")
+        );
       });
+
+      // Recalcular precios con la tarifa del vehículo actual
+      const regenerados = itemsRecuperados.map((it) => {
+        const matchPOS = todosLosItemsPOS.find(
+          (p) => p.id === it.serviceId || p.code === it.code || it.name.includes(p.keyword)
+        );
+        const unitPrice = matchPOS ? matchPOS.price : Number(it.price || 0);
+        const qty = Number(it.qty) || 1;
+        return {
+          ...it,
+          id: `cw_rep_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          vehicleType: vehiculoActivo,
+          price: unitPrice,
+          total: Number((unitPrice * qty).toFixed(2)),
+          name: matchPOS ? `${matchPOS.keyword} (${vehiculoActivo})` : it.name,
+        };
+      });
+
+      await onActualizarItemsOrden([...noCarwash, ...regenerados]);
+      mostrarToast(`✓ Último servicio de Carwash cargado al carrito (${regenerados.length} servicio(s))`, "ok");
+    } catch {
+      mostrarToast("Error al cargar el último servicio", "err");
     }
+  };
 
-    return list;
-  }, [
-    searchQuery,
-    filtroCategoriaGeneral,
-    filteredServices,
-    products,
-    selectedVehicleTypeId,
-    selectedCategoryId,
-    config,
-  ]);
+  // Función 2: Ciclo de afección de estado (Normal -> Moderado -> Extremo/Recargo)
+  const handleCiclarEstadoAfeccion = (clave: string) => {
+    setEstadoAfecciones((prev) => {
+      const actual = prev[clave] || "NORMAL";
+      let siguiente: NivelAfeccion = "NORMAL";
+      if (actual === "NORMAL") siguiente = "MODERADO";
+      else if (actual === "MODERADO") siguiente = "EXTREMO";
+      else siguiente = "NORMAL";
 
-  // Conteos por categoría para los pills superiores basados en datos reales
-  const conteoPorCategoria = useMemo(() => {
-    const map: Record<string, number> = {};
-    services.forEach((s) => {
-      if (s.active && !s.archived && s.categoryId) {
-        map[s.categoryId] = (map[s.categoryId] || 0) + 1;
+      // Si se marca en Rojo (Extremo), sugerir / filtrar automáticamente el servicio correspondiente
+      if (siguiente === "EXTREMO") {
+        if (clave === "Lodo") {
+          setCategoriaActivaId("CHASIS");
+          setSubcategoriaActivaId("DESENGRASE");
+          mostrarToast("⚠️ Lodo extremo detectado: Sugerido Desengrase / Chasis", "ok");
+        } else if (clave === "Pelos") {
+          setCategoriaActivaId("INTERIOR");
+          setSubcategoriaActivaId("TAPICERIA");
+          mostrarToast("⚠️ Pelos extremo detectado: Sugerido Lavado de Tapicería", "ok");
+        } else if (clave === "Manchas") {
+          setCategoriaActivaId("INTERIOR");
+          setSubcategoriaActivaId("TAPICERIA");
+          mostrarToast("⚠️ Manchas extremas detectadas: Sugerido Lavado de Tapicería", "ok");
+        } else if (clave === "Gotaseca") {
+          setCategoriaActivaId("DETAILING");
+          setSubcategoriaActivaId("GOTASECA");
+          mostrarToast("⚠️ Gota seca extrema: Sugerido Tratamiento Gotaseca", "ok");
+        }
       }
-    });
-    products.forEach((p) => {
-      const catId = p.cwCategoryId || "cw_cat_exterior";
-      map[catId] = (map[catId] || 0) + 1;
-    });
-    return map;
-  }, [services, products]);
 
-  const conteoPorSubcategoria = useMemo(() => {
-    const map: Record<string, number> = {};
-    services.forEach((s) => {
-      if (s.active && !s.archived && s.subcategoryId) {
-        map[s.subcategoryId] = (map[s.subcategoryId] || 0) + 1;
+      return { ...prev, [clave]: siguiente };
+    });
+  };
+
+  // Función 3: Subida rápida de foto del estado (R2)
+  const handleSubirFotoEstado = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setSubiendoFoto(true);
+      const url = await uploadImageToR2CarWash(file);
+      setFotosEstado((prev) => [...prev, url]);
+      mostrarToast("✓ Foto del estado del vehículo guardada en R2", "ok");
+    } catch (err: any) {
+      mostrarToast(err.message || "Error al subir foto", "err");
+    } finally {
+      setSubiendoFoto(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  // Función 4: Aplicar combo completo en 1 toque
+  const handleAplicarCombo = async (combo: CarWashComboDef) => {
+    try {
+      const listaActual = [...(itemsOrden || [])];
+      const itemsAgregados: any[] = [];
+      const vehLabel = vehiculoActivo;
+
+      for (const kw of combo.keywords) {
+        const itemMatch = todosLosItemsPOS.find((it) => it.keyword === kw);
+        if (itemMatch) {
+          const yaExiste = listaActual.some(
+            (it) => it.serviceId === itemMatch.id || it.code === itemMatch.code || (it.name && it.name.includes(kw))
+          );
+          if (!yaExiste) {
+            itemsAgregados.push({
+              id: `cw_combo_${itemMatch.id}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+              key: `key_${itemMatch.id}_${Date.now()}`,
+              serviceId: itemMatch.id,
+              type: "SERVICE",
+              category: "Lavado",
+              cwCategoryId: itemMatch.categoryMapped,
+              subCategory: "Car Wash",
+              code: itemMatch.code,
+              name: `${itemMatch.keyword} (${vehLabel})`,
+              brand: "Car Wash",
+              presentation: `${itemMatch.durationMinutes || 25} min`,
+              unitOfMeasure: "Servicio",
+              price: itemMatch.price,
+              total: itemMatch.price,
+              qty: 1,
+              estimatedMinutes: itemMatch.durationMinutes || 25,
+              vehicleType: vehLabel,
+              status: "Listo",
+              completed: true,
+              empleado_id: empleadoLogueado.id,
+              empleado_nombre: empleadoLogueado.nombre,
+            });
+          }
+        }
       }
+
+      if (itemsAgregados.length === 0) {
+        mostrarToast(`Los servicios del Combo ${combo.label} ya están en el carrito`, "ok");
+      } else {
+        await onActualizarItemsOrden([...listaActual, ...itemsAgregados]);
+        mostrarToast(`✓ Combo ${combo.label} aplicado (+${itemsAgregados.length} servicio(s))`, "ok");
+      }
+      setMostrarCombos(false);
+    } catch {
+      mostrarToast("Error al aplicar combo", "err");
+    }
+  };
+
+  // Guardar configuración administrativa si se abre modal
+  const handleSaveConfigAdmin = async (updatedConfig: CarWashConfigData) => {
+    const res = await fetch("/api/taller/carwash", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ config: updatedConfig }),
     });
-    return map;
-  }, [services]);
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      mostrarToast(data.error || "Error al guardar configuración", "err");
+      throw new Error(data.error || "Error");
+    }
+    setConfig(data.config);
+    setServices(data.services || []);
+  };
 
-  // Ítems de Car Wash actualmente en la orden
-  const itemsCarWashEnOrden = useMemo(() => {
-    return (itemsOrden || []).filter((it) => {
-      const code = String(it.code || "");
-      const cat = String(it.category || "");
-      return (
-        cat === "Lavado" ||
-        cat === "Car Wash" ||
-        cat === "Insumo" ||
-        code.startsWith("CW-") ||
-        code.startsWith("PRD-") ||
-        Boolean(it.productId) ||
-        Boolean(it.serviceId)
-      );
+  const handleSaveServiceAdmin = async (servicePayload: any) => {
+    const res = await fetch("/api/taller/carwash", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "SAVE_SERVICE",
+        service: servicePayload,
+      }),
     });
-  }, [itemsOrden]);
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      mostrarToast(data.error || "Error al guardar servicio", "err");
+      throw new Error(data.error || "Error");
+    }
+    setConfig(data.config);
+    setServices(data.services || []);
+    mostrarToast("Servicio guardado correctamente", "ok");
+  };
 
-  const totalUnidadesCarWash = useMemo(() => {
-    return itemsCarWashEnOrden.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
-  }, [itemsCarWashEnOrden]);
+  const handleDeleteServiceAdmin = async (id: string) => {
+    const res = await fetch(`/api/taller/carwash?id=${encodeURIComponent(id)}&type=service`, {
+      method: "DELETE",
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      mostrarToast(data.error || "No se pudo eliminar el servicio", "err");
+      return;
+    }
+    setServices(data.services || []);
+    setServiceFormModal({ open: false, service: null });
+    mostrarToast("Servicio eliminado", "ok");
+  };
 
-  const totalMontoCarWash = useMemo(() => {
-    return itemsCarWashEnOrden.reduce(
-      (acc, it) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1),
-      0
-    );
-  }, [itemsCarWashEnOrden]);
-
-  const totalCatalogoCount = useMemo(() => {
-    return (
-      services.filter((s) => s.active && !s.archived).length +
-      products.length
-    );
-  }, [services, products]);
-
-  if (loading && !config) {
+  if (!mounted || (loading && !config)) {
     return (
       <div className="p-8 rounded-3xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 text-center space-y-3 animate-pulse">
         <div className="text-3xl">🚿</div>
         <p className="text-sm font-normal text-zinc-700 dark:text-zinc-300">
-          Cargando catálogo de Car Wash, paquetes y tarifas desde Neon...
+          Cargando catálogo de Car Wash y tarifas...
         </p>
       </div>
     );
   }
 
-  if (errorMsg || !config) {
+  if (errorMsg && !config) {
     return (
       <div className="p-6 rounded-3xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-center space-y-3">
         <p className="text-sm font-normal text-rose-700 dark:text-rose-300">
-          ⚠️ {errorMsg || "Error al cargar el módulo Car Wash"}
+          ⚠️ {errorMsg}
         </p>
         <button
           type="button"
           onClick={() => void fetchCarWashData()}
           className="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-normal cursor-pointer"
         >
-          Reintentar carga
+          Reintentar
         </button>
       </div>
     );
   }
 
-  const vehLabelCorto = currentVehicleType
-    ? toSingleWord(currentVehicleType.name, CARWASH_VEH_SINGLE)
-    : "Auto";
-
   return (
-    <div className="w-full space-y-2.5 sm:space-y-3 animate-fade-in pb-4">
+    <div className="w-full space-y-2.5 sm:space-y-3 animate-fade-in pb-24 sm:pb-28">
       {/* =====================================================================
-          NIVEL 1: CATEGORÍAS PRINCIPALES (Cubriendo todo el ancho igual que Lubricentro)
+          0. FILA SUPERIOR DE ACCESOS RÁPIDOS (⚡ Repetir, 🧽 Estado, ⚡ Combo)
           ===================================================================== */}
-      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full">
-        <button
-          type="button"
-          onClick={() => {
-            setSelectedCategoryId("TODOS");
-            setSelectedSubcategoryId("TODOS");
-          }}
-          className={`flex-1 min-w-[100px] sm:min-w-[120px] h-9 sm:h-10 px-3 sm:px-4 rounded-xl border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
-            selectedCategoryId === "TODOS"
-              ? "bg-blue-600 border-blue-500 text-white shadow-xs"
-              : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-          }`}
-        >
-          <span className="text-sm leading-none shrink-0">✨</span>
-          <span className="whitespace-nowrap">Todo</span>
-          <span
-            className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-normal shrink-0 ${
-              selectedCategoryId === "TODOS"
-                ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
-                : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
-            }`}
+      <div className="space-y-2 rounded-2xl bg-zinc-50/80 dark:bg-black/20 p-2 sm:p-2.5 border border-zinc-200/80 dark:border-white/10 shadow-2xs">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* ⚡ Repetir */}
+          <button
+            type="button"
+            onClick={handleRepetirUltimoServicio}
+            className="flex-1 h-8 sm:h-9 px-3 rounded-xl border border-zinc-200 dark:border-white/10 bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs whitespace-nowrap"
+            title="Cargar el último servicio realizado a este vehículo"
           >
-            {totalCatalogoCount}
-          </span>
-        </button>
+            <span>⚡</span>
+            <span>Repetir</span>
+          </button>
 
-        {activeCategories.map((cat) => {
-          const activa = selectedCategoryId === cat.id;
-          const totalCat = conteoPorCategoria[cat.id] || 0;
-          return (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => {
-                setSelectedCategoryId(cat.id);
-                setSelectedSubcategoryId("TODOS");
-              }}
-              className={`flex-1 min-w-[100px] sm:min-w-[120px] h-9 sm:h-10 px-3 sm:px-4 rounded-xl border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
-                activa
-                  ? "bg-blue-600 border-blue-500 text-white shadow-xs"
-                  : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-              }`}
-            >
-              <span className="text-base leading-none shrink-0">{cat.icon || "🚿"}</span>
-              <span className="whitespace-nowrap">{toSingleWord(cat.name, CARWASH_CAT_SINGLE)}</span>
-              {totalCat > 0 && (
-                <span
-                  className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-normal shrink-0 ${
-                    activa
-                      ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
-                      : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
-                  }`}
-                >
-                  {totalCat}
+          {/* 🧽 Estado */}
+          <button
+            type="button"
+            onClick={() => {
+              setMostrarEstado((prev) => !prev);
+            }}
+            className={`flex-1 h-8 sm:h-9 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs whitespace-nowrap ${
+              mostrarEstado
+                ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
+                : "border-zinc-200 dark:border-white/10 bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-800 dark:text-zinc-200"
+            }`}
+            title="Recepción rápida de estado del vehículo en lavadora"
+          >
+            <span>🧽</span>
+            <span>Estado</span>
+            <span className="text-[10px] opacity-75">{mostrarEstado ? "▲" : "▼"}</span>
+          </button>
+
+          {/* ⚡ Combo */}
+          <button
+            type="button"
+            onClick={() => {
+              setMostrarCombos((prev) => !prev);
+            }}
+            className={`flex-1 h-8 sm:h-9 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs whitespace-nowrap ${
+              mostrarCombos
+                ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
+                : "border-zinc-200 dark:border-white/10 bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-800 dark:text-zinc-200"
+            }`}
+            title="Combos de servicios rápidos"
+          >
+            <span>⚡</span>
+            <span>Combo</span>
+            <span className="text-[10px] opacity-75">{mostrarCombos ? "▲" : "▼"}</span>
+          </button>
+        </div>
+
+        {/* Despliegue de 🧽 Estado (Lodo, Pelos, Manchas, Gotaseca, Objetos, 📷) */}
+        {mostrarEstado && (
+          <div className="pt-2 border-t border-zinc-200/80 dark:border-white/10 space-y-2 animate-fade-in">
+            <div className="flex items-center justify-between text-[10px] text-zinc-500 dark:text-zinc-400 px-0.5">
+              <span className="font-semibold uppercase tracking-wider">Recepción en Lavadora</span>
+              <span>Gris: Normal • Amarillo: Moderado • Rojo: Extremo</span>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+              {(["Lodo", "Pelos", "Manchas", "Gotaseca"] as const).map((clave) => {
+                const niv = estadoAfecciones[clave] || "NORMAL";
+                return (
+                  <button
+                    key={clave}
+                    type="button"
+                    onClick={() => handleCiclarEstadoAfeccion(clave)}
+                    className={`h-8 sm:h-8.5 px-2 rounded-lg border text-xs flex items-center justify-center gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs whitespace-nowrap ${
+                      niv === "EXTREMO"
+                        ? "bg-rose-100 dark:bg-rose-500/25 text-rose-800 dark:text-rose-200 border-rose-300 dark:border-rose-400/50 font-bold shadow-xs"
+                        : niv === "MODERADO"
+                        ? "bg-amber-100 dark:bg-amber-500/25 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-400/50 font-semibold shadow-xs"
+                        : "bg-white dark:bg-white/[0.04] hover:bg-zinc-50 dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 font-medium"
+                    }`}
+                  >
+                    <span>{clave}</span>
+                    {niv === "EXTREMO" && <span className="text-[10px]">🚨</span>}
+                    {niv === "MODERADO" && <span className="text-[10px]">⚠️</span>}
+                  </button>
+                );
+              })}
+
+              {/* Objetos */}
+              <button
+                type="button"
+                onClick={() => {
+                  const nuevo = !objetosVerificados;
+                  setObjetosVerificados(nuevo);
+                  if (nuevo) {
+                    mostrarToast("✓ Pertenencias verificadas en cabina y baúl", "ok");
+                  }
+                }}
+                className={`h-8 sm:h-8.5 px-2 rounded-lg border text-xs flex items-center justify-center gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs whitespace-nowrap ${
+                  objetosVerificados
+                    ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 border-emerald-300 dark:border-emerald-500/30 font-semibold shadow-xs"
+                    : "bg-white dark:bg-white/[0.04] hover:bg-zinc-50 dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 font-medium"
+                }`}
+                title="Marcar verificación de objetos personales"
+              >
+                {objetosVerificados && <span>✓</span>}
+                <span>Objetos</span>
+              </button>
+
+              {/* 📷 Foto R2 */}
+              <button
+                type="button"
+                disabled={subiendoFoto}
+                onClick={() => fileInputRef.current?.click()}
+                className="h-8 sm:h-8.5 px-2 rounded-lg border border-zinc-200 dark:border-white/10 bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs whitespace-nowrap disabled:opacity-50"
+                title="Tomar o subir foto de recepción"
+              >
+                <span>📷</span>
+                <span>{subiendoFoto ? "..." : fotosEstado.length > 0 ? `(${fotosEstado.length})` : "Foto"}</span>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handleSubirFotoEstado}
+              />
+            </div>
+
+            {/* Mini preview de fotos guardadas */}
+            {fotosEstado.length > 0 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto pt-1">
+                {fotosEstado.map((url, i) => (
+                  <img
+                    key={i}
+                    src={url}
+                    alt={`Recepción ${i + 1}`}
+                    className="w-8 h-8 rounded-lg object-cover border border-zinc-300 dark:border-white/20 shrink-0"
+                  />
+                ))}
+                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium shrink-0">
+                  ✓ {fotosEstado.length} foto(s) de estado
                 </span>
-              )}
-            </button>
-          );
-        })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Despliegue de ⚡ Combo (Exprés, Completo, Interior, Brillo) */}
+        {mostrarCombos && (
+          <div className="pt-2 border-t border-zinc-200/80 dark:border-white/10 space-y-1.5 animate-fade-in">
+            <div className="flex items-center justify-between text-[10px] text-zinc-500 dark:text-zinc-400 px-0.5">
+              <span className="font-semibold uppercase tracking-wider">Combos de Lavado en 1 toque</span>
+              <span>Marca servicios automáticamente en el pedido</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+              {CARWASH_COMBOS.map((combo) => (
+                <button
+                  key={combo.id}
+                  type="button"
+                  onClick={() => void handleAplicarCombo(combo)}
+                  className="h-8.5 sm:h-9 px-3 rounded-xl border border-zinc-200 dark:border-white/10 bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs whitespace-nowrap"
+                >
+                  <span className="text-sm leading-none">{combo.icon}</span>
+                  <span>{combo.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* =====================================================================
-          NIVEL 2: SUBCATEGORÍAS DE LA CATEGORÍA ACTIVA (Cubriendo todo el ancho con flex-1)
+          1. CATEGORÍAS PRINCIPALES CONTRAÍBLES
           ===================================================================== */}
-      {selectedCategoryId !== "TODOS" && activeSubcategories.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 w-full">
-          <button
-            type="button"
-            onClick={() => setSelectedSubcategoryId("TODOS")}
-            className={`flex-1 min-w-[95px] sm:min-w-[110px] h-8 sm:h-8.5 px-3 rounded-lg border text-xs font-normal flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs ${
-              selectedSubcategoryId === "TODOS"
-                ? "bg-blue-600 border-blue-500 text-white font-normal shadow-xs"
-                : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-            }`}
-          >
-            <span>Todos</span>
-            <span
-              className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
-                selectedSubcategoryId === "TODOS"
-                  ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
-                  : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
-              }`}
-            >
-              {conteoPorCategoria[selectedCategoryId] || 0}
-            </span>
-          </button>
-
-          {activeSubcategories.map((sub) => {
-            const activa = selectedSubcategoryId === sub.id;
-            const countSub = conteoPorSubcategoria[sub.id] || 0;
-            return (
-              <button
-                key={sub.id}
-                type="button"
-                onClick={() => setSelectedSubcategoryId(sub.id)}
-                className={`flex-1 min-w-[95px] sm:min-w-[110px] h-8 sm:h-8.5 px-2.5 sm:px-3 rounded-lg border text-xs font-normal flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs ${
-                  activa
-                    ? "bg-blue-600 border-blue-500 text-white font-normal shadow-xs"
-                    : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-                }`}
-              >
-                <span className="text-sm leading-none shrink-0">{sub.icon || "🚿"}</span>
-                <span className="whitespace-nowrap">{toSingleWord(sub.name, CARWASH_SUB_SINGLE)}</span>
-                {countSub > 0 && (
-                  <span
-                    className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
-                      activa
-                        ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
-                        : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
+      <div className="space-y-2 rounded-2xl bg-zinc-50/80 dark:bg-black/20 p-2.5 sm:p-3 border border-zinc-200/80 dark:border-white/10 shadow-2xs">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          {mostrarCategorias ? (
+            <>
+              {CARWASH_CATEGORIES.map((cat) => {
+                const sel = categoriaActivaId === cat.id;
+                const totalCat = conteoItemsPorCategoria[cat.id] || 0;
+                const enPedidoCat = conteoEnPedidoPorCategoria[cat.id] || 0;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      setCategoriaActivaId(cat.id);
+                      setSubcategoriaActivaId("TODOS");
+                      setMostrarCategorias(false);
+                      setMostrarSubcategorias(true);
+                    }}
+                    className={`flex-1 min-w-[95px] sm:min-w-[115px] h-9 sm:h-10 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
+                      sel
+                        ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
+                        : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
                     }`}
                   >
-                    {countSub}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                    <span className="text-sm leading-none shrink-0">{cat.icon}</span>
+                    <span className="whitespace-nowrap">{cat.label}</span>
+                    {enPedidoCat > 0 ? (
+                      <span className="px-1.5 py-0.5 rounded-md text-xs leading-none tabular-nums font-bold bg-emerald-500 text-white shrink-0">
+                        {enPedidoCat}
+                      </span>
+                    ) : (
+                      <span
+                        className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-medium shrink-0 ${
+                          sel
+                            ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30"
+                            : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
+                        }`}
+                      >
+                        {totalCat}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setMostrarCategorias(true)}
+              aria-label="Desplegar categorías"
+              className="min-w-[110px] h-9 sm:h-10 px-3.5 rounded-xl border bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100 text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-xs active:scale-95 whitespace-nowrap"
+            >
+              <span className="text-sm leading-none shrink-0">{categoriaSeleccionadaObj.icon}</span>
+              <span>{categoriaSeleccionadaObj.label}</span>
+              {conteoEnPedidoPorCategoria[categoriaActivaId] > 0 ? (
+                <span className="px-1.5 py-0.5 rounded-md text-xs leading-none tabular-nums font-bold bg-emerald-500 text-white shrink-0">
+                  {conteoEnPedidoPorCategoria[categoriaActivaId]}
+                </span>
+              ) : (
+                <span className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30 font-medium">
+                  {conteoItemsPorCategoria[categoriaActivaId] || 0}
+                </span>
+              )}
+            </button>
+          )}
         </div>
-      )}
+
+        {/* =====================================================================
+            SUBCATEGORÍAS CONTRAÍBLES
+            ===================================================================== */}
+        {categoriaActivaId !== "TODO" && subcategoriasActivas.length > 0 && (
+          <div className="space-y-2 border-t border-zinc-200/80 pt-2.5 dark:border-white/10">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              {mostrarSubcategorias ? (
+                <>
+                  {subcategoriasActivas.map((sub) => {
+                    const activa = subcategoriaActivaId === sub.id;
+                    const countSub = conteoItemsPorSubcategoria[sub.id] || 0;
+                    const enPedidoSub = conteoEnPedidoPorSubcategoria[sub.id] || 0;
+                    return (
+                      <button
+                        key={sub.id}
+                        type="button"
+                        onClick={() => {
+                          setSubcategoriaActivaId(sub.id);
+                          setMostrarSubcategorias(false);
+                        }}
+                        className={`flex-1 min-w-[85px] sm:min-w-[105px] h-8 sm:h-8.5 px-2.5 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs whitespace-nowrap ${
+                          activa
+                            ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
+                            : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
+                        }`}
+                      >
+                        {sub.icon && <span className="text-xs leading-none shrink-0">{sub.icon}</span>}
+                        <span className="whitespace-nowrap">{sub.label}</span>
+                        {enPedidoSub > 0 ? (
+                          <span className="px-1.5 py-0.5 rounded-md text-xs leading-none tabular-nums font-bold bg-emerald-500 text-white shrink-0">
+                            {enPedidoSub}
+                          </span>
+                        ) : (
+                          <span
+                            className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 font-medium ${
+                              activa
+                                ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30"
+                                : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
+                            }`}
+                          >
+                            {countSub}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setMostrarSubcategorias(true)}
+                  aria-label="Desplegar subcategorías"
+                  className="min-w-[100px] h-8 sm:h-8.5 px-3 rounded-lg border bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-xs whitespace-nowrap"
+                >
+                  {subcategoriaSeleccionadaObj?.icon && (
+                    <span className="text-xs leading-none shrink-0">{subcategoriaSeleccionadaObj.icon}</span>
+                  )}
+                  <span className="whitespace-nowrap">
+                    {subcategoriaSeleccionadaObj ? subcategoriaSeleccionadaObj.label : "Todos"}
+                  </span>
+                  {conteoEnPedidoPorSubcategoria[subcategoriaActivaId] > 0 ? (
+                    <span className="px-1.5 py-0.5 rounded-md text-xs leading-none tabular-nums font-bold bg-emerald-500 text-white shrink-0">
+                      {conteoEnPedidoPorSubcategoria[subcategoriaActivaId]}
+                    </span>
+                  ) : (
+                    <span className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30 font-medium">
+                      {conteoItemsPorSubcategoria[subcategoriaActivaId] || 0}
+                    </span>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* =====================================================================
-          TIENDA UNIFICADA Y AUTOMÁTICA DE CAR WASH (Igual que Lubricentro)
+          2. BUSCADOR + SELECTOR CONTRAÍBLE DE PORTE DE VEHÍCULO
           ===================================================================== */}
-      <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 shadow-2xs">
-        {/* Barra superior: Buscador + Desplegable de Tipo (Paquetes / Servicios / Extras) + Carrito */}
-        <div className="flex items-center justify-between gap-2">
+      <div className="space-y-2 rounded-2xl bg-zinc-50/80 dark:bg-black/20 p-2.5 sm:p-3 border border-zinc-200/80 dark:border-white/10 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          {/* Buscador */}
           <div className="relative flex-1">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">
               🔍
@@ -1403,8 +1540,8 @@ export default function ModuloCarWashCatalogo({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar servicio o paquete..."
-              className="w-full h-9 pl-8 pr-8 rounded-lg bg-zinc-50/80 dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
+              placeholder="Buscar servicio o producto..."
+              className="w-full h-9 sm:h-10 pl-8 pr-8 rounded-xl bg-white dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-400 text-xs sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
             />
             {searchQuery && (
               <button
@@ -1417,240 +1554,131 @@ export default function ModuloCarWashCatalogo({
             )}
           </div>
 
-          {/* Desplegable al lado del buscador (Tipo: Todos / Paquetes / Servicios / Extras) */}
-          <div ref={menuFiltroRef} className="relative shrink-0">
-            <button
-              type="button"
-              onClick={() => setMenuFiltroAbierto((prev) => !prev)}
-              className={`h-9 px-3 rounded-lg border text-xs font-normal flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs select-none active:scale-95 ${
-                filtroCategoriaGeneral
-                  ? "bg-amber-500 border-amber-500 text-white font-normal shadow-xs"
-                  : menuFiltroAbierto
-                  ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/40 text-blue-700 dark:text-blue-300"
-                  : "bg-zinc-50/80 dark:bg-black/40 hover:bg-zinc-100 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-              }`}
-            >
-              <span className="truncate">
-                {filtroCategoriaGeneral === "SERVICE"
-                  ? "Servicios"
-                  : filtroCategoriaGeneral === "PRODUCT"
-                  ? "Productos"
-                  : filtroCategoriaGeneral === "PACKAGE"
-                  ? "Paquetes"
-                  : "Tipo"}
-              </span>
-              <svg
-                className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                  menuFiltroAbierto ? "rotate-180" : ""
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth={2.5}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {menuFiltroAbierto && (
-              <div className="absolute right-0 top-full mt-1.5 w-44 rounded-xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/10 shadow-xl dark:shadow-2xl backdrop-blur-md p-1.5 space-y-0.5 z-40 animate-fade-in">
-                {[
-                  { id: "", label: "Todos los tipos", icon: "✨" },
-                  { id: "SERVICE", label: "Servicios (POS)", icon: "🚿" },
-                  { id: "PRODUCT", label: "Productos (POS)", icon: "📦" },
-                  { id: "PACKAGE", label: "Paquetes", icon: "🏷️" },
-                ].map((opt) => {
-                  const act = filtroCategoriaGeneral === opt.id;
+          {/* Selector contraíble de porte / tamaño de vehículo */}
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap shrink-0">
+            <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 hidden lg:inline-block">
+              Porte:
+            </span>
+            {mostrarVehiculos ? (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {VEHICULOS_CARWASH.map((v) => {
+                  const sel = vehiculoActivo === v.id;
                   return (
                     <button
-                      key={opt.id || "all"}
+                      key={v.id}
                       type="button"
                       onClick={() => {
-                        setFiltroCategoriaGeneral(opt.id);
-                        setMenuFiltroAbierto(false);
+                        setVehiculoActivo(v.id);
+                        setSelectedVehicleTypeId(v.vehicleTypeId);
+                        setMostrarVehiculos(false);
                       }}
-                      className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-normal flex items-center justify-between transition-colors cursor-pointer ${
-                        act
-                          ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-normal"
-                          : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
+                      className={`h-9 sm:h-10 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
+                        sel
+                          ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
+                          : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
                       }`}
                     >
-                      <span className="flex items-center gap-1.5">
-                        <span>{opt.icon}</span>
-                        <span>{opt.label}</span>
-                      </span>
-                      {act && <span className="text-xs">✓</span>}
+                      <span className="text-sm leading-none shrink-0">{v.icon}</span>
+                      <span>{v.label}</span>
                     </button>
                   );
                 })}
               </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setMostrarVehiculos(true)}
+                aria-label="Desplegar porte de vehículo"
+                className="h-9 sm:h-10 px-3.5 rounded-xl border bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100 text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-xs active:scale-95 whitespace-nowrap"
+                title="Cambiar porte de vehículo"
+              >
+                <span className="text-sm leading-none shrink-0">{vehiculoSeleccionadoObj.icon}</span>
+                <span>{vehiculoSeleccionadoObj.label}</span>
+                <span className="text-[10px] opacity-75">▾</span>
+              </button>
             )}
           </div>
-
-          {totalUnidadesCarWash > 0 && (
-            <div className="flex items-center gap-1.5 shrink-0">
-              <div className="h-9 px-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-normal flex items-center gap-1.5">
-                <span>🚿</span>
-                <span>{totalUnidadesCarWash}</span>
-                <span className="font-mono">${totalMontoCarWash.toFixed(2)}</span>
-              </div>
-            </div>
-          )}
         </div>
+      </div>
 
-
-        {/* Grid automático de servicios, paquetes y extras (idéntico a Lubricentro) */}
-        {itemsFiltradosAutomaticos.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3">
-            {itemsFiltradosAutomaticos.map((item) => {
+      {/* =====================================================================
+          3. CUADRÍCULA DE SERVICIOS Y PRODUCTOS DEL POS
+          ===================================================================== */}
+      <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-2xs">
+        {itemsFiltrados.length === 0 ? (
+          <div className="py-12 text-center text-zinc-400 space-y-2">
+            <span className="text-3xl block">🔍</span>
+            <p className="text-sm">No se encontraron servicios ni productos</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-y-3.5 gap-x-3.5">
+            {itemsFiltrados.map((item) => {
               const qtyEnPedido = obtenerCantidadEnPedido(item);
               const estaEnPedido = qtyEnPedido > 0;
 
               return (
                 <div
                   key={`${item.kind}-${item.id}`}
-                  onClick={(e) => {
-                    const target = e.target as HTMLElement;
-                    if (target.closest("button") || target.closest("[data-prevent-card-click]")) {
-                      return;
-                    }
+                  onClick={() => {
                     void handleAjustarCantidadItem(item, 1);
                   }}
-                  className={`p-2.5 sm:p-3 rounded-xl border flex flex-col justify-between gap-2 transition-all shadow-2xs cursor-pointer select-none ${
+                  className={`group relative flex flex-col items-center justify-between p-3.5 sm:p-4 rounded-2xl border transition-all select-none cursor-pointer active:scale-[0.98] min-h-[160px] sm:min-h-[175px] shadow-2xs ${
                     estaEnPedido
-                      ? "bg-emerald-50/40 dark:bg-emerald-500/[0.08] border-emerald-400 dark:border-emerald-500/50 ring-1 ring-emerald-400/30"
-                      : "bg-white dark:bg-white/[0.02] hover:border-blue-400/60 dark:hover:border-blue-500/40 border-zinc-200 dark:border-white/10"
+                      ? "bg-blue-50/60 dark:bg-blue-500/[0.08] border-blue-300 dark:border-blue-400/60 ring-2 ring-blue-300/60 dark:ring-blue-400/30 shadow-xs"
+                      : "bg-white hover:bg-zinc-50/80 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-blue-200 dark:hover:border-blue-400/30"
                   }`}
                 >
-                  {/* Fila superior: icono/imagen + info */}
-                  <div className="flex items-start gap-2.5">
-                    <div
-                      data-prevent-card-click
-                      onClick={() => {
-                        if (item.rawService) {
-                          setDetailModalItem({ item: item.rawService, kind: "SERVICE" });
-                        }
+                  {/* Botón restar "−" arriba a la izquierda si está en el pedido */}
+                  {estaEnPedido && (
+                    <button
+                      type="button"
+                      aria-label="Restar 1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleAjustarCantidadItem(item, -1);
                       }}
-                      className="w-14 h-16 sm:w-16 sm:h-18 rounded-lg bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-white/5 flex items-center justify-center p-1.5 shrink-0 overflow-hidden cursor-pointer"
-                      title={item.kind === "PRODUCT" ? "Producto del POS" : "Ver detalle del servicio"}
+                      className="absolute top-2 left-2 w-7 h-7 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 dark:hover:bg-rose-950/40 text-zinc-700 dark:text-zinc-200 text-sm font-bold flex items-center justify-center shadow-xs active:scale-90 transition-all z-10 cursor-pointer"
+                      title="Restar 1"
                     >
-                      {item.imageUrl ? (
-                        <img
-                          src={item.imageUrl}
-                          alt={item.name}
-                          className="w-full h-full object-cover rounded-md"
-                        />
-                      ) : (
-                        <span className="text-2xl">
-                          {item.kind === "PRODUCT" ? "📦" : "🚿"}
-                        </span>
-                      )}
-                    </div>
+                      −
+                    </button>
+                  )}
 
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center justify-between gap-1">
-                        <span
-                          className={`text-[10px] font-normal uppercase tracking-wider truncate ${
-                            item.kind === "PRODUCT"
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : "text-blue-600 dark:text-blue-400"
-                          }`}
-                        >
-                          {item.kind === "PRODUCT" ? "PRODUCTO" : item.brand}
-                        </span>
-                        {estaEnPedido && (
-                          <span className="px-1.5 py-0.2 rounded text-[9px] font-normal bg-emerald-500 text-white shrink-0">
-                            ✓ {qtyEnPedido} en pedido
-                          </span>
-                        )}
-                      </div>
+                  {/* Contador verde arriba a la derecha si está en el pedido */}
+                  {estaEnPedido && (
+                    <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-bold tabular-nums bg-emerald-500 text-white shadow-xs z-10">
+                      +{qtyEnPedido}
+                    </span>
+                  )}
 
-                      <h4
-                        data-prevent-card-click
-                        onClick={() => {
-                          if (item.rawService) {
-                            setDetailModalItem({ item: item.rawService, kind: "SERVICE" });
-                          }
-                        }}
-                        className="text-xs font-normal text-zinc-900 dark:text-zinc-100 line-clamp-2 leading-snug cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
-                      >
-                        {item.name}
-                      </h4>
-
-                      {/* Badges de duración o stock */}
-                      <div className="flex flex-wrap items-center gap-1 pt-0.5">
-                        {item.durationMinutes ? (
-                          <span className="px-1.5 py-0.2 rounded bg-zinc-100 dark:bg-white/10 text-[10px] font-mono font-normal text-zinc-700 dark:text-zinc-300">
-                            ⏱ {item.durationMinutes} min
-                          </span>
-                        ) : null}
-                        {item.stock !== undefined ? (
-                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-normal ${
-                            item.stock > 0
-                              ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-                              : "bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300"
-                          }`}>
-                            {item.stock > 0 ? `📦 Stock: ${item.stock}` : "⚠️ Sin stock"}
-                          </span>
-                        ) : (
-                          <span className="px-1.5 py-0.2 rounded bg-sky-50 dark:bg-sky-500/15 text-[10px] font-normal text-sky-700 dark:text-sky-300">
-                            {currentVehicleType?.icon || "🚗"} {vehLabelCorto}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                  {/* Imagen (Cloudflare R2) o Ícono central */}
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden flex items-center justify-center bg-zinc-100/80 dark:bg-black/30 border border-zinc-200/60 dark:border-white/5 shrink-0 mt-1">
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.keyword}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span className="text-3xl sm:text-4xl select-none leading-none">
+                        {item.itemIcon}
+                      </span>
+                    )}
                   </div>
 
-                  {/* Pie de tarjeta: Precio + Botón / Stepper automático (- qty +) */}
-                  <div className="pt-2 border-t border-zinc-100 dark:border-white/5 flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-sm font-mono font-normal text-emerald-600 dark:text-emerald-400 leading-none">
-                          ${item.price.toFixed(2)}
-                        </span>
-                        {item.isPromo && item.originalPrice && (
-                          <span className="text-[10px] font-mono line-through text-zinc-400">
-                            ${Number(item.originalPrice).toFixed(2)}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate block mt-0.5">
-                        {item.kind === "PRODUCT" ? "Precio unitario" : `Tarifa ${vehLabelCorto}`}
-                      </span>
-                    </div>
+                  {/* Una sola palabra clave en letra grande y negrita */}
+                  <div className="w-full text-center px-1 mt-2">
+                    <span className="text-sm sm:text-base font-black tracking-wide text-zinc-900 dark:text-white uppercase truncate block">
+                      {item.keyword}
+                    </span>
+                  </div>
 
-                    {estaEnPedido ? (
-                      <div className="flex items-center gap-1 bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-400/50 rounded-lg p-0.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => void handleAjustarCantidadItem(item, -1)}
-                          className="w-7 h-7 rounded-md bg-white dark:bg-black/40 hover:bg-rose-50 dark:hover:bg-rose-500/20 text-zinc-800 dark:text-white font-normal text-xs flex items-center justify-center cursor-pointer active:scale-90 transition-all"
-                          title="Restar 1"
-                        >
-                          −
-                        </button>
-                        <span className="w-6 text-center text-xs font-mono font-normal text-emerald-800 dark:text-emerald-200">
-                          {qtyEnPedido}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => void handleAjustarCantidadItem(item, 1)}
-                          className="w-7 h-7 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-normal text-xs flex items-center justify-center cursor-pointer active:scale-90 transition-all"
-                          title="Sumar 1"
-                        >
-                          +
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => void handleAjustarCantidadItem(item, 1)}
-                        className="h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal flex items-center gap-1 shrink-0 transition-all cursor-pointer active:scale-95 shadow-2xs"
-                      >
-                        <span>+</span>
-                        <span>Agregar</span>
-                      </button>
-                    )}
+                  {/* Precio debajo */}
+                  <div className="w-full text-center mt-1">
+                    <span className="text-xs sm:text-sm font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+                      ${item.price.toFixed(2)}
+                    </span>
                   </div>
                 </div>
               );
@@ -1659,17 +1687,26 @@ export default function ModuloCarWashCatalogo({
         )}
       </div>
 
-      {/* Barra inferior fija/flotante en móvil igual que Lubricentro */}
-      <div className="sticky bottom-2 z-30 flex items-center justify-between gap-2 p-2.5 sm:p-3 rounded-xl bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border border-zinc-200 dark:border-white/15 shadow-lg">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/20 border border-blue-200 dark:border-blue-500/30 flex items-center justify-center text-sm shrink-0">
+      {/* =====================================================================
+          4. BARRA INFERIOR FIJA CON TIEMPO ESTIMADO Y TOTAL
+          ===================================================================== */}
+      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 p-3 sm:p-3.5 bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border-t sm:border border-zinc-200 dark:border-white/15 shadow-xl sm:rounded-2xl sm:bottom-3 sm:inset-x-4 sm:max-w-6xl sm:mx-auto pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-100 dark:bg-blue-500/20 border border-blue-300 dark:border-blue-400/40 flex items-center justify-center text-base sm:text-lg shrink-0">
             🚿
           </div>
-          <div className="min-w-0 leading-snug">
-            <span className="text-sm sm:text-base font-normal text-zinc-900 dark:text-white block truncate">
-              {totalUnidadesCarWash} {totalUnidadesCarWash === 1 ? "servicio" : "servicios"}
-            </span>
-            <span className="text-sm sm:text-base font-normal text-emerald-600 dark:text-emerald-400 block">
+          <div className="min-w-0 leading-tight">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs sm:text-sm font-medium text-zinc-900 dark:text-white block truncate">
+                {totalUnidadesCarWash} {totalUnidadesCarWash === 1 ? "servicio" : "servicios"}
+              </span>
+              {totalMinutosEstimados > 0 && (
+                <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 text-[11px] sm:text-xs font-semibold tabular-nums">
+                  ⏱️ {totalMinutosEstimados} min
+                </span>
+              )}
+            </div>
+            <span className="text-sm sm:text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 block tabular-nums mt-0.5">
               Total: ${totalMontoCarWash.toFixed(2)}
             </span>
           </div>
@@ -1679,179 +1716,25 @@ export default function ModuloCarWashCatalogo({
           <button
             type="button"
             onClick={onIrASiguiente || onIrAAvisoYFirma}
-            className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-normal cursor-pointer shadow-xs active:scale-95 transition-all"
+            className="h-10 sm:h-11 px-4 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
           >
-            Siguiente →
+            <span>Siguiente</span>
+            <span>→</span>
           </button>
         </div>
       </div>
 
-      {/* MODAL RESERVA DE BAHÍA */}
-      {showBookingPanel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="w-full max-w-md p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-white/5">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">📅</span>
-                <h3 className="text-sm font-normal text-zinc-900 dark:text-white">
-                  Reservar Bahía de Lavado
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowBookingPanel(false)}
-                className="w-7 h-7 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-white flex items-center justify-center cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[11px] font-normal text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Fecha
-                  </label>
-                  <input
-                    type="date"
-                    value={bookingDate}
-                    onChange={(e) => setBookingDate(e.target.value)}
-                    className="w-full h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white focus:outline-none"
-                  />
-                </div>
-                <div ref={menuHorarioRef} className="relative">
-                  <label className="text-[11px] font-normal text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Horario
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setDropdownHorarioAbierto((prev) => !prev)}
-                    className="w-full h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white flex items-center justify-between cursor-pointer shadow-2xs"
-                  >
-                    <span>{bookingTimeSlot}</span>
-                    <span className={`text-[9px] text-zinc-400 transition-transform duration-200 ${dropdownHorarioAbierto ? "rotate-180 text-blue-500" : ""}`}>
-                      ▾
-                    </span>
-                  </button>
-                  {dropdownHorarioAbierto && (
-                    <div className="absolute left-0 right-0 top-full mt-1.5 max-h-48 overflow-y-auto rounded-xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/10 shadow-xl dark:shadow-2xl backdrop-blur-md p-1.5 space-y-0.5 z-50 animate-fade-in">
-                      {HORARIOS_DISPONIBLES.map((h) => {
-                        const isSelected = bookingTimeSlot === h;
-                        return (
-                          <button
-                            key={h}
-                            type="button"
-                            onClick={() => {
-                              setBookingTimeSlot(h);
-                              setDropdownHorarioAbierto(false);
-                            }}
-                            className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-normal flex items-center justify-between transition-colors cursor-pointer ${
-                              isSelected
-                                ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-normal"
-                                : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
-                            }`}
-                          >
-                            <span>{h}</span>
-                            {isSelected && (
-                              <span className="text-xs text-blue-600 dark:text-blue-400 font-normal">✓</span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-normal text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Bahía de Lavado
-                </label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {(config.bays || ["Bahía Lavado 1", "Bahía Lavado 2"]).map((bay) => (
-                    <button
-                      key={bay}
-                      type="button"
-                      onClick={() => setBookingBay(bay)}
-                      className={`p-2 rounded-lg border text-xs font-normal text-center cursor-pointer transition-all ${
-                        bookingBay === bay
-                          ? "bg-blue-600 text-white border-blue-500 shadow-2xs"
-                          : "bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300"
-                      }`}
-                    >
-                      {bay}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-normal text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Notas u Observaciones
-                </label>
-                <input
-                  type="text"
-                  value={bookingNotes}
-                  onChange={(e) => setBookingNotes(e.target.value)}
-                  placeholder="Ej: Cliente espera en sala..."
-                  className="w-full h-8 px-2.5 rounded-lg bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none"
-                />
-              </div>
-
-              {lastBookingConfirmed && (
-                <div className="p-2.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-[11px] text-emerald-800 dark:text-emerald-300">
-                  ✓ Reserva <span>#{lastBookingConfirmed.appointmentNumber}</span> confirmada para el {lastBookingConfirmed.date} ({lastBookingConfirmed.timeSlot}).
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-zinc-100 dark:border-white/5">
-              <button
-                type="button"
-                onClick={() => setShowBookingPanel(false)}
-                className="h-8 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 text-zinc-700 dark:text-zinc-300 text-xs font-normal cursor-pointer"
-              >
-                Cerrar
-              </button>
-              <button
-                type="button"
-                disabled={savingBooking}
-                onClick={async () => {
-                  await handleConfirmBayReservation();
-                }}
-                className="h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer disabled:opacity-50"
-              >
-                {savingBooking ? "Guardando..." : "Confirmar Reserva"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODALES ADMINISTRATIVOS */}
-      {detailModalItem && (
+      {/* Modales administrativos opcionales (preservados) */}
+      {detailModalItem && config && (
         <ModalDetalleServicioCarWash
           item={detailModalItem.item}
           kind={detailModalItem.kind}
           config={config}
           selectedVehicleTypeId={selectedVehicleTypeId}
-          isSelected={
-            detailModalItem.kind === "PACKAGE"
-              ? selectedPackageIds.includes(detailModalItem.item.id)
-              : selectedServiceIds.includes(detailModalItem.item.id)
-          }
-          selectedAddonIds={selectedAddonIds}
-          onToggleSelect={() => {
-            if (detailModalItem.kind === "PACKAGE") {
-              handleTogglePackage(detailModalItem.item as CarWashPackage);
-            } else {
-              handleToggleService(detailModalItem.item as CarWashEnrichedService);
-            }
-          }}
-          onToggleAddon={(addonId) => {
-            const found = config.addons.find((a) => a.id === addonId);
-            if (found) handleToggleAddon(found);
-          }}
+          isSelected={false}
+          selectedAddonIds={[]}
+          onToggleSelect={() => {}}
+          onToggleAddon={() => {}}
           onEditItem={() => {
             if (detailModalItem.kind === "SERVICE") {
               const srv = detailModalItem.item as CarWashEnrichedService;
@@ -1866,7 +1749,7 @@ export default function ModuloCarWashCatalogo({
         />
       )}
 
-      {serviceFormModal.open && (
+      {serviceFormModal.open && config && (
         <ModalServicioCarWashForm
           initialService={serviceFormModal.service}
           config={config}
@@ -1877,7 +1760,7 @@ export default function ModuloCarWashCatalogo({
         />
       )}
 
-      {configModalOpen && (
+      {configModalOpen && config && (
         <ModalConfiguracionCarWash
           config={config}
           onSaveConfig={handleSaveConfigAdmin}
