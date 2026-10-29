@@ -18,6 +18,8 @@ export interface LubricentroExpressProps {
   onCambiarATaller?: () => void;
   onCambiarModulo?: (modulo: "taller" | "lubricentro" | "carwash" | "tecnicentro") => void;
   ordenActiva?: any;
+  ordenesHistorialVehiculo?: any[];
+  historialVehiculo?: any[];
   modoEspecialidad?: "lubricentro" | "carwash" | "tecnicentro";
   triggerAbrirConfig?: number;
 }
@@ -237,6 +239,8 @@ export default function LubricentroExpress({
   onCambiarATaller,
   onCambiarModulo,
   ordenActiva,
+  ordenesHistorialVehiculo = [],
+  historialVehiculo = [],
   modoEspecialidad = "lubricentro",
   triggerAbrirConfig,
 }: LubricentroExpressProps) {
@@ -413,6 +417,7 @@ export default function LubricentroExpress({
     items?: any[];
     mileage?: number | null;
     nextOilChangeKm?: number | null;
+    inspectionChecklist?: Record<string, any>;
     receptionPhotos?: string[];
     evidencePhotos?: string[];
     receptionInventory?: string[];
@@ -437,6 +442,9 @@ export default function LubricentroExpress({
               : ordenActiva.mileage,
           nextOilChangeKm:
             partial.nextOilChangeKm !== undefined ? partial.nextOilChangeKm : kmProximoCambio,
+          ...(partial.inspectionChecklist !== undefined
+            ? { inspectionChecklist: partial.inspectionChecklist }
+            : {}),
           receptionPhotos: partial.receptionPhotos ?? fotosRecepcion,
           evidencePhotos: partial.evidencePhotos ?? ordenActiva.evidencePhotos ?? [],
           receptionInventory: partial.receptionInventory ?? checklistIngreso,
@@ -1011,10 +1019,40 @@ export default function LubricentroExpress({
             <ModuloLubricentroCatalogo
               empleadoLogueado={empleadoLogueado}
               ordenActiva={ordenEfectiva}
+              ordenesAnteriores={ordenesHistorialVehiculo}
+              historialAnterior={historialVehiculo}
               itemsOrden={itemsOrden}
               mostrarToast={mostrarToast}
               triggerAbrirConfig={triggerAbrirConfig}
               onActualizarItemsOrden={handleActualizarItemsOrdenGenerales}
+              onGuardarDatosLubricentro={async (niveles, nextOilChangeKm, items) => {
+                const inspectionChecklist = {
+                  ...(ordenEfectiva?.inspectionChecklist || {}),
+                  lubricentroLevels: niveles,
+                };
+                if (!ordenActiva?.id) {
+                  if (ordenEfectiva) {
+                    const updatedOrder = {
+                      ...ordenEfectiva,
+                      items,
+                      inspectionChecklist,
+                      nextOilChangeKm,
+                    };
+                    setOrdenLocalBorrador(updatedOrder);
+                    onOrdenCreada?.(updatedOrder);
+                  }
+                  return;
+                }
+
+                const updatedOrder = await sincronizarOrdenLubricentro({
+                  items,
+                  nextOilChangeKm,
+                  inspectionChecklist,
+                });
+                if (!updatedOrder) {
+                  throw new Error("No se pudo guardar la revisión del Lubricentro.");
+                }
+              }}
               onIrASiguiente={() => {
                 if (onCambiarModulo) onCambiarModulo("carwash");
                 else setEtapaActiva(4);

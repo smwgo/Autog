@@ -1146,6 +1146,7 @@ export default function TallerPanel() {
   const [vehiculoEncontrado, setVehiculoEncontrado] = useState<any | null>(null);
   const [clienteEncontrado, setClienteEncontrado] = useState<any | null>(null);
   const [historialVehiculo, setHistorialVehiculo] = useState<any[]>([]);
+  const [ordenesHistorialVehiculo, setOrdenesHistorialVehiculo] = useState<any[]>([]);
   const [mostrarModalHistorial, setMostrarModalHistorial] = useState(false);
   const [mostrarRegistroExpress, setMostrarRegistroExpress] = useState(false);
 
@@ -1336,7 +1337,9 @@ export default function TallerPanel() {
   useEffect(() => {
     if (!ordenActiva?.plate) return;
     let cancel = false;
-    fetch(`/api/taller/operacion?q=${encodeURIComponent(ordenActiva.plate)}`)
+    fetch(
+      `/api/taller/operacion?plate=${encodeURIComponent(ordenActiva.plate)}&historial=true`
+    )
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (cancel || !data) return;
@@ -1344,6 +1347,7 @@ export default function TallerPanel() {
         const total = countHistory > 0 ? countHistory + 1 : 1;
         setVecesAtendido(total);
         if (data.history) setHistorialVehiculo(data.history);
+        setOrdenesHistorialVehiculo(Array.isArray(data.orders) ? data.orders : []);
       })
       .catch(() => {});
     return () => {
@@ -5142,7 +5146,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     key={mod.id}
                     type="button"
                     onClick={() => setModuloTaller(mod.id)}
-                    className={`h-9 flex-1 min-w-0 px-1 sm:flex-none sm:px-3.5 rounded-xl text-[10px] sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`h-9 flex-1 min-w-0 px-1 sm:flex-none sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                       isActivo
                         ? `${mod.bgClass} border ${mod.borderClass} ${mod.textClass} ${mod.shadowClass} backdrop-blur-sm font-bold`
                         : "border border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
@@ -5237,6 +5241,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               serviciosCatalogo={serviciosDb}
               mostrarToast={mostrarToast}
               ordenActiva={ordenActiva}
+              ordenesHistorialVehiculo={ordenesHistorialVehiculo}
+              historialVehiculo={historialVehiculo}
               modoEspecialidad={moduloTaller === "taller" ? "lubricentro" : moduloTaller}
               triggerAbrirConfig={triggerAbrirConfig}
               onOrdenCreada={(orden) => {

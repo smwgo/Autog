@@ -1089,6 +1089,7 @@ export async function POST(request: Request) {
           identificacion,
           telefono,
           email,
+          direccion,
         } = body;
 
         if (!nombres || !String(nombres).trim()) {
@@ -1103,6 +1104,7 @@ export async function POST(request: Request) {
           (identificacion || "").trim() || `CLI-${Date.now().toString().slice(-6)}`;
         const cleanPhone = (telefono || "").trim() || "S/N";
         const cleanEmail = email?.trim() || null;
+        const cleanAddress = String(direccion || "").trim();
         const dbType = tipoCliente === "Empresa" ? "Empresa" : "Personal";
 
         let customer: any = null;
@@ -1127,6 +1129,7 @@ export async function POST(request: Request) {
               name: cleanName,
               phone: cleanPhone,
               email: cleanEmail,
+              address: cleanAddress || null,
               type: dbType,
             },
             include: { vehicles: true },
@@ -1139,6 +1142,7 @@ export async function POST(request: Request) {
               identification: identificacion?.trim() || customer.identification,
               phone: cleanPhone,
               email: cleanEmail,
+              address: cleanAddress || customer.address,
               type: dbType,
               lastVisit: new Date(),
             },
@@ -1164,6 +1168,7 @@ export async function POST(request: Request) {
           identificacion,
           telefono,
           email,
+          direccion,
           ingresadoPor = "Gonzalo Rojas",
           mechanic = "Hernan Marquez",
           motivoIngreso = "",
@@ -1192,6 +1197,7 @@ export async function POST(request: Request) {
           (identificacion || "").trim() || `CLI-${Date.now().toString().slice(-6)}`;
         const cleanPhone = (telefono || "").trim() || "S/N";
         const cleanEmail = email?.trim() || null;
+        const cleanAddress = String(direccion || "").trim();
         const dbType = tipoCliente === "Empresa" ? "Empresa" : "Personal";
 
         // 1. Buscar o crear el cliente en Neon DB sin salir de la orden
@@ -1217,6 +1223,7 @@ export async function POST(request: Request) {
               name: cleanName,
               phone: cleanPhone,
               email: cleanEmail,
+              address: cleanAddress || null,
               type: dbType,
             },
             include: { vehicles: true },
@@ -1228,6 +1235,7 @@ export async function POST(request: Request) {
               name: cleanName,
               phone: cleanPhone || customer.phone,
               email: cleanEmail ?? customer.email,
+              address: cleanAddress || customer.address,
               type: dbType,
               lastVisit: new Date(),
             },
@@ -3146,6 +3154,7 @@ export async function POST(request: Request) {
           receptionPhotos,
           evidencePhotos,
           receptionInventory,
+          inspectionChecklist,
           status,
           fuelLevel,
           generalCondition,
@@ -3206,6 +3215,11 @@ export async function POST(request: Request) {
           ? receptionInventory.map((x: any) => String(x || "").trim()).filter(Boolean)
           : safeParseJson<string[]>(current.receptionInventoryJson, []);
 
+        const finalInspectionChecklist =
+          inspectionChecklist !== undefined
+            ? JSON.stringify(inspectionChecklist)
+            : current.inspectionChecklistJson || "{}";
+
         const finalMileage =
           mileage !== undefined && mileage !== null && mileage !== ""
             ? parseInt(String(mileage), 10)
@@ -3252,6 +3266,7 @@ export async function POST(request: Request) {
                "generalCondition" = COALESCE($14, "generalCondition"),
                "startedAt" = CASE WHEN $15 = TRUE THEN COALESCE("startedAt", NOW()) ELSE "startedAt" END,
                "receptionInventoryJson" = $16,
+               "inspectionChecklistJson" = $17,
                "updatedAt" = NOW()
            WHERE "id" = $1`,
           current.id,
@@ -3269,7 +3284,8 @@ export async function POST(request: Request) {
           fuelLevel || null,
           generalCondition || null,
           Boolean(startTimer),
-          JSON.stringify(finalReceptionInventory)
+          JSON.stringify(finalReceptionInventory),
+          finalInspectionChecklist
         );
 
         if (body.voiceNotes && Array.isArray(body.voiceNotes)) {

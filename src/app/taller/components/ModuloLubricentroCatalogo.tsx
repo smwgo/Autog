@@ -18,6 +18,8 @@ import {
 export interface ModuloLubricentroCatalogoProps {
   empleadoLogueado: { id: string; nombre: string };
   ordenActiva?: any;
+  ordenesAnteriores?: any[];
+  historialAnterior?: any[];
   itemsOrden: any[];
   onActualizarItemsOrden: (nuevosItems: any[]) => Promise<void>;
   onIrAAvisoYFirma: () => void;
@@ -25,6 +27,11 @@ export interface ModuloLubricentroCatalogoProps {
   nombreSiguiente?: string;
   mostrarToast?: (msg: string, tipo?: "ok" | "err") => void;
   triggerAbrirConfig?: number;
+  onGuardarDatosLubricentro?: (
+    niveles: Record<string, EstadoNivelLubricentro>,
+    nextOilChangeKm: number | null,
+    items: any[]
+  ) => Promise<void>;
 }
 
 interface CartItemLubricentro {
@@ -43,6 +50,73 @@ interface CartItemLubricentro {
   lubCategoryId: string;
   lubSubcategoryId: string;
 }
+
+interface ProductoCatalogoLubricentro {
+  id: string;
+  code?: string;
+  name?: string;
+  brand?: string;
+  type?: string;
+  active?: boolean;
+  status?: string;
+  stock?: number | null;
+  price?: number;
+  presentation?: string;
+  unitOfMeasure?: string;
+  imageUrl?: string | null;
+  lubCategoryId?: string;
+  lubSubcategoryId?: string;
+  presentationsAvailable?: LubPresentationVariant[];
+  compatibilities?: LubVehicleCompatibility[];
+  lubricantBase?: string;
+}
+
+interface ItemAnteriorCambioAceite {
+  item: {
+    type?: string;
+    productId?: string;
+    presentation?: string;
+    presentationId?: string;
+    name?: string;
+    qty?: number;
+    price?: number;
+    category?: string;
+    brand?: string;
+    code?: string;
+    unitOfMeasure?: string;
+    subCategory?: string;
+  };
+  product: ProductoCatalogoLubricentro;
+}
+
+type EstadoNivelLubricentro = "Verde" | "Amarillo" | "Rojo";
+type EstadoComponenteLubricentro = "Pendiente" | "Realizado";
+
+const NIVELES_LUBRICENTRO = [
+  { label: "Refrigerante", categoryId: "lub_fluidos", subcategoryId: "lub_flu_coolant" },
+  { label: "Frenos", categoryId: "lub_fluidos", subcategoryId: "lub_flu_frenos" },
+  { label: "Dirección", categoryId: "lub_fluidos", subcategoryId: "lub_flu_hidraulico" },
+  { label: "Aire", categoryId: "lub_filtros", subcategoryId: "lub_fil_aire" },
+  { label: "Cabina", categoryId: "lub_filtros", subcategoryId: "lub_fil_cabina" },
+  { label: "Corona", categoryId: "lub_transmision", subcategoryId: "lub_trans_diferencial" },
+  { label: "Batería", categoryId: "lub_baterias", subcategoryId: null },
+] as const;
+
+const COMPONENTES_SERVICIO_LUBRICENTRO = [
+  "Aceite motor",
+  "Filtro aceite",
+  "Filtro aire",
+  "Filtro cabina",
+  "Filtro combustible",
+  "Caja",
+  "Corona",
+  "Refrigerante",
+  "Frenos",
+  "Dirección",
+  "Batería",
+] as const;
+
+const COMBOS_LUBRICENTRO = ["Básico", "Completo", "Caja", "Corona", "Engrase"] as const;
 
 // Caché en el cliente (módulo y localStorage) para que la carga sea instantánea (0ms)
 let _lubricentroClientCache: {
@@ -64,11 +138,73 @@ const DEPRECATED_CROSS_SUBCATEGORY_IDS = new Set([
 
 const SUBCATEGORY_LABEL_OVERRIDES: Record<string, string> = {
   lub_aceite_motor: "Motor",
-  lub_fil_aceite: "De Aceite",
-  lub_fil_aire: "De Aire",
-  lub_fil_cabina: "Cabina A/C",
-  lub_fil_transmision: "De Caja",
+  lub_trans_manual: "Caja",
+  lub_trans_diferencial: "Corona",
+  lub_fil_aceite: "Aceite",
+  lub_fil_aire: "Aire",
+  lub_fil_cabina: "Cabina",
+  lub_fil_transmision: "Caja",
+  lub_flu_hidraulico: "Dirección",
+  lub_flu_limpiaparabrisas: "Agua",
+  lub_bat_convencionales: "Liviano",
+  lub_bat_agm: "Pesado",
+  lub_bat_motos: "Liviano",
+  lub_bat_efb: "Pesado",
 };
+
+const SUBCATEGORY_IDS_BY_CATEGORY: Record<string, string[]> = {
+  lub_aceite: ["lub_aceite_motor", "lub_aditivos", "lub_flush", "lub_grasa"],
+  lub_transmision: ["lub_trans_manual", "lub_trans_diferencial", "lub_trans_automatica"],
+  lub_filtros: [
+    "lub_fil_aceite",
+    "lub_fil_aire",
+    "lub_fil_cabina",
+    "lub_fil_combustible",
+    "lub_fil_transmision",
+  ],
+  lub_fluidos: [
+    "lub_flu_coolant",
+    "lub_flu_frenos",
+    "lub_flu_hidraulico",
+    "lub_flu_limpiaparabrisas",
+  ],
+  lub_baterias: ["lub_bat_convencionales", "lub_bat_agm"],
+};
+
+const SUBCATEGORY_FILTER_IDS: Record<string, string[]> = {
+  lub_bat_convencionales: ["lub_bat_convencionales", "lub_bat_motos"],
+  lub_bat_agm: ["lub_bat_agm", "lub_bat_efb"],
+};
+
+const ENVASES_CERRADOS = ["Galón", "Litro", "Cuarto", "Caneca"] as const;
+type EnvaseCerrado = (typeof ENVASES_CERRADOS)[number];
+
+function clasificarEnvase(value: unknown): EnvaseCerrado | null {
+  const texto = String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  if (/caneca|5\s*(gal|gallon)/.test(texto)) return "Caneca";
+  if (/cuarto|\bqt\b/.test(texto)) return "Cuarto";
+  if (/galon|\bgal\b|4\s*l(?:itro)?/.test(texto)) return "Galón";
+  if (/litro|\b1\s*l\b|1000\s*ml/.test(texto)) return "Litro";
+  return null;
+}
+
+function productoTieneEnvase(prod: any, envase: EnvaseCerrado): boolean {
+  const presentaciones = [
+    prod.presentation,
+    prod.unitOfMeasure,
+    ...(Array.isArray(prod.presentationsAvailable)
+      ? prod.presentationsAvailable.flatMap((variant: LubPresentationVariant) => [
+          variant.label,
+          variant.unitOfMeasure,
+        ])
+      : []),
+  ];
+  return presentaciones.some((value) => clasificarEnvase(value) === envase);
+}
 
 const LEGACY_PRODUCT_REMAP: Record<string, { catId: string; subId: string }> = {
   lub_valvulina: { catId: "lub_transmision", subId: "lub_trans_manual" },
@@ -79,7 +215,7 @@ const LEGACY_PRODUCT_REMAP: Record<string, { catId: string; subId: string }> = {
 };
 
 function normalizarConfigCliente(rawConfig: any): LubricentroConfigData {
-  if (!rawConfig) return DEFAULT_LUBRICENTRO_CONFIG_CLIENT;
+  if (!rawConfig) rawConfig = DEFAULT_LUBRICENTRO_CONFIG_CLIENT;
   const defaultSubs = DEFAULT_LUBRICENTRO_CONFIG_CLIENT.subcategories || [];
   const rawSubs = Array.isArray(rawConfig.subcategories) ? rawConfig.subcategories : [];
   const existingIds = new Set(rawSubs.map((s: any) => s.id));
@@ -115,9 +251,15 @@ function normalizarProductosCliente(rawProducts: any[]): any[] {
   });
 }
 
+function formatearKilometraje(kilometraje: number): string {
+  return String(Math.trunc(kilometraje)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
 export default function ModuloLubricentroCatalogo({
   empleadoLogueado,
   ordenActiva,
+  ordenesAnteriores = [],
+  historialAnterior = [],
   itemsOrden,
   onActualizarItemsOrden,
   onIrAAvisoYFirma,
@@ -125,6 +267,7 @@ export default function ModuloLubricentroCatalogo({
   nombreSiguiente,
   mostrarToast,
   triggerAbrirConfig,
+  onGuardarDatosLubricentro,
 }: ModuloLubricentroCatalogoProps) {
   // Inicializar y sincronizar desde Neon PostgreSQL
   const [config, setConfig] = useState<LubricentroConfigData>(() =>
@@ -196,20 +339,28 @@ export default function ModuloLubricentroCatalogo({
   const [filtroCategoriaGeneral, setFiltroCategoriaGeneral] = useState<string>("");
   const [menuFiltroAbierto, setMenuFiltroAbierto] = useState<boolean>(false);
   const menuFiltroRef = useRef<HTMLDivElement>(null);
+  const [filtroEnvase, setFiltroEnvase] = useState<EnvaseCerrado | "">("");
+  const [menuEnvaseAbierto, setMenuEnvaseAbierto] = useState(false);
+  const menuEnvaseRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickAfuera = (e: MouseEvent) => {
-      if (menuFiltroRef.current && !menuFiltroRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        !menuFiltroRef.current?.contains(target) &&
+        !menuEnvaseRef.current?.contains(target)
+      ) {
         setMenuFiltroAbierto(false);
+        setMenuEnvaseAbierto(false);
       }
     };
-    if (menuFiltroAbierto) {
+    if (menuFiltroAbierto || menuEnvaseAbierto) {
       document.addEventListener("mousedown", handleClickAfuera);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickAfuera);
     };
-  }, [menuFiltroAbierto]);
+  }, [menuFiltroAbierto, menuEnvaseAbierto]);
 
   // Buscador de compatibilidad por vehículo
   const [mostrarBuscadorVehiculo, setMostrarBuscadorVehiculo] = useState<boolean>(false);
@@ -227,8 +378,27 @@ export default function ModuloLubricentroCatalogo({
   // Carrito integrado de Lubricentro (cuando se vende directo o sincronizado con Orden Activa)
   const [carritoDirecto, setCarritoDirecto] = useState<CartItemLubricentro[]>([]);
   const [drawerCarritoAbierto, setDrawerCarritoAbierto] = useState<boolean>(false);
+  const [drawerTiendaAbierto, setDrawerTiendaAbierto] = useState(false);
+  const [pestanaTienda, setPestanaTienda] = useState<"productos" | "servicios">("productos");
   const [enviandoPedidoPos, setEnviandoPedidoPos] = useState<boolean>(false);
   const [clienteVentaDirecta, setClienteVentaDirecta] = useState<string>("");
+  const [kilometrajeIngreso, setKilometrajeIngreso] = useState(() =>
+    String(ordenActiva?.mileage || "")
+  );
+  const [fechaReferenciaHistorial, setFechaReferenciaHistorial] = useState<number | null>(null);
+  const [mostrarNivelesLubricentro, setMostrarNivelesLubricentro] = useState(false);
+  const [mostrarCombosLubricentro, setMostrarCombosLubricentro] = useState(false);
+  const [nivelesLubricentro, setNivelesLubricentro] = useState<
+    Record<string, EstadoNivelLubricentro>
+  >({});
+  const [componentesLubricentro, setComponentesLubricentro] = useState<
+    Record<string, EstadoComponenteLubricentro>
+  >({});
+  const [proximoCambioKm, setProximoCambioKm] = useState<number | null>(() =>
+    Number(ordenActiva?.nextOilChangeKm) || null
+  );
+  const [guardandoSeguimiento, setGuardandoSeguimiento] = useState(false);
+  const [repitiendoCambioAceite, setRepitiendoCambioAceite] = useState(false);
 
   // Selección múltiple de productos en la tienda
   const [productosSeleccionadosIds, setProductosSeleccionadosIds] = useState<string[]>([]);
@@ -307,9 +477,18 @@ export default function ModuloLubricentroCatalogo({
 
   const subcategoriasActivas = useMemo(() => {
     if (!config || !categoriaSeleccionadaObj) return [];
+    const idsPermitidos = SUBCATEGORY_IDS_BY_CATEGORY[categoriaSeleccionadaObj.id];
     return [...config.subcategories]
-      .filter((s) => s.categoryId === categoriaSeleccionadaObj.id && s.active)
-      .sort((a, b) => a.order - b.order);
+      .filter(
+        (s) =>
+          s.categoryId === categoriaSeleccionadaObj.id &&
+          s.active &&
+          (!idsPermitidos || idsPermitidos.includes(s.id))
+      )
+      .sort((a, b) => {
+        if (!idsPermitidos) return a.order - b.order;
+        return idsPermitidos.indexOf(a.id) - idsPermitidos.indexOf(b.id);
+      });
   }, [config, categoriaSeleccionadaObj]);
 
   const subcategoriaActivaId = useMemo(() => {
@@ -326,6 +505,40 @@ export default function ModuloLubricentroCatalogo({
     if (subcategoriaActivaId === "ALL") return null;
     return subcategoriasActivas.find((s) => s.id === subcategoriaActivaId) || null;
   }, [subcategoriasActivas, subcategoriaActivaId]);
+
+  useEffect(() => {
+    const savedLevels = ordenActiva?.inspectionChecklist?.lubricentroLevels;
+    const validLevels: Record<string, EstadoNivelLubricentro> = {};
+    if (savedLevels && typeof savedLevels === "object") {
+      NIVELES_LUBRICENTRO.forEach(({ label }) => {
+        const status = savedLevels[label];
+        if (status === "Verde" || status === "Amarillo" || status === "Rojo") {
+          validLevels[label] = status;
+        }
+      });
+    }
+    setNivelesLubricentro(validLevels);
+    const savedComponents = ordenActiva?.inspectionChecklist?.lubricentroComponents;
+    const validComponents: Record<string, EstadoComponenteLubricentro> = {};
+    if (savedComponents && typeof savedComponents === "object") {
+      COMPONENTES_SERVICIO_LUBRICENTRO.forEach((label) => {
+        const status = savedComponents[label];
+        if (status === "Pendiente" || status === "Realizado") {
+          validComponents[label] = status;
+        }
+      });
+    }
+    setComponentesLubricentro(validComponents);
+    setKilometrajeIngreso(String(ordenActiva?.mileage || ""));
+    setProximoCambioKm(Number(ordenActiva?.nextOilChangeKm) || null);
+  }, [ordenActiva?.id]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setFechaReferenciaHistorial(Date.now());
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const schemaType = categoriaSeleccionadaObj?.schemaType || "aceites";
   const subSchemaType = subcategoriaSeleccionadaObj?.subSchemaType || "aceite_motor";
@@ -438,6 +651,33 @@ export default function ModuloLubricentroCatalogo({
   // Filtrado dinámico de productos reales
   const productosFiltrados = useMemo(() => {
     return productos.filter((p) => {
+      if (pestanaTienda === "servicios") {
+        if (p.type !== "SERVICE" || p.active === false || p.status === "Inactivo") return false;
+        const price = Number(p.price || 0);
+        if (precioMin.trim() && !Number.isNaN(Number(precioMin)) && price < Number(precioMin)) {
+          return false;
+        }
+        if (precioMax.trim() && !Number.isNaN(Number(precioMax)) && price > Number(precioMax)) {
+          return false;
+        }
+        const terms = busquedaTexto
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean);
+        const text = [p.name, p.code, p.description, p.brand]
+          .map((value) => String(value || ""))
+          .join(" ")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase();
+        return terms.every((term) => text.includes(term));
+      }
+
+      if (p.type === "SERVICE") return false;
+
       // Estado activo/inactivo
       if (filtroDisponibilidad === "INACTIVE") {
         if (p.active !== false && p.status !== "Inactivo") return false;
@@ -458,7 +698,9 @@ export default function ModuloLubricentroCatalogo({
           subcategoriaActivaId &&
           subcategoriaActivaId !== "ALL" &&
           p.lubSubcategoryId &&
-          p.lubSubcategoryId !== subcategoriaActivaId
+          !(SUBCATEGORY_FILTER_IDS[subcategoriaActivaId] || [subcategoriaActivaId]).includes(
+            p.lubSubcategoryId
+          )
         ) {
           return false;
         }
@@ -500,6 +742,8 @@ export default function ModuloLubricentroCatalogo({
           );
         if (!matchPresPrincipal && !matchPresVariante) return false;
       }
+
+      if (filtroEnvase && !productoTieneEnvase(p, filtroEnvase)) return false;
 
       // Especificación técnica
       if (filtroEspecificacion) {
@@ -687,6 +931,7 @@ export default function ModuloLubricentroCatalogo({
     precioMax,
     filtroMarca,
     filtroPresentacion,
+    filtroEnvase,
     filtroEspecificacion,
     schemaType,
     subSchemaType,
@@ -713,7 +958,10 @@ export default function ModuloLubricentroCatalogo({
     vehEngine,
     busquedaTexto,
     filtroCategoriaGeneral,
+    pestanaTienda,
   ]);
+
+  const productosTiendaFiltrados = productosFiltrados;
 
   // Chips de filtros activos para poder eliminarlos individualmente o limpiar todo
   const chipsFiltrosActivos = useMemo(() => {
@@ -744,6 +992,13 @@ export default function ModuloLubricentroCatalogo({
         key: "pres",
         label: `Presentación: ${filtroPresentacion}`,
         onClear: () => setFiltroPresentacion(""),
+      });
+    }
+    if (filtroEnvase) {
+      chips.push({
+        key: "envase",
+        label: `Envase: ${filtroEnvase}`,
+        onClear: () => setFiltroEnvase(""),
       });
     }
     if (filtroEspecificacion) {
@@ -888,6 +1143,7 @@ export default function ModuloLubricentroCatalogo({
     filtroBase,
     filtroViscosidad,
     filtroPresentacion,
+    filtroEnvase,
     filtroEspecificacion,
     filtroMarca,
     filtroTipoFluidoTrans,
@@ -1271,6 +1527,11 @@ export default function ModuloLubricentroCatalogo({
     productos.forEach((p) => {
       if (p.active !== false && p.status !== "Inactivo" && p.lubSubcategoryId) {
         map[p.lubSubcategoryId] = (map[p.lubSubcategoryId] || 0) + 1;
+        Object.entries(SUBCATEGORY_FILTER_IDS).forEach(([canonicalId, sourceIds]) => {
+          if (p.lubSubcategoryId !== canonicalId && sourceIds.includes(p.lubSubcategoryId)) {
+            map[canonicalId] = (map[canonicalId] || 0) + 1;
+          }
+        });
       }
     });
     return map;
@@ -1282,9 +1543,17 @@ export default function ModuloLubricentroCatalogo({
       ? prod.presentationsAvailable
       : [];
     const presElegidaId = presPorProducto[prod.id];
-    const varianteActiva = presElegidaId
+    const varianteEnvase = filtroEnvase
+      ? variantes.find(
+          (variant) =>
+            clasificarEnvase(variant.label) === filtroEnvase ||
+            clasificarEnvase(variant.unitOfMeasure) === filtroEnvase
+        )
+      : undefined;
+    const varianteGuardada = presElegidaId
       ? variantes.find((v) => v.id === presElegidaId || v.label === presElegidaId)
-      : variantes[0];
+      : undefined;
+    const varianteActiva = varianteEnvase || varianteGuardada || variantes[0];
 
     const presentation =
       varianteActiva?.label || prod.presentation || prod.unitOfMeasure || "1 Unidad";
@@ -1292,6 +1561,30 @@ export default function ModuloLubricentroCatalogo({
     const unitOfMeasure = varianteActiva?.unitOfMeasure || prod.unitOfMeasure || "Unidad";
 
     return { presentation, price, unitOfMeasure, variantes };
+  };
+
+  const obtenerPalabraClaveProducto = (prod: any): string => {
+    const viscosidad = String(prod.viscosity || "").trim();
+    const claseFluido = String(prod.fluidClass || "").trim();
+    const claseDot = claseFluido.match(/\bDOT\s*\d+\b/i)?.[0].replace(/\s+/g, "");
+    const proporcionFluido = claseFluido.match(/\b\d+\s*\/\s*\d+\b/)?.[0];
+    const categoriaId = String(prod.lubCategoryId || categoriaActivaId);
+    const subcategoriaId = String(prod.lubSubcategoryId || "");
+    const palabrasClave = [
+      viscosidad,
+      claseDot || proporcionFluido || claseFluido.split(/\s+/)[0],
+      categoriaId === "lub_filtros" || subcategoriaId.startsWith("lub_fil")
+        ? "Filtro"
+        : String(prod.filterType || "").split(/\s+/)[0],
+      String(prod.capacityAh || "").split(/[ /]+/)[0],
+      String(prod.voltage || "").split(/\s+/)[0],
+      String(prod.additiveProductType || "").split(/\s+/)[0],
+      String(prod.greaseType || "").split(/\s+/)[0],
+      String(prod.technology || "").split(/\s+/)[0],
+      String(prod.name || "").trim().split(/\s+/)[0],
+    ];
+
+    return palabrasClave.find((palabra) => palabra.length > 0) || "Producto";
   };
 
   // Cantidad actual de un producto (y su presentación activa) en la Orden o Carrito
@@ -1452,12 +1745,637 @@ export default function ModuloLubricentroCatalogo({
     });
   }, [itemsOrden, productos]);
 
+  const ultimoCambioAceiteAnterior = useMemo(() => {
+    if (!ordenActiva?.id || !ordenActiva?.plate) return null;
+    const placaActiva = String(ordenActiva.plate).toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const ordenesOrdenadas = [...ordenesAnteriores]
+      .filter(
+        (order) =>
+          order?.id !== ordenActiva.id &&
+          String(order?.plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "") === placaActiva
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.dateIn || b.createdAt || 0).getTime() -
+          new Date(a.dateIn || a.createdAt || 0).getTime()
+      );
+
+    const normalizarNombre = (name: unknown) =>
+      String(name || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/^\s*\d+\s*x\s*/i, "")
+        .trim();
+    const encontrarProducto = (item: any) => {
+      const historicalName = normalizarNombre(item.name);
+      return productos.find(
+        (product) =>
+          product.id === item.productId ||
+          (product.code && item.code && product.code === item.code) ||
+          (historicalName &&
+            [normalizarNombre(product.name), normalizarNombre(item.presentation)].some(
+              (name) =>
+                name &&
+                (historicalName === name ||
+                  historicalName.startsWith(`${name} (`) ||
+                  historicalName.startsWith(`${name} `))
+            ))
+      );
+    };
+    const esProductoAceite = (item: any, product: any) => {
+      if (
+        product?.lubCategoryId === "lub_aceite" &&
+        product?.lubSubcategoryId === "lub_aceite_motor"
+      ) {
+        return true;
+      }
+      const itemName = normalizarNombre(item.name);
+      const itemCategory = normalizarNombre(item.category);
+      return (
+        (itemCategory.includes("lubricentro") || itemCategory.includes("aceite")) &&
+        (/\baceite\b|\boil\b/.test(itemName) || /\b\d{1,2}w-\d{2}\b/i.test(itemName))
+      );
+    };
+    const esFiltroAceite = (_item: unknown, product: ProductoCatalogoLubricentro) =>
+      product?.lubCategoryId === "lub_filtros" &&
+      product?.lubSubcategoryId === "lub_fil_aceite";
+    const esProductoLubricentro = (item: any, product: any) =>
+      Boolean(
+        product?.lubCategoryId ||
+          String(item.category || "").toLowerCase().includes("lubricentro") ||
+          String(item.id || "").startsWith("lub-") ||
+          String(item.id || "").startsWith("it_lub") ||
+          String(item.code || "").startsWith("LUB-")
+      );
+
+    const pedidosAnteriores: Array<{
+      order: any;
+      products: Array<{ item: any; product: any }>;
+    }> = ordenesOrdenadas.map((order) => ({
+      order,
+      products: (Array.isArray(order.items) ? order.items : [])
+        .map((item: any) => ({ item, product: encontrarProducto(item) || item }))
+        .filter((entry: { item: any; product: any }) =>
+          esProductoLubricentro(entry.item, entry.product)
+        ),
+    }));
+
+    const historialOrdenado: Array<{
+      order: any;
+      products: Array<{ item: any; product: any }>;
+    }> = [...historialAnterior]
+      .filter(
+        (entry) =>
+          String(entry?.plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "") === placaActiva
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.date || b.createdAt || 0).getTime() -
+          new Date(a.date || a.createdAt || 0).getTime()
+      )
+      .map((entry) => ({
+        order: entry,
+        products: (Array.isArray(entry.services) ? entry.services : [])
+          .map((service: any) => {
+            const item =
+              typeof service === "string" ? { name: service, category: "Lubricentro" } : service;
+            return { item, product: encontrarProducto(item) };
+          })
+          .filter((entry: { item: any; product: any }) =>
+            entry.product && esProductoLubricentro(entry.item, entry.product)
+          ),
+      }));
+
+    const cambiosAnteriores = [...pedidosAnteriores, ...historialOrdenado].sort(
+      (a, b) =>
+        new Date(b.order.dateIn || b.order.date || b.order.createdAt || 0).getTime() -
+        new Date(a.order.dateIn || a.order.date || a.order.createdAt || 0).getTime()
+    );
+
+    for (const cambio of cambiosAnteriores) {
+      const catalogItems = cambio.products;
+      const includesEngineOil = catalogItems.some(({ item, product }) =>
+        esProductoAceite(item, product)
+      );
+      if (!includesEngineOil) continue;
+
+      const productsToRepeat = catalogItems.filter(
+        ({ item, product }) =>
+          item.type !== "SERVICE" &&
+          (esProductoAceite(item, product) || esFiltroAceite(item, product)) &&
+          (product?.id || item.productId || item.code)
+      );
+      if (productsToRepeat.length > 0) {
+        return { order: cambio.order, products: productsToRepeat };
+      }
+    }
+
+    return null;
+  }, [ordenActiva?.id, ordenActiva?.plate, ordenesAnteriores, historialAnterior, productos]);
+
+  const intervaloAceiteEnCarrito = useMemo(() => {
+    const items = ordenActiva?.id ? itemsLubricentroEnOrden : carritoDirecto;
+    for (const item of items) {
+      const prod = productos.find(
+        (candidate) =>
+          candidate.id === item.productId ||
+          (candidate.code && item.code && candidate.code === item.code)
+      );
+      if (
+        !prod ||
+        prod.lubCategoryId !== "lub_aceite" ||
+        prod.lubSubcategoryId !== "lub_aceite_motor"
+      ) {
+        continue;
+      }
+
+      const base = String(prod.lubricantBase || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[\s-]/g, "");
+      if (base.includes("semisintetico")) return 5000;
+      if (base.includes("sintetico")) return 10000;
+      if (base.includes("mineral")) return 5000;
+    }
+    return null;
+  }, [ordenActiva?.id, itemsLubricentroEnOrden, carritoDirecto, productos]);
+
+  useEffect(() => {
+    const mileage = parseInt(String(kilometrajeIngreso || "").replace(/[^0-9]/g, ""), 10);
+    if (mileage > 0 && intervaloAceiteEnCarrito) {
+      setProximoCambioKm(mileage + intervaloAceiteEnCarrito);
+    } else {
+      setProximoCambioKm(Number(ordenActiva?.nextOilChangeKm) || null);
+    }
+  }, [
+    ordenActiva?.id,
+    ordenActiva?.mileage,
+    ordenActiva?.nextOilChangeKm,
+    kilometrajeIngreso,
+    intervaloAceiteEnCarrito,
+  ]);
+
   const totalUnidadesCarrito = useMemo(() => {
     if (ordenActiva) {
       return itemsLubricentroEnOrden.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
     }
     return carritoDirecto.reduce((acc, it) => acc + it.qty, 0);
   }, [ordenActiva, itemsLubricentroEnOrden, carritoDirecto]);
+
+  const handleFiltrarNivelRojo = (categoryId: string, subcategoryId: string | null) => {
+    handleCambiarCategoria(categoryId);
+    setSubcategoriaPorCat((prev) => ({
+      ...prev,
+      [categoryId]: subcategoryId || "ALL",
+    }));
+    setMostrarSubcategorias(false);
+  };
+
+  const handleCiclarNivelLubricentro = (label: string) => {
+    const niveles: Record<EstadoNivelLubricentro, EstadoNivelLubricentro> = {
+      Verde: "Amarillo",
+      Amarillo: "Rojo",
+      Rojo: "Verde",
+    };
+    const estadoActual = nivelesLubricentro[label];
+    const siguiente = estadoActual ? niveles[estadoActual] : "Verde";
+    setNivelesLubricentro((prev) => ({ ...prev, [label]: siguiente }));
+
+    if (siguiente === "Rojo") {
+      const nivel = NIVELES_LUBRICENTRO.find((item) => item.label === label);
+      if (nivel) handleFiltrarNivelRojo(nivel.categoryId, nivel.subcategoryId);
+    }
+  };
+
+  const handleSeleccionarComboLubricentro = async (
+    combo: (typeof COMBOS_LUBRICENTRO)[number]
+  ) => {
+    setMostrarCombosLubricentro(false);
+    const disponibles: ProductoCatalogoLubricentro[] = productos.filter(
+      (product: ProductoCatalogoLubricentro) =>
+        product.active !== false && product.status !== "Inactivo"
+    );
+    const seleccionados: ProductoCatalogoLubricentro[] = [];
+    const agregarPrimero = (
+      coincide: (product: ProductoCatalogoLubricentro) => boolean
+    ) => {
+      const candidatos = disponibles.filter(coincide);
+      if (candidatos.length === 0) return;
+      const compatible = candidatos.find(
+        (product) => evaluarCompatibilidadVehiculo(product).compatibleVerificado
+      );
+      seleccionados.push(compatible || candidatos[0]);
+    };
+    const esAceiteMotor = (product: ProductoCatalogoLubricentro) =>
+      product.lubCategoryId === "lub_aceite" &&
+      product.lubSubcategoryId === "lub_aceite_motor";
+    const esFiltro = (subcategoryId: string) =>
+      (product: ProductoCatalogoLubricentro) =>
+        product.lubCategoryId === "lub_filtros" &&
+        product.lubSubcategoryId === subcategoryId;
+    const esAceiteDeTransmision = (product: ProductoCatalogoLubricentro) =>
+      product.lubCategoryId === "lub_transmision" &&
+      product.lubSubcategoryId !== "lub_trans_diferencial";
+    const normalizar = (value: unknown) =>
+      String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+
+    if (combo === "Básico" || combo === "Completo") {
+      agregarPrimero(esAceiteMotor);
+      agregarPrimero(esFiltro("lub_fil_aceite"));
+      if (combo === "Completo") {
+        agregarPrimero(esFiltro("lub_fil_aire"));
+        agregarPrimero(esFiltro("lub_fil_cabina"));
+      }
+    } else if (combo === "Caja") {
+      agregarPrimero(esAceiteDeTransmision);
+      agregarPrimero(esFiltro("lub_fil_transmision"));
+    } else if (combo === "Corona") {
+      agregarPrimero(
+        (product) =>
+          product.lubCategoryId === "lub_transmision" &&
+          product.lubSubcategoryId === "lub_trans_diferencial"
+      );
+    } else {
+      agregarPrimero(
+        (product) =>
+          product.lubCategoryId === "lub_aceite" &&
+          product.lubSubcategoryId === "lub_grasa"
+      );
+    }
+
+    const terminosServicio: Record<(typeof COMBOS_LUBRICENTRO)[number], string[]> = {
+      "Básico": ["cambio de aceite", "cambio aceite", "basico"],
+      "Completo": ["servicio completo", "mantenimiento completo", "completo"],
+      Caja: ["caja", "transmision"],
+      Corona: ["corona", "diferencial"],
+      Engrase: ["engrase", "engrasado"],
+    };
+    agregarPrimero(
+      (product: ProductoCatalogoLubricentro) =>
+        product.type === "SERVICE" &&
+        terminosServicio[combo].some((term) =>
+          normalizar(product.name).includes(normalizar(term))
+        )
+    );
+
+    if (seleccionados.length === 0) {
+      notificar(`No hay productos disponibles para el combo ${combo}.`, "err");
+      return;
+    }
+
+    try {
+      if (ordenActiva?.id) {
+        const nuevosItems = [...itemsOrden];
+        seleccionados.forEach((product) => {
+          const { presentation, price, unitOfMeasure } = obtenerPresentacionYPrecio(product);
+          const index = nuevosItems.findIndex(
+            (item) =>
+              (item.productId === product.id ||
+                (item.code && product.code && item.code === product.code)) &&
+              (!item.presentation || item.presentation === presentation)
+          );
+          if (index >= 0) {
+            nuevosItems[index] = {
+              ...nuevosItems[index],
+              qty: (Number(nuevosItems[index].qty) || 1) + 1,
+              price,
+            };
+            return;
+          }
+          const categoryLabel =
+            categoriasActivas.find((category) => category.id === product.lubCategoryId)?.label ||
+            "Catálogo";
+          nuevosItems.push({
+            id: `it_${product.id}_${Date.now()}_${nuevosItems.length}`,
+            productId: product.id,
+            type: product.type || "PART",
+            category: `Lubricentro - ${categoryLabel}`,
+            subCategory: product.lubSubcategoryId || "",
+            code: product.code,
+            name: `${product.name} (${presentation})`,
+            brand: product.brand || "",
+            presentation,
+            unitOfMeasure,
+            price,
+            qty: 1,
+            status: "Listo",
+            completed: true,
+            empleado_id: empleadoLogueado.id,
+            empleado_nombre: empleadoLogueado.nombre,
+          });
+        });
+        await onActualizarItemsOrden(nuevosItems);
+      } else {
+        setCarritoDirecto((prev) => {
+          const next = [...prev];
+          seleccionados.forEach((product) => {
+            const { presentation, price, unitOfMeasure } = obtenerPresentacionYPrecio(product);
+            const index = next.findIndex(
+              (item) => item.productId === product.id && item.presentation === presentation
+            );
+            if (index >= 0) {
+              next[index] = { ...next[index], qty: next[index].qty + 1, price };
+              return;
+            }
+            next.push({
+              key: `${product.id}_${presentation}`,
+              productId: product.id,
+              code: product.code || product.id,
+              name: product.name || "Producto",
+              brand: product.brand || "",
+              presentation,
+              unitOfMeasure,
+              price,
+              qty: 1,
+              maxStock: product.stock || 999,
+              imageUrl: product.imageUrl,
+              lubCategoryId: product.lubCategoryId || "",
+              lubSubcategoryId: product.lubSubcategoryId || "",
+            });
+          });
+          return next;
+        });
+      }
+      notificar(`Combo ${combo} agregado al carrito.`, "ok");
+    } catch (error) {
+      notificar(
+        error instanceof Error ? error.message : `No se pudo agregar el combo ${combo}.`,
+        "err"
+      );
+    }
+  };
+
+  const guardarSeguimientoLubricentro = async (): Promise<boolean> => {
+    if (!ordenActiva?.id) {
+      notificar("Selecciona una orden de vehículo para guardar el ingreso.", "err");
+      return false;
+    }
+
+    const kilometraje = Number.parseInt(kilometrajeIngreso.replace(/[^0-9]/g, ""), 10);
+    if (!Number.isFinite(kilometraje) || kilometraje <= 0) {
+      notificar("Ingresa un kilometraje actual válido.", "err");
+      return false;
+    }
+
+    try {
+      setGuardandoSeguimiento(true);
+      if (onGuardarDatosLubricentro) {
+        await onGuardarDatosLubricentro(nivelesLubricentro, proximoCambioKm, itemsOrden);
+      }
+
+      const inspectionChecklist = {
+        ...(ordenActiva.inspectionChecklist || {}),
+        lubricentroLevels: nivelesLubricentro,
+        lubricentroComponents: componentesLubricentro,
+      };
+      const response = await fetch("/api/taller/operacion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "ACTUALIZAR_ORDEN",
+          orderId: ordenActiva.id,
+          items: itemsOrden,
+          mileage: kilometraje,
+          nextOilChangeKm: proximoCambioKm,
+          inspectionChecklist,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "No se pudo guardar el ingreso del vehículo.");
+      }
+
+      setKilometrajeIngreso(String(data.activeOrder?.mileage || kilometraje));
+      notificar("Kilometraje y revisión del vehículo guardados.", "ok");
+      return true;
+    } catch (error) {
+      notificar(
+        error instanceof Error ? error.message : "No se pudo guardar el ingreso del vehículo.",
+        "err"
+      );
+      return false;
+    } finally {
+      setGuardandoSeguimiento(false);
+    }
+  };
+
+  const handleSiguienteLubricentro = async () => {
+    if (ordenActiva?.id && !(await guardarSeguimientoLubricentro())) return;
+    (onIrASiguiente || onIrAAvisoYFirma)();
+  };
+
+  const handleRepetirUltimoCambioAceite = async () => {
+    setRepitiendoCambioAceite(true);
+    try {
+      const presentacionesSeleccionadas: Record<string, string> = {};
+      const placa = String(ordenActiva?.plate || "")
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "");
+      const vehiculo = vehiculosRegistrados.find(
+        (vehicle) =>
+          String(vehicle.plate || "")
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, "") === placa
+      );
+      const datosVehiculo = {
+        brand: String(ordenActiva?.vehicleBrand || ordenActiva?.brand || vehiculo?.brand || vehBrand),
+        model: String(ordenActiva?.vehicleModel || ordenActiva?.model || vehiculo?.model || vehModel),
+        year: String(ordenActiva?.year || vehiculo?.year || vehYear),
+        engine: String(ordenActiva?.engine || vehEngine),
+        description: String(ordenActiva?.vehicle || ""),
+      };
+      const normalizar = (value: unknown) =>
+        String(value || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase();
+      const coincideDato = (catalogValue: unknown, vehicleValue: string) =>
+        !vehicleValue ||
+        normalizar(catalogValue).includes(normalizar(vehicleValue)) ||
+        normalizar(vehicleValue).includes(normalizar(catalogValue));
+      const esCompatibleConVehiculo = (product: ProductoCatalogoLubricentro) => {
+        const tieneDatos = Object.values(datosVehiculo).some(Boolean);
+        if (!tieneDatos) return false;
+        return (Array.isArray(product.compatibilities) ? product.compatibilities : []).some(
+          (compatibility: LubVehicleCompatibility) =>
+            compatibility.verified &&
+            coincideDato(compatibility.brand, datosVehiculo.brand) &&
+            coincideDato(compatibility.model, datosVehiculo.model) &&
+            coincideDato(compatibility.engine, datosVehiculo.engine) &&
+            (!datosVehiculo.year ||
+              ((!compatibility.yearFrom || Number(datosVehiculo.year) >= compatibility.yearFrom) &&
+                (!compatibility.yearTo || Number(datosVehiculo.year) <= compatibility.yearTo))) &&
+            (!datosVehiculo.description ||
+              normalizar(datosVehiculo.description).includes(normalizar(compatibility.brand)) ||
+              normalizar(compatibility.brand).includes(normalizar(datosVehiculo.description)))
+        );
+      };
+      const seleccionarPredeterminado = (
+        coincide: (product: ProductoCatalogoLubricentro) => boolean
+      ) => {
+        const candidatos = productos.filter(
+          (product: ProductoCatalogoLubricentro) =>
+            product.active !== false &&
+            product.status !== "Inactivo" &&
+            product.type !== "SERVICE" &&
+            coincide(product)
+        );
+        return candidatos.find(esCompatibleConVehiculo) || candidatos[0] || null;
+      };
+      const aceitePredeterminado = seleccionarPredeterminado(
+        (product) =>
+          product.lubCategoryId === "lub_aceite" &&
+          product.lubSubcategoryId === "lub_aceite_motor"
+      );
+      const filtroPredeterminado = seleccionarPredeterminado(
+        (product) =>
+          product.lubCategoryId === "lub_filtros" &&
+          product.lubSubcategoryId === "lub_fil_aceite"
+      );
+      const historial = ultimoCambioAceiteAnterior?.products || [];
+      const aceiteAnterior = historial.find(
+        ({ product }) =>
+          product?.lubCategoryId === "lub_aceite" &&
+          product?.lubSubcategoryId === "lub_aceite_motor"
+      );
+      const filtroAnterior = historial.find(
+        ({ product }) =>
+          product?.lubCategoryId === "lub_filtros" &&
+          product?.lubSubcategoryId === "lub_fil_aceite"
+      );
+      const productosARepetir: ItemAnteriorCambioAceite[] = [
+        aceiteAnterior || (aceitePredeterminado ? { item: {}, product: aceitePredeterminado } : null),
+        filtroAnterior || (filtroPredeterminado ? { item: {}, product: filtroPredeterminado } : null),
+      ].filter((entry): entry is ItemAnteriorCambioAceite => Boolean(entry));
+
+      if (productosARepetir.length === 0) {
+        notificar("No hay aceite ni filtro anterior o predeterminado para este vehículo.", "err");
+        return;
+      }
+
+      const itemsPreparados = productosARepetir.map(({ item, product }, index) => {
+        const productId = product.id || item.productId;
+        if (!productId) {
+          throw new Error("No se encontró el identificador de un producto para repetir.");
+        }
+        const presentation = String(
+          item.presentation || product.presentation || product.unitOfMeasure || "1 Unidad"
+        );
+        const variant = Array.isArray(product?.presentationsAvailable)
+          ? product.presentationsAvailable.find(
+              (candidate: LubPresentationVariant) =>
+                candidate.label === presentation || candidate.id === item.presentationId
+            )
+          : undefined;
+        if (variant && productId) presentacionesSeleccionadas[productId] = variant.id;
+
+        const price = Number(variant?.price ?? product.price ?? item.price ?? 0);
+        const quantityFromName = String(item.name || "").match(/^\s*(\d+)\s*x\s*/i)?.[1];
+        const quantity = Math.max(1, Number(item.qty) || Number(quantityFromName) || 1);
+        const categoryLabel =
+          categoriasActivas.find((category) => category.id === product.lubCategoryId)?.label ||
+          String(item.category || "").replace(/^Lubricentro\s*-\s*/i, "") ||
+          "Catálogo";
+        return {
+          id: `it_repeat_${productId || product.code}_${Date.now()}_${index}`,
+          productId,
+          type: product.type || item.type || "PART",
+          category: `Lubricentro - ${categoryLabel}`,
+          subCategory: product.lubSubcategoryId || item.subCategory,
+          code: product.code || item.code,
+          name: `${product.name || item.name} (${presentation})`,
+          brand: product.brand || item.brand,
+          presentation,
+          unitOfMeasure: variant?.unitOfMeasure || product.unitOfMeasure || item.unitOfMeasure,
+          price,
+          qty: quantity,
+          status: "Listo",
+          completed: true,
+          empleado_id: empleadoLogueado.id,
+          empleado_nombre: empleadoLogueado.nombre,
+        };
+      });
+
+      if (ordenActiva?.id) {
+        const nuevosItems = [...itemsOrden];
+        itemsPreparados.forEach((item) => {
+          const existingIndex = nuevosItems.findIndex(
+            (existing) =>
+              ((item.productId && existing.productId === item.productId) ||
+                (existing.code && item.code && existing.code === item.code)) &&
+              (!existing.presentation || existing.presentation === item.presentation)
+          );
+
+          if (existingIndex >= 0) {
+            const currentQty = Number(nuevosItems[existingIndex].qty) || 1;
+            nuevosItems[existingIndex] = {
+              ...nuevosItems[existingIndex],
+              qty: currentQty + item.qty,
+              price: item.price,
+            };
+            return;
+          }
+          nuevosItems.push(item);
+        });
+        await onActualizarItemsOrden(nuevosItems);
+      } else {
+        setCarritoDirecto((prev) => {
+          const next = [...prev];
+          itemsPreparados.forEach((item) => {
+            const index = next.findIndex(
+              (cartItem) =>
+                cartItem.productId === item.productId &&
+                cartItem.presentation === item.presentation
+            );
+            if (index >= 0) {
+              next[index] = { ...next[index], qty: next[index].qty + item.qty, price: item.price };
+              return;
+            }
+            next.push({
+              key: `${item.productId}_${item.presentation}`,
+              productId: item.productId,
+              code: item.code || item.productId || "LUB",
+              name: item.name || "Producto",
+              brand: item.brand || "",
+              presentation: item.presentation,
+              unitOfMeasure: item.unitOfMeasure || "Unidad",
+              price: item.price,
+              qty: item.qty,
+              maxStock:
+                productos.find(
+                  (product: ProductoCatalogoLubricentro) => product.id === item.productId
+                )?.stock || 999,
+              lubCategoryId:
+                productos.find(
+                  (product: ProductoCatalogoLubricentro) => product.id === item.productId
+                )?.lubCategoryId || "",
+              lubSubcategoryId: item.subCategory || "",
+            });
+          });
+          return next;
+        });
+      }
+      setPresPorProducto((prev) => ({ ...prev, ...presentacionesSeleccionadas }));
+      notificar(
+        ultimoCambioAceiteAnterior
+          ? "Último aceite y filtro agregados"
+          : "Aceite y filtro predeterminados agregados",
+        "ok"
+      );
+    } catch (error) {
+      notificar(
+        error instanceof Error ? error.message : "No se pudo repetir el último cambio de aceite.",
+        "err"
+      );
+    } finally {
+      setRepitiendoCambioAceite(false);
+    }
+  };
 
   const totalMontoCarrito = useMemo(() => {
     if (ordenActiva) {
@@ -1468,6 +2386,55 @@ export default function ModuloLubricentroCatalogo({
     }
     return carritoDirecto.reduce((acc, it) => acc + it.price * it.qty, 0);
   }, [ordenActiva, itemsLubricentroEnOrden, carritoDirecto]);
+
+  const ordenUltimoCambioAceite = ultimoCambioAceiteAnterior?.order;
+  const fechaUltimoCambioValor =
+    ordenUltimoCambioAceite?.dateIn ||
+    ordenUltimoCambioAceite?.date ||
+    ordenUltimoCambioAceite?.createdAt;
+  const fechaUltimoCambioMs = fechaUltimoCambioValor
+    ? new Date(fechaUltimoCambioValor).getTime()
+    : Number.NaN;
+  const fechaUltimoCambio =
+    Number.isFinite(fechaUltimoCambioMs) && fechaUltimoCambioMs > 0
+      ? new Date(fechaUltimoCambioMs).toLocaleDateString("es-EC", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          timeZone: "UTC",
+        })
+      : null;
+  const diasDesdeUltimoCambio =
+    fechaReferenciaHistorial !== null && Number.isFinite(fechaUltimoCambioMs)
+      ? Math.max(0, Math.floor((fechaReferenciaHistorial - fechaUltimoCambioMs) / 86_400_000))
+      : null;
+  const tiempoDesdeUltimoCambio =
+    diasDesdeUltimoCambio === null
+      ? null
+      : diasDesdeUltimoCambio === 0
+      ? "hoy"
+      : diasDesdeUltimoCambio >= 365
+      ? `hace ${Math.floor(diasDesdeUltimoCambio / 365)} ${
+          Math.floor(diasDesdeUltimoCambio / 365) === 1 ? "año" : "años"
+        }`
+      : diasDesdeUltimoCambio >= 30
+      ? `hace ${Math.floor(diasDesdeUltimoCambio / 30)} ${
+          Math.floor(diasDesdeUltimoCambio / 30) === 1 ? "mes" : "meses"
+        }`
+      : `hace ${diasDesdeUltimoCambio} ${diasDesdeUltimoCambio === 1 ? "día" : "días"}`;
+  const kilometrajeUltimoCambio = Number(ordenUltimoCambioAceite?.mileage) || 0;
+  const kilometrajeActual = Number.parseInt(kilometrajeIngreso.replace(/[^0-9]/g, ""), 10) || 0;
+  const kilometrosDesdeUltimoCambio =
+    kilometrajeActual > 0 && kilometrajeUltimoCambio > 0
+      ? kilometrajeActual - kilometrajeUltimoCambio
+      : null;
+  const descripcionVehiculo = [
+    ordenActiva?.vehicleBrand || ordenActiva?.brand,
+    ordenActiva?.vehicleModel || ordenActiva?.model,
+    ordenActiva?.year,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   // Viscosidades disponibles para filtro rápido de 1 toque
   const viscosidadesRapidas = useMemo(() => {
@@ -1490,7 +2457,7 @@ export default function ModuloLubricentroCatalogo({
   if (!config) return null;
 
   return (
-    <div className="w-full space-y-2.5 sm:space-y-3 animate-fade-in pb-4">
+    <div className="w-full space-y-2.5 pb-24 sm:space-y-3 sm:pb-4 animate-fade-in">
       {/* Banner de confirmación / error */}
       {bannerAviso && (
         <div
@@ -1511,10 +2478,332 @@ export default function ModuloLubricentroCatalogo({
         </div>
       )}
 
-      {/* =====================================================================
-          NIVEL 1: CATEGORÍAS PRINCIPALES (2 columnas en móvil, 6 en desktop, cubriendo todo el ancho)
-          ===================================================================== */}
-      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full">
+      <div className="space-y-2.5 rounded-2xl border border-zinc-200 bg-white p-3 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+          Acciones rápidas
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handleRepetirUltimoCambioAceite()}
+            disabled={repitiendoCambioAceite}
+            aria-label="Repetir último aceite y filtro"
+            className="min-h-10 px-3.5 rounded-xl border border-amber-400/50 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-60"
+          >
+            ⚡ Repetir
+          </button>
+          <button
+            type="button"
+            onClick={() => setMostrarNivelesLubricentro((prev) => !prev)}
+            aria-expanded={mostrarNivelesLubricentro}
+            className="min-h-10 px-3.5 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-200 text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer active:scale-95"
+          >
+            💧 Niveles
+          </button>
+          <button
+            type="button"
+            onClick={() => setMostrarCombosLubricentro((prev) => !prev)}
+            aria-expanded={mostrarCombosLubricentro}
+            className="min-h-10 px-3.5 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-200 text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer active:scale-95"
+          >
+            ⚡ Combo
+          </button>
+        </div>
+
+        {mostrarNivelesLubricentro && (
+          <div className="flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-2.5 dark:border-white/10">
+            {NIVELES_LUBRICENTRO.map(({ label }) => {
+              const status = nivelesLubricentro[label];
+              const statusClass =
+                status === "Verde"
+                  ? "bg-emerald-500/15 border-emerald-500/50 text-emerald-700 dark:text-emerald-300"
+                  : status === "Amarillo"
+                  ? "bg-amber-500/15 border-amber-500/50 text-amber-700 dark:text-amber-300"
+                  : status === "Rojo"
+                  ? "bg-rose-500/15 border-rose-500/50 text-rose-700 dark:text-rose-300"
+                  : "bg-white dark:bg-white/[0.04] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200";
+              const statusLabel =
+                status === "Verde"
+                  ? "OK"
+                  : status === "Amarillo"
+                  ? "Bajo"
+                  : status === "Rojo"
+                  ? "Cambiar"
+                  : "Sin revisar";
+
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => handleCiclarNivelLubricentro(label)}
+                  aria-label={`${label}: ${statusLabel}`}
+                  title={`${label}: ${status || "Sin revisar"}${status ? ` (${statusLabel})` : ""}`}
+                  className={`min-h-9 px-2.5 rounded-lg border text-xs font-medium cursor-pointer active:scale-95 ${statusClass}`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {mostrarCombosLubricentro && (
+          <div className="flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-2.5 dark:border-white/10">
+            {COMBOS_LUBRICENTRO.map((combo) => (
+              <button
+                key={combo}
+                type="button"
+                onClick={() => void handleSeleccionarComboLubricentro(combo)}
+                className="min-h-9 px-2.5 rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-200 text-xs font-medium cursor-pointer active:scale-95"
+              >
+                {combo}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <section className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-700 dark:text-blue-300">
+              Recepción del vehículo
+            </p>
+            <h2 className="mt-1 text-lg font-bold text-zinc-900 dark:text-zinc-100">
+              {ordenActiva?.plate || "Sin vehículo seleccionado"}
+            </h2>
+            {descripcionVehiculo && (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">{descripcionVehiculo}</p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setPestanaTienda("productos");
+              setDrawerTiendaAbierto(true);
+            }}
+            className="min-h-11 shrink-0 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-xs transition hover:bg-blue-500 active:scale-95"
+          >
+            + Productos y servicios
+          </button>
+        </div>
+
+        {ordenActiva?.id ? (
+          <>
+            <div className="grid gap-3 sm:grid-cols-[minmax(200px,0.8fr)_minmax(0,1.2fr)]">
+              <label className="space-y-1.5">
+                <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                  Kilometraje de ingreso
+                </span>
+                <span className="relative block">
+                  <input
+                    type="number"
+                    min="1"
+                    inputMode="numeric"
+                    value={kilometrajeIngreso}
+                    onChange={(event) => setKilometrajeIngreso(event.target.value)}
+                    placeholder="Ej. 85420"
+                    className="h-12 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 pr-12 text-lg font-bold tabular-nums text-zinc-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-white/10 dark:bg-black/20 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-900/40"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-zinc-500">
+                    km
+                  </span>
+                </span>
+              </label>
+
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3 dark:border-white/10 dark:bg-black/20">
+                {fechaUltimoCambio ? (
+                  <>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">
+                        Último cambio de aceite
+                      </p>
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                        {tiempoDesdeUltimoCambio || "Historial"}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                      {fechaUltimoCambio}
+                      {kilometrajeUltimoCambio > 0 &&
+                        ` · ${formatearKilometraje(kilometrajeUltimoCambio)} km`}
+                    </p>
+                    {kilometrosDesdeUltimoCambio !== null && kilometrosDesdeUltimoCambio >= 0 && (
+                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                        Recorrido desde entonces:{" "}
+                        <strong className="font-semibold text-zinc-700 dark:text-zinc-200">
+                          {formatearKilometraje(kilometrosDesdeUltimoCambio)} km
+                        </strong>
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                      Sin cambio de aceite previo
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                      Registra el kilometraje y el estado de cada componente para iniciar el
+                      historial de mantenimiento de este vehículo.
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2 border-t border-zinc-200 pt-3 dark:border-white/10">
+              <div>
+                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                  Revisión de componentes
+                </h3>
+                <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                  Marca qué se atendió y qué queda pendiente.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {COMPONENTES_SERVICIO_LUBRICENTRO.map((componente) => (
+                  <div
+                    key={componente}
+                    className="flex min-h-12 items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-white/[0.02]"
+                  >
+                    <span className="min-w-0 text-xs font-medium text-zinc-700 dark:text-zinc-200">
+                      {componente}
+                    </span>
+                    <div className="flex shrink-0 rounded-lg bg-zinc-100 p-0.5 dark:bg-white/5">
+                      {(["Pendiente", "Realizado"] as const).map((estado) => {
+                        const activo = componentesLubricentro[componente] === estado;
+                        return (
+                          <button
+                            key={estado}
+                            type="button"
+                            onClick={() =>
+                              setComponentesLubricentro((prev) => ({
+                                ...prev,
+                                [componente]: estado,
+                              }))
+                            }
+                            aria-pressed={activo}
+                            className={`min-h-9 rounded-md px-2.5 text-[10px] font-semibold transition ${
+                              activo
+                                ? "bg-blue-100 text-blue-800 shadow-xs dark:bg-blue-500/25 dark:text-blue-100"
+                                : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"
+                            }`}
+                          >
+                            {estado}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {proximoCambioKm !== null && (
+                <span className="mr-auto text-xs text-zinc-500 dark:text-zinc-400">
+                  Próximo cambio:{" "}
+                  <strong className="font-semibold text-emerald-700 dark:text-emerald-300">
+                    {formatearKilometraje(proximoCambioKm)} km
+                  </strong>
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => void guardarSeguimientoLubricentro()}
+                disabled={guardandoSeguimiento}
+                className="min-h-10 rounded-xl border border-zinc-200 bg-white px-4 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-200 dark:hover:bg-white/[0.08]"
+              >
+                {guardandoSeguimiento ? "Guardando..." : "Guardar revisión"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs leading-relaxed text-zinc-600 dark:border-white/10 dark:bg-black/20 dark:text-zinc-300">
+            Para registrar kilometraje e historial, primero selecciona la orden del vehículo.
+            También puedes abrir la tienda para una venta directa.
+          </p>
+        )}
+      </section>
+
+      {drawerTiendaAbierto && (
+        <div
+          role="presentation"
+          onClick={() => setDrawerTiendaAbierto(false)}
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-5"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Tienda de Lubricentro"
+            onClick={(event) => event.stopPropagation()}
+            className="flex max-h-[94dvh] w-full max-w-6xl flex-col overflow-hidden rounded-t-3xl border border-zinc-200 bg-white text-zinc-900 shadow-2xl dark:border-white/10 dark:bg-[#111113] dark:text-zinc-100 sm:max-h-[90dvh] sm:rounded-2xl"
+          >
+            <div className="shrink-0 border-b border-zinc-200 p-3 dark:border-white/10 sm:px-5 sm:py-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-bold">Tienda de Lubricentro</h2>
+                  <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    {ordenActiva?.plate
+                      ? `Agregar a la atención de ${ordenActiva.plate}`
+                      : "Selecciona productos o servicios para caja"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDrawerTiendaAbierto(false)}
+                  aria-label="Cerrar tienda"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-lg text-zinc-600 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {(["productos", "servicios"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => {
+                      setPestanaTienda(tab);
+                      setMenuFiltroAbierto(false);
+                      setMenuEnvaseAbierto(false);
+                    }}
+                    aria-pressed={pestanaTienda === tab}
+                    className={`min-h-10 rounded-xl border text-sm font-semibold capitalize transition ${
+                      pestanaTienda === tab
+                        ? "border-blue-300 bg-blue-100 text-blue-800 dark:border-blue-400/50 dark:bg-blue-500/20 dark:text-blue-100"
+                        : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300"
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 pb-6 sm:p-5">
+      {pestanaTienda === "productos" && (
+      <section
+        aria-label="Categorías del catálogo"
+        className="rounded-2xl border border-zinc-200 bg-white p-3 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4"
+      >
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 sm:text-base">
+              Explorar catálogo
+            </h2>
+            <p className="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400 sm:text-xs">
+              Elige una categoría y luego un tipo de producto
+            </p>
+          </div>
+          <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+            {productosFiltrados.length} {productosFiltrados.length === 1 ? "producto" : "productos"}
+          </span>
+        </div>
+
+        <div className="space-y-2 rounded-xl bg-zinc-50/80 p-2.5 dark:bg-black/20 sm:p-3">
+          <p className="px-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+            Categoría
+          </p>
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
         {mostrarCategorias ? (
           <>
             <button
@@ -1522,7 +2811,7 @@ export default function ModuloLubricentroCatalogo({
               onClick={() => handleCambiarCategoria("ALL")}
               className={`flex-1 min-w-[100px] sm:min-w-[120px] h-9 sm:h-10 px-3 rounded-xl border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
                 categoriaActivaId === "ALL"
-                  ? "bg-blue-600 border-blue-500 text-white shadow-xs"
+                  ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
                   : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
               }`}
             >
@@ -1531,7 +2820,7 @@ export default function ModuloLubricentroCatalogo({
               <span
                 className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-normal shrink-0 ${
                   categoriaActivaId === "ALL"
-                    ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                    ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30"
                     : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
                 }`}
               >
@@ -1550,7 +2839,7 @@ export default function ModuloLubricentroCatalogo({
                   onClick={() => handleCambiarCategoria(cat.id)}
                   className={`flex-1 min-w-[105px] sm:min-w-[125px] h-9 sm:h-10 px-3 rounded-xl border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
                     sel
-                      ? "bg-blue-600 border-blue-500 text-white shadow-xs"
+                      ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
                       : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
                   }`}
                 >
@@ -1564,7 +2853,7 @@ export default function ModuloLubricentroCatalogo({
                     <span
                       className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-normal shrink-0 ${
                         sel
-                          ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                          ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30"
                           : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
                       }`}
                     >
@@ -1580,13 +2869,13 @@ export default function ModuloLubricentroCatalogo({
             type="button"
             onClick={() => setMostrarCategorias(true)}
             aria-label="Mostrar categorías"
-            className="min-w-[120px] h-9 sm:h-10 px-3 rounded-xl border bg-blue-600 border-blue-500 text-white text-xs font-normal inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-xs active:scale-95 whitespace-nowrap"
+            className="min-w-[120px] h-9 sm:h-10 px-3 rounded-xl border bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100 text-xs font-normal inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-xs active:scale-95 whitespace-nowrap"
           >
             {categoriaActivaId === "ALL" || !categoriaSeleccionadaObj ? (
               <>
                 <span className="text-sm leading-none shrink-0">✨</span>
                 <span>Todo</span>
-                <span className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-blue-500/25 text-blue-100 border border-blue-400/30">
+                <span className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30">
                   {productos.filter((p) => p.active !== false).length}
                 </span>
               </>
@@ -1595,7 +2884,7 @@ export default function ModuloLubricentroCatalogo({
                 <span className="text-base leading-none shrink-0">{categoriaSeleccionadaObj.icon}</span>
                 <span>{categoriaSeleccionadaObj.label}</span>
                 <span
-                  className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-blue-500/25 text-blue-100 border border-blue-400/30"
+                  className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30"
                 >
                   {conteoEnPedidoPorCategoria[categoriaSeleccionadaObj.id] ||
                     conteoProductosPorCategoria[categoriaSeleccionadaObj.id] ||
@@ -1605,13 +2894,14 @@ export default function ModuloLubricentroCatalogo({
             )}
           </button>
         )}
-      </div>
+          </div>
 
-      {/* =====================================================================
-          NIVEL 2: SUBCATEGORÍAS DE LA CATEGORÍA ACTIVA (Cubriendo todo el ancho con flex-1)
-          ===================================================================== */}
-      {categoriaActivaId !== "ALL" && subcategoriasActivas.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 w-full">
+          {categoriaActivaId !== "ALL" && subcategoriasActivas.length > 0 && (
+            <div className="space-y-2 border-t border-zinc-200/80 pt-2.5 dark:border-white/10">
+              <p className="px-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
+                Tipo de producto
+              </p>
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {mostrarSubcategorias ? (
             <>
               <button
@@ -1619,7 +2909,7 @@ export default function ModuloLubricentroCatalogo({
                 onClick={() => handleCambiarSubcategoria("ALL")}
                 className={`flex-1 min-w-[95px] sm:min-w-[110px] h-8 sm:h-8.5 px-3 rounded-lg border text-xs font-normal flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs ${
                   subcategoriaActivaId === "ALL"
-                    ? "bg-blue-600 border-blue-500 text-white font-normal shadow-xs"
+                    ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
                     : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
                 }`}
               >
@@ -1627,7 +2917,7 @@ export default function ModuloLubricentroCatalogo({
                 <span
                   className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
                     subcategoriaActivaId === "ALL"
-                      ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                      ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30"
                       : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
                   }`}
                 >
@@ -1645,7 +2935,7 @@ export default function ModuloLubricentroCatalogo({
                     onClick={() => handleCambiarSubcategoria(sub.id)}
                     className={`flex-1 min-w-[95px] sm:min-w-[110px] h-8 sm:h-8.5 px-2.5 sm:px-3 rounded-lg border text-xs font-normal flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs ${
                       activa
-                        ? "bg-blue-600 border-blue-500 text-white font-normal shadow-xs"
+                        ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
                         : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
                     }`}
                   >
@@ -1661,7 +2951,7 @@ export default function ModuloLubricentroCatalogo({
                       <span
                         className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
                           activa
-                            ? "bg-blue-500/25 text-blue-700 dark:text-blue-100 border border-blue-400/30"
+                            ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30"
                             : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
                         }`}
                       >
@@ -1677,12 +2967,12 @@ export default function ModuloLubricentroCatalogo({
               type="button"
               onClick={() => setMostrarSubcategorias(true)}
               aria-label="Mostrar subcategorías"
-              className="min-w-[110px] h-8 sm:h-8.5 px-3 rounded-lg border bg-blue-600 border-blue-500 text-white text-xs font-normal inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-xs"
+              className="min-w-[110px] h-8 sm:h-8.5 px-3 rounded-lg border bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100 text-xs font-normal inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-xs"
             >
               {subcategoriaActivaId === "ALL" || !subcategoriaSeleccionadaObj ? (
                 <>
                   <span>Todos</span>
-                  <span className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-blue-500/25 text-blue-100 border border-blue-400/30">
+                  <span className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30">
                     {conteoProductosPorCategoria[categoriaActivaId] || 0}
                   </span>
                 </>
@@ -1697,7 +2987,7 @@ export default function ModuloLubricentroCatalogo({
                       .split(/[\s/]+/)[0]}
                   </span>
                   {(conteoProductosPorSubcategoria[subcategoriaSeleccionadaObj.id] || 0) > 0 && (
-                    <span className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-blue-500/25 text-blue-100 border border-blue-400/30">
+                    <span className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30">
                       {conteoProductosPorSubcategoria[subcategoriaSeleccionadaObj.id]}
                     </span>
                   )}
@@ -1705,16 +2995,36 @@ export default function ModuloLubricentroCatalogo({
               )}
             </button>
           )}
+              </div>
+            </div>
+          )}
         </div>
+      </section>
       )}
 
       {/* =====================================================================
           TIENDA UNIFICADA Y AUTOMÁTICA (Muestra productos al instante sin escribir)
           ===================================================================== */}
-      <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 space-y-3 shadow-2xs">
+      <section
+        aria-label="Productos del catálogo"
+        className="space-y-3 rounded-2xl border border-zinc-200 bg-white p-3 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4"
+      >
         {/* Barra superior: Buscador + Desplegable de Base (Sintético / Semisintético / Mineral) + Carrito */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="relative flex-1">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 sm:text-base">
+              {pestanaTienda === "productos" ? "Productos" : "Servicios"}
+            </h2>
+            <p className="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400 sm:text-xs">
+              Toca una tarjeta para agregarla a la atención
+            </p>
+          </div>
+          <span className="shrink-0 rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-medium tabular-nums text-zinc-600 dark:bg-white/10 dark:text-zinc-300">
+            {productosTiendaFiltrados.length} disponibles
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative basis-full sm:basis-auto sm:flex-1">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">
               🔍
             </span>
@@ -1722,7 +3032,7 @@ export default function ModuloLubricentroCatalogo({
               type="text"
               value={busquedaTexto}
               onChange={(e) => setBusquedaTexto(e.target.value)}
-              placeholder="Buscar..."
+              placeholder={pestanaTienda === "productos" ? "Buscar producto..." : "Buscar servicio..."}
               className="w-full h-9 pl-8 pr-8 rounded-lg bg-zinc-50/80 dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
             />
             {busquedaTexto && (
@@ -1736,14 +3046,17 @@ export default function ModuloLubricentroCatalogo({
             )}
           </div>
 
-          {basesRapidas.length > 0 && (
+          {pestanaTienda === "productos" && basesRapidas.length > 0 && (
             <div ref={menuFiltroRef} className="relative shrink-0">
               <button
                 type="button"
-                onClick={() => setMenuFiltroAbierto((prev) => !prev)}
+                onClick={() => {
+                  setMenuFiltroAbierto((prev) => !prev);
+                  setMenuEnvaseAbierto(false);
+                }}
                 className={`h-9 px-3 rounded-lg border text-xs font-normal flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs select-none active:scale-95 ${
                   filtroBase
-                    ? "bg-amber-500 border-amber-500 text-white font-normal shadow-xs"
+                    ? "bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100 shadow-xs"
                     : menuFiltroAbierto
                     ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/40 text-blue-700 dark:text-blue-300"
                     : "bg-zinc-50/80 dark:bg-black/40 hover:bg-zinc-100 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
@@ -1798,7 +3111,7 @@ export default function ModuloLubricentroCatalogo({
                         }}
                         className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-normal flex items-center justify-between transition-colors cursor-pointer ${
                           act
-                            ? "bg-amber-500/20 text-amber-600 dark:text-amber-300 font-normal"
+                            ? "bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-100 font-normal"
                             : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
                         }`}
                       >
@@ -1812,12 +3125,64 @@ export default function ModuloLubricentroCatalogo({
             </div>
           )}
 
-
+          {pestanaTienda === "productos" && (
+          <div ref={menuEnvaseRef} className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setMenuEnvaseAbierto((prev) => !prev);
+                setMenuFiltroAbierto(false);
+              }}
+              aria-expanded={menuEnvaseAbierto}
+              className={`h-9 px-3 rounded-lg border text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 ${
+                filtroEnvase
+                  ? "bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100"
+                  : "bg-zinc-50/80 dark:bg-black/40 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
+              }`}
+            >
+              {filtroEnvase || "Envase"}
+              <svg
+                className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                  menuEnvaseAbierto ? "rotate-180" : ""
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth={2.5}
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {menuEnvaseAbierto && (
+              <div className="absolute right-0 top-full mt-1.5 w-36 rounded-xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/10 shadow-xl dark:shadow-2xl p-1.5 space-y-0.5 z-40 animate-fade-in">
+                {ENVASES_CERRADOS.map((envase) => (
+                  <button
+                    key={envase}
+                    type="button"
+                    onClick={() => {
+                      setFiltroEnvase((prev) => (prev === envase ? "" : envase));
+                      setMenuEnvaseAbierto(false);
+                    }}
+                    className={`w-full px-2.5 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
+                      filtroEnvase === envase
+                        ? "bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-100"
+                        : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
+                    }`}
+                  >
+                    {envase}
+                    {filtroEnvase === envase && <span aria-hidden="true">✓</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          )}
         </div>
 
 
         {/* Chips de filtros activos con botón de limpieza rápida */}
-        {chipsFiltrosActivos.length > 0 && (
+        {pestanaTienda === "productos" && chipsFiltrosActivos.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
             {chipsFiltrosActivos.map((chip) => (
               <span
@@ -1845,10 +3210,11 @@ export default function ModuloLubricentroCatalogo({
         )}
 
         {/* Grid de productos automático, intuitivo y táctil para móvil y escritorio */}
-        {productosFiltrados.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3">
-            {productosFiltrados.map((prod) => {
-              const { presentation, price, variantes } = obtenerPresentacionYPrecio(prod);
+        {productosTiendaFiltrados.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-4 xl:grid-cols-5">
+            {productosTiendaFiltrados.map((prod) => {
+              const { presentation, price } = obtenerPresentacionYPrecio(prod);
+              const palabraClave = obtenerPalabraClaveProducto(prod);
               const qtyEnPedido = obtenerCantidadEnPedido(prod, presentation);
               const estaEnPedido = qtyEnPedido > 0;
 
@@ -1857,171 +3223,98 @@ export default function ModuloLubricentroCatalogo({
                   key={prod.id}
                   onClick={(e) => {
                     const target = e.target as HTMLElement;
-                    if (target.closest("button") || target.closest("[data-prevent-card-click]")) {
-                      return;
+                    if (!target.closest("button")) {
+                      void handleAjustarCantidadProducto(prod, 1, presentation, price);
                     }
-                    void handleAjustarCantidadProducto(prod, 1);
                   }}
-                  className={`p-2.5 sm:p-3 rounded-xl border flex flex-col justify-between gap-2 transition-all shadow-2xs cursor-pointer select-none ${
+                  onKeyDown={(e) => {
+                    if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                      e.preventDefault();
+                      void handleAjustarCantidadProducto(prod, 1, presentation, price);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Agregar ${palabraClave} al carrito`}
+                  aria-pressed={estaEnPedido}
+                  className={`relative min-h-48 p-3 sm:p-4 rounded-2xl border flex flex-col items-center justify-between gap-3 transition-all shadow-2xs cursor-pointer select-none active:scale-[0.98] ${
                     estaEnPedido
-                      ? "bg-emerald-50/40 dark:bg-emerald-500/[0.08] border-emerald-400 dark:border-emerald-500/50 ring-1 ring-emerald-400/30"
+                      ? "bg-blue-50 dark:bg-blue-500/[0.08] border-blue-300 dark:border-blue-400/60 ring-1 ring-blue-300/40"
                       : "bg-white dark:bg-white/[0.02] hover:border-blue-400/60 dark:hover:border-blue-500/40 border-zinc-200 dark:border-white/10"
                   }`}
                 >
-                  {/* Fila superior de tarjeta (compacta en móvil: imagen + info clave) */}
-                  <div className="flex items-start gap-2.5">
-                    <div
-                      data-prevent-card-click
-                      onClick={() => setProductoDetalleModal(prod)}
-                      className="w-14 h-16 sm:w-16 sm:h-18 rounded-lg bg-zinc-50 dark:bg-black/40 border border-zinc-200/80 dark:border-white/5 flex items-center justify-center p-1.5 shrink-0 overflow-hidden cursor-pointer"
-                      title="Ver ficha técnica"
-                    >
-                      {prod.imageUrl ? (
-                        <img
-                          src={prod.imageUrl}
-                          alt={prod.name}
-                          className="w-full h-full object-contain"
-                        />
-                      ) : (
-                        <span className="text-2xl">
-                          {categoriasActivas.find((c) => c.id === prod.lubCategoryId)?.icon || "🛢️"}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-[10px] font-normal uppercase tracking-wider text-blue-600 dark:text-blue-400 truncate">
-                          {prod.brand || "Lubricentro"}
-                        </span>
-                        {estaEnPedido && (
-                          <span className="px-1.5 py-0.2 rounded text-[9px] font-normal bg-emerald-500 text-white shrink-0">
-                            ✓ {qtyEnPedido} en pedido
-                          </span>
-                        )}
-                      </div>
-
-                      <h4
-                        data-prevent-card-click
-                        onClick={() => setProductoDetalleModal(prod)}
-                        className="text-xs font-normal text-zinc-900 dark:text-zinc-100 line-clamp-2 leading-snug cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
-                      >
-                        {prod.name}
-                      </h4>
-
-                      {/* Badges rápidos de viscosidad / base / referencia */}
-                      <div className="flex flex-wrap items-center gap-1 pt-0.5">
-                        {prod.viscosity && (
-                          <span className="px-1.5 py-0.2 rounded bg-zinc-100 dark:bg-white/10 text-[10px] font-mono font-normal text-zinc-700 dark:text-zinc-300">
-                            {prod.viscosity}
-                          </span>
-                        )}
-                        {prod.lubricantBase && (
-                          <span className="px-1.5 py-0.2 rounded bg-amber-50 dark:bg-amber-500/15 text-[10px] font-normal text-amber-700 dark:text-amber-300">
-                            {prod.lubricantBase}
-                          </span>
-                        )}
-                        {prod.fluidClass && (
-                          <span className="px-1.5 py-0.2 rounded bg-sky-50 dark:bg-sky-500/15 text-[10px] font-normal text-sky-700 dark:text-sky-300">
-                            {prod.fluidClass}
-                          </span>
-                        )}
-                        {prod.capacityAh && (
-                          <span className="px-1.5 py-0.2 rounded bg-purple-50 dark:bg-purple-500/15 text-[10px] font-normal text-purple-700 dark:text-purple-300">
-                            {prod.capacityAh}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Selector de presentación en 1 toque (si tiene variantes) o etiqueta directa */}
-                  {variantes.length > 1 ? (
-                    <div className="flex flex-wrap items-center gap-1 pt-1">
-                      {variantes.map((v) => {
-                        const selVar = presentation === v.label;
-                        return (
-                          <button
-                            key={v.id}
-                            type="button"
-                            onClick={() =>
-                              setPresPorProducto((prev) => ({ ...prev, [prod.id]: v.id }))
-                            }
-                            className={`flex-1 min-w-[70px] h-6 px-2 rounded-md border text-[10px] font-normal cursor-pointer transition-all ${
-                              selVar
-                                ? "bg-blue-600 border-blue-500 text-white"
-                                : "bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300"
-                            }`}
-                          >
-                            {v.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : null}
-
-                  {/* Pie de tarjeta: Precio + Presentación + Botón / Stepper automático (- qty +) */}
-                  <div className="pt-2 border-t border-zinc-100 dark:border-white/5 flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <span className="text-sm font-mono font-normal text-emerald-600 dark:text-emerald-400 block leading-none">
-                        ${price.toFixed(2)}
+                  {estaEnPedido && (
+                    <div className="absolute top-2 right-2 flex items-center gap-1">
+                      <span className="min-w-7 h-7 px-1.5 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center tabular-nums">
+                        {qtyEnPedido}
                       </span>
-                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate block mt-0.5">
-                        {presentation}
-                      </span>
-                    </div>
-
-                    {estaEnPedido ? (
-                      <div className="flex items-center gap-1 bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-400/50 rounded-lg p-0.5 shrink-0">
-                        <button
-                          type="button"
-                          disabled={agregandoId === prod.id}
-                          onClick={() =>
-                            void handleAjustarCantidadProducto(prod, -1, presentation, price)
-                          }
-                          className="w-7 h-7 rounded-md bg-white dark:bg-black/40 hover:bg-rose-50 dark:hover:bg-rose-500/20 text-zinc-800 dark:text-white font-normal text-xs flex items-center justify-center cursor-pointer active:scale-90 transition-all"
-                          title="Restar 1"
-                        >
-                          −
-                        </button>
-                        <span className="w-6 text-center text-xs font-mono font-normal text-emerald-800 dark:text-emerald-200">
-                          {qtyEnPedido}
-                        </span>
-                        <button
-                          type="button"
-                          disabled={agregandoId === prod.id}
-                          onClick={() =>
-                            void handleAjustarCantidadProducto(prod, 1, presentation, price)
-                          }
-                          className="w-7 h-7 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-normal text-xs flex items-center justify-center cursor-pointer active:scale-90 transition-all"
-                          title="Sumar 1"
-                        >
-                          +
-                        </button>
-                      </div>
-                    ) : (
                       <button
                         type="button"
                         disabled={agregandoId === prod.id}
-                        onClick={() =>
-                          void handleAjustarCantidadProducto(prod, 1, presentation, price)
-                        }
-                        className="h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal flex items-center gap-1 shrink-0 transition-all cursor-pointer active:scale-95 shadow-2xs disabled:opacity-50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleAjustarCantidadProducto(prod, -1, presentation, price);
+                        }}
+                        className="w-7 h-7 rounded-full bg-white dark:bg-black/40 border border-emerald-400/60 text-zinc-800 dark:text-white font-bold text-sm flex items-center justify-center cursor-pointer active:scale-90 transition-all disabled:opacity-50"
+                        aria-label={`Restar ${palabraClave} del carrito`}
+                        title="Restar 1"
                       >
-                        <span>+</span>
-                        <span>{agregandoId === prod.id ? "..." : "Agregar"}</span>
+                        −
                       </button>
+                    </div>
+                  )}
+                  <div className="mt-1 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-zinc-100 bg-zinc-50 p-2 dark:border-white/5 dark:bg-black/20 sm:h-24 sm:w-24">
+                    {prod.imageUrl ? (
+                      <img
+                        src={prod.imageUrl}
+                        alt=""
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <span className="text-3xl" aria-hidden="true">
+                        {categoriasActivas.find((c) => c.id === prod.lubCategoryId)?.icon || "🛢️"}
+                      </span>
                     )}
+                  </div>
+                  <div className="flex w-full flex-col items-center gap-1">
+                    <span className="max-w-full truncate text-center text-lg font-bold leading-tight text-zinc-900 dark:text-zinc-100 sm:text-xl">
+                      {palabraClave.toUpperCase()}
+                    </span>
+                    <span className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      ${price.toFixed(2)}
+                    </span>
                   </div>
                 </div>
               );
             })}
           </div>
+        ) : (
+          <div className="flex min-h-36 flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-zinc-50/70 px-4 py-8 text-center dark:border-white/15 dark:bg-black/20">
+            <span className="mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-white text-xl shadow-2xs dark:bg-white/10">
+              {cargando ? "…" : "🔎"}
+            </span>
+            <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+              {cargando
+                ? "Cargando catálogo"
+                : `No hay ${pestanaTienda === "productos" ? "productos" : "servicios"} para mostrar`}
+            </p>
+            <p className="mt-1 max-w-sm text-xs text-zinc-500 dark:text-zinc-400">
+              {cargando
+                ? "Estamos actualizando los productos disponibles."
+                : pestanaTienda === "productos"
+                ? "Prueba otra categoría o elimina algunos filtros para ver más opciones."
+                : "Prueba otra búsqueda para encontrar un servicio disponible."}
+            </p>
+          </div>
         )}
-      </div>
+      </section>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Barra inferior fija/flotante en móvil cuando hay productos seleccionados o botón directo */}
-      <div className="sticky bottom-2 z-30 flex items-center justify-between gap-2 p-2.5 sm:p-3 rounded-xl bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border border-zinc-200 dark:border-white/15 shadow-lg">
+      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-2 p-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] sm:sticky sm:bottom-2 sm:mx-auto sm:max-w-7xl sm:p-3 sm:rounded-xl bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border border-zinc-200 dark:border-white/15 shadow-lg">
         <div
           onClick={() => setDrawerCarritoAbierto(true)}
           className="flex items-center gap-2.5 min-w-0 cursor-pointer"
@@ -2033,17 +3326,30 @@ export default function ModuloLubricentroCatalogo({
             <span className="text-sm sm:text-base font-normal text-zinc-900 dark:text-white block truncate">
               {totalUnidadesCarrito} {totalUnidadesCarrito === 1 ? "producto" : "productos"}
             </span>
-            <span className="text-sm sm:text-base font-normal text-emerald-600 dark:text-emerald-400 block">
-              Total: ${totalMontoCarrito.toFixed(2)}
-            </span>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <span className="text-sm sm:text-base font-normal text-emerald-600 dark:text-emerald-400">
+                Total: ${totalMontoCarrito.toFixed(2)}
+              </span>
+              {intervaloAceiteEnCarrito !== null && (
+                <span className="px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-white/10 text-xs font-medium text-zinc-700 dark:text-zinc-200">
+                  +{formatearKilometraje(intervaloAceiteEnCarrito)} km
+                </span>
+              )}
+              {ordenActiva?.id && proximoCambioKm !== null && (
+                <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  Próx: {formatearKilometraje(proximoCambioKm)} km
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
-            onClick={onIrASiguiente || onIrAAvisoYFirma}
-            className="h-9 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-normal cursor-pointer shadow-xs active:scale-95 transition-all"
+            onClick={() => void handleSiguienteLubricentro()}
+            disabled={guardandoSeguimiento}
+            className="h-10 sm:h-9 px-4 sm:px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-normal cursor-pointer shadow-xs active:scale-95 transition-all disabled:opacity-60"
           >
             Siguiente →
           </button>

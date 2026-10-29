@@ -3315,7 +3315,9 @@ ${urlSeguimiento}`;
 
               {/* Resultados de la Inspección de Sistemas (Motor, Frenos, Suspensión, Eléctrico) */}
               {/* Resultados de la Inspección de Sistemas Mecánicos y Eléctricos (si hay evaluaciones) */}
-              {Object.keys(evaluacionesPlantilla).length > 0 && (
+              {SISTEMAS_INSPECCION.some((sis) =>
+                sis.items?.some((item) => evaluacionesPlantilla[item.id] !== undefined)
+              ) && (
                 <div>
                   <div className="flex items-center justify-between mb-2 border-b pb-1">
                     <h4 className="font-bold text-xs uppercase tracking-wider text-zinc-900">

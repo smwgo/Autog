@@ -2047,6 +2047,7 @@ export default function ModalNuevaOrdenTrabajo({
           ).trim(),
           telefono: (clienteSeleccionado?.phone || nuevoClienteTelefono).trim(),
           email: (emailContacto || nuevoClienteEmail || clienteSeleccionado?.email || "").trim() || undefined,
+          direccion: nuevoClienteDireccion.trim() || undefined,
           ingresadoPor: ingresadoPor.trim() || empleadoLogueado.nombre,
           mechanic: mecanicosTexto,
           motivoIngreso: motivoFinal,
