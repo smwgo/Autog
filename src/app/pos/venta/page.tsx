@@ -1642,12 +1642,12 @@ export default function NuevaVentaPage() {
               <button
                 type="button"
                 onClick={abrirModalPedidos}
-                className="relative w-12 h-12 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800/80 text-zinc-700 dark:text-zinc-200 flex items-center justify-center text-xl transition-all active:scale-95 cursor-pointer shadow-xs shrink-0"
+                className="relative w-12 h-12 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border border-emerald-500/30 dark:border-emerald-500/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl transition-all active:scale-95 cursor-pointer shadow-xs shrink-0"
                 title="Pedidos pendientes"
               >
-                <span>📥</span>
+                <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
                 {solicitudesPendientesCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500 text-white text-[11px] font-black flex items-center justify-center shadow-md animate-pulse border-2 border-white dark:border-zinc-900 leading-none">
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-500/25 dark:bg-emerald-500/30 border border-emerald-500/50 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold font-mono flex items-center justify-center shadow-sm backdrop-blur-sm">
                     {solicitudesPendientesCount}
                   </span>
                 )}
