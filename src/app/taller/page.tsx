@@ -715,6 +715,7 @@ export const MODULOS_ESPECIALIDADES = [
   {
     id: "carwash" as const,
     shortName: "Car Wash",
+    mobileName: "Lavado",
     name: "Car Wash & Detailing",
     desc: "Lavado premium, aspirado y estética",
     color: "purple",
@@ -5304,7 +5305,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       title={mod.name}
                     >
                       {mod.svg("w-4 h-4 shrink-0")}
-                      <span className="whitespace-nowrap">{mod.shortName}</span>
+                      <span className="whitespace-nowrap"><span className="sm:hidden">{(mod as { mobileName?: string }).mobileName ?? mod.shortName}</span><span className="hidden sm:inline">{mod.shortName}</span></span>
                     </button>
                   );
                 })}
