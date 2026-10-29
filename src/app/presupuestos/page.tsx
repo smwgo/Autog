@@ -186,15 +186,24 @@ export default function PanelPresupuestosPage() {
       if (!res.ok) {
         let errText = `Error (${res.status})`;
         try {
-          const errData = await res.json();
-          errText = errData.error || errText;
+          const isJson = res.headers.get("content-type")?.includes("application/json");
+          if (isJson) {
+            const errData = await res.json();
+            errText = errData.error || errText;
+          }
         } catch {
           // El servidor devolvió HTML (404/500)
         }
         mostrarToast(errText, "err");
         return;
       }
-      const data = await res.json();
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        mostrarToast("Respuesta inválida del servidor", "err");
+        return;
+      }
       if (data.success) {
         mostrarToast(data.message, "ok");
         // Actualizar estado local inmediatamente
@@ -253,15 +262,24 @@ export default function PanelPresupuestosPage() {
       if (!res.ok) {
         let errText = `Error al consultar órdenes (${res.status})`;
         try {
-          const errData = await res.json();
-          errText = errData.error || errText;
+          const isJson = res.headers.get("content-type")?.includes("application/json");
+          if (isJson) {
+            const errData = await res.json();
+            errText = errData.error || errText;
+          }
         } catch {
           // El servidor devolvió HTML (404/500)
         }
         mostrarToast(errText, "err");
         return;
       }
-      const data = await res.json();
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        mostrarToast("Respuesta inválida del servidor al listar órdenes", "err");
+        return;
+      }
 
       if (data.success) {
         setOrdenes(data.ordenes || []);

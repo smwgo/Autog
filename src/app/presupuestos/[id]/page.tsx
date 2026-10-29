@@ -221,13 +221,22 @@ export default function PaginaDetallePropuesta() {
         if (!res.ok) {
           let errText = `Error (${res.status})`;
           try {
-            const errJson = await res.json();
-            errText = errJson.error || errText;
+            const isJson = res.headers.get("content-type")?.includes("application/json");
+            if (isJson) {
+              const errJson = await res.json();
+              errText = errJson.error || errText;
+            }
           } catch {}
           setError(errText);
           return;
         }
-        const data = await res.json();
+        let data: any = null;
+        try {
+          data = await res.json();
+        } catch {
+          setError("Respuesta inválida del servidor.");
+          return;
+        }
         if (data.success && data.order) {
           const ord = data.order;
           setOrden(ord);
@@ -442,8 +451,11 @@ export default function PaginaDetallePropuesta() {
           method: "POST",
           body: formData,
         });
-        const data = await res.json();
-        if (data.success && data.url) {
+        let data: any = null;
+        try {
+          data = await res.json();
+        } catch {}
+        if (data && data.success && data.url) {
           const nuevaUrl = data.url;
           setOrden((prev) => {
             if (!prev) return prev;
@@ -490,14 +502,20 @@ export default function PaginaDetallePropuesta() {
       if (!res.ok) {
         let errText = `Error al guardar (${res.status})`;
         try {
-          const errJson = await res.json();
-          errText = errJson.error || errText;
+          const isJson = res.headers.get("content-type")?.includes("application/json");
+          if (isJson) {
+            const errJson = await res.json();
+            errText = errJson.error || errText;
+          }
         } catch {}
         mostrarToast(errText, "err");
         return;
       }
-      const data = await res.json();
-      if (data.success) {
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {}
+      if (data?.success) {
         mostrarToast("Factura / Presupuesto guardado correctamente.");
       } else {
         mostrarToast(data.error || "No se pudo guardar.", "err");
@@ -531,14 +549,20 @@ export default function PaginaDetallePropuesta() {
       if (!res.ok) {
         let errText = `Error al transferir a POS (${res.status})`;
         try {
-          const errJson = await res.json();
-          errText = errJson.error || errText;
+          const isJson = res.headers.get("content-type")?.includes("application/json");
+          if (isJson) {
+            const errJson = await res.json();
+            errText = errJson.error || errText;
+          }
         } catch {}
         mostrarToast(errText, "err");
         return;
       }
-      const data = await res.json();
-      if (data.success) {
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {}
+      if (data?.success) {
         mostrarToast("¡Presupuesto autorizado y enviado a Caja POS con éxito!");
         setOrden((prev) => (prev ? { ...prev, quoteStatus: "Aprobado", status: "EN_CAJA" } : null));
       } else {

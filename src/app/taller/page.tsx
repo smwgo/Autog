@@ -5185,138 +5185,13 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
         {/* ===================================================================
             FILA 2: MÁS ABAJO ESOS BOTONES (SELECTOR 4 EN 1 + BOTONES ACCIÓN)
             =================================================================== */}
-        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 py-1">
-          {/* SELECTOR SUPERIOR 4 EN 1: VISTA MÓVIL (DESLIZABLE UNO A UNO) */}
-          <div className="block sm:hidden w-full select-none">
-            <div className="flex items-center gap-1.5 w-full">
-              <div className="relative flex-1 min-w-0 flex items-center bg-white/90 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 rounded-2xl p-1 shadow-sm backdrop-blur-md">
-                {/* Botón flecha izquierda */}
-                <button
-                  type="button"
-                  onClick={handlePrevModulo}
-                  className="h-11 w-10 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors shrink-0 z-10 active:scale-95 cursor-pointer rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5"
-                  title="Anterior especialidad"
-                  aria-label="Anterior"
-                >
-                  <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-
-                {/* Contenedor deslizable uno a uno */}
-                <div
-                  ref={mobileSliderRef}
-                  onScroll={handleMobileSliderScroll}
-                  className="flex-1 flex overflow-x-auto snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden touch-pan-x overscroll-x-contain"
-                >
-                  {MODULOS_ESPECIALIDADES.map((mod) => {
-                    const isActivo = moduloTaller === mod.id;
-                    return (
-                      <div
-                        key={mod.id}
-                        className="w-full shrink-0 snap-center px-1"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => setModuloTaller(mod.id)}
-                          className={`w-full h-11 px-3.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 transition-all select-none cursor-pointer ${
-                            isActivo
-                              ? `${mod.bgClass} border ${mod.borderClass} text-white shadow-lg ${mod.shadowClass} scale-[1.01]`
-                              : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-                          }`}
-                        >
-                          {mod.svg("w-4.5 h-4.5 shrink-0")}
-                          <span className="whitespace-nowrap">{mod.shortName}</span>
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Botón flecha derecha */}
-                <button
-                  type="button"
-                  onClick={handleNextModulo}
-                  className="h-11 w-10 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors shrink-0 z-10 active:scale-95 cursor-pointer rounded-xl hover:bg-zinc-100 dark:hover:bg-white/5"
-                  title="Siguiente especialidad"
-                  aria-label="Siguiente"
-                >
-                  <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Botón Engranaje Móvil */}
-              <button
-                type="button"
-                onClick={() => setMostrarModalFormularioRapido(true)}
-                className="h-11 w-11 shrink-0 flex items-center justify-center rounded-2xl bg-white/90 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white active:scale-95 transition-all cursor-pointer"
-                title="Registro Manual (Modo Formulario)"
-                aria-label="Abrir formulario manual"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                  />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
-
-              {/* Etiqueta Estado de Propuesta Móvil: Enviado (en espera sin marca) o ✓ Aprobado (con marca) */}
-              {ordenActiva &&
-                (ordenActiva.quoteStatus === "Pendiente" ||
-                  ordenActiva.quoteStatus === "Aprobado" ||
-                  ordenActiva.quoteStatus === "ACEPTADO" ||
-                  ordenActiva.status === "Aprobado" ||
-                  ordenActiva.status === "EN_CAJA" ||
-                  ordenActiva.quoteSignatureUrl) && (
-                  (() => {
-                    const esAprobado =
-                      ordenActiva.quoteStatus === "Aprobado" ||
-                      ordenActiva.quoteStatus === "ACEPTADO" ||
-                      ordenActiva.status === "Aprobado" ||
-                      ordenActiva.status === "EN_CAJA";
-
-                    return esAprobado ? (
-                      <div className="flex items-center gap-1.5 ml-auto shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => setModalPresupuestoPdfAbierto(true)}
-                          className="h-10 px-2.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-semibold flex items-center gap-1 shrink-0 shadow-sm transition-all cursor-pointer active:scale-95"
-                          title="Ver e Imprimir PDF tipo factura"
-                        >
-                          <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-6 4h4" />
-                          </svg>
-                          <span>PDF</span>
-                        </button>
-                        <div
-                          title="Propuesta Aprobada"
-                          className="h-10 px-3 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 shrink-0 shadow-sm animate-fade-in backdrop-blur-md select-none"
-                        >
-                          <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                          <span>✓ Aprobado</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div
-                        title="Propuesta enviada - En espera de aprobación"
-                        className="h-10 px-3 rounded-lg bg-amber-500/15 border border-amber-500/35 text-amber-600 dark:text-amber-400 text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow-sm animate-fade-in backdrop-blur-md ml-auto select-none"
-                      >
-                        <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse" />
-                        <span>Enviado</span>
-                      </div>
-                    );
-                  })()
-                )}
-            </div>
-
-            {/* Puntos indicadores interactivos */}
-            <div className="flex items-center justify-center gap-1.5 mt-1.5">
+        {/* ===================================================================
+            FILA 2: SELECTOR 4 EN 1 DE ESPECIALIDADES + BOTONES DE ACCIÓN
+            =================================================================== */}
+        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 py-1 w-full">
+          <div className="flex items-center gap-1.5 sm:gap-2 max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-0.5">
+            {/* SELECTOR SUPERIOR 4 EN 1 (TALLER, LUBRICENTRO, CAR WASH, TECNICENTRO) */}
+            <div className="flex items-center p-1 rounded-2xl bg-white dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl gap-1 shrink-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {MODULOS_ESPECIALIDADES.map((mod) => {
                 const isActivo = moduloTaller === mod.id;
                 return (
@@ -5324,121 +5199,94 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     key={mod.id}
                     type="button"
                     onClick={() => setModuloTaller(mod.id)}
-                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                    className={`h-9 px-2.5 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0 ${
                       isActivo
-                        ? `w-6 ${mod.dotClass}`
-                        : "w-1.5 bg-zinc-300 dark:bg-zinc-700 hover:bg-zinc-400"
+                        ? `${mod.bgClass} border ${mod.borderClass} ${mod.textClass} ${mod.shadowClass} backdrop-blur-sm font-bold`
+                        : "border border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
                     }`}
-                    title={`Especialidad: ${mod.name}`}
-                    aria-label={mod.name}
-                  />
+                    title={mod.name}
+                  >
+                    {mod.svg("w-4 h-4 shrink-0")}
+                    <span className="whitespace-nowrap">{mod.shortName}</span>
+                  </button>
                 );
               })}
             </div>
-          </div>
 
-          {/* SELECTOR SUPERIOR 4 EN 1: VISTA DESKTOP (COMPACTO EN FILA + BOTÓN ENGRANAJE + PROPUESTA A LA DERECHA) */}
-          <div className="hidden sm:flex items-center justify-between w-full gap-2">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center p-1 rounded-2xl bg-white/80 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl gap-1 shrink-0 overflow-x-auto max-w-full">
-                {MODULOS_ESPECIALIDADES.map((mod) => {
-                  const isActivo = moduloTaller === mod.id;
-                  return (
-                    <button
-                      key={mod.id}
-                      type="button"
-                      onClick={() => setModuloTaller(mod.id)}
-                      className={`h-9 px-3.5 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                        isActivo
-                          ? `${mod.bgClass} border ${mod.borderClass} ${mod.textClass} ${mod.shadowClass} backdrop-blur-sm`
-                          : "border border-transparent text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-                      }`}
-                      title={mod.name}
-                    >
-                      {mod.svg("w-4 h-4 shrink-0")}
-                      <span className="whitespace-nowrap">{mod.shortName}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* BOTÓN ENGRANAJE: REGISTRO MANUAL / MODO FORMULARIO */}
-              <button
-                type="button"
-                onClick={() => setMostrarModalFormularioRapido(true)}
-                className="h-11 w-11 flex items-center justify-center rounded-2xl bg-white/80 dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-all cursor-pointer group shrink-0"
-                title="Registro Manual (Modo Formulario)"
-                aria-label="Abrir formulario manual"
+            {/* BOTÓN ENGRANAJE: REGISTRO MANUAL / MODO FORMULARIO */}
+            <button
+              type="button"
+              onClick={() => setMostrarModalFormularioRapido(true)}
+              className="h-10 w-10 sm:h-11 sm:w-11 flex items-center justify-center rounded-2xl bg-white dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-all cursor-pointer group shrink-0"
+              title="Registro Manual (Modo Formulario)"
+              aria-label="Abrir formulario manual"
+            >
+              <svg
+                className="w-4.5 h-4.5 sm:w-5 sm:h-5 transition-transform duration-300 group-hover:rotate-45"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.8}
               >
-                <svg
-                  className="w-5 h-5 transition-transform duration-300 group-hover:rotate-45"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.8}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                  />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
-            </div>
-
-            {/* A LADO DERECHO: ETIQUETA DE PROPUESTA (ENVIADO / ✓ APROBADO) */}
-            {ordenActiva &&
-              (ordenActiva.quoteStatus === "Pendiente" ||
-                ordenActiva.quoteStatus === "Aprobado" ||
-                ordenActiva.quoteStatus === "ACEPTADO" ||
-                ordenActiva.status === "Aprobado" ||
-                ordenActiva.status === "EN_CAJA" ||
-                ordenActiva.quoteSignatureUrl) && (
-                (() => {
-                  const esAprobado =
-                    ordenActiva.quoteStatus === "Aprobado" ||
-                    ordenActiva.quoteStatus === "ACEPTADO" ||
-                    ordenActiva.status === "Aprobado" ||
-                    ordenActiva.status === "EN_CAJA";
-
-                  return esAprobado ? (
-                    <div className="flex items-center gap-2 ml-auto shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setModalPresupuestoPdfAbierto(true)}
-                        className="h-9 px-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-semibold flex items-center gap-1.5 shadow-sm backdrop-blur-md transition-all cursor-pointer active:scale-95"
-                        title="Ver e Imprimir PDF de la Solicitud de Orden (Propuesta)"
-                      >
-                        <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-6 4h4" />
-                        </svg>
-                        <span>PDF Solicitud</span>
-                      </button>
-
-                      <div
-                        title="Propuesta Aprobada"
-                        className="h-9 px-3.5 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 shadow-sm backdrop-blur-md shrink-0 animate-fade-in select-none"
-                      >
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                        <span>✓ Aprobado</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      title="Propuesta enviada - En espera de aprobación"
-                      className="ml-auto h-9 px-3.5 rounded-lg bg-amber-500/15 border border-amber-500/35 text-amber-600 dark:text-amber-400 text-xs font-semibold flex items-center gap-1.5 shadow-sm backdrop-blur-md shrink-0 animate-fade-in select-none"
-                    >
-                      <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse" />
-                      <span>Enviado</span>
-                    </div>
-                  );
-                })()
-              )}
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
           </div>
-        </div>
 
+          {/* A LADO DERECHO: ETIQUETA DE PROPUESTA (ENVIADO / ✓ APROBADO) */}
+          {ordenActiva &&
+            (ordenActiva.quoteStatus === "Pendiente" ||
+              ordenActiva.quoteStatus === "Aprobado" ||
+              ordenActiva.quoteStatus === "ACEPTADO" ||
+              ordenActiva.status === "Aprobado" ||
+              ordenActiva.status === "EN_CAJA" ||
+              ordenActiva.quoteSignatureUrl) && (
+              (() => {
+                const esAprobado =
+                  ordenActiva.quoteStatus === "Aprobado" ||
+                  ordenActiva.quoteStatus === "ACEPTADO" ||
+                  ordenActiva.status === "Aprobado" ||
+                  ordenActiva.status === "EN_CAJA";
+
+                return esAprobado ? (
+                  <div className="flex items-center gap-1.5 sm:gap-2 ml-auto shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setModalPresupuestoPdfAbierto(true)}
+                      className="h-9 px-2.5 sm:px-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-semibold flex items-center gap-1.5 shadow-sm backdrop-blur-md transition-all cursor-pointer active:scale-95"
+                      title="Ver e Imprimir PDF de la Solicitud de Orden (Propuesta)"
+                    >
+                      <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      <span>PDF Solicitud</span>
+                    </button>
+
+                    <div
+                      title="Propuesta Aprobada"
+                      className="h-9 px-3 sm:px-3.5 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 shadow-sm backdrop-blur-md shrink-0 animate-fade-in select-none"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                      <span>✓ Aprobado</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    title="Propuesta enviada - En espera de aprobación"
+                    className="ml-auto h-9 px-3 sm:px-3.5 rounded-lg bg-amber-500/15 border border-amber-500/35 text-amber-600 dark:text-amber-400 text-xs font-semibold flex items-center gap-1.5 shadow-sm backdrop-blur-md shrink-0 animate-fade-in select-none"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse" />
+                    <span>Enviado</span>
+                  </div>
+                );
+              })()
+            )}
+        </div>
         {/* ===================================================================
             CONTENEDOR PRINCIPAL: CABECERA COMÚN (PLACA, VEHÍCULO, CLIENTE, VECES ATENDIDO Y MODO)
             SALE EXACTAMENTE IGUAL PARA TALLER Y LUBRICENTRO
