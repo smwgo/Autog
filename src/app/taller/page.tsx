@@ -4760,7 +4760,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
     VISTAS_INSPECCION.find((v) => v.id === etapa3VistaActiva) || VISTAS_INSPECCION[0];
 
   return (
-    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white font-sans pb-28 md:pb-12 selection:bg-blue-500/30 overflow-x-hidden max-w-full">
+    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white font-sans pb-28 md:pb-12 selection:bg-blue-500/30 overflow-x-hidden max-w-full">
       <Header />
 
 
@@ -4772,7 +4772,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
         {/* ===================================================================
             FILA 1: FLECHA VOLVER (←) + DATOS DEL VEHÍCULO ACTIVO
             =================================================================== */}
-        <div className="flex flex-col items-stretch gap-2.5 sm:gap-3 py-1">
+        <div className="flex flex-col items-stretch gap-2.5 sm:gap-3 py-1 bg-cyan-50 dark:bg-blue-900/10">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             {ordenActiva ? (
               <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -4798,7 +4798,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     <span className="block text-base sm:text-sm font-bold sm:font-semibold leading-tight text-zinc-900 dark:text-white">
                       Orden de Servicio
                     </span>
-                    <span className="block text-sm sm:text-sm font-mono font-normal leading-tight text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    <span className="block text-sm sm:text-sm font-mono font-bold dark:font-normal leading-tight text-black dark:text-white mt-0.5">
                       {limpiarNumeroOrden(ordenActiva.orderNumber)}
                     </span>
                   </span>
@@ -5043,36 +5043,59 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   );
                 })}
               </div>
-              <div
-                className={`inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-lg border text-xs font-medium ${
-                  ordenActiva.status === "Pausada"
-                    ? "bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400"
-                    : "bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-400"
-                }`}
-              >
-                <span className="text-zinc-700 dark:text-zinc-300 whitespace-nowrap text-xs">
-                  Ingreso:{" "}
-                  <span
-                    className="text-zinc-900 dark:text-white font-semibold sm:font-medium"
-                    title={formatearFechaCompleta(ordenActiva.dateIn || ordenActiva.startedAt)}
-                  >
-                    {formatearFechaIngreso(ordenActiva.dateIn || ordenActiva.startedAt)}
+              <div className="w-[calc(100%+1.25rem)] -mx-2.5 px-2.5 py-2 sm:w-[calc(100%+3rem)] sm:-mx-6 sm:px-6 md:w-[calc(100%+4rem)] md:-mx-8 md:px-8 bg-zinc-100 dark:bg-[#34343a] flex items-center justify-between gap-2">
+                <div
+                  className={`inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-lg border text-xs font-medium ${
+                    ordenActiva.status === "Pausada"
+                      ? "bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400"
+                      : "bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-400"
+                  }`}
+                >
+                  <span className="text-zinc-700 dark:text-zinc-300 whitespace-nowrap text-xs">
+                    Ingreso:{" "}
+                    <span
+                      className="text-zinc-900 dark:text-white font-semibold sm:font-medium"
+                      title={formatearFechaCompleta(ordenActiva.dateIn || ordenActiva.startedAt)}
+                    >
+                      {formatearFechaIngreso(ordenActiva.dateIn || ordenActiva.startedAt)}
+                    </span>
                   </span>
-                </span>
 
-                <span className={ordenActiva.status === "Pausada" ? "text-amber-500/60" : "text-emerald-500/60"}>•</span>
+                  <span className={ordenActiva.status === "Pausada" ? "text-amber-500/60" : "text-emerald-500/60"}>•</span>
 
-                {ordenActiva.status === "Pausada" ? (
-                  <span className="inline-flex items-center gap-1.5 text-amber-700 dark:text-amber-400 shrink-0 font-semibold sm:font-medium" title="En Pausa">
-                    <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-amber-500 dark:bg-amber-400 shrink-0" />
-                    <span>En Pausa</span>
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 shrink-0 font-semibold sm:font-medium" title="Trabajando">
-                    <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
-                    <span>Trabajando</span>
-                  </span>
-                )}
+                  {ordenActiva.status === "Pausada" ? (
+                    <span className="inline-flex items-center gap-1.5 text-amber-700 dark:text-amber-400 shrink-0 font-semibold sm:font-medium" title="En Pausa">
+                      <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-amber-500 dark:bg-amber-400 shrink-0" />
+                      <span>En Pausa</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 shrink-0 font-semibold sm:font-medium" title="Trabajando">
+                      <span className="w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
+                      <span>Trabajando</span>
+                    </span>
+                  )}
+                </div>
+                {ordenActiva &&
+                  (ordenActiva.quoteStatus === "Pendiente" ||
+                    ordenActiva.quoteStatus === "Aprobado" ||
+                    ordenActiva.quoteStatus === "ACEPTADO" ||
+                    ordenActiva.status === "Aprobado" ||
+                    ordenActiva.status === "EN_CAJA" ||
+                    ordenActiva.quoteSignatureUrl) &&
+                  !(
+                    ordenActiva.quoteStatus === "Aprobado" ||
+                    ordenActiva.quoteStatus === "ACEPTADO" ||
+                    ordenActiva.status === "Aprobado" ||
+                    ordenActiva.status === "EN_CAJA"
+                  ) && (
+                    <div
+                      title="Propuesta enviada - En espera de aprobación"
+                      className="h-9 px-3 sm:px-3.5 rounded-lg bg-amber-500/15 border border-amber-500/35 text-amber-600 dark:text-amber-400 text-xs font-semibold flex items-center gap-1.5 shadow-sm backdrop-blur-md shrink-0 animate-fade-in select-none"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse" />
+                      <span>Enviado</span>
+                    </div>
+                  )}
               </div>
 
               {/* ETIQUETA EN LA PARTE SUPERIOR: APROBADO PARA EMPEZAR A TRABAJAR */}
@@ -5110,8 +5133,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             FILA 2: SELECTOR 4 EN 1 DE ESPECIALIDADES + ENGRANAJE + PROPUESTA
             =================================================================== */}
         <div className="flex flex-wrap items-center justify-between w-full gap-2 py-1">
-          <div className="flex items-center gap-2 max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-0.5">
-            <div className="flex items-center p-1 rounded-2xl bg-white dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl gap-1 shrink-0">
+          <div className="flex items-center gap-2 w-full min-w-0 sm:w-auto sm:max-w-full py-0.5">
+            <div className="flex items-center flex-1 min-w-0 sm:flex-none p-1 rounded-2xl bg-white dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl gap-0.5 sm:gap-1">
               {MODULOS_ESPECIALIDADES.map((mod) => {
                 const isActivo = moduloTaller === mod.id;
                 return (
@@ -5119,14 +5142,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     key={mod.id}
                     type="button"
                     onClick={() => setModuloTaller(mod.id)}
-                    className={`h-9 px-3 sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0 ${
+                    className={`h-9 flex-1 min-w-0 px-1 sm:flex-none sm:px-3.5 rounded-xl text-[10px] sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                       isActivo
                         ? `${mod.bgClass} border ${mod.borderClass} ${mod.textClass} ${mod.shadowClass} backdrop-blur-sm font-bold`
                         : "border border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
                     }`}
                     title={mod.name}
                   >
-                    {mod.svg("w-4 h-4 shrink-0")}
+                    {mod.svg("hidden sm:block w-4 h-4 shrink-0")}
                     <span className="whitespace-nowrap">{mod.shortName}</span>
                   </button>
                 );
@@ -5195,15 +5218,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       <span>✓ Aprobado</span>
                     </div>
                   </div>
-                ) : (
-                  <div
-                    title="Propuesta enviada - En espera de aprobación"
-                    className="ml-auto h-9 px-3 sm:px-3.5 rounded-lg bg-amber-500/15 border border-amber-500/35 text-amber-600 dark:text-amber-400 text-xs font-semibold flex items-center gap-1.5 shadow-sm backdrop-blur-md shrink-0 animate-fade-in select-none"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse" />
-                    <span>Enviado</span>
-                  </div>
-                );
+                ) : null;
               })()
             )}
         </div>
