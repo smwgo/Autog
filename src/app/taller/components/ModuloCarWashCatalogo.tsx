@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import CarWashVistaApp from "./CarWashVistaApp";
 import type {
   CarWashConfigData,
   CarWashPackage,
@@ -23,6 +24,7 @@ export interface ModuloCarWashCatalogoProps {
   onIrASiguiente?: () => void;
   nombreSiguiente?: string;
   triggerAbrirConfig?: number;
+  vistaApp?: boolean;
 }
 
 // ============================================================================
@@ -559,6 +561,7 @@ export default function ModuloCarWashCatalogo({
   onIrAAvisoYFirma,
   onIrASiguiente,
   triggerAbrirConfig,
+  vistaApp = false,
 }: ModuloCarWashCatalogoProps) {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -1493,6 +1496,35 @@ export default function ModuloCarWashCatalogo({
 
   return (
     <div className="w-full space-y-2.5 sm:space-y-3 animate-fade-in pb-24 sm:pb-28">
+      {vistaApp ? (
+        <CarWashVistaApp
+          vehiculoLabel={vehiculoSeleccionadoObj.label}
+          vehiculoIcon={vehiculoSeleccionadoObj.icon}
+          minutos={totalMinutosEstimados}
+          estadoAfecciones={estadoAfecciones}
+          objetosVerificados={objetosVerificados}
+          fotosEstado={fotosEstado}
+          subiendoFoto={subiendoFoto}
+          combos={CARWASH_COMBOS}
+          comboSeleccionado={comboSeleccionado}
+          items={todosLosItemsPOS.filter((it) => it.kind !== "PRODUCT").slice(0, 12)}
+          totalUnidades={totalUnidadesCarWash}
+          totalMonto={totalMontoCarWash}
+          obtenerCantidad={(item) => obtenerCantidadEnPedido(item)}
+          onAjustarItem={(item, delta) => void handleAjustarCantidadItem(item, delta)}
+          onCiclarAfeccion={handleCiclarEstadoAfeccion}
+          onToggleObjetos={() => setObjetosVerificados((p) => !p)}
+          onSubirFoto={handleSubirFotoEstado}
+          onAplicarCombo={(combo) => {
+            const def = CARWASH_COMBOS.find((x) => x.id === combo.id);
+            setComboSeleccionado(combo.label);
+            if (def) void handleAplicarCombo(def);
+          }}
+          onAbrirConfig={() => setConfigModalOpen(true)}
+          onSiguiente={onIrASiguiente || onIrAAvisoYFirma}
+        />
+      ) : (
+      <>
       {/* =====================================================================
           DISEÑO BENTO GRID (PC: 3 TARJETAS INTELIGENTES / MÓVIL: VISTA LIMPIA)
           ===================================================================== */}
@@ -1954,6 +1986,9 @@ export default function ModuloCarWashCatalogo({
         </div>
       </div>
       
+      </>
+      )}
+
       {/* Modales administrativos opcionales (preservados) */}
       {detailModalItem && config && (
         <ModalDetalleServicioCarWash

@@ -768,6 +768,8 @@ export default function TallerPanel() {
   const [triggerAbrirConfig, setTriggerAbrirConfig] = useState<number>(0);
   const [modalConfigTallerAbierto, setModalConfigTallerAbierto] = useState<boolean>(false);
   const [mostrarModalFormularioRapido, setMostrarModalFormularioRapido] = useState<boolean>(false);
+  // Vista alternativa tipo "app" de Car Wash (se alterna con el botón engranaje)
+  const [vistaAppCarwash, setVistaAppCarwash] = useState<boolean>(false);
 
   const handleAbrirCategoriasModuloActivo = () => {
     if (moduloTaller === "taller") {
@@ -5163,10 +5165,18 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             {/* BOTÓN ENGRANAJE: REGISTRO MANUAL / MODO FORMULARIO */}
             <button
               type="button"
-              onClick={() => setMostrarModalFormularioRapido(true)}
-              className="h-10 w-10 sm:h-11 sm:w-11 flex items-center justify-center rounded-2xl bg-white dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-all cursor-pointer group shrink-0"
-              title="Registro Manual (Modo Formulario)"
-              aria-label="Abrir formulario manual"
+              onClick={() => {
+                // En Car Wash el engranaje alterna la vista tipo "app"; en el resto abre el formulario manual
+                if (moduloTaller === "carwash") setVistaAppCarwash((prev) => !prev);
+                else setMostrarModalFormularioRapido(true);
+              }}
+              className={`h-10 w-10 sm:h-11 sm:w-11 flex items-center justify-center rounded-2xl border backdrop-blur-md shadow-sm dark:shadow-xl transition-all cursor-pointer group shrink-0 ${
+                moduloTaller === "carwash" && vistaAppCarwash
+                  ? "bg-teal-500/15 border-teal-400 text-teal-600 dark:text-teal-300"
+                  : "bg-white dark:bg-[#0d0d0e] border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
+              }`}
+              title={moduloTaller === "carwash" ? "Cambiar vista de Car Wash" : "Registro Manual (Modo Formulario)"}
+              aria-label={moduloTaller === "carwash" ? "Cambiar vista de Car Wash" : "Abrir formulario manual"}
             >
               <svg
                 className="w-5 h-5 transition-transform duration-300 group-hover:rotate-45"
@@ -5245,6 +5255,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               historialVehiculo={historialVehiculo}
               modoEspecialidad={moduloTaller === "taller" ? "lubricentro" : moduloTaller}
               triggerAbrirConfig={triggerAbrirConfig}
+              vistaAppCarwash={vistaAppCarwash}
               onOrdenCreada={(orden) => {
                 setAutosEnPista((prev) => [orden, ...prev.filter((o) => o.id !== orden.id)]);
                 setOrdenActiva(orden);

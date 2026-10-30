@@ -22,6 +22,7 @@ export interface LubricentroExpressProps {
   historialVehiculo?: any[];
   modoEspecialidad?: "lubricentro" | "carwash" | "tecnicentro";
   triggerAbrirConfig?: number;
+  vistaAppCarwash?: boolean;
 }
 
 export interface ServicioExpressItem {
@@ -243,6 +244,7 @@ export default function LubricentroExpress({
   historialVehiculo = [],
   modoEspecialidad = "lubricentro",
   triggerAbrirConfig,
+  vistaAppCarwash = false,
 }: LubricentroExpressProps) {
   // =========================================================================
   // CONTROL DE ETAPAS (2: Servicios Express, 4: Firma)
@@ -1069,6 +1071,7 @@ export default function LubricentroExpress({
               itemsOrden={itemsOrden}
               mostrarToast={mostrarToast}
               triggerAbrirConfig={triggerAbrirConfig}
+              vistaApp={vistaAppCarwash}
               onActualizarItemsOrden={handleActualizarItemsOrdenGenerales}
               onIrASiguiente={() => {
                 if (onCambiarModulo) onCambiarModulo("tecnicentro");
