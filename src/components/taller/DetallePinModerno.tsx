@@ -3,6 +3,24 @@
 import React, { useState } from "react";
 import type { InspectionFinding } from "@/app/taller/page";
 
+interface CatalogoItemPropuesta {
+  id: string;
+  name: string;
+  code?: string;
+  category?: string;
+  brand?: string;
+  type: "SERVICE" | "PART";
+}
+
+interface CatalogoItemFuente {
+  id?: string | number;
+  name?: string;
+  title?: string;
+  code?: string;
+  category?: string;
+  brand?: string;
+}
+
 export interface DetallePinModernoProps {
   pin: InspectionFinding;
   chipsTipos: { id: string; label: string; color: string }[];
@@ -35,10 +53,10 @@ export interface DetallePinModernoProps {
   onReubicarPin?: () => void;
   onCerrar: () => void;
   // Props opcionales de compatibilidad
-  serviciosCatalogo?: any[];
-  productosCatalogo?: any[];
-  onAgregarItemPin?: (item: any) => void;
-  onEliminarItemPin?: (itemId: string) => void;
+  serviciosCatalogo?: CatalogoItemFuente[];
+  productosCatalogo?: CatalogoItemFuente[];
+  onAgregarItemPin?: (item: CatalogoItemPropuesta, targetPinId?: string) => void;
+  onEliminarItemPin?: (itemId: string, targetPinId?: string) => void;
 }
 
 export function DetallePinModerno({
@@ -68,6 +86,10 @@ export function DetallePinModerno({
   hallazgosDelMismoPin = [],
   onSeleccionarHallazgoPin,
   onEliminarHallazgoEspecifico,
+  serviciosCatalogo = [],
+  productosCatalogo = [],
+  onAgregarItemPin,
+  onEliminarItemPin,
 }: DetallePinModernoProps) {
   const mismoNumero = pin.pinNumber || 1;
   const listaMismoPin = hallazgosDelMismoPin.filter(
@@ -90,6 +112,44 @@ export function DetallePinModerno({
   } | null>(null);
   const [audioClipReproduciendoUrl, setAudioClipReproduciendoUrl] = useState<string | null>(null);
   const audioClipPlayerRef = React.useRef<HTMLAudioElement | null>(null);
+  const [busquedaCatalogo, setBusquedaCatalogo] = useState("");
+
+  const catalogoParaPropuesta = React.useMemo<CatalogoItemPropuesta[]>(() => {
+    const servicios: CatalogoItemPropuesta[] = serviciosCatalogo
+      .map((item) => ({
+        id: String(item.id || item.code || item.name || ""),
+        name: String(item.name || item.title || "").trim(),
+        code: item.code ? String(item.code) : undefined,
+        category: item.category ? String(item.category) : undefined,
+        brand: item.brand ? String(item.brand) : undefined,
+        type: "SERVICE" as const,
+      }))
+      .filter((item) => item.id && item.name);
+    const productos: CatalogoItemPropuesta[] = productosCatalogo
+      .map((item) => ({
+        id: String(item.id || item.code || item.name || ""),
+        name: String(item.name || item.title || "").trim(),
+        code: item.code ? String(item.code) : undefined,
+        category: item.category ? String(item.category) : undefined,
+        brand: item.brand ? String(item.brand) : undefined,
+        type: "PART" as const,
+      }))
+      .filter((item) => item.id && item.name);
+
+    return [...servicios, ...productos];
+  }, [productosCatalogo, serviciosCatalogo]);
+
+  const resultadosCatalogo = React.useMemo(() => {
+    const query = busquedaCatalogo.trim().toLocaleLowerCase();
+    if (!query) return [];
+    return catalogoParaPropuesta
+      .filter((item) =>
+        [item.name, item.code, item.category, item.brand]
+          .filter(Boolean)
+          .some((value) => value!.toLocaleLowerCase().includes(query))
+      )
+      .slice(0, 8);
+  }, [busquedaCatalogo, catalogoParaPropuesta]);
 
   // Clasificación de evidencias: Fotos vs Videos
   const esVideoUrl = (url: string) =>
@@ -751,6 +811,115 @@ export function DetallePinModerno({
                     )}
                   </div>
                 )}
+
+                <div
+                  className="space-y-2 border-t border-zinc-200/70 pt-3 dark:border-white/10"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h4 className="text-sm font-bold text-zinc-800 dark:text-zinc-200">
+                      Productos y servicios para la propuesta
+                    </h4>
+                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                      Se agregan sin precio
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="search"
+                      value={busquedaCatalogo}
+                      onChange={(e) => setBusquedaCatalogo(e.target.value)}
+                      placeholder="Buscar producto o servicio..."
+                      aria-label={`Buscar productos o servicios para Evidencia #${numBloque}`}
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 pr-10 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500/50 focus:outline-none dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-zinc-500"
+                    />
+                    <svg
+                      className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      aria-hidden="true"
+                    >
+                      <circle cx="11" cy="11" r="7" />
+                      <path strokeLinecap="round" d="m16 16 4 4" />
+                    </svg>
+                  </div>
+
+                  {busquedaCatalogo.trim() && (
+                    <div className="max-h-64 space-y-1 overflow-y-auto rounded-xl border border-zinc-200 bg-white p-1.5 dark:border-white/10 dark:bg-[#18181b]">
+                      {resultadosCatalogo.length > 0 ? (
+                        resultadosCatalogo.map((item) => {
+                          const vinculado = (bloque.linkedItems || []).some(
+                            (linkedItem) =>
+                              (item.type === "PART" && linkedItem.productId === item.id) ||
+                              (linkedItem.type === item.type &&
+                                linkedItem.name.toLocaleLowerCase() === item.name.toLocaleLowerCase())
+                          );
+                          return (
+                            <div
+                              key={`${item.type}-${item.id}`}
+                              className="flex items-center justify-between gap-3 rounded-lg px-2.5 py-2 hover:bg-zinc-50 dark:hover:bg-white/[0.04]"
+                            >
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+                                  {item.name}
+                                </p>
+                                <p className="truncate text-[11px] text-zinc-500 dark:text-zinc-400">
+                                  {item.type === "PART" ? "Producto" : "Servicio"}
+                                  {item.category ? ` · ${item.category}` : ""}
+                                  {item.brand ? ` · ${item.brand}` : ""}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                disabled={vinculado || !onAgregarItemPin}
+                                onClick={() =>
+                                  onAgregarItemPin?.(item, bloque.id)
+                                }
+                                className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500 dark:disabled:bg-white/10 dark:disabled:text-zinc-500"
+                              >
+                                {vinculado ? "Añadido" : "Añadir"}
+                              </button>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="px-2.5 py-3 text-center text-xs text-zinc-500 dark:text-zinc-400">
+                          No se encontraron productos o servicios.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {(bloque.linkedItems || []).length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {bloque.linkedItems?.map((item) => (
+                        <span
+                          key={item.id}
+                          className="inline-flex max-w-full items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200"
+                        >
+                          <span className="truncate">
+                            {item.name}
+                            <span className="ml-1 font-normal text-blue-600 dark:text-blue-300">
+                              · {item.type === "PART" ? "Producto" : "Servicio"}
+                            </span>
+                          </span>
+                          {onEliminarItemPin && (
+                            <button
+                              type="button"
+                              onClick={() => onEliminarItemPin(item.id, bloque.id)}
+                              className="shrink-0 font-bold text-blue-600 hover:text-rose-600 dark:text-blue-300 dark:hover:text-rose-400"
+                              aria-label={`Quitar ${item.name} de la propuesta`}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           );

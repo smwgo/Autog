@@ -19,7 +19,12 @@ export interface ItemPedidoRapido {
 export interface ModalFormularioRapidoProps {
   isOpen: boolean;
   onClose: () => void;
+  modoInline?: boolean;
   especialidadInicial?: EspecialidadTipo;
+  mostrarPanelLubricentro?: boolean;
+  mostrarPanelCarwash?: boolean;
+  mostrarPanelTecnicentro?: boolean;
+  fotoVehiculo?: string | null;
   ordenActiva?: any | null;
   onGuardarItems?: (
     itemsNuevos: ItemPedidoRapido[],
@@ -47,14 +52,14 @@ const SUGERENCIAS_POR_ESPECIALIDAD: Record<
   }
 > = {
   taller: {
-    categorias: ["Motor", "Frenos", "Suspensión", "Eléctrico", "Transmisión", "Diagnóstico"],
+    categorias: ["Carrocería", "Motor", "Frenos", "Suspensión", "Eléctrico", "Aire Acondicionado"],
     subcategoriasPorCat: {
-      Motor: ["Afinamiento", "Inyectores", "Distribución", "Culata"],
+      Carrocería: ["Rayón", "Abolladura", "Golpe", "Pintura", "Pulido", "Enderezado"],
+      Motor: ["Distribución", "Empaquetaduras", "Retenes", "Motor Mayor", "Refrigeración"],
       Frenos: ["Pastillas", "Discos", "Zapatas", "Purga"],
-      Suspensión: ["Amortiguadores", "Trapecios", "Rótulas", "Terminales"],
-      Eléctrico: ["Alternador", "Arrancador", "Batería", "Luces"],
-      Transmisión: ["Embrague", "Caja", "Homocinética", "Diferencial"],
-      Diagnóstico: ["Escáner", "Compresión", "Revisión"],
+      Suspensión: ["Amortiguadores", "Trapecios", "Rótulas", "Terminales", "Dirección"],
+      Eléctrico: ["Batería", "Alternador", "Arrancador", "Cableado", "Sensores", "Luces"],
+      "Aire Acondicionado": ["Compresor", "Gas refrigerante", "Condensador", "Filtro de cabina", "Ventilación"],
     },
   },
   lubricentro: {
@@ -144,6 +149,42 @@ const ESPECIALIDADES_INFO = [
   },
 ];
 
+const ATAJOS_CATEGORIA_TALLER = [
+  { label: "Carrocería", category: "Carrocería", icon: "🚘" },
+  { label: "Motor", category: "Motor", icon: "⚙️" },
+  { label: "Frenos", category: "Frenos", icon: "🛑" },
+  { label: "Suspensión", category: "Suspensión", icon: "🔩" },
+  { label: "Eléctrico", category: "Eléctrico", icon: "⚡" },
+  { label: "A/C", category: "Aire Acondicionado", icon: "❄️" },
+];
+
+const ATAJOS_LUBRICENTRO = [
+  { label: "Aceite motor", category: "Aceites", subCategory: "Motor", icon: "🛢️" },
+  { label: "Filtro aceite", category: "Filtros", subCategory: "Aceite", icon: "🔘" },
+  { label: "Filtro aire", category: "Filtros", subCategory: "Aire", icon: "🌬️" },
+  { label: "Refrigerante", category: "Fluidos", subCategory: "Refrigerante", icon: "❄️" },
+  { label: "Líquido frenos", category: "Fluidos", subCategory: "Frenos", icon: "🛑" },
+  { label: "Engrase", category: "Aceites", subCategory: "Grasa", icon: "⚙️" },
+];
+
+const ATAJOS_CARWASH = [
+  { label: "Lavado exterior", category: "Exterior", subCategory: "Express", icon: "🚿" },
+  { label: "Aspirado", category: "Interior", subCategory: "Aspirado", icon: "🧹" },
+  { label: "Lavado completo", category: "Completo", subCategory: "Auto", icon: "🚘" },
+  { label: "SUV / Camioneta", category: "Completo", subCategory: "SUV", icon: "🚙" },
+  { label: "Detailing", category: "Detailing", subCategory: "Pulido", icon: "✨" },
+  { label: "Lavado de motor", category: "Motor", subCategory: "Vapor", icon: "🧽" },
+];
+
+const ATAJOS_TECNICENTRO = [
+  { label: "Alineación", category: "Alineación", subCategory: "Completa", icon: "📐" },
+  { label: "Balanceo", category: "Balanceo", subCategory: "Completo", icon: "⚖️" },
+  { label: "Neumáticos", category: "Neumáticos", subCategory: "Rotación", icon: "🛞" },
+  { label: "Suspensión", category: "Suspensión", subCategory: "Amortiguadores", icon: "🔩" },
+  { label: "Frenos", category: "Frenos", subCategory: "Inspección", icon: "🛑" },
+  { label: "Diagnóstico", category: "Diagnóstico", subCategory: "Informe", icon: "🔍" },
+];
+
 function obtenerDefaultsEspecialidad(
   esp: EspecialidadTipo,
   estructura: typeof SUGERENCIAS_POR_ESPECIALIDAD = SUGERENCIAS_POR_ESPECIALIDAD
@@ -164,7 +205,12 @@ function obtenerDefaultsEspecialidad(
 export default function ModalFormularioRapido({
   isOpen,
   onClose,
+  modoInline = false,
   especialidadInicial = "taller",
+  mostrarPanelLubricentro = true,
+  mostrarPanelCarwash = true,
+  mostrarPanelTecnicentro = true,
+  fotoVehiculo,
   ordenActiva,
   onGuardarItems,
   mostrarToast,
@@ -197,6 +243,7 @@ export default function ModalFormularioRapido({
   } | null>(null);
   const [busquedaDropdown, setBusquedaDropdown] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [categoriaTallerSeleccionada, setCategoriaTallerSeleccionada] = useState<string | null>(null);
 
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -285,7 +332,7 @@ export default function ModalFormularioRapido({
         if (dropdownAbierto) {
           setDropdownAbierto(null);
         } else {
-          onClose();
+          if (!modoInline) onClose();
         }
       }
     };
@@ -329,13 +376,50 @@ export default function ModalFormularioRapido({
       0
     );
   }, [filas]);
+  const primerTrabajo = filas[0];
+  const fotoVehiculoMostrar =
+    fotoVehiculo ||
+    (especialidad === "carwash"
+      ? "/images/inspeccion/auto_3d_superior.jpg"
+      : "/images/inspeccion/auto_3d_motor.jpg");
 
-  const agregarFila = () => {
+  const crearFilaVacia = (override?: Partial<FilaRegistroManual>) => {
     const { defaultCat, defaultSub } = obtenerDefaultsEspecialidad(especialidad, estructuraDb);
-    setFilas((prev) => [
-      ...prev,
+    return {
+      id: String(Date.now() + Math.random()),
+      category: defaultCat,
+      subCategory: defaultSub,
+      name: "",
+      qty: 1,
+      price: 0,
+      ...override,
+    } satisfies FilaRegistroManual;
+  };
+
+  const aplicarServicioRapido = (
+    servicio: { label: string; category: string; subCategory: string }
+  ) => {
+    setFilas((prev) => {
+      if (!prev[0]) return [crearFilaVacia({ name: servicio.label })];
+      return prev.map((fila, index) =>
+        index === 0
+          ? {
+              ...fila,
+              category: servicio.category,
+              subCategory: servicio.subCategory,
+              name: fila.name?.trim() ? fila.name : servicio.label,
+            }
+          : fila
+      );
+    });
+  };
+
+  const cambiarEspecialidad = (nextEspecialidad: EspecialidadTipo) => {
+    setEspecialidad(nextEspecialidad);
+    const { defaultCat, defaultSub } = obtenerDefaultsEspecialidad(nextEspecialidad, estructuraDb);
+    setFilas([
       {
-        id: String(Date.now() + Math.random()),
+        id: "1",
         category: defaultCat,
         subCategory: defaultSub,
         name: "",
@@ -343,6 +427,12 @@ export default function ModalFormularioRapido({
         price: 0,
       },
     ]);
+    setDropdownAbierto(null);
+    setBusquedaDropdown("");
+  };
+
+  const agregarFila = () => {
+    setFilas((prev) => [...prev, crearFilaVacia()]);
   };
 
   const actualizarFila = (
@@ -489,7 +579,7 @@ export default function ModalFormularioRapido({
           price: 0,
         },
       ]);
-      onClose();
+      if (!modoInline) onClose();
     } catch (err: any) {
       console.error("Error al registrar pedido en Neon:", err);
       mostrarToast?.(err?.message || "Error al registrar el pedido en Neon", "err");
@@ -501,8 +591,472 @@ export default function ModalFormularioRapido({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-[95%] sm:w-full max-w-lg max-h-[90dvh] flex flex-col bg-white dark:bg-[#121214] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+    <div
+      className={
+        modoInline
+          ? "w-full space-y-3 animate-fade-in"
+          : "fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+      }
+    >
+      {modoInline && especialidad === "lubricentro" && mostrarPanelLubricentro ? (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-3.5 items-start">
+          <div className="lg:col-span-8 rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white">
+                <span>🚗</span>
+                <span>{ordenActiva?.vehicle || "Vehículo en servicio"}</span>
+              </h2>
+              <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300">
+                Lubricentro
+              </span>
+            </div>
+            <div className="relative flex min-h-48 items-center justify-center overflow-hidden rounded-xl border border-blue-200/70 bg-blue-50/60 p-3 dark:border-blue-400/20 dark:bg-blue-500/[0.04] sm:min-h-64">
+              <div
+                className="pointer-events-none absolute inset-0 opacity-60"
+                style={{
+                  backgroundImage: "radial-gradient(#60a5fa 0.8px, transparent 0.8px)",
+                  backgroundSize: "22px 22px",
+                }}
+              />
+              <img
+                src={fotoVehiculoMostrar}
+                alt={`Vehículo para servicio de lubricentro: ${ordenActiva?.vehicle || "automóvil"}`}
+                onError={(event) => {
+                  event.currentTarget.onerror = null;
+                  event.currentTarget.src = "/images/inspeccion/auto_3d_motor.jpg";
+                }}
+                className={`relative z-10 max-h-56 w-full object-contain sm:max-h-72 ${
+                  fotoVehiculo ? "" : "mix-blend-multiply dark:mix-blend-screen"
+                }`}
+              />
+              <span className="absolute right-3 top-3 z-20 rounded-full border border-zinc-200 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-zinc-800 shadow-sm dark:border-white/15 dark:bg-[#18181b]/90 dark:text-white">
+                🛠️ Vista del vehículo
+              </span>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 font-mono font-bold text-zinc-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-white">
+                {ordenActiva?.plate || "Sin placa"}
+              </span>
+              <span className="text-zinc-500 dark:text-zinc-400">
+                {ordenActiva?.client || "Sin cliente asignado"}
+              </span>
+              <span className="ml-auto rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 font-semibold text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200">
+                Se realizará: {primerTrabajo?.category || "Aceites"}
+                {primerTrabajo?.subCategory ? ` · ${primerTrabajo.subCategory}` : ""}
+                {primerTrabajo?.name ? ` — ${primerTrabajo.name}` : ""}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-3 lg:col-span-4">
+            <div className="rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h2 className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white">
+                  <span>🧰</span>
+                  <span>Servicios de Lubricentro</span>
+                </h2>
+                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500">
+                  Selección rápida
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {ATAJOS_LUBRICENTRO.map((servicio) => (
+                  <button
+                    key={servicio.label}
+                    type="button"
+                    onClick={() => aplicarServicioRapido(servicio)}
+                    className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl border border-zinc-200 bg-zinc-50 px-1.5 py-2 text-[10px] font-bold text-zinc-700 transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800 active:scale-95 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-200 dark:hover:border-amber-500/40 dark:hover:bg-amber-500/10 dark:hover:text-amber-200"
+                  >
+                    <span className="text-base leading-none">{servicio.icon}</span>
+                    <span className="text-center leading-tight">{servicio.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <h2 className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white">
+                  <span>📝</span>
+                  <span>Registro Manual</span>
+                </h2>
+                <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
+                  {ordenActiva?.items?.length || 0} en orden
+                </span>
+              </div>
+              <div className="rounded-xl border border-zinc-200/70 bg-zinc-50 p-3 dark:border-white/5 dark:bg-black/20">
+                <p className="text-xl font-black text-zinc-900 dark:text-white">${total.toFixed(2)}</p>
+                <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">
+                  Total de servicios ingresados
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : modoInline && especialidad === "carwash" && mostrarPanelCarwash ? (
+        <div className="grid grid-cols-1 items-start gap-3 sm:gap-3.5 lg:grid-cols-12">
+          <div className="rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4 lg:col-span-8">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white">
+                <span>🚘</span>
+                <span>{ordenActiva?.vehicle || "Vehículo en servicio"}</span>
+              </h2>
+              <span className="rounded-full border border-cyan-300 bg-cyan-50 px-2 py-0.5 text-[10px] font-bold text-cyan-800 dark:border-cyan-500/30 dark:bg-cyan-500/15 dark:text-cyan-300">
+                Car Wash
+              </span>
+            </div>
+            <div className="relative flex min-h-48 items-center justify-center overflow-hidden rounded-xl border border-cyan-200/70 bg-cyan-50/60 p-3 dark:border-cyan-400/20 dark:bg-cyan-500/[0.04] sm:min-h-64">
+              <div
+                className="pointer-events-none absolute inset-0 opacity-60"
+                style={{
+                  backgroundImage: "radial-gradient(#22d3ee 0.8px, transparent 0.8px)",
+                  backgroundSize: "22px 22px",
+                }}
+              />
+              <img
+                src={fotoVehiculoMostrar}
+                alt={`Vehículo para lavado: ${ordenActiva?.vehicle || "automóvil"}`}
+                onError={(event) => {
+                  event.currentTarget.onerror = null;
+                  event.currentTarget.src = "/images/inspeccion/auto_3d_superior.jpg";
+                }}
+                className={`relative z-10 max-h-56 w-full object-contain sm:max-h-72 ${
+                  fotoVehiculo ? "" : "mix-blend-multiply dark:mix-blend-screen"
+                }`}
+              />
+              <span className="absolute right-3 top-3 z-20 rounded-full border border-zinc-200 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-zinc-800 shadow-sm dark:border-white/15 dark:bg-[#18181b]/90 dark:text-white">
+                💦 Vista del vehículo
+              </span>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 font-mono font-bold text-zinc-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-white">
+                {ordenActiva?.plate || "Sin placa"}
+              </span>
+              <span className="text-zinc-500 dark:text-zinc-400">
+                {ordenActiva?.client || "Sin cliente asignado"}
+              </span>
+              <span className="ml-auto rounded-lg border border-cyan-200 bg-cyan-50 px-2.5 py-1.5 font-semibold text-cyan-800 dark:border-cyan-500/25 dark:bg-cyan-500/10 dark:text-cyan-200">
+                Servicio: {primerTrabajo?.category || "Exterior"}
+                {primerTrabajo?.subCategory ? ` · ${primerTrabajo.subCategory}` : ""}
+                {primerTrabajo?.name ? ` — ${primerTrabajo.name}` : ""}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-3 lg:col-span-4">
+            <div className="rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h2 className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white">
+                  <span>🧼</span>
+                  <span>Servicios Car Wash</span>
+                </h2>
+                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500">
+                  Selección rápida
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {ATAJOS_CARWASH.map((servicio) => (
+                  <button
+                    key={servicio.label}
+                    type="button"
+                    onClick={() => {
+                      if (!filas[0]) return;
+                      setFilas((prev) =>
+                        prev.map((fila, index) =>
+                          index === 0
+                            ? {
+                                ...fila,
+                                category: servicio.category,
+                                subCategory: servicio.subCategory,
+                                name: fila.name || servicio.label,
+                              }
+                            : fila
+                        )
+                      );
+                    }}
+                    className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl border border-zinc-200 bg-zinc-50 px-1.5 py-2 text-[10px] font-bold text-zinc-700 transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-800 active:scale-95 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-200 dark:hover:border-cyan-500/40 dark:hover:bg-cyan-500/10 dark:hover:text-cyan-200"
+                  >
+                    <span className="text-base leading-none">{servicio.icon}</span>
+                    <span className="text-center leading-tight">{servicio.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <h2 className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white">
+                  <span>🫧</span>
+                  <span>Resumen del lavado</span>
+                </h2>
+                <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
+                  {ordenActiva?.items?.length || 0} en orden
+                </span>
+              </div>
+              <div className="rounded-xl border border-zinc-200/70 bg-zinc-50 p-3 dark:border-white/5 dark:bg-black/20">
+                <p className="text-xl font-black text-zinc-900 dark:text-white">${total.toFixed(2)}</p>
+                <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">
+                  Total de servicios Car Wash ingresados
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : modoInline && especialidad === "tecnicentro" && mostrarPanelTecnicentro ? (
+        <div className="grid grid-cols-1 items-start gap-3 sm:gap-3.5 lg:grid-cols-12">
+          <div className="rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4 lg:col-span-8">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white">
+                <span>🚗</span>
+                <span>{ordenActiva?.vehicle || "Vehículo en servicio"}</span>
+              </h2>
+              <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300">
+                Tecnicentro
+              </span>
+            </div>
+            <div className="relative flex min-h-48 items-center justify-center overflow-hidden rounded-xl border border-emerald-200/70 bg-emerald-50/60 p-3 dark:border-emerald-400/20 dark:bg-emerald-500/[0.04] sm:min-h-64">
+              <div
+                className="pointer-events-none absolute inset-0 opacity-60"
+                style={{
+                  backgroundImage: "radial-gradient(#34d399 0.8px, transparent 0.8px)",
+                  backgroundSize: "22px 22px",
+                }}
+              />
+              <img
+                src={fotoVehiculoMostrar}
+                alt={`Vehículo para servicio de tecnicentro: ${ordenActiva?.vehicle || "automóvil"}`}
+                onError={(event) => {
+                  event.currentTarget.onerror = null;
+                  event.currentTarget.src = "/images/inspeccion/auto_3d_suspension.jpg";
+                }}
+                className={`relative z-10 max-h-56 w-full object-contain sm:max-h-72 ${
+                  fotoVehiculo ? "" : "mix-blend-multiply dark:mix-blend-screen"
+                }`}
+              />
+              <span className="absolute right-3 top-3 z-20 rounded-full border border-zinc-200 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-zinc-800 shadow-sm dark:border-white/15 dark:bg-[#18181b]/90 dark:text-white">
+                🛞 Revisión técnica
+              </span>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 font-mono font-bold text-zinc-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-white">
+                {ordenActiva?.plate || "Sin placa"}
+              </span>
+              <span className="text-zinc-500 dark:text-zinc-400">
+                {ordenActiva?.client || "Sin cliente asignado"}
+              </span>
+              <span className="ml-auto rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 font-semibold text-emerald-800 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-200">
+                Servicio: {primerTrabajo?.category || "Alineación"}
+                {primerTrabajo?.subCategory ? ` · ${primerTrabajo.subCategory}` : ""}
+                {primerTrabajo?.name ? ` — ${primerTrabajo.name}` : ""}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-3 lg:col-span-4">
+            <div className="rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h2 className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white">
+                  <span>🛞</span>
+                  <span>Servicios Tecnicentro</span>
+                </h2>
+                <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500">
+                  Selección rápida
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {ATAJOS_TECNICENTRO.map((servicio) => (
+                  <button
+                    key={servicio.label}
+                    type="button"
+                    onClick={() => {
+                      if (!filas[0]) return;
+                      setFilas((prev) =>
+                        prev.map((fila, index) =>
+                          index === 0
+                            ? {
+                                ...fila,
+                                category: servicio.category,
+                                subCategory: servicio.subCategory,
+                                name: fila.name || servicio.label,
+                              }
+                            : fila
+                        )
+                      );
+                    }}
+                    className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl border border-zinc-200 bg-zinc-50 px-1.5 py-2 text-[10px] font-bold text-zinc-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 active:scale-95 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-200 dark:hover:border-emerald-500/40 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
+                  >
+                    <span className="text-base leading-none">{servicio.icon}</span>
+                    <span className="text-center leading-tight">{servicio.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <h2 className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white">
+                  <span>📝</span>
+                  <span>Resumen técnico</span>
+                </h2>
+                <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
+                  {ordenActiva?.items?.length || 0} en orden
+                </span>
+              </div>
+              <div className="rounded-xl border border-zinc-200/70 bg-zinc-50 p-3 dark:border-white/5 dark:bg-black/20">
+                <p className="text-xl font-black text-zinc-900 dark:text-white">${total.toFixed(2)}</p>
+                <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">
+                  Total de servicios técnicos ingresados
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : modoInline && especialidad === "tecnicentro" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white">
+                <span>🚗</span>
+                <span>Orden de Tecnicentro</span>
+              </h2>
+              <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300">
+                {ordenActiva ? "Activa" : "Registro"}
+              </span>
+            </div>
+            <div className="rounded-xl border border-zinc-200/70 bg-zinc-50 p-3 dark:border-white/5 dark:bg-black/20">
+              <p className="truncate text-lg font-black text-zinc-900 dark:text-white">
+                {ordenActiva?.plate || "Sin vehículo"}
+              </p>
+              <p className="mt-1 truncate text-xs text-zinc-600 dark:text-zinc-300">
+                {ordenActiva?.vehicle || "Servicios de neumáticos y alineación"}
+              </p>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white">
+                <span>🛞</span>
+                <span>Servicios rápidos</span>
+              </h2>
+              <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500">
+                Selección rápida
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {ATAJOS_TECNICENTRO.map((servicio) => (
+                <button
+                  key={servicio.label}
+                  type="button"
+                  onClick={() => {
+                    if (filas[0]) actualizarFila(filas[0].id, "category", servicio.label);
+                  }}
+                  className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border border-zinc-200 bg-zinc-50 px-1.5 py-2 text-[10px] font-bold text-zinc-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 active:scale-95 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-200 dark:hover:border-emerald-500/40 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-300"
+                >
+                  <span className="text-base leading-none">{servicio.icon}</span>
+                  <span className="truncate">{servicio.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white">
+                <span>📝</span>
+                <span>Registro Manual</span>
+              </h2>
+              <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
+                {ordenActiva?.items?.length || 0} en orden
+              </span>
+            </div>
+            <div className="rounded-xl border border-zinc-200/70 bg-zinc-50 p-3 dark:border-white/5 dark:bg-black/20">
+              <p className="text-xl font-black text-zinc-900 dark:text-white">${total.toFixed(2)}</p>
+              <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">
+                Total de servicios ingresados
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : modoInline && especialidad === "taller" ? (
+        <div className="grid grid-cols-1 gap-3">
+          <div className="rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white">
+                <span>🧰</span>
+                <span>Sistemas de Taller</span>
+              </h2>
+              <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500">
+                Selección rápida
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {ATAJOS_CATEGORIA_TALLER.map((categoria) => (
+                <button
+                  key={categoria.label}
+                  type="button"
+                  onClick={() => {
+                    setCategoriaTallerSeleccionada(categoria.category);
+                    if (filas[0]) {
+                      actualizarFila(filas[0].id, "category", categoria.category);
+                    }
+                  }}
+                  className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border px-1.5 py-2 text-[10px] font-bold transition active:scale-95 ${
+                    categoriaTallerSeleccionada === categoria.category
+                      ? "border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-500/50 dark:bg-blue-500/15 dark:text-blue-200"
+                      : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-200 dark:hover:border-blue-500/40 dark:hover:bg-blue-500/10 dark:hover:text-blue-300"
+                  }`}
+                >
+                  <span className="text-base leading-none">{categoria.icon}</span>
+                  <span className="text-center leading-tight">{categoria.label}</span>
+                </button>
+              ))}
+            </div>
+            {categoriaTallerSeleccionada && (
+              <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-white/5">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                  {categoriaTallerSeleccionada === "Aire Acondicionado" ? "A/C" : categoriaTallerSeleccionada}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {(estructuraDb.taller.subcategoriasPorCat[categoriaTallerSeleccionada] ||
+                    SUGERENCIAS_POR_ESPECIALIDAD.taller.subcategoriasPorCat[categoriaTallerSeleccionada] ||
+                    []).map((subcategoria) => (
+                    <button
+                      key={subcategoria}
+                      type="button"
+                      onClick={() => {
+                        const fila = filas[0];
+                        if (!fila) return;
+                        actualizarFila(fila.id, "category", categoriaTallerSeleccionada);
+                        setFilas((prev) =>
+                          prev.map((item, index) =>
+                            index === 0 ? { ...item, category: categoriaTallerSeleccionada, subCategory: subcategoria } : item
+                          )
+                        );
+                      }}
+                      className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition ${
+                        filas[0]?.subCategory === subcategoria && filas[0]?.category === categoriaTallerSeleccionada
+                          ? "border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-500/50 dark:bg-blue-500/15 dark:text-blue-200"
+                          : "border-zinc-200 bg-white text-zinc-600 hover:border-blue-300 hover:bg-blue-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-blue-500/40 dark:hover:bg-blue-500/10"
+                      }`}
+                    >
+                      {subcategoria}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
+      {!(
+        modoInline &&
+        ((especialidad === "lubricentro" && mostrarPanelLubricentro) ||
+          (especialidad === "carwash" && mostrarPanelCarwash) ||
+          (especialidad === "tecnicentro" && mostrarPanelTecnicentro))
+      ) && (
+        <div
+          className={`relative ${
+            modoInline
+              ? "w-full max-h-[75dvh] sm:max-h-none"
+              : "w-[95%] sm:w-full max-w-lg max-h-[90dvh]"
+          } flex flex-col bg-white dark:bg-[#121214] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden`}
+        >
         {/* Cabecera */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 dark:border-white/5 bg-zinc-50/70 dark:bg-white/[0.02]">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -513,20 +1067,30 @@ export default function ModalFormularioRapido({
               </svg>
             </span>
             <div className="min-w-0">
-              <h3 className="text-sm font-normal text-zinc-900 dark:text-white leading-none truncate">
-                Registrar Trabajo
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-white leading-none truncate">
+                {modoInline
+                  ? `Registro manual de ${
+                      especialidad === "lubricentro"
+                        ? "Lubricentro"
+                        : especialidad === "tecnicentro"
+                          ? "Tecnicentro"
+                          : "Taller"
+                    }`
+                  : "Registrar Trabajo"}
               </h3>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
-            aria-label="Cerrar"
+            className="h-10 sm:h-8 px-3 flex items-center justify-center gap-1.5 rounded-lg text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+            aria-label={modoInline ? "Volver al modo normal de Taller" : "Cerrar"}
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            {modoInline ? <span>Volver</span> : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            )}
           </button>
         </div>
 
@@ -535,7 +1099,7 @@ export default function ModalFormularioRapido({
           ref={formRef}
           onSubmit={handleGuardar}
           onScroll={() => setDropdownAbierto(null)}
-          className="flex-1 overflow-y-auto p-4 space-y-3.5"
+          className={`flex-1 overflow-y-auto p-3 sm:p-4 space-y-3.5 ${modoInline ? "rounded-2xl border border-zinc-200/90 bg-white shadow-2xs dark:border-white/10 dark:bg-white/[0.03]" : ""}`}
         >
           {/* Cabecera superior: Etiqueta única suave y transparente + botón Añadir fila */}
           <div className="flex items-center justify-between gap-2">
@@ -551,7 +1115,7 @@ export default function ModalFormularioRapido({
               onClick={agregarFila}
               className="h-8 px-3 rounded-xl text-xs font-normal bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-600 dark:text-blue-300 backdrop-blur-md inline-flex items-center gap-1 transition-colors cursor-pointer"
             >
-              <span>+ Añadir fila</span>
+              <span>+ Añadir trabajo</span>
             </button>
           </div>
 
@@ -840,7 +1404,8 @@ export default function ModalFormularioRapido({
             </div>
           </div>
         </form>
-      </div>
+        </div>
+      )}
 
       {/* Menú desplegable flotante encima del modal (fuera de overflow-hidden) */}
       {dropdownAbierto && (() => {

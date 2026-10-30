@@ -3114,13 +3114,12 @@ export default function ModuloLubricentroCatalogo({
             <div className="flex items-center justify-between gap-2 mb-2">
               <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
                 <span className="text-base sm:text-lg">🚗</span>
-                <span>Auto-Servicio Detectado</span>
+                <span>Auto detectado</span>
               </h2>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300/60 dark:border-amber-400/30">
-                Automático
+                Auto
               </span>
             </div>
-
             {/* Kilometraje 100% automático */}
             <div className="mt-2 p-3 rounded-xl bg-zinc-50 dark:bg-black/20 border border-zinc-200/70 dark:border-white/5">
               <div className="flex items-baseline justify-between gap-2">
@@ -3140,67 +3139,6 @@ export default function ModuloLubricentroCatalogo({
             </div>
           </div>
 
-          {/* Pre-cargas inteligentes por placa / motor */}
-          <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-white/5 space-y-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 block">
-              Pre-carga inteligente sugerida
-            </span>
-            <div className="grid grid-cols-2 gap-2">
-              {/* Botón 1: 20W-50 Galón */}
-              {(() => {
-                const enOrden = estaPreCargadoEnOrden("lub_oil_20w50");
-                return (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const item = BASE_LUBRICENTRO_POS_ITEMS.find((b) => b.id === "lub_oil_20w50")!;
-                      void handleAjustarItemBento(item, enOrden ? -1 : 1);
-                    }}
-                    className={`h-11 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-start gap-2 transition-all cursor-pointer select-none active:scale-95 shadow-2xs ${enOrden
-                        ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-400 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200"
-                        : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300"
-                      }`}
-                  >
-                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${enOrden ? "bg-emerald-500 text-white" : "border-2 border-zinc-300 text-transparent"
-                      }`}>
-                      ✓
-                    </span>
-                    <span className="truncate text-left leading-tight">
-                      <span className="block font-black">20W-50</span>
-                      <span className="text-[10px] font-normal opacity-80">Galón</span>
-                    </span>
-                  </button>
-                );
-              })()}
-
-              {/* Botón 2: Filtro Aceite */}
-              {(() => {
-                const enOrden = estaPreCargadoEnOrden("lub_fil_aceite_std");
-                return (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const item = BASE_LUBRICENTRO_POS_ITEMS.find((b) => b.id === "lub_fil_aceite_std")!;
-                      void handleAjustarItemBento(item, enOrden ? -1 : 1);
-                    }}
-                    className={`h-11 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-start gap-2 transition-all cursor-pointer select-none active:scale-95 shadow-2xs ${enOrden
-                        ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-400 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200"
-                        : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300"
-                      }`}
-                  >
-                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${enOrden ? "bg-emerald-500 text-white" : "border-2 border-zinc-300 text-transparent"
-                      }`}>
-                      ✓
-                    </span>
-                    <span className="truncate text-left leading-tight">
-                      <span className="block font-black">Filtro</span>
-                      <span className="text-[10px] font-normal opacity-80">Aceite</span>
-                    </span>
-                  </button>
-                );
-              })()}
-            </div>
-          </div>
         </div>
 
         {/* ===================================================================

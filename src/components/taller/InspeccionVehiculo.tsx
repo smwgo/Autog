@@ -1097,17 +1097,32 @@ export default function InspeccionVehiculo({
   // VINCULAR SERVICIO O PRODUCTO AL PIN Y PROPUESTA DETALLADA (PRESUPUESTO)
   const handleAgregarItemPin = async (
     targetPinId: string,
-    itemData: { name: string; price: number; type: "SERVICE" | "PART"; qty: number }
+    itemData: {
+      id: string;
+      name: string;
+      code?: string;
+      category?: string;
+      type: "SERVICE" | "PART";
+      productId?: string;
+    }
   ) => {
+    if (!ordenActiva || !onUpdateOrden) {
+      mostrarToast("No está disponible una orden activa para enviar elementos a la propuesta.", "err");
+      return;
+    }
+
     const pin = hallazgos.find((h) => h.id === targetPinId);
     if (!pin) return;
 
     const itemLink: FindingItemLink = {
       id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       name: itemData.name,
-      price: itemData.price,
+      price: 0,
       type: itemData.type,
-      qty: itemData.qty,
+      qty: 1,
+      code: itemData.code,
+      category: itemData.category,
+      productId: itemData.type === "PART" ? itemData.id : undefined,
     };
 
     // 1. Guardar en los ítems vinculados del pin
@@ -1123,18 +1138,21 @@ export default function InspeccionVehiculo({
     sincronizarHallazgosNeon(nuevosHallazgos);
 
     // 2. Sincronizar hacia ordenActiva.items (Presupuesto)
-    if (ordenActiva && onUpdateOrden) {
+    if (onUpdateOrden) {
       const itemsOrden = ordenActiva.items ? [...ordenActiva.items] : [];
       const itemExistenteIndex = itemsOrden.findIndex((it) => it.id === itemLink.id);
 
       const nuevoOrderItem: OrderItem = {
         id: itemLink.id,
-        code: `PIN-${pin.pinNumber || 1}-${Date.now().toString(36).slice(-4)}`,
+        code:
+          itemLink.code ||
+          `PIN-${pin.pinNumber || 1}-${Date.now().toString(36).slice(-4)}`,
         type: itemLink.type,
         name: itemLink.name,
         category: `Inspección - Pin #${pin.pinNumber || 1} (${pin.vistaLabel || pin.vista})`,
         qty: itemLink.qty,
-        price: itemLink.price,
+        price: 0,
+        productId: itemLink.productId,
         status: "Pendiente",
       };
 
@@ -2713,8 +2731,8 @@ ${urlSeguimiento}`;
             onEliminarFoto={(idx, e, targetId) => handleEliminarFotoPin(targetId || pinActual.id, idx, e)}
             productosCatalogo={productosCatalogo}
             serviciosCatalogo={serviciosCatalogo}
-            onAgregarItemPin={(item) => handleAgregarItemPin(pinActual.id, item)}
-            onEliminarItemPin={(itemId) => handleEliminarItemPin(pinActual.id, itemId)}
+            onAgregarItemPin={(item, targetId) => handleAgregarItemPin(targetId || pinActual.id, item)}
+            onEliminarItemPin={(itemId, targetId) => handleEliminarItemPin(targetId || pinActual.id, itemId)}
             onDuplicarPin={() => handleDuplicarPin(pinActual)}
             onEliminarPin={() => handleEliminarPin(pinActual.id)}
             onReubicarPin={() => {
@@ -3166,8 +3184,8 @@ ${urlSeguimiento}`;
                 onEliminarFoto={(idx, e, targetId) => handleEliminarFotoPin(targetId || pinActual.id, idx, e)}
                 productosCatalogo={productosCatalogo}
                 serviciosCatalogo={serviciosCatalogo}
-                onAgregarItemPin={(item) => handleAgregarItemPin(pinActual.id, item)}
-                onEliminarItemPin={(itemId) => handleEliminarItemPin(pinActual.id, itemId)}
+                onAgregarItemPin={(item, targetId) => handleAgregarItemPin(targetId || pinActual.id, item)}
+                onEliminarItemPin={(itemId, targetId) => handleEliminarItemPin(targetId || pinActual.id, itemId)}
                 onDuplicarPin={() => handleDuplicarPin(pinActual)}
                 onEliminarPin={() => handleEliminarPin(pinActual.id)}
                 onReubicarPin={() => {
