@@ -159,6 +159,7 @@ export const CARWASH_COMBOS: CarWashComboDef[] = [
 
 // Extracción de una sola palabra clave en mayúsculas para cada tarjeta
 const KEYWORD_RULES: Array<{ match: RegExp; keyword: string }> = [
+  { match: /vapor\s*motor|motor/i, keyword: "VAPOR MOTOR" },
   { match: /expr[eé]s/i, keyword: "EXPRÉS" },
   { match: /grafitad/i, keyword: "GRAFITADO" },
   { match: /motor/i, keyword: "MOTOR" },
@@ -403,7 +404,7 @@ function computePriceForVehicle(
 
   // Multiplicador automático según tamaño de vehículo si no hay tarifa fija cargada
   let multiplier = 1.0;
-  if (vehicleTypeId === "vt_suv") multiplier = 1.25;
+  if (vehicleTypeId === "vt_suv") multiplier = 1.0;
   else if (vehicleTypeId === "vt_camioneta" || vehicleTypeId === "vt_camioneta_grande") multiplier = 1.4;
   else if (vehicleTypeId === "vt_mayor_tamano" || vehicleTypeId === "vt_furgoneta") multiplier = 1.8;
   else if (vehicleTypeId === "vt_moto") multiplier = 0.65;
@@ -431,6 +432,124 @@ async function uploadImageToR2CarWash(file: File): Promise<string> {
 
 type NivelAfeccion = "NORMAL" | "MODERADO" | "EXTREMO";
 
+
+// Ilustraciones gráficas estilizadas SVG que replican exactamente el diseño Bento de Car Wash
+function CarWashIllustration({ keyword }: { keyword: string }) {
+  const kw = (keyword || "").toUpperCase();
+  if (kw === "EXPRÉS" || kw === "EXPRES") {
+    return (
+      <svg viewBox="0 0 100 80" className="w-20 h-16 sm:w-24 sm:h-20 select-none drop-shadow-sm transition-transform group-hover:scale-105">
+        <defs>
+          <linearGradient id="cwFoamGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#e0f2fe" />
+            <stop offset="100%" stopColor="#7dd3fc" />
+          </linearGradient>
+        </defs>
+        <path
+          d="M 22 55 C 14 55, 10 46, 16 38 C 12 28, 24 18, 35 24 C 42 12, 60 12, 66 22 C 78 16, 88 26, 84 38 C 92 46, 86 55, 78 55 Z"
+          fill="url(#cwFoamGrad)"
+          stroke="#38bdf8"
+          strokeWidth="2"
+        />
+        <circle cx="36" cy="38" r="8" fill="#ffffff" opacity="0.6" />
+        <circle cx="56" cy="34" r="10" fill="#ffffff" opacity="0.5" />
+        <circle cx="68" cy="44" r="6" fill="#ffffff" opacity="0.6" />
+        <circle cx="26" cy="46" r="5" fill="#ffffff" opacity="0.5" />
+        <circle cx="20" cy="20" r="3" fill="#bae6fd" stroke="#38bdf8" strokeWidth="1" />
+        <circle cx="78" cy="18" r="4" fill="#bae6fd" stroke="#38bdf8" strokeWidth="1" />
+        <circle cx="86" cy="28" r="2.5" fill="#bae6fd" stroke="#38bdf8" strokeWidth="1" />
+        <path d="M 50 16 L 52 20 L 56 22 L 52 24 L 50 28 L 48 24 L 44 22 L 48 20 Z" fill="#facc15" />
+        <path d="M 74 36 L 75 38 L 77 39 L 75 40 L 74 42 L 73 40 L 71 39 L 73 38 Z" fill="#facc15" />
+      </svg>
+    );
+  }
+  if (kw === "GRAFITADO") {
+    return (
+      <svg viewBox="0 0 100 80" className="w-20 h-16 sm:w-24 sm:h-20 select-none drop-shadow-sm transition-transform group-hover:scale-105">
+        <rect x="18" y="24" width="6" height="52" rx="1.5" fill="#0284c7" stroke="#0369a1" strokeWidth="1" />
+        <rect x="76" y="24" width="6" height="52" rx="1.5" fill="#0284c7" stroke="#0369a1" strokeWidth="1" />
+        <rect x="14" y="72" width="14" height="4" rx="1" fill="#0369a1" />
+        <rect x="72" y="72" width="14" height="4" rx="1" fill="#0369a1" />
+        <rect x="22" y="44" width="56" height="4" rx="1" fill="#eab308" />
+        <path d="M 28 42 C 28 36, 34 32, 42 30 L 58 30 C 66 32, 72 36, 72 42 Z" fill="#475569" />
+        <circle cx="34" cy="42" r="5" fill="#1e293b" />
+        <circle cx="66" cy="42" r="5" fill="#1e293b" />
+        <path d="M 44 68 L 47 48" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="2 2" />
+        <path d="M 50 68 L 50 47" stroke="#0284c7" strokeWidth="1.5" strokeDasharray="2 2" />
+        <path d="M 56 68 L 53 48" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="2 2" />
+        <path d="M 82 12 L 76 20" stroke="#0284c7" strokeWidth="2" strokeLinecap="round" />
+        <path d="M 74 20 L 78 22" stroke="#0284c7" strokeWidth="2" />
+        <path d="M 72 24 L 62 34" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="2 2" />
+      </svg>
+    );
+  }
+  if (kw === "COMPLETO") {
+    return (
+      <svg viewBox="0 0 100 80" className="w-20 h-16 sm:w-24 sm:h-20 select-none drop-shadow-sm transition-transform group-hover:scale-105">
+        <rect x="15" y="16" width="70" height="50" rx="8" fill="#1e293b" />
+        <path d="M 25 52 C 25 38, 35 32, 50 32 C 65 32, 75 38, 75 52 Z" fill="#94a3b8" />
+        <circle cx="35" cy="52" r="5" fill="#0f172a" />
+        <circle cx="65" cy="52" r="5" fill="#0f172a" />
+        <path d="M 38 34 C 42 28, 58 28, 62 34 Z" fill="#ffffff" opacity="0.9" />
+        <circle cx="20" cy="38" r="3.5" fill="#38bdf8" />
+        <rect x="18" y="42" width="5" height="12" rx="2" fill="#0284c7" />
+        <circle cx="80" cy="38" r="3.5" fill="#38bdf8" />
+        <rect x="77" y="42" width="5" height="12" rx="2" fill="#0284c7" />
+      </svg>
+    );
+  }
+  if (kw === "VAPOR MOTOR" || kw === "MOTOR") {
+    return (
+      <svg viewBox="0 0 100 80" className="w-20 h-16 sm:w-24 sm:h-20 select-none drop-shadow-sm transition-transform group-hover:scale-105">
+        <rect x="22" y="32" width="56" height="34" rx="4" fill="#334155" stroke="#475569" strokeWidth="1.5" />
+        <rect x="30" y="26" width="40" height="8" rx="2" fill="#64748b" />
+        <circle cx="36" cy="48" r="7" fill="#1e293b" stroke="#e2e8f0" strokeWidth="1" />
+        <circle cx="64" cy="48" r="7" fill="#1e293b" stroke="#e2e8f0" strokeWidth="1" />
+        <path d="M 34 22 C 34 16, 40 14, 40 8" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.7" />
+        <path d="M 50 22 C 50 14, 56 12, 56 6" stroke="#cbd5e1" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.9" />
+        <path d="M 64 22 C 64 16, 70 14, 70 8" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.7" />
+      </svg>
+    );
+  }
+  if (kw === "TAPICERÍA" || kw === "TAPICERIA") {
+    return (
+      <svg viewBox="0 0 100 80" className="w-20 h-16 sm:w-24 sm:h-20 select-none drop-shadow-sm transition-transform group-hover:scale-105">
+        <rect x="20" y="20" width="26" height="36" rx="6" fill="#78350f" stroke="#92400e" strokeWidth="1.5" />
+        <rect x="18" y="52" width="30" height="14" rx="4" fill="#92400e" />
+        <rect x="25" y="14" width="16" height="8" rx="3" fill="#b45309" />
+        <rect x="54" y="20" width="26" height="36" rx="6" fill="#78350f" stroke="#92400e" strokeWidth="1.5" />
+        <rect x="52" y="52" width="30" height="14" rx="4" fill="#92400e" />
+        <rect x="59" y="14" width="16" height="8" rx="3" fill="#b45309" />
+        <line x1="33" y1="24" x2="33" y2="48" stroke="#d97706" strokeWidth="1" strokeDasharray="2 1" />
+        <line x1="67" y1="24" x2="67" y2="48" stroke="#d97706" strokeWidth="1" strokeDasharray="2 1" />
+      </svg>
+    );
+  }
+  if (kw === "FAROS") {
+    return (
+      <svg viewBox="0 0 100 80" className="w-20 h-16 sm:w-24 sm:h-20 select-none drop-shadow-sm transition-transform group-hover:scale-105">
+        <path
+          d="M 16 38 C 22 24, 60 22, 84 32 C 86 38, 76 56, 56 58 C 34 60, 16 52, 16 38 Z"
+          fill="#1e293b"
+          stroke="#475569"
+          strokeWidth="1.5"
+        />
+        <circle cx="44" cy="42" r="10" fill="#38bdf8" opacity="0.8" />
+        <circle cx="44" cy="42" r="6" fill="#ffffff" />
+        <path d="M 60 36 C 68 36, 76 38, 80 40 L 74 46 C 70 44, 64 42, 58 42 Z" fill="#f59e0b" />
+        <path d="M 32 26 L 33 30 L 37 31 L 33 32 L 32 36 L 31 32 L 27 31 L 31 30 Z" fill="#ffffff" />
+        <path d="M 70 24 L 71 27 L 74 28 L 71 29 L 70 32 L 69 29 L 66 28 L 69 27 Z" fill="#facc15" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 100 80" className="w-20 h-16 sm:w-24 sm:h-20 select-none drop-shadow-sm">
+      <circle cx="50" cy="40" r="22" fill="#e0f2fe" stroke="#38bdf8" strokeWidth="2" />
+      <text x="50" y="47" fontSize="24" textAnchor="middle">🚿</text>
+    </svg>
+  );
+}
+
 export default function ModuloCarWashCatalogo({
   empleadoLogueado,
   ordenActiva,
@@ -454,12 +573,16 @@ export default function ModuloCarWashCatalogo({
 
   // 2. Estados de recepción rápida en lavadora (Lodo, Pelos, Manchas, Gotaseca, Objetos, 📷)
   const [estadoAfecciones, setEstadoAfecciones] = useState<Record<string, NivelAfeccion>>({
-    Lodo: "NORMAL",
-    Pelos: "NORMAL",
+    Lodo: "EXTREMO",
+    Pelos: "MODERADO",
     Manchas: "NORMAL",
     Gotaseca: "NORMAL",
   });
-  const [objetosVerificados, setObjetosVerificados] = useState<boolean>(false);
+  const [objetosVerificados, setObjetosVerificados] = useState<boolean>(true);
+  const [comboSeleccionado, setComboSeleccionado] = useState<string>("Completo");
+  const [menuCatAbierto, setMenuCatAbierto] = useState<boolean>(false);
+  const [menuSubcatAbierto, setMenuSubcatAbierto] = useState<boolean>(false);
+  const [menuPorteAbierto, setMenuPorteAbierto] = useState<boolean>(false);
   const [fotosEstado, setFotosEstado] = useState<string[]>([]);
   const [subiendoFoto, setSubiendoFoto] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1182,6 +1305,164 @@ export default function ModuloCarWashCatalogo({
     mostrarToast("Servicio eliminado", "ok");
   };
 
+  // =========================================================================
+  // HELPERS Y ESTADOS PARA EL MODELO BENTO DE CAR WASH
+  // =========================================================================
+  const sugerenciaRecepcion = useMemo(() => {
+    if (estadoAfecciones.Lodo === "EXTREMO" || estadoAfecciones.Lodo === "MODERADO") {
+      return "Sugiere: + Grafitado ($12.00) o desengrase";
+    }
+    if (estadoAfecciones.Pelos === "EXTREMO" || estadoAfecciones.Pelos === "MODERADO") {
+      return "Sugiere: + Tapicería ($25.00) o aspirado profundo";
+    }
+    if (estadoAfecciones.Manchas === "EXTREMO" || estadoAfecciones.Manchas === "MODERADO") {
+      return "Sugiere: + Tapicería ($25.00)";
+    }
+    if (estadoAfecciones.Gotaseca === "EXTREMO" || estadoAfecciones.Gotaseca === "MODERADO") {
+      return "Sugiere: + Gotaseca ($20.00) o pulido";
+    }
+    return "Sugiere: + Grafitado ($12.00) o desengrase";
+  }, [estadoAfecciones]);
+
+  // Pre-carga inicial automática para Car Wash (Exprés $8.00 + Grafitado $12.00 = $20.00 / 45 min)
+  const autoCargaCarWashHecha = useRef(false);
+  useEffect(() => {
+    if (autoCargaCarWashHecha.current) return;
+    if (!ordenActiva) return;
+    if (itemsOrden && itemsOrden.length > 0) {
+      autoCargaCarWashHecha.current = true;
+      return;
+    }
+    const itemExpres = todosLosItemsPOS.find((s) => s.keyword === "EXPRÉS" || s.id.includes("expres"));
+    const itemGrafitado = todosLosItemsPOS.find((s) => s.keyword === "GRAFITADO" || s.id.includes("grafitado"));
+    const initialItems: any[] = [];
+    if (itemExpres) {
+      initialItems.push({
+        id: `cw_${itemExpres.id}_init`,
+        key: `cw_init_${itemExpres.id}`,
+        serviceId: itemExpres.id,
+        type: "SERVICE",
+        category: "Lavado",
+        cwCategoryId: "LAVADO",
+        subCategory: "Car Wash",
+        code: itemExpres.code || "CW-EXPRES",
+        name: `${itemExpres.keyword} (${vehiculoActivo})`,
+        brand: "Car Wash",
+        presentation: `${itemExpres.durationMinutes || 15} min`,
+        unitOfMeasure: "Servicio",
+        price: itemExpres.price || 8.0,
+        total: itemExpres.price || 8.0,
+        qty: 1,
+        estimatedMinutes: itemExpres.durationMinutes || 15,
+        vehicleType: vehiculoActivo,
+        status: "Listo",
+        completed: true,
+        empleado_id: empleadoLogueado.id,
+        empleado_nombre: empleadoLogueado.nombre,
+      });
+    }
+    if (itemGrafitado) {
+      initialItems.push({
+        id: `cw_${itemGrafitado.id}_init`,
+        key: `cw_init_${itemGrafitado.id}`,
+        serviceId: itemGrafitado.id,
+        type: "SERVICE",
+        category: "Chasis",
+        cwCategoryId: "CHASIS",
+        subCategory: "Car Wash",
+        code: itemGrafitado.code || "CW-GRAFITADO",
+        name: `${itemGrafitado.keyword} (${vehiculoActivo})`,
+        brand: "Car Wash",
+        presentation: `${itemGrafitado.durationMinutes || 20} min`,
+        unitOfMeasure: "Servicio",
+        price: itemGrafitado.price || 12.0,
+        total: itemGrafitado.price || 12.0,
+        qty: 1,
+        estimatedMinutes: itemGrafitado.durationMinutes || 20,
+        vehicleType: vehiculoActivo,
+        status: "Listo",
+        completed: true,
+        empleado_id: empleadoLogueado.id,
+        empleado_nombre: empleadoLogueado.nombre,
+      });
+    }
+    if (initialItems.length > 0) {
+      autoCargaCarWashHecha.current = true;
+      void onActualizarItemsOrden(initialItems);
+    }
+  }, [ordenActiva, itemsOrden, onActualizarItemsOrden, vehiculoActivo, empleadoLogueado, todosLosItemsPOS]);
+
+  const ESTADO_CIRCULOS_RECEPCION = useMemo(() => [
+    {
+      id: "Lodo" as const,
+      label: "Lodo",
+      sublabel: estadoAfecciones.Lodo === "EXTREMO" ? "Recargo" : estadoAfecciones.Lodo === "MODERADO" ? "Moderado" : "Normal",
+      color: estadoAfecciones.Lodo === "EXTREMO" ? "bg-rose-500 text-white shadow-md shadow-rose-500/30 ring-2 ring-rose-400/60" : estadoAfecciones.Lodo === "MODERADO" ? "bg-amber-400 text-white ring-2 ring-amber-300" : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10",
+      sublabelColor: estadoAfecciones.Lodo === "EXTREMO" ? "text-rose-600 dark:text-rose-400 font-bold" : estadoAfecciones.Lodo === "MODERADO" ? "text-amber-600 dark:text-amber-400 font-bold" : "text-zinc-500 dark:text-zinc-400 font-medium",
+      badge: estadoAfecciones.Lodo === "EXTREMO" ? "⚠️" : null,
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+          <path d="M12 2C8.5 2 6 4.5 6 7c0 1.2.5 2.3 1.2 3.1C5 11 3 13.5 3 16.5 3 20 6 22 10 22c2 0 4-.8 5.5-2.2C17 21 19 22 21 22c1.7 0 3-1.3 3-3 0-2.2-2.5-3.8-4-4.8 0-.4.1-.8.1-1.2 0-3.9-3.6-7-8.1-7zm-1 8c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1zm4 4c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1zm-6 2c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1z" />
+        </svg>
+      ),
+    },
+    {
+      id: "Pelos" as const,
+      label: "Pelos",
+      sublabel: estadoAfecciones.Pelos === "EXTREMO" ? "Recargo" : estadoAfecciones.Pelos === "MODERADO" ? "Moderado" : "Normal",
+      color: estadoAfecciones.Pelos === "EXTREMO" ? "bg-rose-500 text-white shadow-md shadow-rose-500/30 ring-2 ring-rose-400/60" : estadoAfecciones.Pelos === "MODERADO" ? "bg-amber-400 text-white shadow-md shadow-amber-400/30 ring-2 ring-amber-300" : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10",
+      sublabelColor: estadoAfecciones.Pelos === "EXTREMO" ? "text-rose-600 dark:text-rose-400 font-bold" : estadoAfecciones.Pelos === "MODERADO" ? "text-amber-600 dark:text-amber-400 font-bold" : "text-zinc-500 dark:text-zinc-400 font-medium",
+      badge: estadoAfecciones.Pelos === "EXTREMO" ? "⚠️" : null,
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+          <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+        </svg>
+      ),
+    },
+    {
+      id: "Manchas" as const,
+      label: "Manchas",
+      sublabel: estadoAfecciones.Manchas === "EXTREMO" ? "Recargo" : estadoAfecciones.Manchas === "MODERADO" ? "Moderado" : "Normal",
+      color: estadoAfecciones.Manchas === "EXTREMO" ? "bg-rose-500 text-white shadow-md shadow-rose-500/30 ring-2 ring-rose-400/60" : estadoAfecciones.Manchas === "MODERADO" ? "bg-amber-400 text-white ring-2 ring-amber-300" : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10",
+      sublabelColor: estadoAfecciones.Manchas === "EXTREMO" ? "text-rose-600 dark:text-rose-400 font-bold" : estadoAfecciones.Manchas === "MODERADO" ? "text-amber-600 dark:text-amber-400 font-bold" : "text-zinc-500 dark:text-zinc-400 font-medium",
+      badge: null,
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+          <path d="M12 3c-1.5 0-2.8.8-3.5 2C7.3 4.4 6 5.2 5.5 6.5 4.3 6.9 3.5 8 3.5 9.3c0 .8.3 1.5.8 2C3.5 12.3 3 13.6 3 15c0 3.3 2.7 6 6 6 1.2 0 2.3-.4 3.2-1 .7.6 1.7 1 2.8 1 2.8 0 5-2.2 5-5 0-.8-.2-1.5-.5-2.2 1.1-.9 1.8-2.2 1.8-3.8 0-2.8-2.2-5-5-5-.4 0-.8.1-1.2.2C14.4 3.9 13.3 3 12 3z" />
+        </svg>
+      ),
+    },
+    {
+      id: "Gotaseca" as const,
+      label: "Gotaseca",
+      sublabel: estadoAfecciones.Gotaseca === "EXTREMO" ? "Recargo" : estadoAfecciones.Gotaseca === "MODERADO" ? "Moderado" : "Normal",
+      color: estadoAfecciones.Gotaseca === "EXTREMO" ? "bg-rose-500 text-white shadow-md shadow-rose-500/30 ring-2 ring-rose-400/60" : estadoAfecciones.Gotaseca === "MODERADO" ? "bg-amber-400 text-white ring-2 ring-amber-300" : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10",
+      sublabelColor: estadoAfecciones.Gotaseca === "EXTREMO" ? "text-rose-600 dark:text-rose-400 font-bold" : estadoAfecciones.Gotaseca === "MODERADO" ? "text-amber-600 dark:text-amber-400 font-bold" : "text-zinc-500 dark:text-zinc-400 font-medium",
+      badge: null,
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+        </svg>
+      ),
+    },
+  ], [estadoAfecciones]);
+
+  const labelCategoriaActiva = useMemo(() => {
+    const cat = CARWASH_CATEGORIES.find((c) => c.id === categoriaActivaId);
+    return cat ? `${cat.icon} ${cat.label}` : "🫧 Todo";
+  }, [categoriaActivaId]);
+
+  const labelSubcategoriaActiva = useMemo(() => {
+    if (subcategoriaActivaId === "TODOS") return "🚿 Lavado";
+    const sub = subcategoriasActivas.find((s) => s.id === subcategoriaActivaId);
+    return sub ? `${sub.icon || "•"} ${sub.label}` : "🚿 Lavado";
+  }, [subcategoriaActivaId, subcategoriasActivas]);
+
+  const labelPorteActivo = useMemo(() => {
+    return `${vehiculoSeleccionadoObj.icon} ${vehiculoSeleccionadoObj.label}`;
+  }, [vehiculoSeleccionadoObj]);
+
+
   if (!mounted || (loading && !config)) {
     return (
       <div className="p-8 rounded-3xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 text-center space-y-3 animate-pulse">
@@ -1213,388 +1494,355 @@ export default function ModuloCarWashCatalogo({
   return (
     <div className="w-full space-y-2.5 sm:space-y-3 animate-fade-in pb-24 sm:pb-28">
       {/* =====================================================================
-          0. FILA SUPERIOR DE ACCESOS RÁPIDOS (⚡ Repetir, 🧽 Estado, ⚡ Combo)
+          DISEÑO BENTO GRID (PC: 3 TARJETAS INTELIGENTES / MÓVIL: VISTA LIMPIA)
           ===================================================================== */}
-      <div className="space-y-2 rounded-2xl bg-zinc-50/80 dark:bg-black/20 p-2 sm:p-2.5 border border-zinc-200/80 dark:border-white/10 shadow-2xs">
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* ⚡ Repetir */}
-          <button
-            type="button"
-            onClick={handleRepetirUltimoServicio}
-            className="flex-1 h-8 sm:h-9 px-3 rounded-xl border border-zinc-200 dark:border-white/10 bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs whitespace-nowrap"
-            title="Cargar el último servicio realizado a este vehículo"
-          >
-            <span>⚡</span>
-            <span>Repetir</span>
-          </button>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-3.5 items-start">
+        
+        {/* ===================================================================
+            TARJETA 1: RECEPCIÓN Y ESTADO (SUV)
+            =================================================================== */}
+        <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between min-h-[260px]">
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
+                Recepción y Estado ({vehiculoActivo})
+              </h2>
+            </div>
 
-          {/* 🧽 Estado */}
-          <button
-            type="button"
-            onClick={() => {
-              setMostrarEstado((prev) => !prev);
-            }}
-            className={`flex-1 h-8 sm:h-9 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs whitespace-nowrap ${
-              mostrarEstado
-                ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
-                : "border-zinc-200 dark:border-white/10 bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-800 dark:text-zinc-200"
-            }`}
-            title="Recepción rápida de estado del vehículo en lavadora"
-          >
-            <span>🧽</span>
-            <span>Estado</span>
-            <span className="text-[10px] opacity-75">{mostrarEstado ? "▲" : "▼"}</span>
-          </button>
+            {/* Vista compacta para móvil */}
+            <div className="flex sm:hidden items-center justify-between p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-500/10 border border-blue-200/60 dark:border-blue-400/30 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-base">🚗</span>
+                <span className="text-xs font-black text-zinc-900 dark:text-white">{vehiculoActivo} Detectado</span>
+              </div>
+              <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300 font-mono">
+                ⏱️ {totalMinutosEstimados > 0 ? `${totalMinutosEstimados} min` : "45 min"}
+              </span>
+            </div>
 
-          {/* ⚡ Combo */}
-          <button
-            type="button"
-            onClick={() => {
-              setMostrarCombos((prev) => !prev);
-            }}
-            className={`flex-1 h-8 sm:h-9 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs whitespace-nowrap ${
-              mostrarCombos
-                ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
-                : "border-zinc-200 dark:border-white/10 bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-800 dark:text-zinc-200"
-            }`}
-            title="Combos de servicios rápidos"
-          >
-            <span>⚡</span>
-            <span>Combo</span>
-            <span className="text-[10px] opacity-75">{mostrarCombos ? "▲" : "▼"}</span>
-          </button>
+            {/* Detección automática de vehículo (Desktop) */}
+            <div className="hidden sm:block p-3 rounded-xl bg-zinc-50 dark:bg-black/20 border border-zinc-200/70 dark:border-white/5 text-center space-y-1">
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-base sm:text-lg font-black text-zinc-900 dark:text-white">
+                  {vehiculoActivo} Detectado
+                </span>
+                <span className="text-base sm:text-lg">🚗</span>
+              </div>
+              <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                Auto-Servicio
+              </div>
+              <div className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                ⏱️ Est. {totalMinutosEstimados > 0 ? `${totalMinutosEstimados} min` : "45 min"}
+              </div>
+            </div>
+
+            {/* Subtítulo Recepción Rápida */}
+            <div className="text-center text-xs font-bold text-zinc-700 dark:text-zinc-300 mt-2.5 mb-1.5">
+              Recepción Rápida
+            </div>
+
+            {/* Tablero de 6 íconos circulares de recepción */}
+            <div className="grid grid-cols-3 gap-y-3 gap-x-2 place-items-center py-1">
+              {ESTADO_CIRCULOS_RECEPCION.map((btn) => (
+                <div key={btn.id} className="flex flex-col items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleCiclarEstadoAfeccion(btn.id)}
+                    className={`relative w-13 h-13 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${btn.color}`}
+                    title={`${btn.label}: Toca para cambiar nivel (Normal, Moderado, Extremo)`}
+                  >
+                    {btn.icon}
+                    {btn.badge && (
+                      <span className="absolute -top-1 -right-1 text-xs">{btn.badge}</span>
+                    )}
+                  </button>
+                  <div className="text-center leading-tight">
+                    <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 block">
+                      {btn.label}
+                    </span>
+                    <span className={`text-[10px] block ${btn.sublabelColor}`}>
+                      {btn.sublabel}
+                    </span>
+                  </div>
+                </div>
+              ))}
+
+              {/* Botón 5: Objetos */}
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nuevo = !objetosVerificados;
+                    setObjetosVerificados(nuevo);
+                    if (nuevo) mostrarToast("✓ Pertenencias verificadas en cabina y baúl", "ok");
+                  }}
+                  className={`w-13 h-13 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${
+                    objetosVerificados
+                      ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/30 scale-105 ring-2 ring-emerald-400/60"
+                      : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
+                  }`}
+                  title="Verificación de objetos personales en cabina"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </button>
+                <div className="text-center leading-tight">
+                  <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 block">
+                    Objetos
+                  </span>
+                  <span className={`text-[10px] font-bold block ${objetosVerificados ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-400"}`}>
+                    {objetosVerificados ? "Ok" : "Revisar"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Botón 6: Foto */}
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  type="button"
+                  disabled={subiendoFoto}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-13 h-13 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm bg-blue-100 hover:bg-blue-200/80 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-400/40"
+                  title="Tomar o subir foto de recepción del vehículo"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                </button>
+                <div className="text-center leading-tight">
+                  <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 block">
+                    Foto
+                  </span>
+                  <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block">
+                    {subiendoFoto ? "..." : fotosEstado.length > 0 ? `(${fotosEstado.length})` : "R2"}
+                  </span>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handleSubirFotoEstado}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Autoventa sugerida / conectada al POS */}
+          <div className="mt-3 pt-2.5 border-t border-zinc-100 dark:border-white/5 text-center">
+            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate block">
+              {sugerenciaRecepcion}
+            </span>
+          </div>
         </div>
 
-        {/* Despliegue de 🧽 Estado (Lodo, Pelos, Manchas, Gotaseca, Objetos, 📷) */}
-        {mostrarEstado && (
-          <div className="pt-2 border-t border-zinc-200/80 dark:border-white/10 space-y-2 animate-fade-in">
-            <div className="flex items-center justify-between text-[10px] text-zinc-500 dark:text-zinc-400 px-0.5">
-              <span className="font-semibold uppercase tracking-wider">Recepción en Lavadora</span>
-              <span>Gris: Normal • Amarillo: Moderado • Rojo: Extremo</span>
+        {/* ===================================================================
+            TARJETA 2: ACCESOS RÁPIDOS Y COMBOS
+            =================================================================== */}
+        <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between min-h-[260px]">
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
+                Accesos Rápidos y Combos
+              </h2>
             </div>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-              {(["Lodo", "Pelos", "Manchas", "Gotaseca"] as const).map((clave) => {
-                const niv = estadoAfecciones[clave] || "NORMAL";
+
+            {/* Botón principal Combo superior */}
+            <button
+              type="button"
+              onClick={() => {
+                const comboComp = CARWASH_COMBOS.find((c) => c.label === "Completo") || CARWASH_COMBOS[0];
+                void handleAplicarCombo(comboComp);
+                setComboSeleccionado("Completo");
+              }}
+              className="w-full h-11 rounded-xl bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-400/40 text-blue-800 dark:text-blue-100 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 shadow-2xs hover:bg-blue-100/70"
+            >
+              <span>⚡</span>
+              <span>Combo</span>
+            </button>
+
+            {/* Cuadrícula 2x2 de paquetes de lavado */}
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              {CARWASH_COMBOS.map((combo) => {
+                const activo = comboSeleccionado === combo.label;
                 return (
                   <button
-                    key={clave}
+                    key={combo.id}
                     type="button"
-                    onClick={() => handleCiclarEstadoAfeccion(clave)}
-                    className={`h-8 sm:h-8.5 px-2 rounded-lg border text-xs flex items-center justify-center gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs whitespace-nowrap ${
-                      niv === "EXTREMO"
-                        ? "bg-rose-100 dark:bg-rose-500/25 text-rose-800 dark:text-rose-200 border-rose-300 dark:border-rose-400/50 font-bold shadow-xs"
-                        : niv === "MODERADO"
-                        ? "bg-amber-100 dark:bg-amber-500/25 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-400/50 font-semibold shadow-xs"
-                        : "bg-white dark:bg-white/[0.04] hover:bg-zinc-50 dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 font-medium"
+                    onClick={() => {
+                      setComboSeleccionado(combo.label);
+                      void handleAplicarCombo(combo);
+                    }}
+                    className={`h-10 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none active:scale-95 shadow-2xs ${
+                      activo
+                        ? "bg-blue-50 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100 ring-1 ring-blue-300 shadow-xs"
+                        : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
                     }`}
                   >
-                    <span>{clave}</span>
-                    {niv === "EXTREMO" && <span className="text-[10px]">🚨</span>}
-                    {niv === "MODERADO" && <span className="text-[10px]">⚠️</span>}
+                    {activo && <span className="text-blue-600 dark:text-blue-300">✓</span>}
+                    <span>{combo.label}</span>
                   </button>
                 );
               })}
+            </div>
+          </div>
 
-              {/* Objetos */}
+          {/* Botón inferior Repetir */}
+          <div className="mt-3 pt-2">
+            <button
+              type="button"
+              onClick={handleRepetirUltimoServicio}
+              className="w-full h-10 rounded-xl bg-zinc-50 dark:bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-98 shadow-2xs"
+              title="Cargar el último servicio realizado a este vehículo"
+            >
+              <span>⚡</span>
+              <span>Repetir</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ===================================================================
+            TARJETA 3: CATÁLOGO CONTRAÍDO EN 1 SOLA LÍNEA (FILAS SUPERIORES)
+            =================================================================== */}
+        <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs space-y-3">
+          {/* Fila de 3 píldoras desplegables contraíbles */}
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+            {/* Píldora 1: Categoría */}
+            <div className="relative flex-1 min-w-[90px]">
               <button
                 type="button"
                 onClick={() => {
-                  const nuevo = !objetosVerificados;
-                  setObjetosVerificados(nuevo);
-                  if (nuevo) {
-                    mostrarToast("✓ Pertenencias verificadas en cabina y baúl", "ok");
-                  }
+                  setMenuCatAbierto((prev) => !prev);
+                  setMenuSubcatAbierto(false);
+                  setMenuPorteAbierto(false);
                 }}
-                className={`h-8 sm:h-8.5 px-2 rounded-lg border text-xs flex items-center justify-center gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs whitespace-nowrap ${
-                  objetosVerificados
-                    ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 border-emerald-300 dark:border-emerald-500/30 font-semibold shadow-xs"
-                    : "bg-white dark:bg-white/[0.04] hover:bg-zinc-50 dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 font-medium"
-                }`}
-                title="Marcar verificación de objetos personales"
+                className="w-full h-9 px-2.5 rounded-xl border border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-400/40 dark:bg-blue-500/15 dark:text-blue-100 text-xs font-bold flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
               >
-                {objetosVerificados && <span>✓</span>}
-                <span>Objetos</span>
+                <span className="truncate">{labelCategoriaActiva}</span>
+                <span className="text-[10px] opacity-75">▾</span>
               </button>
+              {menuCatAbierto && (
+                <div className="absolute top-11 left-0 z-40 w-44 rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5">
+                  {CARWASH_CATEGORIES.map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        setCategoriaActivaId(cat.id);
+                        setSubcategoriaActivaId("TODOS");
+                        setMenuCatAbierto(false);
+                      }}
+                      className="w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+                    >
+                      <span>{cat.icon}</span>
+                      <span>{cat.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
-              {/* 📷 Foto R2 */}
+            {/* Píldora 2: Subcategoría */}
+            <div className="relative flex-1 min-w-[90px]">
               <button
                 type="button"
-                disabled={subiendoFoto}
-                onClick={() => fileInputRef.current?.click()}
-                className="h-8 sm:h-8.5 px-2 rounded-lg border border-zinc-200 dark:border-white/10 bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs whitespace-nowrap disabled:opacity-50"
-                title="Tomar o subir foto de recepción"
+                onClick={() => {
+                  setMenuSubcatAbierto((prev) => !prev);
+                  setMenuCatAbierto(false);
+                  setMenuPorteAbierto(false);
+                }}
+                className="w-full h-9 px-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200 text-xs font-bold flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
               >
-                <span>📷</span>
-                <span>{subiendoFoto ? "..." : fotosEstado.length > 0 ? `(${fotosEstado.length})` : "Foto"}</span>
+                <span className="truncate">{labelSubcategoriaActiva}</span>
+                <span className="text-[10px] opacity-75">▾</span>
               </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={handleSubirFotoEstado}
-              />
-            </div>
-
-            {/* Mini preview de fotos guardadas */}
-            {fotosEstado.length > 0 && (
-              <div className="flex items-center gap-1.5 overflow-x-auto pt-1">
-                {fotosEstado.map((url, i) => (
-                  <img
-                    key={i}
-                    src={url}
-                    alt={`Recepción ${i + 1}`}
-                    className="w-8 h-8 rounded-lg object-cover border border-zinc-300 dark:border-white/20 shrink-0"
-                  />
-                ))}
-                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium shrink-0">
-                  ✓ {fotosEstado.length} foto(s) de estado
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Despliegue de ⚡ Combo (Exprés, Completo, Interior, Brillo) */}
-        {mostrarCombos && (
-          <div className="pt-2 border-t border-zinc-200/80 dark:border-white/10 space-y-1.5 animate-fade-in">
-            <div className="flex items-center justify-between text-[10px] text-zinc-500 dark:text-zinc-400 px-0.5">
-              <span className="font-semibold uppercase tracking-wider">Combos de Lavado en 1 toque</span>
-              <span>Marca servicios automáticamente en el pedido</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-              {CARWASH_COMBOS.map((combo) => (
-                <button
-                  key={combo.id}
-                  type="button"
-                  onClick={() => void handleAplicarCombo(combo)}
-                  className="h-8.5 sm:h-9 px-3 rounded-xl border border-zinc-200 dark:border-white/10 bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] text-zinc-800 dark:text-zinc-200 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs whitespace-nowrap"
-                >
-                  <span className="text-sm leading-none">{combo.icon}</span>
-                  <span>{combo.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* =====================================================================
-          1. CATEGORÍAS PRINCIPALES CONTRAÍBLES
-          ===================================================================== */}
-      <div className="space-y-2 rounded-2xl bg-zinc-50/80 dark:bg-black/20 p-2.5 sm:p-3 border border-zinc-200/80 dark:border-white/10 shadow-2xs">
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          {mostrarCategorias ? (
-            <>
-              {CARWASH_CATEGORIES.map((cat) => {
-                const sel = categoriaActivaId === cat.id;
-                const totalCat = conteoItemsPorCategoria[cat.id] || 0;
-                const enPedidoCat = conteoEnPedidoPorCategoria[cat.id] || 0;
-                return (
+              {menuSubcatAbierto && (
+                <div className="absolute top-11 left-0 z-40 w-44 rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5 max-h-56 overflow-y-auto">
                   <button
-                    key={cat.id}
                     type="button"
                     onClick={() => {
-                      setCategoriaActivaId(cat.id);
                       setSubcategoriaActivaId("TODOS");
-                      setMostrarCategorias(false);
-                      setMostrarSubcategorias(true);
+                      setMenuSubcatAbierto(false);
                     }}
-                    className={`flex-1 min-w-[95px] sm:min-w-[115px] h-9 sm:h-10 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
-                      sel
-                        ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
-                        : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-                    }`}
+                    className="w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2 cursor-pointer"
                   >
-                    <span className="text-sm leading-none shrink-0">{cat.icon}</span>
-                    <span className="whitespace-nowrap">{cat.label}</span>
-                    {enPedidoCat > 0 ? (
-                      <span className="px-1.5 py-0.5 rounded-md text-xs leading-none tabular-nums font-bold bg-emerald-500 text-white shrink-0">
-                        {enPedidoCat}
-                      </span>
-                    ) : (
-                      <span
-                        className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-medium shrink-0 ${
-                          sel
-                            ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30"
-                            : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
-                        }`}
-                      >
-                        {totalCat}
-                      </span>
-                    )}
+                    <span>✨</span>
+                    <span>Todos</span>
                   </button>
-                );
-              })}
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setMostrarCategorias(true)}
-              aria-label="Desplegar categorías"
-              className="min-w-[110px] h-9 sm:h-10 px-3.5 rounded-xl border bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100 text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-xs active:scale-95 whitespace-nowrap"
-            >
-              <span className="text-sm leading-none shrink-0">{categoriaSeleccionadaObj.icon}</span>
-              <span>{categoriaSeleccionadaObj.label}</span>
-              {conteoEnPedidoPorCategoria[categoriaActivaId] > 0 ? (
-                <span className="px-1.5 py-0.5 rounded-md text-xs leading-none tabular-nums font-bold bg-emerald-500 text-white shrink-0">
-                  {conteoEnPedidoPorCategoria[categoriaActivaId]}
-                </span>
-              ) : (
-                <span className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30 font-medium">
-                  {conteoItemsPorCategoria[categoriaActivaId] || 0}
-                </span>
-              )}
-            </button>
-          )}
-        </div>
-
-        {/* =====================================================================
-            SUBCATEGORÍAS CONTRAÍBLES
-            ===================================================================== */}
-        {categoriaActivaId !== "TODO" && subcategoriasActivas.length > 0 && (
-          <div className="space-y-2 border-t border-zinc-200/80 pt-2.5 dark:border-white/10">
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              {mostrarSubcategorias ? (
-                <>
-                  {subcategoriasActivas.map((sub) => {
-                    const activa = subcategoriaActivaId === sub.id;
-                    const countSub = conteoItemsPorSubcategoria[sub.id] || 0;
-                    const enPedidoSub = conteoEnPedidoPorSubcategoria[sub.id] || 0;
-                    return (
-                      <button
-                        key={sub.id}
-                        type="button"
-                        onClick={() => {
-                          setSubcategoriaActivaId(sub.id);
-                          setMostrarSubcategorias(false);
-                        }}
-                        className={`flex-1 min-w-[85px] sm:min-w-[105px] h-8 sm:h-8.5 px-2.5 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs whitespace-nowrap ${
-                          activa
-                            ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
-                            : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-                        }`}
-                      >
-                        {sub.icon && <span className="text-xs leading-none shrink-0">{sub.icon}</span>}
-                        <span className="whitespace-nowrap">{sub.label}</span>
-                        {enPedidoSub > 0 ? (
-                          <span className="px-1.5 py-0.5 rounded-md text-xs leading-none tabular-nums font-bold bg-emerald-500 text-white shrink-0">
-                            {enPedidoSub}
-                          </span>
-                        ) : (
-                          <span
-                            className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 font-medium ${
-                              activa
-                                ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30"
-                                : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
-                            }`}
-                          >
-                            {countSub}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setMostrarSubcategorias(true)}
-                  aria-label="Desplegar subcategorías"
-                  className="min-w-[100px] h-8 sm:h-8.5 px-3 rounded-lg border bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-xs whitespace-nowrap"
-                >
-                  {subcategoriaSeleccionadaObj?.icon && (
-                    <span className="text-xs leading-none shrink-0">{subcategoriaSeleccionadaObj.icon}</span>
-                  )}
-                  <span className="whitespace-nowrap">
-                    {subcategoriaSeleccionadaObj ? subcategoriaSeleccionadaObj.label : "Todos"}
-                  </span>
-                  {conteoEnPedidoPorSubcategoria[subcategoriaActivaId] > 0 ? (
-                    <span className="px-1.5 py-0.5 rounded-md text-xs leading-none tabular-nums font-bold bg-emerald-500 text-white shrink-0">
-                      {conteoEnPedidoPorSubcategoria[subcategoriaActivaId]}
-                    </span>
-                  ) : (
-                    <span className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30 font-medium">
-                      {conteoItemsPorSubcategoria[subcategoriaActivaId] || 0}
-                    </span>
-                  )}
-                </button>
+                  {(subcategoriasActivas.length > 0 ? subcategoriasActivas : CARWASH_CATEGORIES[1].subcategories).map((sub) => (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      onClick={() => {
+                        setSubcategoriaActivaId(sub.id);
+                        setMenuSubcatAbierto(false);
+                      }}
+                      className="w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+                    >
+                      {sub.icon && <span>{sub.icon}</span>}
+                      <span>{sub.label}</span>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
-          </div>
-        )}
-      </div>
 
-      {/* =====================================================================
-          2. BUSCADOR + SELECTOR CONTRAÍBLE DE PORTE DE VEHÍCULO
-          ===================================================================== */}
-      <div className="space-y-2 rounded-2xl bg-zinc-50/80 dark:bg-black/20 p-2.5 sm:p-3 border border-zinc-200/80 dark:border-white/10 shadow-2xs">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-          {/* Buscador */}
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">
-              🔍
-            </span>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar servicio o producto..."
-              className="w-full h-9 sm:h-10 pl-8 pr-8 rounded-xl bg-white dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-400 text-xs sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
-            />
-            {searchQuery && (
+            {/* Píldora 3: Porte / Chasis */}
+            <div className="relative flex-1 min-w-[85px]">
               <button
                 type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white text-xs cursor-pointer"
+                onClick={() => {
+                  setMenuPorteAbierto((prev) => !prev);
+                  setMenuCatAbierto(false);
+                  setMenuSubcatAbierto(false);
+                }}
+                className="w-full h-9 px-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200 text-xs font-bold flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
               >
-                ✕
+                <span className="truncate">{labelPorteActivo}</span>
+                <span className="text-[10px] opacity-75">▾</span>
               </button>
-            )}
-          </div>
-
-          {/* Selector contraíble de porte / tamaño de vehículo */}
-          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap shrink-0">
-            <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 hidden lg:inline-block">
-              Porte:
-            </span>
-            {mostrarVehiculos ? (
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {VEHICULOS_CARWASH.map((v) => {
-                  const sel = vehiculoActivo === v.id;
-                  return (
+              {menuPorteAbierto && (
+                <div className="absolute top-11 right-0 z-40 w-36 rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5">
+                  {VEHICULOS_CARWASH.map((v) => (
                     <button
                       key={v.id}
                       type="button"
                       onClick={() => {
                         setVehiculoActivo(v.id);
                         setSelectedVehicleTypeId(v.vehicleTypeId);
-                        setMostrarVehiculos(false);
+                        setMenuPorteAbierto(false);
                       }}
-                      className={`h-9 sm:h-10 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
-                        sel
-                          ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
-                          : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-                      }`}
+                      className="w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2 cursor-pointer"
                     >
-                      <span className="text-sm leading-none shrink-0">{v.icon}</span>
+                      <span>{v.icon}</span>
                       <span>{v.label}</span>
                     </button>
-                  );
-                })}
-              </div>
-            ) : (
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Buscador */}
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar..."
+              className="w-full h-9 pl-8 pr-7 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 outline-none focus:ring-1 focus:ring-blue-400 shadow-2xs"
+            />
+            {searchQuery && (
               <button
                 type="button"
-                onClick={() => setMostrarVehiculos(true)}
-                aria-label="Desplegar porte de vehículo"
-                className="h-9 sm:h-10 px-3.5 rounded-xl border bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100 text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-xs active:scale-95 whitespace-nowrap"
-                title="Cambiar porte de vehículo"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 text-xs cursor-pointer"
               >
-                <span className="text-sm leading-none shrink-0">{vehiculoSeleccionadoObj.icon}</span>
-                <span>{vehiculoSeleccionadoObj.label}</span>
-                <span className="text-[10px] opacity-75">▾</span>
+                ✕
               </button>
             )}
           </div>
@@ -1602,16 +1850,16 @@ export default function ModuloCarWashCatalogo({
       </div>
 
       {/* =====================================================================
-          3. CUADRÍCULA DE SERVICIOS Y PRODUCTOS DEL POS
+          CUADRÍCULA DE SERVICIOS Y PRODUCTOS DEL POS (OPCIONES LIMPIAS)
           ===================================================================== */}
-      <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-2xs">
+      <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 shadow-2xs">
         {itemsFiltrados.length === 0 ? (
-          <div className="py-12 text-center text-zinc-400 space-y-2">
-            <span className="text-3xl block">🔍</span>
-            <p className="text-sm">No se encontraron servicios ni productos</p>
+          <div className="py-12 text-center text-zinc-400 space-y-1.5">
+            <span className="text-3xl block">🚿</span>
+            <p className="text-xs sm:text-sm font-semibold">No se encontraron servicios ni productos</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-y-3.5 gap-x-3.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-3.5">
             {itemsFiltrados.map((item) => {
               const qtyEnPedido = obtenerCantidadEnPedido(item);
               const estaEnPedido = qtyEnPedido > 0;
@@ -1622,13 +1870,13 @@ export default function ModuloCarWashCatalogo({
                   onClick={() => {
                     void handleAjustarCantidadItem(item, 1);
                   }}
-                  className={`group relative flex flex-col items-center justify-between p-3.5 sm:p-4 rounded-2xl border transition-all select-none cursor-pointer active:scale-[0.98] min-h-[160px] sm:min-h-[175px] shadow-2xs ${
+                  className={`group relative flex flex-col items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none active:scale-[0.98] min-h-[175px] shadow-2xs ${
                     estaEnPedido
-                      ? "bg-blue-50/60 dark:bg-blue-500/[0.08] border-blue-300 dark:border-blue-400/60 ring-2 ring-blue-300/60 dark:ring-blue-400/30 shadow-xs"
-                      : "bg-white hover:bg-zinc-50/80 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-blue-200 dark:hover:border-blue-400/30"
+                      ? "bg-blue-50/70 dark:bg-blue-500/10 border-blue-400 dark:border-blue-400/50 ring-2 ring-blue-300/60 dark:ring-blue-400/30 shadow-xs"
+                      : "bg-white hover:bg-zinc-50 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/40"
                   }`}
                 >
-                  {/* Botón restar "−" arriba a la izquierda si está en el pedido */}
+                  {/* Botón restar "−" arriba a la izquierda */}
                   {estaEnPedido && (
                     <button
                       type="button"
@@ -1637,46 +1885,40 @@ export default function ModuloCarWashCatalogo({
                         e.stopPropagation();
                         void handleAjustarCantidadItem(item, -1);
                       }}
-                      className="absolute top-2 left-2 w-7 h-7 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 dark:hover:bg-rose-950/40 text-zinc-700 dark:text-zinc-200 text-sm font-bold flex items-center justify-center shadow-xs active:scale-90 transition-all z-10 cursor-pointer"
+                      className="absolute top-2 left-2 w-7 h-7 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 text-sm font-bold flex items-center justify-center shadow-xs active:scale-90 transition-all z-10 cursor-pointer"
                       title="Restar 1"
                     >
                       −
                     </button>
                   )}
 
-                  {/* Contador verde arriba a la derecha si está en el pedido */}
+                  {/* Contador verde arriba a la derecha */}
                   {estaEnPedido && (
                     <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-bold tabular-nums bg-emerald-500 text-white shadow-xs z-10">
                       +{qtyEnPedido}
                     </span>
                   )}
 
-                  {/* Imagen (Cloudflare R2) o Ícono central */}
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden flex items-center justify-center bg-zinc-100/80 dark:bg-black/30 border border-zinc-200/60 dark:border-white/5 shrink-0 mt-1">
+                  {/* Ilustración gráfica estilizada o foto */}
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center shrink-0 mt-1">
                     {item.imageUrl ? (
                       <img
                         src={item.imageUrl}
                         alt={item.keyword}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="w-full h-full object-contain rounded-xl"
                         loading="lazy"
                       />
                     ) : (
-                      <span className="text-3xl sm:text-4xl select-none leading-none">
-                        {item.itemIcon}
-                      </span>
+                      <CarWashIllustration keyword={item.keyword} />
                     )}
                   </div>
 
-                  {/* Una sola palabra clave en letra grande y negrita */}
-                  <div className="w-full text-center px-1 mt-2">
-                    <span className="text-sm sm:text-base font-black tracking-wide text-zinc-900 dark:text-white uppercase truncate block">
+                  {/* Palabra clave en letra grande y negrita */}
+                  <div className="w-full text-center mt-2 px-1">
+                    <span className="text-sm sm:text-base font-black tracking-tight text-zinc-900 dark:text-white uppercase block truncate">
                       {item.keyword}
                     </span>
-                  </div>
-
-                  {/* Precio debajo */}
-                  <div className="w-full text-center mt-1">
-                    <span className="text-xs sm:text-sm font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+                    <span className="text-xs sm:text-sm font-bold font-mono text-zinc-700 dark:text-zinc-300 mt-0.5 block tabular-nums">
                       ${item.price.toFixed(2)}
                     </span>
                   </div>
@@ -1688,26 +1930,14 @@ export default function ModuloCarWashCatalogo({
       </div>
 
       {/* =====================================================================
-          4. BARRA INFERIOR FIJA CON TIEMPO ESTIMADO Y TOTAL
+          BARRA INFERIOR FIJA: TOTAL, TIEMPO ESTIMADO Y BOTÓN SIGUIENTE
           ===================================================================== */}
       <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 p-3 sm:p-3.5 bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border-t sm:border border-zinc-200 dark:border-white/15 shadow-xl sm:rounded-2xl sm:bottom-3 sm:inset-x-4 sm:max-w-6xl sm:mx-auto pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-100 dark:bg-blue-500/20 border border-blue-300 dark:border-blue-400/40 flex items-center justify-center text-base sm:text-lg shrink-0">
-            🚿
-          </div>
-          <div className="min-w-0 leading-tight">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs sm:text-sm font-medium text-zinc-900 dark:text-white block truncate">
-                {totalUnidadesCarWash} {totalUnidadesCarWash === 1 ? "servicio" : "servicios"}
-              </span>
-              {totalMinutosEstimados > 0 && (
-                <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-400/30 text-blue-700 dark:text-blue-300 text-[11px] sm:text-xs font-semibold tabular-nums">
-                  ⏱️ {totalMinutosEstimados} min
-                </span>
-              )}
-            </div>
-            <span className="text-sm sm:text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 block tabular-nums mt-0.5">
-              Total: ${totalMontoCarWash.toFixed(2)}
+          <div className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-400/40 flex items-center gap-2 shrink-0">
+            <span className="text-base sm:text-lg">🛒</span>
+            <span className="text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-200 font-mono">
+              {totalUnidadesCarWash} {totalUnidadesCarWash === 1 ? "servicio" : "servicios"} | Total: ${totalMontoCarWash.toFixed(2)} · ⏱️ {totalMinutosEstimados > 0 ? `${totalMinutosEstimados} min` : "45 min"}
             </span>
           </div>
         </div>
@@ -1716,14 +1946,14 @@ export default function ModuloCarWashCatalogo({
           <button
             type="button"
             onClick={onIrASiguiente || onIrAAvisoYFirma}
-            className="h-10 sm:h-11 px-4 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
+            className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
           >
             <span>Siguiente</span>
             <span>→</span>
           </button>
         </div>
       </div>
-
+      
       {/* Modales administrativos opcionales (preservados) */}
       {detailModalItem && config && (
         <ModalDetalleServicioCarWash

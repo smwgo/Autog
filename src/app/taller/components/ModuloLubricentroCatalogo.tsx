@@ -198,9 +198,9 @@ function productoTieneEnvase(prod: any, envase: EnvaseCerrado): boolean {
     prod.unitOfMeasure,
     ...(Array.isArray(prod.presentationsAvailable)
       ? prod.presentationsAvailable.flatMap((variant: LubPresentationVariant) => [
-          variant.label,
-          variant.unitOfMeasure,
-        ])
+        variant.label,
+        variant.unitOfMeasure,
+      ])
       : []),
   ];
   return presentaciones.some((value) => clasificarEnvase(value) === envase);
@@ -253,6 +253,254 @@ function normalizarProductosCliente(rawProducts: any[]): any[] {
 
 function formatearKilometraje(kilometraje: number): string {
   return String(Math.trunc(kilometraje)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+
+// ============================================================================
+// CATÁLOGO BASE Y MODELO BENTO PARA LUBRICENTRO MODERNO
+// ============================================================================
+export interface ItemBentoCatalogo {
+  id: string;
+  code: string;
+  name: string;
+  fullName: string;
+  brand: string;
+  price: number;
+  viscosity?: string;
+  lubCategoryId: string;
+  lubSubcategoryId: string;
+  presentation: string;
+  unitOfMeasure: string;
+  type: string;
+  color?: string;
+  imageUrl?: string | null;
+}
+
+export const BASE_LUBRICENTRO_POS_ITEMS: ItemBentoCatalogo[] = [
+  {
+    id: "lub_oil_20w50",
+    code: "OIL-20W50",
+    name: "20W-50",
+    fullName: "Aceite 20W-50 Mineral Galón",
+    brand: "Shell Helix",
+    price: 12.50,
+    viscosity: "20W-50",
+    lubCategoryId: "lub_aceite",
+    lubSubcategoryId: "lub_aceite_motor",
+    presentation: "Galón",
+    unitOfMeasure: "Galón",
+    type: "PART",
+    color: "#eab308", // gold/yellow
+  },
+  {
+    id: "lub_oil_10w30",
+    code: "OIL-10W30",
+    name: "10W-30",
+    fullName: "Aceite 10W-30 Semisintético Galón",
+    brand: "Shell Helix",
+    price: 14.00,
+    viscosity: "10W-30",
+    lubCategoryId: "lub_aceite",
+    lubSubcategoryId: "lub_aceite_motor",
+    presentation: "Galón",
+    unitOfMeasure: "Galón",
+    type: "PART",
+    color: "#f59e0b", // amber
+  },
+  {
+    id: "lub_oil_5w30",
+    code: "OIL-5W30",
+    name: "5W-30",
+    fullName: "Aceite 5W-30 Sintético Galón",
+    brand: "Shell Helix Ultra",
+    price: 18.00,
+    viscosity: "5W-30",
+    lubCategoryId: "lub_aceite",
+    lubSubcategoryId: "lub_aceite_motor",
+    presentation: "Galón",
+    unitOfMeasure: "Galón",
+    type: "PART",
+    color: "#2563eb", // blue
+  },
+  {
+    id: "lub_oil_0w20",
+    code: "OIL-0W20",
+    name: "0W-20",
+    fullName: "Aceite 0W-20 Sintético Galón",
+    brand: "Mobil 1",
+    price: 22.00,
+    viscosity: "0W-20",
+    lubCategoryId: "lub_aceite",
+    lubSubcategoryId: "lub_aceite_motor",
+    presentation: "Galón",
+    unitOfMeasure: "Galón",
+    type: "PART",
+    color: "#059669", // emerald
+  },
+  {
+    id: "lub_oil_15w40",
+    code: "OIL-15W40",
+    name: "15W-40",
+    fullName: "Aceite 15W-40 Heavy Duty Galón",
+    brand: "Shell Rimula",
+    price: 16.00,
+    viscosity: "15W-40",
+    lubCategoryId: "lub_aceite",
+    lubSubcategoryId: "lub_aceite_motor",
+    presentation: "Galón",
+    unitOfMeasure: "Galón",
+    type: "PART",
+    color: "#d97706",
+  },
+  // Filtros
+  {
+    id: "lub_fil_aceite_std",
+    code: "FIL-ACEITE",
+    name: "Filtro Aceite",
+    fullName: "Filtro de Aceite Blindado Original",
+    brand: "Bosch",
+    price: 8.50,
+    lubCategoryId: "lub_filtros",
+    lubSubcategoryId: "lub_fil_aceite",
+    presentation: "Unidad",
+    unitOfMeasure: "Unidad",
+    type: "PART",
+  },
+  {
+    id: "lub_fil_aire_std",
+    code: "FIL-AIRE",
+    name: "Filtro Aire",
+    fullName: "Filtro de Aire Alto Flujo",
+    brand: "Mann-Filter",
+    price: 8.50,
+    lubCategoryId: "lub_filtros",
+    lubSubcategoryId: "lub_fil_aire",
+    presentation: "Unidad",
+    unitOfMeasure: "Unidad",
+    type: "PART",
+  },
+  {
+    id: "lub_fil_cabina_std",
+    code: "FIL-CABINA",
+    name: "Filtro Cabina",
+    fullName: "Filtro de Cabina Carbón Activado",
+    brand: "Bosch",
+    price: 10.00,
+    lubCategoryId: "lub_filtros",
+    lubSubcategoryId: "lub_fil_cabina",
+    presentation: "Unidad",
+    unitOfMeasure: "Unidad",
+    type: "PART",
+  },
+  // Fluidos y transmisiones
+  {
+    id: "lub_flu_refrig_std",
+    code: "FLU-REFRIG",
+    name: "Refrigerante",
+    fullName: "Refrigerante 50/50 Galón",
+    brand: "Prestone",
+    price: 12.00,
+    lubCategoryId: "lub_fluidos",
+    lubSubcategoryId: "lub_flu_coolant",
+    presentation: "Galón",
+    unitOfMeasure: "Galón",
+    type: "PART",
+  },
+  {
+    id: "lub_flu_frenos_std",
+    code: "FLU-FRENOS",
+    name: "Líquido Frenos",
+    fullName: "Líquido de Frenos DOT4 500ml",
+    brand: "Brembo",
+    price: 9.00,
+    lubCategoryId: "lub_fluidos",
+    lubSubcategoryId: "lub_flu_frenos",
+    presentation: "Unidad",
+    unitOfMeasure: "Unidad",
+    type: "PART",
+  },
+  {
+    id: "lub_trans_corona_std",
+    code: "TR-CORONA",
+    name: "Aceite Corona",
+    fullName: "Aceite Corona / Diferencial 80W-90 Galón",
+    brand: "Valvoline",
+    price: 14.00,
+    lubCategoryId: "lub_transmision",
+    lubSubcategoryId: "lub_trans_diferencial",
+    presentation: "Galón",
+    unitOfMeasure: "Galón",
+    type: "PART",
+  },
+  // Servicios
+  {
+    id: "lub_srv_engrase_std",
+    code: "SRV-ENGRASE",
+    name: "Engrase",
+    fullName: "Servicio de Engrase General",
+    brand: "Lubricentro",
+    price: 5.00,
+    lubCategoryId: "lub_aceite",
+    lubSubcategoryId: "lub_grasa",
+    presentation: "Servicio",
+    unitOfMeasure: "Servicio",
+    type: "SERVICE",
+  },
+];
+
+// Gráfico SVG realista de Galón de Aceite estilo Shell / Mobil con etiqueta
+function BotellaAceiteGrafico({ viscosidad, color = "#eab308" }: { viscosidad: string; color?: string }) {
+  return (
+    <svg viewBox="0 0 100 130" className="w-16 h-20 sm:w-20 sm:h-24 drop-shadow-md select-none transition-transform group-hover:scale-105">
+      {/* Tapa del galón */}
+      <rect x="22" y="8" width="18" height="10" rx="2" fill="#d97706" />
+      <rect x="24" y="6" width="14" height="3" rx="1" fill="#f59e0b" />
+      {/* Cuello */}
+      <path d="M 24 18 L 24 26 L 38 26 L 38 18 Z" fill="#1e293b" />
+      {/* Asa o mango lateral */}
+      <path
+        d="M 68 28 C 84 32, 88 56, 86 80 C 82 84, 76 84, 74 80 C 76 60, 72 44, 62 36 Z"
+        fill="#0f172a"
+        stroke="#334155"
+        strokeWidth="1.5"
+      />
+      {/* Cuerpo del galón */}
+      <path
+        d="M 22 26 C 14 36, 12 50, 12 110 C 12 118, 20 122, 28 122 L 74 122 C 82 122, 86 118, 86 110 L 86 86 C 82 86, 68 86, 64 36 C 60 28, 48 26, 38 26 Z"
+        fill="#0f172a"
+        stroke="#1e293b"
+        strokeWidth="1.5"
+      />
+      {/* Brillo de relieve lateral */}
+      <path d="M 16 38 L 16 110" stroke="#475569" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
+      {/* Etiqueta frontal */}
+      <rect x="20" y="44" width="48" height="66" rx="4" fill="#1e293b" stroke="#334155" strokeWidth="1" />
+      {/* Franja superior de marca */}
+      <path d="M 20 48 C 30 44, 58 44, 68 48 L 68 58 L 20 58 Z" fill={color} />
+      {/* Concha / Emblema Shell */}
+      <circle cx="44" cy="53" r="5" fill="#ef4444" />
+      <circle cx="44" cy="53" r="3.5" fill="#facc15" />
+      {/* Recuadro de Viscosidad */}
+      <rect x="23" y="66" width="42" height="24" rx="3" fill="#0f172a" />
+      <text
+        x="44"
+        y="82"
+        fill="#ffffff"
+        fontSize="12"
+        fontWeight="900"
+        fontFamily="monospace"
+        textAnchor="middle"
+        letterSpacing="-0.5"
+      >
+        {viscosidad}
+      </text>
+      {/* Franja dorada inferior */}
+      <rect x="25" y="96" width="38" height="3" rx="1.5" fill={color} opacity="0.9" />
+      <text x="44" y="105" fill="#94a3b8" fontSize="7" fontWeight="bold" textAnchor="middle">
+        PREMIUM OIL
+      </text>
+    </svg>
+  );
 }
 
 export default function ModuloLubricentroCatalogo({
@@ -1200,11 +1448,10 @@ export default function ModuloLubricentroCatalogo({
       const validado = data.validatedItem;
       const detalleReq =
         schemaType === "aceites" && subSchemaType === "aceite_motor"
-          ? ` • Req. cliente: ${
-              cantidadPersonalizadaActiva && cantidadPersonalizadaValor
-                ? `${cantidadPersonalizadaValor} ${cantidadPersonalizadaUnidad}`
-                : cantidadRequeridaLabel
-            }`
+          ? ` • Req. cliente: ${cantidadPersonalizadaActiva && cantidadPersonalizadaValor
+            ? `${cantidadPersonalizadaValor} ${cantidadPersonalizadaUnidad}`
+            : cantidadRequeridaLabel
+          }`
           : "";
 
       const nombreEnOrden = `${validado.name} [${validado.presentation}]${detalleReq}`;
@@ -1545,10 +1792,10 @@ export default function ModuloLubricentroCatalogo({
     const presElegidaId = presPorProducto[prod.id];
     const varianteEnvase = filtroEnvase
       ? variantes.find(
-          (variant) =>
-            clasificarEnvase(variant.label) === filtroEnvase ||
-            clasificarEnvase(variant.unitOfMeasure) === filtroEnvase
-        )
+        (variant) =>
+          clasificarEnvase(variant.label) === filtroEnvase ||
+          clasificarEnvase(variant.unitOfMeasure) === filtroEnvase
+      )
       : undefined;
     const varianteGuardada = presElegidaId
       ? variantes.find((v) => v.id === presElegidaId || v.label === presElegidaId)
@@ -1803,10 +2050,10 @@ export default function ModuloLubricentroCatalogo({
     const esProductoLubricentro = (item: any, product: any) =>
       Boolean(
         product?.lubCategoryId ||
-          String(item.category || "").toLowerCase().includes("lubricentro") ||
-          String(item.id || "").startsWith("lub-") ||
-          String(item.id || "").startsWith("it_lub") ||
-          String(item.code || "").startsWith("LUB-")
+        String(item.category || "").toLowerCase().includes("lubricentro") ||
+        String(item.id || "").startsWith("lub-") ||
+        String(item.id || "").startsWith("it_lub") ||
+        String(item.code || "").startsWith("LUB-")
       );
 
     const pedidosAnteriores: Array<{
@@ -2268,9 +2515,9 @@ export default function ModuloLubricentroCatalogo({
         );
         const variant = Array.isArray(product?.presentationsAvailable)
           ? product.presentationsAvailable.find(
-              (candidate: LubPresentationVariant) =>
-                candidate.label === presentation || candidate.id === item.presentationId
-            )
+            (candidate: LubPresentationVariant) =>
+              candidate.label === presentation || candidate.id === item.presentationId
+          )
           : undefined;
         if (variant && productId) presentacionesSeleccionadas[productId] = variant.id;
 
@@ -2398,11 +2645,11 @@ export default function ModuloLubricentroCatalogo({
   const fechaUltimoCambio =
     Number.isFinite(fechaUltimoCambioMs) && fechaUltimoCambioMs > 0
       ? new Date(fechaUltimoCambioMs).toLocaleDateString("es-EC", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-          timeZone: "UTC",
-        })
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      })
       : null;
   const diasDesdeUltimoCambio =
     fechaReferenciaHistorial !== null && Number.isFinite(fechaUltimoCambioMs)
@@ -2412,16 +2659,14 @@ export default function ModuloLubricentroCatalogo({
     diasDesdeUltimoCambio === null
       ? null
       : diasDesdeUltimoCambio === 0
-      ? "hoy"
-      : diasDesdeUltimoCambio >= 365
-      ? `hace ${Math.floor(diasDesdeUltimoCambio / 365)} ${
-          Math.floor(diasDesdeUltimoCambio / 365) === 1 ? "año" : "años"
-        }`
-      : diasDesdeUltimoCambio >= 30
-      ? `hace ${Math.floor(diasDesdeUltimoCambio / 30)} ${
-          Math.floor(diasDesdeUltimoCambio / 30) === 1 ? "mes" : "meses"
-        }`
-      : `hace ${diasDesdeUltimoCambio} ${diasDesdeUltimoCambio === 1 ? "día" : "días"}`;
+        ? "hoy"
+        : diasDesdeUltimoCambio >= 365
+          ? `hace ${Math.floor(diasDesdeUltimoCambio / 365)} ${Math.floor(diasDesdeUltimoCambio / 365) === 1 ? "año" : "años"
+          }`
+          : diasDesdeUltimoCambio >= 30
+            ? `hace ${Math.floor(diasDesdeUltimoCambio / 30)} ${Math.floor(diasDesdeUltimoCambio / 30) === 1 ? "mes" : "meses"
+            }`
+            : `hace ${diasDesdeUltimoCambio} ${diasDesdeUltimoCambio === 1 ? "día" : "días"}`;
   const kilometrajeUltimoCambio = Number(ordenUltimoCambioAceite?.mileage) || 0;
   const kilometrajeActual = Number.parseInt(kilometrajeIngreso.replace(/[^0-9]/g, ""), 10) || 0;
   const kilometrosDesdeUltimoCambio =
@@ -2454,18 +2699,396 @@ export default function ModuloLubricentroCatalogo({
     return [];
   }, [config, schemaType, subcategoriaActivaId, subSchemaType]);
 
+  // =========================================================================
+  // ESTADOS Y HELPERS DEL SISTEMA BENTO INTELIGENTE (LUBRICENTRO)
+  // =========================================================================
+
+  // Kilometraje automático de la orden activa
+  const kmActual = useMemo(() => {
+    const raw = Number(ordenActiva?.mileage);
+    return Number.isFinite(raw) && raw > 0 ? raw : 85000;
+  }, [ordenActiva?.mileage]);
+
+  const kmProximo = useMemo(() => {
+    const nextVal = Number(ordenActiva?.nextOilChangeKm);
+    if (Number.isFinite(nextVal) && nextVal > 0) return nextVal;
+    return kmActual + 5000;
+  }, [ordenActiva?.nextOilChangeKm, kmActual]);
+
+  const estaPreCargadoEnOrden = (targetId: string) => {
+    return itemsOrden.some(
+      (it: any) =>
+        (it.productId && it.productId === targetId) ||
+        (it.id && it.id === targetId) ||
+        (it.code && it.code === targetId)
+    );
+  };
+
+  const handleAjustarItemBento = (itemDef: any, delta: number) => {
+    if (!itemDef) return;
+    const targetId = itemDef.id || itemDef.productId || itemDef.code;
+    const indexExistente = itemsOrden.findIndex(
+      (it: any) =>
+        (it.productId && it.productId === targetId) ||
+        (it.id && it.id === targetId) ||
+        (it.code && it.code === itemDef.code)
+    );
+
+    let nuevos = [...itemsOrden];
+    if (indexExistente >= 0) {
+      const itemActual = nuevos[indexExistente];
+      const nuevaCant = (Number(itemActual.qty) || 1) + delta;
+      if (nuevaCant <= 0) {
+        nuevos.splice(indexExistente, 1);
+      } else {
+        nuevos[indexExistente] = {
+          ...itemActual,
+          qty: nuevaCant,
+          subtotal: nuevaCant * (Number(itemActual.price) || 0),
+        };
+      }
+    } else if (delta > 0) {
+      nuevos.push({
+        key: `lub_bento_${itemDef.id}_${Date.now()}`,
+        productId: itemDef.id,
+        id: itemDef.id,
+        code: itemDef.code || itemDef.id,
+        name: itemDef.name || itemDef.fullName,
+        fullName: itemDef.fullName || itemDef.name,
+        brand: itemDef.brand || 'Lubricentro',
+        presentation: itemDef.presentation || 'Unidad',
+        unitOfMeasure: itemDef.unitOfMeasure || 'Unidad',
+        price: Number(itemDef.price) || 0,
+        qty: 1,
+        maxStock: 999,
+        subtotal: Number(itemDef.price) || 0,
+        type: itemDef.type || 'PART',
+        lubCategoryId: itemDef.lubCategoryId || 'lub_aceite',
+        lubSubcategoryId: itemDef.lubSubcategoryId || '',
+      });
+    }
+
+    void onActualizarItemsOrden(nuevos);
+    if (mostrarToast) {
+      if (delta > 0) {
+        mostrarToast(`+ ${itemDef.name || itemDef.fullName}`, 'ok');
+      } else {
+        mostrarToast(`- ${itemDef.name || itemDef.fullName}`, 'ok');
+      }
+    }
+  };
+
+  // Pre-carga inteligente al abrir si no hay items
+  const autoCargaInicialHecha = useRef(false);
+  useEffect(() => {
+    if (autoCargaInicialHecha.current) return;
+    if (!ordenActiva) return;
+    if (itemsOrden && itemsOrden.length > 0) {
+      autoCargaInicialHecha.current = true;
+      return;
+    }
+    const itemAceite = BASE_LUBRICENTRO_POS_ITEMS.find((b) => b.id === 'lub_oil_20w50');
+    const itemFiltro = BASE_LUBRICENTRO_POS_ITEMS.find((b) => b.id === 'lub_fil_aceite_std');
+    const itemsIniciales: any[] = [];
+    if (itemAceite) {
+      itemsIniciales.push({
+        key: `lub_init_${itemAceite.id}`,
+        productId: itemAceite.id,
+        id: itemAceite.id,
+        code: itemAceite.code,
+        name: itemAceite.name,
+        fullName: itemAceite.fullName,
+        brand: itemAceite.brand,
+        presentation: itemAceite.presentation,
+        unitOfMeasure: itemAceite.unitOfMeasure,
+        price: itemAceite.price,
+        qty: 1,
+        maxStock: 999,
+        subtotal: itemAceite.price,
+        type: itemAceite.type,
+        lubCategoryId: itemAceite.lubCategoryId,
+        lubSubcategoryId: itemAceite.lubSubcategoryId,
+      });
+    }
+    if (itemFiltro) {
+      itemsIniciales.push({
+        key: `lub_init_${itemFiltro.id}`,
+        productId: itemFiltro.id,
+        id: itemFiltro.id,
+        code: itemFiltro.code,
+        name: itemFiltro.name,
+        fullName: itemFiltro.fullName,
+        brand: itemFiltro.brand,
+        presentation: itemFiltro.presentation,
+        unitOfMeasure: itemFiltro.unitOfMeasure,
+        price: itemFiltro.price,
+        qty: 1,
+        maxStock: 999,
+        subtotal: itemFiltro.price,
+        type: itemFiltro.type,
+        lubCategoryId: itemFiltro.lubCategoryId,
+        lubSubcategoryId: itemFiltro.lubSubcategoryId,
+      });
+    }
+    if (itemsIniciales.length > 0) {
+      autoCargaInicialHecha.current = true;
+      void onActualizarItemsOrden(itemsIniciales);
+    }
+  }, [ordenActiva, itemsOrden, onActualizarItemsOrden]);
+
+  const SEMAFORO_CIRCULOS = useMemo(
+    () => [
+      {
+        id: 'aire',
+        label: 'Aire',
+        iconSvg: (cls: string) => (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+            <path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2" />
+            <path d="M9.6 4.6A2 2 0 1 1 11 8H2" />
+            <path d="M12.6 19.4A2 2 0 1 0 14 16H2" />
+          </svg>
+        ),
+        posItem: BASE_LUBRICENTRO_POS_ITEMS.find((i) => i.id === 'lub_fil_aire_std'),
+      },
+      {
+        id: 'cabina',
+        label: 'Cabina',
+        iconSvg: (cls: string) => (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+            <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9C2.1 11 2 11.5 2 12v4c0 .6.4 1 1 1h2" />
+            <circle cx="7" cy="17" r="2" />
+            <path d="M9 17h6" />
+            <circle cx="17" cy="17" r="2" />
+          </svg>
+        ),
+        posItem: BASE_LUBRICENTRO_POS_ITEMS.find((i) => i.id === 'lub_fil_cabina_std'),
+      },
+      {
+        id: 'refrigerante',
+        label: 'Refrigerante',
+        iconSvg: (cls: string) => (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+            <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />
+            <path d="M2 19c1.5 0 2.5-1 4-1s2.5 1 4 1 2.5-1 4-1 2.5 1 4 1 2.5-1 4-1" />
+          </svg>
+        ),
+        posItem: BASE_LUBRICENTRO_POS_ITEMS.find((i) => i.id === 'lub_flu_refrig_std'),
+      },
+      {
+        id: 'frenos',
+        label: 'Frenos',
+        iconSvg: (cls: string) => (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+            <circle cx="12" cy="12" r="6" />
+            <circle cx="12" cy="12" r="2" />
+            <path d="M4.93 4.93a10 10 0 0 0 0 14.14" />
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+          </svg>
+        ),
+        posItem: BASE_LUBRICENTRO_POS_ITEMS.find((i) => i.id === 'lub_flu_frenos_std'),
+      },
+      {
+        id: 'corona',
+        label: 'Corona',
+        iconSvg: (cls: string) => (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        ),
+        posItem: BASE_LUBRICENTRO_POS_ITEMS.find((i) => i.id === 'lub_trans_corona_std'),
+      },
+      {
+        id: 'engrase',
+        label: 'Engrase',
+        iconSvg: (cls: string) => (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+            <path d="M12 2v6" />
+            <path d="m4.93 10.93 4.24 4.24" />
+            <path d="m19.07 10.93-4.24 4.24" />
+            <circle cx="12" cy="18" r="3" />
+            <path d="M12 8a4 4 0 0 0-4 4v1h8v-1a4 4 0 0 0-4-4Z" />
+          </svg>
+        ),
+        posItem: BASE_LUBRICENTRO_POS_ITEMS.find((i) => i.id === 'lub_srv_engrase_std'),
+      },
+    ],
+    []
+  );
+
+  const [semaforoCirculosActivos, setSemaforoCirculosActivos] = useState<Record<string, boolean>>({
+    aire: true,
+  });
+
+  const handleToggleSemaforoCirculo = (id: string) => {
+    const circulo = SEMAFORO_CIRCULOS.find((c) => c.id === id);
+    if (!circulo) return;
+
+    const actualmenteActivo = !!semaforoCirculosActivos[id];
+    const nuevoEstado = !actualmenteActivo;
+    setSemaforoCirculosActivos((prev) => ({
+      ...prev,
+      [id]: nuevoEstado,
+    }));
+
+    if (circulo.posItem) {
+      if (nuevoEstado) {
+        if (!estaPreCargadoEnOrden(circulo.posItem.id)) {
+          handleAjustarItemBento(circulo.posItem, 1);
+        }
+      } else {
+        if (estaPreCargadoEnOrden(circulo.posItem.id)) {
+          handleAjustarItemBento(circulo.posItem, -99);
+        }
+      }
+    }
+  };
+
+  const textoAlertaSemaforo = useMemo(() => {
+    const activos = SEMAFORO_CIRCULOS.filter((c) => semaforoCirculosActivos[c.id]);
+    if (activos.length === 0) return 'Todos los niveles verificados (OK)';
+    const ultimo = activos[activos.length - 1];
+    return `Sugiere: + ${ultimo.posItem?.fullName || ultimo.label} (${(ultimo.posItem?.price || 0).toFixed(2)})`;
+  }, [semaforoCirculosActivos, SEMAFORO_CIRCULOS]);
+
+  const [menuCatAbierto, setMenuCatAbierto] = useState(false);
+  const [menuSubcatAbierto, setMenuSubcatAbierto] = useState(false);
+  const [menuEnvaseDropdownAbierto, setMenuEnvaseDropdownAbierto] = useState(false);
+  const [envaseActivo, setEnvaseActivo] = useState<string>('Galón');
+  const [busquedaBento, setBusquedaBento] = useState<string>('');
+
+  const OPCIONES_CATEGORIAS = useMemo(
+    () => [
+      { id: 'lub_aceite', label: 'Aceites', icon: '🛢️' },
+      { id: 'lub_filtros', label: 'Filtros', icon: '💨' },
+      { id: 'lub_fluidos', label: 'Fluidos', icon: '🧪' },
+      { id: 'lub_transmision', label: 'Transmisión', icon: '⚙️' },
+      { id: 'lub_baterias', label: 'Baterías', icon: '🔋' },
+    ],
+    []
+  );
+
+  const labelCategoriaActiva = useMemo(() => {
+    const cat = OPCIONES_CATEGORIAS.find((c) => c.id === categoriaActivaId);
+    return cat ? `${cat.icon} ${cat.label}` : '🛢️ Aceites';
+  }, [categoriaActivaId, OPCIONES_CATEGORIAS]);
+
+  const opcionesSubcategoriasActuales = useMemo(() => {
+    if (subcategoriasActivas && subcategoriasActivas.length > 0) {
+      return subcategoriasActivas;
+    }
+    if (categoriaActivaId === 'lub_aceite') {
+      return [
+        { id: 'lub_aceite_motor', label: 'Motor' },
+        { id: 'lub_aditivos', label: 'Aditivos' },
+        { id: 'lub_grasa', label: 'Grasa' },
+      ];
+    }
+    return [{ id: 'ALL', label: 'Todas' }];
+  }, [subcategoriasActivas, categoriaActivaId]);
+
+  const labelSubcategoriaActiva = useMemo(() => {
+    if (subcategoriaActivaId === 'ALL') return 'Todas';
+    const sub = opcionesSubcategoriasActuales.find((s) => s.id === subcategoriaActivaId);
+    return sub?.label || 'Motor';
+  }, [subcategoriaActivaId, opcionesSubcategoriasActuales]);
+
+  const setSubcategoriaActivaId = (subId: string) => {
+    setSubcategoriaPorCat((prev) => ({
+      ...prev,
+      [categoriaActivaId]: subId,
+    }));
+  };
+
+  const productosBentoAMostrar = useMemo(() => {
+    let lista = [...BASE_LUBRICENTRO_POS_ITEMS];
+
+    if (productos && productos.length > 0) {
+      const idsBase = new Set(lista.map((p) => p.id));
+      for (const p of productos) {
+        if (!idsBase.has(p.id) && p.active !== false) {
+          lista.push({
+            id: p.id,
+            code: p.code || p.id,
+            name: p.name,
+            fullName: p.name,
+            brand: p.brand || 'Genérico',
+            price: Number(p.price) || 0,
+            viscosity: p.viscosity || p.name,
+            lubCategoryId: p.lubCategoryId || 'lub_aceite',
+            lubSubcategoryId: p.lubSubcategoryId || '',
+            presentation: p.presentation || 'Galón',
+            unitOfMeasure: p.unitOfMeasure || 'Galón',
+            type: p.type || 'PART',
+            color: '#eab308',
+            imageUrl: p.imageUrl,
+          });
+        }
+      }
+    }
+
+    if (categoriaActivaId) {
+      lista = lista.filter((p) => p.lubCategoryId === categoriaActivaId);
+    }
+
+    if (subcategoriaActivaId && subcategoriaActivaId !== 'ALL') {
+      lista = lista.filter((p) => p.lubSubcategoryId === subcategoriaActivaId);
+    }
+
+    if (envaseActivo && envaseActivo !== 'Todos') {
+      lista = lista.filter((p) => {
+        const pres = String(p.presentation || '').toLowerCase();
+        const uom = String(p.unitOfMeasure || '').toLowerCase();
+        const name = String(p.name || p.fullName || '').toLowerCase();
+        const env = envaseActivo.toLowerCase();
+        return pres.includes(env) || uom.includes(env) || name.includes(env);
+      });
+    }
+
+    if (busquedaBento.trim()) {
+      const q = busquedaBento.trim().toLowerCase();
+      lista = lista.filter(
+        (p) =>
+          (p.name && p.name.toLowerCase().includes(q)) ||
+          (p.fullName && p.fullName.toLowerCase().includes(q)) ||
+          (p.viscosity && p.viscosity.toLowerCase().includes(q)) ||
+          (p.code && p.code.toLowerCase().includes(q)) ||
+          (p.brand && p.brand.toLowerCase().includes(q))
+      );
+    }
+
+    return lista;
+  }, [productos, categoriaActivaId, subcategoriaActivaId, envaseActivo, busquedaBento]);
+
+  const obtenerCantidadItemEnOrden = (targetId: string) => {
+    const it = itemsOrden.find(
+      (x: any) =>
+        (x.productId && x.productId === targetId) ||
+        (x.id && x.id === targetId) ||
+        (x.code && x.code === targetId)
+    );
+    return it ? Number(it.qty) || 0 : 0;
+  };
+
+  const totalMontoActual = useMemo(() => {
+    return itemsOrden.reduce((sum: number, it: any) => {
+      const p = Number(it.price) || 0;
+      const q = Number(it.qty) || 1;
+      return sum + p * q;
+    }, 0);
+  }, [itemsOrden]);
+
   if (!config) return null;
 
   return (
-    <div className="w-full space-y-2.5 pb-24 sm:space-y-3 sm:pb-4 animate-fade-in">
+    <div className="w-full space-y-3 pb-24 sm:pb-28 animate-fade-in">
       {/* Banner de confirmación / error */}
       {bannerAviso && (
         <div
-          className={`p-2.5 sm:p-3 rounded-xl border text-xs font-normal flex items-center justify-between gap-2 shadow-xs ${
-            bannerAviso.tipo === "ok"
+          className={`p-2.5 sm:p-3 rounded-xl border text-xs font-normal flex items-center justify-between gap-2 shadow-xs ${bannerAviso.tipo === "ok"
               ? "bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-500/15 dark:border-emerald-500/40 dark:text-emerald-200"
               : "bg-rose-50 border-rose-300 text-rose-800 dark:bg-rose-500/15 dark:border-rose-500/40 dark:text-rose-200"
-          }`}
+            }`}
         >
           <span>{bannerAviso.texto}</span>
           <button
@@ -2478,1046 +3101,386 @@ export default function ModuloLubricentroCatalogo({
         </div>
       )}
 
-      <div className="space-y-2.5 rounded-2xl border border-zinc-200 bg-white p-3 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
-          Acciones rápidas
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => void handleRepetirUltimoCambioAceite()}
-            disabled={repitiendoCambioAceite}
-            aria-label="Repetir último aceite y filtro"
-            className="min-h-10 px-3.5 rounded-xl border border-amber-400/50 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-60"
-          >
-            ⚡ Repetir
-          </button>
-          <button
-            type="button"
-            onClick={() => setMostrarNivelesLubricentro((prev) => !prev)}
-            aria-expanded={mostrarNivelesLubricentro}
-            className="min-h-10 px-3.5 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-200 text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer active:scale-95"
-          >
-            💧 Niveles
-          </button>
-          <button
-            type="button"
-            onClick={() => setMostrarCombosLubricentro((prev) => !prev)}
-            aria-expanded={mostrarCombosLubricentro}
-            className="min-h-10 px-3.5 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-200 text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer active:scale-95"
-          >
-            ⚡ Combo
-          </button>
-        </div>
+      {/* =====================================================================
+          DISEÑO BENTO GRID (PC: 3 TARJETAS INTELIGENTES / MÓVIL: VISTA LIMPIA)
+          ===================================================================== */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-3.5 items-start">
 
-        {mostrarNivelesLubricentro && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-2.5 dark:border-white/10">
-            {NIVELES_LUBRICENTRO.map(({ label }) => {
-              const status = nivelesLubricentro[label];
-              const statusClass =
-                status === "Verde"
-                  ? "bg-emerald-500/15 border-emerald-500/50 text-emerald-700 dark:text-emerald-300"
-                  : status === "Amarillo"
-                  ? "bg-amber-500/15 border-amber-500/50 text-amber-700 dark:text-amber-300"
-                  : status === "Rojo"
-                  ? "bg-rose-500/15 border-rose-500/50 text-rose-700 dark:text-rose-300"
-                  : "bg-white dark:bg-white/[0.04] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200";
-              const statusLabel =
-                status === "Verde"
-                  ? "OK"
-                  : status === "Amarillo"
-                  ? "Bajo"
-                  : status === "Rojo"
-                  ? "Cambiar"
-                  : "Sin revisar";
-
-              return (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => handleCiclarNivelLubricentro(label)}
-                  aria-label={`${label}: ${statusLabel}`}
-                  title={`${label}: ${status || "Sin revisar"}${status ? ` (${statusLabel})` : ""}`}
-                  className={`min-h-9 px-2.5 rounded-lg border text-xs font-medium cursor-pointer active:scale-95 ${statusClass}`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {mostrarCombosLubricentro && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-2.5 dark:border-white/10">
-            {COMBOS_LUBRICENTRO.map((combo) => (
-              <button
-                key={combo}
-                type="button"
-                onClick={() => void handleSeleccionarComboLubricentro(combo)}
-                className="min-h-9 px-2.5 rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-zinc-700 dark:text-zinc-200 text-xs font-medium cursor-pointer active:scale-95"
-              >
-                {combo}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <section className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-700 dark:text-blue-300">
-              Recepción del vehículo
-            </p>
-            <h2 className="mt-1 text-lg font-bold text-zinc-900 dark:text-zinc-100">
-              {ordenActiva?.plate || "Sin vehículo seleccionado"}
-            </h2>
-            {descripcionVehiculo && (
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">{descripcionVehiculo}</p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setPestanaTienda("productos");
-              setDrawerTiendaAbierto(true);
-            }}
-            className="min-h-11 shrink-0 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-xs transition hover:bg-blue-500 active:scale-95"
-          >
-            + Productos y servicios
-          </button>
-        </div>
-
-        {ordenActiva?.id ? (
-          <>
-            <div className="grid gap-3 sm:grid-cols-[minmax(200px,0.8fr)_minmax(0,1.2fr)]">
-              <label className="space-y-1.5">
-                <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                  Kilometraje de ingreso
-                </span>
-                <span className="relative block">
-                  <input
-                    type="number"
-                    min="1"
-                    inputMode="numeric"
-                    value={kilometrajeIngreso}
-                    onChange={(event) => setKilometrajeIngreso(event.target.value)}
-                    placeholder="Ej. 85420"
-                    className="h-12 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 pr-12 text-lg font-bold tabular-nums text-zinc-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-white/10 dark:bg-black/20 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-900/40"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-zinc-500">
-                    km
-                  </span>
-                </span>
-              </label>
-
-              <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3 dark:border-white/10 dark:bg-black/20">
-                {fechaUltimoCambio ? (
-                  <>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">
-                        Último cambio de aceite
-                      </p>
-                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-                        {tiempoDesdeUltimoCambio || "Historial"}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                      {fechaUltimoCambio}
-                      {kilometrajeUltimoCambio > 0 &&
-                        ` · ${formatearKilometraje(kilometrajeUltimoCambio)} km`}
-                    </p>
-                    {kilometrosDesdeUltimoCambio !== null && kilometrosDesdeUltimoCambio >= 0 && (
-                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                        Recorrido desde entonces:{" "}
-                        <strong className="font-semibold text-zinc-700 dark:text-zinc-200">
-                          {formatearKilometraje(kilometrosDesdeUltimoCambio)} km
-                        </strong>
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                    Sin cambio de aceite previo
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2 border-t border-zinc-200 pt-3 dark:border-white/10">
-              <div>
-                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  Revisión de componentes
-                </h3>
-              </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {COMPONENTES_SERVICIO_LUBRICENTRO.map((componente) => (
-                  <div
-                    key={componente}
-                    className="flex min-h-12 items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-white/[0.02]"
-                  >
-                    <span className="min-w-0 text-xs font-medium text-zinc-700 dark:text-zinc-200">
-                      {componente}
-                    </span>
-                    <div className="flex shrink-0 rounded-lg bg-zinc-100 p-0.5 dark:bg-white/5">
-                      {(["Pendiente", "Realizado"] as const).map((estado) => {
-                        const activo = componentesLubricentro[componente] === estado;
-                        return (
-                          <button
-                            key={estado}
-                            type="button"
-                            onClick={() =>
-                              setComponentesLubricentro((prev) => ({
-                                ...prev,
-                                [componente]: estado,
-                              }))
-                            }
-                            aria-pressed={activo}
-                            className={`min-h-9 rounded-md px-2.5 text-[10px] font-semibold transition ${
-                              activo
-                                ? "bg-blue-100 text-blue-800 shadow-xs dark:bg-blue-500/25 dark:text-blue-100"
-                                : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"
-                            }`}
-                          >
-                            {estado}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              {proximoCambioKm !== null && (
-                <span className="mr-auto text-xs text-zinc-500 dark:text-zinc-400">
-                  Próximo cambio:{" "}
-                  <strong className="font-semibold text-emerald-700 dark:text-emerald-300">
-                    {formatearKilometraje(proximoCambioKm)} km
-                  </strong>
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => void guardarSeguimientoLubricentro()}
-                disabled={guardandoSeguimiento}
-                className="min-h-10 rounded-xl border border-zinc-200 bg-white px-4 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-200 dark:hover:bg-white/[0.08]"
-              >
-                {guardandoSeguimiento ? "Guardando..." : "Guardar revisión"}
-              </button>
-            </div>
-          </>
-        ) : (
-          <p className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs leading-relaxed text-zinc-600 dark:border-white/10 dark:bg-black/20 dark:text-zinc-300">
-            Para registrar kilometraje e historial, primero selecciona la orden del vehículo.
-            También puedes abrir la tienda para una venta directa.
-          </p>
-        )}
-      </section>
-
-      {drawerTiendaAbierto && (
-        <div
-          role="presentation"
-          onClick={() => setDrawerTiendaAbierto(false)}
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-5"
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Tienda de Lubricentro"
-            onClick={(event) => event.stopPropagation()}
-            className="flex max-h-[94dvh] w-full max-w-6xl flex-col overflow-hidden rounded-t-3xl border border-zinc-200 bg-white text-zinc-900 shadow-2xl dark:border-white/10 dark:bg-[#111113] dark:text-zinc-100 sm:max-h-[90dvh] sm:rounded-2xl"
-          >
-            <div className="shrink-0 border-b border-zinc-200 p-3 dark:border-white/10 sm:px-5 sm:py-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-base font-bold">Tienda de Lubricentro</h2>
-                  <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                    {ordenActiva?.plate
-                      ? `Agregar a la atención de ${ordenActiva.plate}`
-                      : "Selecciona productos o servicios para caja"}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setDrawerTiendaAbierto(false)}
-                  aria-label="Cerrar tienda"
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-lg text-zinc-600 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200"
-                >
-                  ×
-                </button>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                {(["productos", "servicios"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    onClick={() => {
-                      setPestanaTienda(tab);
-                      setMenuFiltroAbierto(false);
-                      setMenuEnvaseAbierto(false);
-                    }}
-                    aria-pressed={pestanaTienda === tab}
-                    className={`min-h-10 rounded-xl border text-sm font-semibold capitalize transition ${
-                      pestanaTienda === tab
-                        ? "border-blue-300 bg-blue-100 text-blue-800 dark:border-blue-400/50 dark:bg-blue-500/20 dark:text-blue-100"
-                        : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300"
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 pb-6 sm:p-5">
-      {pestanaTienda === "productos" && (
-      <section
-        aria-label="Categorías del catálogo"
-        className="rounded-2xl border border-zinc-200 bg-white p-3 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4"
-      >
-        <div className="mb-3 flex items-center justify-between gap-3">
+        {/* ===================================================================
+            TARJETA 1: AUTO-SERVICIO DETECTADO (CERO BÚSQUEDA MANUAL)
+            =================================================================== */}
+        <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between min-h-[220px]">
           <div>
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 sm:text-base">
-              Explorar catálogo
-            </h2>
-            <p className="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400 sm:text-xs">
-              Elige una categoría y luego un tipo de producto
-            </p>
-          </div>
-          <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
-            {productosFiltrados.length} {productosFiltrados.length === 1 ? "producto" : "productos"}
-          </span>
-        </div>
-
-        <div className="space-y-2 rounded-xl bg-zinc-50/80 p-2.5 dark:bg-black/20 sm:p-3">
-          <p className="px-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
-            Categoría
-          </p>
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-        {mostrarCategorias ? (
-          <>
-            <button
-              type="button"
-              onClick={() => handleCambiarCategoria("ALL")}
-              className={`flex-1 min-w-[100px] sm:min-w-[120px] h-9 sm:h-10 px-3 rounded-xl border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
-                categoriaActivaId === "ALL"
-                  ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
-                  : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-              }`}
-            >
-              <span className="text-sm leading-none shrink-0">✨</span>
-              <span className="whitespace-nowrap">Todo</span>
-              <span
-                className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-normal shrink-0 ${
-                  categoriaActivaId === "ALL"
-                    ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30"
-                    : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
-                }`}
-              >
-                {productos.filter((p) => p.active !== false).length}
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                <span className="text-base sm:text-lg">🚗</span>
+                <span>Auto-Servicio Detectado</span>
+              </h2>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300/60 dark:border-amber-400/30">
+                Automático
               </span>
-            </button>
+            </div>
 
-            {categoriasActivas.map((cat) => {
-              const sel = categoriaActivaId === cat.id;
-              const enPedido = conteoEnPedidoPorCategoria[cat.id] || 0;
-              const totalCat = conteoProductosPorCategoria[cat.id] || 0;
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => handleCambiarCategoria(cat.id)}
-                  className={`flex-1 min-w-[105px] sm:min-w-[125px] h-9 sm:h-10 px-3 rounded-xl border text-xs font-normal flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap ${
-                    sel
-                      ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
-                      : "bg-white hover:bg-zinc-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-                  }`}
-                >
-                  <span className="text-base leading-none shrink-0">{cat.icon}</span>
-                  <span className="whitespace-nowrap">{cat.label}</span>
-                  {enPedido > 0 ? (
-                    <span className="px-1.5 py-0.5 rounded-md text-xs leading-none tabular-nums font-normal bg-emerald-500 text-white shrink-0">
-                      {enPedido}
-                    </span>
-                  ) : (
-                    <span
-                      className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md font-normal shrink-0 ${
-                        sel
-                          ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30"
-                          : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
-                      }`}
-                    >
-                      {totalCat}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setMostrarCategorias(true)}
-            aria-label="Mostrar categorías"
-            className="min-w-[120px] h-9 sm:h-10 px-3 rounded-xl border bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100 text-xs font-normal inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-xs active:scale-95 whitespace-nowrap"
-          >
-            {categoriaActivaId === "ALL" || !categoriaSeleccionadaObj ? (
-              <>
-                <span className="text-sm leading-none shrink-0">✨</span>
-                <span>Todo</span>
-                <span className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30">
-                  {productos.filter((p) => p.active !== false).length}
+            {/* Kilometraje 100% automático */}
+            <div className="mt-2 p-3 rounded-xl bg-zinc-50 dark:bg-black/20 border border-zinc-200/70 dark:border-white/5">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-xl sm:text-2xl font-black font-mono tracking-tight text-zinc-900 dark:text-white">
+                  {kmActual.toLocaleString()} km
                 </span>
-              </>
-            ) : (
-              <>
-                <span className="text-base leading-none shrink-0">{categoriaSeleccionadaObj.icon}</span>
-                <span>{categoriaSeleccionadaObj.label}</span>
-                <span
-                  className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30"
-                >
-                  {conteoEnPedidoPorCategoria[categoriaSeleccionadaObj.id] ||
-                    conteoProductosPorCategoria[categoriaSeleccionadaObj.id] ||
-                    0}
+                <span className="text-lg text-blue-600 dark:text-blue-400 font-bold">➔</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between text-xs sm:text-sm text-zinc-600 dark:text-zinc-300">
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
+                  Próx: {kmProximo.toLocaleString()} km
                 </span>
-              </>
-            )}
-          </button>
-        )}
+                <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 font-mono">
+                  (+5.000 km)
+                </span>
+              </div>
+            </div>
           </div>
 
-          {categoriaActivaId !== "ALL" && subcategoriasActivas.length > 0 && (
-            <div className="space-y-2 border-t border-zinc-200/80 pt-2.5 dark:border-white/10">
-              <p className="px-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
-                Tipo de producto
-              </p>
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          {mostrarSubcategorias ? (
-            <>
-              <button
-                type="button"
-                onClick={() => handleCambiarSubcategoria("ALL")}
-                className={`flex-1 min-w-[95px] sm:min-w-[110px] h-8 sm:h-8.5 px-3 rounded-lg border text-xs font-normal flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs ${
-                  subcategoriaActivaId === "ALL"
-                    ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
-                    : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-                }`}
-              >
-                <span>Todos</span>
-                <span
-                  className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
-                    subcategoriaActivaId === "ALL"
-                      ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30"
-                      : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
-                  }`}
-                >
-                  {conteoProductosPorCategoria[categoriaActivaId] || 0}
-                </span>
-              </button>
-
-              {subcategoriasActivas.map((sub) => {
-                const activa = subcategoriaActivaId === sub.id;
-                const countSub = conteoProductosPorSubcategoria[sub.id] || 0;
+          {/* Pre-cargas inteligentes por placa / motor */}
+          <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-white/5 space-y-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 block">
+              Pre-carga inteligente sugerida
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              {/* Botón 1: 20W-50 Galón */}
+              {(() => {
+                const enOrden = estaPreCargadoEnOrden("lub_oil_20w50");
                 return (
                   <button
-                    key={sub.id}
                     type="button"
-                    onClick={() => handleCambiarSubcategoria(sub.id)}
-                    className={`flex-1 min-w-[95px] sm:min-w-[110px] h-8 sm:h-8.5 px-2.5 sm:px-3 rounded-lg border text-xs font-normal flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs ${
-                      activa
-                        ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-100 shadow-xs"
-                        : "bg-white hover:bg-zinc-50 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-                    }`}
+                    onClick={() => {
+                      const item = BASE_LUBRICENTRO_POS_ITEMS.find((b) => b.id === "lub_oil_20w50")!;
+                      void handleAjustarItemBento(item, enOrden ? -1 : 1);
+                    }}
+                    className={`h-11 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-start gap-2 transition-all cursor-pointer select-none active:scale-95 shadow-2xs ${enOrden
+                        ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-400 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200"
+                        : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300"
+                      }`}
                   >
-                    <span className="text-sm leading-none shrink-0">{sub.icon}</span>
-                    <span className="whitespace-nowrap">
-                      {sub.label
-                        .replace(/^De\s+/i, "")
-                        .replace(/^Líquido\s+(de\s+)?/i, "")
-                        .replace(/^Valvulina\s*\/\s*/i, "")
-                        .split(/[\s/]+/)[0]}
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${enOrden ? "bg-emerald-500 text-white" : "border-2 border-zinc-300 text-transparent"
+                      }`}>
+                      ✓
                     </span>
-                    {countSub > 0 && (
-                      <span
-                        className={`text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md shrink-0 ${
-                          activa
-                            ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30"
-                            : "bg-zinc-100 dark:bg-white/15 text-zinc-700 dark:text-zinc-100"
-                        }`}
-                      >
-                        {countSub}
-                      </span>
-                    )}
+                    <span className="truncate text-left leading-tight">
+                      <span className="block font-black">20W-50</span>
+                      <span className="text-[10px] font-normal opacity-80">Galón</span>
+                    </span>
                   </button>
                 );
-              })}
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setMostrarSubcategorias(true)}
-              aria-label="Mostrar subcategorías"
-              className="min-w-[110px] h-8 sm:h-8.5 px-3 rounded-lg border bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100 text-xs font-normal inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-xs"
-            >
-              {subcategoriaActivaId === "ALL" || !subcategoriaSeleccionadaObj ? (
-                <>
-                  <span>Todos</span>
-                  <span className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30">
-                    {conteoProductosPorCategoria[categoriaActivaId] || 0}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="text-sm leading-none shrink-0">{subcategoriaSeleccionadaObj.icon}</span>
-                  <span className="whitespace-nowrap">
-                    {subcategoriaSeleccionadaObj.label
-                      .replace(/^De\s+/i, "")
-                      .replace(/^Líquido\s+(de\s+)?/i, "")
-                      .replace(/^Valvulina\s*\/\s*/i, "")
-                      .split(/[\s/]+/)[0]}
-                  </span>
-                  {(conteoProductosPorSubcategoria[subcategoriaSeleccionadaObj.id] || 0) > 0 && (
-                    <span className="text-xs leading-none tabular-nums px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-500/30">
-                      {conteoProductosPorSubcategoria[subcategoriaSeleccionadaObj.id]}
-                    </span>
-                  )}
-                </>
-              )}
-            </button>
-          )}
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-      )}
+              })()}
 
-      {/* =====================================================================
-          TIENDA UNIFICADA Y AUTOMÁTICA (Muestra productos al instante sin escribir)
-          ===================================================================== */}
-      <section
-        aria-label="Productos del catálogo"
-        className="space-y-3 rounded-2xl border border-zinc-200 bg-white p-3 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4"
-      >
-        {/* Barra superior: Buscador + Desplegable de Base (Sintético / Semisintético / Mineral) + Carrito */}
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 sm:text-base">
-              {pestanaTienda === "productos" ? "Productos" : "Servicios"}
-            </h2>
-            <p className="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400 sm:text-xs">
-              Toca una tarjeta para agregarla a la atención
-            </p>
+              {/* Botón 2: Filtro Aceite */}
+              {(() => {
+                const enOrden = estaPreCargadoEnOrden("lub_fil_aceite_std");
+                return (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const item = BASE_LUBRICENTRO_POS_ITEMS.find((b) => b.id === "lub_fil_aceite_std")!;
+                      void handleAjustarItemBento(item, enOrden ? -1 : 1);
+                    }}
+                    className={`h-11 px-2.5 rounded-xl border text-xs font-bold flex items-center justify-start gap-2 transition-all cursor-pointer select-none active:scale-95 shadow-2xs ${enOrden
+                        ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-400 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200"
+                        : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300"
+                      }`}
+                  >
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${enOrden ? "bg-emerald-500 text-white" : "border-2 border-zinc-300 text-transparent"
+                      }`}>
+                      ✓
+                    </span>
+                    <span className="truncate text-left leading-tight">
+                      <span className="block font-black">Filtro</span>
+                      <span className="text-[10px] font-normal opacity-80">Aceite</span>
+                    </span>
+                  </button>
+                );
+              })()}
+            </div>
           </div>
-          <span className="shrink-0 rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-medium tabular-nums text-zinc-600 dark:bg-white/10 dark:text-zinc-300">
-            {productosTiendaFiltrados.length} disponibles
-          </span>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative basis-full sm:basis-auto sm:flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">
-              🔍
+
+        {/* ===================================================================
+            TARJETA 2: SEMÁFORO AUTOMÁTICO (1 TOQUE = VENTA DIRECTA DEL POS)
+            =================================================================== */}
+        <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between min-h-[220px]">
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                <span className="text-base sm:text-lg">🚦</span>
+                <span>Semáforo Automático</span>
+              </h2>
+              <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
+                1 toque = POS
+              </span>
+            </div>
+
+            {/* Tablero minimalista de 6 íconos circulares de 1 sola palabra */}
+            <div className="grid grid-cols-3 gap-y-3.5 gap-x-2 place-items-center py-1">
+              {SEMAFORO_CIRCULOS.map((btn) => {
+                const activo = semaforoCirculosActivos[btn.id];
+                return (
+                  <div key={btn.id} className="flex flex-col items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => void handleToggleSemaforoCirculo(btn.id)}
+                      className={`w-13 h-13 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${activo
+                          ? "bg-rose-500 hover:bg-rose-600 text-white shadow-md shadow-rose-500/30 scale-105 ring-2 ring-rose-400/60"
+                          : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
+                        }`}
+                      title={`${btn.label}: Toca para cambiar estado y agregar automáticamente al carrito`}
+                    >
+                      {btn.iconSvg("w-6 h-6 sm:w-6.5 sm:h-6.5")}
+                    </button>
+                    <span className={`text-xs font-bold ${activo ? "text-rose-600 dark:text-rose-400" : "text-zinc-700 dark:text-zinc-300"}`}>
+                      {btn.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Autoventa sugerida / conectada al POS */}
+          <div className="mt-3 pt-2.5 border-t border-zinc-100 dark:border-white/5 text-center">
+            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate block">
+              {textoAlertaSemaforo}
             </span>
-            <input
-              type="text"
-              value={busquedaTexto}
-              onChange={(e) => setBusquedaTexto(e.target.value)}
-              placeholder={pestanaTienda === "productos" ? "Buscar producto..." : "Buscar servicio..."}
-              className="w-full h-9 pl-8 pr-8 rounded-lg bg-zinc-50/80 dark:bg-black/40 border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 shadow-2xs"
-            />
-            {busquedaTexto && (
+          </div>
+        </div>
+
+        {/* ===================================================================
+            TARJETA 3: CATÁLOGO CONTRAÍDO EN 1 SOLA LÍNEA (FILAS SUPERIORES)
+            =================================================================== */}
+        <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs space-y-3">
+          {/* Fila de 3 píldoras desplegables contraíbles + Buscador */}
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+            {/* Píldora 1: Categoría */}
+            <div className="relative flex-1 min-w-[90px]">
               <button
                 type="button"
-                onClick={() => setBusquedaTexto("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-white text-xs cursor-pointer"
+                onClick={() => {
+                  setMenuCatAbierto((prev) => !prev);
+                  setMenuSubcatAbierto(false);
+                  setMenuEnvaseDropdownAbierto(false);
+                }}
+                className="w-full h-9 px-2.5 rounded-xl border border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-400/40 dark:bg-blue-500/15 dark:text-blue-100 text-xs font-bold flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
+              >
+                <span className="truncate">{labelCategoriaActiva}</span>
+                <span className="text-[10px] opacity-75">▾</span>
+              </button>
+              {menuCatAbierto && (
+                <div className="absolute top-11 left-0 z-40 w-44 rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5">
+                  {OPCIONES_CATEGORIAS.map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        setCategoriaActivaId(cat.id);
+                        setMenuCatAbierto(false);
+                      }}
+                      className="w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+                    >
+                      <span>{cat.icon}</span>
+                      <span>{cat.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Píldora 2: Subcategoría */}
+            <div className="relative flex-1 min-w-[90px]">
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuSubcatAbierto((prev) => !prev);
+                  setMenuCatAbierto(false);
+                  setMenuEnvaseDropdownAbierto(false);
+                }}
+                className="w-full h-9 px-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200 text-xs font-bold flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
+              >
+                <span className="truncate">{labelSubcategoriaActiva}</span>
+                <span className="text-[10px] opacity-75">▾</span>
+              </button>
+              {menuSubcatAbierto && (
+                <div className="absolute top-11 left-0 z-40 w-44 rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5 max-h-56 overflow-y-auto">
+                  {opcionesSubcategoriasActuales.map((sub) => (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      onClick={() => {
+                        setSubcategoriaActivaId(sub.id);
+                        setMenuSubcatAbierto(false);
+                      }}
+                      className="w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+                    >
+                      <span>{sub.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Píldora 3: Envase */}
+            <div className="relative flex-1 min-w-[85px]">
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuEnvaseDropdownAbierto((prev) => !prev);
+                  setMenuCatAbierto(false);
+                  setMenuSubcatAbierto(false);
+                }}
+                className="w-full h-9 px-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200 text-xs font-bold flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
+              >
+                <span className="truncate">{envaseActivo || "Galón"}</span>
+                <span className="text-[10px] opacity-75">▾</span>
+              </button>
+              {menuEnvaseDropdownAbierto && (
+                <div className="absolute top-11 right-0 z-40 w-36 rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5">
+                  {["Galón", "Litro", "Cuarto", "Caneca", "Todos"].map((env) => (
+                    <button
+                      key={env}
+                      type="button"
+                      onClick={() => {
+                        setEnvaseActivo(env === "Todos" ? "" : env);
+                        setMenuEnvaseDropdownAbierto(false);
+                      }}
+                      className="w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+                    >
+                      <span>{env}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Buscador */}
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
+            <input
+              type="text"
+              value={busquedaBento}
+              onChange={(e) => setBusquedaBento(e.target.value)}
+              placeholder="Buscar..."
+              className="w-full h-9 pl-8 pr-7 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 outline-none focus:ring-1 focus:ring-blue-400 shadow-2xs"
+            />
+            {busquedaBento && (
+              <button
+                type="button"
+                onClick={() => setBusquedaBento("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 text-xs cursor-pointer"
               >
                 ✕
               </button>
             )}
           </div>
-
-          {pestanaTienda === "productos" && basesRapidas.length > 0 && (
-            <div ref={menuFiltroRef} className="relative shrink-0">
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuFiltroAbierto((prev) => !prev);
-                  setMenuEnvaseAbierto(false);
-                }}
-                className={`h-9 px-3 rounded-lg border text-xs font-normal flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs select-none active:scale-95 ${
-                  filtroBase
-                    ? "bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100 shadow-xs"
-                    : menuFiltroAbierto
-                    ? "bg-blue-50 dark:bg-blue-500/15 border-blue-400 dark:border-blue-500/40 text-blue-700 dark:text-blue-300"
-                    : "bg-zinc-50/80 dark:bg-black/40 hover:bg-zinc-100 dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-                }`}
-              >
-                <span className="truncate max-w-[110px] sm:max-w-none">
-                  {filtroBase || "Base"}
-                </span>
-                <svg
-                  className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                    menuFiltroAbierto ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2.5}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {menuFiltroAbierto && (
-                <div className="absolute right-0 top-full mt-1.5 w-44 rounded-xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/10 shadow-xl dark:shadow-2xl backdrop-blur-md p-1.5 space-y-0.5 z-40 animate-fade-in">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFiltroBase("");
-                      setMenuFiltroAbierto(false);
-                    }}
-                    className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-normal flex items-center justify-between transition-colors cursor-pointer ${
-                      !filtroBase
-                        ? "bg-blue-50 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-normal"
-                        : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
-                    }`}
-                  >
-                    <span>Todas las bases</span>
-                    {!filtroBase && <span className="text-xs">✓</span>}
-                  </button>
-
-                  <div className="my-1 border-t border-zinc-100 dark:border-white/5" />
-
-                  {basesRapidas.map((b) => {
-                    const val = b.value || b.label;
-                    const act = filtroBase.toLowerCase() === val.toLowerCase();
-                    return (
-                      <button
-                        key={b.id}
-                        type="button"
-                        onClick={() => {
-                          setFiltroBase(act ? "" : val);
-                          setMenuFiltroAbierto(false);
-                        }}
-                        className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-normal flex items-center justify-between transition-colors cursor-pointer ${
-                          act
-                            ? "bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-100 font-normal"
-                            : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
-                        }`}
-                      >
-                        <span>{b.label}</span>
-                        {act && <span className="text-xs">✓</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {pestanaTienda === "productos" && (
-          <div ref={menuEnvaseRef} className="relative shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                setMenuEnvaseAbierto((prev) => !prev);
-                setMenuFiltroAbierto(false);
-              }}
-              aria-expanded={menuEnvaseAbierto}
-              className={`h-9 px-3 rounded-lg border text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 ${
-                filtroEnvase
-                  ? "bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100"
-                  : "bg-zinc-50/80 dark:bg-black/40 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-              }`}
-            >
-              {filtroEnvase || "Envase"}
-              <svg
-                className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                  menuEnvaseAbierto ? "rotate-180" : ""
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth={2.5}
-                aria-hidden="true"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            {menuEnvaseAbierto && (
-              <div className="absolute right-0 top-full mt-1.5 w-36 rounded-xl bg-white dark:bg-[#121215] border border-zinc-200 dark:border-white/10 shadow-xl dark:shadow-2xl p-1.5 space-y-0.5 z-40 animate-fade-in">
-                {ENVASES_CERRADOS.map((envase) => (
-                  <button
-                    key={envase}
-                    type="button"
-                    onClick={() => {
-                      setFiltroEnvase((prev) => (prev === envase ? "" : envase));
-                      setMenuEnvaseAbierto(false);
-                    }}
-                    className={`w-full px-2.5 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
-                      filtroEnvase === envase
-                        ? "bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-100"
-                        : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
-                    }`}
-                  >
-                    {envase}
-                    {filtroEnvase === envase && <span aria-hidden="true">✓</span>}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          )}
         </div>
+      </div>
 
-
-        {/* Chips de filtros activos con botón de limpieza rápida */}
-        {pestanaTienda === "productos" && chipsFiltrosActivos.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            {chipsFiltrosActivos.map((chip) => (
-              <span
-                key={chip.key}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-500/30 text-[11px] font-normal text-blue-700 dark:text-blue-300"
-              >
-                <span>{chip.label}</span>
-                <button
-                  type="button"
-                  onClick={chip.onClear}
-                  className="hover:text-rose-500 font-normal pl-0.5 cursor-pointer"
-                >
-                  ✕
-                </button>
-              </span>
-            ))}
-            <button
-              type="button"
-              onClick={limpiarTodosLosFiltros}
-              className="text-[11px] font-normal text-rose-600 dark:text-rose-400 hover:underline px-1.5 cursor-pointer"
-            >
-              Limpiar filtros
-            </button>
+      {/* =====================================================================
+          CUADRÍCULA DE PRODUCTOS DEL CATÁLOGO BENTO (OPCIONES LIMPIAS)
+          ===================================================================== */}
+      <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 shadow-2xs">
+        {productosBentoAMostrar.length === 0 ? (
+          <div className="py-12 text-center text-zinc-400 space-y-1.5">
+            <span className="text-3xl block">🛢️</span>
+            <p className="text-xs sm:text-sm font-semibold">No se encontraron productos con los filtros seleccionados</p>
           </div>
-        )}
-
-        {/* Grid de productos automático, intuitivo y táctil para móvil y escritorio */}
-        {productosTiendaFiltrados.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-4 xl:grid-cols-5">
-            {productosTiendaFiltrados.map((prod) => {
-              const { presentation, price } = obtenerPresentacionYPrecio(prod);
-              const palabraClave = obtenerPalabraClaveProducto(prod);
-              const qtyEnPedido = obtenerCantidadEnPedido(prod, presentation);
-              const estaEnPedido = qtyEnPedido > 0;
-
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-3.5">
+            {productosBentoAMostrar.map((prod) => {
+              const cantEnOrden = obtenerCantidadItemEnOrden(prod.id);
+              const enOrden = cantEnOrden > 0;
               return (
                 <div
                   key={prod.id}
-                  onClick={(e) => {
-                    const target = e.target as HTMLElement;
-                    if (!target.closest("button")) {
-                      void handleAjustarCantidadProducto(prod, 1, presentation, price);
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
-                      e.preventDefault();
-                      void handleAjustarCantidadProducto(prod, 1, presentation, price);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Agregar ${palabraClave} al carrito`}
-                  aria-pressed={estaEnPedido}
-                  className={`relative min-h-48 p-3 sm:p-4 rounded-2xl border flex flex-col items-center justify-between gap-3 transition-all shadow-2xs cursor-pointer select-none active:scale-[0.98] ${
-                    estaEnPedido
-                      ? "bg-blue-50 dark:bg-blue-500/[0.08] border-blue-300 dark:border-blue-400/60 ring-1 ring-blue-300/40"
-                      : "bg-white dark:bg-white/[0.02] hover:border-blue-400/60 dark:hover:border-blue-500/40 border-zinc-200 dark:border-white/10"
-                  }`}
+                  onClick={() => void handleAjustarItemBento(prod, 1)}
+                  className={`group relative flex flex-col items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none active:scale-[0.98] min-h-[175px] shadow-2xs ${enOrden
+                      ? "bg-blue-50/70 dark:bg-blue-500/10 border-blue-400 dark:border-blue-400/50 ring-2 ring-blue-300/60 dark:ring-blue-400/30 shadow-xs"
+                      : "bg-white hover:bg-zinc-50 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/40"
+                    }`}
                 >
-                  {estaEnPedido && (
-                    <div className="absolute top-2 right-2 flex items-center gap-1">
-                      <span className="min-w-7 h-7 px-1.5 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center tabular-nums">
-                        {qtyEnPedido}
-                      </span>
-                      <button
-                        type="button"
-                        disabled={agregandoId === prod.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void handleAjustarCantidadProducto(prod, -1, presentation, price);
-                        }}
-                        className="w-7 h-7 rounded-full bg-white dark:bg-black/40 border border-emerald-400/60 text-zinc-800 dark:text-white font-bold text-sm flex items-center justify-center cursor-pointer active:scale-90 transition-all disabled:opacity-50"
-                        aria-label={`Restar ${palabraClave} del carrito`}
-                        title="Restar 1"
-                      >
-                        −
-                      </button>
-                    </div>
+                  {/* Botón restar "−" arriba a la izquierda */}
+                  {enOrden && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleAjustarItemBento(prod, -1);
+                      }}
+                      className="absolute top-2 left-2 w-7 h-7 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 text-sm font-bold flex items-center justify-center shadow-xs active:scale-90 transition-all z-10 cursor-pointer"
+                      title="Restar 1"
+                    >
+                      −
+                    </button>
                   )}
-                  <div className="mt-1 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-zinc-100 bg-zinc-50 p-2 dark:border-white/5 dark:bg-black/20 sm:h-24 sm:w-24">
+
+                  {/* Badge contador verde arriba a la derecha */}
+                  {enOrden && (
+                    <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500 text-white shadow-xs z-10">
+                      +{cantEnOrden}
+                    </span>
+                  )}
+
+                  {/* Gráfico de botella o imagen del producto */}
+                  <div className="w-20 h-24 sm:w-24 sm:h-28 flex items-center justify-center shrink-0 mt-1">
                     {prod.imageUrl ? (
-                      <img
-                        src={prod.imageUrl}
-                        alt=""
-                        className="w-full h-full object-contain"
-                      />
+                      <img src={prod.imageUrl} alt={prod.name} className="w-full h-full object-contain" />
                     ) : (
-                      <span className="text-3xl" aria-hidden="true">
-                        {categoriasActivas.find((c) => c.id === prod.lubCategoryId)?.icon || "🛢️"}
-                      </span>
+                      <BotellaAceiteGrafico viscosidad={prod.viscosity || prod.name} color={prod.color || "#eab308"} />
                     )}
                   </div>
-                  <div className="flex w-full flex-col items-center gap-1">
-                    <span className="max-w-full truncate text-center text-lg font-bold leading-tight text-zinc-900 dark:text-zinc-100 sm:text-xl">
-                      {palabraClave.toUpperCase()}
+
+                  {/* Texto grande de viscosidad y precio */}
+                  <div className="w-full text-center mt-2 px-1">
+                    <span className="text-base sm:text-lg font-black tracking-tight text-zinc-900 dark:text-white block truncate">
+                      {prod.viscosity || prod.name}
                     </span>
-                    <span className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                      ${price.toFixed(2)}
+                    <span className="text-xs sm:text-sm font-bold font-mono text-zinc-700 dark:text-zinc-300 mt-0.5 block">
+                      ${Number(prod.price || 0).toFixed(2)}
                     </span>
                   </div>
                 </div>
               );
             })}
           </div>
-        ) : (
-          <div className="flex min-h-36 flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-300 bg-zinc-50/70 px-4 py-8 text-center dark:border-white/15 dark:bg-black/20">
-            <span className="mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-white text-xl shadow-2xs dark:bg-white/10">
-              {cargando ? "…" : "🔎"}
-            </span>
-            <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">
-              {cargando
-                ? "Cargando catálogo"
-                : `No hay ${pestanaTienda === "productos" ? "productos" : "servicios"} para mostrar`}
-            </p>
-            <p className="mt-1 max-w-sm text-xs text-zinc-500 dark:text-zinc-400">
-              {cargando
-                ? "Estamos actualizando los productos disponibles."
-                : pestanaTienda === "productos"
-                ? "Prueba otra categoría o elimina algunos filtros para ver más opciones."
-                : "Prueba otra búsqueda para encontrar un servicio disponible."}
-            </p>
-          </div>
         )}
-      </section>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
 
-      {/* Barra inferior fija/flotante en móvil cuando hay productos seleccionados o botón directo */}
-      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-2 p-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))] sm:sticky sm:bottom-2 sm:mx-auto sm:max-w-7xl sm:p-3 sm:rounded-xl bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border border-zinc-200 dark:border-white/15 shadow-lg">
-        <div
-          onClick={() => setDrawerCarritoAbierto(true)}
-          className="flex items-center gap-2.5 min-w-0 cursor-pointer"
-        >
-          <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/20 border border-blue-200 dark:border-blue-500/30 flex items-center justify-center text-sm shrink-0">
+      {/* =====================================================================
+          BARRA INFERIOR FIJA: TOTAL, PRÓXIMO CONTROL Y BOTÓN SIGUIENTE
+          ===================================================================== */}
+      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 p-3 sm:p-3.5 bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border-t sm:border border-zinc-200 dark:border-white/15 shadow-xl sm:rounded-2xl sm:bottom-3 sm:inset-x-4 sm:max-w-6xl sm:mx-auto pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/20 border border-blue-300 dark:border-blue-400/40 flex items-center justify-center text-lg shrink-0">
             🛒
           </div>
-          <div className="min-w-0 leading-snug">
-            <span className="text-sm sm:text-base font-normal text-zinc-900 dark:text-white block truncate">
-              {totalUnidadesCarrito} {totalUnidadesCarrito === 1 ? "producto" : "productos"}
+          <div className="min-w-0 leading-tight">
+            <span className="text-base sm:text-lg font-bold font-mono text-zinc-900 dark:text-white block tabular-nums">
+              Total: ${totalMontoActual.toFixed(2)}
             </span>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-              <span className="text-sm sm:text-base font-normal text-emerald-600 dark:text-emerald-400">
-                Total: ${totalMontoCarrito.toFixed(2)}
-              </span>
-              {intervaloAceiteEnCarrito !== null && (
-                <span className="px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-white/10 text-xs font-medium text-zinc-700 dark:text-zinc-200">
-                  +{formatearKilometraje(intervaloAceiteEnCarrito)} km
-                </span>
-              )}
-              {ordenActiva?.id && proximoCambioKm !== null && (
-                <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                  Próx: {formatearKilometraje(proximoCambioKm)} km
-                </span>
-              )}
-            </div>
+            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5 block">
+              Próx: {kmProximo.toLocaleString()} km
+            </span>
           </div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
-            onClick={() => void handleSiguienteLubricentro()}
-            disabled={guardandoSeguimiento}
-            className="h-10 sm:h-9 px-4 sm:px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-normal cursor-pointer shadow-xs active:scale-95 transition-all disabled:opacity-60"
+            onClick={onIrASiguiente || onIrAAvisoYFirma}
+            className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
           >
-            Siguiente →
+            <span>Siguiente</span>
+            <span>→</span>
           </button>
         </div>
       </div>
-
-      {/* =====================================================================
-          DRAWER / MODAL DE CARRITO DE LUBRICENTRO Y ORDEN ACTIVA
-          ===================================================================== */}
-      {drawerCarritoAbierto && (
-        <div
-          onClick={() => setDrawerCarritoAbierto(false)}
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex justify-end animate-fade-in"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md h-full bg-white dark:bg-[#111113] text-zinc-900 dark:text-zinc-100 border-l border-zinc-200 dark:border-white/10 p-5 flex flex-col justify-between overflow-y-auto"
-          >
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-3">
-                <div>
-                  <h3 className="text-base font-normal">🛒 Carrito de Lubricentro</h3>
-                  <p className="text-xs text-zinc-500">
-                    {ordenActiva?.id
-                      ? `Sincronizado con Orden Activa #${ordenActiva.orderNumber || ordenActiva.plate}`
-                      : "Venta directa hacia Caja POS"}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setDrawerCarritoAbierto(false)}
-                  className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-white/5 text-xs font-normal cursor-pointer"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Si hay orden activa, muestra los ítems de la orden */}
-              {ordenActiva?.id ? (
-                <div className="space-y-2.5">
-                  {itemsOrden.length === 0 ? (
-                    <p className="text-xs text-zinc-400 italic py-6 text-center">
-                      No hay productos en la orden activa todavía.
-                    </p>
-                  ) : (
-                    itemsOrden.map((it) => (
-                      <div
-                        key={it.id}
-                        className="p-3 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex items-center justify-between gap-2"
-                      >
-                        <div className="min-w-0">
-                          <span className="text-xs font-normal block truncate">
-                            {it.name}
-                          </span>
-                          <span className="text-[11px] font-mono text-zinc-500">
-                            {it.qty || 1} x ${Number(it.price || 0).toFixed(2)} ={" "}
-                            <span className="text-zinc-900 dark:text-white">
-                              ${((Number(it.qty) || 1) * Number(it.price || 0)).toFixed(2)}
-                            </span>
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onActualizarItemsOrden(
-                              itemsOrden.filter((x) => x.id !== it.id)
-                            )
-                          }
-                          className="text-rose-600 text-xs font-normal px-2 cursor-pointer"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {carritoDirecto.length === 0 ? (
-                    <p className="text-xs text-zinc-400 italic py-6 text-center">
-                      El carrito está vacío. Selecciona productos del catálogo.
-                    </p>
-                  ) : (
-                    <>
-                      <input
-                        type="text"
-                        value={clienteVentaDirecta}
-                        onChange={(e) => setClienteVentaDirecta(e.target.value)}
-                        placeholder="Nombre del cliente (opcional)..."
-                        className="w-full h-9 px-3 rounded-xl border border-zinc-300 dark:border-white/15 bg-white dark:bg-black/40 text-xs"
-                      />
-                      {carritoDirecto.map((c) => (
-                        <div
-                          key={c.key}
-                          className="p-3 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex items-center justify-between gap-2"
-                        >
-                          <div className="min-w-0">
-                            <span className="text-xs font-normal block truncate">
-                              {c.name} ({c.presentation})
-                            </span>
-                            <span className="text-[11px] font-mono text-zinc-500">
-                              {c.qty} x ${c.price.toFixed(2)} ={" "}
-                              <span className="text-zinc-900 dark:text-white">
-                                ${(c.qty * c.price).toFixed(2)}
-                              </span>
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setCarritoDirecto((prev) =>
-                                prev.filter((x) => x.key !== c.key)
-                              )
-                            }
-                            className="text-rose-600 text-xs font-normal px-2 cursor-pointer"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="pt-4 border-t border-zinc-200 dark:border-white/10 space-y-3">
-              {ordenActiva?.id ? (
-                <>
-                  <div className="flex items-center justify-between text-sm font-normal">
-                    <span>Subtotal Orden:</span>
-                    <span className="font-mono text-blue-600 dark:text-blue-400">
-                      $
-                      {itemsOrden
-                        .reduce(
-                          (acc, it) =>
-                            acc + (Number(it.price) || 0) * (Number(it.qty) || 1),
-                          0
-                        )
-                        .toFixed(2)}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDrawerCarritoAbierto(false);
-                      onIrAAvisoYFirma();
-                    }}
-                    className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer"
-                  >
-                    Ir a Aviso, Firma y Enviar a POS →
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between text-sm font-normal">
-                    <span>Total Carrito:</span>
-                    <span className="font-mono text-blue-600 dark:text-blue-400">
-                      ${totalMontoCarrito.toFixed(2)}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={carritoDirecto.length === 0 || enviandoPedidoPos}
-                    onClick={handleEnviarCarritoDirectoAPos}
-                    className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-300 text-white text-xs font-normal cursor-pointer"
-                  >
-                    {enviandoPedidoPos
-                      ? "Validando stock y enviando a POS..."
-                      : "💳 Enviar Pedido a Caja POS"}
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* =====================================================================
           MODALES DE DETALLE, CREACIÓN/EDICIÓN DE PRODUCTO Y CONFIGURACIÓN MANUAL

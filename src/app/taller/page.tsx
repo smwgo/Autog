@@ -717,15 +717,15 @@ export const MODULOS_ESPECIALIDADES = [
     shortName: "Carwash",
     name: "Car Wash & Detailing",
     desc: "Lavado premium, aspirado y estética",
-    color: "purple",
-    bgClass: "bg-purple-500/10 dark:bg-purple-500/15",
-    borderClass: "border-purple-500/30 dark:border-purple-400/35",
-    textClass: "text-purple-600 dark:text-purple-300",
-    shadowClass: "shadow-sm shadow-purple-500/10",
-    dotClass: "bg-purple-500",
+    color: "teal",
+    bgClass: "bg-teal-500/10 dark:bg-teal-500/15",
+    borderClass: "border-teal-500/40 dark:border-teal-400/45",
+    textClass: "text-teal-700 dark:text-teal-300",
+    shadowClass: "shadow-sm shadow-teal-500/10",
+    dotClass: "bg-teal-500",
     svg: (className = "w-4 h-4") => (
       <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
       </svg>
     ),
   },
@@ -5022,12 +5022,12 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                         <span className="block text-base sm:text-sm font-bold sm:font-semibold text-zinc-900 dark:text-white truncate">
                           {nombreVehiculo}
                         </span>
-                        <span className="mt-1 flex items-center gap-2 text-xs sm:text-[11px] text-zinc-500 dark:text-zinc-400">
-                          <span className="font-mono tracking-wider text-blue-600 dark:text-blue-300 truncate font-bold">
+                        <span className="mt-1 flex items-center gap-2.5 text-sm sm:text-xs text-zinc-600 dark:text-zinc-300">
+                          <span className="font-mono tracking-wider text-blue-600 dark:text-blue-400 truncate text-base sm:text-sm font-black">
                             {auto.plate}
                           </span>
                           {anioVehiculo && (
-                            <span className="shrink-0 border-l border-zinc-300 dark:border-white/15 pl-2 font-medium">
+                            <span className="shrink-0 border-l-2 border-zinc-300 dark:border-white/25 pl-2.5 font-bold text-sm sm:text-xs text-zinc-700 dark:text-zinc-300">
                               {anioVehiculo}
                             </span>
                           )}
