@@ -40,8 +40,6 @@ export interface CarWashVistaAppProps {
   combos: CarWashAppCombo[];
   comboSeleccionado: string;
   items: CarWashAppItem[];
-  totalUnidades: number;
-  totalMonto: number;
   obtenerCantidad: (item: CarWashAppItem) => number;
   onAjustarItem: (item: CarWashAppItem, delta: number) => void;
   onCiclarAfeccion: (clave: string) => void;
@@ -49,7 +47,6 @@ export interface CarWashVistaAppProps {
   onSubirFoto: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onAplicarCombo: (combo: CarWashAppCombo) => void;
   onAbrirConfig: () => void;
-  onSiguiente: () => void;
 }
 
 const colorNivel = (nivel: NivelAfeccionApp) =>
@@ -138,8 +135,6 @@ export default function CarWashVistaApp(props: CarWashVistaAppProps) {
     combos,
     comboSeleccionado,
     items,
-    totalUnidades,
-    totalMonto,
     obtenerCantidad,
     onAjustarItem,
     onCiclarAfeccion,
@@ -147,7 +142,6 @@ export default function CarWashVistaApp(props: CarWashVistaAppProps) {
     onSubirFoto,
     onAplicarCombo,
     onAbrirConfig,
-    onSiguiente,
   } = props;
 
   const fileRef = useRef<HTMLInputElement>(null);
@@ -394,23 +388,6 @@ export default function CarWashVistaApp(props: CarWashVistaAppProps) {
         </div>
       </div>
 
-      {/* Barra inferior fija estilo app */}
-      <div className="fixed inset-x-3 bottom-3 z-30 flex items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white/95 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-zinc-900 shadow-xl backdrop-blur-md dark:border-white/10 dark:bg-[#18181b]/95 dark:text-white sm:inset-x-4 sm:mx-auto sm:max-w-6xl">
-        <div className="min-w-0 leading-tight">
-          <p className="text-sm sm:text-base font-semibold truncate">
-            {totalUnidades} {totalUnidades === 1 ? "Servicio" : "Servicios"} • Total: <span className="font-black">${totalMonto.toFixed(2)}</span>
-          </p>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">⏱️ {minutos > 0 ? minutos : 35}m</p>
-        </div>
-        <button
-          type="button"
-          onClick={onSiguiente}
-          className="flex h-11 cursor-pointer items-center gap-1.5 rounded-xl bg-teal-600 px-5 text-sm font-bold text-white shadow-sm transition-all hover:bg-teal-700 active:scale-95 dark:bg-teal-500 dark:text-zinc-950 dark:hover:bg-teal-400 sm:px-7"
-        >
-          <span>Siguiente</span>
-          <span>→</span>
-        </button>
-      </div>
     </div>
   );
 }

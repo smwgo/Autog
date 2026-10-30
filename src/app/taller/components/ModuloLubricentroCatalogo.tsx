@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import type {
   LubricentroConfigData,
   LubPresentationVariant,
@@ -22,11 +23,12 @@ export interface ModuloLubricentroCatalogoProps {
   historialAnterior?: any[];
   itemsOrden: any[];
   onActualizarItemsOrden: (nuevosItems: any[]) => Promise<void>;
-  onIrAAvisoYFirma: () => void;
-  onIrASiguiente?: () => void;
-  nombreSiguiente?: string;
   mostrarToast?: (msg: string, tipo?: "ok" | "err") => void;
   triggerAbrirConfig?: number;
+  onIrAAvisoYFirma: () => void;
+  onIrAAnterior?: () => void;
+  onIrASiguiente?: () => void;
+  navegacionActiva?: boolean;
   onGuardarDatosLubricentro?: (
     niveles: Record<string, EstadoNivelLubricentro>,
     nextOilChangeKm: number | null,
@@ -510,12 +512,13 @@ export default function ModuloLubricentroCatalogo({
   historialAnterior = [],
   itemsOrden,
   onActualizarItemsOrden,
-  onIrAAvisoYFirma,
-  onIrASiguiente,
-  nombreSiguiente,
   mostrarToast,
   triggerAbrirConfig,
   onGuardarDatosLubricentro,
+  onIrAAvisoYFirma,
+  onIrAAnterior,
+  onIrASiguiente,
+  navegacionActiva = false,
 }: ModuloLubricentroCatalogoProps) {
   // Inicializar y sincronizar desde Neon PostgreSQL
   const [config, setConfig] = useState<LubricentroConfigData>(() =>
@@ -3390,35 +3393,31 @@ export default function ModuloLubricentroCatalogo({
         )}
       </div>
 
-      {/* =====================================================================
-          BARRA INFERIOR FIJA: TOTAL, PRÓXIMO CONTROL Y BOTÓN SIGUIENTE
-          ===================================================================== */}
-      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 p-3 sm:p-3.5 bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border-t sm:border border-zinc-200 dark:border-white/15 shadow-xl sm:rounded-2xl sm:bottom-3 sm:inset-x-4 sm:max-w-6xl sm:mx-auto pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/20 border border-blue-300 dark:border-blue-400/40 flex items-center justify-center text-lg shrink-0">
-            🛒
-          </div>
-          <div className="min-w-0 leading-tight">
-            <span className="text-base sm:text-lg font-bold font-mono text-zinc-900 dark:text-white block tabular-nums">
-              Total: ${totalMontoActual.toFixed(2)}
-            </span>
-            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5 block">
-              Próx: {kmProximo.toLocaleString()} km
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={onIrASiguiente || onIrAAvisoYFirma}
-            className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
-          >
-            <span>Siguiente</span>
-            <span>→</span>
-          </button>
-        </div>
-      </div>
+      {navegacionActiva && typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 p-3 sm:p-3.5 bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border-t sm:border border-zinc-200 dark:border-white/15 shadow-xl sm:rounded-2xl sm:bottom-3 sm:max-w-[1440px] sm:mx-auto pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+            <div className="flex w-full items-center justify-between gap-2">
+              {onIrAAnterior && (
+                <button
+                  type="button"
+                  onClick={onIrAAnterior}
+                  className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-700 text-xs sm:text-sm font-semibold cursor-pointer transition-all hover:bg-zinc-200 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
+                >
+                  ← Anterior
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => void handleSiguienteLubricentro()}
+                className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
+              >
+                <span>Siguiente</span>
+                <span>→</span>
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
 
       {/* =====================================================================
           MODALES DE DETALLE, CREACIÓN/EDICIÓN DE PRODUCTO Y CONFIGURACIÓN MANUAL

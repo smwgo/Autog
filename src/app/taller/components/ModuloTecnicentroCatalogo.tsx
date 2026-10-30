@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import type {
   TecnicentroConfigData,
   TecnicentroPackage,
@@ -20,10 +21,10 @@ export interface ModuloTecnicentroCatalogoProps {
   itemsOrden: any[];
   mostrarToast: (msg: string, tipo?: "ok" | "err") => void;
   onActualizarItemsOrden: (nuevosItems: any[]) => Promise<void>;
-  onIrAAvisoYFirma: () => void;
-  onIrASiguiente?: () => void;
-  nombreSiguiente?: string;
   triggerAbrirConfig?: number;
+  onIrAAvisoYFirma: () => void;
+  onIrAAnterior?: () => void;
+  navegacionActiva?: boolean;
 }
 
 // ============================================================================
@@ -373,9 +374,10 @@ export default function ModuloTecnicentroCatalogo({
   itemsOrden,
   mostrarToast,
   onActualizarItemsOrden,
-  onIrAAvisoYFirma,
-  onIrASiguiente,
   triggerAbrirConfig,
+  onIrAAvisoYFirma,
+  onIrAAnterior,
+  navegacionActiva = false,
 }: ModuloTecnicentroCatalogoProps) {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -605,13 +607,6 @@ export default function ModuloTecnicentroCatalogo({
 
   const totalUnidadesTecnicentro = useMemo(() => {
     return itemsTecnicentroEnOrden.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
-  }, [itemsTecnicentroEnOrden]);
-
-  const totalMontoTecnicentro = useMemo(() => {
-    return itemsTecnicentroEnOrden.reduce(
-      (acc, it) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1),
-      0
-    );
   }, [itemsTecnicentroEnOrden]);
 
   // Conteos por categoría
@@ -1125,46 +1120,6 @@ export default function ModuloTecnicentroCatalogo({
     }
   };
 
-  // 4. Cálculo automático del próximo control (+10,000 km)
-  const tieneServicioControlKm = useMemo(() => {
-    return (itemsOrden || []).some((it) => {
-      const text = `${it.name || ""} ${it.code || ""} ${it.category || ""} ${it.subCategory || ""}`.toLowerCase();
-      return (
-        text.includes("alineac") ||
-        text.includes("balanceo") ||
-        text.includes("rotac") ||
-        text.includes("llanta") ||
-        text.includes("neumat") ||
-        text.includes("enllant") ||
-        text.includes("montaje") ||
-        it.type === "PART" ||
-        it.category === "Llantas" ||
-        it.subCategory === "LLANTAS" ||
-        it.subCategory === "ALINEACION" ||
-        it.subCategory === "ENLLANTAJE"
-      );
-    });
-  }, [itemsOrden]);
-
-  const proximoControlData = useMemo(() => {
-    if (!tieneServicioControlKm) return null;
-    const kmRaw = ordenActiva?.mileage || ordenActiva?.km || 0;
-    const kmActual =
-      typeof kmRaw === "number" ? kmRaw : parseInt(String(kmRaw).replace(/\D/g, ""), 10) || 0;
-
-    if (kmActual > 0) {
-      const proxKm = kmActual + 10000;
-      return {
-        textoPildora: `+10.000 km (${proxKm.toLocaleString()} km)`,
-        kmProximo: proxKm,
-      };
-    }
-    return {
-      textoPildora: "+10.000 km",
-      kmProximo: null,
-    };
-  }, [tieneServicioControlKm, ordenActiva?.mileage, ordenActiva?.km]);
-
   // Guardar configuración administrativa
   const handleSaveConfigAdmin = async (updatedConfig: TecnicentroConfigData) => {
     const res = await fetch("/api/taller/tecnicentro", {
@@ -1323,10 +1278,6 @@ export default function ModuloTecnicentroCatalogo({
       return true;
     });
   }, [todosLosItemsPOS, categoriaActivaId, subcategoriaActivaId, rinActivo, busquedaTec]);
-
-  const totalMinutosTec = React.useMemo(() => {
-    return itemsTecnicentroEnOrden.reduce((acc, it) => acc + (Number(it.estimatedMinutes) || 30), 0);
-  }, [itemsTecnicentroEnOrden]);
 
   const sugerenciaSemaforoBento = React.useMemo(() => {
     const alertas = SEMAFORO_TREN_DEF.filter(d => semaforoBentoEstados[d.id] === 'alerta' || semaforoBentoEstados[d.id] === 'revisar');
@@ -1678,33 +1629,31 @@ export default function ModuloTecnicentroCatalogo({
         </div>
       </div>
 
-      {/* BARRA INFERIOR FIJA */}
-      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 p-3 sm:p-3.5 bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border-t sm:border border-zinc-200 dark:border-white/15 shadow-xl sm:rounded-2xl sm:bottom-3 sm:inset-x-4 sm:max-w-6xl sm:mx-auto pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-teal-100 dark:bg-teal-500/20 border border-teal-300 dark:border-teal-400/40 flex items-center justify-center text-base shrink-0">🛒</div>
-          <div className="min-w-0 leading-tight">
-            <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white block">
-              {totalUnidadesTecnicentro} {totalUnidadesTecnicentro === 1 ? 'servicio' : 'servicios'} | Total:{' '}
-              <span className="text-emerald-600 dark:text-emerald-400">${totalMontoTecnicentro.toFixed(2)}</span>
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">⏱️ {totalMinutosTec} min</span>
-              {proximoControlData && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
-                  🛞 {proximoControlData.textoPildora}
-                </span>
+      {navegacionActiva && typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 p-3 sm:p-3.5 bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border-t sm:border border-zinc-200 dark:border-white/15 shadow-xl sm:rounded-2xl sm:bottom-3 sm:max-w-[1440px] sm:mx-auto pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+            <div className="flex w-full items-center justify-between gap-2">
+              {onIrAAnterior && (
+                <button
+                  type="button"
+                  onClick={onIrAAnterior}
+                  className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-700 text-xs sm:text-sm font-semibold cursor-pointer transition-all hover:bg-zinc-200 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
+                >
+                  ← Anterior
+                </button>
               )}
+              <button
+                type="button"
+                onClick={onIrAAvisoYFirma}
+                className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
+              >
+                <span>Siguiente</span>
+                <span>→</span>
+              </button>
             </div>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onIrASiguiente || onIrAAvisoYFirma}
-          className="h-10 sm:h-11 px-5 sm:px-7 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
-        >
-          <span>Siguiente</span><span>→</span>
-        </button>
-      </div>
+          </div>,
+          document.body
+        )}
 
             {/* Modales administrativos opcionales (preservados) */}
       {/* Modales administrativos opcionales (preservados) */}

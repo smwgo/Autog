@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import CarWashVistaApp from "./CarWashVistaApp";
 import type {
   CarWashConfigData,
@@ -20,11 +21,12 @@ export interface ModuloCarWashCatalogoProps {
   itemsOrden: any[];
   mostrarToast: (msg: string, tipo?: "ok" | "err") => void;
   onActualizarItemsOrden: (nuevosItems: any[]) => Promise<void>;
-  onIrAAvisoYFirma: () => void;
-  onIrASiguiente?: () => void;
-  nombreSiguiente?: string;
   triggerAbrirConfig?: number;
   vistaApp?: boolean;
+  onIrAAvisoYFirma: () => void;
+  onIrAAnterior?: () => void;
+  onIrASiguiente?: () => void;
+  navegacionActiva?: boolean;
 }
 
 // ============================================================================
@@ -558,10 +560,12 @@ export default function ModuloCarWashCatalogo({
   itemsOrden,
   mostrarToast,
   onActualizarItemsOrden,
-  onIrAAvisoYFirma,
-  onIrASiguiente,
   triggerAbrirConfig,
   vistaApp = false,
+  onIrAAvisoYFirma,
+  onIrAAnterior,
+  onIrASiguiente,
+  navegacionActiva = false,
 }: ModuloCarWashCatalogoProps) {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -836,13 +840,6 @@ export default function ModuloCarWashCatalogo({
 
   const totalUnidadesCarWash = useMemo(() => {
     return itemsCarWashEnOrden.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
-  }, [itemsCarWashEnOrden]);
-
-  const totalMontoCarWash = useMemo(() => {
-    return itemsCarWashEnOrden.reduce(
-      (acc, it) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1),
-      0
-    );
   }, [itemsCarWashEnOrden]);
 
   // Cálculo automático del tiempo estimado de lavado según los servicios seleccionados
@@ -1508,8 +1505,6 @@ export default function ModuloCarWashCatalogo({
           combos={CARWASH_COMBOS}
           comboSeleccionado={comboSeleccionado}
           items={todosLosItemsPOS.filter((it) => it.kind !== "PRODUCT").slice(0, 12)}
-          totalUnidades={totalUnidadesCarWash}
-          totalMonto={totalMontoCarWash}
           obtenerCantidad={(item) => obtenerCantidadEnPedido(item)}
           onAjustarItem={(item, delta) => void handleAjustarCantidadItem(item, delta)}
           onCiclarAfeccion={handleCiclarEstadoAfeccion}
@@ -1521,7 +1516,6 @@ export default function ModuloCarWashCatalogo({
             if (def) void handleAplicarCombo(def);
           }}
           onAbrirConfig={() => setConfigModalOpen(true)}
-          onSiguiente={onIrASiguiente || onIrAAvisoYFirma}
         />
       ) : (
       <>
@@ -1961,33 +1955,34 @@ export default function ModuloCarWashCatalogo({
         )}
       </div>
 
-      {/* =====================================================================
-          BARRA INFERIOR FIJA: TOTAL, TIEMPO ESTIMADO Y BOTÓN SIGUIENTE
-          ===================================================================== */}
-      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 p-3 sm:p-3.5 bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border-t sm:border border-zinc-200 dark:border-white/15 shadow-xl sm:rounded-2xl sm:bottom-3 sm:inset-x-4 sm:max-w-6xl sm:mx-auto pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-400/40 flex items-center gap-2 shrink-0">
-            <span className="text-base sm:text-lg">🛒</span>
-            <span className="text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-200 font-mono">
-              {totalUnidadesCarWash} {totalUnidadesCarWash === 1 ? "servicio" : "servicios"} | Total: ${totalMontoCarWash.toFixed(2)} · ⏱️ {totalMinutosEstimados > 0 ? `${totalMinutosEstimados} min` : "45 min"}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={onIrASiguiente || onIrAAvisoYFirma}
-            className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
-          >
-            <span>Siguiente</span>
-            <span>→</span>
-          </button>
-        </div>
-      </div>
-      
       </>
       )}
+
+      {navegacionActiva && typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 p-3 sm:p-3.5 bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border-t sm:border border-zinc-200 dark:border-white/15 shadow-xl sm:rounded-2xl sm:bottom-3 sm:max-w-[1440px] sm:mx-auto pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+            <div className="flex w-full items-center justify-between gap-2">
+              {onIrAAnterior && (
+                <button
+                  type="button"
+                  onClick={onIrAAnterior}
+                  className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-700 text-xs sm:text-sm font-semibold cursor-pointer transition-all hover:bg-zinc-200 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
+                >
+                  ← Anterior
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onIrASiguiente || onIrAAvisoYFirma}
+                className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
+              >
+                <span>Siguiente</span>
+                <span>→</span>
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
 
       {/* Modales administrativos opcionales (preservados) */}
       {detailModalItem && config && (

@@ -683,12 +683,6 @@ export default function ModalFormularioRapido({
                   {ordenActiva?.items?.length || 0} en orden
                 </span>
               </div>
-              <div className="rounded-xl border border-zinc-200/70 bg-zinc-50 p-3 dark:border-white/5 dark:bg-black/20">
-                <p className="text-xl font-black text-zinc-900 dark:text-white">${total.toFixed(2)}</p>
-                <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">
-                  Total de servicios ingresados
-                </p>
-              </div>
             </div>
           </div>
         </div>
@@ -979,7 +973,6 @@ export default function ModalFormularioRapido({
             <div className="mb-2 flex items-center justify-between gap-2">
               <h2 className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white">
                 <span>🧰</span>
-                <span>Productos / Servicios</span>
               </h2>
             </div>
             <div className="grid grid-cols-3 gap-2">
@@ -1066,13 +1059,11 @@ export default function ModalFormularioRapido({
             <div className="min-w-0">
               <h3 className="text-sm font-bold text-zinc-900 dark:text-white leading-none truncate">
                 {modoInline
-                  ? `Registro manual de ${
-                      especialidad === "lubricentro"
-                        ? "Lubricentro"
-                        : especialidad === "tecnicentro"
-                          ? "Tecnicentro"
-                          : "Taller"
-                    }`
+                  ? especialidad === "taller"
+                    ? "Registro Manual"
+                    : `Registro manual de ${
+                        especialidad === "lubricentro" ? "Lubricentro" : "Tecnicentro"
+                      }`
                   : "Registrar Trabajo"}
               </h3>
             </div>
@@ -1328,25 +1319,11 @@ export default function ModalFormularioRapido({
                         title="Cantidad"
                       />
 
-                      <div className="relative w-20">
-                        <span className="absolute left-2 top-2.5 text-[10px] text-zinc-400">$</span>
-                        <input
-                          type="number"
-                          min={0}
-                          step="0.5"
-                          value={f.price === 0 ? "" : f.price}
-                          onChange={(e) =>
-                            actualizarFila(f.id, "price", parseFloat(e.target.value) || 0)
-                          }
-                          placeholder="0.00"
-                          className="w-full h-9 pl-5 pr-1.5 rounded-lg bg-white dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 text-base sm:text-xs font-normal text-right text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          title="Precio"
-                        />
-                      </div>
-
-                      <span className="w-14 text-right text-xs font-normal text-zinc-700 dark:text-zinc-300">
-                        ${subtotal.toFixed(2)}
-                      </span>
+                      {especialidad !== "taller" && especialidad !== "lubricentro" && (
+                        <span className="w-14 text-right text-xs font-normal text-zinc-700 dark:text-zinc-300">
+                          ${subtotal.toFixed(2)}
+                        </span>
+                      )}
 
                       <button
                         type="button"
@@ -1366,13 +1343,15 @@ export default function ModalFormularioRapido({
           </div>
 
           {/* Pie: Total y Guardar */}
-          <div className="pt-2 border-t border-zinc-100 dark:border-white/5 flex items-center justify-between gap-3">
-            <div>
-              <span className="text-[10px] font-normal uppercase tracking-wider text-zinc-400">Total</span>
-              <div className="text-xl font-normal text-emerald-600 dark:text-emerald-400">
-                ${total.toFixed(2)}
+          <div className="sticky bottom-0 z-10 -mx-3 -mb-3 flex items-center justify-between gap-3 border-t border-zinc-100 bg-white/95 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-md dark:border-white/5 dark:bg-[#121214]/95 sm:-mx-4 sm:-mb-4 sm:px-4">
+            {especialidad !== "taller" && especialidad !== "lubricentro" && (
+              <div>
+                <span className="text-[10px] font-normal uppercase tracking-wider text-zinc-400">Total</span>
+                <div className="text-xl font-normal text-emerald-600 dark:text-emerald-400">
+                  ${total.toFixed(2)}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex items-center gap-2">
               <button

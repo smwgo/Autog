@@ -23,6 +23,7 @@ export interface LubricentroExpressProps {
   modoEspecialidad?: "lubricentro" | "carwash" | "tecnicentro";
   triggerAbrirConfig?: number;
   vistaAppCarwash?: boolean;
+  navegacionActiva?: boolean;
 }
 
 export interface ServicioExpressItem {
@@ -245,6 +246,7 @@ export default function LubricentroExpress({
   modoEspecialidad = "lubricentro",
   triggerAbrirConfig,
   vistaAppCarwash = false,
+  navegacionActiva = false,
 }: LubricentroExpressProps) {
   // =========================================================================
   // CONTROL DE ETAPAS (2: Servicios Express, 4: Firma)
@@ -1055,12 +1057,13 @@ export default function LubricentroExpress({
                   throw new Error("No se pudo guardar la revisión del Lubricentro.");
                 }
               }}
+              onIrAAnterior={onCambiarATaller}
               onIrASiguiente={() => {
                 if (onCambiarModulo) onCambiarModulo("carwash");
                 else setEtapaActiva(4);
               }}
-              nombreSiguiente="Car Wash"
               onIrAAvisoYFirma={() => setEtapaActiva(4)}
+              navegacionActiva={navegacionActiva && modoEspecialidad === "lubricentro"}
             />
           </div>
 
@@ -1073,12 +1076,15 @@ export default function LubricentroExpress({
               triggerAbrirConfig={triggerAbrirConfig}
               vistaApp={vistaAppCarwash}
               onActualizarItemsOrden={handleActualizarItemsOrdenGenerales}
+              onIrAAnterior={() => {
+                if (onCambiarModulo) onCambiarModulo("lubricentro");
+              }}
               onIrASiguiente={() => {
                 if (onCambiarModulo) onCambiarModulo("tecnicentro");
                 else setEtapaActiva(4);
               }}
-              nombreSiguiente="Tecnicentro"
               onIrAAvisoYFirma={() => setEtapaActiva(4)}
+              navegacionActiva={navegacionActiva && modoEspecialidad === "carwash"}
             />
           </div>
 
@@ -1090,7 +1096,11 @@ export default function LubricentroExpress({
               mostrarToast={mostrarToast}
               triggerAbrirConfig={triggerAbrirConfig}
               onActualizarItemsOrden={handleActualizarItemsOrdenGenerales}
+              onIrAAnterior={() => {
+                if (onCambiarModulo) onCambiarModulo("carwash");
+              }}
               onIrAAvisoYFirma={() => setEtapaActiva(4)}
+              navegacionActiva={navegacionActiva && modoEspecialidad === "tecnicentro"}
             />
           </div>
         </>
