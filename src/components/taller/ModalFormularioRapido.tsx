@@ -979,11 +979,8 @@ export default function ModalFormularioRapido({
             <div className="mb-2 flex items-center justify-between gap-2">
               <h2 className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white">
                 <span>🧰</span>
-                <span>Sistemas de Taller</span>
+                <span>Productos / Servicios</span>
               </h2>
-              <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500">
-                Selección rápida
-              </span>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {ATAJOS_CATEGORIA_TALLER.map((categoria) => (
