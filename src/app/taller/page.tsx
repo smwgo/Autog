@@ -5243,59 +5243,55 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               })}
             </div>
 
-            {/* BOTÓN ENGRANAJE: REGISTRO MANUAL / MODO FORMULARIO */}
-            <button
-              type="button"
-              onClick={() => setModoRapidoActivo((prev) => !prev)}
-              className={`h-10 w-10 sm:h-11 sm:w-11 flex items-center justify-center rounded-2xl border backdrop-blur-md shadow-sm dark:shadow-xl transition-all cursor-pointer group shrink-0 ${
-                modoRapidoActivo
-                  ? moduloTaller === "taller"
-                    ? "bg-blue-500/15 border-blue-400 text-blue-600 dark:text-blue-300"
-                    : moduloTaller === "lubricentro"
+            {/* BOTÓN ENGRANAJE: REGISTRO MANUAL / MODO FORMULARIO (SOLO EN LUBRICENTRO, CARWASH Y TECNICENTRO) */}
+            {moduloTaller !== "taller" && (
+              <button
+                type="button"
+                onClick={() => setModoRapidoActivo((prev) => !prev)}
+                className={`h-10 w-10 sm:h-11 sm:w-11 flex items-center justify-center rounded-2xl border backdrop-blur-md shadow-sm dark:shadow-xl transition-all cursor-pointer group shrink-0 ${
+                  modoRapidoActivo
+                    ? moduloTaller === "lubricentro"
                       ? "bg-amber-500/15 border-amber-400 text-amber-600 dark:text-amber-300"
                       : moduloTaller === "carwash"
                         ? "bg-teal-500/15 border-teal-400 text-teal-600 dark:text-teal-300"
                         : "bg-emerald-500/15 border-emerald-400 text-emerald-600 dark:text-emerald-300"
-                  : "bg-white dark:bg-[#0d0d0e] border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-              }`}
-              title={
-                moduloTaller === "taller"
-                  ? "Cambiar vista de Taller"
-                  : moduloTaller === "lubricentro"
+                    : "bg-white dark:bg-[#0d0d0e] border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
+                }`}
+                title={
+                  moduloTaller === "lubricentro"
                     ? "Cambiar vista de Lubricentro"
                     : moduloTaller === "carwash"
                       ? "Cambiar vista de Car Wash"
                       : moduloTaller === "tecnicentro"
                         ? "Cambiar vista de Tecnicentro"
-                        : "Registro Manual (Modo Formulario)"
-              }
-              aria-label={
-                moduloTaller === "taller"
-                  ? "Cambiar vista de Taller"
-                  : moduloTaller === "lubricentro"
+                        : "Registro Manual"
+                }
+                aria-label={
+                  moduloTaller === "lubricentro"
                     ? "Cambiar vista de Lubricentro"
                     : moduloTaller === "carwash"
                       ? "Cambiar vista de Car Wash"
                       : moduloTaller === "tecnicentro"
                         ? "Cambiar vista de Tecnicentro"
                         : "Abrir formulario manual"
-              }
-            >
-              <svg
-                className="w-5 h-5 transition-transform duration-300 group-hover:rotate-45"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.8}
+                }
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </button>
+                <svg
+                  className="w-5 h-5 transition-transform duration-300 group-hover:rotate-45"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.8}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+            )}
           </div>
 
           {/* A LADO DERECHO: ETIQUETA DE PROPUESTA (ENVIADO / ✓ APROBADO) */}
@@ -5347,8 +5343,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
           {/* VISTAS SEGÚN EL SELECTOR: TALLER, LUBRICENTRO, CAR WASH O TECNICENTRO */}
           <div
             className={
-              (moduloTaller === "lubricentro" || moduloTaller === "carwash" || moduloTaller === "tecnicentro") &&
-              !modoRapidoActivo
+              moduloTaller === "lubricentro" || moduloTaller === "carwash" || moduloTaller === "tecnicentro"
                 ? "block w-full"
                 : "hidden"
             }
@@ -5365,7 +5360,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               historialVehiculo={historialVehiculo}
               modoEspecialidad={moduloTaller === "taller" ? "lubricentro" : moduloTaller}
               triggerAbrirConfig={triggerAbrirConfig}
-              vistaAppCarwash={true}
+              vistaAppCarwash={false}
               navegacionActiva={false}
               onOrdenCreada={(orden) => {
                 setAutosEnPista((prev) => [orden, ...prev.filter((o) => o.id !== orden.id)]);
@@ -5375,120 +5370,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               onCambiarModulo={(mod) => setModuloTaller(mod)}
             />
           </div>
-
-          {moduloTaller === "lubricentro" && modoRapidoActivo && (
-            <div className="w-full animate-fade-in">
-              <ModalFormularioRapido
-                isOpen
-                modoInline
-                onClose={() => setModoRapidoActivo(false)}
-                especialidadInicial="lubricentro"
-                fotoVehiculo={fotoVehiculoLubricentro}
-                ordenActiva={ordenActiva}
-                onVolver={() => setModuloTaller("taller")}
-                onContinuar={() => setModuloTaller("carwash")}
-                onGuardarItems={async (itemsNuevos, especialidad, activeOrderFromServer) => {
-                  if (activeOrderFromServer) {
-                    setOrdenActiva(activeOrderFromServer);
-                    setAutosEnPista((prev) =>
-                      prev.map((o) => (o.id === activeOrderFromServer.id ? activeOrderFromServer : o))
-                    );
-                  } else if (ordenActiva) {
-                    const actualizados = [...(ordenActiva.items || []), ...itemsNuevos];
-                    setOrdenActiva({ ...ordenActiva, items: actualizados });
-                    setAutosEnPista((prev) =>
-                      prev.map((o) => (o.id === ordenActiva.id ? { ...o, items: actualizados } : o))
-                    );
-                    await sincronizarOrdenEnNeon({ items: actualizados });
-                  }
-                  setModuloTaller(especialidad);
-                  mostrarToast(
-                    ordenActiva
-                      ? `✅ ${itemsNuevos.length} servicio(s) de Lubricentro agregado(s) a ${ordenActiva.plate}`
-                      : `✅ ${itemsNuevos.length} servicio(s) registrados en el catálogo de Lubricentro`,
-                    "ok"
-                  );
-                }}
-                mostrarToast={mostrarToast}
-              />
-            </div>
-          )}
-
-          {moduloTaller === "carwash" && modoRapidoActivo && (
-            <div className="w-full animate-fade-in">
-              <ModalFormularioRapido
-                isOpen
-                modoInline
-                especialidadInicial="carwash"
-                fotoVehiculo={fotoVehiculoLubricentro}
-                ordenActiva={ordenActiva}
-                onClose={() => setModoRapidoActivo(false)}
-                onVolver={() => setModuloTaller("lubricentro")}
-                onContinuar={() => setModuloTaller("tecnicentro")}
-                onGuardarItems={async (itemsNuevos, especialidad, activeOrderFromServer) => {
-                  if (activeOrderFromServer) {
-                    setOrdenActiva(activeOrderFromServer);
-                    setAutosEnPista((prev) =>
-                      prev.map((o) => (o.id === activeOrderFromServer.id ? activeOrderFromServer : o))
-                    );
-                  } else if (ordenActiva) {
-                    const actualizados = [...(ordenActiva.items || []), ...itemsNuevos];
-                    setOrdenActiva({ ...ordenActiva, items: actualizados });
-                    setAutosEnPista((prev) =>
-                      prev.map((o) => (o.id === ordenActiva.id ? { ...o, items: actualizados } : o))
-                    );
-                    await sincronizarOrdenEnNeon({ items: actualizados });
-                  }
-                  setModuloTaller(especialidad);
-                  mostrarToast(
-                    ordenActiva
-                      ? `✅ ${itemsNuevos.length} servicio(s) de Car Wash agregado(s) a ${ordenActiva.plate}`
-                      : `✅ ${itemsNuevos.length} servicio(s) registrados en el catálogo de Car Wash`,
-                    "ok"
-                  );
-                }}
-                mostrarToast={mostrarToast}
-              />
-            </div>
-          )}
-
-          {moduloTaller === "tecnicentro" && modoRapidoActivo && (
-            <div className="w-full animate-fade-in">
-              <ModalFormularioRapido
-                isOpen
-                modoInline
-                especialidadInicial="tecnicentro"
-                fotoVehiculo={fotoVehiculoLubricentro}
-                ordenActiva={ordenActiva}
-                onClose={() => setModoRapidoActivo(false)}
-                onVolver={() => setModuloTaller("carwash")}
-                onContinuar={() => setEtapaActiva(4)}
-                onGuardarItems={async (itemsNuevos, especialidad, activeOrderFromServer) => {
-                  if (activeOrderFromServer) {
-                    setOrdenActiva(activeOrderFromServer);
-                    setAutosEnPista((prev) =>
-                      prev.map((o) => (o.id === activeOrderFromServer.id ? activeOrderFromServer : o))
-                    );
-                  } else if (ordenActiva) {
-                    const actualizados = [...(ordenActiva.items || []), ...itemsNuevos];
-                    setOrdenActiva({ ...ordenActiva, items: actualizados });
-                    setAutosEnPista((prev) =>
-                      prev.map((o) => (o.id === ordenActiva.id ? { ...o, items: actualizados } : o))
-                    );
-                    await sincronizarOrdenEnNeon({ items: actualizados });
-                  }
-                  setModuloTaller(especialidad);
-                  mostrarToast(
-                    ordenActiva
-                      ? `✅ ${itemsNuevos.length} servicio(s) de Tecnicentro agregado(s) a ${ordenActiva.plate}`
-                      : `✅ ${itemsNuevos.length} servicio(s) registrados en el catálogo de Tecnicentro`,
-                    "ok"
-                  );
-                }}
-                mostrarToast={mostrarToast}
-              />
-            </div>
-          )}
 
           {moduloTaller !== "taller" &&
             moduloTaller !== "lubricentro" &&
@@ -5518,45 +5399,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
 
 
 
-          <div className={moduloTaller === "taller" && modoRapidoActivo ? "block w-full" : "hidden"}>
-            <ModalFormularioRapido
-              isOpen={moduloTaller === "taller" && modoRapidoActivo}
-              modoInline
-              onClose={() => setModoRapidoActivo(false)}
-              especialidadInicial="taller"
-              ordenActiva={ordenActiva}
-              onVolver={() => setModoRapidoActivo(false)}
-              onContinuar={() => {
-                setModuloTaller("lubricentro");
-                setModoRapidoActivo(true);
-              }}
-              onGuardarItems={async (itemsNuevos, especialidad, activeOrderFromServer) => {
-                if (activeOrderFromServer) {
-                  setOrdenActiva(activeOrderFromServer);
-                  setAutosEnPista((prev) =>
-                    prev.map((o) => (o.id === activeOrderFromServer.id ? activeOrderFromServer : o))
-                  );
-                } else if (ordenActiva) {
-                  const actualizados = [...(ordenActiva.items || []), ...itemsNuevos];
-                  setOrdenActiva({ ...ordenActiva, items: actualizados });
-                  setAutosEnPista((prev) =>
-                    prev.map((o) => (o.id === ordenActiva.id ? { ...o, items: actualizados } : o))
-                  );
-                  await sincronizarOrdenEnNeon({ items: actualizados });
-                }
-                setModuloTaller(especialidad);
-                mostrarToast(
-                  ordenActiva
-                    ? `✅ ${itemsNuevos.length} trabajo(s) registrado(s) y agregado(s) a ${ordenActiva.plate}`
-                    : `✅ ${itemsNuevos.length} trabajo(s) registrado(s) en el catálogo de Taller`,
-                  "ok"
-                );
-              }}
-              mostrarToast={mostrarToast}
-            />
-          </div>
-
-          <div className={moduloTaller === "taller" && !modoRapidoActivo ? "block w-full" : "hidden"}>
+          <div className={moduloTaller === "taller" ? "block w-full" : "hidden"}>
           {/* ===================================================================
               VISTA DE CADA ETAPA ACTIVA (ALTURA DINÁMICA SIN ESPACIOS VACÍOS)
               =================================================================== */}

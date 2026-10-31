@@ -1402,7 +1402,7 @@ export default function ModuloCarWashCatalogo({
     {
       id: "Lodo" as const,
       label: "Lodo",
-      sublabel: estadoAfecciones.Lodo === "EXTREMO" ? "Recargo" : estadoAfecciones.Lodo === "MODERADO" ? "Moderado" : "Normal",
+      sublabel: estadoAfecciones.Lodo === "EXTREMO" ? "Extremo (+ $5.00)" : estadoAfecciones.Lodo === "MODERADO" ? "Moderado" : "Normal",
       color: estadoAfecciones.Lodo === "EXTREMO" ? "bg-rose-500 text-white shadow-md shadow-rose-500/30 ring-2 ring-rose-400/60" : estadoAfecciones.Lodo === "MODERADO" ? "bg-amber-400 text-white ring-2 ring-amber-300" : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10",
       sublabelColor: estadoAfecciones.Lodo === "EXTREMO" ? "text-rose-600 dark:text-rose-400 font-bold" : estadoAfecciones.Lodo === "MODERADO" ? "text-amber-600 dark:text-amber-400 font-bold" : "text-zinc-500 dark:text-zinc-400 font-medium",
       badge: estadoAfecciones.Lodo === "EXTREMO" ? "⚠️" : null,
@@ -1415,7 +1415,7 @@ export default function ModuloCarWashCatalogo({
     {
       id: "Pelos" as const,
       label: "Pelos",
-      sublabel: estadoAfecciones.Pelos === "EXTREMO" ? "Recargo" : estadoAfecciones.Pelos === "MODERADO" ? "Moderado" : "Normal",
+      sublabel: estadoAfecciones.Pelos === "EXTREMO" ? "Extremo (+ $5.00)" : estadoAfecciones.Pelos === "MODERADO" ? "Moderado" : "Normal",
       color: estadoAfecciones.Pelos === "EXTREMO" ? "bg-rose-500 text-white shadow-md shadow-rose-500/30 ring-2 ring-rose-400/60" : estadoAfecciones.Pelos === "MODERADO" ? "bg-amber-400 text-white shadow-md shadow-amber-400/30 ring-2 ring-amber-300" : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10",
       sublabelColor: estadoAfecciones.Pelos === "EXTREMO" ? "text-rose-600 dark:text-rose-400 font-bold" : estadoAfecciones.Pelos === "MODERADO" ? "text-amber-600 dark:text-amber-400 font-bold" : "text-zinc-500 dark:text-zinc-400 font-medium",
       badge: estadoAfecciones.Pelos === "EXTREMO" ? "⚠️" : null,
@@ -1552,7 +1552,7 @@ export default function ModuloCarWashCatalogo({
                 <span className="text-xs font-black text-zinc-900 dark:text-white">{vehiculoActivo} Detectado</span>
               </div>
               <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300 font-mono">
-                ⏱️ {totalMinutosEstimados > 0 ? `${totalMinutosEstimados} min` : "45 min"}
+                ⏱️ {totalMinutosEstimados > 0 ? `${totalMinutosEstimados} min` : "35 min"}
               </span>
             </div>
 
@@ -1565,10 +1565,10 @@ export default function ModuloCarWashCatalogo({
                 <span className="text-base sm:text-lg">🚗</span>
               </div>
               <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                Auto-Servicio
+                Tarifa {vehiculoActivo.toLowerCase()} auto-ajustada
               </div>
               <div className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                ⏱️ Est. {totalMinutosEstimados > 0 ? `${totalMinutosEstimados} min` : "45 min"}
+                ⏱️ Est. {totalMinutosEstimados > 0 ? `${totalMinutosEstimados} min` : "35 min"}
               </div>
             </div>
 
@@ -1628,7 +1628,7 @@ export default function ModuloCarWashCatalogo({
                     Objetos
                   </span>
                   <span className={`text-[10px] font-bold block ${objetosVerificados ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-400"}`}>
-                    {objetosVerificados ? "Ok" : "Revisar"}
+                    {objetosVerificados ? "Verificado" : "Pendiente"}
                   </span>
                 </div>
               </div>

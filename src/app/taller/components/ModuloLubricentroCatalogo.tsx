@@ -448,6 +448,45 @@ export const BASE_LUBRICENTRO_POS_ITEMS: ItemBentoCatalogo[] = [
     unitOfMeasure: "Servicio",
     type: "SERVICE",
   },
+  {
+    id: "lub_trans_caja_std",
+    code: "TR-CAJA",
+    name: "Caja",
+    fullName: "Aceite de Transmisión / Caja ATF Galón",
+    brand: "Castrol Transmax",
+    price: 14.00,
+    lubCategoryId: "lub_transmision",
+    lubSubcategoryId: "lub_trans_caja",
+    presentation: "Galón",
+    unitOfMeasure: "Galón",
+    type: "PART",
+  },
+  {
+    id: "lub_flu_direccion_std",
+    code: "FLU-DIR",
+    name: "Dirección",
+    fullName: "Líquido de Dirección Asistida 500ml",
+    brand: "Motul",
+    price: 8.00,
+    lubCategoryId: "lub_fluidos",
+    lubSubcategoryId: "lub_flu_direccion",
+    presentation: "Unidad",
+    unitOfMeasure: "Unidad",
+    type: "PART",
+  },
+  {
+    id: "lub_flu_plumillas_std",
+    code: "FLU-PLUMILLAS",
+    name: "Plumillas",
+    fullName: "Líquido Parabrisas + Escobillas Plumillas",
+    brand: "Bosch Aerotwin",
+    price: 7.50,
+    lubCategoryId: "lub_fluidos",
+    lubSubcategoryId: "lub_flu_limpia",
+    presentation: "Par",
+    unitOfMeasure: "Par",
+    type: "PART",
+  },
 ];
 
 // Gráfico SVG realista de Galón de Aceite estilo Shell / Mobil con etiqueta
@@ -2839,16 +2878,19 @@ export default function ModuloLubricentroCatalogo({
     }
   }, [ordenActiva, itemsOrden, onActualizarItemsOrden]);
 
+  type SemaforoEstado = 'neutral' | 'ok' | 'atencion' | 'critico';
+
   const SEMAFORO_CIRCULOS = useMemo(
     () => [
       {
         id: 'aire',
         label: 'Aire',
+        detalle: 'Filtro de Aire Motor',
         iconSvg: (cls: string) => (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
-            <path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2" />
-            <path d="M9.6 4.6A2 2 0 1 1 11 8H2" />
-            <path d="M12.6 19.4A2 2 0 1 0 14 16H2" />
+            <path d="M4 8h11a3 3 0 1 0-3-3" />
+            <path d="M2 13h16a3 3 0 1 1-3 3" />
+            <path d="M6 18h7a2 2 0 1 0-2-2" />
           </svg>
         ),
         posItem: BASE_LUBRICENTRO_POS_ITEMS.find((i) => i.id === 'lub_fil_aire_std'),
@@ -2856,12 +2898,15 @@ export default function ModuloLubricentroCatalogo({
       {
         id: 'cabina',
         label: 'Cabina',
+        detalle: 'Filtro de Cabina / A/C',
         iconSvg: (cls: string) => (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
-            <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9C2.1 11 2 11.5 2 12v4c0 .6.4 1 1 1h2" />
-            <circle cx="7" cy="17" r="2" />
-            <path d="M9 17h6" />
-            <circle cx="17" cy="17" r="2" />
+            <path d="M3 15h18" />
+            <path d="M5 15V9a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v6" />
+            <circle cx="7.5" cy="15.5" r="2.5" />
+            <circle cx="16.5" cy="15.5" r="2.5" />
+            <path d="M9 10h6" />
+            <path d="M12 7v3" />
           </svg>
         ),
         posItem: BASE_LUBRICENTRO_POS_ITEMS.find((i) => i.id === 'lub_fil_cabina_std'),
@@ -2869,10 +2914,13 @@ export default function ModuloLubricentroCatalogo({
       {
         id: 'refrigerante',
         label: 'Refrigerante',
+        detalle: 'Nivel y Calidad Coolant',
         iconSvg: (cls: string) => (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
             <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />
-            <path d="M2 19c1.5 0 2.5-1 4-1s2.5 1 4 1 2.5-1 4-1 2.5 1 4 1 2.5-1 4-1" />
+            <circle cx="11.5" cy="17.5" r="2" fill="currentColor" opacity="0.6" />
+            <path d="M9 8h3" />
+            <path d="M9 11h2" />
           </svg>
         ),
         posItem: BASE_LUBRICENTRO_POS_ITEMS.find((i) => i.id === 'lub_flu_refrig_std'),
@@ -2880,66 +2928,128 @@ export default function ModuloLubricentroCatalogo({
       {
         id: 'frenos',
         label: 'Frenos',
+        detalle: 'Líquido Frenos DOT4',
         iconSvg: (cls: string) => (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
-            <circle cx="12" cy="12" r="6" />
-            <circle cx="12" cy="12" r="2" />
-            <path d="M4.93 4.93a10 10 0 0 0 0 14.14" />
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+            <circle cx="12" cy="12" r="8" />
+            <circle cx="12" cy="12" r="3" />
+            <circle cx="12" cy="7" r="0.75" fill="currentColor" />
+            <circle cx="12" cy="17" r="0.75" fill="currentColor" />
+            <circle cx="7" cy="12" r="0.75" fill="currentColor" />
+            <circle cx="17" cy="12" r="0.75" fill="currentColor" />
+            <path d="M17 5.5a9.5 9.5 0 0 1 3.5 6.5c0 2.5-1 4.5-2.5 6" strokeWidth="2.5" />
           </svg>
         ),
         posItem: BASE_LUBRICENTRO_POS_ITEMS.find((i) => i.id === 'lub_flu_frenos_std'),
       },
       {
-        id: 'corona',
-        label: 'Corona',
+        id: 'caja',
+        label: 'Caja',
+        detalle: 'Aceite Transmisión / ATF',
         iconSvg: (cls: string) => (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            <circle cx="6" cy="5" r="2" />
+            <circle cx="12" cy="5" r="2" />
+            <circle cx="18" cy="5" r="2" />
+            <circle cx="6" cy="19" r="2" />
+            <circle cx="12" cy="19" r="2" />
+            <circle cx="18" cy="19" r="2" />
+            <path d="M6 7v10M12 7v10M18 7v10M6 12h12" />
+          </svg>
+        ),
+        posItem: BASE_LUBRICENTRO_POS_ITEMS.find((i) => i.id === 'lub_trans_caja_std'),
+      },
+      {
+        id: 'corona',
+        label: 'Corona',
+        detalle: 'Diferencial Trasero 80W90',
+        iconSvg: (cls: string) => (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+            <circle cx="12" cy="12" r="8" />
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 4v4M12 16v4M4 12h4M16 12h4M6.34 6.34l2.83 2.83M14.83 14.83l2.83 2.83M6.34 17.66l2.83-2.83M14.83 9.17l2.83-2.83" />
           </svg>
         ),
         posItem: BASE_LUBRICENTRO_POS_ITEMS.find((i) => i.id === 'lub_trans_corona_std'),
       },
       {
-        id: 'engrase',
-        label: 'Engrase',
+        id: 'direccion',
+        label: 'Dirección',
+        detalle: 'Líquido Dirección Asistida',
         iconSvg: (cls: string) => (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
-            <path d="M12 2v6" />
-            <path d="m4.93 10.93 4.24 4.24" />
-            <path d="m19.07 10.93-4.24 4.24" />
-            <circle cx="12" cy="18" r="3" />
-            <path d="M12 8a4 4 0 0 0-4 4v1h8v-1a4 4 0 0 0-4-4Z" />
+            <circle cx="12" cy="12" r="9" />
+            <circle cx="12" cy="12" r="2.5" />
+            <path d="M12 14.5V21" />
+            <path d="M9.5 12H3" />
+            <path d="M21 12h-6.5" />
+          </svg>
+        ),
+        posItem: BASE_LUBRICENTRO_POS_ITEMS.find((i) => i.id === 'lub_flu_direccion_std'),
+      },
+      {
+        id: 'engrase',
+        label: 'Engrase',
+        detalle: 'Engrase Chasis / Rótulas',
+        iconSvg: (cls: string) => (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+            <path d="M7 21l3-3m0 0l-1.5-1.5 4.5-4.5 1.5 1.5 3-3-4.5-4.5-3 3 1.5 1.5-4.5 4.5-1.5-1.5L7 21z" />
+            <path d="M16 6l3-3 2 2-3 3" />
+            <circle cx="18" cy="18" r="2" fill="currentColor" opacity="0.6" />
           </svg>
         ),
         posItem: BASE_LUBRICENTRO_POS_ITEMS.find((i) => i.id === 'lub_srv_engrase_std'),
+      },
+      {
+        id: 'plumillas',
+        label: 'Plumillas',
+        detalle: 'Limpiaparabrisas + Plumillas',
+        iconSvg: (cls: string) => (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cls}>
+            <path d="M3 17a16 16 0 0 1 18 0" />
+            <path d="M12 17l6-9" strokeWidth="2.5" />
+            <path d="M14 6l4 2.5" />
+            <circle cx="9" cy="8" r="1" fill="currentColor" />
+            <circle cx="6" cy="11" r="1" fill="currentColor" />
+          </svg>
+        ),
+        posItem: BASE_LUBRICENTRO_POS_ITEMS.find((i) => i.id === 'lub_flu_plumillas_std'),
       },
     ],
     []
   );
 
-  const [semaforoCirculosActivos, setSemaforoCirculosActivos] = useState<Record<string, boolean>>({
-    aire: true,
+  const [semaforoEstados, setSemaforoEstados] = useState<Record<string, SemaforoEstado>>({
+    aire: 'critico',
   });
 
-  const handleToggleSemaforoCirculo = (id: string) => {
+  const handleToggleSemaforoCirculo = (id: string, estadoForzado?: SemaforoEstado) => {
     const circulo = SEMAFORO_CIRCULOS.find((c) => c.id === id);
     if (!circulo) return;
 
-    const actualmenteActivo = !!semaforoCirculosActivos[id];
-    const nuevoEstado = !actualmenteActivo;
-    setSemaforoCirculosActivos((prev) => ({
+    const actual = semaforoEstados[id] || 'neutral';
+    let siguiente: SemaforoEstado;
+    if (estadoForzado) {
+      siguiente = estadoForzado;
+    } else {
+      if (actual === 'neutral') siguiente = 'ok';
+      else if (actual === 'ok') siguiente = 'atencion';
+      else if (actual === 'atencion') siguiente = 'critico';
+      else siguiente = 'neutral';
+    }
+
+    setSemaforoEstados((prev) => ({
       ...prev,
-      [id]: nuevoEstado,
+      [id]: siguiente,
     }));
 
     if (circulo.posItem) {
-      if (nuevoEstado) {
+      if (siguiente === 'critico') {
         if (!estaPreCargadoEnOrden(circulo.posItem.id)) {
           handleAjustarItemBento(circulo.posItem, 1);
+          mostrarToast?.(`🔴 ${circulo.label}: Cambio urgente agregado al pedido (+${circulo.posItem.price ? `$${circulo.posItem.price.toFixed(2)}` : ''})`, 'ok');
         }
-      } else {
+      } else if (actual === 'critico') {
         if (estaPreCargadoEnOrden(circulo.posItem.id)) {
           handleAjustarItemBento(circulo.posItem, -99);
         }
@@ -2947,12 +3057,43 @@ export default function ModuloLubricentroCatalogo({
     }
   };
 
+  const handleMarcarTodosOk = () => {
+    const nuevos: Record<string, SemaforoEstado> = {};
+    SEMAFORO_CIRCULOS.forEach((c) => {
+      nuevos[c.id] = 'ok';
+      if (semaforoEstados[c.id] === 'critico' && c.posItem && estaPreCargadoEnOrden(c.posItem.id)) {
+        handleAjustarItemBento(c.posItem, -99);
+      }
+    });
+    setSemaforoEstados(nuevos);
+    mostrarToast?.('🟢 Todos los puntos marcados como OK (Buen estado)', 'ok');
+  };
+
+  const itemsCriticosSemaforo = useMemo(() => {
+    return SEMAFORO_CIRCULOS.filter((c) => (semaforoEstados[c.id] || 'neutral') === 'critico');
+  }, [semaforoEstados, SEMAFORO_CIRCULOS]);
+
+  const itemsAtencionSemaforo = useMemo(() => {
+    return SEMAFORO_CIRCULOS.filter((c) => (semaforoEstados[c.id] || 'neutral') === 'atencion');
+  }, [semaforoEstados, SEMAFORO_CIRCULOS]);
+
+  const itemsOkSemaforo = useMemo(() => {
+    return SEMAFORO_CIRCULOS.filter((c) => (semaforoEstados[c.id] || 'neutral') === 'ok');
+  }, [semaforoEstados, SEMAFORO_CIRCULOS]);
+
   const textoAlertaSemaforo = useMemo(() => {
-    const activos = SEMAFORO_CIRCULOS.filter((c) => semaforoCirculosActivos[c.id]);
-    if (activos.length === 0) return 'Todos los niveles verificados (OK)';
-    const ultimo = activos[activos.length - 1];
-    return `Sugiere: + ${ultimo.posItem?.fullName || ultimo.label} (${(ultimo.posItem?.price || 0).toFixed(2)})`;
-  }, [semaforoCirculosActivos, SEMAFORO_CIRCULOS]);
+    if (itemsCriticosSemaforo.length > 0) {
+      const ultimo = itemsCriticosSemaforo[itemsCriticosSemaforo.length - 1];
+      return `🔴 Sugiere cambio: + ${ultimo.posItem?.fullName || ultimo.label} ($${(ultimo.posItem?.price || 0).toFixed(2)})`;
+    }
+    if (itemsAtencionSemaforo.length > 0) {
+      return `🟡 Atención preventiva en: ${itemsAtencionSemaforo.map((c) => c.label).join(', ')}`;
+    }
+    if (itemsOkSemaforo.length > 0) {
+      return `🟢 Niveles verificados: ${itemsOkSemaforo.length}/${SEMAFORO_CIRCULOS.length} en óptimo estado (OK)`;
+    }
+    return 'Toca cualquier ícono: 🟢 OK • 🟡 Revisar • 🔴 Cambiar (POS)';
+  }, [itemsCriticosSemaforo, itemsAtencionSemaforo, itemsOkSemaforo, SEMAFORO_CIRCULOS]);
 
   const [menuCatAbierto, setMenuCatAbierto] = useState(false);
   const [menuSubcatAbierto, setMenuSubcatAbierto] = useState(false);
@@ -3145,51 +3286,156 @@ export default function ModuloLubricentroCatalogo({
         </div>
 
         {/* ===================================================================
-            TARJETA 2: SEMÁFORO AUTOMÁTICO (1 TOQUE = VENTA DIRECTA DEL POS)
+            TARJETA 2: SEMÁFORO INTELIGENTE DE INSPECCIÓN RÁPIDA
             =================================================================== */}
-        <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between min-h-[220px]">
+        <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between min-h-[260px]">
           <div>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+            {/* Cabecera con título y botón rápido "Marcar todo OK" */}
+            <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-zinc-100 dark:border-white/5">
+              <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-base sm:text-lg">🚦</span>
-                <span>Semáforo Automático</span>
-              </h2>
-              <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
-                1 toque = POS
+                <div>
+                  <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white leading-tight">
+                    Semáforo de Inspección
+                  </h2>
+                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                    ⚪ Neutro ➜ 🟢 OK ➜ 🟡 Revisar ➜ 🔴 Cambiar (POS)
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleMarcarTodosOk}
+                className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 text-[11px] font-bold transition-all cursor-pointer active:scale-95 shrink-0"
+                title="Marcar todos los puntos en estado Verde (OK)"
+              >
+                Todo OK 🟢
+              </button>
+            </div>
+
+            {/* Guía semafórica de 3 colores funcionales */}
+            <div className="grid grid-cols-3 gap-1.5 mb-2.5 px-1 py-1 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-100 dark:border-white/5 text-center text-[10px] font-semibold">
+              <span className="text-emerald-700 dark:text-emerald-400 flex items-center justify-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span>🟢 OK</span>
+              </span>
+              <span className="text-amber-700 dark:text-amber-400 flex items-center justify-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                <span>🟡 Revisar</span>
+              </span>
+              <span className="text-rose-700 dark:text-rose-400 flex items-center justify-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-rose-500" />
+                <span>🔴 Cambiar</span>
               </span>
             </div>
 
-            {/* Tablero minimalista de 6 íconos circulares de 1 sola palabra */}
-            <div className="grid grid-cols-3 gap-y-3.5 gap-x-2 place-items-center py-1">
+            {/* Tablero de 9 íconos semafóricos (3x3) */}
+            <div className="grid grid-cols-3 gap-y-3 gap-x-2 place-items-center py-1">
               {SEMAFORO_CIRCULOS.map((btn) => {
-                const activo = semaforoCirculosActivos[btn.id];
+                const estado = semaforoEstados[btn.id] || 'neutral';
+                const esCritico = estado === 'critico';
+                const esAtencion = estado === 'atencion';
+                const esOk = estado === 'ok';
+
                 return (
-                  <div key={btn.id} className="flex flex-col items-center gap-1">
+                  <div key={btn.id} className="flex flex-col items-center gap-1 text-center w-full">
                     <button
                       type="button"
                       onClick={() => void handleToggleSemaforoCirculo(btn.id)}
-                      className={`w-13 h-13 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${activo
-                          ? "bg-rose-500 hover:bg-rose-600 text-white shadow-md shadow-rose-500/30 scale-105 ring-2 ring-rose-400/60"
+                      className={`relative w-12 h-12 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-xs ${
+                        esCritico
+                          ? "bg-rose-500 hover:bg-rose-600 text-white shadow-md shadow-rose-500/30 scale-105 ring-2 ring-rose-400"
+                          : esAtencion
+                          ? "bg-amber-400 hover:bg-amber-500 text-zinc-950 shadow-md shadow-amber-400/30 scale-102 ring-2 ring-amber-300"
+                          : esOk
+                          ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/25 scale-102 ring-2 ring-emerald-400"
                           : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
-                        }`}
-                      title={`${btn.label}: Toca para cambiar estado y agregar automáticamente al carrito`}
+                      }`}
+                      title={`${btn.label} (${btn.detalle}): Estado actual [${estado.toUpperCase()}]. Clic para ciclar: Neutro ➜ OK ➜ Revisar ➜ Cambiar (POS)`}
                     >
-                      {btn.iconSvg("w-6 h-6 sm:w-6.5 sm:h-6.5")}
+                      {btn.iconSvg("w-5.5 h-5.5 sm:w-6 sm:h-6")}
+
+                      {/* Mini insignia con estado activo */}
+                      {esCritico && (
+                        <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-600 text-white border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[9px] font-black shadow-xs">
+                          🛒
+                        </span>
+                      )}
+                      {esAtencion && (
+                        <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-400 text-zinc-950 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[10px] font-black shadow-xs">
+                          !
+                        </span>
+                      )}
+                      {esOk && (
+                        <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-white border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[9px] font-black shadow-xs">
+                          ✓
+                        </span>
+                      )}
                     </button>
-                    <span className={`text-xs font-bold ${activo ? "text-rose-600 dark:text-rose-400" : "text-zinc-700 dark:text-zinc-300"}`}>
-                      {btn.label}
-                    </span>
+
+                    <div className="flex flex-col items-center leading-none">
+                      <span className={`text-xs font-bold ${
+                        esCritico
+                          ? "text-rose-600 dark:text-rose-400"
+                          : esAtencion
+                          ? "text-amber-600 dark:text-amber-400"
+                          : esOk
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-zinc-700 dark:text-zinc-300"
+                      }`}>
+                        {btn.label}
+                      </span>
+                      <span className="text-[9px] font-medium text-zinc-400 dark:text-zinc-500 mt-0.5">
+                        {esCritico ? "Cambiar" : esAtencion ? "Revisar" : esOk ? "OK" : "Pendiente"}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          {/* Autoventa sugerida / conectada al POS */}
-          <div className="mt-3 pt-2.5 border-t border-zinc-100 dark:border-white/5 text-center">
-            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate block">
-              {textoAlertaSemaforo}
-            </span>
+          {/* Autoventa sugerida / conectada al POS con estados claros */}
+          <div className="mt-3 pt-2.5 border-t border-zinc-100 dark:border-white/5">
+            {itemsCriticosSemaforo.length > 0 ? (
+              <div className="p-2 sm:p-2.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/25 space-y-1">
+                <div className="flex items-center justify-between text-xs font-bold text-rose-700 dark:text-rose-300">
+                  <span className="flex items-center gap-1.5">
+                    <span>🛒</span>
+                    <span>{itemsCriticosSemaforo.length} para cambio (En Pedido)</span>
+                  </span>
+                  <span className="text-[11px] font-mono">
+                    ${itemsCriticosSemaforo.reduce((acc, it) => acc + (it.posItem?.price || 0), 0).toFixed(2)}
+                  </span>
+                </div>
+                <p className="text-[11px] text-rose-600 dark:text-rose-400 truncate">
+                  + {itemsCriticosSemaforo.map((c) => `${c.label} (${c.posItem?.name || ''})`).join(', ')}
+                </p>
+              </div>
+            ) : itemsAtencionSemaforo.length > 0 ? (
+              <div className="p-2 sm:p-2.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/25">
+                <p className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                  <span>⚠️</span>
+                  <span>Atención preventiva:</span>
+                </p>
+                <p className="text-[11px] text-amber-700 dark:text-amber-400 truncate mt-0.5">
+                  {itemsAtencionSemaforo.map((c) => c.label).join(', ')}
+                </p>
+              </div>
+            ) : itemsOkSemaforo.length > 0 ? (
+              <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/25 text-center">
+                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center justify-center gap-1.5">
+                  <span>✓</span>
+                  <span>{itemsOkSemaforo.length}/{SEMAFORO_CIRCULOS.length} Niveles inspeccionados en buen estado</span>
+                </span>
+              </div>
+            ) : (
+              <div className="text-center py-0.5">
+                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                  {textoAlertaSemaforo}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
