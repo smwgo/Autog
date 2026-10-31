@@ -543,7 +543,7 @@ export default function CarWashVistaApp(props: CarWashVistaAppProps) {
           ===================================================================== */}
       <section className="mt-4">
         <div className="flex items-center justify-between px-1 mb-2">
-          <h3 className="text-sm font-bold text-slate-200">Combos Rápidos</h3>
+          <h3 className="text-sm font-bold text-slate-200">Combos</h3>
           <span className="text-xs text-slate-400 flex items-center gap-0.5">
             Swipe <span>›</span>
           </span>

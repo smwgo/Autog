@@ -586,8 +586,8 @@ export default function ModuloCarWashCatalogo({
 
   // 2. Estados de recepción rápida en lavadora (Lodo, Pelos, Manchas, Gotaseca, Objetos, 📷)
   const [estadoAfecciones, setEstadoAfecciones] = useState<Record<string, NivelAfeccion>>({
-    Lodo: "EXTREMO",
-    Pelos: "MODERADO",
+    Lodo: "NORMAL",
+    Pelos: "NORMAL",
     Manchas: "NORMAL",
     Gotaseca: "NORMAL",
   });
@@ -1192,6 +1192,17 @@ export default function ModuloCarWashCatalogo({
     });
   };
 
+  const handleMarcarTodoOkCarWash = () => {
+    setEstadoAfecciones({
+      Lodo: "NORMAL",
+      Pelos: "NORMAL",
+      Manchas: "NORMAL",
+      Gotaseca: "NORMAL",
+    });
+    setObjetosVerificados(true);
+    mostrarToast("🟢 Todas las inspecciones marcadas como OK (Normal)", "ok");
+  };
+
   // Función 3: Subida rápida de foto del estado (R2)
   const handleSubirFotoEstado = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1535,56 +1546,95 @@ export default function ModuloCarWashCatalogo({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-3.5 items-start">
         
         {/* ===================================================================
-            TARJETA 1: RECEPCIÓN Y ESTADO (SUV)
+            TARJETA 1: RECEPCIÓN
             =================================================================== */}
-        <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between min-h-[260px]">
+        <div className="lg:col-span-5 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between min-h-[220px]">
           <div>
             <div className="flex items-center justify-between gap-2 mb-2">
               <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
-                Recepción y Estado ({vehiculoActivo})
+                Recepción
               </h2>
             </div>
 
-            {/* Vista compacta para móvil */}
-            <div className="flex sm:hidden items-center justify-between p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-500/10 border border-blue-200/60 dark:border-blue-400/30 mb-2">
-              <div className="flex items-center gap-2">
-                <span className="text-base">🚗</span>
-                <span className="text-xs font-black text-zinc-900 dark:text-white">{vehiculoActivo} Detectado</span>
-              </div>
-              <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300 font-mono">
-                ⏱️ {totalMinutosEstimados > 0 ? `${totalMinutosEstimados} min` : "35 min"}
-              </span>
-            </div>
-
-            {/* Detección automática de vehículo (Desktop) */}
-            <div className="hidden sm:block p-3 rounded-xl bg-zinc-50 dark:bg-black/20 border border-zinc-200/70 dark:border-white/5 text-center space-y-1">
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-base sm:text-lg font-black text-zinc-900 dark:text-white">
-                  {vehiculoActivo} Detectado
+            {/* Detección de vehículo y tiempo estimado */}
+            <div className="mt-2 p-3 rounded-xl bg-zinc-50 dark:bg-black/20 border border-zinc-200/70 dark:border-white/5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm sm:text-base font-black text-zinc-900 dark:text-white flex items-center gap-1.5">
+                  <span>🚗</span>
+                  <span>{vehiculoActivo} Detectado</span>
                 </span>
-                <span className="text-base sm:text-lg">🚗</span>
+                <span className="text-xs font-bold font-mono px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300">
+                  ⏱️ {totalMinutosEstimados > 0 ? `${totalMinutosEstimados} min` : "35 min"}
+                </span>
               </div>
               <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                 Tarifa {vehiculoActivo.toLowerCase()} auto-ajustada
               </div>
-              <div className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                ⏱️ Est. {totalMinutosEstimados > 0 ? `${totalMinutosEstimados} min` : "35 min"}
+            </div>
+
+            {/* Botón rápido Repetir último servicio */}
+            <button
+              type="button"
+              onClick={handleRepetirUltimoServicio}
+              className="mt-3 w-full h-10 rounded-xl bg-blue-50/70 dark:bg-blue-500/10 hover:bg-blue-100/70 dark:hover:bg-blue-500/20 border border-blue-200/60 dark:border-blue-500/20 text-blue-800 dark:text-blue-200 text-xs sm:text-sm font-bold flex items-center justify-between px-3 cursor-pointer transition-all active:scale-98 shadow-2xs"
+              title="Cargar el último servicio realizado a este vehículo"
+            >
+              <span className="flex items-center gap-1.5">
+                <span>⚡</span>
+                <span>Repetir último</span>
+              </span>
+              <span className="text-xs font-black text-blue-600 dark:text-blue-400">→</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ===================================================================
+            TARJETA 2: SEMÁFORO INTELIGENTE (CARWASH)
+            =================================================================== */}
+        <div className="lg:col-span-7 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs">
+          <div>
+            {/* Cabecera con título Semáforo y botón Todo OK */}
+            <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-zinc-100 dark:border-white/5">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-base sm:text-lg">🚦</span>
+                <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white leading-tight">
+                  Semáforo
+                </h2>
               </div>
+              <button
+                type="button"
+                onClick={handleMarcarTodoOkCarWash}
+                className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 text-[11px] font-bold transition-all cursor-pointer active:scale-95 shrink-0"
+                title="Marcar todas las inspecciones en estado Normal (OK)"
+              >
+                Todo OK 🟢
+              </button>
             </div>
 
-            {/* Subtítulo Recepción Rápida */}
-            <div className="text-center text-xs font-bold text-zinc-700 dark:text-zinc-300 mt-2.5 mb-1.5">
-              Recepción Rápida
+            {/* Guía semafórica de 3 niveles */}
+            <div className="grid grid-cols-3 gap-1.5 mb-2.5 px-1 py-1 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-100 dark:border-white/5 text-center text-[10px] font-semibold">
+              <span className="text-emerald-700 dark:text-emerald-400 flex items-center justify-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span>🟢 Normal</span>
+              </span>
+              <span className="text-amber-700 dark:text-amber-400 flex items-center justify-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                <span>🟡 Moderado</span>
+              </span>
+              <span className="text-rose-700 dark:text-rose-400 flex items-center justify-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-rose-500" />
+                <span>🔴 Extremo</span>
+              </span>
             </div>
 
-            {/* Tablero de 6 íconos circulares de recepción */}
+            {/* Tablero de los 6 íconos semafóricos de CarWash */}
             <div className="grid grid-cols-3 gap-y-3 gap-x-2 place-items-center py-1">
               {ESTADO_CIRCULOS_RECEPCION.map((btn) => (
-                <div key={btn.id} className="flex flex-col items-center gap-1">
+                <div key={btn.id} className="flex flex-col items-center gap-1 text-center w-full">
                   <button
                     type="button"
                     onClick={() => handleCiclarEstadoAfeccion(btn.id)}
-                    className={`relative w-13 h-13 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${btn.color}`}
+                    className={`relative w-12 h-12 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-xs ${btn.color}`}
                     title={`${btn.label}: Toca para cambiar nivel (Normal, Moderado, Extremo)`}
                   >
                     {btn.icon}
@@ -1592,11 +1642,11 @@ export default function ModuloCarWashCatalogo({
                       <span className="absolute -top-1 -right-1 text-xs">{btn.badge}</span>
                     )}
                   </button>
-                  <div className="text-center leading-tight">
-                    <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 block">
+                  <div className="flex flex-col items-center leading-tight mt-1">
+                    <span className="text-xs sm:text-[13px] font-bold text-zinc-800 dark:text-zinc-200 block">
                       {btn.label}
                     </span>
-                    <span className={`text-[10px] block ${btn.sublabelColor}`}>
+                    <span className={`text-[10px] sm:text-[11px] block ${btn.sublabelColor}`}>
                       {btn.sublabel}
                     </span>
                   </div>
@@ -1604,7 +1654,7 @@ export default function ModuloCarWashCatalogo({
               ))}
 
               {/* Botón 5: Objetos */}
-              <div className="flex flex-col items-center gap-1">
+              <div className="flex flex-col items-center gap-1 text-center w-full">
                 <button
                   type="button"
                   onClick={() => {
@@ -1612,46 +1662,46 @@ export default function ModuloCarWashCatalogo({
                     setObjetosVerificados(nuevo);
                     if (nuevo) mostrarToast("✓ Pertenencias verificadas en cabina y baúl", "ok");
                   }}
-                  className={`w-13 h-13 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm ${
+                  className={`w-12 h-12 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-xs ${
                     objetosVerificados
-                      ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/30 scale-105 ring-2 ring-emerald-400/60"
+                      ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/30 ring-2 ring-emerald-400"
                       : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
                   }`}
                   title="Verificación de objetos personales en cabina"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5.5 h-5.5 sm:w-6 sm:h-6">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 </button>
-                <div className="text-center leading-tight">
-                  <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 block">
+                <div className="flex flex-col items-center leading-tight mt-1">
+                  <span className="text-xs sm:text-[13px] font-bold text-zinc-800 dark:text-zinc-200 block">
                     Objetos
                   </span>
-                  <span className={`text-[10px] font-bold block ${objetosVerificados ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-400"}`}>
+                  <span className={`text-[10px] sm:text-[11px] font-bold block ${objetosVerificados ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-400"}`}>
                     {objetosVerificados ? "Verificado" : "Pendiente"}
                   </span>
                 </div>
               </div>
 
               {/* Botón 6: Foto */}
-              <div className="flex flex-col items-center gap-1">
+              <div className="flex flex-col items-center gap-1 text-center w-full">
                 <button
                   type="button"
                   disabled={subiendoFoto}
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-13 h-13 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-sm bg-blue-100 hover:bg-blue-200/80 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-400/40"
+                  className="w-12 h-12 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-xs bg-blue-100 hover:bg-blue-200/80 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-400/40"
                   title="Tomar o subir foto de recepción del vehículo"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5.5 h-5.5 sm:w-6 sm:h-6">
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                     <circle cx="12" cy="13" r="4" />
                   </svg>
                 </button>
-                <div className="text-center leading-tight">
-                  <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 block">
+                <div className="flex flex-col items-center leading-tight mt-1">
+                  <span className="text-xs sm:text-[13px] font-bold text-zinc-800 dark:text-zinc-200 block">
                     Foto
                   </span>
-                  <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block">
+                  <span className="text-[10px] sm:text-[11px] text-zinc-500 dark:text-zinc-400 block">
                     {subiendoFoto ? "..." : fotosEstado.length > 0 ? `(${fotosEstado.length})` : "R2"}
                   </span>
                 </div>
@@ -1668,82 +1718,20 @@ export default function ModuloCarWashCatalogo({
           </div>
 
           {/* Autoventa sugerida / conectada al POS */}
-          <div className="mt-3 pt-2.5 border-t border-zinc-100 dark:border-white/5 text-center">
-            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate block">
-              {sugerenciaRecepcion}
-            </span>
-          </div>
-        </div>
-
-        {/* ===================================================================
-            TARJETA 2: ACCESOS RÁPIDOS Y COMBOS
-            =================================================================== */}
-        <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between min-h-[260px]">
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
-                Accesos Rápidos y Combos
-              </h2>
+          {sugerenciaRecepcion && (
+            <div className="mt-3 pt-2.5 border-t border-zinc-100 dark:border-white/5 text-center">
+              <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate block">
+                {sugerenciaRecepcion}
+              </span>
             </div>
-
-            {/* Botón principal Combo superior */}
-            <button
-              type="button"
-              onClick={() => {
-                const comboComp = CARWASH_COMBOS.find((c) => c.label === "Completo") || CARWASH_COMBOS[0];
-                void handleAplicarCombo(comboComp);
-                setComboSeleccionado("Completo");
-              }}
-              className="w-full h-11 rounded-xl bg-blue-50 dark:bg-blue-500/15 border border-blue-200 dark:border-blue-400/40 text-blue-800 dark:text-blue-100 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-98 shadow-2xs hover:bg-blue-100/70"
-            >
-              <span>⚡</span>
-              <span>Combo</span>
-            </button>
-
-            {/* Cuadrícula 2x2 de paquetes de lavado */}
-            <div className="grid grid-cols-2 gap-2 mt-3">
-              {CARWASH_COMBOS.map((combo) => {
-                const activo = comboSeleccionado === combo.label;
-                return (
-                  <button
-                    key={combo.id}
-                    type="button"
-                    onClick={() => {
-                      setComboSeleccionado(combo.label);
-                      void handleAplicarCombo(combo);
-                    }}
-                    className={`h-10 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none active:scale-95 shadow-2xs ${
-                      activo
-                        ? "bg-blue-50 dark:bg-blue-500/20 border-blue-300 dark:border-blue-400/50 text-blue-800 dark:text-blue-100 ring-1 ring-blue-300 shadow-xs"
-                        : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/5 dark:hover:bg-white/10 border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
-                    }`}
-                  >
-                    {activo && <span className="text-blue-600 dark:text-blue-300">✓</span>}
-                    <span>{combo.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Botón inferior Repetir */}
-          <div className="mt-3 pt-2">
-            <button
-              type="button"
-              onClick={handleRepetirUltimoServicio}
-              className="w-full h-10 rounded-xl bg-zinc-50 dark:bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-98 shadow-2xs"
-              title="Cargar el último servicio realizado a este vehículo"
-            >
-              <span>⚡</span>
-              <span>Repetir</span>
-            </button>
-          </div>
+          )}
         </div>
+      </div>
 
-        {/* ===================================================================
-            TARJETA 3: CATÁLOGO CONTRAÍDO EN 1 SOLA LÍNEA (FILAS SUPERIORES)
-            =================================================================== */}
-        <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs space-y-3">
+      {/* =====================================================================
+          BUSCADOR Y FILTROS: ANCHO COMPLETO (CUBRE TODO EL ESPACIO EN PC Y MÓVIL)
+          ===================================================================== */}
+      <div className="w-full rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3 sm:p-3.5 shadow-2xs space-y-3">
           {/* Fila de 3 píldoras desplegables contraíbles */}
           <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
             {/* Píldora 1: Categoría */}
@@ -1883,7 +1871,6 @@ export default function ModuloCarWashCatalogo({
             )}
           </div>
         </div>
-      </div>
 
       {/* =====================================================================
           CUADRÍCULA DE SERVICIOS Y PRODUCTOS DEL POS (OPCIONES LIMPIAS)

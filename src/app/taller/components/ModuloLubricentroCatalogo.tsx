@@ -3699,30 +3699,8 @@ export default function ModuloLubricentroCatalogo({
             =================================================================== */}
         <div className="lg:col-span-5 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between min-h-[220px]">
           <div>
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="min-w-0 flex-1">
-                <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white flex items-center gap-1.5 truncate">
-                  <span className="text-base sm:text-lg">🚗</span>
-                  <span className="truncate">
-                    {descripcionVehiculo || (ordenActiva?.plate ? `Auto ${ordenActiva.plate}` : "Auto detectado")}
-                  </span>
-                </h2>
-                {(ordenActiva?.clientName || ordenActiva?.customerName || ordenActiva?.client || ordenActiva?.plate) && (
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5 font-normal flex items-center gap-1.5">
-                    {ordenActiva?.plate && (
-                      <span className="font-semibold font-mono uppercase bg-zinc-100 dark:bg-white/10 px-1.5 py-0.5 rounded text-[11px] text-zinc-800 dark:text-zinc-200">
-                        {ordenActiva.plate}
-                      </span>
-                    )}
-                    <span className="truncate">
-                      {ordenActiva?.clientName || ordenActiva?.customerName || ordenActiva?.client || ""}
-                    </span>
-                  </p>
-                )}
-              </div>
-            </div>
             {/* Kilometraje normal y legible */}
-            <div className="mt-2 p-3 rounded-xl bg-zinc-50 dark:bg-black/20 border border-zinc-200/70 dark:border-white/5">
+            <div className="p-3 rounded-xl bg-zinc-50 dark:bg-black/20 border border-zinc-200/70 dark:border-white/5">
               <div className="flex items-baseline justify-between gap-2">
                 <span className="text-xl sm:text-2xl font-bold font-sans tracking-normal text-zinc-900 dark:text-white">
                   {kmActual.toLocaleString()} km
