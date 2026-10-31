@@ -5190,19 +5190,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 ordenActiva.status === "Aprobado" ||
                 ordenActiva.quoteStatus === "ACEPTADO") && (
                 <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setModalPresupuestoPdfAbierto(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl sm:rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-semibold shadow-sm animate-fade-in transition-all cursor-pointer active:scale-95 shrink-0"
-                    title="Ver e Imprimir PDF de la Solicitud de Orden (Propuesta)"
-                  >
-                    <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-6 4h4" />
-                    </svg>
-                    <span>PDF Solicitud</span>
-                  </button>
-
                   <div
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl sm:rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider shadow-sm animate-fade-in shrink-0"
                     title="Propuesta Aprobada - Listo para empezar a trabajar"
@@ -5223,12 +5210,15 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
           <div className="flex items-center gap-2 w-full min-w-0 sm:w-auto sm:max-w-full py-0.5">
             <div className="flex items-center flex-1 min-w-0 sm:flex-none p-1 rounded-2xl bg-white dark:bg-[#0d0d0e] border border-zinc-200 dark:border-white/10 backdrop-blur-md shadow-sm dark:shadow-xl gap-0.5 sm:gap-1">
               {MODULOS_ESPECIALIDADES.map((mod) => {
-                const isActivo = moduloTaller === mod.id;
+                const isActivo = etapaActiva !== 4 && moduloTaller === mod.id;
                 return (
                   <button
                     key={mod.id}
                     type="button"
-                    onClick={() => setModuloTaller(mod.id)}
+                    onClick={() => {
+                      setModuloTaller(mod.id);
+                      setEtapaActiva(2);
+                    }}
                     className={`h-9 flex-1 min-w-0 px-1 sm:flex-none sm:px-3.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                       isActivo
                         ? `${mod.bgClass} border ${mod.borderClass} ${mod.textClass} ${mod.shadowClass} backdrop-blur-sm font-bold`
@@ -5244,7 +5234,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             </div>
 
             {/* BOTÓN ENGRANAJE: REGISTRO MANUAL / MODO FORMULARIO (SOLO EN LUBRICENTRO, CARWASH Y TECNICENTRO) */}
-            {moduloTaller !== "taller" && (
+            {moduloTaller !== "taller" && etapaActiva !== 4 && (
               <button
                 type="button"
                 onClick={() => setModoRapidoActivo((prev) => !prev)}
@@ -5294,56 +5284,33 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             )}
           </div>
 
-          {/* A LADO DERECHO: ETIQUETA DE PROPUESTA (ENVIADO / ✓ APROBADO) */}
-          {ordenActiva &&
-            (ordenActiva.quoteStatus === "Pendiente" ||
-              ordenActiva.quoteStatus === "Aprobado" ||
-              ordenActiva.quoteStatus === "ACEPTADO" ||
-              ordenActiva.status === "Aprobado" ||
-              ordenActiva.status === "EN_CAJA" ||
-              ordenActiva.quoteSignatureUrl) && (
-              (() => {
-                const esAprobado =
-                  ordenActiva.quoteStatus === "Aprobado" ||
-                  ordenActiva.quoteStatus === "ACEPTADO" ||
-                  ordenActiva.status === "Aprobado" ||
-                  ordenActiva.status === "EN_CAJA";
-
-                return esAprobado ? (
-                  <div className="flex items-center gap-1.5 sm:gap-2 ml-auto shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setModalPresupuestoPdfAbierto(true)}
-                      className="h-9 px-2.5 sm:px-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-semibold flex items-center gap-1.5 shadow-sm backdrop-blur-md transition-all cursor-pointer active:scale-95"
-                      title="Ver e Imprimir PDF de la Solicitud de Orden (Propuesta)"
-                    >
-                      <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
-                      <span>PDF Solicitud</span>
-                    </button>
-
-                    <div
-                      title="Propuesta Aprobada"
-                      className="h-9 px-3 sm:px-3.5 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 shadow-sm backdrop-blur-md shrink-0 animate-fade-in select-none"
-                    >
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                      <span>✓ Aprobado</span>
-                    </div>
-                  </div>
-                ) : null;
-              })()
-            )}
+          {/* A LADO DERECHO: ETIQUETA DE APROBACIÓN */}
+          {ordenActiva && (
+            <div className="flex items-center gap-1.5 sm:gap-2 ml-auto shrink-0">
+              {(ordenActiva.quoteStatus === "Aprobado" ||
+                ordenActiva.quoteStatus === "ACEPTADO" ||
+                ordenActiva.status === "Aprobado" ||
+                ordenActiva.status === "EN_CAJA") && (
+                <div
+                  title="Propuesta Aprobada"
+                  className="h-9 px-3 sm:px-3.5 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-bold flex items-center gap-1.5 shadow-sm backdrop-blur-md shrink-0 animate-fade-in select-none"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                  <span>✓ Aprobado</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         {/* ===================================================================
             CONTENEDOR PRINCIPAL: CABECERA COMÚN (PLACA, VEHÍCULO, CLIENTE, VECES ATENDIDO Y MODO)
             SALE EXACTAMENTE IGUAL PARA TALLER Y LUBRICENTRO
             =================================================================== */}
         <section className="bg-white dark:bg-[#111113]/90 rounded-2xl border border-zinc-200 dark:border-white/[0.08] p-3 sm:p-6 shadow-sm dark:shadow-2xl space-y-4 sm:space-y-5 overflow-hidden w-full max-w-full">
-          {/* VISTAS SEGÚN EL SELECTOR: TALLER, LUBRICENTRO, CAR WASH O TECNICENTRO */}
+          {/* VISTAS SEGÚN EL SELECTOR: TALLER, LUBRICENTRO, CAR WASH O TECNICENTRO (CUANDO NO ESTAMOS EN FIRMA) */}
           <div
             className={
-              moduloTaller === "lubricentro" || moduloTaller === "carwash" || moduloTaller === "tecnicentro"
+              (moduloTaller === "lubricentro" || moduloTaller === "carwash" || moduloTaller === "tecnicentro") && etapaActiva !== 4
                 ? "block w-full"
                 : "hidden"
             }
@@ -5375,7 +5342,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             moduloTaller !== "lubricentro" &&
             moduloTaller !== "carwash" &&
             moduloTaller !== "tecnicentro" &&
-            !modoRapidoActivo && (
+            !modoRapidoActivo &&
+            etapaActiva !== 4 && (
             <div className="w-full space-y-4 animate-fade-in">
               <InspeccionVehiculo
                 ordenActiva={ordenActiva}
@@ -5397,13 +5365,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             </div>
           )}
 
-
-
-          <div className={moduloTaller === "taller" ? "block w-full" : "hidden"}>
-          {/* ===================================================================
-              VISTA DE CADA ETAPA ACTIVA (ALTURA DINÁMICA SIN ESPACIOS VACÍOS)
-              =================================================================== */}
-          <div className="w-full">
+          <div className={moduloTaller === "taller" && etapaActiva !== 4 ? "block w-full" : "hidden"}>
             {/* ETAPA 2: INSPECCIÓN (5 VISTAS + PINES NUMERADOS + R2) */}
             {etapaActiva === 2 && (
               <div className="w-full space-y-4 animate-fade-in">
@@ -5427,240 +5389,314 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 />
               </div>
             )}
+          </div>
 
-            {/* ETAPA 4: AVISO Y FIRMA + TRASPASO A POS / ÓRDENES */}
-            {etapaActiva === 4 && (
-              <div className="w-full space-y-4 animate-fade-in">
-                <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/[0.08] space-y-4 shadow-sm dark:shadow-xl">
-                  {/* Cabecera */}
-                  <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/[0.08] pb-3">
-                    <h4 className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-white">
-                      Firma
-                    </h4>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setModalPresupuestoPdfAbierto(true)}
-                        className="h-8 px-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
-                        title="Ver e Imprimir PDF de la Solicitud de Orden (Propuesta)"
-                      >
-                        <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-6 4h4" />
-                        </svg>
-                        <span>PDF Solicitud</span>
-                      </button>
-
-                      {ordenActiva &&
-                        (ordenActiva.quoteStatus === "Aprobado" ||
-                          ordenActiva.status === "Aprobado" ||
-                          ordenActiva.quoteStatus === "ACEPTADO") && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/20 border border-emerald-400/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider shadow-xs">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                            ✓ Aprobado
-                          </span>
-                        )}
+          {/* ===================================================================
+              ETAPA 4: AVISO Y FIRMA + RESUMEN DE PROCESOS + PDF SOLICITUD
+              ACCESIBLE DIRECTAMENTE DESDE CUALQUIER MÓDULO AL PONER "SIGUIENTE"
+              =================================================================== */}
+          {etapaActiva === 4 && (
+            <div className="w-full space-y-4 animate-fade-in">
+              <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/[0.08] space-y-4 shadow-sm dark:shadow-xl">
+                {/* Cabecera */}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 dark:border-white/[0.08] pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center text-base">
+                      ✍️
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
+                        Firma y Confirmación
+                      </h4>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {ordenActiva?.plate ? `Placa: ${ordenActiva.plate}` : "Orden en proceso"} {ordenActiva?.vehicle ? `• ${ordenActiva.vehicle}` : ""}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Contenido en 2 columnas */}
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                    {/* Columna Izquierda: Estado y Notificación */}
-                    <div className="lg:col-span-5 space-y-3">
-                      {/* Estado */}
-                      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 space-y-2">
-                        <span className="text-xs font-normal text-zinc-700 dark:text-zinc-300 block">
-                          Estado:
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setModalPresupuestoPdfAbierto(true)}
+                      className="h-9 px-3.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                      title="Ver e Imprimir PDF de la Solicitud de Orden (Propuesta)"
+                    >
+                      <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-6 4h4" />
+                      </svg>
+                      <span>PDF Solicitud</span>
+                    </button>
+
+                    {ordenActiva &&
+                      (ordenActiva.quoteStatus === "Aprobado" ||
+                        ordenActiva.status === "Aprobado" ||
+                        ordenActiva.quoteStatus === "ACEPTADO") && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-400/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider shadow-xs">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                          ✓ Aprobado
                         </span>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                          {etapa6EstadosLista.slice(0, 5).map((st, idx) => {
-                            const sel =
-                              etapa6EstadoSeleccionado.toLowerCase() === st.name.toLowerCase() ||
-                              etapa6EstadoSeleccionado.toLowerCase().includes(st.name.toLowerCase().replace(/^\d+\s*/, ""));
+                      )}
+                  </div>
+                </div>
 
-                            const coloresActivoPorIndice = [
-                              "bg-amber-500/25 text-amber-800 dark:text-amber-200 border-amber-400/60 ring-1 ring-amber-400/40 font-normal shadow-sm",
-                              "bg-blue-500/25 text-blue-800 dark:text-blue-200 border-blue-400/60 ring-1 ring-blue-400/40 font-normal shadow-sm",
-                              "bg-rose-500/25 text-rose-800 dark:text-rose-200 border-rose-400/60 ring-1 ring-rose-400/40 font-normal shadow-sm",
-                              "bg-emerald-500/25 text-emerald-800 dark:text-emerald-200 border-emerald-400/60 ring-1 ring-emerald-400/40 font-normal shadow-sm",
-                              "bg-purple-500/25 text-purple-800 dark:text-purple-200 border-purple-400/60 ring-1 ring-purple-400/40 font-normal shadow-sm",
-                            ];
-                            const estiloActivo = coloresActivoPorIndice[idx % coloresActivoPorIndice.length];
-                            const estiloPlomo = "bg-white dark:bg-white/[0.03] hover:bg-zinc-100 dark:hover:bg-white/[0.07] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-zinc-200 dark:border-white/10 font-normal";
+                {/* RESUMEN DE PROCESOS Y SERVICIOS MARCADOS */}
+                <div className="p-3.5 sm:p-4 rounded-xl bg-zinc-50/80 dark:bg-black/30 border border-zinc-200 dark:border-white/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">📋</span>
+                      <h5 className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                        Procesos y Trabajos Registrados ({(ordenActiva?.items || []).length})
+                      </h5>
+                    </div>
+                    <span className="text-xs font-bold text-zinc-900 dark:text-white px-2.5 py-1 rounded-lg bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 shadow-xs">
+                      Total: ${Number(ordenActiva?.totalCost || (ordenActiva?.items || []).reduce((sum: number, it: any) => sum + (Number(it.price || 0) * (Number(it.qty) || 1)), 0)).toFixed(2)}
+                    </span>
+                  </div>
 
-                            return (
-                              <button
-                                key={st.id}
-                                type="button"
-                                onClick={() => handleSeleccionarEstadoEtapa6(st)}
-                                className={`px-2 py-1.5 rounded-lg text-xs border transition-all cursor-pointer text-center active:scale-95 ${
-                                  sel ? estiloActivo : estiloPlomo
-                                }`}
-                              >
-                                {st.name}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
+                  {ordenActiva?.items && ordenActiva.items.length > 0 ? (
+                    <div className="divide-y divide-zinc-200/60 dark:divide-white/5 max-h-56 overflow-y-auto pr-1">
+                      {ordenActiva.items.map((item: any, idx: number) => {
+                        const itemQty = Number(item.qty || item.quantity || 1);
+                        const itemPrice = Number(item.price || 0);
+                        const itemSubtotal = itemQty * itemPrice;
+                        const categoria = item.category || (item.type === "PART" ? "Repuesto" : "Servicio");
 
-                      {/* Notificación rápida */}
-                      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 space-y-2">
-                        <span className="text-xs font-normal text-zinc-700 dark:text-zinc-300 block">
-                          Aviso:
-                        </span>
-                        <button
-                          type="button"
-                          onClick={handleEnviarWhatsAppAvisoEtapa6}
-                          className="w-full h-9 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-normal transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 shadow-sm"
-                          title="Abrir WhatsApp Web con mensaje prediseñado según el estado actual"
-                        >
-                          <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
-                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
-                          </svg>
-                          <span>WhatsApp</span>
-                        </button>
+                        return (
+                          <div key={item.id || `item_${idx}`} className="py-2 flex items-center justify-between gap-3 text-xs">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="w-5 h-5 rounded-md bg-zinc-200 dark:bg-white/10 text-zinc-700 dark:text-zinc-300 font-bold flex items-center justify-center text-[10px] shrink-0">
+                                {idx + 1}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="font-medium text-zinc-800 dark:text-zinc-200 truncate">
+                                  {item.name || item.description || "Trabajo"}
+                                </p>
+                                <div className="flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+                                  <span className="capitalize">{categoria}</span>
+                                  <span>•</span>
+                                  <span>Cant: {itemQty}</span>
+                                  {itemPrice > 0 && (
+                                    <>
+                                      <span>•</span>
+                                      <span>c/u ${itemPrice.toFixed(2)}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                                ${itemSubtotal.toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="py-3 text-center text-xs text-zinc-500 dark:text-zinc-400 bg-white dark:bg-white/[0.02] rounded-lg border border-dashed border-zinc-200 dark:border-white/10">
+                      <span>No se han registrado procesos todavía. Puedes usar los módulos superiores para marcar trabajos.</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Contenido en 2 columnas */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                  {/* Columna Izquierda: Estado y Notificación */}
+                  <div className="lg:col-span-5 space-y-3">
+                    {/* Estado */}
+                    <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 space-y-2">
+                      <span className="text-xs font-normal text-zinc-700 dark:text-zinc-300 block">
+                        Estado:
+                      </span>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                        {etapa6EstadosLista.slice(0, 5).map((st, idx) => {
+                          const sel =
+                            etapa6EstadoSeleccionado.toLowerCase() === st.name.toLowerCase() ||
+                            etapa6EstadoSeleccionado.toLowerCase().includes(st.name.toLowerCase().replace(/^\d+\s*/, ""));
+
+                          const coloresActivoPorIndice = [
+                            "bg-amber-500/25 text-amber-800 dark:text-amber-200 border-amber-400/60 ring-1 ring-amber-400/40 font-normal shadow-sm",
+                            "bg-blue-500/25 text-blue-800 dark:text-blue-200 border-blue-400/60 ring-1 ring-blue-400/40 font-normal shadow-sm",
+                            "bg-rose-500/25 text-rose-800 dark:text-rose-200 border-rose-400/60 ring-1 ring-rose-400/40 font-normal shadow-sm",
+                            "bg-emerald-500/25 text-emerald-800 dark:text-emerald-200 border-emerald-400/60 ring-1 ring-emerald-400/40 font-normal shadow-sm",
+                            "bg-purple-500/25 text-purple-800 dark:text-purple-200 border-purple-400/60 ring-1 ring-purple-400/40 font-normal shadow-sm",
+                          ];
+                          const estiloActivo = coloresActivoPorIndice[idx % coloresActivoPorIndice.length];
+                          const estiloPlomo = "bg-white dark:bg-white/[0.03] hover:bg-zinc-100 dark:hover:bg-white/[0.07] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 border border-zinc-200 dark:border-white/10 font-normal";
+
+                          return (
+                            <button
+                              key={st.id}
+                              type="button"
+                              onClick={() => handleSeleccionarEstadoEtapa6(st)}
+                              className={`px-2 py-1.5 rounded-lg text-xs border transition-all cursor-pointer text-center active:scale-95 ${
+                                sel ? estiloActivo : estiloPlomo
+                              }`}
+                            >
+                              {st.name}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
-                    {/* Columna Derecha: Doble Firma (Aceptación o Entrega) */}
-                    <div className="lg:col-span-7 space-y-3">
-                      <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 space-y-3">
-                        {/* Selector de Modo de Firma */}
-                        <div className="flex items-center justify-between gap-2 border-b border-zinc-200 dark:border-white/5 pb-2.5">
-                          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 shadow-xs">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setModoFirma("ACEPTACION");
-                                limpiarCanvasFirmaEtapa7();
-                              }}
-                              className={`px-3 py-1 rounded-md text-xs font-normal transition-all cursor-pointer ${
-                                modoFirma === "ACEPTACION"
-                                  ? "bg-blue-600 text-white shadow-xs"
-                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                              }`}
-                            >
-                              Presupuesto
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setModoFirma("ENTREGA");
-                                limpiarCanvasFirmaEtapa7();
-                              }}
-                              className={`px-3 py-1 rounded-md text-xs font-normal transition-all cursor-pointer ${
-                                modoFirma === "ENTREGA"
-                                  ? "bg-teal-600 text-white shadow-xs"
-                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                              }`}
-                            >
-                              Entrega
-                            </button>
-                          </div>
+                    {/* Notificación rápida */}
+                    <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 space-y-2">
+                      <span className="text-xs font-normal text-zinc-700 dark:text-zinc-300 block">
+                        Aviso:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleEnviarWhatsAppAvisoEtapa6}
+                        className="w-full h-9 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-normal transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 shadow-sm"
+                        title="Abrir WhatsApp Web con mensaje prediseñado según el estado actual"
+                      >
+                        <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                        </svg>
+                        <span>WhatsApp</span>
+                      </button>
+                    </div>
+                  </div>
 
+                  {/* Columna Derecha: Doble Firma (Aceptación o Entrega) */}
+                  <div className="lg:col-span-7 space-y-3">
+                    <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 space-y-3">
+                      {/* Selector de Modo de Firma */}
+                      <div className="flex items-center justify-between gap-2 border-b border-zinc-200 dark:border-white/5 pb-2.5">
+                        <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 shadow-xs">
                           <button
                             type="button"
-                            onClick={limpiarCanvasFirmaEtapa7}
-                            className="text-[11px] text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white px-2 py-0.5 rounded bg-zinc-200/80 dark:bg-white/5 cursor-pointer transition-colors"
+                            onClick={() => {
+                              setModoFirma("ACEPTACION");
+                              limpiarCanvasFirmaEtapa7();
+                            }}
+                            className={`px-3 py-1 rounded-md text-xs font-normal transition-all cursor-pointer ${
+                              modoFirma === "ACEPTACION"
+                                ? "bg-blue-600 text-white shadow-xs"
+                                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                            }`}
                           >
-                            Limpiar
+                            Presupuesto
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setModoFirma("ENTREGA");
+                              limpiarCanvasFirmaEtapa7();
+                            }}
+                            className={`px-3 py-1 rounded-md text-xs font-normal transition-all cursor-pointer ${
+                              modoFirma === "ENTREGA"
+                                ? "bg-teal-600 text-white shadow-xs"
+                                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                            }`}
+                          >
+                            Entrega
                           </button>
                         </div>
 
-                        {/* Lienzo Canvas Minimalista Táctil o Firma recibida desde Panel Cliente */}
-                        {(() => {
-                          const firmaGuardadaUrl =
-                            modoFirma === "ACEPTACION"
-                              ? ordenActiva?.quoteSignatureUrl
-                              : ordenActiva?.deliverySignatureUrl;
-                          const firmaSolicitadaPanel =
-                            modoFirma === "ACEPTACION"
-                              ? ordenActiva?.quoteStatus === "Pendiente Firma en Panel Cliente"
-                              : ordenActiva?.deliveryStatus === "Pendiente Firma en Panel Cliente";
-
-                          return (
-                            <>
-                              <div className="h-40 rounded-xl bg-zinc-50 dark:bg-[#0a0a0c] border border-dashed border-zinc-300 dark:border-white/10 relative overflow-hidden flex items-center justify-center">
-                                {firmaGuardadaUrl && !tieneTrazosFirmaEtapa7Ref.current ? (
-                                  <div className="w-full h-full flex flex-col items-center justify-center p-2 bg-white/95 relative">
-                                    <img
-                                      src={firmaGuardadaUrl}
-                                      alt="Firma del Cliente"
-                                      className="max-h-28 max-w-full object-contain"
-                                    />
-                                    <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 text-[10px] font-bold">
-                                      ✓ Firmado por Cliente
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <canvas
-                                      ref={canvasFirmaEtapa7Ref}
-                                      width={480}
-                                      height={160}
-                                      onMouseDown={iniciarTrazoFirmaEtapa7}
-                                      onMouseMove={moverTrazoFirmaEtapa7}
-                                      onMouseUp={terminarTrazoFirmaEtapa7}
-                                      onMouseLeave={terminarTrazoFirmaEtapa7}
-                                      onTouchStart={iniciarTrazoFirmaEtapa7}
-                                      onTouchMove={moverTrazoFirmaEtapa7}
-                                      onTouchEnd={terminarTrazoFirmaEtapa7}
-                                      className="w-full h-full cursor-crosshair touch-none select-none"
-                                    />
-                                    {!tieneTrazosFirmaEtapa7Ref.current && (
-                                      <div className="absolute pointer-events-none text-zinc-400 dark:text-zinc-500 text-xs font-mono text-center px-3">
-                                        {firmaSolicitadaPanel
-                                          ? "📲 Esperando firma del cliente en su Panel Cliente..."
-                                          : modoFirma === "ACEPTACION"
-                                          ? "[Firma presupuesto]"
-                                          : "[Firma entrega]"}
-                                      </div>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-
-                              {/* Acciones de Firma */}
-                              <div className="flex items-center justify-between gap-2 pt-1">
-                                <button
-                                  type="button"
-                                  onClick={handleGuardarFirmaActiva}
-                                  disabled={guardandoEtapa7}
-                                  className="h-9 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-800 dark:bg-white/10 dark:hover:bg-white/15 dark:border-transparent dark:text-white text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
-                                >
-                                  <span>💾 {guardandoEtapa7 ? "Guardando..." : "Guardar"}</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={handleEnviarWhatsAppAceptacionEtapa7}
-                                  disabled={guardandoEtapa7}
-                                  className={`h-9 px-3 rounded-xl border text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
-                                    copiadoLinkFirmaEtapa7 || firmaSolicitadaPanel
-                                      ? "bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-500/20 dark:border-blue-500/40 dark:text-blue-300"
-                                      : "bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-700 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-zinc-300"
-                                  }`}
-                                  title="Habilita la firma remota directamente en el Panel del Cliente (/cliente/taller)"
-                                >
-                                  <span>
-                                    {copiadoLinkFirmaEtapa7 || firmaSolicitadaPanel
-                                      ? "✓ En Panel Cliente"
-                                      : "📲 Firma remota"}
-                                  </span>
-                                </button>
-                              </div>
-                            </>
-                          );
-                        })()}
+                        <button
+                          type="button"
+                          onClick={limpiarCanvasFirmaEtapa7}
+                          className="text-[11px] text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white px-2 py-0.5 rounded bg-zinc-200/80 dark:bg-white/5 cursor-pointer transition-colors"
+                        >
+                          Limpiar
+                        </button>
                       </div>
+
+                      {/* Lienzo Canvas Minimalista Táctil o Firma recibida desde Panel Cliente */}
+                      {(() => {
+                        const firmaGuardadaUrl =
+                          modoFirma === "ACEPTACION"
+                            ? ordenActiva?.quoteSignatureUrl
+                            : ordenActiva?.deliverySignatureUrl;
+                        const firmaSolicitadaPanel =
+                          modoFirma === "ACEPTACION"
+                            ? ordenActiva?.quoteStatus === "Pendiente Firma en Panel Cliente"
+                            : ordenActiva?.deliveryStatus === "Pendiente Firma en Panel Cliente";
+
+                        return (
+                          <>
+                            <div className="h-40 rounded-xl bg-zinc-50 dark:bg-[#0a0a0c] border border-dashed border-zinc-300 dark:border-white/10 relative overflow-hidden flex items-center justify-center">
+                              {firmaGuardadaUrl && !tieneTrazosFirmaEtapa7Ref.current ? (
+                                <div className="w-full h-full flex flex-col items-center justify-center p-2 bg-white/95 relative">
+                                  <img
+                                    src={firmaGuardadaUrl}
+                                    alt="Firma del Cliente"
+                                    className="max-h-28 max-w-full object-contain"
+                                  />
+                                  <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 text-[10px] font-bold">
+                                    ✓ Firmado por Cliente
+                                  </span>
+                                </div>
+                              ) : (
+                                <>
+                                  <canvas
+                                    ref={canvasFirmaEtapa7Ref}
+                                    width={480}
+                                    height={160}
+                                    onMouseDown={iniciarTrazoFirmaEtapa7}
+                                    onMouseMove={moverTrazoFirmaEtapa7}
+                                    onMouseUp={terminarTrazoFirmaEtapa7}
+                                    onMouseLeave={terminarTrazoFirmaEtapa7}
+                                    onTouchStart={iniciarTrazoFirmaEtapa7}
+                                    onTouchMove={moverTrazoFirmaEtapa7}
+                                    onTouchEnd={terminarTrazoFirmaEtapa7}
+                                    className="w-full h-full cursor-crosshair touch-none select-none"
+                                  />
+                                  {!tieneTrazosFirmaEtapa7Ref.current && (
+                                    <div className="absolute pointer-events-none text-zinc-400 dark:text-zinc-500 text-xs font-mono text-center px-3">
+                                      {firmaSolicitadaPanel
+                                        ? "📲 Esperando firma del cliente en su Panel Cliente..."
+                                        : modoFirma === "ACEPTACION"
+                                        ? "[Firma presupuesto]"
+                                        : "[Firma entrega]"}
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+
+                            {/* Acciones de Firma */}
+                            <div className="flex items-center justify-between gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={handleGuardarFirmaActiva}
+                                disabled={guardandoEtapa7}
+                                className="h-9 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-800 dark:bg-white/10 dark:hover:bg-white/15 dark:border-transparent dark:text-white text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+                              >
+                                <span>💾 {guardandoEtapa7 ? "Guardando..." : "Guardar"}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={handleEnviarWhatsAppAceptacionEtapa7}
+                                disabled={guardandoEtapa7}
+                                className={`h-9 px-3 rounded-xl border text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 ${
+                                  copiadoLinkFirmaEtapa7 || firmaSolicitadaPanel
+                                    ? "bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-500/20 dark:border-blue-500/40 dark:text-blue-300"
+                                    : "bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-700 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-zinc-300"
+                                }`}
+                                title="Habilita la firma remota directamente en el Panel del Cliente (/cliente/taller)"
+                              >
+                                <span>
+                                  {copiadoLinkFirmaEtapa7 || firmaSolicitadaPanel
+                                    ? "✓ En Panel Cliente"
+                                    : "📲 Firma remota"}
+                                </span>
+                              </button>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
               </div>
-            )}
-          </div>
-          </div>
+            </div>
+          )}
         </section>
 
         {/* BARRA DE NAVEGACIÓN: AL FINAL DE LA PÁGINA (FLUJO NORMAL) */}

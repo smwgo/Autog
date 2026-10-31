@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import Link from "next/link";
 import { createPortal } from "react-dom";
 import type {
   LubricentroConfigData,
@@ -12,6 +13,9 @@ import {
   ModalProductoLubricentroForm,
   ModalConfiguracionManualLubricentro,
 } from "./LubricentroAdminModals";
+import ModalHistorialCambiosAceite, {
+  ItemHistorialCambioAceite,
+} from "./ModalHistorialCambiosAceite";
 import {
   DEFAULT_LUBRICENTRO_CONFIG_CLIENT,
 } from "./lubricentroDefaults";
@@ -689,6 +693,9 @@ export default function ModuloLubricentroCatalogo({
   );
   const [guardandoSeguimiento, setGuardandoSeguimiento] = useState(false);
   const [repitiendoCambioAceite, setRepitiendoCambioAceite] = useState(false);
+  const [mostrarModalHistorialAceite, setMostrarModalHistorialAceite] = useState(false);
+  const [historialRemoto, setHistorialRemoto] = useState<{ history: any[]; orders: any[] } | null>(null);
+  const [cargandoHistorialRemoto, setCargandoHistorialRemoto] = useState(false);
 
   // Selección múltiple de productos en la tienda
   const [productosSeleccionadosIds, setProductosSeleccionadosIds] = useState<string[]>([]);
@@ -2757,6 +2764,471 @@ export default function ModuloLubricentroCatalogo({
     return kmActual + 5000;
   }, [ordenActiva?.nextOilChangeKm, kmActual]);
 
+  // Consulta remota de historial si el modal se abre y no hay historial cargado aún
+  const consultarHistorialPlaca = useCallback(async (placaABuscar: string) => {
+    if (!placaABuscar.trim()) return;
+    try {
+      setCargandoHistorialRemoto(true);
+      const res = await fetch(`/api/taller/operacion?plate=${encodeURIComponent(placaABuscar.trim())}&historial=true`);
+      if (res.ok) {
+        const data = await res.json();
+        setHistorialRemoto({
+          history: Array.isArray(data.history) ? data.history : [],
+          orders: Array.isArray(data.orders) ? data.orders : [],
+        });
+      }
+    } catch (e) {
+      console.error("Error al consultar historial de aceite:", e);
+    } finally {
+      setCargandoHistorialRemoto(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mostrarModalHistorialAceite && ordenActiva?.plate && !historialRemoto) {
+      void consultarHistorialPlaca(ordenActiva.plate);
+    }
+  }, [mostrarModalHistorialAceite, ordenActiva?.plate, historialRemoto, consultarHistorialPlaca]);
+
+  // Lista COMPLETA de todos los cambios de aceite realizados históricamente a este cliente / vehículo
+  const todosCambiosAceiteAnteriores = useMemo<ItemHistorialCambioAceite[]>(() => {
+    const placaActiva = ordenActiva?.plate
+      ? String(ordenActiva.plate).toUpperCase().replace(/[^A-Z0-9]/g, "")
+      : "";
+    const clienteNombreRef = ordenActiva?.clientName || ordenActiva?.customerName || ordenActiva?.client || "";
+
+    // Combinar órdenes locales de props y datos remotos evitando duplicados
+    const todasLasOrdenes = [...ordenesAnteriores, ...(historialRemoto?.orders || [])];
+    const ordenesUnicasMap = new Map<string, any>();
+    todasLasOrdenes.forEach((o) => {
+      const k = String(o?.id || o?.orderNumber || "");
+      if (k && !ordenesUnicasMap.has(k)) ordenesUnicasMap.set(k, o);
+    });
+
+    const ordenesFiltradas = Array.from(ordenesUnicasMap.values()).filter((order) => {
+      if (ordenActiva?.id && order?.id === ordenActiva.id) return false;
+      if (!placaActiva) return true;
+      const p = String(order?.plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+      return p === placaActiva;
+    });
+
+    // Combinar historial de servicios anteriores evitando duplicados
+    const todosHistorial = [...historialAnterior, ...(historialRemoto?.history || [])];
+    const histUnicosMap = new Map<string, any>();
+    todosHistorial.forEach((h) => {
+      const k = String(h?.id || h?.serviceCode || h?.orderNumber || "");
+      if (k && !histUnicosMap.has(k)) histUnicosMap.set(k, h);
+    });
+
+    const historialFiltrado = Array.from(histUnicosMap.values()).filter((entry) => {
+      if (!placaActiva) return true;
+      const p = String(entry?.plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+      return p === placaActiva;
+    });
+
+    const normalizarNombre = (name: unknown) =>
+      String(name || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/^\s*\d+\s*x\s*/i, "")
+        .trim();
+
+    const encontrarProducto = (item: any) => {
+      const historicalName = normalizarNombre(item.name);
+      return productos.find(
+        (product) =>
+          product.id === item.productId ||
+          (product.code && item.code && product.code === item.code) ||
+          (historicalName &&
+            [normalizarNombre(product.name), normalizarNombre(item.presentation)].some(
+              (name) =>
+                name &&
+                (historicalName === name ||
+                  historicalName.startsWith(`${name} (`) ||
+                  historicalName.startsWith(`${name} `))
+            ))
+      );
+    };
+
+    const esProductoAceite = (item: any, product: any) => {
+      if (
+        product?.lubCategoryId === "lub_aceite" &&
+        product?.lubSubcategoryId === "lub_aceite_motor"
+      ) {
+        return true;
+      }
+      const itemName = normalizarNombre(item.name);
+      const itemCategory = normalizarNombre(item.category);
+      return (
+        (itemCategory.includes("lubricentro") || itemCategory.includes("aceite")) &&
+        (/\baceite\b|\boil\b/.test(itemName) || /\b\d{1,2}w-\d{2}\b/i.test(itemName))
+      );
+    };
+
+    const esFiltroAceite = (item: any, product: any) => {
+      if (
+        product?.lubCategoryId === "lub_filtros" &&
+        product?.lubSubcategoryId === "lub_fil_aceite"
+      ) {
+        return true;
+      }
+      const itemName = normalizarNombre(item.name);
+      return itemName.includes("filtro") && itemName.includes("aceite");
+    };
+
+    const esProductoLubricentro = (item: any, product: any) =>
+      Boolean(
+        product?.lubCategoryId ||
+        String(item.category || "").toLowerCase().includes("lubricentro") ||
+        String(item.id || "").startsWith("lub-") ||
+        String(item.id || "").startsWith("it_lub") ||
+        String(item.code || "").startsWith("LUB-")
+      );
+
+    const extraerViscosidad = (texto: string) => {
+      const match = String(texto).match(/\b(\d{1,2}W-\d{2})\b/i);
+      return match ? match[1].toUpperCase() : undefined;
+    };
+
+    // Procesar órdenes de taller
+    const pedidosMapeados: ItemHistorialCambioAceite[] = ordenesFiltradas.map((order) => {
+      const itemsList = Array.isArray(order.items) ? order.items : [];
+      const prods: Array<{ item: any; product: any }> = itemsList
+        .map((item: any) => ({ item, product: encontrarProducto(item) || item }))
+        .filter((entry: { item: any; product: any }) =>
+          esProductoLubricentro(entry.item, entry.product)
+        );
+
+      const itemAceite = prods.find(({ item, product }: { item: any; product: any }) => esProductoAceite(item, product));
+      const itemFiltro = prods.find(({ item, product }: { item: any; product: any }) => esFiltroAceite(item, product));
+      const otros = prods.filter(
+        ({ item, product }: { item: any; product: any }) =>
+          (!itemAceite || (item !== itemAceite.item && product !== itemAceite.product)) &&
+          (!itemFiltro || (item !== itemFiltro.item && product !== itemFiltro.product))
+      );
+
+      const prodsToRepeat = prods.filter(
+        ({ item, product }: { item: any; product: any }) =>
+          item.type !== "SERVICE" &&
+          (esProductoAceite(item, product) || esFiltroAceite(item, product)) &&
+          (product?.id || item.productId || item.code)
+      );
+
+      const fechaValor = order.dateIn || order.createdAt || 0;
+      const fechaMs = new Date(fechaValor).getTime();
+      const fechaFormateada = Number.isFinite(fechaMs) && fechaMs > 0
+        ? new Date(fechaMs).toLocaleDateString("es-EC", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          timeZone: "UTC",
+        })
+        : "Sin fecha";
+
+      const km = Number(order.mileage) || 0;
+      const kmDiff = kmActual > 0 && km > 0 ? kmActual - km : null;
+
+      const visc =
+        extraerViscosidad(itemAceite?.product?.name || itemAceite?.item?.name || "") ||
+        itemAceite?.product?.oilViscosity ||
+        undefined;
+
+      const precioAceite = Number(itemAceite?.item?.price || itemAceite?.product?.price || 0);
+      const qtyAceite = Number(itemAceite?.item?.qty || 1);
+
+      const precioFiltro = Number(itemFiltro?.item?.price || itemFiltro?.product?.price || 0);
+      const qtyFiltro = Number(itemFiltro?.item?.qty || 1);
+
+      return {
+        id: String(order.id || `ord_${order.orderNumber}`),
+        orderNumber: String(order.orderNumber || order.code || ""),
+        fecha: fechaFormateada,
+        fechaMs,
+        kilometraje: km,
+        kilometrosDiferencia: kmDiff,
+        mecanico: order.assignedMechanic || order.mechanic || "Técnico Lubricentro",
+        cliente: order.clientName || order.customerName || order.client || clienteNombreRef,
+        placa: order.plate || ordenActiva?.plate || "",
+        vehiculo: [order.vehicleBrand || order.brand, order.vehicleModel || order.model, order.year]
+          .filter(Boolean)
+          .join(" ") || descripcionVehiculo,
+        aceite: itemAceite
+          ? {
+            nombre: itemAceite.product?.name || itemAceite.item?.name || "Aceite de Motor",
+            marca: itemAceite.product?.brand || itemAceite.item?.brand,
+            viscosidad: visc,
+            presentacion: itemAceite.item?.presentation || itemAceite.product?.presentation || "Galón",
+            cantidad: qtyAceite,
+            precio: precioAceite,
+            subtotal: precioAceite * qtyAceite,
+            product: itemAceite.product,
+            item: itemAceite.item,
+          }
+          : null,
+        filtro: itemFiltro
+          ? {
+            nombre: itemFiltro.product?.name || itemFiltro.item?.name || "Filtro de Aceite",
+            marca: itemFiltro.product?.brand || itemFiltro.item?.brand,
+            presentacion: itemFiltro.item?.presentation || itemFiltro.product?.presentation || "Unidad",
+            cantidad: qtyFiltro,
+            precio: precioFiltro,
+            subtotal: precioFiltro * qtyFiltro,
+            product: itemFiltro.product,
+            item: itemFiltro.item,
+          }
+          : null,
+        otrosFluidos: otros.map(({ item, product }: { item: any; product: any }) => ({
+          nombre: product?.name || item.name,
+          cantidad: Number(item.qty || 1),
+          precio: Number(item.price || product?.price || 0),
+        })),
+        serviciosTexto: itemsList
+          .filter((it: any) => it.type === "SERVICE")
+          .map((it: any) => it.name),
+        notas: order.notes || order.observations || undefined,
+        costoTotal: Number(order.totalAmount || order.total || 0),
+        productosARepetir: prodsToRepeat,
+      };
+    });
+
+    // Procesar registros de WorkshopHistory
+    const historialMapeado: ItemHistorialCambioAceite[] = historialFiltrado.map((entry) => {
+      const servicesList = Array.isArray(entry.services) ? entry.services : [];
+      const prods: Array<{ item: any; product: any }> = servicesList.map((service: any) => {
+        const item = typeof service === "string" ? { name: service, category: "Lubricentro" } : service;
+        return { item, product: encontrarProducto(item) || item };
+      });
+
+      const itemAceite = prods.find(({ item, product }: { item: any; product: any }) => esProductoAceite(item, product));
+      const itemFiltro = prods.find(({ item, product }: { item: any; product: any }) => esFiltroAceite(item, product));
+
+      const fechaValor = entry.date || entry.createdAt || 0;
+      const fechaMs = new Date(fechaValor).getTime();
+      const fechaFormateada = Number.isFinite(fechaMs) && fechaMs > 0
+        ? new Date(fechaMs).toLocaleDateString("es-EC", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          timeZone: "UTC",
+        })
+        : String(entry.date || "Sin fecha");
+
+      const km = Number(String(entry.mileage || "").replace(/[^0-9]/g, "")) || 0;
+      const kmDiff = kmActual > 0 && km > 0 ? kmActual - km : null;
+
+      const textoAceite =
+        itemAceite?.product?.name ||
+        itemAceite?.item?.name ||
+        servicesList.find((s: any) =>
+          typeof s === "string" && (s.toLowerCase().includes("aceite") || /\b\d{1,2}w-\d{2}\b/i.test(s))
+        ) ||
+        "Cambio de Aceite";
+
+      const visc =
+        extraerViscosidad(textoAceite) ||
+        itemAceite?.product?.oilViscosity ||
+        undefined;
+
+      const prodsToRepeat = prods.filter(
+        ({ item, product }: { item: any; product: any }) =>
+          item.type !== "SERVICE" &&
+          (esProductoAceite(item, product) || esFiltroAceite(item, product)) &&
+          (product?.id || item.productId || item.code)
+      );
+
+      return {
+        id: String(entry.id || `hist_${entry.serviceCode || entry.orderNumber}`),
+        orderNumber: String(entry.orderNumber || entry.serviceCode || ""),
+        fecha: fechaFormateada,
+        fechaMs,
+        kilometraje: km,
+        kilometrosDiferencia: kmDiff,
+        mecanico: entry.mechanic || "Carlos Rodríguez",
+        cliente: entry.client || clienteNombreRef,
+        placa: entry.plate || ordenActiva?.plate || "",
+        vehiculo: entry.vehicle || descripcionVehiculo,
+        aceite: {
+          nombre: String(textoAceite),
+          marca: itemAceite?.product?.brand || itemAceite?.item?.brand || undefined,
+          viscosidad: visc,
+          presentacion: itemAceite?.item?.presentation || itemAceite?.product?.presentation || "Galón",
+          cantidad: 1,
+          precio: Number(itemAceite?.item?.price || itemAceite?.product?.price || 0),
+          subtotal: Number(itemAceite?.item?.price || itemAceite?.product?.price || 0),
+          product: itemAceite?.product,
+          item: itemAceite?.item,
+        },
+        filtro: itemFiltro
+          ? {
+            nombre: itemFiltro.product?.name || itemFiltro.item?.name || "Filtro de Aceite",
+            marca: itemFiltro.product?.brand || itemFiltro.item?.brand,
+            presentacion: "Unidad",
+            cantidad: 1,
+            precio: Number(itemFiltro.item?.price || itemFiltro.product?.price || 0),
+            subtotal: Number(itemFiltro.item?.price || itemFiltro.product?.price || 0),
+            product: itemFiltro.product,
+            item: itemFiltro.item,
+          }
+          : null,
+        otrosFluidos: [],
+        serviciosTexto: servicesList.filter((s: any) => typeof s === "string"),
+        notas: entry.notes || undefined,
+        costoTotal: Number(entry.cost || 0),
+        productosARepetir: prodsToRepeat,
+      };
+    });
+
+    const todos = [...pedidosMapeados, ...historialMapeado].sort(
+      (a, b) => b.fechaMs - a.fechaMs
+    );
+
+    // Solo registros que contengan cambio de aceite
+    return todos.filter((cambio) => {
+      if (cambio.aceite) return true;
+      if (Array.isArray(cambio.serviciosTexto)) {
+        return cambio.serviciosTexto.some(
+          (s) => typeof s === "string" && (s.toLowerCase().includes("aceite") || /\b\d{1,2}w-\d{2}\b/i.test(s))
+        );
+      }
+      return false;
+    });
+  }, [
+    ordenActiva?.id,
+    ordenActiva?.plate,
+    ordenActiva?.clientName,
+    ordenActiva?.customerName,
+    ordenActiva?.client,
+    ordenesAnteriores,
+    historialAnterior,
+    historialRemoto,
+    productos,
+    kmActual,
+    descripcionVehiculo,
+  ]);
+
+  const handleAplicarCambioEspecifico = async (productosARepetir: Array<{ item: any; product: any }>) => {
+    try {
+      setRepitiendoCambioAceite(true);
+      if (!productosARepetir || productosARepetir.length === 0) {
+        notificar("Este registro no incluye productos específicos en catálogo.", "err");
+        return;
+      }
+
+      const presentacionesSeleccionadas: Record<string, string> = {};
+      const itemsPreparados = productosARepetir.map(({ item, product }, index) => {
+        const productId = product?.id || item.productId;
+        if (!productId) {
+          throw new Error("No se encontró el identificador del producto.");
+        }
+        const presentation = String(
+          item.presentation || product?.presentation || product?.unitOfMeasure || "1 Unidad"
+        );
+        const variant = Array.isArray(product?.presentationsAvailable)
+          ? product.presentationsAvailable.find(
+            (candidate: LubPresentationVariant) =>
+              candidate.label === presentation || candidate.id === item.presentationId
+          )
+          : undefined;
+        if (variant && productId) presentacionesSeleccionadas[productId] = variant.id;
+
+        const price = Number(variant?.price ?? product?.price ?? item.price ?? 0);
+        const quantityFromName = String(item.name || "").match(/^\s*(\d+)\s*x\s*/i)?.[1];
+        const quantity = Math.max(1, Number(item.qty) || Number(quantityFromName) || 1);
+        const categoryLabel =
+          categoriasActivas.find((category) => category.id === product?.lubCategoryId)?.label ||
+          String(item.category || "").replace(/^Lubricentro\s*-\s*/i, "") ||
+          "Catálogo";
+        return {
+          id: `it_repeat_${productId || product?.code}_${Date.now()}_${index}`,
+          productId,
+          type: product?.type || item.type || "PART",
+          category: `Lubricentro - ${categoryLabel}`,
+          subCategory: product?.lubSubcategoryId || item.subCategory,
+          code: product?.code || item.code,
+          name: `${product?.name || item.name} (${presentation})`,
+          brand: product?.brand || item.brand,
+          presentation,
+          unitOfMeasure: variant?.unitOfMeasure || product?.unitOfMeasure || item.unitOfMeasure,
+          price,
+          qty: quantity,
+          status: "Listo",
+          completed: true,
+          empleado_id: empleadoLogueado.id,
+          empleado_nombre: empleadoLogueado.nombre,
+        };
+      });
+
+      if (ordenActiva?.id) {
+        const nuevosItems = [...itemsOrden];
+        itemsPreparados.forEach((item) => {
+          const existingIndex = nuevosItems.findIndex(
+            (existing) =>
+              ((item.productId && existing.productId === item.productId) ||
+                (existing.code && item.code && existing.code === item.code)) &&
+              (!existing.presentation || existing.presentation === item.presentation)
+          );
+
+          if (existingIndex >= 0) {
+            const currentQty = Number(nuevosItems[existingIndex].qty) || 1;
+            nuevosItems[existingIndex] = {
+              ...nuevosItems[existingIndex],
+              qty: currentQty + item.qty,
+              price: item.price,
+            };
+            return;
+          }
+          nuevosItems.push(item);
+        });
+        await onActualizarItemsOrden(nuevosItems);
+      } else {
+        setCarritoDirecto((prev) => {
+          const next = [...prev];
+          itemsPreparados.forEach((item) => {
+            const index = next.findIndex(
+              (cartItem) =>
+                cartItem.productId === item.productId &&
+                cartItem.presentation === item.presentation
+            );
+            if (index >= 0) {
+              next[index] = { ...next[index], qty: next[index].qty + item.qty, price: item.price };
+              return;
+            }
+            const foundProduct = productos.find(
+              (product: ProductoCatalogoLubricentro) => product.id === item.productId
+            );
+            next.push({
+              key: `${item.productId}_${item.presentation}`,
+              productId: item.productId,
+              code: item.code || item.productId || "LUB",
+              name: item.name || "Producto",
+              brand: item.brand || "",
+              presentation: item.presentation,
+              unitOfMeasure: item.unitOfMeasure || "Unidad",
+              price: item.price,
+              qty: item.qty,
+              maxStock: foundProduct?.stock ?? 999,
+              imageUrl: foundProduct?.imageUrl || null,
+              lubCategoryId: foundProduct?.lubCategoryId || "lub_aceite",
+              lubSubcategoryId: foundProduct?.lubSubcategoryId || "lub_aceite_motor",
+            });
+          });
+          return next;
+        });
+      }
+      setPresPorProducto((prev) => ({ ...prev, ...presentacionesSeleccionadas }));
+      notificar("¡Aceite y filtro aplicados a la orden con éxito!", "ok");
+      setMostrarModalHistorialAceite(false);
+    } catch (error) {
+      notificar(
+        error instanceof Error ? error.message : "No se pudo aplicar el cambio de aceite.",
+        "err"
+      );
+    } finally {
+      setRepitiendoCambioAceite(false);
+    }
+  };
+
   const estaPreCargadoEnOrden = (targetId: string) => {
     return itemsOrden.some(
       (it: any) =>
@@ -3019,9 +3491,7 @@ export default function ModuloLubricentroCatalogo({
     []
   );
 
-  const [semaforoEstados, setSemaforoEstados] = useState<Record<string, SemaforoEstado>>({
-    aire: 'critico',
-  });
+  const [semaforoEstados, setSemaforoEstados] = useState<Record<string, SemaforoEstado>>({});
 
   const handleToggleSemaforoCirculo = (id: string, estadoForzado?: SemaforoEstado) => {
     const circulo = SEMAFORO_CIRCULOS.find((c) => c.id === id);
@@ -3068,32 +3538,6 @@ export default function ModuloLubricentroCatalogo({
     setSemaforoEstados(nuevos);
     mostrarToast?.('🟢 Todos los puntos marcados como OK (Buen estado)', 'ok');
   };
-
-  const itemsCriticosSemaforo = useMemo(() => {
-    return SEMAFORO_CIRCULOS.filter((c) => (semaforoEstados[c.id] || 'neutral') === 'critico');
-  }, [semaforoEstados, SEMAFORO_CIRCULOS]);
-
-  const itemsAtencionSemaforo = useMemo(() => {
-    return SEMAFORO_CIRCULOS.filter((c) => (semaforoEstados[c.id] || 'neutral') === 'atencion');
-  }, [semaforoEstados, SEMAFORO_CIRCULOS]);
-
-  const itemsOkSemaforo = useMemo(() => {
-    return SEMAFORO_CIRCULOS.filter((c) => (semaforoEstados[c.id] || 'neutral') === 'ok');
-  }, [semaforoEstados, SEMAFORO_CIRCULOS]);
-
-  const textoAlertaSemaforo = useMemo(() => {
-    if (itemsCriticosSemaforo.length > 0) {
-      const ultimo = itemsCriticosSemaforo[itemsCriticosSemaforo.length - 1];
-      return `🔴 Sugiere cambio: + ${ultimo.posItem?.fullName || ultimo.label} ($${(ultimo.posItem?.price || 0).toFixed(2)})`;
-    }
-    if (itemsAtencionSemaforo.length > 0) {
-      return `🟡 Atención preventiva en: ${itemsAtencionSemaforo.map((c) => c.label).join(', ')}`;
-    }
-    if (itemsOkSemaforo.length > 0) {
-      return `🟢 Niveles verificados: ${itemsOkSemaforo.length}/${SEMAFORO_CIRCULOS.length} en óptimo estado (OK)`;
-    }
-    return 'Toca cualquier ícono: 🟢 OK • 🟡 Revisar • 🔴 Cambiar (POS)';
-  }, [itemsCriticosSemaforo, itemsAtencionSemaforo, itemsOkSemaforo, SEMAFORO_CIRCULOS]);
 
   const [menuCatAbierto, setMenuCatAbierto] = useState(false);
   const [menuSubcatAbierto, setMenuSubcatAbierto] = useState(false);
@@ -3230,8 +3674,8 @@ export default function ModuloLubricentroCatalogo({
       {bannerAviso && (
         <div
           className={`p-2.5 sm:p-3 rounded-xl border text-xs font-normal flex items-center justify-between gap-2 shadow-xs ${bannerAviso.tipo === "ok"
-              ? "bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-500/15 dark:border-emerald-500/40 dark:text-emerald-200"
-              : "bg-rose-50 border-rose-300 text-rose-800 dark:bg-rose-500/15 dark:border-rose-500/40 dark:text-rose-200"
+            ? "bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-500/15 dark:border-emerald-500/40 dark:text-emerald-200"
+            : "bg-rose-50 border-rose-300 text-rose-800 dark:bg-rose-500/15 dark:border-rose-500/40 dark:text-rose-200"
             }`}
         >
           <span>{bannerAviso.texto}</span>
@@ -3253,196 +3697,182 @@ export default function ModuloLubricentroCatalogo({
         {/* ===================================================================
             TARJETA 1: AUTO-SERVICIO DETECTADO (CERO BÚSQUEDA MANUAL)
             =================================================================== */}
-        <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between min-h-[220px]">
+        <div className="lg:col-span-5 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between min-h-[220px]">
           <div>
             <div className="flex items-center justify-between gap-2 mb-2">
-              <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
-                <span className="text-base sm:text-lg">🚗</span>
-                <span>Auto detectado</span>
-              </h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300/60 dark:border-amber-400/30">
-                Auto
-              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white flex items-center gap-1.5 truncate">
+                  <span className="text-base sm:text-lg">🚗</span>
+                  <span className="truncate">
+                    {descripcionVehiculo || (ordenActiva?.plate ? `Auto ${ordenActiva.plate}` : "Auto detectado")}
+                  </span>
+                </h2>
+                {(ordenActiva?.clientName || ordenActiva?.customerName || ordenActiva?.client || ordenActiva?.plate) && (
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5 font-normal flex items-center gap-1.5">
+                    {ordenActiva?.plate && (
+                      <span className="font-semibold font-mono uppercase bg-zinc-100 dark:bg-white/10 px-1.5 py-0.5 rounded text-[11px] text-zinc-800 dark:text-zinc-200">
+                        {ordenActiva.plate}
+                      </span>
+                    )}
+                    <span className="truncate">
+                      {ordenActiva?.clientName || ordenActiva?.customerName || ordenActiva?.client || ""}
+                    </span>
+                  </p>
+                )}
+              </div>
             </div>
-            {/* Kilometraje 100% automático */}
+            {/* Kilometraje normal y legible */}
             <div className="mt-2 p-3 rounded-xl bg-zinc-50 dark:bg-black/20 border border-zinc-200/70 dark:border-white/5">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="text-xl sm:text-2xl font-black font-mono tracking-tight text-zinc-900 dark:text-white">
+                <span className="text-xl sm:text-2xl font-bold font-sans tracking-normal text-zinc-900 dark:text-white">
                   {kmActual.toLocaleString()} km
                 </span>
                 <span className="text-lg text-blue-600 dark:text-blue-400 font-bold">➔</span>
               </div>
-              <div className="mt-1 flex items-center justify-between text-xs sm:text-sm text-zinc-600 dark:text-zinc-300">
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
+              <div className="mt-1 flex items-center justify-between text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-sans">
+                <span className="font-semibold font-sans text-emerald-600 dark:text-emerald-400">
                   Próx: {kmProximo.toLocaleString()} km
                 </span>
-                <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 font-mono">
+                <span className="text-[11px] font-medium font-sans text-zinc-500 dark:text-zinc-400">
                   (+5.000 km)
                 </span>
               </div>
             </div>
-          </div>
 
+            {/* Acceso directo al historial de cambios de aceite */}
+            <Link
+              href={`/taller/historial-aceite?placa=${encodeURIComponent(ordenActiva?.plate || "")}&cliente=${encodeURIComponent(ordenActiva?.clientName || ordenActiva?.customerName || ordenActiva?.client || "")}&vehiculo=${encodeURIComponent(ordenActiva?.vehicle || [ordenActiva?.vehicleBrand, ordenActiva?.vehicleModel].filter(Boolean).join(" ") || "")}`}
+              className="mt-2.5 p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-500/10 border border-blue-200/60 dark:border-blue-500/20 flex items-center justify-between hover:bg-blue-100/70 dark:hover:bg-blue-500/20 transition-all cursor-pointer group no-underline"
+              title="Abrir historial de aceites"
+            >
+              <span className="text-xs sm:text-sm font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                <span>🛢️</span>
+                <span>Historial de aceites</span>
+              </span>
+              <span className="text-xs sm:text-sm font-black text-blue-600 dark:text-blue-400 shrink-0 ml-2 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                <span>Consultar</span>
+                <span>→</span>
+              </span>
+            </Link>
+          </div>
         </div>
 
         {/* ===================================================================
             TARJETA 2: SEMÁFORO INTELIGENTE DE INSPECCIÓN RÁPIDA
             =================================================================== */}
-        <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between min-h-[260px]">
-          <div>
-            {/* Cabecera con título y botón rápido "Marcar todo OK" */}
-            <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-zinc-100 dark:border-white/5">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-base sm:text-lg">🚦</span>
-                <div>
-                  <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white leading-tight">
-                    Semáforo de Inspección
-                  </h2>
-                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
-                    ⚪ Neutro ➜ 🟢 OK ➜ 🟡 Revisar ➜ 🔴 Cambiar (POS)
-                  </p>
-                </div>
+        <div className="lg:col-span-7 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs">
+          {/* Cabecera con título y botón rápido "Marcar todo OK" */}
+          <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-zinc-100 dark:border-white/5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-base sm:text-lg">🚦</span>
+              <div>
+                <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white leading-tight">
+                  Semáforo
+                </h2>
               </div>
-              <button
-                type="button"
-                onClick={handleMarcarTodosOk}
-                className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 text-[11px] font-bold transition-all cursor-pointer active:scale-95 shrink-0"
-                title="Marcar todos los puntos en estado Verde (OK)"
-              >
-                Todo OK 🟢
-              </button>
             </div>
+            <button
+              type="button"
+              onClick={handleMarcarTodosOk}
+              className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 text-[11px] font-bold transition-all cursor-pointer active:scale-95 shrink-0"
+              title="Marcar todos los puntos en estado Verde (OK)"
+            >
+              Todo OK 🟢
+            </button>
+          </div>
 
-            {/* Guía semafórica de 3 colores funcionales */}
-            <div className="grid grid-cols-3 gap-1.5 mb-2.5 px-1 py-1 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-100 dark:border-white/5 text-center text-[10px] font-semibold">
-              <span className="text-emerald-700 dark:text-emerald-400 flex items-center justify-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span>🟢 OK</span>
-              </span>
-              <span className="text-amber-700 dark:text-amber-400 flex items-center justify-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-amber-400" />
-                <span>🟡 Revisar</span>
-              </span>
-              <span className="text-rose-700 dark:text-rose-400 flex items-center justify-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-rose-500" />
-                <span>🔴 Cambiar</span>
-              </span>
-            </div>
+          {/* Guía semafórica de 3 colores funcionales */}
+          <div className="grid grid-cols-3 gap-1.5 mb-2.5 px-1 py-1 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-100 dark:border-white/5 text-center text-[10px] font-semibold">
+            <span className="text-emerald-700 dark:text-emerald-400 flex items-center justify-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>🟢 OK</span>
+            </span>
+            <span className="text-amber-700 dark:text-amber-400 flex items-center justify-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-amber-400" />
+              <span>🟡 Revisar</span>
+            </span>
+            <span className="text-rose-700 dark:text-rose-400 flex items-center justify-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
+              <span>🔴 Cambiar</span>
+            </span>
+          </div>
 
-            {/* Tablero de 9 íconos semafóricos (3x3) */}
-            <div className="grid grid-cols-3 gap-y-3 gap-x-2 place-items-center py-1">
-              {SEMAFORO_CIRCULOS.map((btn) => {
-                const estado = semaforoEstados[btn.id] || 'neutral';
-                const esCritico = estado === 'critico';
-                const esAtencion = estado === 'atencion';
-                const esOk = estado === 'ok';
+          {/* Tablero de 9 íconos semafóricos (3x3) */}
+          <div className="grid grid-cols-3 gap-y-3 gap-x-2 place-items-center py-1">
+            {SEMAFORO_CIRCULOS.map((btn) => {
+              const estado = semaforoEstados[btn.id] || 'neutral';
+              const esCritico = estado === 'critico';
+              const esAtencion = estado === 'atencion';
+              const esOk = estado === 'ok';
 
-                return (
-                  <div key={btn.id} className="flex flex-col items-center gap-1 text-center w-full">
-                    <button
-                      type="button"
-                      onClick={() => void handleToggleSemaforoCirculo(btn.id)}
-                      className={`relative w-12 h-12 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-xs ${
-                        esCritico
-                          ? "bg-rose-500 hover:bg-rose-600 text-white shadow-md shadow-rose-500/30 scale-105 ring-2 ring-rose-400"
-                          : esAtencion
-                          ? "bg-amber-400 hover:bg-amber-500 text-zinc-950 shadow-md shadow-amber-400/30 scale-102 ring-2 ring-amber-300"
-                          : esOk
+              return (
+                <div key={btn.id} className="flex flex-col items-center gap-1 text-center w-full">
+                  <button
+                    type="button"
+                    onClick={() => void handleToggleSemaforoCirculo(btn.id)}
+                    className={`relative w-12 h-12 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-xs ${esCritico
+                      ? "bg-rose-500 hover:bg-rose-600 text-white shadow-md shadow-rose-500/30 scale-105 ring-2 ring-rose-400"
+                      : esAtencion
+                        ? "bg-amber-400 hover:bg-amber-500 text-zinc-950 shadow-md shadow-amber-400/30 scale-102 ring-2 ring-amber-300"
+                        : esOk
                           ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/25 scale-102 ring-2 ring-emerald-400"
                           : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
                       }`}
-                      title={`${btn.label} (${btn.detalle}): Estado actual [${estado.toUpperCase()}]. Clic para ciclar: Neutro ➜ OK ➜ Revisar ➜ Cambiar (POS)`}
-                    >
-                      {btn.iconSvg("w-5.5 h-5.5 sm:w-6 sm:h-6")}
+                    title={`${btn.label} (${btn.detalle}): Estado actual [${estado.toUpperCase()}]. Clic para ciclar: Neutro ➜ OK ➜ Revisar ➜ Cambiar (POS)`}
+                  >
+                    {btn.iconSvg("w-5.5 h-5.5 sm:w-6 sm:h-6")}
 
-                      {/* Mini insignia con estado activo */}
-                      {esCritico && (
-                        <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-600 text-white border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[9px] font-black shadow-xs">
-                          🛒
-                        </span>
-                      )}
-                      {esAtencion && (
-                        <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-400 text-zinc-950 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[10px] font-black shadow-xs">
-                          !
-                        </span>
-                      )}
-                      {esOk && (
-                        <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-white border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[9px] font-black shadow-xs">
-                          ✓
-                        </span>
-                      )}
-                    </button>
+                    {/* Mini insignia con estado activo */}
+                    {esCritico && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-600 text-white border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[9px] font-black shadow-xs">
+                        🛒
+                      </span>
+                    )}
+                    {esAtencion && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-400 text-zinc-950 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[10px] font-black shadow-xs">
+                        !
+                      </span>
+                    )}
+                    {esOk && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-white border-2 border-white dark:border-zinc-900 flex items-center justify-center text-[9px] font-black shadow-xs">
+                        ✓
+                      </span>
+                    )}
+                  </button>
 
-                    <div className="flex flex-col items-center leading-none">
-                      <span className={`text-xs font-bold ${
-                        esCritico
-                          ? "text-rose-600 dark:text-rose-400"
-                          : esAtencion
-                          ? "text-amber-600 dark:text-amber-400"
-                          : esOk
+                  <div className="flex flex-col items-center leading-tight mt-1">
+                    <span className={`text-sm sm:text-[15px] font-black tracking-tight text-center ${esCritico
+                      ? "text-rose-600 dark:text-rose-400"
+                      : esAtencion
+                        ? "text-amber-600 dark:text-amber-400"
+                        : esOk
                           ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-zinc-700 dark:text-zinc-300"
+                          : "text-zinc-800 dark:text-zinc-200"
                       }`}>
-                        {btn.label}
-                      </span>
-                      <span className="text-[9px] font-medium text-zinc-400 dark:text-zinc-500 mt-0.5">
-                        {esCritico ? "Cambiar" : esAtencion ? "Revisar" : esOk ? "OK" : "Pendiente"}
-                      </span>
-                    </div>
+                      {btn.label}
+                    </span>
+                    <span className={`text-[11px] sm:text-xs font-bold mt-0.5 ${esCritico
+                      ? "text-rose-600 dark:text-rose-400 font-extrabold"
+                      : esAtencion
+                        ? "text-amber-600 dark:text-amber-400 font-extrabold"
+                        : esOk
+                          ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                          : "text-zinc-500 dark:text-zinc-400"
+                      }`}>
+                      {esCritico ? "Cambiar" : esAtencion ? "Revisar" : esOk ? "OK" : "Pendiente"}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Autoventa sugerida / conectada al POS con estados claros */}
-          <div className="mt-3 pt-2.5 border-t border-zinc-100 dark:border-white/5">
-            {itemsCriticosSemaforo.length > 0 ? (
-              <div className="p-2 sm:p-2.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/25 space-y-1">
-                <div className="flex items-center justify-between text-xs font-bold text-rose-700 dark:text-rose-300">
-                  <span className="flex items-center gap-1.5">
-                    <span>🛒</span>
-                    <span>{itemsCriticosSemaforo.length} para cambio (En Pedido)</span>
-                  </span>
-                  <span className="text-[11px] font-mono">
-                    ${itemsCriticosSemaforo.reduce((acc, it) => acc + (it.posItem?.price || 0), 0).toFixed(2)}
-                  </span>
                 </div>
-                <p className="text-[11px] text-rose-600 dark:text-rose-400 truncate">
-                  + {itemsCriticosSemaforo.map((c) => `${c.label} (${c.posItem?.name || ''})`).join(', ')}
-                </p>
-              </div>
-            ) : itemsAtencionSemaforo.length > 0 ? (
-              <div className="p-2 sm:p-2.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/25">
-                <p className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
-                  <span>⚠️</span>
-                  <span>Atención preventiva:</span>
-                </p>
-                <p className="text-[11px] text-amber-700 dark:text-amber-400 truncate mt-0.5">
-                  {itemsAtencionSemaforo.map((c) => c.label).join(', ')}
-                </p>
-              </div>
-            ) : itemsOkSemaforo.length > 0 ? (
-              <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/25 text-center">
-                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center justify-center gap-1.5">
-                  <span>✓</span>
-                  <span>{itemsOkSemaforo.length}/{SEMAFORO_CIRCULOS.length} Niveles inspeccionados en buen estado</span>
-                </span>
-              </div>
-            ) : (
-              <div className="text-center py-0.5">
-                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                  {textoAlertaSemaforo}
-                </span>
-              </div>
-            )}
+              );
+            })}
           </div>
         </div>
+      </div>
 
-        {/* ===================================================================
-            TARJETA 3: CATÁLOGO CONTRAÍDO EN 1 SOLA LÍNEA (FILAS SUPERIORES)
-            =================================================================== */}
-        <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs space-y-3">
+      {/* =====================================================================
+          BUSCADOR Y FILTROS: ANCHO COMPLETO (CUBRE TODO EL ESPACIO EN PC Y MÓVIL)
+          ===================================================================== */}
+      <div className="w-full rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3 sm:p-3.5 shadow-2xs space-y-3">
           {/* Fila de 3 píldoras desplegables contraíbles + Buscador */}
           <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
             {/* Píldora 1: Categoría */}
@@ -3490,29 +3920,62 @@ export default function ModuloLubricentroCatalogo({
                 }}
                 className="w-full h-9 px-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200 text-xs font-bold flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
               >
-                <span className="truncate">{labelSubcategoriaActiva}</span>
+                <span className="truncate flex items-center gap-1.5">
+                  <span className="text-sm shrink-0">
+                    {(() => {
+                      const s = (subcategoriaActivaId + " " + labelSubcategoriaActiva).toLowerCase();
+                      if (s.includes("motor")) return "🚗";
+                      if (s.includes("aditiv")) return "🧪";
+                      if (s.includes("grasa")) return "🧈";
+                      if (s.includes("transmi") || s.includes("caja")) return "⚙️";
+                      if (s.includes("freno")) return "🛑";
+                      if (s.includes("hidraul")) return "💧";
+                      if (s.includes("filtro")) return "🌪️";
+                      if (s.includes("tod") || subcategoriaActivaId === "ALL") return "📋";
+                      return "🔧";
+                    })()}
+                  </span>
+                  <span className="truncate">{labelSubcategoriaActiva}</span>
+                </span>
                 <span className="text-[10px] opacity-75">▾</span>
               </button>
               {menuSubcatAbierto && (
                 <div className="absolute top-11 left-0 z-40 w-44 rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5 max-h-56 overflow-y-auto">
-                  {opcionesSubcategoriasActuales.map((sub) => (
-                    <button
-                      key={sub.id}
-                      type="button"
-                      onClick={() => {
-                        setSubcategoriaActivaId(sub.id);
-                        setMenuSubcatAbierto(false);
-                      }}
-                      className="w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2 cursor-pointer"
-                    >
-                      <span>{sub.label}</span>
-                    </button>
-                  ))}
+                  {opcionesSubcategoriasActuales.map((sub: any) => {
+                    const s = (sub.id + " " + sub.label).toLowerCase();
+                    const icono = sub.icon || (
+                      s.includes("motor") ? "🚗" :
+                        s.includes("aditiv") ? "🧪" :
+                          s.includes("grasa") ? "🧈" :
+                            s.includes("transmi") || s.includes("caja") ? "⚙️" :
+                              s.includes("freno") ? "🛑" :
+                                s.includes("hidraul") ? "💧" :
+                                  s.includes("filtro") ? "🌪️" :
+                                    s.includes("tod") ? "📋" : "🔧"
+                    );
+                    return (
+                      <button
+                        key={sub.id}
+                        type="button"
+                        onClick={() => {
+                          setSubcategoriaActivaId(sub.id);
+                          setMenuSubcatAbierto(false);
+                        }}
+                        className={`w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${subcategoriaActivaId === sub.id
+                          ? "bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 font-bold"
+                          : "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10"
+                          }`}
+                      >
+                        <span className="text-sm shrink-0">{icono}</span>
+                        <span className="truncate">{sub.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
 
-            {/* Píldora 3: Envase */}
+            {/* Píldora 3: Envase con íconos */}
             <div className="relative flex-1 min-w-[85px]">
               <button
                 type="button"
@@ -3523,22 +3986,45 @@ export default function ModuloLubricentroCatalogo({
                 }}
                 className="w-full h-9 px-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200 text-xs font-bold flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
               >
-                <span className="truncate">{envaseActivo || "Galón"}</span>
+                <span className="truncate flex items-center gap-1.5">
+                  <span className="text-sm shrink-0">
+                    {(() => {
+                      const e = envaseActivo || "Galón";
+                      if (e === "Galón") return "🧴";
+                      if (e === "Litro") return "🍶";
+                      if (e === "Cuarto") return "🥫";
+                      if (e === "Caneca") return "🪣";
+                      if (e === "Todos") return "📦";
+                      return "🧴";
+                    })()}
+                  </span>
+                  <span className="truncate">{envaseActivo || "Galón"}</span>
+                </span>
                 <span className="text-[10px] opacity-75">▾</span>
               </button>
               {menuEnvaseDropdownAbierto && (
                 <div className="absolute top-11 right-0 z-40 w-36 rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5">
-                  {["Galón", "Litro", "Cuarto", "Caneca", "Todos"].map((env) => (
+                  {[
+                    { id: "Galón", label: "Galón", icon: "🧴" },
+                    { id: "Litro", label: "Litro", icon: "🍶" },
+                    { id: "Cuarto", label: "Cuarto", icon: "🥫" },
+                    { id: "Caneca", label: "Caneca", icon: "🪣" },
+                    { id: "Todos", label: "Todos", icon: "📦" },
+                  ].map((env) => (
                     <button
-                      key={env}
+                      key={env.id}
                       type="button"
                       onClick={() => {
-                        setEnvaseActivo(env === "Todos" ? "" : env);
+                        setEnvaseActivo(env.id === "Todos" ? "" : env.id);
                         setMenuEnvaseDropdownAbierto(false);
                       }}
-                      className="w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2 cursor-pointer"
+                      className={`w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors ${(envaseActivo === env.id || (!envaseActivo && env.id === "Todos"))
+                        ? "bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 font-bold"
+                        : "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10"
+                        }`}
                     >
-                      <span>{env}</span>
+                      <span className="text-sm shrink-0">{env.icon}</span>
+                      <span className="truncate">{env.label}</span>
                     </button>
                   ))}
                 </div>
@@ -3567,150 +4053,176 @@ export default function ModuloLubricentroCatalogo({
             )}
           </div>
         </div>
-      </div>
 
       {/* =====================================================================
           CUADRÍCULA DE PRODUCTOS DEL CATÁLOGO BENTO (OPCIONES LIMPIAS)
           ===================================================================== */}
-      <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 shadow-2xs">
-        {productosBentoAMostrar.length === 0 ? (
-          <div className="py-12 text-center text-zinc-400 space-y-1.5">
-            <span className="text-3xl block">🛢️</span>
-            <p className="text-xs sm:text-sm font-semibold">No se encontraron productos con los filtros seleccionados</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-3.5">
-            {productosBentoAMostrar.map((prod) => {
-              const cantEnOrden = obtenerCantidadItemEnOrden(prod.id);
-              const enOrden = cantEnOrden > 0;
-              return (
-                <div
-                  key={prod.id}
-                  onClick={() => void handleAjustarItemBento(prod, 1)}
-                  className={`group relative flex flex-col items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none active:scale-[0.98] min-h-[175px] shadow-2xs ${enOrden
-                      ? "bg-blue-50/70 dark:bg-blue-500/10 border-blue-400 dark:border-blue-400/50 ring-2 ring-blue-300/60 dark:ring-blue-400/30 shadow-xs"
-                      : "bg-white hover:bg-zinc-50 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/40"
-                    }`}
-                >
-                  {/* Botón restar "−" arriba a la izquierda */}
-                  {enOrden && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void handleAjustarItemBento(prod, -1);
-                      }}
-                      className="absolute top-2 left-2 w-7 h-7 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 text-sm font-bold flex items-center justify-center shadow-xs active:scale-90 transition-all z-10 cursor-pointer"
-                      title="Restar 1"
-                    >
-                      −
-                    </button>
-                  )}
-
-                  {/* Badge contador verde arriba a la derecha */}
-                  {enOrden && (
-                    <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500 text-white shadow-xs z-10">
-                      +{cantEnOrden}
-                    </span>
-                  )}
-
-                  {/* Gráfico de botella o imagen del producto */}
-                  <div className="w-20 h-24 sm:w-24 sm:h-28 flex items-center justify-center shrink-0 mt-1">
-                    {prod.imageUrl ? (
-                      <img src={prod.imageUrl} alt={prod.name} className="w-full h-full object-contain" />
-                    ) : (
-                      <BotellaAceiteGrafico viscosidad={prod.viscosity || prod.name} color={prod.color || "#eab308"} />
-                    )}
-                  </div>
-
-                  {/* Texto grande de viscosidad y precio */}
-                  <div className="w-full text-center mt-2 px-1">
-                    <span className="text-base sm:text-lg font-black tracking-tight text-zinc-900 dark:text-white block truncate">
-                      {prod.viscosity || prod.name}
-                    </span>
-                    <span className="text-xs sm:text-sm font-bold font-mono text-zinc-700 dark:text-zinc-300 mt-0.5 block">
-                      ${Number(prod.price || 0).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+  <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 shadow-2xs">
+    {productosBentoAMostrar.length === 0 ? (
+      <div className="py-12 text-center text-zinc-400 space-y-1.5">
+        <span className="text-3xl block">🛢️</span>
+        <p className="text-xs sm:text-sm font-semibold">No se encontraron productos con los filtros seleccionados</p>
       </div>
+    ) : (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-3.5">
+        {productosBentoAMostrar.map((prod) => {
+          const cantEnOrden = obtenerCantidadItemEnOrden(prod.id);
+          const enOrden = cantEnOrden > 0;
+          return (
+            <div
+              key={prod.id}
+              onClick={() => void handleAjustarItemBento(prod, 1)}
+              className={`group relative flex flex-col items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none active:scale-[0.98] min-h-[175px] shadow-2xs ${enOrden
+                ? "bg-blue-50/70 dark:bg-blue-500/10 border-blue-400 dark:border-blue-400/50 ring-2 ring-blue-300/60 dark:ring-blue-400/30 shadow-xs"
+                : "bg-white hover:bg-zinc-50 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/40"
+                }`}
+            >
+              {/* Botón restar "−" arriba a la izquierda */}
+              {enOrden && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleAjustarItemBento(prod, -1);
+                  }}
+                  className="absolute top-2 left-2 w-7 h-7 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 text-sm font-bold flex items-center justify-center shadow-xs active:scale-90 transition-all z-10 cursor-pointer"
+                  title="Restar 1"
+                >
+                  −
+                </button>
+              )}
 
-      {navegacionActiva && (
-        <div className="w-full border-t border-zinc-200 dark:border-white/15 py-3 mt-6">
-          <div className="flex w-full items-center justify-between gap-3">
-            {onIrAAnterior && (
-              <button
-                type="button"
-                onClick={onIrAAnterior}
-                className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-700 text-xs sm:text-sm font-semibold cursor-pointer transition-all hover:bg-zinc-200 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
-              >
-                ← Anterior
-              </button>
-            )}
+              {/* Badge contador verde arriba a la derecha */}
+              {enOrden && (
+                <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500 text-white shadow-xs z-10">
+                  +{cantEnOrden}
+                </span>
+              )}
+
+              {/* Gráfico de botella o imagen del producto */}
+              <div className="w-20 h-24 sm:w-24 sm:h-28 flex items-center justify-center shrink-0 mt-1">
+                {prod.imageUrl ? (
+                  <img src={prod.imageUrl} alt={prod.name} className="w-full h-full object-contain" />
+                ) : (
+                  <BotellaAceiteGrafico viscosidad={prod.viscosity || prod.name} color={prod.color || "#eab308"} />
+                )}
+              </div>
+
+              {/* Texto grande de viscosidad y precio */}
+              <div className="w-full text-center mt-2 px-1">
+                <span className="text-base sm:text-lg font-black tracking-tight text-zinc-900 dark:text-white block truncate">
+                  {prod.viscosity || prod.name}
+                </span>
+                <span className="text-xs sm:text-sm font-bold font-mono text-zinc-700 dark:text-zinc-300 mt-0.5 block">
+                  ${Number(prod.price || 0).toFixed(2)}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+
+  {
+    navegacionActiva && (
+      <div className="w-full border-t border-zinc-200 dark:border-white/15 py-3 mt-6">
+        <div className="flex w-full items-center justify-between gap-3">
+          {onIrAAnterior && (
             <button
               type="button"
-              onClick={() => void handleSiguienteLubricentro()}
-              className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5 ml-auto"
+              onClick={onIrAAnterior}
+              className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-700 text-xs sm:text-sm font-semibold cursor-pointer transition-all hover:bg-zinc-200 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
             >
-              <span>Siguiente</span>
-              <span>→</span>
+              ← Anterior
             </button>
-          </div>
+          )}
+          <button
+            type="button"
+            onClick={() => void handleSiguienteLubricentro()}
+            className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5 ml-auto"
+          >
+            <span>Siguiente</span>
+            <span>→</span>
+          </button>
         </div>
-      )}
+      </div>
+    )
+  }
 
-      {/* =====================================================================
+  {/* =====================================================================
           MODALES DE DETALLE, CREACIÓN/EDICIÓN DE PRODUCTO Y CONFIGURACIÓN MANUAL
           ===================================================================== */}
-      {productoDetalleModal && (
-        <ModalDetalleProductoLubricentro
-          producto={productoDetalleModal}
-          config={config}
-          onClose={() => setProductoDetalleModal(null)}
-          onEditar={(prod) => {
-            setProductoAEditar(prod);
-            setModalProductoFormAbierto(true);
-          }}
-          onAgregarAlCarrito={(prod, qty, presId) => {
-            void handleValidarYAgregarAlCarrito(prod, qty, presId);
-          }}
-        />
-      )}
+  {
+    productoDetalleModal && (
+      <ModalDetalleProductoLubricentro
+        producto={productoDetalleModal}
+        config={config}
+        onClose={() => setProductoDetalleModal(null)}
+        onEditar={(prod) => {
+          setProductoAEditar(prod);
+          setModalProductoFormAbierto(true);
+        }}
+        onAgregarAlCarrito={(prod, qty, presId) => {
+          void handleValidarYAgregarAlCarrito(prod, qty, presId);
+        }}
+      />
+    )
+  }
 
-      {modalProductoFormAbierto && (
-        <ModalProductoLubricentroForm
-          productoEditar={productoAEditar}
-          config={config}
-          defaultCategoryId={categoriaSeleccionadaObj?.id || "lub_aceite"}
-          defaultSubcategoryId={subcategoriaActivaId || "lub_aceite_motor"}
-          onClose={() => {
-            setModalProductoFormAbierto(false);
-            setProductoAEditar(null);
-          }}
-          onGuardado={(_prod, msg) => {
-            notificar(msg, "ok");
-            void cargarDatosLubricentro();
-          }}
-          onConfigActualizada={(nuevaConfig) => setConfig(nuevaConfig)}
-        />
-      )}
+  {
+    modalProductoFormAbierto && (
+      <ModalProductoLubricentroForm
+        productoEditar={productoAEditar}
+        config={config}
+        defaultCategoryId={categoriaSeleccionadaObj?.id || "lub_aceite"}
+        defaultSubcategoryId={subcategoriaActivaId || "lub_aceite_motor"}
+        onClose={() => {
+          setModalProductoFormAbierto(false);
+          setProductoAEditar(null);
+        }}
+        onGuardado={(_prod, msg) => {
+          notificar(msg, "ok");
+          void cargarDatosLubricentro();
+        }}
+        onConfigActualizada={(nuevaConfig) => setConfig(nuevaConfig)}
+      />
+    )
+  }
 
-      {modalConfigAbierto && (
-        <ModalConfiguracionManualLubricentro
-          config={config}
-          tabInicial={tabConfigInicial}
-          onClose={() => setModalConfigAbierto(false)}
-          onConfigGuardada={(nuevaConfig, msg) => {
-            setConfig(nuevaConfig);
-            notificar(msg, "ok");
-            void cargarDatosLubricentro();
-          }}
-        />
-      )}
-    </div>
+  {
+    modalConfigAbierto && (
+      <ModalConfiguracionManualLubricentro
+        config={config}
+        tabInicial={tabConfigInicial}
+        onClose={() => setModalConfigAbierto(false)}
+        onConfigGuardada={(nuevaConfig, msg) => {
+          setConfig(nuevaConfig);
+          notificar(msg, "ok");
+          void cargarDatosLubricentro();
+        }}
+      />
+    )
+  }
+
+  {
+    mostrarModalHistorialAceite && (
+      <ModalHistorialCambiosAceite
+        isOpen={mostrarModalHistorialAceite}
+        onClose={() => setMostrarModalHistorialAceite(false)}
+        clienteNombre={ordenActiva?.clientName || ordenActiva?.customerName || ordenActiva?.client || "Cliente Mostrador"}
+        placaVehiculo={ordenActiva?.plate || ""}
+        descripcionVehiculo={descripcionVehiculo}
+        kmActual={kmActual}
+        kmProximo={kmProximo}
+        cambios={todosCambiosAceiteAnteriores || []}
+        cargando={cargandoHistorialRemoto}
+        repitiendoCambio={repitiendoCambioAceite}
+        onAplicarCambio={(prods) => void handleAplicarCambioEspecifico(prods)}
+        onBuscarOtraPlaca={(placa) => void consultarHistorialPlaca(placa)}
+      />
+    )
+  }
+    </div >
   );
 }

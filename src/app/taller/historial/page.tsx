@@ -60,6 +60,14 @@ export default function HistorialServiciosPage() {
   }, [searchTerm]);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const q = urlParams.get("busqueda") || urlParams.get("placa") || urlParams.get("q") || "";
+      if (q) setSearchTerm(q);
+    }
+  }, []);
+
+  useEffect(() => {
     cargarHistorial();
   }, [cargarHistorial]);
 
@@ -293,9 +301,11 @@ export default function HistorialServiciosPage() {
                   <p className="text-lg sm:text-xl font-bold text-purple-700 dark:text-purple-400 mb-2">
                     {record.date}
                   </p>
-                  <span className="inline-block bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-xs font-mono px-2.5 py-1 rounded-md w-fit">
-                    {record.id}
-                  </span>
+                  {record.id && !/^#?OT\b/i.test(record.id.trim()) && (
+                    <span className="inline-block bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-xs font-mono px-2.5 py-1 rounded-md w-fit">
+                      {record.id}
+                    </span>
+                  )}
                 </div>
 
                 {/* Middle Column: Vehicle & Services */}

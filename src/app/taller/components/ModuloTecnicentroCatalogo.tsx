@@ -1418,10 +1418,10 @@ export default function ModuloTecnicentroCatalogo({
             </div>
           </div>
 
-          {/* ===== CARD CENTRAL: Semaforo de Tren Delantero ===== */}
+          {/* ===== CARD CENTRAL: Semaforo ===== */}
           <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden">
             <div className="px-4 pt-4 pb-3 border-b border-zinc-100 dark:border-white/[0.08]">
-              <p className="text-sm font-bold text-zinc-900 dark:text-white">Semáforo de Tren Delantero</p>
+              <p className="text-sm font-bold text-zinc-900 dark:text-white">Semáforo</p>
             </div>
             <div className="p-3 grid grid-cols-3 gap-2.5">
               {SEMAFORO_TREN_DEF.map((defItem) => {
@@ -1466,8 +1466,8 @@ export default function ModuloTecnicentroCatalogo({
                       {defItem.id === 'Bateria' && <span>🔋</span>}
                       {defItem.id === 'Rotacion' && <span className="text-emerald-600 font-black">↻</span>}
                     </div>
-                    <span className="text-[10px] font-bold text-zinc-800 dark:text-zinc-200">{defItem.label}</span>
-                    <span className={['text-[10px] font-semibold', textCls].join(' ')}>{labelSub}</span>
+                    <span className="text-xs sm:text-sm font-black text-zinc-800 dark:text-zinc-200">{defItem.label}</span>
+                    <span className={['text-xs font-bold', textCls].join(' ')}>{labelSub}</span>
                   </button>
                 );
               })}
