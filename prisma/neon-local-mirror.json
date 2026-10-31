@@ -48,7 +48,7 @@
       "vin": null,
       "customerId": "cmvria2c041ggd602",
       "createdAt": "2026-10-28T02:39:11.954Z",
-      "updatedAt": "2026-10-30T18:58:11.986Z",
+      "updatedAt": "2026-10-31T01:29:11.659Z",
       "imageUrl": "/api/storage/download?key=vehiculos%2F24427869-fd3b-44e1-8961-b092e991bf46.png"
     },
     {
@@ -149,7 +149,7 @@
       "stockDeducted": false,
       "branch": "PRINCIPAL",
       "createdAt": 0,
-      "updatedAt": "2026-10-30T18:58:11.972Z",
+      "updatedAt": "2026-10-31T01:29:11.654Z",
       "id": "ord_9bq9i92mvribuco",
       "orderNumber": "OT #00001",
       "customerId": "cmvria2c041ggd602",

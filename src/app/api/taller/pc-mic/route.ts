@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
       }
 
       const wavPath = path.join(os.tmpdir(), `autog_mic_${sessionId}_${Date.now()}.wav`);
-      const proc = spawn(exePath, [wavPath], {
+      const proc = spawn(/*turbopackIgnore: true*/ exePath, [wavPath], {
         windowsHide: true,
         stdio: ["pipe", "pipe", "pipe"],
       });

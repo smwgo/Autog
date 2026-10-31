@@ -33,6 +33,8 @@ export interface ModalFormularioRapidoProps {
   ) => Promise<void> | void;
   mostrarToast?: (mensaje: string, tipo?: "ok" | "err" | "info") => void;
   onCambiarEspecialidad?: (especialidad: EspecialidadTipo) => void;
+  onVolver?: () => void;
+  onContinuar?: () => void;
 }
 
 interface FilaRegistroManual {
@@ -42,6 +44,7 @@ interface FilaRegistroManual {
   name: string;
   qty: number;
   price: number;
+  photos?: string[];
 }
 
 const SUGERENCIAS_POR_ESPECIALIDAD: Record<
@@ -158,6 +161,14 @@ const ATAJOS_CATEGORIA_TALLER = [
   { label: "A/C", category: "Aire Acondicionado", icon: "❄️" },
 ];
 
+const VISTAS_LUBRICENTRO = [
+  { label: "Motor 3D", icon: "🛠️", src: "/images/inspeccion/auto_3d_motor.jpg" },
+  { label: "Frenos 3D", icon: "🛑", src: "/images/inspeccion/auto_3d_frenos.jpg" },
+  { label: "Suspensión 3D", icon: "🔩", src: "/images/inspeccion/auto_3d_suspension.jpg" },
+  { label: "Eléctrico 3D", icon: "⚡", src: "/images/inspeccion/auto_3d_electrico.jpg" },
+  { label: "Superior 3D", icon: "🚘", src: "/images/inspeccion/auto_3d_superior.jpg" },
+];
+
 const ATAJOS_LUBRICENTRO = [
   { label: "Aceite motor", category: "Aceites", subCategory: "Motor", icon: "🛢️" },
   { label: "Filtro aceite", category: "Filtros", subCategory: "Aceite", icon: "🔘" },
@@ -214,6 +225,8 @@ export default function ModalFormularioRapido({
   ordenActiva,
   onGuardarItems,
   mostrarToast,
+  onVolver,
+  onContinuar,
 }: ModalFormularioRapidoProps) {
   const [especialidad, setEspecialidad] = useState<EspecialidadTipo>(especialidadInicial);
   const [estructuraDb, setEstructuraDb] = useState<typeof SUGERENCIAS_POR_ESPECIALIDAD>(
@@ -245,7 +258,179 @@ export default function ModalFormularioRapido({
   const [guardando, setGuardando] = useState(false);
   const [categoriaTallerSeleccionada, setCategoriaTallerSeleccionada] = useState<string | null>(null);
 
+  // Estados para Dictado y Cámara directa
+  const [filaDictandoId, setFilaDictandoId] = useState<string | null>(null);
+  const [subiendoFotoFilaId, setSubiendoFotoFilaId] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const textoBaseDictadoRef = useRef<string>("");
+
   const formRef = useRef<HTMLFormElement>(null);
+
+  // Limpiar reconocimiento al desmontar
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch {}
+        recognitionRef.current = null;
+      }
+    };
+  }, []);
+
+  // Función para dictado por voz (voz a texto directo al input)
+  const toggleDictado = (filaId: string) => {
+    if (filaDictandoId === filaId) {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch {}
+        recognitionRef.current = null;
+      }
+      setFilaDictandoId(null);
+      return;
+    }
+
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+      recognitionRef.current = null;
+    }
+
+    const SpeechRecognition =
+      typeof window !== "undefined" &&
+      ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+    if (!SpeechRecognition) {
+      mostrarToast?.("Tu navegador no soporta dictado por voz (disponible en Chrome, Safari y Edge)", "err");
+      return;
+    }
+
+    try {
+      const filaActual = filas.find((f) => f.id === filaId);
+      textoBaseDictadoRef.current = (filaActual?.name || "").trim();
+
+      const recognition = new SpeechRecognition();
+      const navLang = typeof navigator !== "undefined" ? navigator.language : "es-ES";
+      recognition.lang = navLang && navLang.startsWith("es") ? navLang : "es-ES";
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        setFilaDictandoId(filaId);
+        mostrarToast?.("🎙️ Dictado activo... habla y se escribirá aquí", "ok");
+      };
+
+      recognition.onresult = (event: any) => {
+        let finalStr = "";
+        let interimStr = "";
+        for (let i = 0; i < event.results.length; ++i) {
+          const item = event.results[i];
+          if (item.isFinal) {
+            finalStr += item[0].transcript + " ";
+          } else {
+            interimStr += item[0].transcript;
+          }
+        }
+        const dictado = (finalStr + interimStr).trim();
+        if (dictado) {
+          const base = textoBaseDictadoRef.current;
+          const textoCompleto = base ? (base + " " + dictado) : dictado;
+          actualizarFila(filaId, "name", textoCompleto);
+        }
+      };
+
+      recognition.onerror = (e: any) => {
+        console.warn("SpeechRecognition error:", e);
+        setFilaDictandoId(null);
+      };
+
+      recognition.onend = () => {
+        setFilaDictandoId(null);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error("Error iniciando dictado:", err);
+      mostrarToast?.("No se pudo iniciar el dictado por voz", "err");
+      setFilaDictandoId(null);
+    }
+  };
+
+  // Función para tomar foto directa con la cámara (capture="environment")
+  const handleTomarFotoFila = async (e: React.ChangeEvent<HTMLInputElement>, filaId: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSubiendoFotoFilaId(filaId);
+    try {
+      const formData = new FormData();
+      formData.append("file", file, file.name || ("foto_trabajo_" + Date.now() + ".jpg"));
+      formData.append("folder", "taller_inspeccion_evidencia");
+      formData.append("tipo", "image");
+      if (ordenActiva?.id) formData.append("orderId", ordenActiva.id);
+      if (ordenActiva?.plate) formData.append("plate", ordenActiva.plate);
+
+      const res = await fetch("/api/storage/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        setFilas((prev) =>
+          prev.map((f) => {
+            if (f.id !== filaId) return f;
+            const photos = [...(f.photos || []), data.url];
+            return { ...f, photos };
+          })
+        );
+        mostrarToast?.("📷 Foto tomada y adjuntada al trabajo", "ok");
+      } else {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const base64 = ev.target?.result as string;
+          if (base64) {
+            setFilas((prev) =>
+              prev.map((f) => {
+                if (f.id !== filaId) return f;
+                const photos = [...(f.photos || []), base64];
+                return { ...f, photos };
+              })
+            );
+            mostrarToast?.("📷 Foto tomada y adjuntada", "ok");
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch (err) {
+      console.error("Error subiendo foto:", err);
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const base64 = ev.target?.result as string;
+        if (base64) {
+          setFilas((prev) =>
+            prev.map((f) => {
+              if (f.id !== filaId) return f;
+              const photos = [...(f.photos || []), base64];
+              return { ...f, photos };
+            })
+          );
+          mostrarToast?.("📷 Foto capturada", "ok");
+        }
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setSubiendoFotoFilaId(null);
+      e.target.value = "";
+    }
+  };
+
+  const handleEliminarFotoFila = (filaId: string, photoIdx: number) => {
+    setFilas((prev) =>
+      prev.map((f) => {
+        if (f.id !== filaId) return f;
+        const photos = (f.photos || []).filter((_, idx) => idx !== photoIdx);
+        return { ...f, photos };
+      })
+    );
+  };
 
   const abrirDropdown = (
     filaId: string,
@@ -396,23 +581,56 @@ export default function ModalFormularioRapido({
     } satisfies FilaRegistroManual;
   };
 
-  const aplicarServicioRapido = (
+  const [vistaLubricentroIdx, setVistaLubricentroIdx] = useState(0);
+
+  const isServicioActivo = (label: string) => {
+    const sName = label.trim().toLowerCase();
+    return filas.some((f) => f.name.trim().toLowerCase() === sName);
+  };
+
+  const toggleServicioRapido = (
     servicio: { label: string; category: string; subCategory: string }
   ) => {
-    setFilas((prev) => {
-      if (!prev[0]) return [crearFilaVacia({ name: servicio.label })];
-      return prev.map((fila, index) =>
-        index === 0
-          ? {
-              ...fila,
+    const sName = servicio.label.trim().toLowerCase();
+    const existeIndex = filas.findIndex(
+      (f) => f.name.trim().toLowerCase() === sName
+    );
+
+    if (existeIndex !== -1) {
+      if (filas.length === 1) {
+        setFilas([crearFilaVacia()]);
+      } else {
+        setFilas((prev) => prev.filter((_, idx) => idx !== existeIndex));
+      }
+      mostrarToast?.(`Removido: ${servicio.label}`, "ok");
+    } else {
+      setFilas((prev) => {
+        if (prev.length === 1 && !prev[0].name.trim()) {
+          return [
+            {
+              ...prev[0],
               category: servicio.category,
               subCategory: servicio.subCategory,
-              name: fila.name?.trim() ? fila.name : servicio.label,
-            }
-          : fila
-      );
-    });
+              name: servicio.label,
+              qty: 1,
+            },
+          ];
+        }
+        return [
+          ...prev,
+          crearFilaVacia({
+            category: servicio.category,
+            subCategory: servicio.subCategory,
+            name: servicio.label,
+            qty: 1,
+          }),
+        ];
+      });
+      mostrarToast?.(`✓ Añadido: ${servicio.label}`, "ok");
+    }
   };
+
+  const aplicarServicioRapido = toggleServicioRapido;
 
   const cambiarEspecialidad = (nextEspecialidad: EspecialidadTipo) => {
     setEspecialidad(nextEspecialidad);
@@ -525,6 +743,7 @@ export default function ModalFormularioRapido({
         price: Number(f.price) || 0,
         qty: Number(f.qty) || 1,
         status: "En Proceso",
+        photos: f.photos && f.photos.length > 0 ? f.photos : undefined,
       };
     });
 
@@ -619,7 +838,7 @@ export default function ModalFormularioRapido({
                 }}
               />
               <img
-                src={fotoVehiculoMostrar}
+                src={fotoVehiculo || VISTAS_LUBRICENTRO[vistaLubricentroIdx].src}
                 alt={`Vehículo para servicio de lubricentro: ${ordenActiva?.vehicle || "automóvil"}`}
                 onError={(event) => {
                   event.currentTarget.onerror = null;
@@ -629,9 +848,18 @@ export default function ModalFormularioRapido({
                   fotoVehiculo ? "" : "mix-blend-multiply dark:mix-blend-screen"
                 }`}
               />
-              <span className="absolute right-3 top-3 z-20 rounded-full border border-zinc-200 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-zinc-800 shadow-sm dark:border-white/15 dark:bg-[#18181b]/90 dark:text-white">
-                🛠️ Vista del vehículo
-              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const nextIdx = (vistaLubricentroIdx + 1) % VISTAS_LUBRICENTRO.length;
+                  setVistaLubricentroIdx(nextIdx);
+                  mostrarToast?.(`Vista cambiada: ${VISTAS_LUBRICENTRO[nextIdx].label}`, "ok");
+                }}
+                className="absolute right-3 top-3 z-20 rounded-full border border-zinc-200 bg-white/95 px-3 py-1.5 text-[10px] sm:text-xs font-bold text-zinc-800 shadow-sm transition-all hover:bg-amber-50 hover:border-amber-400 hover:text-amber-800 active:scale-95 cursor-pointer dark:border-white/15 dark:bg-[#18181b]/90 dark:text-white dark:hover:bg-amber-500/15"
+                title="Toca para cambiar la vista 3D del vehículo"
+              >
+                {VISTAS_LUBRICENTRO[vistaLubricentroIdx].icon} {VISTAS_LUBRICENTRO[vistaLubricentroIdx].label} ↻
+              </button>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
               <span className="rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 font-mono font-bold text-zinc-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-white">
@@ -640,10 +868,12 @@ export default function ModalFormularioRapido({
               <span className="text-zinc-500 dark:text-zinc-400">
                 {ordenActiva?.client || "Sin cliente asignado"}
               </span>
-              <span className="ml-auto rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 font-semibold text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200">
-                Se realizará: {primerTrabajo?.category || "Aceites"}
-                {primerTrabajo?.subCategory ? ` · ${primerTrabajo.subCategory}` : ""}
-                {primerTrabajo?.name ? ` — ${primerTrabajo.name}` : ""}
+              <span className="ml-auto rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 font-semibold text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200 max-w-full">
+                Se realizará: {
+                  filas.filter((f) => f.name.trim().length > 0).length > 0
+                    ? filas.filter((f) => f.name.trim().length > 0).map((f) => f.name.trim()).join(" • ")
+                    : primerTrabajo?.name || "Aceite motor"
+                }
               </span>
             </div>
           </div>
@@ -660,29 +890,56 @@ export default function ModalFormularioRapido({
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                {ATAJOS_LUBRICENTRO.map((servicio) => (
-                  <button
-                    key={servicio.label}
-                    type="button"
-                    onClick={() => aplicarServicioRapido(servicio)}
-                    className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl border border-zinc-200 bg-zinc-50 px-1.5 py-2 text-[10px] font-bold text-zinc-700 transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800 active:scale-95 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-200 dark:hover:border-amber-500/40 dark:hover:bg-amber-500/10 dark:hover:text-amber-200"
-                  >
-                    <span className="text-base leading-none">{servicio.icon}</span>
-                    <span className="text-center leading-tight">{servicio.label}</span>
-                  </button>
-                ))}
+                {ATAJOS_LUBRICENTRO.map((servicio) => {
+                  const activo = isServicioActivo(servicio.label);
+                  return (
+                    <button
+                      key={servicio.label}
+                      type="button"
+                      onClick={() => toggleServicioRapido(servicio)}
+                      className={`relative flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl border px-1.5 py-2 text-[10px] font-bold transition-all active:scale-95 cursor-pointer ${
+                        activo
+                          ? "border-amber-400 bg-amber-500/15 text-amber-900 shadow-xs ring-2 ring-amber-400/50 dark:border-amber-400 dark:bg-amber-500/20 dark:text-amber-200"
+                          : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-200 dark:hover:border-amber-500/40 dark:hover:bg-amber-500/10 dark:hover:text-amber-200"
+                      }`}
+                      title={activo ? `Quitar ${servicio.label}` : `Añadir ${servicio.label}`}
+                    >
+                      {activo && (
+                        <span className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[9px] font-black flex items-center justify-center shadow">
+                          ✓
+                        </span>
+                      )}
+                      <span className="text-base leading-none">{servicio.icon}</span>
+                      <span className="text-center leading-tight">{servicio.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
-            <div className="rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
+            <div
+              onClick={() => {
+                if (filas.length > 0 && !filas[filas.length - 1].name.trim()) {
+                  formRef.current?.scrollIntoView({ behavior: "smooth" });
+                } else {
+                  agregarFila();
+                  formRef.current?.scrollIntoView({ behavior: "smooth" });
+                }
+              }}
+              className="rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4 cursor-pointer hover:border-amber-300 hover:bg-amber-50/10 active:scale-[0.99] transition-all group"
+              title="Toca para ir a la lista de trabajos manuales o añadir uno nuevo"
+            >
               <div className="mb-2 flex items-center justify-between gap-2">
-                <h2 className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white">
+                <h2 className="flex items-center gap-1.5 text-sm font-bold text-zinc-900 dark:text-white group-hover:text-amber-600 transition-colors">
                   <span>📝</span>
                   <span>Registro Manual</span>
                 </h2>
-                <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
-                  {ordenActiva?.items?.length || 0} en orden
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
+                  {filas.filter((f) => f.name.trim().length > 0).length} en orden
                 </span>
               </div>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                Toca aquí para escribir o dictar trabajos manuales adicionales
+              </p>
             </div>
           </div>
         </div>
@@ -1293,21 +1550,71 @@ export default function ModalFormularioRapido({
                     </div>
                   </div>
 
-                  {/* Fila 2 del bloque: Realizar (Servicio/Trabajo + Cantidad + Precio + Subtotal + Eliminar) */}
-                  <div className="space-y-1">
+                  {/* Fila 2 del bloque: Realizar (Servicio/Trabajo + Dictado Voz + Tomar Foto Cámara + Cantidad + Subtotal + Eliminar) */}
+                  <div className="space-y-1.5">
                     <label className="text-[10px] font-normal uppercase tracking-wider text-zinc-400 block">
                       Realizar
                     </label>
                     <div className="flex items-center gap-1.5">
-                      <input
-                        type="text"
-                        value={f.name}
-                        onChange={(e) => actualizarFila(f.id, "name", e.target.value)}
-                        placeholder="Servicio o trabajo a realizar"
-                        autoFocus={index === filas.length - 1 && !f.name}
-                        className="flex-1 min-w-0 h-9 px-2.5 rounded-lg bg-white dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 text-base sm:text-xs font-normal text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
+                      {/* Input de texto con botón de Dictado por voz (micrófono) */}
+                      <div className="relative flex-1 min-w-0 flex items-center">
+                        <input
+                          type="text"
+                          value={f.name}
+                          onChange={(e) => actualizarFila(f.id, "name", e.target.value)}
+                          placeholder="Servicio o trabajo a realizar"
+                          autoFocus={index === filas.length - 1 && !f.name}
+                          className="w-full h-9 pl-2.5 pr-8 rounded-lg bg-white dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 text-base sm:text-xs font-normal text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
 
+                        {/* Botón Dictado por Voz (Micrófono) */}
+                        <button
+                          type="button"
+                          onClick={() => toggleDictado(f.id)}
+                          title={filaDictandoId === f.id ? "Detener dictado" : "Dictar servicio con la voz"}
+                          className={'absolute right-1 w-7 h-7 rounded-md flex items-center justify-center transition-all cursor-pointer ' + (
+                            filaDictandoId === f.id
+                              ? 'bg-rose-500 text-white animate-pulse shadow-xs'
+                              : 'text-zinc-400 hover:text-blue-600 hover:bg-zinc-100 dark:hover:bg-white/10'
+                          )}
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      {/* Botón Tomar Foto Directa con la Cámara (capture="environment", sin selector de archivos ni galería) */}
+                      <label
+                        title="Tomar foto con la cámara (evidencia)"
+                        className={'relative w-9 h-9 shrink-0 rounded-lg border flex items-center justify-center transition-all cursor-pointer overflow-hidden ' + (
+                          subiendoFotoFilaId === f.id
+                            ? 'bg-blue-50 border-blue-300 text-blue-500 animate-pulse'
+                            : 'bg-white dark:bg-white/[0.04] border-zinc-200 dark:border-white/10 text-zinc-500 hover:text-blue-600 hover:bg-blue-50/50 dark:hover:bg-white/10 active:scale-95 shadow-2xs'
+                        )}
+                      >
+                        {subiendoFotoFilaId === f.id ? (
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                          </svg>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          disabled={subiendoFotoFilaId === f.id}
+                          onChange={(e) => void handleTomarFotoFila(e, f.id)}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                        />
+                      </label>
+
+                      {/* Cantidad */}
                       <input
                         type="number"
                         min={1}
@@ -1325,10 +1632,11 @@ export default function ModalFormularioRapido({
                         </span>
                       )}
 
+                      {/* Eliminar fila */}
                       <button
                         type="button"
                         onClick={() => eliminarFila(f.id)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors cursor-pointer"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors cursor-pointer shrink-0"
                         title="Eliminar fila"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1336,49 +1644,70 @@ export default function ModalFormularioRapido({
                         </svg>
                       </button>
                     </div>
+
+                    {/* Miniaturas de fotos tomadas con la cámara */}
+                    {f.photos && f.photos.length > 0 && (
+                      <div className="flex items-center gap-2 pt-1 flex-wrap">
+                        {f.photos.map((fotoUrl, pIdx) => (
+                          <div key={pIdx} className="relative group w-12 h-12 rounded-lg border border-zinc-200 dark:border-white/10 overflow-hidden shrink-0 shadow-2xs">
+                            <img src={fotoUrl} alt={'Foto trabajo ' + (pIdx + 1)} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => handleEliminarFotoFila(f.id, pIdx)}
+                              className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/70 hover:bg-red-600 text-white text-[9px] flex items-center justify-center cursor-pointer transition-colors"
+                              title="Eliminar foto"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Pie: Total y Guardar */}
-          <div className="sticky bottom-0 z-10 -mx-3 -mb-3 flex items-center justify-between gap-3 border-t border-zinc-100 bg-white/95 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-md dark:border-white/5 dark:bg-[#121214]/95 sm:-mx-4 sm:-mb-4 sm:px-4">
-            {especialidad !== "taller" && especialidad !== "lubricentro" && (
-              <div>
-                <span className="text-[10px] font-normal uppercase tracking-wider text-zinc-400">Total</span>
-                <div className="text-xl font-normal text-emerald-600 dark:text-emerald-400">
-                  ${total.toFixed(2)}
+          {/* Pie: Total y Guardar en popup (en modo inline la barra de navegación es fija abajo) */}
+          {modoInline ? null : (
+            <div className="sticky bottom-0 z-10 -mx-3 -mb-3 flex items-center justify-between gap-3 border-t border-zinc-100 bg-white/95 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-md dark:border-white/5 dark:bg-[#121214]/95 sm:-mx-4 sm:-mb-4 sm:px-4">
+              {especialidad !== "taller" && especialidad !== "lubricentro" && (
+                <div>
+                  <span className="text-[10px] font-normal uppercase tracking-wider text-zinc-400">Total</span>
+                  <div className="text-xl font-normal text-emerald-600 dark:text-emerald-400">
+                    ${total.toFixed(2)}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="h-10 px-4 rounded-xl text-xs font-normal text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={guardando}
-                className="h-10 px-5 rounded-xl text-xs font-normal bg-blue-600 hover:bg-blue-500 text-white transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {guardando ? (
-                  <span>Guardando...</span>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span>Guardar</span>
-                  </>
-                )}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="h-10 px-4 rounded-xl text-xs font-normal text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={guardando}
+                  className="h-10 px-5 rounded-xl text-xs font-normal bg-blue-600 hover:bg-blue-500 text-white transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {guardando ? (
+                    <span>Guardando...</span>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Guardar</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </form>
         </div>
       )}

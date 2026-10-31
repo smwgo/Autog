@@ -609,6 +609,15 @@ export default function ModuloTecnicentroCatalogo({
     return itemsTecnicentroEnOrden.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
   }, [itemsTecnicentroEnOrden]);
 
+  const totalMontoTecnicentro = useMemo(() => {
+    return itemsTecnicentroEnOrden.reduce((acc, it) => acc + (Number(it.total) || (Number(it.price) * (Number(it.qty) || 1)) || 0), 0);
+  }, [itemsTecnicentroEnOrden]);
+
+  const tiempoEstimadoTecnicentro = useMemo(() => {
+    if (totalUnidadesTecnicentro === 0) return 0;
+    return Math.max(30, totalUnidadesTecnicentro * 20);
+  }, [totalUnidadesTecnicentro]);
+
   // Conteos por categoría
   const conteoItemsPorCategoria = useMemo(() => {
     const map: Record<string, number> = { TODO: todosLosItemsPOS.length };
@@ -1351,21 +1360,21 @@ export default function ModuloTecnicentroCatalogo({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
 
           {/* ===== CARD IZQUIERDA: Alineacion y Llantas ===== */}
-          <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden">
-            <div className="px-4 pt-4 pb-3 border-b border-zinc-100 dark:border-white/[0.08]">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-sm shrink-0">🚗</div>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-zinc-900 dark:text-white leading-tight">
-                    {vehiculoTipo} Detectado 🚗
-                  </p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    • Rin {rinLabel}
-                  </p>
-                </div>
-              </div>
-              <p className="mt-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">Recepción Rápida</p>
+          <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden p-3.5 sm:p-4">
+            <p className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white mb-2.5">
+              Alineación y Llantas ({vehiculoTipo})
+            </p>
+            <div className="rounded-2xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200/80 dark:border-white/5 p-3.5 text-center">
+              <p className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white flex items-center justify-center gap-2">
+                <span>{vehiculoTipo} Detectado</span> 🚗
+              </p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                • Rin {rinLabel}
+              </p>
             </div>
+            <p className="mt-3.5 mb-2 text-center text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wide">
+              Recepción Rápida
+            </p>
             <div className="p-3 grid grid-cols-3 gap-2">
               {PRECARGA_BENTO_ITEMS.map((pItem, pIdx) => {
                 const qty = obtenerCantidadEnPedido(pItem);
@@ -1629,31 +1638,44 @@ export default function ModuloTecnicentroCatalogo({
         </div>
       </div>
 
-      {navegacionActiva && typeof document !== "undefined" &&
-        createPortal(
-          <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 p-3 sm:p-3.5 bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border-t sm:border border-zinc-200 dark:border-white/15 shadow-xl sm:rounded-2xl sm:bottom-3 sm:max-w-[1440px] sm:mx-auto pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-            <div className="flex w-full items-center justify-between gap-2">
-              {onIrAAnterior && (
-                <button
-                  type="button"
-                  onClick={onIrAAnterior}
-                  className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-700 text-xs sm:text-sm font-semibold cursor-pointer transition-all hover:bg-zinc-200 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
-                >
-                  ← Anterior
-                </button>
-              )}
+      {navegacionActiva && (
+        <div className="w-full border-t border-zinc-200 dark:border-white/15 py-3 mt-6">
+          <div className="flex w-full items-center justify-between gap-3">
+            {onIrAAnterior && (
               <button
                 type="button"
-                onClick={onIrAAvisoYFirma}
-                className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
+                onClick={onIrAAnterior}
+                className="px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10 cursor-pointer active:scale-95 transition-all shrink-0"
               >
-                <span>Siguiente</span>
-                <span>→</span>
+                ← Anterior
               </button>
+            )}
+
+            {/* Resumen PC (Imagen 1) */}
+            <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs sm:text-sm font-semibold shadow-xs">
+              <span className="text-base">🛒</span>
+              <span>
+                {totalUnidadesTecnicentro} {totalUnidadesTecnicentro === 1 ? 'servicio' : 'servicios'} | Total: ${totalMontoTecnicentro.toFixed(2)} • ⏱ {tiempoEstimadoTecnicentro} min
+              </span>
             </div>
-          </div>,
-          document.body
-        )}
+
+            {/* Resumen Móvil (Imagen 1 Móvil) */}
+            <div className="sm:hidden flex flex-col items-center justify-center text-center">
+              <span className="text-xs font-bold text-zinc-900 dark:text-white">Total: ${totalMontoTecnicentro.toFixed(2)}</span>
+              <span className="text-[10px] text-zinc-500 dark:text-zinc-400">• ⏱ {tiempoEstimadoTecnicentro} min</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={onIrAAvisoYFirma}
+              className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold shadow-sm shadow-blue-500/20 active:scale-95 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ml-auto"
+            >
+              <span>Siguiente</span>
+              <span>→</span>
+            </button>
+          </div>
+        </div>
+      )}
 
             {/* Modales administrativos opcionales (preservados) */}
       {/* Modales administrativos opcionales (preservados) */}

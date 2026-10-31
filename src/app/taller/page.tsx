@@ -766,6 +766,11 @@ export default function TallerPanel() {
   const [serviciosDb, setServiciosDb] = useState<any[]>([]);
   const [mecanicos, setMecanicos] = useState<string[]>([]);
   const [cargandoInicial, setCargandoInicial] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // SELECTOR SUPERIOR 4 EN 1: TALLER MECÁNICO, LUBRICENTRO, CAR WASH Y TECNICENTRO
   const [moduloTaller, setModuloTaller] = useState<"taller" | "lubricentro" | "carwash" | "tecnicentro">("taller");
@@ -3517,6 +3522,54 @@ Hola *${clienteNom}*, actualización de su vehículo *${vehiculoDesc}* (Placa: *
     setEtapa7FirmaDataUrl(null);
   };
 
+  const handlePasarAPropuesta = async () => {
+    if (!ordenActiva) return;
+    setGuardandoEtapa7(true);
+    try {
+      let firmaDataUrl: string | undefined;
+      if (tieneTrazosFirmaEtapa7Ref.current && canvasFirmaEtapa7Ref.current) {
+        firmaDataUrl = canvasFirmaEtapa7Ref.current.toDataURL("image/png");
+      }
+      const res = await fetch("/api/taller/operacion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "PASAR_A_PROPUESTA",
+          orderId: ordenActiva.id,
+          orderNumber: ordenActiva.orderNumber,
+          plate: ordenActiva.plate,
+          vehicle: ordenActiva.vehicle,
+          client: ordenActiva.client,
+          clientPhone: ordenActiva.clientPhone,
+          mechanic: ordenActiva.mechanic,
+          items: ordenActiva.items,
+          services: (ordenActiva as any).services || [],
+          totalCost: ordenActiva.totalCost,
+          notes: ordenActiva.notes,
+          quoteStatus: "Pendiente",
+          quoteSignatureUrl: modoFirma === "ACEPTACION" ? firmaDataUrl : undefined,
+          deliverySignatureUrl: modoFirma === "ENTREGA" ? firmaDataUrl : undefined,
+          signedBy: ordenActiva.client || "Cliente",
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.activeOrder) {
+        setOrdenActiva(data.activeOrder);
+        setAutosEnPista((prev) =>
+          prev.map((o) => (o.id === data.activeOrder.id ? data.activeOrder : o))
+        );
+        setModalPropuestaEnviada(true);
+      } else {
+        mostrarToast(data.error || "No se pudo procesar la propuesta", "err");
+      }
+    } catch (err) {
+      console.error("Error al pasar a propuesta:", err);
+      mostrarToast("Error al conectar con la base de datos", "err");
+    } finally {
+      setGuardandoEtapa7(false);
+    }
+  };
+
   const sincronizarEtapa7EnNeon = async (partial?: {
     deliveryChecklist?: DeliveryChecklistData;
     technicalReportText?: string;
@@ -4794,7 +4847,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
     VISTAS_INSPECCION.find((v) => v.id === etapa3VistaActiva) || VISTAS_INSPECCION[0];
 
   return (
-    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white font-sans pb-28 md:pb-12 selection:bg-blue-500/30 overflow-x-hidden max-w-full">
+    <div className="flex flex-col min-h-dvh bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white font-sans pb-8 sm:pb-12 selection:bg-blue-500/30 overflow-x-hidden max-w-full">
       <Header />
 
 
@@ -5294,8 +5347,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
           {/* VISTAS SEGÚN EL SELECTOR: TALLER, LUBRICENTRO, CAR WASH O TECNICENTRO */}
           <div
             className={
-              (moduloTaller === "lubricentro" || moduloTaller === "carwash") &&
-              modoRapidoActivo
+              (moduloTaller === "lubricentro" || moduloTaller === "carwash" || moduloTaller === "tecnicentro") &&
+              !modoRapidoActivo
                 ? "block w-full"
                 : "hidden"
             }
@@ -5312,8 +5365,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               historialVehiculo={historialVehiculo}
               modoEspecialidad={moduloTaller === "taller" ? "lubricentro" : moduloTaller}
               triggerAbrirConfig={triggerAbrirConfig}
-              vistaAppCarwash={modoRapidoActivo}
-              navegacionActiva={modoRapidoActivo && moduloTaller !== "taller"}
+              vistaAppCarwash={true}
+              navegacionActiva={false}
               onOrdenCreada={(orden) => {
                 setAutosEnPista((prev) => [orden, ...prev.filter((o) => o.id !== orden.id)]);
                 setOrdenActiva(orden);
@@ -5323,15 +5376,17 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             />
           </div>
 
-          {moduloTaller === "lubricentro" && !modoRapidoActivo && (
+          {moduloTaller === "lubricentro" && modoRapidoActivo && (
             <div className="w-full animate-fade-in">
               <ModalFormularioRapido
                 isOpen
                 modoInline
-                onClose={() => setModoRapidoActivo(true)}
+                onClose={() => setModoRapidoActivo(false)}
                 especialidadInicial="lubricentro"
                 fotoVehiculo={fotoVehiculoLubricentro}
                 ordenActiva={ordenActiva}
+                onVolver={() => setModuloTaller("taller")}
+                onContinuar={() => setModuloTaller("carwash")}
                 onGuardarItems={async (itemsNuevos, especialidad, activeOrderFromServer) => {
                   if (activeOrderFromServer) {
                     setOrdenActiva(activeOrderFromServer);
@@ -5359,7 +5414,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             </div>
           )}
 
-          {moduloTaller === "carwash" && !modoRapidoActivo && (
+          {moduloTaller === "carwash" && modoRapidoActivo && (
             <div className="w-full animate-fade-in">
               <ModalFormularioRapido
                 isOpen
@@ -5367,7 +5422,9 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 especialidadInicial="carwash"
                 fotoVehiculo={fotoVehiculoLubricentro}
                 ordenActiva={ordenActiva}
-                onClose={() => setModoRapidoActivo(true)}
+                onClose={() => setModoRapidoActivo(false)}
+                onVolver={() => setModuloTaller("lubricentro")}
+                onContinuar={() => setModuloTaller("tecnicentro")}
                 onGuardarItems={async (itemsNuevos, especialidad, activeOrderFromServer) => {
                   if (activeOrderFromServer) {
                     setOrdenActiva(activeOrderFromServer);
@@ -5395,7 +5452,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             </div>
           )}
 
-          {moduloTaller === "tecnicentro" && !modoRapidoActivo && (
+          {moduloTaller === "tecnicentro" && modoRapidoActivo && (
             <div className="w-full animate-fade-in">
               <ModalFormularioRapido
                 isOpen
@@ -5403,7 +5460,9 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 especialidadInicial="tecnicentro"
                 fotoVehiculo={fotoVehiculoLubricentro}
                 ordenActiva={ordenActiva}
-                onClose={() => setModoRapidoActivo(true)}
+                onClose={() => setModoRapidoActivo(false)}
+                onVolver={() => setModuloTaller("carwash")}
+                onContinuar={() => setEtapaActiva(4)}
                 onGuardarItems={async (itemsNuevos, especialidad, activeOrderFromServer) => {
                   if (activeOrderFromServer) {
                     setOrdenActiva(activeOrderFromServer);
@@ -5457,74 +5516,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             </div>
           )}
 
-          <div className={moduloTaller === "lubricentro" && modoRapidoActivo ? "block w-full" : "hidden"}>
-            <ModalFormularioRapido
-              isOpen={moduloTaller === "lubricentro" && modoRapidoActivo}
-              modoInline
-              mostrarPanelLubricentro={false}
-              onClose={() => setModoRapidoActivo(false)}
-              especialidadInicial="lubricentro"
-              fotoVehiculo={fotoVehiculoLubricentro}
-              ordenActiva={ordenActiva}
-              onGuardarItems={async (itemsNuevos, especialidad, activeOrderFromServer) => {
-                if (activeOrderFromServer) {
-                  setOrdenActiva(activeOrderFromServer);
-                  setAutosEnPista((prev) =>
-                    prev.map((o) => (o.id === activeOrderFromServer.id ? activeOrderFromServer : o))
-                  );
-                } else if (ordenActiva) {
-                  const actualizados = [...(ordenActiva.items || []), ...itemsNuevos];
-                  setOrdenActiva({ ...ordenActiva, items: actualizados });
-                  setAutosEnPista((prev) =>
-                    prev.map((o) => (o.id === ordenActiva.id ? { ...o, items: actualizados } : o))
-                  );
-                  await sincronizarOrdenEnNeon({ items: actualizados });
-                }
-                setModuloTaller(especialidad);
-                mostrarToast(
-                  ordenActiva
-                    ? `✅ ${itemsNuevos.length} servicio(s) de Lubricentro agregado(s) a ${ordenActiva.plate}`
-                    : `✅ ${itemsNuevos.length} servicio(s) registrados en el catálogo de Lubricentro`,
-                  "ok"
-                );
-              }}
-              mostrarToast={mostrarToast}
-            />
-          </div>
 
-          <div className={moduloTaller === "tecnicentro" && modoRapidoActivo ? "block w-full" : "hidden"}>
-            <ModalFormularioRapido
-              isOpen={moduloTaller === "tecnicentro" && modoRapidoActivo}
-              modoInline
-              mostrarPanelTecnicentro={false}
-              onClose={() => setModoRapidoActivo(false)}
-              especialidadInicial="tecnicentro"
-              ordenActiva={ordenActiva}
-              onGuardarItems={async (itemsNuevos, especialidad, activeOrderFromServer) => {
-                if (activeOrderFromServer) {
-                  setOrdenActiva(activeOrderFromServer);
-                  setAutosEnPista((prev) =>
-                    prev.map((o) => (o.id === activeOrderFromServer.id ? activeOrderFromServer : o))
-                  );
-                } else if (ordenActiva) {
-                  const actualizados = [...(ordenActiva.items || []), ...itemsNuevos];
-                  setOrdenActiva({ ...ordenActiva, items: actualizados });
-                  setAutosEnPista((prev) =>
-                    prev.map((o) => (o.id === ordenActiva.id ? { ...o, items: actualizados } : o))
-                  );
-                  await sincronizarOrdenEnNeon({ items: actualizados });
-                }
-                setModuloTaller(especialidad);
-                mostrarToast(
-                  ordenActiva
-                    ? `✅ ${itemsNuevos.length} servicio(s) de Tecnicentro agregado(s) a ${ordenActiva.plate}`
-                    : `✅ ${itemsNuevos.length} servicio(s) registrados en el catálogo de Tecnicentro`,
-                  "ok"
-                );
-              }}
-              mostrarToast={mostrarToast}
-            />
-          </div>
 
           <div className={moduloTaller === "taller" && modoRapidoActivo ? "block w-full" : "hidden"}>
             <ModalFormularioRapido
@@ -5533,6 +5525,11 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               onClose={() => setModoRapidoActivo(false)}
               especialidadInicial="taller"
               ordenActiva={ordenActiva}
+              onVolver={() => setModoRapidoActivo(false)}
+              onContinuar={() => {
+                setModuloTaller("lubricentro");
+                setModoRapidoActivo(true);
+              }}
               onGuardarItems={async (itemsNuevos, especialidad, activeOrderFromServer) => {
                 if (activeOrderFromServer) {
                   setOrdenActiva(activeOrderFromServer);
@@ -5578,7 +5575,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     );
                   }}
                   onGenerarPdf={handleGenerarPdfInspeccion}
-                  onVolver={() => {}}
+                  onVolver={() => setModoRapidoActivo(true)}
                   onContinuar={() => {
                     setModuloTaller("lubricentro");
                     setModoRapidoActivo(true);
@@ -5816,81 +5813,81 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       </div>
                     </div>
                   </div>
-
-                  {/* Pie: Pasar a Propuesta */}
-                  <div className="pt-3 border-t border-zinc-200 dark:border-white/[0.08] flex items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setEtapaActiva(2)}
-                      className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-700 dark:bg-white/5 dark:hover:bg-white/10 dark:border-transparent dark:text-zinc-300 text-xs font-normal cursor-pointer transition-colors"
-                    >
-                      Anterior
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={guardandoEtapa7}
-                      onClick={async () => {
-                        if (ordenActiva) {
-                          setGuardandoEtapa7(true);
-                          try {
-                            let firmaDataUrl: string | undefined;
-                            if (tieneTrazosFirmaEtapa7Ref.current && canvasFirmaEtapa7Ref.current) {
-                              firmaDataUrl = canvasFirmaEtapa7Ref.current.toDataURL("image/png");
-                            }
-                            const res = await fetch("/api/taller/operacion", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({
-                                action: "PASAR_A_PROPUESTA",
-                                orderId: ordenActiva.id,
-                                orderNumber: ordenActiva.orderNumber,
-                                plate: ordenActiva.plate,
-                                vehicle: ordenActiva.vehicle,
-                                client: ordenActiva.client,
-                                clientPhone: ordenActiva.clientPhone,
-                                mechanic: ordenActiva.mechanic,
-                                items: ordenActiva.items,
-                                services: (ordenActiva as any).services || [],
-                                totalCost: ordenActiva.totalCost,
-                                notes: ordenActiva.notes,
-                                quoteStatus: "Pendiente",
-                                quoteSignatureUrl: modoFirma === "ACEPTACION" ? firmaDataUrl : undefined,
-                                deliverySignatureUrl: modoFirma === "ENTREGA" ? firmaDataUrl : undefined,
-                                signedBy: ordenActiva.client || "Cliente",
-                              }),
-                            });
-                            const data = await res.json();
-                            if (data.success && data.activeOrder) {
-                              setOrdenActiva(data.activeOrder);
-                              setAutosEnPista((prev) =>
-                                prev.map((o) => (o.id === data.activeOrder.id ? data.activeOrder : o))
-                              );
-                              setModalPropuestaEnviada(true);
-                            } else {
-                              mostrarToast(data.error || "No se pudo procesar la propuesta", "err");
-                            }
-                          } catch (err) {
-                            console.error("Error al pasar a propuesta:", err);
-                            mostrarToast("Error al conectar con la base de datos", "err");
-                          } finally {
-                            setGuardandoEtapa7(false);
-                          }
-                        }
-                      }}
-                      className="px-4 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-700 dark:bg-sky-500/15 dark:hover:bg-sky-500/25 dark:border-sky-500/35 dark:text-sky-300 text-xs font-normal backdrop-blur-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
-                      title="Presupuesto"
-                    >
-                      <span>📋</span>
-                      <span>Presupuesto</span>
-                    </button>
-                  </div>
                 </div>
               </div>
             )}
           </div>
           </div>
         </section>
+
+        {/* BARRA DE NAVEGACIÓN: AL FINAL DE LA PÁGINA (FLUJO NORMAL) */}
+        <div className="w-full pt-6 pb-2 border-t border-zinc-200 dark:border-white/10 mt-6">
+          <div className="flex w-full items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                if (etapaActiva === 4) {
+                  setModuloTaller("tecnicentro");
+                  setEtapaActiva(2);
+                } else if (moduloTaller === "tecnicentro") {
+                  setModuloTaller("carwash");
+                } else if (moduloTaller === "carwash") {
+                  setModuloTaller("lubricentro");
+                } else if (moduloTaller === "lubricentro") {
+                  setModuloTaller("taller");
+                } else if (moduloTaller === "taller") {
+                  if (modoRapidoActivo) setModoRapidoActivo(false);
+                }
+              }}
+              disabled={moduloTaller === "taller" && !modoRapidoActivo && etapaActiva !== 4}
+              className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-700 text-xs sm:text-sm font-semibold cursor-pointer transition-all hover:bg-zinc-200 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10 active:scale-95 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              ← Anterior
+            </button>
+
+            {/* Resumen dinámico en el centro según el módulo */}
+            {moduloTaller === "tecnicentro" && etapaActiva !== 4 && (
+              <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs sm:text-sm font-semibold shadow-xs">
+                <span className="text-base">🛒</span>
+                <span>
+                  {(ordenActiva?.items || []).length} trabajo(s) en orden • Total: ${Number(ordenActiva?.totalCost || 0).toFixed(2)}
+                </span>
+              </div>
+            )}
+
+            {etapaActiva === 4 ? (
+              <button
+                type="button"
+                disabled={guardandoEtapa7}
+                onClick={() => void handlePasarAPropuesta()}
+                className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold shadow-sm shadow-blue-500/20 active:scale-95 transition-all flex items-center gap-1.5 ml-auto shrink-0 cursor-pointer disabled:opacity-50"
+              >
+                <span>📋</span>
+                <span>{guardandoEtapa7 ? "Guardando..." : "Presupuesto"}</span>
+                <span>→</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  if (moduloTaller === "taller") {
+                    setModuloTaller("lubricentro");
+                  } else if (moduloTaller === "lubricentro") {
+                    setModuloTaller("carwash");
+                  } else if (moduloTaller === "carwash") {
+                    setModuloTaller("tecnicentro");
+                  } else if (moduloTaller === "tecnicentro") {
+                    setEtapaActiva(4);
+                  }
+                }}
+                className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold shadow-sm shadow-blue-500/20 active:scale-95 transition-all flex items-center gap-1.5 ml-auto shrink-0 cursor-pointer"
+              >
+                <span>Siguiente</span>
+                <span>→</span>
+              </button>
+            )}
+          </div>
+        </div>
 
       </main>
 
@@ -7047,39 +7044,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
         </div>
       )}
 
-      {moduloTaller !== "taller" &&
-        (!modoRapidoActivo || moduloTaller === "tecnicentro") &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 p-3 sm:p-3.5 bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border-t sm:border border-zinc-200 dark:border-white/15 shadow-xl sm:rounded-2xl sm:bottom-3 sm:max-w-[1440px] sm:mx-auto pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-            <div className="flex w-full items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  if (moduloTaller === "lubricentro") setModuloTaller("taller");
-                  else if (moduloTaller === "carwash") setModuloTaller("lubricentro");
-                  else setModuloTaller("carwash");
-                }}
-                className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-700 text-xs sm:text-sm font-semibold cursor-pointer transition-all hover:bg-zinc-200 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
-              >
-                ← Anterior
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (moduloTaller === "lubricentro") setModuloTaller("carwash");
-                  else if (moduloTaller === "carwash") setModuloTaller("tecnicentro");
-                  else setModuloTaller("taller");
-                }}
-                className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
-              >
-                <span>Siguiente</span>
-                <span>→</span>
-              </button>
-            </div>
-          </div>,
-          document.body
-        )}
+
       <TallerMobileNav />
     </div>
   );

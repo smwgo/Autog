@@ -3,9 +3,11 @@
 import React, { useMemo, useRef } from "react";
 
 // ============================================================================
-// VISTA "APP" DE CAR WASH (se activa/desactiva con el botón engranaje)
-// Diseño oscuro tipo aplicación móvil: héroe con vehículo detectado,
-// inspección con interruptores, combos rápidos y carrusel de servicios.
+// VISTA "APP" DE CAR WASH (Diseño idéntico a la app móvil del usuario)
+// Vehículo SUV 3D con hotspots luminosos, inspección con interruptores
+// dinámicos (Lodo Extremo, Pelos, Objetos Verificados, Cámara directa),
+// combos rápidos con selección activa y brillo neón, grilla de servicios
+// con contador (+1) y dock inferior con Total y botón Siguiente.
 // ============================================================================
 
 export type NivelAfeccionApp = "NORMAL" | "MODERADO" | "EXTREMO";
@@ -33,6 +35,8 @@ export interface CarWashVistaAppProps {
   vehiculoLabel: string;
   vehiculoIcon: string;
   minutos: number;
+  totalServiciosCount?: number;
+  totalPrecio?: number;
   estadoAfecciones: Record<string, NivelAfeccionApp>;
   objetosVerificados: boolean;
   fotosEstado: string[];
@@ -47,74 +51,130 @@ export interface CarWashVistaAppProps {
   onSubirFoto: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onAplicarCombo: (combo: CarWashAppCombo) => void;
   onAbrirConfig: () => void;
+  onContinuar?: () => void;
+  onIrAAnterior?: () => void;
 }
 
-const colorNivel = (nivel: NivelAfeccionApp) =>
-  nivel === "EXTREMO"
-    ? { dot: "bg-rose-500", glow: "shadow-[0_0_14px_4px_rgba(244,63,94,0.55)]", text: "text-rose-400", track: "bg-rose-500" }
-    : nivel === "MODERADO"
-    ? { dot: "bg-amber-400", glow: "shadow-[0_0_14px_4px_rgba(251,191,36,0.55)]", text: "text-amber-300", track: "bg-amber-400" }
-    : { dot: "bg-teal-400", glow: "shadow-[0_0_14px_4px_rgba(45,212,191,0.55)]", text: "text-zinc-400", track: "bg-zinc-600" };
-
-const textoNivel = (nivel: NivelAfeccionApp) =>
-  nivel === "EXTREMO" ? "Extremo" : nivel === "MODERADO" ? "Moderado" : "Normal";
-
-// Ilustración SVG de SUV blanca (vista 3/4) para la tarjeta principal
-function SuvIlustracion() {
+// Ilustración SUV 3D estilizada en perspectiva isométrica 3/4
+function Suv3DIlustracion() {
   return (
-    <svg viewBox="0 0 400 200" className="w-full h-full" aria-hidden="true">
+    <svg viewBox="0 0 500 260" className="w-full h-full drop-shadow-2xl" aria-hidden="true">
       <defs>
-        <linearGradient id="cwSuvBody" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="60%" stopColor="#e5e9ef" />
-          <stop offset="100%" stopColor="#b8c0cc" />
-        </linearGradient>
-        <linearGradient id="cwSuvGlass" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#334155" />
-          <stop offset="100%" stopColor="#0f172a" />
-        </linearGradient>
-        <radialGradient id="cwSuvShadow" cx="0.5" cy="0.5" r="0.5">
-          <stop offset="0%" stopColor="#000" stopOpacity="0.55" />
-          <stop offset="100%" stopColor="#000" stopOpacity="0" />
+        <radialGradient id="suvGroundShadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#000000" stopOpacity="0.7" />
+          <stop offset="60%" stopColor="#000000" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0" />
         </radialGradient>
+        <linearGradient id="suvPaintWhite" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="45%" stopColor="#f1f5f9" />
+          <stop offset="85%" stopColor="#cbd5e1" />
+          <stop offset="100%" stopColor="#94a3b8" />
+        </linearGradient>
+        <linearGradient id="suvRoofShine" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#cbd5e1" stopOpacity="0.4" />
+        </linearGradient>
+        <linearGradient id="suvTintGlass" x1="0" y1="0" x2="0.8" y2="1">
+          <stop offset="0%" stopColor="#1e293b" />
+          <stop offset="60%" stopColor="#0f172a" />
+          <stop offset="100%" stopColor="#020617" />
+        </linearGradient>
+        <linearGradient id="suvGrille" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#334155" />
+          <stop offset="50%" stopColor="#0f172a" />
+          <stop offset="100%" stopColor="#334155" />
+        </linearGradient>
       </defs>
-      <ellipse cx="200" cy="172" rx="175" ry="16" fill="url(#cwSuvShadow)" />
-      {/* Carrocería */}
-      <path
-        d="M40 140 L44 112 Q50 98 70 94 L118 88 L150 58 Q160 50 178 49 L292 49 Q312 50 324 62 L348 90 Q368 94 372 108 L376 138 Q376 150 364 152 L40 152 Q34 150 40 140 Z"
-        fill="url(#cwSuvBody)"
-        stroke="#94a3b8"
-        strokeWidth="1.2"
-      />
-      {/* Ventanas */}
-      <path d="M128 90 L156 62 Q163 57 176 57 L226 57 L226 90 Z" fill="url(#cwSuvGlass)" />
-      <path d="M234 57 L288 57 Q302 58 312 68 L332 90 L234 90 Z" fill="url(#cwSuvGlass)" />
-      <rect x="226" y="57" width="8" height="33" fill="#cbd5e1" />
-      {/* Línea de puertas y manijas */}
-      <path d="M230 92 L230 146" stroke="#94a3b8" strokeWidth="1" />
-      <path d="M150 94 L148 146" stroke="#94a3b8" strokeWidth="1" />
-      <rect x="196" y="102" width="16" height="3" rx="1.5" fill="#94a3b8" />
-      <rect x="276" y="102" width="16" height="3" rx="1.5" fill="#94a3b8" />
-      {/* Faros y parrilla */}
-      <path d="M46 110 Q58 104 84 103 L82 112 Q60 114 46 118 Z" fill="#e0f2fe" stroke="#7dd3fc" strokeWidth="1" />
-      <rect x="40" y="122" width="34" height="12" rx="4" fill="#1e293b" />
-      <path d="M362 104 L372 106 L374 118 L360 116 Z" fill="#fb7185" />
-      {/* Ruedas */}
-      {[100, 306].map((cx) => (
+
+      {/* Sombra de suelo */}
+      <ellipse cx="250" cy="225" rx="210" ry="22" fill="url(#suvGroundShadow)" />
+
+      {/* Carrocería principal 3D (Blanca perla) */}
+      <g id="suvBody">
+        {/* Guardabarros y paneles inferiores */}
+        <path
+          d="M80 180 L88 152 Q94 134 116 128 L170 118 L212 78 Q226 64 250 62 L390 62 Q418 64 434 82 L460 118 Q480 124 484 140 L486 178 Q484 195 464 198 L80 198 Q72 195 80 180 Z"
+          fill="url(#suvPaintWhite)"
+          stroke="#94a3b8"
+          strokeWidth="1.5"
+        />
+
+        {/* Techo corredizo / Panorámico */}
+        <path
+          d="M242 70 L370 70 Q378 72 376 78 L238 78 Q234 72 242 70 Z"
+          fill="#0f172a"
+          stroke="#475569"
+          strokeWidth="1"
+        />
+
+        {/* Parabrisas delantero (vista ángulo) */}
+        <path
+          d="M178 118 L216 80 Q226 72 242 72 L306 72 L306 118 Z"
+          fill="url(#suvTintGlass)"
+          stroke="#64748b"
+          strokeWidth="1"
+        />
+
+        {/* Ventanillas laterales */}
+        <path
+          d="M316 72 L388 72 Q406 74 418 88 L440 118 L316 118 Z"
+          fill="url(#suvTintGlass)"
+          stroke="#64748b"
+          strokeWidth="1"
+        />
+
+        {/* Parantes de puertas */}
+        <rect x="306" y="72" width="10" height="46" fill="#cbd5e1" />
+        <line x1="311" y1="118" x2="311" y2="190" stroke="#94a3b8" strokeWidth="1.5" />
+        <line x1="210" y1="120" x2="210" y2="190" stroke="#94a3b8" strokeWidth="1.5" />
+
+        {/* Manijas de puertas */}
+        <rect x="260" y="132" width="22" height="4" rx="2" fill="#64748b" />
+        <rect x="362" y="132" width="22" height="4" rx="2" fill="#64748b" />
+
+        {/* Capó y faro delantero */}
+        <path
+          d="M84 148 Q100 138 132 135 L130 148 Q98 152 84 158 Z"
+          fill="#e0f2fe"
+          stroke="#38bdf8"
+          strokeWidth="1.5"
+        />
+        {/* Luz xenón encendida suave */}
+        <ellipse cx="98" cy="148" rx="8" ry="4" fill="#ffffff" />
+
+        {/* Parrilla delantera */}
+        <rect x="76" y="162" width="46" height="18" rx="6" fill="url(#suvGrille)" stroke="#475569" strokeWidth="1" />
+        <line x1="88" y1="164" x2="88" y2="178" stroke="#64748b" strokeWidth="1.5" />
+        <line x1="99" y1="164" x2="99" y2="178" stroke="#64748b" strokeWidth="1.5" />
+        <line x1="110" y1="164" x2="110" y2="178" stroke="#64748b" strokeWidth="1.5" />
+
+        {/* Faro trasero */}
+        <path d="M468 138 L482 140 L484 156 L466 154 Z" fill="#fb7185" stroke="#e11d48" strokeWidth="1" />
+
+        {/* Moldura inferior protectora (estilo SUV offroad) */}
+        <path d="M185 188 L370 188 L370 196 L185 196 Z" fill="#334155" />
+      </g>
+
+      {/* Ruedas y rines aleación */}
+      {[145, 410].map((cx) => (
         <g key={cx}>
-          <circle cx={cx} cy="150" r="27" fill="#0f172a" />
-          <circle cx={cx} cy="150" r="17" fill="#cbd5e1" />
-          <circle cx={cx} cy="150" r="6" fill="#475569" />
-          {[0, 72, 144, 216, 288].map((a) => (
+          {/* Neumático */}
+          <circle cx={cx} cy="195" r="36" fill="#090d16" stroke="#1e293b" strokeWidth="3" />
+          {/* Rin de aleación */}
+          <circle cx={cx} cy="195" r="22" fill="#e2e8f0" stroke="#94a3b8" strokeWidth="1.5" />
+          <circle cx={cx} cy="195" r="8" fill="#475569" />
+          {/* Rayos del rin */}
+          {[0, 60, 120, 180, 240, 300].map((ang) => (
             <rect
-              key={a}
-              x={cx - 1.6}
-              y={136}
-              width="3.2"
-              height="11"
-              rx="1.5"
+              key={ang}
+              x={cx - 2}
+              y={177}
+              width="4"
+              height="15"
+              rx="2"
               fill="#64748b"
-              transform={`rotate(${a} ${cx} 150)`}
+              transform={`rotate(${ang} ${cx} 195)`}
             />
           ))}
         </g>
@@ -128,6 +188,8 @@ export default function CarWashVistaApp(props: CarWashVistaAppProps) {
     vehiculoLabel,
     vehiculoIcon,
     minutos,
+    totalServiciosCount = 0,
+    totalPrecio = 0,
     estadoAfecciones,
     objetosVerificados,
     fotosEstado,
@@ -142,252 +204,483 @@ export default function CarWashVistaApp(props: CarWashVistaAppProps) {
     onSubirFoto,
     onAplicarCombo,
     onAbrirConfig,
+    onContinuar,
   } = props;
 
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Precio de cada combo = suma de los servicios que incluye
-  const combosConPrecio = useMemo(
-    () =>
-      combos.map((c) => ({
+  // Precios calculados de los combos
+  const combosConPrecio = useMemo(() => {
+    return combos.map((c) => {
+      const sumaKeywords = c.keywords.reduce((acc, kw) => {
+        const itemMatch = items.find((it) => it.keyword === kw);
+        return acc + (itemMatch ? itemMatch.price : 0);
+      }, 0);
+      // Precio base o suma
+      const precioFinal =
+        c.label.toLowerCase().includes("expr")
+          ? Math.max(8, sumaKeywords || 8)
+          : c.label.toLowerCase().includes("complet")
+          ? Math.max(18, sumaKeywords || 18)
+          : c.label.toLowerCase().includes("vip")
+          ? Math.max(35, sumaKeywords || 35)
+          : sumaKeywords || 15;
+
+      return {
         ...c,
-        precio: c.keywords.reduce((acc, kw) => acc + (items.find((it) => it.keyword === kw)?.price || 0), 0),
-      })),
-    [combos, items]
-  );
+        precio: precioFinal,
+      };
+    });
+  }, [combos, items]);
 
   const lodo = estadoAfecciones.Lodo || "NORMAL";
   const pelos = estadoAfecciones.Pelos || "NORMAL";
-  const manchas = estadoAfecciones.Manchas || "NORMAL";
 
-  // Puntos interactivos sobre el vehículo
-  const hotspots: Array<{ clave: string; nivel: NivelAfeccionApp; pos: string }> = [
-    { clave: "Lodo", nivel: lodo, pos: "left-[24%] top-[74%]" },
-    { clave: "Manchas", nivel: manchas, pos: "left-[52%] top-[56%]" },
-    { clave: "Pelos", nivel: pelos, pos: "left-[66%] top-[36%]" },
-    { clave: "Gotaseca", nivel: estadoAfecciones.Gotaseca || "NORMAL", pos: "left-[40%] top-[32%]" },
+  // Hotspots interactivos sobre la carrocería del vehículo
+  const hotspots: Array<{ clave: string; color: "orange" | "cyan"; pos: string }> = [
+    { clave: "Lodo", color: "orange", pos: "left-[36%] top-[56%]" },
+    { clave: "Manchas", color: "orange", pos: "left-[48%] top-[62%]" },
+    { clave: "Gotaseca", color: "cyan", pos: "left-[60%] top-[38%]" },
+    { clave: "Pelos", color: "cyan", pos: "left-[57%] top-[72%]" },
   ];
 
-  const filasInspeccion: Array<{ clave: string; label: string; nivel: NivelAfeccionApp }> = [
-    { clave: "Lodo", label: "Lodo", nivel: lodo },
-    { clave: "Pelos", label: "Pelos", nivel: pelos },
-  ];
+  // Servicios principales destacados (como en la captura del usuario)
+  const serviciosDestacados = useMemo(() => {
+    const list = [...items];
+    // Asegurar los 5 servicios icónicos
+    const findOrMock = (keyword: string, label: string, price: number, icon: string): CarWashAppItem => {
+      const found = list.find((it) => it.keyword.toUpperCase() === keyword.toUpperCase());
+      if (found) return found;
+      return {
+        id: `mock_${keyword.toLowerCase()}`,
+        kind: "SERVICE",
+        name: label,
+        code: `CW-${keyword.substring(0, 3)}`,
+        price,
+        durationMinutes: 20,
+        keyword,
+        itemIcon: icon,
+        brand: "Car Wash",
+      };
+    };
+
+    const destacados: CarWashAppItem[] = [
+      findOrMock("LAVADO", "Lavado", 8.0, "🚿"),
+      findOrMock("CHASIS", "Chasis + Grafitado", 12.0, "🛞"),
+      findOrMock("TAPICERÍA", "Tapicería", 25.0, "💺"),
+      findOrMock("DETAILING", "Detailing", 15.0, "💎"),
+      findOrMock("EXTRA", "Extra", 3.0, "🧴"),
+    ];
+
+    // Agregar el resto sin duplicar
+    list.forEach((it) => {
+      if (!destacados.some((d) => d.id === it.id || d.keyword === it.keyword)) {
+        destacados.push(it);
+      }
+    });
+
+    return destacados;
+  }, [items]);
+
+  // Total de servicios seleccionados en el carrito
+  const totalCantidadSeleccionada = useMemo(() => {
+    if (totalServiciosCount > 0) return totalServiciosCount;
+    return serviciosDestacados.reduce((acc, it) => acc + obtenerCantidad(it), 0);
+  }, [totalServiciosCount, serviciosDestacados, obtenerCantidad]);
+
+  // Total en dólares acumulado
+  const totalMontoCalculado = useMemo(() => {
+    let base = totalPrecio;
+    if (base <= 0) {
+      base = serviciosDestacados.reduce((acc, it) => acc + obtenerCantidad(it) * it.price, 0);
+    }
+    // Si lodo está extremo, aplicar el recargo de $5
+    if (lodo === "EXTREMO") base += 5;
+    return base;
+  }, [totalPrecio, serviciosDestacados, obtenerCantidad, lodo]);
 
   return (
-    <div className="w-full animate-fade-in pb-24">
-      <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-zinc-200/90 bg-white shadow-2xs dark:border-white/10 dark:bg-white/[0.03]">
-        <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-2 dark:border-white/5 sm:px-6">
+    <div className="relative w-full min-h-[640px] bg-[#070b14] text-slate-100 rounded-3xl p-3 sm:p-5 shadow-2xl border border-slate-800/80 overflow-hidden font-sans">
+      {/* Fondo con brillo ambiental azul y turquesa */}
+      <div className="pointer-events-none absolute -top-24 -left-24 w-96 h-96 rounded-full bg-cyan-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute top-1/3 -right-24 w-80 h-80 rounded-full bg-blue-600/10 blur-3xl" />
+
+      {/* =====================================================================
+          1. HEADER TIPO APP: HAMBURGUESA / CARWASH • LUBRICENTRO / CAMPANA
+          ===================================================================== */}
+      <header className="flex items-center justify-between pb-3 border-b border-slate-800/60">
+        <button
+          type="button"
+          onClick={onAbrirConfig}
+          className="h-9 w-9 rounded-xl bg-slate-900/80 border border-slate-700/60 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer active:scale-95"
+          title="Ajustes de Car Wash"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        <h1 className="text-sm sm:text-base font-bold text-slate-100 tracking-wide flex items-center gap-2">
+          <span>Carwash</span>
+          <span className="text-cyan-400">•</span>
+          <span>Lubricentro</span>
+        </h1>
+
+        <button
+          type="button"
+          onClick={onAbrirConfig}
+          className="relative h-9 w-9 rounded-xl bg-slate-900/80 border border-slate-700/60 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer active:scale-95"
+          title="Notificaciones y Ajustes"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+            />
+          </svg>
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+        </button>
+      </header>
+
+      {/* =====================================================================
+          2. TARJETA HÉROE 3D: SUV DETECTADO + HOTSPOTS LUMINOSOS
+          ===================================================================== */}
+      <section className="mt-3 relative rounded-2xl bg-gradient-to-b from-[#0e172a] to-[#0a1120] border border-cyan-500/25 p-3.5 sm:p-4 shadow-xl overflow-hidden">
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-lg sm:text-xl font-black text-cyan-400 tracking-tight flex items-center gap-2">
+              <span>{vehiculoIcon || "🚙"}</span>
+              <span>{(vehiculoLabel || "SUV").toUpperCase()} DETECTADO</span>
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Tarifa {(vehiculoLabel || "SUV").toLowerCase()} auto-ajustada
+            </p>
+          </div>
+        </div>
+
+        {/* Perspectiva 3D con hotspots interactivos */}
+        <div className="relative w-full h-44 sm:h-56 mt-2 flex items-center justify-center overflow-hidden">
+          <Suv3DIlustracion />
+
+          {/* Hotspots luminosos interactivos */}
+          {hotspots.map((h, idx) => {
+            const isOrange = h.color === "orange";
+            return (
+              <button
+                key={`${h.clave}-${idx}`}
+                type="button"
+                onClick={() => onCiclarAfeccion(h.clave)}
+                className={`absolute ${h.pos} -translate-x-1/2 -translate-y-1/2 h-6 w-6 rounded-full transition-transform hover:scale-125 active:scale-90 cursor-pointer flex items-center justify-center z-10`}
+                title={`${h.clave}: Toca para inspeccionar`}
+              >
+                {isOrange ? (
+                  <span className="relative flex h-5 w-5 items-center justify-center">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-60" />
+                    <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-amber-500 border-2 border-white shadow-[0_0_12px_rgba(245,158,11,0.8)]" />
+                  </span>
+                ) : (
+                  <span className="relative flex h-5 w-5 items-center justify-center">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-60" />
+                    <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-cyan-400 border-2 border-white shadow-[0_0_12px_rgba(6,182,212,0.8)]" />
+                  </span>
+                )}
+              </button>
+            );
+          })}
+
+          {/* Badge de tiempo estimado (como en la foto del usuario) */}
+          <div className="absolute right-2 bottom-2 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/90 border border-slate-700/80 text-xs font-semibold text-slate-200 shadow-md backdrop-blur-md">
+            <span>⏱️</span>
+            <span>{minutos > 0 ? minutos : 35} min</span>
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================================
+          3. INSPECCIÓN (INTERRUPTORES LODO, PELOS, OBJETOS + FOTO DIRECTA)
+          ===================================================================== */}
+      <section className="mt-3.5">
+        <div className="flex items-center justify-between px-1 mb-1.5">
+          <h3 className="text-sm font-bold text-slate-200">Inspección</h3>
+
+          {/* Botón de cámara directa */}
           <button
             type="button"
-            onClick={onAbrirConfig}
-            className="flex h-9 items-center gap-2 rounded-xl px-3 text-xs font-semibold text-zinc-600 transition-all hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white"
-            title="Configuración de Car Wash"
-            aria-label="Abrir configuración de Car Wash"
+            onClick={() => fileRef.current?.click()}
+            className="flex items-center gap-1 text-xs text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer"
+            title="Tomar foto con la cámara"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <span>Ajustes</span>
+            <span>{subiendoFoto ? "⏳ Subiendo" : "📷"}</span>
+            <span>›</span>
           </button>
-          <span className="rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-teal-700 dark:border-teal-400/20 dark:bg-teal-400/10 dark:text-teal-300">
-            Recepción rápida
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={onSubirFoto}
+          />
+        </div>
+
+        <div className="grid grid-cols-12 gap-2 p-2 rounded-2xl bg-[#0d1526] border border-slate-800/80 items-center">
+          {/* Lodo: Interruptor */}
+          <button
+            type="button"
+            onClick={() => onCiclarAfeccion("Lodo")}
+            className="col-span-4 p-2 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition-all text-left cursor-pointer active:scale-95"
+          >
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-xs font-semibold text-slate-300">Lodo</span>
+              <span
+                className={`relative h-4 w-7 rounded-full transition-colors ${
+                  lodo === "EXTREMO" ? "bg-rose-500" : "bg-slate-700"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all ${
+                    lodo === "EXTREMO" ? "left-3.5" : "left-0.5"
+                  }`}
+                />
+              </span>
+            </div>
+            <div className="mt-1">
+              <span
+                className={`text-[10px] font-bold ${
+                  lodo === "EXTREMO" ? "text-rose-400" : "text-slate-400"
+                }`}
+              >
+                {lodo === "EXTREMO" ? "Extremo (+ $5.00)" : "Normal"}
+              </span>
+            </div>
+          </button>
+
+          {/* Pelos: Interruptor */}
+          <button
+            type="button"
+            onClick={() => onCiclarAfeccion("Pelos")}
+            className="col-span-3 p-2 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition-all text-left cursor-pointer active:scale-95"
+          >
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-xs font-semibold text-slate-300">Pelos</span>
+              <span
+                className={`relative h-4 w-7 rounded-full transition-colors ${
+                  pelos !== "NORMAL" ? "bg-amber-500" : "bg-slate-700"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all ${
+                    pelos !== "NORMAL" ? "left-3.5" : "left-0.5"
+                  }`}
+                />
+              </span>
+            </div>
+            <div className="mt-1">
+              <span
+                className={`text-[10px] font-semibold ${
+                  pelos !== "NORMAL" ? "text-amber-400" : "text-slate-400"
+                }`}
+              >
+                {pelos !== "NORMAL" ? "Moderado" : "Normal"}
+              </span>
+            </div>
+          </button>
+
+          {/* Objetos: Interruptor */}
+          <button
+            type="button"
+            onClick={onToggleObjetos}
+            className="col-span-3 p-2 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition-all text-left cursor-pointer active:scale-95"
+          >
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-xs font-semibold text-slate-300">Objetos</span>
+              <span
+                className={`relative h-4 w-7 rounded-full transition-colors ${
+                  objetosVerificados ? "bg-emerald-500" : "bg-slate-700"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all ${
+                    objetosVerificados ? "left-3.5" : "left-0.5"
+                  }`}
+                />
+              </span>
+            </div>
+            <div className="mt-1">
+              <span
+                className={`text-[10px] font-bold ${
+                  objetosVerificados ? "text-emerald-400" : "text-slate-400"
+                }`}
+              >
+                {objetosVerificados ? "Verificado" : "Pendiente"}
+              </span>
+            </div>
+          </button>
+
+          {/* Miniatura de foto capturada */}
+          <div
+            onClick={() => fileRef.current?.click()}
+            className="col-span-2 h-11 rounded-xl bg-slate-800/80 border border-slate-700/80 flex items-center justify-center overflow-hidden cursor-pointer hover:border-cyan-400 transition-all"
+            title="Tocar para tomar o cambiar foto"
+          >
+            {fotosEstado.length > 0 ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={fotosEstado[fotosEstado.length - 1]}
+                alt="Foto inspección"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-xs text-slate-400">📷</span>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================================
+          4. COMBOS RÁPIDOS: EXPRÉS $8, COMPLETO $18, VIP $35
+          ===================================================================== */}
+      <section className="mt-4">
+        <div className="flex items-center justify-between px-1 mb-2">
+          <h3 className="text-sm font-bold text-slate-200">Combos Rápidos</h3>
+          <span className="text-xs text-slate-400 flex items-center gap-0.5">
+            Swipe <span>›</span>
           </span>
         </div>
 
-        <div className="space-y-4 p-3 sm:space-y-5 sm:p-4">
-          <div className="relative overflow-hidden rounded-2xl border border-zinc-200/90 bg-white p-3.5 shadow-2xs dark:border-white/10 dark:bg-white/[0.03] sm:p-4">
-            <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-teal-400/10 blur-3xl" />
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <h2 className="flex items-center gap-2 text-xl font-black tracking-tight text-teal-700 dark:text-teal-300 sm:text-2xl">
-                  <span>{vehiculoIcon}</span>
-                  <span>{vehiculoLabel.toUpperCase()} DETECTADO</span>
-                </h2>
-                <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400 sm:text-sm">
-                  Tarifa para {vehiculoLabel.toLowerCase()} autoajustada
-                </p>
-              </div>
-              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-200">
-                ⏱️ {minutos > 0 ? minutos : 35} min
-              </span>
-            </div>
+        <div className="flex gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+          {combosConPrecio.map((combo) => {
+            const isActivo =
+              comboSeleccionado.toLowerCase() === combo.label.toLowerCase();
 
-            <div className="relative mx-auto mt-3 h-40 max-w-2xl overflow-hidden rounded-xl border border-teal-200/70 bg-teal-50/60 dark:border-teal-400/20 dark:bg-teal-500/[0.04] sm:h-52">
+            return (
+              <button
+                key={combo.id}
+                type="button"
+                onClick={() => onAplicarCombo(combo)}
+                className={`shrink-0 h-10 px-4 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
+                  isActivo
+                    ? "border-2 border-emerald-400 bg-emerald-500/20 text-white shadow-[0_0_18px_rgba(52,211,153,0.45)] ring-1 ring-emerald-400/50"
+                    : "border border-slate-700/80 bg-[#0e1628] text-slate-300 hover:border-slate-500 hover:text-white"
+                }`}
+              >
+                <span className="text-amber-400">⚡</span>
+                <span>{combo.label}</span>
+                <span className="text-slate-200">${combo.precio.toFixed(0)}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* =====================================================================
+          5. GRILLA DE SERVICIOS: LAVADO, CHASIS, TAPICERÍA, DETAILING, EXTRA
+          ===================================================================== */}
+      <section className="mt-4 mb-24">
+        <h3 className="text-sm font-bold text-slate-200 px-1 mb-2">Servicios</h3>
+
+        <div className="flex gap-2.5 overflow-x-auto pb-2 [scrollbar-width:none]">
+          {serviciosDestacados.map((servicio) => {
+            const cant = obtenerCantidad(servicio);
+            const isSeleccionado = cant > 0;
+
+            return (
               <div
-                className="pointer-events-none absolute inset-0 opacity-60"
-                style={{
-                  backgroundImage: "radial-gradient(#5eead4 0.8px, transparent 0.8px)",
-                  backgroundSize: "22px 22px",
+                key={`${servicio.kind}-${servicio.id}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => onAjustarItem(servicio, 1)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") onAjustarItem(servicio, 1);
                 }}
-              />
-              <SuvIlustracion />
-              {hotspots.map((h) => {
-                const c = colorNivel(h.nivel);
-                return (
-                  <button
-                    key={h.clave}
-                    type="button"
-                    onClick={() => onCiclarAfeccion(h.clave)}
-                    className={`absolute ${h.pos} -translate-x-1/2 -translate-y-1/2 h-5 w-5 rounded-full ${c.dot} ${c.glow} ring-2 ring-white/70 transition-all hover:scale-110 active:scale-90`}
-                    title={`${h.clave}: ${textoNivel(h.nivel)} (toca para cambiar)`}
-                    aria-label={`${h.clave}: ${textoNivel(h.nivel)}`}
-                  />
-                );
-              })}
-            </div>
-          </div>
-
-          <div>
-            <div className="mb-2 flex items-center justify-between px-1">
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-white sm:text-base">Inspección</h3>
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="flex items-center gap-1 text-xs text-zinc-500 transition hover:text-teal-700 dark:text-zinc-400 dark:hover:text-teal-300"
-                title="Tomar foto del estado"
+                className={`relative flex min-h-[118px] w-[114px] shrink-0 cursor-pointer select-none flex-col items-center justify-center gap-1.5 rounded-2xl border p-2 text-center transition-all active:scale-95 ${
+                  isSeleccionado
+                    ? "border-2 border-cyan-400 bg-[#0f233a] shadow-[0_0_18px_rgba(34,211,238,0.3)] text-cyan-200"
+                    : "border-slate-800 bg-[#0c1322] text-slate-300 hover:border-slate-600 hover:bg-[#111a2e]"
+                }`}
               >
-                {subiendoFoto ? "⏳ Subiendo" : "📷 Foto"} <span>›</span>
-              </button>
-              <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onSubirFoto} />
-            </div>
-            <div className="flex items-stretch overflow-hidden rounded-2xl border border-zinc-200/90 bg-white divide-x divide-zinc-200 dark:border-white/10 dark:bg-white/[0.03] dark:divide-white/10">
-              {filasInspeccion.map((f) => {
-                const c = colorNivel(f.nivel);
-                const activo = f.nivel !== "NORMAL";
-                return (
-                  <button
-                    key={f.clave}
-                    type="button"
-                    onClick={() => onCiclarAfeccion(f.clave)}
-                    className="min-w-0 flex-1 cursor-pointer px-2.5 py-2.5 text-left text-zinc-800 transition hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-white/5 sm:px-3"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold sm:text-sm">{f.label}</span>
-                      <span className={`relative h-[18px] w-8 rounded-full transition-all ${activo ? c.track : "bg-zinc-300 dark:bg-zinc-600"}`}>
-                        <span className={`absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white transition-all ${activo ? "left-4" : "left-0.5"}`} />
-                      </span>
-                    </div>
-                    <span className={`text-[10px] font-semibold sm:text-[11px] ${f.nivel === "NORMAL" ? "text-zinc-500 dark:text-zinc-400" : c.text}`}>
-                      {textoNivel(f.nivel)}
-                      {f.nivel === "EXTREMO" ? " · Recargo" : ""}
+                {/* Badge de cantidad (+1) */}
+                {isSeleccionado && (
+                  <>
+                    <span className="absolute -top-2 -right-1.5 min-w-6 h-6 px-1.5 rounded-full bg-cyan-400 text-slate-950 text-[11px] font-black flex items-center justify-center shadow-md">
+                      +{cant}
                     </span>
-                  </button>
-                );
-              })}
-              <button
-                type="button"
-                onClick={onToggleObjetos}
-                className="min-w-0 flex-1 cursor-pointer px-2.5 py-2.5 text-left text-zinc-800 transition hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-white/5 sm:px-3"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold sm:text-sm">Objetos</span>
-                  <span className={`relative h-[18px] w-8 rounded-full transition-all ${objetosVerificados ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-600"}`}>
-                    <span className={`absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white transition-all ${objetosVerificados ? "left-4" : "left-0.5"}`} />
-                  </span>
-                </div>
-                <span className={`text-[10px] font-semibold sm:text-[11px] ${objetosVerificados ? "text-emerald-700 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"}`}>
-                  {objetosVerificados ? "Verificado" : "Pendiente"}
-                </span>
-              </button>
-              {fotosEstado.length > 0 && (
-                <div className="hidden w-16 shrink-0 bg-zinc-100 dark:bg-black/30 sm:block">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={fotosEstado[fotosEstado.length - 1]} alt="Estado del vehículo" className="h-full w-full object-cover" />
-                </div>
-              )}
-            </div>
-          </div>
 
-          <div className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-2 px-1">
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-white sm:text-base">Combos Rápidos</h3>
-                <span className="text-xs text-zinc-500 dark:text-zinc-400 lg:hidden">Desliza ›</span>
-              </div>
-              <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-wrap [scrollbar-width:none]">
-                {combosConPrecio.map((c) => {
-                  const activo = comboSeleccionado === c.label;
-                  return (
+                    {/* Botón rápido para restar */}
                     <button
-                      key={c.id}
                       type="button"
-                      onClick={() => onAplicarCombo(c)}
-                      className={`shrink-0 h-10 px-4 rounded-full border text-sm font-semibold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all ${
-                        activo
-                          ? "border-teal-300 bg-teal-50 text-teal-800 shadow-sm dark:border-teal-400 dark:bg-teal-500/15 dark:text-teal-200"
-                          : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-white/15 dark:bg-white/[0.05] dark:text-zinc-200 dark:hover:bg-white/10"
-                      }`}
-                    >
-                      <span className="text-amber-500 dark:text-amber-300">⚡</span>
-                      <span>{c.label}</span>
-                      <span className="opacity-90">${c.precio.toFixed(0)}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div>
-              <h3 className="mb-2 px-1 text-sm font-bold text-zinc-900 dark:text-white sm:text-base">Servicios</h3>
-              <div className="flex gap-2.5 overflow-x-auto pb-2 [scrollbar-width:none]">
-                {items.map((item) => {
-                  const cant = obtenerCantidad(item);
-                  const enPedido = cant > 0;
-                  return (
-                    <div
-                      key={`${item.kind}-${item.id}`}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => onAjustarItem(item, 1)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") onAjustarItem(item, 1);
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAjustarItem(servicio, -1);
                       }}
-                      className={`relative flex min-h-[120px] w-[116px] shrink-0 cursor-pointer select-none flex-col items-center justify-center gap-1 rounded-2xl border p-2.5 text-center transition-all active:scale-95 ${
-                        enPedido
-                          ? "border-teal-300 bg-teal-50 shadow-sm dark:border-teal-400 dark:bg-teal-400/10"
-                          : "border-zinc-200 bg-white hover:bg-zinc-50 dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
-                      }`}
+                      className="absolute top-1 left-1 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border border-slate-700 bg-slate-900/90 text-xs font-bold text-slate-300 hover:bg-rose-500 hover:text-white transition-colors"
+                      title="Quitar uno"
+                      aria-label="Restar 1"
                     >
-                      {enPedido && (
-                        <>
-                          <span className="absolute -top-1.5 -right-1.5 min-w-6 h-6 px-1.5 rounded-full bg-teal-500 text-white text-[11px] font-black flex items-center justify-center shadow">
-                            +{cant}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onAjustarItem(item, -1);
-                            }}
-                            className="absolute top-1 left-1 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border border-zinc-200 bg-white text-xs font-bold text-zinc-600 hover:bg-rose-500 hover:text-white dark:border-white/20 dark:bg-black/50 dark:text-white dark:hover:bg-rose-500/70"
-                            aria-label="Restar 1"
-                          >
-                            −
-                          </button>
-                        </>
-                      )}
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden">
-                        {item.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={item.imageUrl} alt={item.keyword} className="w-full h-full object-cover" loading="lazy" />
-                        ) : (
-                          <span className="text-2xl leading-none">{item.itemIcon}</span>
-                        )}
-                      </div>
-                      <span className="line-clamp-2 text-[11px] font-bold leading-tight text-zinc-800 capitalize dark:text-zinc-100 sm:text-xs">
-                        {item.keyword.toLowerCase()}
-                      </span>
-                      <span className="font-mono text-[11px] text-zinc-500 dark:text-zinc-400">(${item.price.toFixed(2)})</span>
-                    </div>
-                  );
-                })}
+                      −
+                    </button>
+                  </>
+                )}
+
+                {/* Icono del servicio */}
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-2xl leading-none">
+                  {servicio.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={servicio.imageUrl}
+                      alt={servicio.name}
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                  ) : (
+                    <span>{servicio.itemIcon || "🧼"}</span>
+                  )}
+                </div>
+
+                {/* Nombre */}
+                <span className="line-clamp-2 text-[11px] font-bold leading-tight capitalize">
+                  {servicio.name || servicio.keyword}
+                </span>
+
+                {/* Precio */}
+                <span className="font-mono text-[11px] text-slate-400 font-semibold">
+                  (${servicio.price.toFixed(2)})
+                </span>
               </div>
-            </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* =====================================================================
+          6. DOCK INFERIOR FIJO: TOTAL SERVICIOS + TIEMPO + BOTÓN SIGUIENTE →
+          ===================================================================== */}
+      <div className="sticky bottom-0 inset-x-0 mt-4 rounded-2xl bg-[#0b1426]/95 backdrop-blur-xl border border-cyan-500/30 p-3 shadow-[0_-4px_25px_rgba(0,0,0,0.5)] flex items-center justify-between gap-3 z-30">
+        <div>
+          <div className="text-xs sm:text-sm font-bold text-slate-100 flex items-center gap-1.5">
+            <span>
+              {totalCantidadSeleccionada} {totalCantidadSeleccionada === 1 ? "Servicio" : "Servicios"}
+            </span>
+            <span className="text-cyan-400">•</span>
+            <span>Total: ${totalMontoCalculado.toFixed(2)}</span>
+          </div>
+          <div className="text-[10px] sm:text-xs text-slate-400 font-semibold flex items-center gap-1 mt-0.5">
+            <span>⏱️</span>
+            <span>{minutos > 0 ? minutos : 35}m</span>
           </div>
         </div>
-      </div>
 
+        {onContinuar && (
+          <button
+            type="button"
+            onClick={onContinuar}
+            className="h-10 sm:h-11 px-5 sm:px-6 rounded-full bg-gradient-to-r from-sky-400 to-cyan-400 hover:from-sky-300 hover:to-cyan-300 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-cyan-500/25 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+          >
+            <span>Siguiente</span>
+            <span>→</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 }

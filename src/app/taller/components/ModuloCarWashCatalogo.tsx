@@ -148,6 +148,12 @@ export const CARWASH_COMBOS: CarWashComboDef[] = [
     keywords: ["EXPRÉS", "ASPIRADO", "AGUA", "GRAFITADO", "MOTOR"],
   },
   {
+    id: "combo_vip",
+    label: "VIP",
+    icon: "👑",
+    keywords: ["EXPRÉS", "ASPIRADO", "AGUA", "GRAFITADO", "MOTOR", "TAPICERÍA", "CERA"],
+  },
+  {
     id: "combo_interior",
     label: "Interior",
     icon: "🛋️",
@@ -1498,6 +1504,8 @@ export default function ModuloCarWashCatalogo({
           vehiculoLabel={vehiculoSeleccionadoObj.label}
           vehiculoIcon={vehiculoSeleccionadoObj.icon}
           minutos={totalMinutosEstimados}
+          totalServiciosCount={(itemsOrden || []).reduce((acc, it) => acc + (Number(it.qty) || 1), 0)}
+          totalPrecio={(itemsOrden || []).reduce((acc, it) => acc + (Number(it.total) || Number(it.price) * (Number(it.qty) || 1) || 0), 0)}
           estadoAfecciones={estadoAfecciones}
           objetosVerificados={objetosVerificados}
           fotosEstado={fotosEstado}
@@ -1516,6 +1524,8 @@ export default function ModuloCarWashCatalogo({
             if (def) void handleAplicarCombo(def);
           }}
           onAbrirConfig={() => setConfigModalOpen(true)}
+          onContinuar={onIrASiguiente || onIrAAvisoYFirma}
+          onIrAAnterior={onIrAAnterior}
         />
       ) : (
       <>
@@ -1958,31 +1968,29 @@ export default function ModuloCarWashCatalogo({
       </>
       )}
 
-      {navegacionActiva && typeof document !== "undefined" &&
-        createPortal(
-          <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 p-3 sm:p-3.5 bg-white/95 dark:bg-[#121215]/95 backdrop-blur-md border-t sm:border border-zinc-200 dark:border-white/15 shadow-xl sm:rounded-2xl sm:bottom-3 sm:max-w-[1440px] sm:mx-auto pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-            <div className="flex w-full items-center justify-between gap-2">
-              {onIrAAnterior && (
-                <button
-                  type="button"
-                  onClick={onIrAAnterior}
-                  className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-700 text-xs sm:text-sm font-semibold cursor-pointer transition-all hover:bg-zinc-200 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
-                >
-                  ← Anterior
-                </button>
-              )}
+      {navegacionActiva && (
+        <div className="w-full border-t border-zinc-200 dark:border-white/15 py-3 mt-6">
+          <div className="flex w-full items-center justify-between gap-3">
+            {onIrAAnterior && (
               <button
                 type="button"
-                onClick={onIrASiguiente || onIrAAvisoYFirma}
-                className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
+                onClick={onIrAAnterior}
+                className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl border border-zinc-200 bg-zinc-100 text-zinc-700 text-xs sm:text-sm font-semibold cursor-pointer transition-all hover:bg-zinc-200 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
               >
-                <span>Siguiente</span>
-                <span>→</span>
+                ← Anterior
               </button>
-            </div>
-          </div>,
-          document.body
-        )}
+            )}
+            <button
+              type="button"
+              onClick={onIrASiguiente || onIrAAvisoYFirma}
+              className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5 ml-auto"
+            >
+              <span>Siguiente</span>
+              <span>→</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modales administrativos opcionales (preservados) */}
       {detailModalItem && config && (

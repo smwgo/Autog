@@ -818,11 +818,8 @@ export function DetallePinModerno({
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h4 className="text-sm font-bold text-zinc-800 dark:text-zinc-200">
-                      Productos y servicios para la propuesta
+                      Productos/Servicios
                     </h4>
-                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                      Se agregan sin precio
-                    </span>
                   </div>
                   <div className="relative">
                     <input

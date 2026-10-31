@@ -86,7 +86,7 @@ export default function AprobacionPresupuestoMovilPage() {
           <h1 className="text-lg font-bold">Presupuesto no disponible</h1>
           <p className="text-xs text-zinc-400">{error}</p>
           <Link
-            href="/clientes"
+            href="/cliente"
             className="inline-flex h-10 px-4 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold items-center justify-center"
           >
             Ir al Portal de Clientes

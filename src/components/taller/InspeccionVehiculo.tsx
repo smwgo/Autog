@@ -3444,32 +3444,7 @@ ${urlSeguimiento}`;
         </div>
       )}
 
-      {/* ===================================================================
-          BOTONES DE NAVEGACIÓN
-          =================================================================== */}
-      <div className="flex items-center justify-between pt-2">
-        {onVolver ? (
-          <button
-            type="button"
-            onClick={onVolver}
-            className="px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs font-semibold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10 transition-all cursor-pointer"
-          >
-            ← Anterior
-          </button>
-        ) : <div />}
 
-        <div className="flex items-center gap-2">
-          {onContinuar && (
-            <button
-              type="button"
-              onClick={onContinuar}
-              className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white dark:bg-purple-500/20 dark:hover:bg-purple-500/30 dark:border dark:border-purple-500/40 dark:text-purple-300 text-xs font-bold transition-all cursor-pointer shadow-sm"
-            >
-              Siguiente
-            </button>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
