@@ -1356,24 +1356,24 @@ export default function ModuloTecnicentroCatalogo({
   return (
     <div className="w-full">
       <div className="w-full animate-fade-in pb-28">
-        {/* BENTO GRID TECNICENTRO: 3 tarjetas en PC, vertical en movil */}
+        {/* BENTO GRID TECNICENTRO: 2 tarjetas superiores (Alineación y Semáforo) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
 
-          {/* ===== CARD IZQUIERDA: Alineacion y Llantas ===== */}
-          <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden p-3.5 sm:p-4">
+          {/* ===== CARD IZQUIERDA: Alineacion ===== */}
+          <div className="lg:col-span-5 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden p-3.5 sm:p-4">
             <p className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white mb-2.5">
-              Alineación y Llantas ({vehiculoTipo})
+              Alineación
             </p>
             <div className="rounded-2xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200/80 dark:border-white/5 p-3.5 text-center">
-              <p className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white flex items-center justify-center gap-2">
-                <span>{vehiculoTipo} Detectado</span> 🚗
+              <p className="text-2xl text-zinc-900 dark:text-white flex items-center justify-center">
+                🚗
               </p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                 • Rin {rinLabel}
               </p>
             </div>
             <p className="mt-3.5 mb-2 text-center text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wide">
-              Recepción Rápida
+              Recepción
             </p>
             <div className="p-3 grid grid-cols-3 gap-2">
               {PRECARGA_BENTO_ITEMS.map((pItem, pIdx) => {
@@ -1418,8 +1418,8 @@ export default function ModuloTecnicentroCatalogo({
             </div>
           </div>
 
-          {/* ===== CARD CENTRAL: Semaforo ===== */}
-          <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden">
+          {/* ===== CARD DERECHA: Semaforo ===== */}
+          <div className="lg:col-span-7 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden">
             <div className="px-4 pt-4 pb-3 border-b border-zinc-100 dark:border-white/[0.08]">
               <p className="text-sm font-bold text-zinc-900 dark:text-white">Semáforo</p>
             </div>
@@ -1483,11 +1483,14 @@ export default function ModuloTecnicentroCatalogo({
               </div>
             )}
           </div>
+        </div>
 
-          {/* ===== CARD DERECHA: Pills + Busqueda + Catalogo ===== */}
-          <div className="lg:col-span-4 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden">
+        {/* ===== CONTENEDOR DE FILTROS, BÚSQUEDA Y CATÁLOGO DEBAJO DE SEMÁFORO (CUBRE TODA LA PÁGINA) ===== */}
+        <div className="w-full rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 shadow-2xs p-3.5 sm:p-4 mt-3 space-y-3">
+          {/* Fila de Filtros y Buscador */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
             {/* Pills de filtro */}
-            <div className="px-3 pt-3 pb-2 border-b border-zinc-100 dark:border-white/[0.08] flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap">
               {/* Pill Categoria */}
               <div className="relative">
                 <button
@@ -1573,67 +1576,65 @@ export default function ModuloTecnicentroCatalogo({
             </div>
 
             {/* Busqueda */}
-            <div className="px-3 pt-2 pb-2">
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
-                <input
-                  type="text"
-                  value={busquedaTec}
-                  onChange={e => setBusquedaTec(e.target.value)}
-                  placeholder="Buscar..."
-                  className="w-full h-8 pl-8 pr-7 rounded-xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-400 text-xs text-zinc-900 dark:text-white placeholder-zinc-400"
-                />
-                {busquedaTec && (
-                  <button type="button" onClick={() => setBusquedaTec('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 text-xs cursor-pointer">✕</button>
-                )}
-              </div>
-            </div>
-
-            {/* Grid de productos */}
-            <div className="px-3 pb-3 max-h-[380px] overflow-y-auto">
-              {productosBentoFiltrados.length === 0 ? (
-                <div className="py-8 text-center text-zinc-400 text-xs">Sin resultados</div>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  {productosBentoFiltrados.slice(0, 12).map(item => {
-                    const cant = obtenerCantidadEnPedido(item);
-                    const enPedido = cant > 0;
-                    return (
-                      <div
-                        key={item.id + item.keyword}
-                        onClick={() => void handleAjustarCantidadItem(item as any, 1)}
-                        className={[
-                          'relative flex flex-col items-center p-2.5 rounded-xl border cursor-pointer active:scale-[0.97] transition-all select-none',
-                          enPedido
-                            ? 'bg-blue-50 dark:bg-blue-500/[0.08] border-blue-300 dark:border-blue-400/50 ring-1 ring-blue-300/50'
-                            : 'bg-zinc-50 dark:bg-white/[0.03] border-zinc-200 dark:border-white/10 hover:border-blue-200',
-                        ].join(' ')}
-                      >
-                        {enPedido && (
-                          <>
-                            <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white z-10">+{cant}</span>
-                            <button
-                              type="button"
-                              onClick={e => { e.stopPropagation(); void handleAjustarCantidadItem(item as any, -1); }}
-                              className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-white/20 text-zinc-600 dark:text-zinc-300 text-xs font-bold flex items-center justify-center cursor-pointer hover:bg-rose-50 hover:text-rose-600 z-10"
-                            >−</button>
-                          </>
-                        )}
-                        <div className="w-14 h-14 rounded-lg overflow-hidden flex items-center justify-center bg-zinc-100 dark:bg-black/20 border border-zinc-200/60 dark:border-white/5 mb-1.5">
-                          {item.imageUrl ? (
-                            <img src={item.imageUrl} alt={item.keyword} className="w-full h-full object-cover" loading="lazy" />
-                          ) : (
-                            <span className="text-2xl leading-none">{item.itemIcon}</span>
-                          )}
-                        </div>
-                        <span className="text-[11px] font-black uppercase tracking-wide text-zinc-900 dark:text-white text-center leading-tight truncate w-full">{item.keyword}</span>
-                        <span className="text-[11px] font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">${item.price.toFixed(2)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
+            <div className="relative flex-1 sm:max-w-xs">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
+              <input
+                type="text"
+                value={busquedaTec}
+                onChange={e => setBusquedaTec(e.target.value)}
+                placeholder="Buscar..."
+                className="w-full h-8 pl-8 pr-7 rounded-xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-400 text-xs text-zinc-900 dark:text-white placeholder-zinc-400"
+              />
+              {busquedaTec && (
+                <button type="button" onClick={() => setBusquedaTec('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 text-xs cursor-pointer">✕</button>
               )}
             </div>
+          </div>
+
+          {/* Grid de productos a ancho completo cubriendo toda la pantalla */}
+          <div className="w-full">
+            {productosBentoFiltrados.length === 0 ? (
+              <div className="py-8 text-center text-zinc-400 text-xs">Sin resultados</div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 sm:gap-3">
+                {productosBentoFiltrados.map(item => {
+                  const cant = obtenerCantidadEnPedido(item);
+                  const enPedido = cant > 0;
+                  return (
+                    <div
+                      key={item.id + item.keyword}
+                      onClick={() => void handleAjustarCantidadItem(item as any, 1)}
+                      className={[
+                        'relative flex flex-col items-center p-2.5 rounded-xl border cursor-pointer active:scale-[0.97] transition-all select-none',
+                        enPedido
+                          ? 'bg-blue-50 dark:bg-blue-500/[0.08] border-blue-300 dark:border-blue-400/50 ring-1 ring-blue-300/50'
+                          : 'bg-zinc-50 dark:bg-white/[0.03] border-zinc-200 dark:border-white/10 hover:border-blue-200',
+                      ].join(' ')}
+                    >
+                      {enPedido && (
+                        <>
+                          <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white z-10">+{cant}</span>
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); void handleAjustarCantidadItem(item as any, -1); }}
+                            className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-white/20 text-zinc-600 dark:text-zinc-300 text-xs font-bold flex items-center justify-center cursor-pointer hover:bg-rose-50 hover:text-rose-600 z-10"
+                          >−</button>
+                        </>
+                      )}
+                      <div className="w-14 h-14 rounded-lg overflow-hidden flex items-center justify-center bg-zinc-100 dark:bg-black/20 border border-zinc-200/60 dark:border-white/5 mb-1.5">
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt={item.keyword} className="w-full h-full object-cover" loading="lazy" />
+                        ) : (
+                          <span className="text-2xl leading-none">{item.itemIcon}</span>
+                        )}
+                      </div>
+                      <span className="text-[11px] font-black uppercase tracking-wide text-zinc-900 dark:text-white text-center leading-tight truncate w-full">{item.keyword}</span>
+                      <span className="text-[11px] font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">${item.price.toFixed(2)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>

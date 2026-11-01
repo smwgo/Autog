@@ -351,11 +351,8 @@ export default function CarWashVistaApp(props: CarWashVistaAppProps) {
           <div>
             <h2 className="text-lg sm:text-xl font-black text-cyan-400 tracking-tight flex items-center gap-2">
               <span>{vehiculoIcon || "🚙"}</span>
-              <span>{(vehiculoLabel || "SUV").toUpperCase()} DETECTADO</span>
+              <span>{(vehiculoLabel || "SUV").toUpperCase()}</span>
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Tarifa {(vehiculoLabel || "SUV").toLowerCase()} auto-ajustada
-            </p>
           </div>
         </div>
 

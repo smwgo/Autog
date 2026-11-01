@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import Link from "next/link";
 import { createPortal } from "react-dom";
 import CarWashVistaApp from "./CarWashVistaApp";
 import type {
@@ -188,7 +189,7 @@ const KEYWORD_RULES: Array<{ match: RegExp; keyword: string }> = [
   { match: /desengras/i, keyword: "DESENGRASE" },
   { match: /suspensi/i, keyword: "SUSPENSIÓN" },
   { match: /agua|presi[oó]n/i, keyword: "AGUA" },
-  { match: /moto/i, keyword: "MOTOS" },
+  { match: /\bmoto(s|cicleta)?\b/i, keyword: "MOTO" },
   { match: /aroma|ambientador|fragancia|perfume/i, keyword: "AROMA" },
   { match: /silicona|abrillantador/i, keyword: "SILICONA" },
   { match: /shampoo|jab[oó]n/i, keyword: "SHAMPOO" },
@@ -803,6 +804,11 @@ export default function ModuloCarWashCatalogo({
 
     // 4. Catálogo base complementario para asegurar opciones en todas las categorías
     SERVICIOS_BASE_CARWASH.forEach((base) => {
+      // Si el vehículo NO es una moto, no incluir servicios de moto
+      if (base.subcategory === "MOTOS" && selectedVehicleTypeId !== "vt_moto") return;
+      // Si el vehículo ES una moto, no incluir servicios de chasis/techo
+      if (selectedVehicleTypeId === "vt_moto" && (base.category === "CHASIS" || base.subcategory === "TECHO")) return;
+
       const kw = extractKeyword(base.name);
       if (!existingKeywords.has(kw)) {
         const pInfo = computePriceForVehicle({ basePrice: base.basePrice }, selectedVehicleTypeId);
@@ -830,16 +836,39 @@ export default function ModuloCarWashCatalogo({
     return (itemsOrden || []).filter((it) => {
       const code = String(it.code || "");
       const cat = String(it.category || "");
+      const n = String(it.name || "").toLowerCase();
+
+      // Exclusión estricta de lubricentro, repuestos, llantas y taller general
+      if (
+        n.includes("filtro") ||
+        n.includes("aceite") ||
+        n.includes("llanta") ||
+        n.includes("balanceo") ||
+        n.includes("alineacion") ||
+        n.includes("alineación") ||
+        n.includes("freno") ||
+        n.includes("pastilla") ||
+        n.includes("disco") ||
+        n.includes("bateria") ||
+        n.includes("batería") ||
+        n.includes("bujia") ||
+        cat === "Lubricentro" ||
+        cat === "Repuestos" ||
+        cat === "Mecánica"
+      ) {
+        return false;
+      }
+
       return (
         cat === "Lavado" ||
         cat === "Car Wash" ||
-        cat === "Insumo" ||
+        it.cwCategoryId === "LAVADO" ||
+        it.cwCategoryId === "INTERIOR" ||
+        it.cwCategoryId === "CHASIS" ||
+        it.cwCategoryId === "DETAILING" ||
         code.startsWith("CW-") ||
         code.startsWith("PKG-CW-") ||
-        code.startsWith("ADD-CW-") ||
-        code.startsWith("PRD-") ||
-        Boolean(it.productId) ||
-        Boolean(it.serviceId)
+        code.startsWith("ADD-CW-")
       );
     });
   }, [itemsOrden]);
@@ -885,16 +914,69 @@ export default function ModuloCarWashCatalogo({
     }, 0);
   }, [itemsCarWashEnOrden]);
 
-  // Persistir último servicio de este vehículo en localStorage para "⚡ Repetir"
+  // Persistir último servicio de este vehículo en localStorage para "⚡ Repetir" (estrictamente por placa)
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const plateClean = String(ordenActiva?.plate || "").replace(/[^A-Z0-9]/g, "").toUpperCase();
+    if (!plateClean) return;
     if (itemsCarWashEnOrden.length > 0) {
       try {
-        const key = `carwash_last_${ordenActiva?.plate || "general"}`;
+        const key = `carwash_last_${plateClean}`;
         localStorage.setItem(key, JSON.stringify(itemsCarWashEnOrden));
       } catch {}
     }
   }, [itemsCarWashEnOrden, ordenActiva?.plate]);
+
+  // Cargar servicio pendiente si se eligió repetir desde la página /taller/historial-carwash
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const rawPendiente = localStorage.getItem("carwash_cargar_servicio_pendiente");
+      if (!rawPendiente) return;
+      const data = JSON.parse(rawPendiente);
+      if (Date.now() - Number(data.timestamp || 0) > 30 * 60 * 1000) {
+        localStorage.removeItem("carwash_cargar_servicio_pendiente");
+        return;
+      }
+      localStorage.removeItem("carwash_cargar_servicio_pendiente");
+
+      const itemsRecuperados = Array.isArray(data.items) ? data.items : [];
+      if (itemsRecuperados.length === 0) return;
+
+      const noCarwash = (itemsOrden || []).filter((it) => {
+        const cat = String(it.category || "");
+        const code = String(it.code || "");
+        return (
+          cat !== "Lavado" &&
+          cat !== "Car Wash" &&
+          !code.startsWith("CW-") &&
+          !code.startsWith("PKG-CW-") &&
+          !code.startsWith("ADD-CW-")
+        );
+      });
+
+      const regenerados = itemsRecuperados.map((it: any) => {
+        const matchPOS = todosLosItemsPOS.find(
+          (p) => p.id === it.serviceId || p.code === it.code || it.name.includes(p.keyword)
+        );
+        const unitPrice = matchPOS ? matchPOS.price : Number(it.price || 0);
+        const qty = Number(it.qty) || 1;
+        return {
+          ...it,
+          id: `cw_rep_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          vehicleType: vehiculoActivo,
+          price: unitPrice,
+          total: Number((unitPrice * qty).toFixed(2)),
+          name: matchPOS ? `${matchPOS.keyword} (${vehiculoActivo})` : it.name,
+        };
+      });
+
+      void onActualizarItemsOrden([...noCarwash, ...regenerados]);
+      mostrarToast(`✓ Servicio repetido cargado a la orden (${regenerados.length} servicio(s))`, "ok");
+    } catch (e) {
+      console.error("Error al procesar servicio repetido:", e);
+    }
+  }, [itemsOrden, mostrarToast, onActualizarItemsOrden, todosLosItemsPOS, vehiculoActivo]);
 
   // Conteos por categoría
   const conteoItemsPorCategoria = useMemo(() => {
@@ -1326,9 +1408,6 @@ export default function ModuloCarWashCatalogo({
   // HELPERS Y ESTADOS PARA EL MODELO BENTO DE CAR WASH
   // =========================================================================
   const sugerenciaRecepcion = useMemo(() => {
-    if (estadoAfecciones.Lodo === "EXTREMO" || estadoAfecciones.Lodo === "MODERADO") {
-      return "Sugiere: + Grafitado ($12.00) o desengrase";
-    }
     if (estadoAfecciones.Pelos === "EXTREMO" || estadoAfecciones.Pelos === "MODERADO") {
       return "Sugiere: + Tapicería ($25.00) o aspirado profundo";
     }
@@ -1338,7 +1417,7 @@ export default function ModuloCarWashCatalogo({
     if (estadoAfecciones.Gotaseca === "EXTREMO" || estadoAfecciones.Gotaseca === "MODERADO") {
       return "Sugiere: + Gotaseca ($20.00) o pulido";
     }
-    return "Sugiere: + Grafitado ($12.00) o desengrase";
+    return null;
   }, [estadoAfecciones]);
 
   // Pre-carga inicial automática para Car Wash (Exprés $8.00 + Grafitado $12.00 = $20.00 / 45 min)
@@ -1557,34 +1636,29 @@ export default function ModuloCarWashCatalogo({
             </div>
 
             {/* Detección de vehículo y tiempo estimado */}
-            <div className="mt-2 p-3 rounded-xl bg-zinc-50 dark:bg-black/20 border border-zinc-200/70 dark:border-white/5 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm sm:text-base font-black text-zinc-900 dark:text-white flex items-center gap-1.5">
-                  <span>🚗</span>
-                  <span>{vehiculoActivo} Detectado</span>
+            <div className="mt-2 p-3 rounded-xl bg-zinc-50 dark:bg-black/20 border border-zinc-200/70 dark:border-white/5">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl sm:text-3xl shrink-0 leading-none">
+                  🚗
                 </span>
-                <span className="text-xs font-bold font-mono px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300">
+                <span className="text-sm sm:text-base font-bold font-mono px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300">
                   ⏱️ {totalMinutosEstimados > 0 ? `${totalMinutosEstimados} min` : "35 min"}
                 </span>
               </div>
-              <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                Tarifa {vehiculoActivo.toLowerCase()} auto-ajustada
-              </div>
             </div>
 
-            {/* Botón rápido Repetir último servicio */}
-            <button
-              type="button"
-              onClick={handleRepetirUltimoServicio}
+            {/* Botón rápido Repetir último servicio en su propia página */}
+            <Link
+              href={`/taller/historial-carwash?placa=${encodeURIComponent(ordenActiva?.plate || "")}&cliente=${encodeURIComponent(ordenActiva?.customerName || "")}&vehiculo=${encodeURIComponent(`${ordenActiva?.vehicleBrand || ""} ${ordenActiva?.vehicleModel || ""}`.trim() || vehiculoActivo)}&tipo=${encodeURIComponent(vehiculoActivo)}`}
               className="mt-3 w-full h-10 rounded-xl bg-blue-50/70 dark:bg-blue-500/10 hover:bg-blue-100/70 dark:hover:bg-blue-500/20 border border-blue-200/60 dark:border-blue-500/20 text-blue-800 dark:text-blue-200 text-xs sm:text-sm font-bold flex items-center justify-between px-3 cursor-pointer transition-all active:scale-98 shadow-2xs"
-              title="Cargar el último servicio realizado a este vehículo"
+              title="Consultar historial y repetir servicios previos de este vehículo"
             >
               <span className="flex items-center gap-1.5">
                 <span>⚡</span>
                 <span>Repetir último</span>
               </span>
               <span className="text-xs font-black text-blue-600 dark:text-blue-400">→</span>
-            </button>
+            </Link>
           </div>
         </div>
 
