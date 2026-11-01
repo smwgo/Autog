@@ -249,6 +249,78 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, task, orderId, vehicle, mechanic, durationMinutes, status, revenue, notes } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "ID de registro de tiempo requerido para actualizar." },
+        { status: 400 }
+      );
+    }
+
+    return await withRetry(async () => {
+      await ensureTableExists();
+
+      const existing: any[] = await prisma.$queryRawUnsafe(
+        'SELECT * FROM "WorkshopTimeLog" WHERE "id" = $1 OR "logNumber" = $1 LIMIT 1',
+        id
+      );
+
+      if (existing.length === 0) {
+        return NextResponse.json(
+          { success: false, error: "Registro de tiempo no encontrado." },
+          { status: 404 }
+        );
+      }
+
+      const current = existing[0];
+      const mins = durationMinutes !== undefined ? Number(durationMinutes) : Number(current.durationMinutes || 0);
+      const hrs = Math.floor(mins / 60);
+      const remMins = mins % 60;
+      const formattedDuration = `${hrs}h ${remMins.toString().padStart(2, "0")}m`;
+
+      await prisma.$executeRawUnsafe(
+        `UPDATE "WorkshopTimeLog" SET
+           "task" = COALESCE($2, "task"),
+           "orderId" = COALESCE($3, "orderId"),
+           "vehicle" = COALESCE($4, "vehicle"),
+           "mechanic" = COALESCE($5, "mechanic"),
+           "duration" = $6,
+           "durationMinutes" = $7,
+           "status" = COALESCE($8, "status"),
+           "revenue" = COALESCE($9, "revenue"),
+           "notes" = COALESCE($10, "notes"),
+           "updatedAt" = NOW()
+         WHERE "id" = $1`,
+        current.id,
+        task || null,
+        orderId || null,
+        vehicle || null,
+        mechanic || null,
+        formattedDuration,
+        mins,
+        status || null,
+        revenue !== undefined ? Number(revenue) : null,
+        notes !== undefined ? notes : null
+      );
+
+      return NextResponse.json({
+        success: true,
+        message: "Registro de tiempo actualizado en Neon.",
+      });
+    });
+  } catch (error: any) {
+    console.error("Error al actualizar tiempo en Neon:", error);
+    return NextResponse.json(
+      { success: false, error: error.message || "Error al actualizar tiempo en Neon." },
+      { status: 500 }
+    );
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);

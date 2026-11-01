@@ -55,10 +55,10 @@ export default function ControlTiemposPage() {
 
   // Cronómetro en vivo
   const [activeTimer, setActiveTimer] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(1425); // 00:23:45 inicial listo para usar
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [timerTask, setTimerTask] = useState("Diagnóstico y Reparación");
-  const [timerOrderId, setTimerOrderId] = useState("ORD-2023-001");
-  const [timerVehicle, setTimerVehicle] = useState("Toyota Hilux 2020 (ABC-123)");
+  const [timerOrderId, setTimerOrderId] = useState("");
+  const [timerVehicle, setTimerVehicle] = useState("");
   const [timerMechanic, setTimerMechanic] = useState("Carlos Rodríguez");
   const [guardandoTimer, setGuardandoTimer] = useState(false);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import type { UnifiedOrder, InspectionFinding, OrderItem } from "@/app/taller/page";
 
 interface ModalPresupuestoPdfProps {
@@ -43,11 +43,122 @@ export default function ModalPresupuestoPdf({
 
   const items = rawItems;
   const hallazgos = orden.inspectionFindings || [];
-  const firmaCliente =
-    orden.quoteSignatureUrl ||
-    orden.deliverySignatureUrl ||
-    orden.receptionSignatureUrl;
   const nombreFinalTaller = "Auto / G";
+
+  // Clasificador de cada ítem en: Taller, Lubricentro, Car Wash, Tecnicentro y su subcategoría
+  const clasificarItem = (it: any): {
+    modulo: "Taller" | "Lubricentro" | "Car Wash" | "Tecnicentro";
+    moduloIcon: string;
+    subcategoria: string;
+  } => {
+    const cat = String(it.category || "").toLowerCase();
+    const sub = String(it.subCategory || it.subcategory || "").toLowerCase();
+    const name = String(it.name || "").toLowerCase();
+    const id = String(it.id || "").toLowerCase();
+
+    // 1. Tecnicentro
+    if (
+      cat.includes("tecnicentro") ||
+      sub.includes("tecnicentro") ||
+      id.startsWith("tc_") ||
+      name.match(/llanta|alineaci[oó]n|balanceo|camber|enllanta|vulcaniz|parche|aro |rin |pit[oó]n|v[aá]lvula|pastilla|disco.*freno|zapata|rectific|suspensi[oó]n|amortiguador|terminal.*direcci[oó]n|r[oó]tula|buje|bater[ií]a|borne/i)
+    ) {
+      let subCat = "Servicios";
+      if (name.match(/llanta|aro |rin /i) || cat.includes("llanta")) subCat = "Llantas";
+      else if (name.match(/alineaci[oó]n|balanceo|camber|rotaci[oó]n/i) || cat.includes("alineacion")) subCat = "Alineación y Balanceo";
+      else if (name.match(/enllanta|parche|vulcaniz|nitr[oó]geno|v[aá]lvula/i) || cat.includes("enllantaje")) subCat = "Enllantaje";
+      else if (name.match(/freno|pastilla|disco|zapata/i) || cat.includes("frenos")) subCat = "Frenos";
+      else if (name.match(/suspensi|amortiguador|terminal|r[oó]tula|buje|mesa/i) || cat.includes("suspension")) subCat = "Suspensión y Dirección";
+      else if (name.match(/bater[ií]a|borne/i) || cat.includes("bateria")) subCat = "Baterías";
+      else if (it.subCategory) subCat = String(it.subCategory);
+      else if (it.category && !cat.includes("tecnicentro")) subCat = String(it.category);
+
+      return { modulo: "Tecnicentro", moduloIcon: "⚡", subcategoria: subCat };
+    }
+
+    // 2. Car Wash
+    if (
+      cat.includes("car wash") ||
+      cat.includes("carwash") ||
+      cat.includes("lavado") ||
+      sub.includes("car wash") ||
+      sub.includes("carwash") ||
+      id.startsWith("cw_") ||
+      name.match(/lavado|aspirado|tapicer[ií]a|grafitado|chasis|cera|encerado|pulido|detailing|ozono|desengrase|shampoo|ambientador/i)
+    ) {
+      let subCat = "Lavado";
+      if (name.match(/chasis|grafitado|desengrase/i) || cat.includes("chasis")) subCat = "Chasis y Motor";
+      else if (name.match(/aspirado|tapicer[ií]a|cuero|techo|ozono|interior/i) || cat.includes("interior")) subCat = "Interior y Tapicería";
+      else if (name.match(/cera|encerado|pulido|faro|gotaseca|detailing/i) || cat.includes("detailing")) subCat = "Detailing y Pulido";
+      else if (name.match(/aroma|silicona|shampoo|toalla|insumo|producto/i) || cat.includes("extra")) subCat = "Insumos y Extras";
+      else if (it.subCategory && it.subCategory !== "Car Wash") subCat = String(it.subCategory);
+      else if (it.category && !cat.includes("car")) subCat = String(it.category);
+
+      return { modulo: "Car Wash", moduloIcon: "🧼", subcategoria: subCat };
+    }
+
+    // 3. Lubricentro
+    if (
+      cat.includes("lubricentro") ||
+      id.startsWith("lub_") ||
+      name.match(/aceite|filtro|valvulina|refrigerante|l[ií]quido.*freno|flush|aditivo|10w|20w|5w|0w|sint[eé]tico|mineral/i)
+    ) {
+      let subCat = "Mantenimiento";
+      if (name.match(/aceite|lubricante|10w|20w|5w|0w|motor/i) || cat.includes("aceite")) subCat = "Aceites";
+      else if (name.match(/filtro/i) || cat.includes("filtro")) subCat = "Filtros";
+      else if (name.match(/refrigerante|freno|hidr[aá]ulico|fluido/i) || cat.includes("fluido")) subCat = "Fluidos y Refrigerantes";
+      else if (name.match(/transmisi[oó]n|atf|cvt|caja|diferencial/i) || cat.includes("transmision")) subCat = "Transmisión";
+      else if (name.match(/aditivo|flush|limpiador/i)) subCat = "Aditivos";
+      else if (it.category && it.category.includes("-")) subCat = it.category.split("-")[1].trim();
+      else if (it.subCategory) subCat = String(it.subCategory);
+
+      return { modulo: "Lubricentro", moduloIcon: "🛢️", subcategoria: subCat };
+    }
+
+    // 4. Taller
+    let subCat = "Mecánica General";
+    if (cat.includes("repuesto") || it.type === "PART") subCat = "Repuestos y Partes";
+    else if (it.subCategory) subCat = String(it.subCategory);
+    else if (it.category && !cat.includes("taller")) subCat = String(it.category);
+
+    return { modulo: "Taller", moduloIcon: "🔧", subcategoria: subCat };
+  };
+
+  // Agrupación de trabajos por módulo y subcategoría
+  const gruposModulos = useMemo(() => {
+    const ordenModulos: Array<{ id: "Taller" | "Lubricentro" | "Car Wash" | "Tecnicentro"; icon: string }> = [
+      { id: "Taller", icon: "🔧" },
+      { id: "Lubricentro", icon: "🛢️" },
+      { id: "Car Wash", icon: "🧼" },
+      { id: "Tecnicentro", icon: "⚡" },
+    ];
+
+    const mapa: Record<string, Record<string, OrderItem[]>> = {};
+
+    items.forEach((it) => {
+      const { modulo, subcategoria } = clasificarItem(it);
+      if (!mapa[modulo]) mapa[modulo] = {};
+      if (!mapa[modulo][subcategoria]) mapa[modulo][subcategoria] = [];
+      mapa[modulo][subcategoria].push(it);
+    });
+
+    return ordenModulos
+      .filter((m) => mapa[m.id] && Object.keys(mapa[m.id]).length > 0)
+      .map((m) => {
+        const subcategorias = Object.entries(mapa[m.id]).map(([subcat, listaItems]) => ({
+          nombre: subcat,
+          items: listaItems,
+        }));
+        const totalItemsModulo = subcategorias.reduce((sum, s) => sum + s.items.length, 0);
+        return {
+          id: m.id,
+          nombre: m.id,
+          icon: m.icon,
+          totalItems: totalItemsModulo,
+          subcategorias,
+        };
+      });
+  }, [items]);
 
   // Agrupar hallazgos por sección
   const secciones = [
@@ -103,33 +214,47 @@ export default function ModalPresupuestoPdf({
   const iva = Number(orden.taxAmount) || (subtotalCalculado > 0 ? subtotalConDescuento * 0.15 : Math.max(0, totalBase - subtotal));
   const total = subtotalCalculado > 0 ? subtotalConDescuento + iva : totalBase;
 
-  const fechaEmision = new Date().toLocaleDateString("es-EC", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const formatearFechaPropuesta = (f: Date = new Date()) => {
+    const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    const diaSemana = dias[f.getDay()];
+    const diaMes = f.getDate();
+    const mes = meses[f.getMonth()];
+    const anio = f.getFullYear();
+    return `${diaSemana} ${diaMes} de ${mes}, ${anio}`;
+  };
 
-  const codigoLimpio = (orden.quoteNumber || orden.orderNumber || "00001")
-    .replace(/#/g, "")
-    .replace(/\s+/g, " ")
+  const fechaEmision = formatearFechaPropuesta(new Date());
+
+  const numeroLimpio = String(orden.orderNumber || orden.quoteNumber || "00001")
+    .replace(/^#+/, "")
+    .replace(/^(?:COT|OT|ORD|LUB|CW|TC)[\s\-_]*/gi, "")
+    .replace(/^(?:COT|OT|ORD|LUB|CW|TC)[\s\-_]*/gi, "")
+    .replace(/^#+/, "")
     .trim();
-  const codigoOrdenFormateado = codigoLimpio.startsWith("COT") || codigoLimpio.startsWith("OT")
-    ? codigoLimpio
-    : `OT-${codigoLimpio}`;
+  const codigoOrdenFormateado = `#${numeroLimpio || "00001"}`;
+
+  const formatoPrimeraMayuscula = (texto?: string) => {
+    if (!texto) return "";
+    const str = String(texto).trim();
+    if (!str) return "";
+    const res = str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+    return res.replace(/\(([a-záéíóúñ])/gi, (m) => m.toUpperCase());
+  };
+
+  const formatoNombrePropio = (texto?: string) => {
+    if (!texto) return "";
+    return String(texto)
+      .trim()
+      .split(/\s+/)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
+  };
 
   const handleImprimir = () => {
     if (typeof window !== "undefined") {
       window.print();
     }
-  };
-
-  const handleEnviarWhatsApp = () => {
-    const telDigits = (orden.clientPhone || "").replace(/\D/g, "");
-    const msg = `Hola *${orden.client || "Cliente"}*, le adjuntamos la *Solicitud de Orden de Trabajo (Propuesta)* de su vehículo *${orden.vehicle || ""}* (${orden.plate || ""}) con Orden *#${codigoOrdenFormateado}*.\n\n*Total estimado:* $${total.toFixed(2)} USD.\n\nQuedamos a su disposición para cualquier duda o confirmación del trabajo.`;
-    const waUrl = telDigits
-      ? `https://wa.me/${telDigits.startsWith("593") || telDigits.length > 10 ? telDigits : `593${telDigits.replace(/^0/, "")}`}?text=${encodeURIComponent(msg)}`
-      : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-    window.open(waUrl, "_blank");
   };
 
   return (
@@ -143,6 +268,7 @@ export default function ModalPresupuestoPdf({
               }
               #presupuesto-pdf-content, #presupuesto-pdf-content * {
                 visibility: visible !important;
+                font-family: Verdana, Geneva, Tahoma, sans-serif !important;
               }
               #presupuesto-pdf-content {
                 position: fixed !important;
@@ -163,50 +289,42 @@ export default function ModalPresupuestoPdf({
       />
       <div
         id="presupuesto-pdf-content"
-        className="relative w-full max-w-4xl bg-white text-zinc-900 rounded-2xl shadow-2xl p-4 sm:p-8 space-y-6 my-auto print:p-0 print:m-0 print:shadow-none print:w-full"
+        style={{ fontFamily: "Verdana, Geneva, Tahoma, sans-serif" }}
+        className="relative w-full max-w-4xl bg-white text-zinc-900 rounded-2xl shadow-2xl p-4 sm:p-8 space-y-6 my-auto print:p-0 print:m-0 print:shadow-none print:w-full font-normal text-sm"
       >
         {/* ===================================================================
-            CABECERA DEL DOCUMENTO PDF / IMPRESIÓN TIPO FACTURA
+            CABECERA DEL DOCUMENTO PDF - PROPUESTA LIMPIA
             =================================================================== */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-zinc-900 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-200 pb-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-2xl">🔧</span>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-900">
+              <span className="text-base">🔧</span>
+              <h1 className="text-sm font-normal tracking-tight text-zinc-900">
                 {nombreFinalTaller}
               </h1>
             </div>
-            <p className="text-xs text-zinc-600 mt-1">
-              RUC: {tallerRuc} • Tel: {tallerTelefono}
-            </p>
-            <p className="text-xs text-zinc-600">{tallerDireccion}</p>
+            {tallerTelefono && (
+              <p className="text-sm font-normal text-zinc-500 mt-0.5">Tel: {tallerTelefono}</p>
+            )}
           </div>
 
-          <div className="text-left sm:text-right bg-zinc-50 p-3.5 rounded-xl border border-zinc-200 min-w-[220px]">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-600 block">
-              Solicitud de Orden de Trabajo
+          <div className="text-left sm:text-right bg-zinc-50 px-3.5 py-2 rounded-xl border border-zinc-200">
+            <span className="text-sm font-normal text-zinc-900 block">
+              Propuesta {codigoOrdenFormateado}
             </span>
-            <span className="text-[9px] uppercase font-bold tracking-wider text-blue-600 block">
-              Propuesta de Servicio
+            <span className="text-sm font-normal text-zinc-700 block mt-0.5">
+              {fechaEmision}
             </span>
-            <span className="text-base sm:text-lg font-mono font-black text-zinc-900 block mt-0.5">
-              #{codigoOrdenFormateado}
-            </span>
-            <span className="text-xs text-zinc-600 font-medium block mt-0.5">
-              Fecha: {fechaEmision}
-            </span>
-            <div className="mt-1.5 flex items-center justify-start sm:justify-end">
+            <div className="mt-1 flex items-center justify-start sm:justify-end">
               {orden.quoteStatus === "Aprobado" ||
               orden.status === "Aprobado" ||
               orden.quoteStatus === "ACEPTADO" ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-emerald-50 border border-emerald-300 text-emerald-800 text-[10px] font-bold uppercase tracking-wider">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                  ✓ Aprobado
+                <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm font-normal">
+                  Aprobado
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-50 border border-amber-300 text-amber-800 text-[10px] font-bold uppercase tracking-wider">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
-                  Solicitado / Pendiente
+                <span className="px-2.5 py-0.5 rounded-md bg-amber-50 border border-amber-300 text-amber-800 text-sm font-normal">
+                  Pendiente
                 </span>
               )}
             </div>
@@ -216,78 +334,73 @@ export default function ModalPresupuestoPdf({
         {/* ===================================================================
             DATOS DEL CLIENTE Y VEHÍCULO
             =================================================================== */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-zinc-50 p-3.5 rounded-xl border border-zinc-200 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-zinc-50 p-4 sm:p-5 rounded-xl border border-zinc-200 text-sm">
           <div>
-            <span className="text-[10px] text-zinc-500 font-semibold block uppercase">Cliente</span>
-            <span className="font-bold text-zinc-900 block truncate">{orden.client || "Consumidor Final"}</span>
-            <span className="text-zinc-600 font-mono text-[11px] block">{orden.clientPhone || "Sin teléfono"}</span>
-            {orden.clientIdDoc && (
-              <span className="text-zinc-500 font-mono text-[10px] block">RUC/CI: {orden.clientIdDoc}</span>
+            <span className="text-sm font-normal text-zinc-500 block">Cliente</span>
+            <span className="text-sm font-normal text-zinc-900 block truncate mt-0.5">{formatoNombrePropio(orden.client || "Consumidor Final")}</span>
+            {orden.clientPhone && orden.clientPhone !== "S/N" && (
+              <span className="text-sm font-normal text-zinc-600 block mt-0.5">{orden.clientPhone}</span>
             )}
           </div>
           <div>
-            <span className="text-[10px] text-zinc-500 font-semibold block uppercase">Vehículo</span>
-            <span className="font-bold text-zinc-900 block truncate">{orden.vehicle || "Vehículo"}</span>
-            <span className="font-mono text-zinc-700 font-semibold text-[11px]">Placa: {orden.plate}</span>
+            <span className="text-sm font-normal text-zinc-500 block">Vehículo</span>
+            <span className="text-sm font-normal text-zinc-900 block truncate mt-0.5">{formatoPrimeraMayuscula(orden.vehicle || "Vehículo")}</span>
+            <span className="text-sm font-normal text-zinc-700 block mt-0.5">Placa: {orden.plate}</span>
           </div>
           <div>
-            <span className="text-[10px] text-zinc-500 font-semibold block uppercase">Kilometraje</span>
-            <span className="font-bold text-zinc-900 block">
-              {orden.mileage ? `${orden.mileage.toLocaleString()} km` : "No registrado"}
+            <span className="text-sm font-normal text-zinc-500 block">Km</span>
+            <span className="text-sm font-normal text-zinc-900 block mt-0.5">
+              {orden.mileage ? `${orden.mileage.toLocaleString()} km` : "S/N"}
             </span>
-            <span className="text-zinc-600 text-[11px]">Nivel: {orden.fuelLevel || "1/2"}</span>
+            <span className="text-sm font-normal text-zinc-600 block mt-0.5">Nivel: {orden.fuelLevel || "1/2"}</span>
           </div>
           <div>
-            <span className="text-[10px] text-zinc-500 font-semibold block uppercase">Técnico / Asesor</span>
-            <span className="font-bold text-zinc-900 block truncate">{orden.mechanic || "Taller"}</span>
-            <span className="text-emerald-700 font-semibold text-[11px]">Validez: 15 días</span>
+            <span className="text-sm font-normal text-zinc-500 block">Técnico</span>
+            <span className="text-sm font-normal text-zinc-900 block truncate mt-0.5">{formatoNombrePropio(orden.mechanic || "Taller")}</span>
           </div>
         </div>
 
         {/* ===================================================================
-            SECCIÓN 1: HALLAZGOS DE INSPECCIÓN POR SECCIÓN (LO QUE SE DETECTÓ)
+            SECCIÓN 1: HALLAZGOS DE INSPECCIÓN
             =================================================================== */}
         {secciones.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between border-b pb-1">
-              <h2 className="text-xs font-black uppercase tracking-wider text-zinc-900 flex items-center gap-1.5">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between border-b border-zinc-200 pb-1">
+              <h2 className="text-sm font-normal text-zinc-800 flex items-center gap-1.5">
                 <span>🔍</span>
-                <span>1. Diagnóstico e Inspección Previa del Vehículo</span>
+                <span>Diagnóstico ({hallazgos.length})</span>
               </h2>
-              <span className="text-[11px] font-mono text-zinc-500">
-                {hallazgos.length} {hallazgos.length === 1 ? "hallazgo" : "hallazgos"}
-              </span>
             </div>
 
             <div className="space-y-3">
               {secciones.map((sec) => (
-                <div key={sec.id} className="rounded-xl border border-zinc-200 overflow-hidden text-xs">
-                  <div className="bg-zinc-100 px-3 py-1.5 font-bold text-zinc-800 flex items-center gap-2 border-b border-zinc-200">
+                <div key={sec.id} className="rounded-xl border border-zinc-200 overflow-hidden bg-white text-sm">
+                  <div className="bg-zinc-100 px-3.5 py-1.5 font-normal text-zinc-900 flex items-center gap-2 border-b border-zinc-200 text-sm">
                     <span>{sec.icon}</span>
-                    <span>{sec.nombre}</span>
-                    <span className="text-[10px] bg-zinc-200 px-1.5 py-0.2 rounded font-normal text-zinc-700 ml-auto">
+                    <span>{formatoPrimeraMayuscula(sec.nombre)}</span>
+                    <span className="text-sm bg-zinc-200 px-2 py-0.5 rounded font-normal text-zinc-700 ml-auto">
                       {sec.items.length} {sec.items.length === 1 ? "punto" : "puntos"}
                     </span>
                   </div>
 
-                  <div className="divide-y divide-zinc-100 p-2 space-y-2">
+                  <div className="divide-y divide-zinc-100 p-2.5 space-y-2">
                     {sec.items.map((pin) => {
                       const fotosPin = pin.photoUrls || (pin.photoUrl ? [pin.photoUrl] : []);
                       return (
-                        <div key={pin.id} className="pt-2 first:pt-0 flex items-start justify-between gap-3">
+                        <div key={pin.id} className="pt-2 first:pt-0 flex items-start justify-between gap-3 text-sm">
                           <div className="space-y-1 min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-mono text-[10px] font-bold flex items-center justify-center shrink-0">
+                              <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-normal text-xs flex items-center justify-center shrink-0">
                                 #{pin.pinNumber || 1}
                               </span>
-                              <span className="font-bold text-zinc-900">{pin.tipo}</span>
-                              <span className="text-[10px] text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">
-                                {pin.vistaLabel || pin.vista}
+                              <span className="font-normal text-zinc-900 text-sm">{formatoPrimeraMayuscula(pin.tipo)}</span>
+                              <span className="text-sm font-normal text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded">
+                                {formatoPrimeraMayuscula(pin.vistaLabel || pin.vista)}
                               </span>
                             </div>
                             {pin.descripcion && (
-                              <p className="text-[11px] text-zinc-700 italic pl-7">
-                                &quot;{pin.descripcion}&quot;
+                              <p className="text-sm font-normal text-zinc-700 italic pl-7">
+                                &quot;{formatoPrimeraMayuscula(pin.descripcion)}&quot;
                               </p>
                             )}
                           </div>
@@ -300,7 +413,7 @@ export default function ModalPresupuestoPdf({
                                   key={fIdx}
                                   src={fUrl}
                                   alt="Evidencia"
-                                  className="w-9 h-9 rounded object-cover border border-zinc-300"
+                                  className="w-10 h-10 rounded object-cover border border-zinc-300"
                                 />
                               ))}
                             </div>
@@ -316,143 +429,81 @@ export default function ModalPresupuestoPdf({
         )}
 
         {/* ===================================================================
-            SECCIÓN 2: DETALLE DEL PRESUPUESTO (SERVICIOS Y REPUESTOS)
+            SECCIÓN 2: TRABAJOS AGRUPADOS POR MÓDULO (SIN VALORES)
             =================================================================== */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between border-b pb-1">
-            <h2 className="text-xs font-black uppercase tracking-wider text-zinc-900 flex items-center gap-1.5">
+          <div className="flex items-center justify-between border-b border-zinc-200 pb-1">
+            <h2 className="text-sm font-normal text-zinc-800 flex items-center gap-1.5">
               <span>💼</span>
-              <span>2. Trabajos, Servicios y Repuestos Solicitados</span>
+              <span>Trabajos ({items.length})</span>
             </h2>
-            <span className="text-[11px] font-mono text-zinc-500">
-              {items.length} {items.length === 1 ? "ítem" : "ítems"}
-            </span>
           </div>
 
-          {items.length === 0 ? (
-            <div className="py-6 text-center text-xs text-zinc-400 italic bg-zinc-50 rounded-xl border border-dashed border-zinc-200">
-              No se han agregado servicios ni repuestos a la cotización todavía.
+          {gruposModulos.length === 0 ? (
+            <div className="py-6 text-center text-sm font-normal text-zinc-400 italic bg-zinc-50 rounded-xl border border-dashed border-zinc-200">
+              No se han agregado trabajos a la propuesta todavía.
             </div>
           ) : (
-            <div className="border border-zinc-200 rounded-xl overflow-hidden text-xs">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-zinc-100 text-[10px] uppercase font-bold text-zinc-600 border-b border-zinc-200">
-                    <th className="py-2 px-3">Cant.</th>
-                    <th className="py-2 px-3">Descripción del Trabajo / Repuesto</th>
-                    <th className="py-2 px-3">Tipo</th>
-                    <th className="py-2 px-3 text-right">P. Unitario</th>
-                    <th className="py-2 px-3 text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-200">
-                  {items.map((it, idx) => {
-                    const cant = Number(it.qty) || 1;
-                    const precio = Number(it.price) || 0;
-                    const totalLinea = cant * precio;
-                    const esRepuesto = it.type === "PART" || it.category?.includes("Repuesto");
+            <div className="space-y-3">
+              {gruposModulos.map((mod) => (
+                <div key={mod.id} className="rounded-xl border border-zinc-200 overflow-hidden bg-white text-sm">
+                  {/* Cabecera del Módulo (Taller, Lubricentro, Car Wash, Tecnicentro) */}
+                  <div className="bg-zinc-100 px-3.5 py-1.5 font-normal text-zinc-900 flex items-center gap-2 border-b border-zinc-200 text-sm">
+                    <span>{mod.icon}</span>
+                    <span>{mod.nombre}</span>
+                    <span className="text-sm bg-zinc-200 px-2 py-0.5 rounded font-normal text-zinc-700 ml-auto">
+                      {mod.totalItems} {mod.totalItems === 1 ? "trabajo" : "trabajos"}
+                    </span>
+                  </div>
 
-                    return (
-                      <tr key={it.id || idx} className="hover:bg-zinc-50/60">
-                        <td className="py-2 px-3 font-mono font-bold text-zinc-800">{cant}</td>
-                        <td className="py-2 px-3">
-                          <span className="font-semibold text-zinc-900 block">{it.name}</span>
-                          {it.category && (
-                            <span className="text-[10px] text-zinc-500 block">{it.category}</span>
-                          )}
-                        </td>
-                        <td className="py-2 px-3">
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
-                              esRepuesto
-                                ? "bg-amber-100 text-amber-800"
-                                : "bg-blue-100 text-blue-800"
-                            }`}
-                          >
-                            {esRepuesto ? "Repuesto" : "Mano de Obra / Servicio"}
+                  {/* Subcategorías y Lista de Trabajos (Sin Valores) */}
+                  <div className="divide-y divide-zinc-200">
+                    {mod.subcategorias.map((sub, sIdx) => (
+                      <div key={sIdx} className="bg-white">
+                        {/* Subcategoría directamente debajo del módulo */}
+                        <div className="bg-zinc-50/70 px-3.5 py-1.5 flex items-center justify-between border-b border-zinc-100">
+                          <span className="font-normal text-zinc-700 text-sm flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>
+                            {formatoPrimeraMayuscula(sub.nombre)}
                           </span>
-                        </td>
-                        <td className="py-2 px-3 text-right font-mono text-zinc-700">
-                          ${precio.toFixed(2)}
-                        </td>
-                        <td className="py-2 px-3 text-right font-mono font-bold text-zinc-900">
-                          ${totalLinea.toFixed(2)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          <span className="text-sm font-normal text-zinc-500">
+                            {sub.items.length} {sub.items.length === 1 ? "ítem" : "ítems"}
+                          </span>
+                        </div>
+
+                        {/* Lista de trabajos (Sin Valores) */}
+                        <div className="divide-y divide-zinc-100 px-3.5 py-1">
+                          {sub.items.map((it, itIdx) => {
+                            const cant = Number(it.qty) || 1;
+                            return (
+                              <div
+                                key={it.id || itIdx}
+                                className="py-2 flex items-center justify-between gap-3 text-sm"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  <span className="w-5 h-5 rounded-full bg-zinc-100 text-zinc-600 font-normal text-xs flex items-center justify-center shrink-0 border border-zinc-200">
+                                    #{itIdx + 1}
+                                  </span>
+                                  <span className="font-normal text-zinc-900 truncate text-sm">
+                                    {formatoPrimeraMayuscula(it.name)}
+                                  </span>
+                                </div>
+                                {cant > 1 && (
+                                  <span className="text-sm font-normal text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-md shrink-0">
+                                    Cant: {cant}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
-        </div>
-
-        {/* ===================================================================
-            TOTALES Y FIRMAS
-            =================================================================== */}
-        <div className="flex flex-col sm:flex-row items-start justify-between gap-6 pt-2">
-          {/* Términos y Condiciones */}
-          <div className="text-[10px] text-zinc-500 space-y-1 max-w-sm">
-            <p className="font-bold text-zinc-700 uppercase">Términos y Condiciones:</p>
-            <p>• Los repuestos cotizados cuentan con garantía del fabricante.</p>
-            <p>• Mano de obra garantizada por 30 días o 1,000 km.</p>
-            <p>• Cualquier daño oculto adicional se informará antes de proceder.</p>
-          </div>
-
-          {/* Cuadro de Totales */}
-          <div className="w-full sm:w-64 bg-zinc-50 p-3.5 rounded-xl border border-zinc-200 text-xs space-y-1.5 ml-auto">
-            <div className="flex justify-between text-zinc-600">
-              <span>Subtotal:</span>
-              <span className="font-mono font-semibold">${subtotal.toFixed(2)}</span>
-            </div>
-            {descuento > 0 && (
-              <div className="flex justify-between text-emerald-700 font-medium">
-                <span>Descuento:</span>
-                <span className="font-mono">-${descuento.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-zinc-600">
-              <span>IVA (15%):</span>
-              <span className="font-mono font-semibold">${iva.toFixed(2)}</span>
-            </div>
-            <div className="border-t border-zinc-300 pt-1.5 flex justify-between text-sm font-black text-zinc-900">
-              <span>TOTAL ESTIMADO (PROPUESTA):</span>
-              <span className="font-mono text-base text-emerald-700 font-black">
-                ${total.toFixed(2)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Firmas de Conformidad */}
-        <div className="pt-6 border-t-2 border-zinc-900 grid grid-cols-2 gap-8 text-center text-xs">
-          <div>
-            <div className="h-14 border-b border-zinc-400 mb-1 flex items-center justify-center">
-              <span className="text-[11px] text-zinc-400 italic">Firma del Asesor Técnico</span>
-            </div>
-            <p className="font-bold text-zinc-900">{orden.mechanic || "Responsable de Taller"}</p>
-            <p className="text-[10px] text-zinc-500">{nombreFinalTaller}</p>
-          </div>
-
-          <div>
-            <div className="h-14 border-b border-zinc-400 mb-1 flex items-center justify-center">
-              {firmaCliente ? (
-                <img
-                  src={firmaCliente}
-                  alt="Firma Cliente"
-                  className="max-h-12 object-contain"
-                />
-              ) : (
-                <span className="text-[11px] text-zinc-400 italic">Firma de Conformidad / Aprobación</span>
-              )}
-            </div>
-            <p className="font-bold text-zinc-900">{orden.quoteSignedBy || orden.deliverySignedBy || orden.client || "Cliente"}</p>
-            <p className="text-[10px] text-zinc-500">
-              {orden.quoteApprovedAt
-                ? `Aprobado el ${new Date(orden.quoteApprovedAt).toLocaleDateString("es-EC")}`
-                : "Aceptación de Solicitud / Propuesta"}
-            </p>
-          </div>
         </div>
 
         {/* ===================================================================
@@ -462,25 +513,17 @@ export default function ModalPresupuestoPdf({
           <button
             type="button"
             onClick={onCerrar}
-            className="h-10 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-xs font-semibold text-zinc-700 transition-all cursor-pointer"
+            className="h-10 px-5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-sm font-normal text-zinc-700 transition-all cursor-pointer"
           >
             Cerrar
           </button>
 
           <button
             type="button"
-            onClick={handleEnviarWhatsApp}
-            className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-emerald-600/20 active:scale-95"
-          >
-            <span>💬 Enviar WhatsApp</span>
-          </button>
-
-          <button
-            type="button"
             onClick={handleImprimir}
-            className="h-10 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-lg shadow-blue-600/25 active:scale-95"
+            className="h-10 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-normal transition-all cursor-pointer flex items-center gap-2 shadow-md shadow-blue-600/20 active:scale-95"
           >
-            <span>🖨️ Descargar / Imprimir PDF</span>
+            <span>Descargar</span>
           </button>
         </div>
       </div>

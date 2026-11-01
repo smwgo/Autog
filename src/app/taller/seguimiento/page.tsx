@@ -80,39 +80,7 @@ const COLOR_MAP: Record<
   },
 };
 
-const DEMO_ORDER = {
-  id: "demo-1042",
-  orderNumber: "1042",
-  workshopName: "Taller Mecánico Especializado",
-  client: "Juan Pérez",
-  plate: "ABC-1234",
-  vehicle: "Toyota Hilux 2.8 D-4D (2022)",
-  mechanic: "Carlos Rodríguez",
-  status: "En Reparación",
-  statusColor: "sky",
-  trackingPin: "4821",
-  fuelLevel: "3/4",
-  mileage: 48500,
-  nextOilChangeKm: 58500,
-  hasPriceAuthorized: false,
-  totalCost: 0,
-  items: [
-    { id: "it-1", name: "Revisión de frenos delanteros", status: "Listo", completed: true },
-    { id: "it-2", name: "Cambio de aceite y filtro", status: "En Proceso", completed: false },
-    { id: "it-3", name: "Cambio de pastillas de freno", status: "Pendiente", completed: false },
-    { id: "it-4", name: "Prueba de ruta y alineación", status: "Pendiente", completed: false },
-  ],
-  internalChat: [
-    {
-      id: "c-1",
-      author: "Carlos Rodríguez (Técnico)",
-      role: "Técnico",
-      text: "Hola Juan, recibimos tu vehículo. Ya finalizamos la revisión de frenos y estamos drenando el aceite de motor.",
-      createdAt: "10:30 AM",
-    },
-  ],
-  evidencePhotos: [],
-};
+
 
 function getEtapaActivaIndex(status: string, etapas: CustomStatus[]): number {
   const s = (status || "").toLowerCase().trim();
@@ -153,8 +121,23 @@ function SeguimientoOrdenContent() {
 
   const consultarSeguimiento = async (numOrden: string, pin: string, isDemo = false) => {
     if (isDemo) {
-      setOrden(DEMO_ORDER);
-      setChatMensajes(DEMO_ORDER.internalChat);
+      try {
+        setCargando(true);
+        setError("");
+        const res = await fetch("/api/taller/operacion?trackingLatest=true");
+        const data = await res.json();
+        if (data.success && data.order) {
+          setOrden(data.order);
+          setChatMensajes(Array.isArray(data.order.internalChat) ? data.order.internalChat : []);
+        } else {
+          setOrden(null);
+          setError(data.error || "No hay órdenes activas registradas en Neon.");
+        }
+      } catch {
+        setError("Error de conexión al consultar el estado de tu orden.");
+      } finally {
+        setCargando(false);
+      }
       return;
     }
 

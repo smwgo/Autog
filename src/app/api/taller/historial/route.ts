@@ -267,6 +267,83 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, serviceCode, date, vehicle, plate, client, services, cost, mechanic, mileage, nextOilChangeKm, notes, orderNumber } = body;
+
+    const targetId = id || serviceCode;
+    if (!targetId) {
+      return NextResponse.json(
+        { success: false, error: "ID o código de servicio requerido para actualizar." },
+        { status: 400 }
+      );
+    }
+
+    return await withRetry(async () => {
+      await ensureTableExists();
+
+      const existing: any[] = await prisma.$queryRawUnsafe(
+        'SELECT * FROM "WorkshopHistory" WHERE "id" = $1 OR "serviceCode" = $1 LIMIT 1',
+        targetId
+      );
+
+      if (existing.length === 0) {
+        return NextResponse.json(
+          { success: false, error: "Registro de historial no encontrado." },
+          { status: 404 }
+        );
+      }
+
+      const current = existing[0];
+      const servicesJson = services !== undefined
+        ? (typeof services === "string" ? services : JSON.stringify(services))
+        : current.servicesJson;
+      const finalCost = cost !== undefined ? Number(cost) : Number(current.cost || 0);
+
+      await prisma.$executeRawUnsafe(
+        `UPDATE "WorkshopHistory" SET
+           "date" = COALESCE($2, "date"),
+           "vehicle" = COALESCE($3, "vehicle"),
+           "plate" = COALESCE($4, "plate"),
+           "client" = COALESCE($5, "client"),
+           "servicesJson" = $6,
+           "cost" = $7,
+           "mechanic" = COALESCE($8, "mechanic"),
+           "mileage" = COALESCE($9, "mileage"),
+           "nextOilChangeKm" = COALESCE($10, "nextOilChangeKm"),
+           "notes" = COALESCE($11, "notes"),
+           "orderNumber" = COALESCE($12, "orderNumber"),
+           "updatedAt" = NOW()
+         WHERE "id" = $1`,
+        current.id,
+        date || null,
+        vehicle ? vehicle.trim() : null,
+        plate ? plate.trim().toUpperCase() : null,
+        client ? client.trim() : null,
+        servicesJson,
+        finalCost,
+        mechanic || null,
+        mileage || null,
+        nextOilChangeKm !== undefined ? Number(nextOilChangeKm) : null,
+        notes !== undefined ? notes : null,
+        orderNumber || null
+      );
+
+      return NextResponse.json({
+        success: true,
+        message: "Registro de historial actualizado en Neon.",
+      });
+    });
+  } catch (error: any) {
+    console.error("Error al actualizar historial en Neon:", error);
+    return NextResponse.json(
+      { success: false, error: error.message || "Error al actualizar historial en Neon." },
+      { status: 500 }
+    );
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);

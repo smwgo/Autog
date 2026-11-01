@@ -791,6 +791,12 @@ export default function TallerPanel() {
   const [mostrarModalNuevaOrden, setMostrarModalNuevaOrden] = useState(false);
   // MODAL / LISTA DE CLIENTES Y AUTOS EN ATENCIÓN (PAUSAR, CAMBIAR, CONTINUAR)
   const [mostrarModalAutosAtencion, setMostrarModalAutosAtencion] = useState(false);
+  // MODAL FLOTANTE DE CONFIRMACIÓN PARA ELIMINAR TRABAJOS DE LA ORDEN
+  const [modalConfirmEliminar, setModalConfirmEliminar] = useState<{
+    tipo: "INDIVIDUAL" | "TODOS";
+    indice?: number;
+    nombre: string;
+  } | null>(null);
 
   // Pausar el trabajo de una orden para seguir con otra
   const handlePausarOrden = async (auto: UnifiedOrder, e?: React.MouseEvent) => {
@@ -4358,6 +4364,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
   }) => {
     if (!ordenActiva) return;
 
+    // Actualización optimista instantánea en memoria local para que la UI reaccione de inmediato
+    if (partial.items !== undefined) {
+      setOrdenActiva((prev) => (prev ? { ...prev, items: partial.items! } : prev));
+      setAutosEnPista((prev) =>
+        prev.map((o) => (o.id === ordenActiva.id ? { ...o, items: partial.items! } : o))
+      );
+    }
+
     try {
       setSincronizandoOrden(true);
       const res = await fetch("/api/taller/operacion", {
@@ -4365,7 +4379,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "ACTUALIZAR_ORDEN",
-          orderId: ordenActiva.id,
+          orderId: ordenActiva.id || ordenActiva.orderNumber,
           items: partial.items ?? ordenActiva.items,
           mechanic: partial.mechanic ?? ordenActiva.mechanic,
           mileage: partial.mileage !== undefined ? partial.mileage : ordenActiva.mileage,
@@ -4613,10 +4627,62 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
     await sincronizarOrdenEnNeon({ items: nuevosItems });
   };
 
+  const handleConfirmarEliminar = async () => {
+    if (!modalConfirmEliminar || !ordenActiva) {
+      setModalConfirmEliminar(null);
+      return;
+    }
+
+    const { tipo, indice, nombre } = modalConfirmEliminar;
+    setModalConfirmEliminar(null);
+
+    if (tipo === "TODOS") {
+      const itemsVacios: OrderItem[] = [];
+      setOrdenActiva((prev) => (prev ? { ...prev, items: itemsVacios } : prev));
+      setAutosEnPista((prev) =>
+        prev.map((o) => (o.id === ordenActiva.id ? { ...o, items: itemsVacios } : o))
+      );
+      await sincronizarOrdenEnNeon({ items: itemsVacios });
+      mostrarToast("Todos los trabajos han sido eliminados de la orden", "ok");
+    } else if (indice !== undefined) {
+      const nuevosItems = (ordenActiva.items || []).filter((_, i) => i !== indice);
+      setOrdenActiva((prev) => (prev ? { ...prev, items: nuevosItems } : prev));
+      setAutosEnPista((prev) =>
+        prev.map((o) => (o.id === ordenActiva.id ? { ...o, items: nuevosItems } : o))
+      );
+      await sincronizarOrdenEnNeon({ items: nuevosItems });
+      mostrarToast(`"${nombre}" eliminado de la orden`, "ok");
+    }
+  };
+
   const handleEliminarItemOrden = async (itemId: string) => {
-    if (!ordenActiva) return;
-    const nuevosItems = ordenActiva.items.filter((it) => it.id !== itemId);
-    await sincronizarOrdenEnNeon({ items: nuevosItems });
+    if (!ordenActiva || !ordenActiva.items) return;
+    const itemAEliminar = ordenActiva.items.find((it) => it.id === itemId);
+    const nombreItem = itemAEliminar?.name || (itemAEliminar as any)?.description || "este trabajo";
+    setModalConfirmEliminar({
+      tipo: "INDIVIDUAL",
+      indice: ordenActiva.items.findIndex((it) => it.id === itemId),
+      nombre: nombreItem,
+    });
+  };
+
+  const handleEliminarItemOrdenPorIndice = (idxAEliminar: number) => {
+    if (!ordenActiva || !ordenActiva.items) return;
+    const itemAEliminar = ordenActiva.items[idxAEliminar];
+    const nombreItem = itemAEliminar?.name || (itemAEliminar as any)?.description || "este trabajo";
+    setModalConfirmEliminar({
+      tipo: "INDIVIDUAL",
+      indice: idxAEliminar,
+      nombre: nombreItem,
+    });
+  };
+
+  const handleLimpiarTodosLosItemsOrden = () => {
+    if (!ordenActiva || !ordenActiva.items || ordenActiva.items.length === 0) return;
+    setModalConfirmEliminar({
+      tipo: "TODOS",
+      nombre: "todos los trabajos registrados",
+    });
   };
 
   // Iniciar Orden y Cronómetro en Vivo
@@ -5405,8 +5471,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                       ✍️
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
-                        Firma y Confirmación
+                      <h4 className="text-lg sm:text-xl font-normal text-zinc-900 dark:text-white">
+                        Firma
                       </h4>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400">
                         {ordenActiva?.plate ? `Placa: ${ordenActiva.plate}` : "Orden en proceso"} {ordenActiva?.vehicle ? `• ${ordenActiva.vehicle}` : ""}
@@ -5418,14 +5484,14 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     <button
                       type="button"
                       onClick={() => setModalPresupuestoPdfAbierto(true)}
-                      className="h-9 px-3.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
-                      title="Ver e Imprimir PDF de la Solicitud de Orden (Propuesta)"
+                      className="h-8 sm:h-9 px-3 sm:px-3.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs sm:text-sm font-normal flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                      title="Ver Propuesta de Orden"
                     >
                       <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6m-6 4h4" />
                       </svg>
-                      <span>PDF Solicitud</span>
+                      <span>Propuesta</span>
                     </button>
 
                     {ordenActiva &&
@@ -5445,50 +5511,61 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-base">📋</span>
-                      <h5 className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-                        Procesos y Trabajos Registrados ({(ordenActiva?.items || []).length})
+                      <h5 className="text-xs sm:text-sm font-normal text-zinc-800 dark:text-zinc-200">
+                        Trabajos ({(ordenActiva?.items || []).length})
                       </h5>
                     </div>
-                    <span className="text-xs font-bold text-zinc-900 dark:text-white px-2.5 py-1 rounded-lg bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 shadow-xs">
-                      Total: ${Number(ordenActiva?.totalCost || (ordenActiva?.items || []).reduce((sum: number, it: any) => sum + (Number(it.price || 0) * (Number(it.qty) || 1)), 0)).toFixed(2)}
-                    </span>
+                    {ordenActiva?.items && ordenActiva.items.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => void handleLimpiarTodosLosItemsOrden()}
+                        className="px-2.5 py-1 rounded-lg text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 dark:text-rose-400 border border-rose-200/80 dark:border-rose-500/30 flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-2xs"
+                        title="Eliminar todos los trabajos de la orden"
+                      >
+                        <span>🗑️</span>
+                        <span>Eliminar todos</span>
+                      </button>
+                    )}
                   </div>
 
                   {ordenActiva?.items && ordenActiva.items.length > 0 ? (
                     <div className="divide-y divide-zinc-200/60 dark:divide-white/5 max-h-56 overflow-y-auto pr-1">
                       {ordenActiva.items.map((item: any, idx: number) => {
                         const itemQty = Number(item.qty || item.quantity || 1);
-                        const itemPrice = Number(item.price || 0);
-                        const itemSubtotal = itemQty * itemPrice;
                         const categoria = item.category || (item.type === "PART" ? "Repuesto" : "Servicio");
 
                         return (
-                          <div key={item.id || `item_${idx}`} className="py-2 flex items-center justify-between gap-3 text-xs">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <span className="w-5 h-5 rounded-md bg-zinc-200 dark:bg-white/10 text-zinc-700 dark:text-zinc-300 font-bold flex items-center justify-center text-[10px] shrink-0">
+                          <div key={item.id || item.key || `item_${idx}`} className="py-2.5 flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span className="w-6 h-6 rounded-lg bg-zinc-200 dark:bg-white/10 text-zinc-700 dark:text-zinc-300 font-normal flex items-center justify-center text-xs shrink-0">
                                 {idx + 1}
                               </span>
                               <div className="min-w-0">
-                                <p className="font-medium text-zinc-800 dark:text-zinc-200 truncate">
+                                <p className="text-sm sm:text-base font-normal text-zinc-900 dark:text-zinc-100 truncate">
                                   {item.name || item.description || "Trabajo"}
                                 </p>
-                                <div className="flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+                                <div className="flex items-center gap-2 text-xs sm:text-sm font-normal text-zinc-500 dark:text-zinc-400">
                                   <span className="capitalize">{categoria}</span>
                                   <span>•</span>
                                   <span>Cant: {itemQty}</span>
-                                  {itemPrice > 0 && (
-                                    <>
-                                      <span>•</span>
-                                      <span>c/u ${itemPrice.toFixed(2)}</span>
-                                    </>
-                                  )}
                                 </div>
                               </div>
                             </div>
                             <div className="text-right shrink-0">
-                              <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-                                ${itemSubtotal.toFixed(2)}
-                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setModalConfirmEliminar({
+                                    tipo: "INDIVIDUAL",
+                                    indice: idx,
+                                    nombre: item.name || item.description || "este trabajo",
+                                  })
+                                }
+                                className="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 dark:text-rose-400 border border-rose-200/80 dark:border-rose-500/30 flex items-center justify-center text-sm font-normal transition-all active:scale-95 cursor-pointer shadow-2xs"
+                                title="Eliminar este trabajo"
+                              >
+                                🗑️
+                              </button>
                             </div>
                           </div>
                         );
@@ -5723,16 +5800,6 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             >
               ← Anterior
             </button>
-
-            {/* Resumen dinámico en el centro según el módulo */}
-            {moduloTaller === "tecnicentro" && etapaActiva !== 4 && (
-              <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs sm:text-sm font-semibold shadow-xs">
-                <span className="text-base">🛒</span>
-                <span>
-                  {(ordenActiva?.items || []).length} trabajo(s) en orden • Total: ${Number(ordenActiva?.totalCost || 0).toFixed(2)}
-                </span>
-              </div>
-            )}
 
             {etapaActiva === 4 ? (
               <button
@@ -6287,7 +6354,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             ? {
                 ...ordenActiva,
                 workshopName: "Auto / G",
-                items: etapa4Items && etapa4Items.length > 0 ? etapa4Items : ordenActiva.items || [],
+                items: ordenActiva.items && ordenActiva.items.length > 0 ? ordenActiva.items : etapa4Items || [],
                 quoteSignatureUrl: etapa7FirmaDataUrl || ordenActiva.quoteSignatureUrl,
               }
             : null
@@ -6721,6 +6788,44 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               >
                 <span>+</span>
                 <span>Nueva Orden</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL FLOTANTE DE CONFIRMACIÓN PARA ELIMINAR TRABAJOS DE LA ORDEN */}
+      {modalConfirmEliminar && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-sm bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl p-5 space-y-4 animate-scale-in">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 flex items-center justify-center text-lg shrink-0">
+                🗑️
+              </div>
+              <p className="text-sm font-normal text-zinc-800 dark:text-zinc-200 leading-snug">
+                {modalConfirmEliminar.tipo === "TODOS" ? (
+                  "¿Eliminar todos los trabajos?"
+                ) : (
+                  <>¿Eliminar "{modalConfirmEliminar.nombre}"?</>
+                )}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setModalConfirmEliminar(null)}
+                className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-xs sm:text-sm font-normal text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/10 transition-all cursor-pointer active:scale-95"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleConfirmarEliminar()}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs sm:text-sm font-normal transition-all cursor-pointer shadow-sm shadow-rose-600/30 active:scale-95 flex items-center gap-1.5"
+              >
+                <span>🗑️</span>
+                <span>Eliminar</span>
               </button>
             </div>
           </div>

@@ -336,51 +336,6 @@ function HistorialCarWashContenido() {
         });
       }
 
-      // 3. Revisar en localStorage EXCLUSIVAMENTE para la placa activa
-      if (typeof window !== "undefined" && placaTarget) {
-        const keyLocal = `carwash_last_${placaTarget}`;
-        const rawLocal = localStorage.getItem(keyLocal);
-
-        if (rawLocal) {
-          try {
-            // Si el vehículo actual no es una moto y la memoria tenía "moto", purgarla automáticamente
-            if (!esMoto && rawLocal.toLowerCase().includes("moto")) {
-              localStorage.removeItem(keyLocal);
-            } else {
-              const parsed = JSON.parse(rawLocal);
-              const items = Array.isArray(parsed) ? parsed : parsed.items || [];
-              // Filtrar estrictamente sólo servicios de Car Wash correspondientes al tipo de vehículo
-              const itemsValidos = items.filter(esServicioCarWash);
-
-              if (itemsValidos.length > 0 && !registrosMapeados.some((r) => r.orderNumber === "PREV-LOCAL")) {
-                const serviciosLocal: CarWashServiceItem[] = itemsValidos.map((it: any) => ({
-                  id: it.id || it.serviceId,
-                  code: it.code,
-                  nombre: it.name || "Servicio Car Wash",
-                  categoria: it.category || "Car Wash",
-                  duracionMin: it.estimatedMinutes || 35,
-                  cantidad: Number(it.qty || 1),
-                }));
-
-                registrosMapeados.unshift({
-                  id: `local_${Date.now()}`,
-                  orderNumber: "Último guardado",
-                  fecha: "Sesión reciente",
-                  fechaMs: Date.now(),
-                  cliente: cliente || "Cliente",
-                  placa: placaTarget,
-                  vehiculo: vehiculo || tipo,
-                  servicios: serviciosLocal,
-                  mecanico: "Lavador / Operador",
-                  notas: "Último servicio guardado en el módulo",
-                  rawItems: itemsValidos,
-                });
-              }
-            }
-          } catch {}
-        }
-      }
-
       registrosMapeados.sort((a, b) => b.fechaMs - a.fechaMs);
       setTodosLosRegistros(registrosMapeados);
     } catch (err) {

@@ -457,7 +457,16 @@ export async function GET(request: Request) {
       await ensureTallerSchema();
 
       // 0.A Consulta pública de Seguimiento en Línea con Número de Orden y PIN (Etapa 6)
-      if (trackingOrderParam) {
+      if (trackingOrderParam || searchParams.get("trackingLatest") === "true") {
+        if (!trackingOrderParam) {
+          const rows: any[] = await prisma.$queryRawUnsafe(
+            `SELECT * FROM "WorkshopOrder" ORDER BY "updatedAt" DESC LIMIT 1`
+          );
+          if (rows.length === 0) {
+            return NextResponse.json({ success: false, error: "No hay órdenes en Neon." }, { status: 404 });
+          }
+          return NextResponse.json({ success: true, order: mapOrderRow(rows[0]) });
+        }
         const cleanOrder = trackingOrderParam.replace(/^#/, "").trim();
         const rows: any[] = await prisma.$queryRawUnsafe(
           `SELECT * FROM "WorkshopOrder"

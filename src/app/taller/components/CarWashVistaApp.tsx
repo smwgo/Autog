@@ -244,19 +244,23 @@ export default function CarWashVistaApp(props: CarWashVistaAppProps) {
     { clave: "Pelos", color: "cyan", pos: "left-[57%] top-[72%]" },
   ];
 
-  // Servicios principales destacados (como en la captura del usuario)
+  // Servicios principales destacados reales desde Neon PostgreSQL
   const serviciosDestacados = useMemo(() => {
     const list = [...items];
-    // Asegurar los 5 servicios icónicos
-    const findOrMock = (keyword: string, label: string, price: number, icon: string): CarWashAppItem => {
-      const found = list.find((it) => it.keyword.toUpperCase() === keyword.toUpperCase());
+    const findOrMatch = (keyword: string, label: string, defaultPrice: number, icon: string): CarWashAppItem => {
+      const found = list.find(
+        (it) =>
+          it.keyword?.toUpperCase() === keyword.toUpperCase() ||
+          it.name?.toUpperCase().includes(keyword.toUpperCase()) ||
+          it.code?.toUpperCase().includes(keyword.toUpperCase().slice(0, 3))
+      );
       if (found) return found;
       return {
-        id: `mock_${keyword.toLowerCase()}`,
+        id: `cw_${keyword.toLowerCase().replace(/[^a-z0-9]/g, "_")}`,
         kind: "SERVICE",
         name: label,
         code: `CW-${keyword.substring(0, 3)}`,
-        price,
+        price: defaultPrice,
         durationMinutes: 20,
         keyword,
         itemIcon: icon,
@@ -265,11 +269,11 @@ export default function CarWashVistaApp(props: CarWashVistaAppProps) {
     };
 
     const destacados: CarWashAppItem[] = [
-      findOrMock("LAVADO", "Lavado", 8.0, "🚿"),
-      findOrMock("CHASIS", "Chasis + Grafitado", 12.0, "🛞"),
-      findOrMock("TAPICERÍA", "Tapicería", 25.0, "💺"),
-      findOrMock("DETAILING", "Detailing", 15.0, "💎"),
-      findOrMock("EXTRA", "Extra", 3.0, "🧴"),
+      findOrMatch("LAVADO", "Lavado", 8.0, "🚿"),
+      findOrMatch("CHASIS", "Chasis + Grafitado", 12.0, "🛞"),
+      findOrMatch("TAPICERÍA", "Tapicería", 25.0, "💺"),
+      findOrMatch("DETAILING", "Detailing", 15.0, "💎"),
+      findOrMatch("EXTRA", "Extra", 3.0, "🧴"),
     ];
 
     // Agregar el resto sin duplicar
