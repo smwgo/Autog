@@ -280,6 +280,7 @@ export interface ItemBentoCatalogo {
   type: string;
   color?: string;
   imageUrl?: string | null;
+  stock?: number;
 }
 
 export const BASE_LUBRICENTRO_POS_ITEMS: ItemBentoCatalogo[] = [
@@ -3589,7 +3590,19 @@ export default function ModuloLubricentroCatalogo({
   };
 
   const productosBentoAMostrar = useMemo(() => {
-    let lista = [...BASE_LUBRICENTRO_POS_ITEMS];
+    let lista = BASE_LUBRICENTRO_POS_ITEMS.map((base) => {
+      const match = (productos || []).find(
+        (p) =>
+          p.id === base.id ||
+          p.code === base.code ||
+          (base.viscosity && (p.viscosity === base.viscosity || p.name?.toLowerCase().includes(base.viscosity.toLowerCase())))
+      );
+      return {
+        ...base,
+        stock: match?.stock !== undefined ? Number(match.stock) : (base.stock !== undefined ? base.stock : 25),
+        price: match?.price ? Number(match.price) : base.price,
+      };
+    });
 
     if (productos && productos.length > 0) {
       const idsBase = new Set(lista.map((p) => p.id));
@@ -3610,6 +3623,7 @@ export default function ModuloLubricentroCatalogo({
             type: p.type || 'PART',
             color: '#eab308',
             imageUrl: p.imageUrl,
+            stock: p.stock !== undefined ? Number(p.stock) : 25,
           });
         }
       }
@@ -4046,29 +4060,51 @@ export default function ModuloLubricentroCatalogo({
         {productosBentoAMostrar.map((prod) => {
           const cantEnOrden = obtenerCantidadItemEnOrden(prod.id);
           const enOrden = cantEnOrden > 0;
+          const stockVal = prod.stock !== undefined && prod.stock !== null ? Number(prod.stock) : 25;
+          const estaAgotado = stockVal <= 0;
           return (
             <div
               key={prod.id}
-              onClick={() => void handleAjustarItemBento(prod, 1)}
+              onClick={() => {
+                if (estaAgotado) {
+                  mostrarToast?.(`El producto ${prod.name || prod.viscosity} está agotado (sin stock)`, 'err');
+                  return;
+                }
+                void handleAjustarItemBento(prod, 1);
+              }}
               className={`group relative flex flex-col items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none active:scale-[0.98] min-h-[175px] shadow-2xs ${enOrden
                 ? "bg-blue-50/70 dark:bg-blue-500/10 border-blue-400 dark:border-blue-400/50 ring-2 ring-blue-300/60 dark:ring-blue-400/30 shadow-xs"
+                : estaAgotado
+                ? "bg-zinc-50/70 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 opacity-75"
                 : "bg-white hover:bg-zinc-50 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/40"
                 }`}
             >
-              {/* Botón restar "−" arriba a la izquierda */}
-              {enOrden && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void handleAjustarItemBento(prod, -1);
-                  }}
-                  className="absolute top-2 left-2 w-7 h-7 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 text-sm font-bold flex items-center justify-center shadow-xs active:scale-90 transition-all z-10 cursor-pointer"
-                  title="Restar 1"
+              {/* Botón restar "−" e indicador de Stock/Agotado (una sola letra: S en verde, A en rojo) */}
+              <div className="absolute top-2 left-2 flex items-center gap-1.5 z-10">
+                {enOrden && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handleAjustarItemBento(prod, -1);
+                    }}
+                    className="w-7 h-7 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 text-sm font-bold flex items-center justify-center shadow-xs active:scale-90 transition-all cursor-pointer"
+                    title="Restar 1"
+                  >
+                    −
+                  </button>
+                )}
+                <span
+                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black border select-none ${
+                    estaAgotado
+                      ? "bg-rose-50 text-rose-600 border-rose-300 dark:bg-rose-500/20 dark:text-rose-400 dark:border-rose-500/40"
+                      : "bg-emerald-50 text-emerald-600 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/40"
+                  }`}
+                  title={estaAgotado ? "Agotado (Sin stock)" : `Stock disponible (${stockVal})`}
                 >
-                  −
-                </button>
-              )}
+                  {estaAgotado ? "A" : "S"}
+                </span>
+              </div>
 
               {/* Badge contador verde arriba a la derecha */}
               {enOrden && (
@@ -4086,12 +4122,12 @@ export default function ModuloLubricentroCatalogo({
                 )}
               </div>
 
-              {/* Texto grande de viscosidad y precio */}
+              {/* Texto de viscosidad y precio sin negrita */}
               <div className="w-full text-center mt-2 px-1">
-                <span className="text-base sm:text-lg font-black tracking-tight text-zinc-900 dark:text-white block truncate">
+                <span className="text-base sm:text-lg font-normal tracking-tight text-zinc-900 dark:text-white block truncate">
                   {prod.viscosity || prod.name}
                 </span>
-                <span className="text-xs sm:text-sm font-bold font-mono text-zinc-700 dark:text-zinc-300 mt-0.5 block">
+                <span className="text-xs sm:text-sm font-normal font-mono text-zinc-700 dark:text-zinc-300 mt-0.5 block">
                   ${Number(prod.price || 0).toFixed(2)}
                 </span>
               </div>

@@ -1309,21 +1309,101 @@ export default function ModuloTecnicentroCatalogo({
     return rinActivo.replace('R', '') + '"';
   }, [rinActivo, vehiculoTipo]);
 
-  const PRECARGA_BENTO_ITEMS = React.useMemo(() => {
-    const ali = todosLosItemsPOS.find(it => it.id === 'tc_ali_completa') ||
-      todosLosItemsPOS.find(it => it.categoryMapped === 'ALINEACION' && it.subcategoryMapped === 'COMPLETA');
-    const bal = todosLosItemsPOS.find(it => it.id === 'tc_bal_dinamico') ||
-      todosLosItemsPOS.find(it => it.categoryMapped === 'ALINEACION' && it.subcategoryMapped === 'BALANCEO');
-    type PItem = typeof todosLosItemsPOS[number] & { labelCorto: string };
-    const items: PItem[] = [];
-    if (ali) items.push({ ...ali, labelCorto: 'Alineación 3D' });
-    if (bal) items.push({ ...bal, labelCorto: 'Balanceo x4' });
-    if (bal) items.push({ ...bal, labelCorto: 'Balanceo x4' });
-    if (ali) items.push({ ...ali, labelCorto: 'Alineación 3D' });
-    if (bal) items.push({ ...bal, labelCorto: 'Balanceo x4' });
-    if (bal) items.push({ ...bal, labelCorto: 'Balanceo x4' });
-    return items;
-  }, [todosLosItemsPOS]);
+  // Guardar en localStorage los últimos ítems de Tecnicentro del vehículo para permitir "Repetir último"
+  useEffect(() => {
+    if (itemsTecnicentroEnOrden.length > 0) {
+      try {
+        const keyPlate = `tecnicentro_last_${ordenActiva?.plate || "general"}`;
+        localStorage.setItem(keyPlate, JSON.stringify(itemsTecnicentroEnOrden));
+      } catch {}
+    }
+  }, [itemsTecnicentroEnOrden, ordenActiva?.plate]);
+
+  const handleRepetirUltimoTecnicentro = async () => {
+    try {
+      let itemsRecuperados: any[] = [];
+      const keyPlate = `tecnicentro_last_${ordenActiva?.plate || "general"}`;
+
+      if (typeof window !== "undefined") {
+        const guardado = localStorage.getItem(keyPlate) || localStorage.getItem("tecnicentro_last_general");
+        if (guardado) {
+          try {
+            itemsRecuperados = JSON.parse(guardado);
+          } catch {}
+        }
+      }
+
+      // Si no hay historial previo en localStorage, sugerir alineación completa y balanceo
+      if (!itemsRecuperados || itemsRecuperados.length === 0) {
+        const ali = todosLosItemsPOS.find(
+          (it) => it.id === "tc_ali_completa" || (it.categoryMapped === "ALINEACION" && it.subcategoryMapped === "COMPLETA")
+        );
+        const bal = todosLosItemsPOS.find(
+          (it) => it.id === "tc_bal_dinamico" || (it.categoryMapped === "ALINEACION" && it.subcategoryMapped === "BALANCEO")
+        );
+        itemsRecuperados = [
+          ...(ali ? [{ ...ali, qty: 1 }] : []),
+          ...(bal ? [{ ...bal, qty: 4 }] : []),
+        ];
+      }
+
+      if (itemsRecuperados.length === 0) {
+        mostrarToast("No hay servicios previos registrados para repetir", "err");
+        return;
+      }
+
+      // Conservar ítems que no sean de Tecnicentro
+      const noTecnicentro = (itemsOrden || []).filter((it) => {
+        const cat = String(it.category || "");
+        const code = String(it.code || "");
+        return (
+          cat !== "Tecnicentro" &&
+          cat !== "Llantas" &&
+          cat !== "Alineación" &&
+          cat !== "Frenos" &&
+          cat !== "Suspensión" &&
+          cat !== "Baterías" &&
+          !code.startsWith("TC-") &&
+          !code.startsWith("NEU-") &&
+          !code.startsWith("PRD-TC-")
+        );
+      });
+
+      const regenerados = itemsRecuperados.map((it) => {
+        const matchPOS = todosLosItemsPOS.find((p) => p.id === it.id || p.id === it.serviceId || p.code === it.code);
+        const unitPrice = matchPOS ? matchPOS.price : Number(it.price || 0);
+        const qty = Number(it.qty) || 1;
+        return {
+          ...it,
+          id: `tc_rep_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          serviceId: it.serviceId || it.id,
+          productId: it.kind === "TIRE" ? (it.productId || it.id) : undefined,
+          type: it.kind === "TIRE" ? "PRODUCT" : "SERVICE",
+          category: it.categoryMapped || it.category || "Tecnicentro",
+          subCategory: it.subcategoryMapped || it.subCategory || "Alineación",
+          code: it.code || `TC-${it.id}`,
+          name: it.name,
+          brand: it.brand || "Tecnicentro",
+          presentation: "Servicio",
+          unitOfMeasure: "Unidad",
+          price: unitPrice,
+          total: Number((unitPrice * qty).toFixed(2)),
+          qty,
+          estimatedMinutes: it.durationMinutes || 30,
+          vehicleType: vehiculoTipo,
+          status: "Listo",
+          completed: true,
+          empleado_id: empleadoLogueado.id,
+          empleado_nombre: empleadoLogueado.nombre,
+        };
+      });
+
+      await onActualizarItemsOrden([...noTecnicentro, ...regenerados]);
+      mostrarToast(`✓ Último servicio de Tecnicentro cargado (${regenerados.length} servicio(s))`, "ok");
+    } catch {
+      mostrarToast("Error al cargar el último servicio de Tecnicentro", "err");
+    }
+  };
 
   if (!mounted || (loading && !config)) {
     return (
@@ -1359,62 +1439,47 @@ export default function ModuloTecnicentroCatalogo({
         {/* BENTO GRID TECNICENTRO: 2 tarjetas superiores (Alineación y Semáforo) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
 
-          {/* ===== CARD IZQUIERDA: Alineacion ===== */}
-          <div className="lg:col-span-5 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 shadow-sm overflow-hidden p-3.5 sm:p-4">
-            <p className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white mb-2.5">
-              Alineación
-            </p>
-            <div className="rounded-2xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200/80 dark:border-white/5 p-3.5 text-center">
-              <p className="text-2xl text-zinc-900 dark:text-white flex items-center justify-center">
-                🚗
-              </p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                • Rin {rinLabel}
-              </p>
-            </div>
-            <p className="mt-3.5 mb-2 text-center text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wide">
-              Recepción
-            </p>
-            <div className="p-3 grid grid-cols-3 gap-2">
-              {PRECARGA_BENTO_ITEMS.map((pItem, pIdx) => {
-                const qty = obtenerCantidadEnPedido(pItem);
-                const enPedido = qty > 0;
-                return (
-                  <button
-                    key={pIdx}
-                    type="button"
-                    onClick={() => void handleAjustarCantidadItem(pItem as any, enPedido ? -1 : 1)}
-                    className={[
-                      'flex flex-col items-center justify-center gap-1 rounded-xl border py-2.5 px-1 transition-all active:scale-95 cursor-pointer text-center',
-                      enPedido
-                        ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/40'
-                        : 'bg-zinc-50 dark:bg-white/[0.03] border-zinc-200 dark:border-white/10 hover:border-emerald-300',
-                    ].join(' ')}
-                  >
-                    <div className={[
-                      'w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold border-2 shrink-0',
-                      enPedido
-                        ? 'bg-emerald-500 border-emerald-500 text-white'
-                        : 'bg-white dark:bg-zinc-800 border-zinc-300 dark:border-white/20 text-zinc-400',
-                    ].join(' ')}
-                    >
-                      {enPedido ? '✓' : '○'}
-                    </div>
-                    <span className="text-[10px] font-semibold text-zinc-700 dark:text-zinc-300 leading-tight">{pItem.labelCorto}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mx-3 mb-3 px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30">
-              {(() => {
-                const aliItem = todosLosItemsPOS.find(it => it.id === 'tc_ali_completa') ||
-                  todosLosItemsPOS.find(it => it.categoryMapped === 'ALINEACION' && it.subcategoryMapped === 'COMPLETA');
-                return (
-                  <p className="text-xs text-blue-700 dark:text-blue-300 font-semibold">
-                    Sugiere: + {aliItem ? aliItem.keyword : 'Alineación 3D'} ({aliItem ? '$' + aliItem.price.toFixed(2) : '$15.00'})
-                  </p>
-                );
-              })()}
+          {/* ===================================================================
+              TARJETA 1: RECEPCIÓN (TECNICENTRO)
+              =================================================================== */}
+          <div className="lg:col-span-5 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs flex flex-col justify-between min-h-[220px]">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
+                  Recepción
+                </h2>
+              </div>
+
+              {/* Detección de vehículo y tiempo estimado */}
+              <div className="mt-2 p-3 rounded-xl bg-zinc-50 dark:bg-black/20 border border-zinc-200/70 dark:border-white/5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl sm:text-3xl shrink-0 leading-none">
+                      {vehiculoTipo === "SUV" ? "🚙" : vehiculoTipo === "Camión" ? "🚚" : "🚗"}
+                    </span>
+                    <span className="text-sm sm:text-base font-bold font-mono px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300">
+                      ⏱️ {tiempoEstimadoTecnicentro > 0 ? `${tiempoEstimadoTecnicentro} min` : "30 min"}
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-white/5 px-2.5 py-1 rounded-full border border-zinc-200/60 dark:border-white/10">
+                    Rin {rinLabel}
+                  </span>
+                </div>
+              </div>
+
+              {/* Botón rápido Repetir último servicio */}
+              <button
+                type="button"
+                onClick={handleRepetirUltimoTecnicentro}
+                className="mt-3 w-full h-10 rounded-xl bg-blue-50/70 dark:bg-blue-500/10 hover:bg-blue-100/70 dark:hover:bg-blue-500/20 border border-blue-200/60 dark:border-blue-500/20 text-blue-800 dark:text-blue-200 text-xs sm:text-sm font-bold flex items-center justify-between px-3 cursor-pointer transition-all active:scale-98 shadow-2xs"
+                title="Consultar historial y repetir servicios previos de Tecnicentro"
+              >
+                <span className="flex items-center gap-1.5">
+                  <span>⚡</span>
+                  <span>Repetir último</span>
+                </span>
+                <span className="text-xs font-black text-blue-600 dark:text-blue-400">→</span>
+              </button>
             </div>
           </div>
 
@@ -1472,164 +1537,202 @@ export default function ModuloTecnicentroCatalogo({
                 );
               })}
             </div>
-            {sugerenciaSemaforoBento && (
-              <div
-                className="mx-3 mb-3 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 cursor-pointer active:scale-[0.98] transition-all"
-                onClick={() => sugerenciaSemaforoBento.item && void handleAjustarCantidadItem(sugerenciaSemaforoBento.item as any, 1)}
-              >
-                <p className="text-xs text-amber-700 dark:text-amber-300 font-semibold">
-                  Sugiere: + {sugerenciaSemaforoBento.label} (${sugerenciaSemaforoBento.price.toFixed(2)})
-                </p>
-              </div>
-            )}
           </div>
         </div>
 
         {/* ===== CONTENEDOR DE FILTROS, BÚSQUEDA Y CATÁLOGO DEBAJO DE SEMÁFORO (CUBRE TODA LA PÁGINA) ===== */}
         <div className="w-full rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 shadow-2xs p-3.5 sm:p-4 mt-3 space-y-3">
-          {/* Fila de Filtros y Buscador */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-            {/* Pills de filtro */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {/* Pill Categoria */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => { setMenuCatAbierto(p => !p); setMenuSubcatAbierto(false); setMenuRinAbierto(false); }}
-                  className="h-8 px-3 rounded-full border border-zinc-300 dark:border-white/20 bg-zinc-50 dark:bg-white/[0.05] text-xs font-semibold text-zinc-700 dark:text-zinc-200 flex items-center gap-1 cursor-pointer hover:border-blue-400 transition-all"
-                >
-                  {labelCatBento} <span className="text-[10px] opacity-60">▾</span>
-                </button>
-                {menuCatAbierto && (
-                  <div className="absolute left-0 top-full mt-1 z-50 min-w-[145px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/15 rounded-xl shadow-xl overflow-hidden">
-                    {TECNICENTRO_CATEGORIES.map(cat => (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => { setCategoriaActivaId(cat.id); setSubcategoriaActivaId('TODOS'); setMenuCatAbierto(false); }}
-                        className={['w-full text-left px-3 py-2 text-xs font-semibold flex items-center gap-2 hover:bg-zinc-50 dark:hover:bg-white/10 transition-all', cat.id === categoriaActivaId ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10' : 'text-zinc-700 dark:text-zinc-300'].join(' ')}
-                      >
-                        <span>{cat.icon}</span><span>{cat.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Pill Subcategoria */}
-              {categoriaActivaId !== 'TODO' && (() => {
-                const catDef = TECNICENTRO_CATEGORIES.find(c => c.id === categoriaActivaId);
-                if (!catDef || catDef.subcategories.length === 0) return null;
-                return (
-                  <div className="relative">
+          {/* Fila 1: Píldoras de Filtro estilo Bento */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Píldora 1: Categoría */}
+            <div className="relative flex-1 min-w-[110px]">
+              <button
+                type="button"
+                onClick={() => { setMenuCatAbierto(p => !p); setMenuSubcatAbierto(false); setMenuRinAbierto(false); }}
+                className="w-full h-9 px-2.5 rounded-xl border border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-400/40 dark:bg-blue-500/15 dark:text-blue-100 text-xs font-bold flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
+              >
+                <span className="truncate">{labelCatBento}</span>
+                <span className="text-[10px] opacity-75">▾</span>
+              </button>
+              {menuCatAbierto && (
+                <div className="absolute top-11 left-0 z-40 w-44 rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5">
+                  {TECNICENTRO_CATEGORIES.map(cat => (
                     <button
+                      key={cat.id}
                       type="button"
-                      onClick={() => { setMenuSubcatAbierto(p => !p); setMenuCatAbierto(false); setMenuRinAbierto(false); }}
-                      className="h-8 px-3 rounded-full border border-zinc-300 dark:border-white/20 bg-zinc-50 dark:bg-white/[0.05] text-xs font-semibold text-zinc-700 dark:text-zinc-200 flex items-center gap-1 cursor-pointer hover:border-blue-400 transition-all"
+                      onClick={() => { setCategoriaActivaId(cat.id); setSubcategoriaActivaId('TODOS'); setMenuCatAbierto(false); }}
+                      className={['w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors', cat.id === categoriaActivaId ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 font-bold' : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10'].join(' ')}
                     >
-                      {labelSubcatBento} <span className="text-[10px] opacity-60">▾</span>
+                      <span>{cat.icon}</span><span>{cat.label}</span>
                     </button>
-                    {menuSubcatAbierto && (
-                      <div className="absolute left-0 top-full mt-1 z-50 min-w-[145px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/15 rounded-xl shadow-xl overflow-hidden">
-                        {[{ id: 'TODOS', label: 'Todos', icon: '✨' }, ...catDef.subcategories].map(sub => (
-                          <button
-                            key={sub.id}
-                            type="button"
-                            onClick={() => { setSubcategoriaActivaId(sub.id); setMenuSubcatAbierto(false); }}
-                            className={['w-full text-left px-3 py-2 text-xs font-semibold flex items-center gap-2 hover:bg-zinc-50 dark:hover:bg-white/10 transition-all', sub.id === subcategoriaActivaId ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10' : 'text-zinc-700 dark:text-zinc-300'].join(' ')}
-                          >
-                            <span>{(sub as any).icon || '•'}</span><span>{sub.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* Pill Rin (solo LLANTAS) */}
-              {categoriaActivaId === 'LLANTAS' && (
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => { setMenuRinAbierto(p => !p); setMenuCatAbierto(false); setMenuSubcatAbierto(false); }}
-                    className="h-8 px-3 rounded-full border border-zinc-300 dark:border-white/20 bg-zinc-50 dark:bg-white/[0.05] text-xs font-semibold text-zinc-700 dark:text-zinc-200 flex items-center gap-1 cursor-pointer hover:border-blue-400 transition-all"
-                  >
-                    🛞 {rinActivo} <span className="text-[10px] opacity-60">▾</span>
-                  </button>
-                  {menuRinAbierto && (
-                    <div className="absolute left-0 top-full mt-1 z-50 min-w-[100px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/15 rounded-xl shadow-xl overflow-hidden">
-                      {RINES_TECNICENTRO.map(r => (
-                        <button
-                          key={r.id}
-                          type="button"
-                          onClick={() => { setRinActivo(r.id); setMenuRinAbierto(false); }}
-                          className={['w-full text-left px-3 py-2 text-xs font-semibold hover:bg-zinc-50 dark:hover:bg-white/10 transition-all', r.id === rinActivo ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10' : 'text-zinc-700 dark:text-zinc-300'].join(' ')}
-                        >
-                          {r.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  ))}
                 </div>
               )}
             </div>
 
-            {/* Busqueda */}
-            <div className="relative flex-1 sm:max-w-xs">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
-              <input
-                type="text"
-                value={busquedaTec}
-                onChange={e => setBusquedaTec(e.target.value)}
-                placeholder="Buscar..."
-                className="w-full h-8 pl-8 pr-7 rounded-xl bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 focus:outline-none focus:ring-1 focus:ring-blue-400 text-xs text-zinc-900 dark:text-white placeholder-zinc-400"
-              />
-              {busquedaTec && (
-                <button type="button" onClick={() => setBusquedaTec('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 text-xs cursor-pointer">✕</button>
+            {/* Píldora 2: Subcategoría */}
+            <div className="relative flex-1 min-w-[110px]">
+              <button
+                type="button"
+                onClick={() => { setMenuSubcatAbierto(p => !p); setMenuCatAbierto(false); setMenuRinAbierto(false); }}
+                className="w-full h-9 px-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200 text-xs font-bold flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
+              >
+                <span className="truncate">{labelSubcatBento || '✨ Todos'}</span>
+                <span className="text-[10px] opacity-75">▾</span>
+              </button>
+              {menuSubcatAbierto && (
+                <div className="absolute top-11 left-0 z-40 w-44 rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5">
+                  {[{ id: 'TODOS', label: 'Todos', icon: '✨' }, ...((TECNICENTRO_CATEGORIES.find(c => c.id === categoriaActivaId)?.subcategories) || [])].map(sub => (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      onClick={() => { setSubcategoriaActivaId(sub.id); setMenuSubcatAbierto(false); }}
+                      className={['w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors', sub.id === subcategoriaActivaId ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 font-bold' : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10'].join(' ')}
+                    >
+                      <span>{(sub as any).icon || '•'}</span><span>{sub.label}</span>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
+
+            {/* Píldora 3: Rin / Aro */}
+            <div className="relative flex-1 min-w-[95px]">
+              <button
+                type="button"
+                onClick={() => { setMenuRinAbierto(p => !p); setMenuCatAbierto(false); setMenuSubcatAbierto(false); }}
+                className="w-full h-9 px-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200 text-xs font-bold flex items-center justify-between gap-1 cursor-pointer transition-all active:scale-95 shadow-2xs truncate"
+              >
+                <span className="truncate">🛞 {rinActivo}</span>
+                <span className="text-[10px] opacity-75">▾</span>
+              </button>
+              {menuRinAbierto && (
+                <div className="absolute top-11 right-0 z-40 w-36 rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5">
+                  {RINES_TECNICENTRO.map(r => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => { setRinActivo(r.id); setMenuRinAbierto(false); }}
+                      className={['w-full h-8 px-2.5 rounded-lg text-left text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors', r.id === rinActivo ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 font-bold' : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10'].join(' ')}
+                    >
+                      <span>🛞</span><span>{r.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Fila 2: Buscador ancho completo */}
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
+            <input
+              type="text"
+              value={busquedaTec}
+              onChange={e => setBusquedaTec(e.target.value)}
+              placeholder="Buscar..."
+              className="w-full h-9 pl-8 pr-7 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 outline-none focus:ring-1 focus:ring-blue-400 shadow-2xs"
+            />
+            {busquedaTec && (
+              <button
+                type="button"
+                onClick={() => setBusquedaTec('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 text-xs cursor-pointer"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
           {/* Grid de productos a ancho completo cubriendo toda la pantalla */}
           <div className="w-full">
             {productosBentoFiltrados.length === 0 ? (
-              <div className="py-8 text-center text-zinc-400 text-xs">Sin resultados</div>
+              <div className="py-12 text-center text-zinc-400 space-y-1.5">
+                <span className="text-3xl block">🛞</span>
+                <p className="text-xs sm:text-sm font-semibold">Sin resultados</p>
+              </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 sm:gap-3">
-                {productosBentoFiltrados.map(item => {
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-3.5">
+                {productosBentoFiltrados.map((item) => {
                   const cant = obtenerCantidadEnPedido(item);
                   const enPedido = cant > 0;
+                  const estaAgotado = (item as any).stock !== undefined && (item as any).stock !== null ? Number((item as any).stock) <= 0 : false;
+
                   return (
                     <div
                       key={item.id + item.keyword}
-                      onClick={() => void handleAjustarCantidadItem(item as any, 1)}
-                      className={[
-                        'relative flex flex-col items-center p-2.5 rounded-xl border cursor-pointer active:scale-[0.97] transition-all select-none',
+                      onClick={() => {
+                        if (estaAgotado) {
+                          mostrarToast?.(`El producto o servicio ${item.keyword} está agotado`, 'err');
+                          return;
+                        }
+                        void handleAjustarCantidadItem(item as any, 1);
+                      }}
+                      className={`group relative flex flex-col items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none active:scale-[0.98] min-h-[175px] shadow-2xs ${
                         enPedido
-                          ? 'bg-blue-50 dark:bg-blue-500/[0.08] border-blue-300 dark:border-blue-400/50 ring-1 ring-blue-300/50'
-                          : 'bg-zinc-50 dark:bg-white/[0.03] border-zinc-200 dark:border-white/10 hover:border-blue-200',
-                      ].join(' ')}
+                          ? "bg-blue-50/70 dark:bg-blue-500/10 border-blue-400 dark:border-blue-400/50 ring-2 ring-blue-300/60 dark:ring-blue-400/30 shadow-xs"
+                          : estaAgotado
+                          ? "bg-zinc-50/70 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 opacity-75"
+                          : "bg-white hover:bg-zinc-50 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/40"
+                      }`}
                     >
-                      {enPedido && (
-                        <>
-                          <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white z-10">+{cant}</span>
+                      {/* Botón restar "−" e indicador de Stock/Agotado (una sola letra: S en verde, A en rojo) */}
+                      <div className="absolute top-2 left-2 flex items-center gap-1.5 z-10">
+                        {enPedido && (
                           <button
                             type="button"
-                            onClick={e => { e.stopPropagation(); void handleAjustarCantidadItem(item as any, -1); }}
-                            className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-white/20 text-zinc-600 dark:text-zinc-300 text-xs font-bold flex items-center justify-center cursor-pointer hover:bg-rose-50 hover:text-rose-600 z-10"
-                          >−</button>
-                        </>
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleAjustarCantidadItem(item as any, -1);
+                            }}
+                            className="w-7 h-7 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 text-sm font-bold flex items-center justify-center shadow-xs active:scale-90 transition-all cursor-pointer"
+                            title="Restar 1"
+                          >
+                            −
+                          </button>
+                        )}
+                        <span
+                          className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black border select-none ${
+                            estaAgotado
+                              ? "bg-rose-50 text-rose-600 border-rose-300 dark:bg-rose-500/20 dark:text-rose-400 dark:border-rose-500/40"
+                              : "bg-emerald-50 text-emerald-600 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/40"
+                          }`}
+                          title={estaAgotado ? "Agotado (Sin stock)" : "Stock disponible"}
+                        >
+                          {estaAgotado ? "A" : "S"}
+                        </span>
+                      </div>
+
+                      {/* Contador verde arriba a la derecha */}
+                      {enPedido && (
+                        <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-bold tabular-nums bg-emerald-500 text-white shadow-xs z-10">
+                          +{cant}
+                        </span>
                       )}
-                      <div className="w-14 h-14 rounded-lg overflow-hidden flex items-center justify-center bg-zinc-100 dark:bg-black/20 border border-zinc-200/60 dark:border-white/5 mb-1.5">
+
+                      {/* Ilustración / Imagen */}
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center shrink-0 mt-1">
                         {item.imageUrl ? (
-                          <img src={item.imageUrl} alt={item.keyword} className="w-full h-full object-cover" loading="lazy" />
+                          <img
+                            src={item.imageUrl}
+                            alt={item.keyword}
+                            className="w-full h-full object-contain rounded-xl"
+                            loading="lazy"
+                          />
                         ) : (
-                          <span className="text-2xl leading-none">{item.itemIcon}</span>
+                          <span className="text-3xl sm:text-4xl leading-none">{item.itemIcon}</span>
                         )}
                       </div>
-                      <span className="text-[11px] font-black uppercase tracking-wide text-zinc-900 dark:text-white text-center leading-tight truncate w-full">{item.keyword}</span>
-                      <span className="text-[11px] font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">${item.price.toFixed(2)}</span>
+
+                      {/* Palabra clave en letra normal sin negrita */}
+                      <div className="w-full text-center mt-2 px-1">
+                        <span className="text-sm sm:text-base font-normal tracking-tight text-zinc-900 dark:text-white block truncate">
+                          {item.keyword}
+                        </span>
+                        <span className="text-xs sm:text-sm font-normal font-mono text-zinc-700 dark:text-zinc-300 mt-0.5 block tabular-nums">
+                          ${item.price.toFixed(2)}
+                        </span>
+                      </div>
                     </div>
                   );
                 })}

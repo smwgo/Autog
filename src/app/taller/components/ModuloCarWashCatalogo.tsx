@@ -1956,38 +1956,57 @@ export default function ModuloCarWashCatalogo({
             <p className="text-xs sm:text-sm font-semibold">No se encontraron servicios ni productos</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-3.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-3.5">
             {itemsFiltrados.map((item) => {
               const qtyEnPedido = obtenerCantidadEnPedido(item);
               const estaEnPedido = qtyEnPedido > 0;
+              const estaAgotado = (item as any).stock !== undefined && (item as any).stock !== null ? Number((item as any).stock) <= 0 : false;
 
               return (
                 <div
                   key={`${item.kind}-${item.id}`}
                   onClick={() => {
+                    if (estaAgotado) {
+                      mostrarToast?.(`El servicio ${item.keyword} está agotado (sin disponibilidad)`, 'err');
+                      return;
+                    }
                     void handleAjustarCantidadItem(item, 1);
                   }}
                   className={`group relative flex flex-col items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none active:scale-[0.98] min-h-[175px] shadow-2xs ${
                     estaEnPedido
                       ? "bg-blue-50/70 dark:bg-blue-500/10 border-blue-400 dark:border-blue-400/50 ring-2 ring-blue-300/60 dark:ring-blue-400/30 shadow-xs"
+                      : estaAgotado
+                      ? "bg-zinc-50/70 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 opacity-75"
                       : "bg-white hover:bg-zinc-50 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/40"
                   }`}
                 >
-                  {/* Botón restar "−" arriba a la izquierda */}
-                  {estaEnPedido && (
-                    <button
-                      type="button"
-                      aria-label="Restar 1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void handleAjustarCantidadItem(item, -1);
-                      }}
-                      className="absolute top-2 left-2 w-7 h-7 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 text-sm font-bold flex items-center justify-center shadow-xs active:scale-90 transition-all z-10 cursor-pointer"
-                      title="Restar 1"
+                  {/* Botón restar "−" e indicador de Stock/Agotado (una sola letra: S en verde, A en rojo) */}
+                  <div className="absolute top-2 left-2 flex items-center gap-1.5 z-10">
+                    {estaEnPedido && (
+                      <button
+                        type="button"
+                        aria-label="Restar 1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleAjustarCantidadItem(item, -1);
+                        }}
+                        className="w-7 h-7 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 text-sm font-bold flex items-center justify-center shadow-xs active:scale-90 transition-all cursor-pointer"
+                        title="Restar 1"
+                      >
+                        −
+                      </button>
+                    )}
+                    <span
+                      className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black border select-none ${
+                        estaAgotado
+                          ? "bg-rose-50 text-rose-600 border-rose-300 dark:bg-rose-500/20 dark:text-rose-400 dark:border-rose-500/40"
+                          : "bg-emerald-50 text-emerald-600 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/40"
+                      }`}
+                      title={estaAgotado ? "Agotado (Sin disponibilidad)" : "Stock disponible"}
                     >
-                      −
-                    </button>
-                  )}
+                      {estaAgotado ? "A" : "S"}
+                    </span>
+                  </div>
 
                   {/* Contador verde arriba a la derecha */}
                   {estaEnPedido && (
@@ -2010,12 +2029,12 @@ export default function ModuloCarWashCatalogo({
                     )}
                   </div>
 
-                  {/* Palabra clave en letra grande y negrita */}
+                  {/* Palabra clave en letra normal sin negrita */}
                   <div className="w-full text-center mt-2 px-1">
-                    <span className="text-sm sm:text-base font-black tracking-tight text-zinc-900 dark:text-white uppercase block truncate">
+                    <span className="text-sm sm:text-base font-normal tracking-tight text-zinc-900 dark:text-white block truncate">
                       {item.keyword}
                     </span>
-                    <span className="text-xs sm:text-sm font-bold font-mono text-zinc-700 dark:text-zinc-300 mt-0.5 block tabular-nums">
+                    <span className="text-xs sm:text-sm font-normal font-mono text-zinc-700 dark:text-zinc-300 mt-0.5 block tabular-nums">
                       ${item.price.toFixed(2)}
                     </span>
                   </div>
