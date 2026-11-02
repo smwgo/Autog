@@ -839,9 +839,6 @@ export default function PaginaDetallePropuesta() {
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
                 Propuesta
               </h1>
-              <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20 shrink-0 font-mono">
-                #{limpiarNumeroOrden(orden.orderNumber)}
-              </span>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
