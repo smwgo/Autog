@@ -41,13 +41,29 @@ async function executeDbOperation() {
   };
 }
 
+let columnTipoEnsured = false;
+async function ensureColumnTipo() {
+  if (columnTipoEnsured) return;
+  try {
+    await prisma.$executeRawUnsafe(
+      `ALTER TABLE "WorkshopService" ADD COLUMN IF NOT EXISTS "tipo" TEXT DEFAULT 'Taller'`
+    );
+    columnTipoEnsured = true;
+  } catch (err) {
+    console.warn("No se pudo agregar columna tipo a WorkshopService:", err);
+  }
+}
+
 // GET: Listar servicios REALES directamente desde Neon
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const categoria = searchParams.get("categoria");
     const busqueda = searchParams.get("busqueda");
+    const modulo = (searchParams.get("modulo") || searchParams.get("tipo") || "").trim().toLowerCase();
     const soloActivos = searchParams.get("activos") !== "false";
+
+    await ensureColumnTipo();
 
     return await withRetry(async () => {
       const db = await executeDbOperation();
@@ -77,7 +93,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({
           success: true,
-          servicios,
+          servicios: servicios.map((s: any) => ({ ...s, tipo: s.tipo || "Taller" })),
           categories,
           total: servicios.length,
           connectedToNeon: true,
@@ -94,6 +110,11 @@ export async function GET(request: Request) {
           query += ` AND "category" = $${pIdx++}`;
           params.push(categoria);
         }
+        if (modulo) {
+          query += ` AND ("tipo" ILIKE $${pIdx} OR "tipo" ILIKE '%todos%')`;
+          params.push(`%${modulo}%`);
+          pIdx++;
+        }
         if (busqueda) {
           query += ` AND ("name" ILIKE $${pIdx} OR "code" ILIKE $${pIdx} OR "description" ILIKE $${pIdx})`;
           params.push(`%${busqueda}%`);
@@ -102,7 +123,11 @@ export async function GET(request: Request) {
 
         query += ' ORDER BY "category" ASC, "name" ASC';
 
-        const servicios: any = await prisma.$queryRawUnsafe(query, ...params);
+        const rawServicios: any = await prisma.$queryRawUnsafe(query, ...params);
+        const servicios = (rawServicios || []).map((s: any) => ({
+          ...s,
+          tipo: s.tipo || "Taller",
+        }));
 
         const catRows: any = await prisma.$queryRawUnsafe('SELECT DISTINCT "category" FROM "WorkshopService" ORDER BY "category" ASC');
         const categories = Array.from(new Set(catRows.map((r: any) => r.category).filter(Boolean)));
@@ -136,7 +161,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { code, name, category, price, estimatedMinutes, description, requiresBay, active } = body;
+    const { code, name, category, tipo = "Taller", price, estimatedMinutes, description, requiresBay, active } = body;
 
     if (!name || price === undefined || price === null || price === "") {
       return NextResponse.json(
@@ -144,6 +169,10 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    await ensureColumnTipo();
+
+    const finalTipo = Array.isArray(tipo) ? tipo.join(", ") : (tipo ? String(tipo).trim() : "Taller");
 
     const generatedCode =
       code?.trim().toUpperCase() ||
@@ -157,6 +186,7 @@ export async function POST(request: Request) {
           code: generatedCode,
           name: name.trim(),
           category: category?.trim() || "General",
+          tipo: finalTipo,
           price: parseFloat(price),
           estimatedMinutes: parseInt(estimatedMinutes) || 30,
           description: description?.trim() || null,
@@ -173,12 +203,13 @@ export async function POST(request: Request) {
     } else {
       const id = generateId();
       await prisma.$executeRawUnsafe(
-        `INSERT INTO "WorkshopService" ("id", "code", "name", "category", "price", "estimatedMinutes", "description", "requiresBay", "active", "createdAt", "updatedAt")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())`,
+        `INSERT INTO "WorkshopService" ("id", "code", "name", "category", "tipo", "price", "estimatedMinutes", "description", "requiresBay", "active", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())`,
         id,
         generatedCode,
         name.trim(),
         category?.trim() || "General",
+        finalTipo,
         parseFloat(price),
         parseInt(estimatedMinutes) || 30,
         description?.trim() || null,
@@ -207,7 +238,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, name, category, price, estimatedMinutes, description, requiresBay, active, code } = body;
+    const { id, name, category, tipo, price, estimatedMinutes, description, requiresBay, active, code } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -216,6 +247,12 @@ export async function PUT(request: Request) {
       );
     }
 
+    await ensureColumnTipo();
+
+    const finalTipo = tipo !== undefined
+      ? (Array.isArray(tipo) ? tipo.join(", ") : (tipo ? String(tipo).trim() : "Taller"))
+      : undefined;
+
     const db = await executeDbOperation();
 
     if (db.type === "prisma") {
@@ -223,6 +260,7 @@ export async function PUT(request: Request) {
       if (code !== undefined) dataToUpdate.code = code.trim().toUpperCase();
       if (name !== undefined) dataToUpdate.name = name.trim();
       if (category !== undefined) dataToUpdate.category = category.trim();
+      if (finalTipo !== undefined) dataToUpdate.tipo = finalTipo;
       if (price !== undefined) dataToUpdate.price = parseFloat(price);
       if (estimatedMinutes !== undefined) dataToUpdate.estimatedMinutes = parseInt(estimatedMinutes);
       if (description !== undefined) dataToUpdate.description = description?.trim() || null;
@@ -245,17 +283,19 @@ export async function PUT(request: Request) {
          SET "code" = COALESCE($2, "code"),
              "name" = COALESCE($3, "name"),
              "category" = COALESCE($4, "category"),
-             "price" = COALESCE($5, "price"),
-             "estimatedMinutes" = COALESCE($6, "estimatedMinutes"),
-             "description" = $7,
-             "requiresBay" = COALESCE($8, "requiresBay"),
-             "active" = COALESCE($9, "active"),
+             "tipo" = COALESCE($5, "tipo"),
+             "price" = COALESCE($6, "price"),
+             "estimatedMinutes" = COALESCE($7, "estimatedMinutes"),
+             "description" = $8,
+             "requiresBay" = COALESCE($9, "requiresBay"),
+             "active" = COALESCE($10, "active"),
              "updatedAt" = NOW()
          WHERE id = $1`,
         id,
         code ? code.trim().toUpperCase() : null,
         name ? name.trim() : null,
         category ? category.trim() : null,
+        finalTipo !== undefined ? finalTipo : null,
         price !== undefined ? parseFloat(price) : null,
         estimatedMinutes !== undefined ? parseInt(estimatedMinutes) : null,
         description !== undefined ? description?.trim() : null,

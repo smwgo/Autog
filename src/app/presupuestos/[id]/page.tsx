@@ -82,6 +82,11 @@ interface OrdenDetalleCompleta {
   photos?: string[];
   evidencePhotos?: string[];
   receptionPhotos?: string[];
+  clientPhoto?: string | null;
+  vehiclePhoto?: string | null;
+  customerId?: string | null;
+  vehicleId?: string | null;
+  customerType?: string | null;
 }
 
 function deducirEspecialidad(nombre: string, categoria: string = ""): EspecialidadTipo {
@@ -159,6 +164,8 @@ export default function PaginaDetallePropuesta() {
   const [esAprobadoLocal, setEsAprobadoLocal] = useState<boolean | null>(null);
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const [subiendoFotoCliente, setSubiendoFotoCliente] = useState(false);
+  const [subiendoFotoVehiculoPrincipal, setSubiendoFotoVehiculoPrincipal] = useState(false);
 
   // Formulario rápido para nuevo repuesto
   const [nuevoNombre, setNuevoNombre] = useState("");
@@ -483,6 +490,104 @@ export default function PaginaDetallePropuesta() {
     }
   };
 
+  // Subir foto de perfil de la Persona / Cliente
+  const handleSubirFotoCliente = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !orden) return;
+    setSubiendoFotoCliente(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "clientes");
+      formData.append("tipo", "image");
+      formData.append("orderId", orden.id);
+      formData.append("clientIdDoc", orden.clientIdDoc || "");
+
+      const res = await fetch("/api/storage/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data && data.success && data.url) {
+        const photoUrl = data.url;
+        await fetch("/api/presupuestos/actualizar-foto", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "client",
+            photoUrl,
+            clientIdDoc: orden.clientIdDoc,
+            customerId: orden.customerId,
+            clientName: orden.client,
+            orderId: orden.id,
+          }),
+        });
+        setOrden((prev) => (prev ? { ...prev, clientPhoto: photoUrl } : prev));
+        mostrarToast("Foto de perfil del cliente actualizada con éxito.");
+      } else {
+        mostrarToast("No se pudo subir la foto del cliente.", "err");
+      }
+    } catch (err: any) {
+      mostrarToast("Error al subir foto de cliente: " + (err.message || ""), "err");
+    } finally {
+      setSubiendoFotoCliente(false);
+      e.target.value = "";
+    }
+  };
+
+  // Subir foto de perfil del Vehículo (foto principal)
+  const handleSubirFotoVehiculoPrincipal = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !orden) return;
+    setSubiendoFotoVehiculoPrincipal(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "vehiculos");
+      formData.append("tipo", "image");
+      formData.append("orderId", orden.id);
+      formData.append("orderNumber", orden.orderNumber);
+      formData.append("plate", orden.plate);
+
+      const res = await fetch("/api/storage/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data && data.success && data.url) {
+        const photoUrl = data.url;
+        await fetch("/api/presupuestos/actualizar-foto", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "vehicle",
+            photoUrl,
+            plate: orden.plate,
+            vehicleId: orden.vehicleId,
+            orderId: orden.id,
+          }),
+        });
+        setOrden((prev) => {
+          if (!prev) return prev;
+          const prevPhotos = prev.photos || [];
+          return {
+            ...prev,
+            vehiclePhoto: photoUrl,
+            photos: prevPhotos.includes(photoUrl) ? prevPhotos : [photoUrl, ...prevPhotos],
+          };
+        });
+        mostrarToast("Foto de perfil del vehículo actualizada con éxito.");
+      } else {
+        mostrarToast("No se pudo subir la foto del vehículo.", "err");
+      }
+    } catch (err: any) {
+      mostrarToast("Error al subir foto del vehículo: " + (err.message || ""), "err");
+    } finally {
+      setSubiendoFotoVehiculoPrincipal(false);
+      e.target.value = "";
+    }
+  };
+
   // Guardar Cambios en Neon PostgreSQL
   const handleGuardarBorrador = async () => {
     if (!orden) return;
@@ -699,7 +804,7 @@ export default function PaginaDetallePropuesta() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-100 dark:bg-[#08080a] font-sans pb-36 text-zinc-900 dark:text-white selection:bg-blue-500/30">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-12 text-zinc-900 dark:text-white selection:bg-blue-500/30">
       {/* Toast Notificaciones */}
       {toast && (
         <div
@@ -714,86 +819,70 @@ export default function PaginaDetallePropuesta() {
         </div>
       )}
 
-      {/* CABECERA Y BARRA DE ACCIONES FIJAS SUPERIORES (NO SE IMPRIME, INMÓVIL AL SCROLL) */}
-      <div className="print:hidden sticky top-0 z-40 bg-white dark:bg-[#08080a] shadow-xs">
+      {/* CABECERA ESTÁNDAR Y BARRA DE ACCIONES SUPERIORES (SIN FONDO BLANCO) */}
+      <div className="print:hidden">
         <Header />
 
-        {/* Barra de Herramientas y Acciones Superior */}
-        <section className="border-b border-zinc-200 dark:border-white/10 bg-white/95 dark:bg-[#0c0c0e]/95 backdrop-blur-md">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-start sm:items-center gap-3 min-w-0">
+        {/* Barra de Título Propuesta y Acciones */}
+        <section className="border-b border-zinc-200/80 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
               <Link
                 href="/presupuestos"
-                title="Volver al panel de presupuestos"
-                className="w-10 h-10 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 flex items-center justify-center text-zinc-600 dark:text-zinc-300 transition-all cursor-pointer active:scale-95 shrink-0 mt-0.5 sm:mt-0"
+                title="Volver a Propuestas"
+                className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-xs active:scale-95 group shrink-0"
               >
-                ←
+                <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
               </Link>
-
-              <div className="min-w-0 space-y-0.5">
-                {/* 1. Orden de Servicio */}
-                <div className="flex items-center gap-1.5 text-xs">
-                  <span className="text-zinc-500 dark:text-zinc-400 font-semibold">Orden de Servicio:</span>
-                  <span className="font-mono font-bold px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
-                    #{limpiarNumeroOrden(orden.orderNumber)}
-                  </span>
-                </div>
-
-                {/* 2. Placa */}
-                <div className="flex items-center gap-1.5 text-xs">
-                  <span className="text-zinc-500 dark:text-zinc-400 font-semibold">Placa:</span>
-                  <span className="font-mono font-black uppercase px-2 py-0.5 rounded-md bg-zinc-200 dark:bg-white/10 text-zinc-800 dark:text-white border border-zinc-300 dark:border-white/10">
-                    {orden.plate}
-                  </span>
-                </div>
-
-                {/* 3. Vehículo y Cliente */}
-                <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300 flex-wrap">
-                  <span>
-                    Vehículo: <strong className="font-bold text-zinc-900 dark:text-white">{orden.vehicle}</strong>
-                  </span>
-                  <span className="text-zinc-400 dark:text-zinc-500">•</span>
-                  <span>
-                    Cliente: <strong className="font-bold text-zinc-900 dark:text-white">{orden.client}</strong>
-                  </span>
-                </div>
-              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
+                Propuesta
+              </h1>
+              <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20 shrink-0 font-mono">
+                #{limpiarNumeroOrden(orden.orderNumber)}
+              </span>
             </div>
 
-            <div className="flex items-center gap-2 ml-auto shrink-0">
+            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+              {/* Botón Imprimir */}
               <button
                 type="button"
                 onClick={handleImprimir}
-                className="w-10 h-10 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-base transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs shrink-0"
+                className="h-10 px-3.5 sm:px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-200 active:scale-95 font-semibold text-xs sm:text-sm shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 title="Imprimir Proforma"
                 aria-label="Imprimir Proforma"
               >
                 <span>🖨️</span>
+                <span className="hidden sm:inline">Imprimir</span>
               </button>
 
+              {/* Botón WhatsApp Catálogo */}
               <button
                 type="button"
                 onClick={() => setModalWhatsApp(true)}
-                className="w-10 h-10 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-base transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs shrink-0"
+                className="h-10 px-3.5 sm:px-4 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 font-semibold text-xs sm:text-sm transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                 title="Catálogo Proveedores WhatsApp"
                 aria-label="Catálogo Proveedores WhatsApp"
               >
                 <span>📲</span>
+                <span className="hidden sm:inline">WhatsApp</span>
               </button>
 
+              {/* Botón Estado Aprobado / Pendiente */}
               <button
                 type="button"
                 disabled={cambiandoEstado}
                 onClick={handleToggleEstado}
-                className={`w-10 h-10 rounded-xl border flex items-center justify-center text-sm font-black shadow-xs shrink-0 transition-all active:scale-95 cursor-pointer disabled:opacity-50 ${
+                className={`h-10 px-3.5 sm:px-4 rounded-xl border flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold shadow-xs shrink-0 transition-all active:scale-95 cursor-pointer disabled:opacity-50 ${
                   esAprobado
                     ? "bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
                     : "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/30 text-amber-600 dark:text-amber-400"
                 }`}
                 title={esAprobado ? "Propuesta Aprobada (clic para poner En Espera)" : "Propuesta En Espera (clic para Aprobar)"}
-                aria-label={esAprobado ? "Estado: Aprobado" : "Estado: En Espera"}
               >
                 <span>{cambiandoEstado ? "..." : (esAprobado ? "✓" : "⏳")}</span>
+                <span>{esAprobado ? "Aprobado" : "En Espera"}</span>
               </button>
             </div>
           </div>
@@ -853,45 +942,156 @@ export default function PaginaDetallePropuesta() {
             </div>
           </div>
 
-          {/* FICHA TÉCNICA DEL CLIENTE Y VEHÍCULO (DATOS ORDENADOS) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Cuadro Cliente */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-white/5">
-                <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <span>👤</span>
-                  <span>Datos del Cliente</span>
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
-                  Titular
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#111113] border border-zinc-200/80 dark:border-white/10 flex flex-col justify-between min-h-[58px] shadow-2xs">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Cliente / Razón Social</span>
-                  <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate mt-0.5" title={orden.client}>{orden.client}</span>
+          {/* FICHA TÉCNICA REDISEÑADA: DATOS DEL CLIENTE Y VEHÍCULO CON FOTOS DE PERFIL */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+            {/* 1. TARJETA PERFIL DEL CLIENTE */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/90 dark:border-white/10 shadow-xs flex flex-col justify-between space-y-4">
+              <div>
+                {/* Cabecera Tarjeta Cliente */}
+                <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-white/5">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-sm">
+                      👤
+                    </span>
+                    <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+                      Datos del Cliente
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      Titular
+                    </span>
+                    <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400">
+                      {orden.customerType || "Personal"}
+                    </span>
+                  </div>
                 </div>
-                <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#111113] border border-zinc-200/80 dark:border-white/10 flex flex-col justify-between min-h-[58px] shadow-2xs">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Cédula / RUC</span>
-                  <span className="text-xs sm:text-sm font-mono font-bold text-zinc-800 dark:text-zinc-200 mt-0.5">{orden.clientIdDoc || "9999999999"}</span>
+
+                {/* Perfil del Cliente: Foto Avatar + Datos Principales */}
+                <div className="pt-3.5 flex items-center gap-3.5 sm:gap-4">
+                  {/* Foto de Perfil / Avatar */}
+                  <div className="relative group shrink-0">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 border-zinc-200 dark:border-white/15 bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 shadow-sm flex items-center justify-center">
+                      {orden.clientPhoto ? (
+                        <img
+                          src={orden.clientPhoto}
+                          alt={orden.client}
+                          className="w-full h-full object-cover cursor-pointer group-hover:scale-105 transition-transform duration-200"
+                          onClick={() => setFotoZoom(orden.clientPhoto!)}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 text-white font-black text-lg sm:text-xl tracking-wider select-none">
+                          {(() => {
+                            const p = (orden.client || "Cliente").trim().split(/\s+/).filter(Boolean);
+                            return p.length === 1 ? p[0].slice(0, 2).toUpperCase() : (p[0][0] + p[1][0]).toUpperCase();
+                          })()}
+                        </div>
+                      )}
+
+                      {/* Overlay para Cambiar / Ver Foto */}
+                      <label
+                        className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-bold cursor-pointer rounded-2xl print:hidden gap-0.5"
+                        title="Cambiar foto de perfil del cliente"
+                      >
+                        <span>📷</span>
+                        <span>{subiendoFotoCliente ? "Subiendo..." : "Cambiar"}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={subiendoFotoCliente}
+                          onChange={handleSubirFotoCliente}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+
+                    {/* Botón flotante para subir/cambiar foto */}
+                    <label
+                      className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold flex items-center justify-center shadow-md cursor-pointer border-2 border-white dark:border-[#121215] transition-all print:hidden active:scale-90"
+                      title="Subir foto del cliente"
+                    >
+                      <span>+</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={subiendoFotoCliente}
+                        onChange={handleSubirFotoCliente}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  {/* Nombre y detalles de identificación rápida */}
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3
+                        className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white truncate"
+                        title={orden.client}
+                      >
+                        {orden.client}
+                      </h3>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap text-xs text-zinc-500 dark:text-zinc-400">
+                      <span className="font-mono px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-white/5 font-semibold text-zinc-800 dark:text-zinc-200">
+                        {orden.clientIdDoc || "CLI-000000"}
+                      </span>
+
+                      {/* Enlace rápido a WhatsApp si tiene teléfono */}
+                      {orden.clientPhone && orden.clientPhone !== "S/N" ? (
+                        <a
+                          href={`https://wa.me/${orden.clientPhone.replace(/\D/g, "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-medium transition-colors"
+                          title="Contactar al cliente vía WhatsApp"
+                        >
+                          <span>💬</span>
+                          <span className="font-mono">{orden.clientPhone}</span>
+                        </a>
+                      ) : (
+                        <span className="text-zinc-400 font-mono text-[11px]">Tel: S/N</span>
+                      )}
+                    </div>
+
+                    <div className="pt-0.5 flex items-center gap-1.5">
+                      <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                      <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 truncate">
+                        {orden.status || "En Taller"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#111113] border border-zinc-200/80 dark:border-white/10 flex flex-col justify-between min-h-[58px] shadow-2xs">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Teléfono / WhatsApp</span>
-                  <span className="text-xs sm:text-sm font-mono font-medium text-zinc-800 dark:text-zinc-200 mt-0.5">{orden.clientPhone || "S/N"}</span>
-                </div>
-                <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#111113] border border-zinc-200/80 dark:border-white/10 flex flex-col justify-between min-h-[58px] shadow-2xs">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Estado Operativo</span>
-                  <span className="text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400 truncate mt-0.5">{orden.status || "En Taller"}</span>
+
+                {/* Grid con campos estructurados del cliente */}
+                <div className="grid grid-cols-2 gap-2 sm:gap-2.5 pt-3.5">
+                  <div className="p-2.5 rounded-xl bg-zinc-50/80 dark:bg-white/[0.03] border border-zinc-200/70 dark:border-white/5 flex flex-col justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                      Cédula / RUC
+                    </span>
+                    <span className="text-xs sm:text-sm font-mono font-bold text-zinc-800 dark:text-zinc-200 mt-0.5 truncate">
+                      {orden.clientIdDoc || "CLI-151951"}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-zinc-50/80 dark:bg-white/[0.03] border border-zinc-200/70 dark:border-white/5 flex flex-col justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                      Teléfono / WhatsApp
+                    </span>
+                    <span className="text-xs sm:text-sm font-mono font-medium text-zinc-800 dark:text-zinc-200 mt-0.5 truncate">
+                      {orden.clientPhone || "S/N"}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Observaciones / Motivo de Ingreso del Cliente */}
-              <div className="pt-2 border-t border-zinc-200 dark:border-white/5 space-y-1.5">
+              {/* Motivo de Ingreso / Observaciones */}
+              <div className="pt-2 border-t border-zinc-100 dark:border-white/5 space-y-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 flex items-center gap-1">
                   <span>📝</span>
                   <span>Motivo de Ingreso / Observaciones</span>
                 </span>
-                <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#111113] border border-zinc-200/80 dark:border-white/10 min-h-[58px] flex items-center text-xs text-zinc-700 dark:text-zinc-300 shadow-2xs">
+                <div className="p-2.5 rounded-xl bg-zinc-50/80 dark:bg-white/[0.03] border border-zinc-200/70 dark:border-white/5 text-xs text-zinc-700 dark:text-zinc-300">
                   <p className="line-clamp-2">
                     {orden.notes || "Revisión general, mantenimiento preventivo e inspección técnica vehicular."}
                   </p>
@@ -899,51 +1099,144 @@ export default function PaginaDetallePropuesta() {
               </div>
             </div>
 
-            {/* Cuadro Vehículo */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-white/5">
-                <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <span>🚗</span>
-                  <span>Datos del Vehículo</span>
-                </span>
-                <span className="text-xs font-mono font-black px-2 py-0.5 rounded-md bg-amber-400 text-black border border-amber-500 uppercase">
-                  {orden.plate}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#111113] border border-zinc-200/80 dark:border-white/10 flex flex-col justify-between min-h-[58px] shadow-2xs">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Marca / Modelo / Año</span>
-                  <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate mt-0.5" title={orden.vehicle}>{orden.vehicle}</span>
+            {/* 2. TARJETA PERFIL DEL VEHÍCULO */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#121215] border border-zinc-200/90 dark:border-white/10 shadow-xs flex flex-col justify-between space-y-4">
+              <div>
+                {/* Cabecera Tarjeta Vehículo */}
+                <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-white/5">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 text-sm">
+                      🚗
+                    </span>
+                    <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+                      Datos del Vehículo
+                    </span>
+                  </div>
+
+                  {/* Placa estilo matriculación ecuatoriana */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs sm:text-sm font-mono font-black px-2.5 py-0.5 rounded-md bg-amber-400 text-black border border-amber-500 tracking-wider shadow-2xs uppercase">
+                      {orden.plate}
+                    </span>
+                  </div>
                 </div>
-                <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#111113] border border-zinc-200/80 dark:border-white/10 flex flex-col justify-between min-h-[58px] shadow-2xs">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Mecánico Responsable</span>
-                  <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate mt-0.5" title={orden.mechanic || "Taller Principal"}>
-                    {orden.mechanic || "Taller Principal"}
-                  </span>
+
+                {/* Perfil del Vehículo: Foto Principal Hero + Datos del Modelo */}
+                <div className="pt-3.5 flex items-center gap-3.5 sm:gap-4">
+                  {/* Foto de Perfil del Vehículo */}
+                  {(() => {
+                    const fotoVehiculoPerfil = orden.vehiclePhoto || (fotosVehiculo.length > 0 ? fotosVehiculo[0] : null);
+                    return (
+                      <div className="relative group shrink-0">
+                        <div className="w-20 h-16 sm:w-24 sm:h-20 rounded-2xl overflow-hidden border-2 border-zinc-200 dark:border-white/15 bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 shadow-sm flex items-center justify-center">
+                          {fotoVehiculoPerfil ? (
+                            <img
+                              src={fotoVehiculoPerfil}
+                              alt={orden.vehicle}
+                              className="w-full h-full object-cover cursor-pointer group-hover:scale-105 transition-transform duration-200"
+                              onClick={() => setFotoZoom(fotoVehiculoPerfil)}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-800/80 p-1 text-center">
+                              <span className="text-xl sm:text-2xl">🏎️</span>
+                              <span className="text-[9px] font-bold mt-0.5 uppercase tracking-tight">Sin Foto</span>
+                            </div>
+                          )}
+
+                          {/* Overlay para Cambiar / Ver Foto del Auto */}
+                          <label
+                            className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-bold cursor-pointer rounded-2xl print:hidden gap-0.5"
+                            title="Cambiar foto de perfil del vehículo"
+                          >
+                            <span>📷</span>
+                            <span>{subiendoFotoVehiculoPrincipal ? "Subiendo..." : "Cambiar"}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={subiendoFotoVehiculoPrincipal}
+                              onChange={handleSubirFotoVehiculoPrincipal}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+
+                        {/* Botón flotante para subir/cambiar foto */}
+                        <label
+                          className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-amber-500 hover:bg-amber-400 text-black text-[11px] font-black flex items-center justify-center shadow-md cursor-pointer border-2 border-white dark:border-[#121215] transition-all print:hidden active:scale-90"
+                          title="Subir foto de perfil del vehículo"
+                        >
+                          <span>+</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={subiendoFotoVehiculoPrincipal}
+                            onChange={handleSubirFotoVehiculoPrincipal}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Marca / Modelo y Mecánico a cargo */}
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <h3
+                      className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white truncate"
+                      title={orden.vehicle}
+                    >
+                      {orden.vehicle}
+                    </h3>
+
+                    <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                      <span className="text-zinc-400">👨‍🔧</span>
+                      <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate">
+                        {orden.mechanic || "Carlos Rodríguez (Taller)"}
+                      </span>
+                    </div>
+
+                    <div className="pt-0.5 flex items-center gap-2 text-xs">
+                      <span className="font-mono font-bold text-zinc-700 dark:text-zinc-300">
+                        {orden.mileage ? `${Number(orden.mileage).toLocaleString()} km` : "N/D"}
+                      </span>
+                      <span className="text-zinc-300 dark:text-zinc-700">•</span>
+                      <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
+                        Tanque: <strong className="font-bold text-zinc-900 dark:text-white">{orden.fuelLevel || "1/2"}</strong>
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#111113] border border-zinc-200/80 dark:border-white/10 flex flex-col justify-between min-h-[58px] shadow-2xs">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Kilometraje Actual</span>
-                  <span className="text-xs sm:text-sm font-mono font-bold text-zinc-800 dark:text-zinc-200 mt-0.5">
-                    {orden.mileage ? `${Number(orden.mileage).toLocaleString()} km` : "N/D"}
-                  </span>
-                </div>
-                <div className="p-2.5 sm:p-3 rounded-xl bg-white dark:bg-[#111113] border border-zinc-200/80 dark:border-white/10 flex flex-col justify-between min-h-[58px] shadow-2xs">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Combustible / Estado</span>
-                  <span className="text-xs sm:text-sm font-medium text-zinc-800 dark:text-zinc-200 mt-0.5">
-                    Tanque: <strong className="font-bold">{orden.fuelLevel || "1/2"}</strong>
-                  </span>
+
+                {/* Grid con campos estructurados del vehículo */}
+                <div className="grid grid-cols-2 gap-2 sm:gap-2.5 pt-3.5">
+                  <div className="p-2.5 rounded-xl bg-zinc-50/80 dark:bg-white/[0.03] border border-zinc-200/70 dark:border-white/5 flex flex-col justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                      Kilometraje Actual
+                    </span>
+                    <span className="text-xs sm:text-sm font-mono font-bold text-zinc-800 dark:text-zinc-200 mt-0.5">
+                      {orden.mileage ? `${Number(orden.mileage).toLocaleString()} km` : "5000 km"}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-zinc-50/80 dark:bg-white/[0.03] border border-zinc-200/70 dark:border-white/5 flex flex-col justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                      Combustible / Estado
+                    </span>
+                    <span className="text-xs sm:text-sm font-medium text-zinc-800 dark:text-zinc-200 mt-0.5">
+                      Tanque: <strong className="font-bold text-amber-600 dark:text-amber-400">{orden.fuelLevel || "E"}</strong>
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Fotos del Vehículo integradas directamente en la tarjeta */}
-              <div className="pt-2 border-t border-zinc-200 dark:border-white/5 space-y-1.5">
+              {/* Tira rápida de galería / Más fotos del vehículo */}
+              <div className="pt-2 border-t border-zinc-100 dark:border-white/5 space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 flex items-center gap-1">
                     <span>📷</span>
                     <span>Fotos del Vehículo ({fotosVehiculo.length})</span>
                   </span>
-                  <label className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1 print:hidden">
-                    <span>+ Subir foto</span>
+                  <label className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1 print:hidden">
+                    <span>+ Subir fotos</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -956,28 +1249,28 @@ export default function PaginaDetallePropuesta() {
                 </div>
 
                 {fotosVehiculo.length > 0 ? (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {fotosVehiculo.map((fotoUrl, idx) => (
+                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
+                    {fotosVehiculo.slice(0, 5).map((fotoUrl, idx) => (
                       <div
                         key={`veh-mini-${idx}`}
                         onClick={() => setFotoZoom(fotoUrl)}
-                        className="group relative aspect-4/3 rounded-xl overflow-hidden border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-black/40 cursor-pointer shadow-2xs hover:border-blue-500 transition-all"
+                        className="group relative aspect-4/3 rounded-lg overflow-hidden border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-black/40 cursor-pointer shadow-2xs hover:border-blue-500 transition-all"
                       >
                         <img
                           src={fotoUrl}
                           alt={`Vehículo ${idx + 1}`}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                         />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
-                          🔍 Ver
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[9px] font-bold">
+                          🔍
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <label className="p-3 rounded-xl border border-dashed border-zinc-300 dark:border-white/10 flex items-center justify-center gap-2 text-zinc-400 text-xs hover:border-blue-500 hover:text-blue-500 transition-all cursor-pointer">
+                  <label className="p-2.5 rounded-xl border border-dashed border-zinc-300 dark:border-white/10 flex items-center justify-center gap-1.5 text-zinc-400 text-xs hover:border-blue-500 hover:text-blue-500 transition-all cursor-pointer">
                     <span>📷</span>
-                    <span>Sin fotos registradas. Clic para subir fotos del auto.</span>
+                    <span>Sin fotos adicionales. Clic para agregar.</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -1527,9 +1820,9 @@ export default function PaginaDetallePropuesta() {
         </div>
       </main>
 
-      {/* BARRA INFERIOR STICKY CON ACCIONES (NO SE IMPRIME) */}
-      <footer className="print:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-[#0c0c0e]/95 backdrop-blur-xl border-t border-zinc-200 dark:border-white/10 p-3 sm:p-4 shadow-2xl">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4">
+      {/* BARRA FINAL CON ACCIONES (FLUJO NORMAL AL FINAL DEL DOCUMENTO) */}
+      <footer className="print:hidden max-w-6xl mx-auto px-3 sm:px-6 md:px-8 mt-6 mb-12">
+        <div className="bg-white dark:bg-[#0f0f13] border border-zinc-200 dark:border-white/10 rounded-3xl p-4 sm:p-6 shadow-xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
           {/* Métricas Rápidas */}
           <div className="flex items-center justify-between md:justify-start gap-4 sm:gap-6 text-xs font-mono">
             <div>
@@ -1559,12 +1852,12 @@ export default function PaginaDetallePropuesta() {
           </div>
 
           {/* Botones de Acción */}
-          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap justify-end">
             <button
               type="button"
               disabled={guardando}
               onClick={handleGuardarBorrador}
-              className="h-10 px-4 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-xs font-normal transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+              className="h-10 px-5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-xs font-semibold transition-all active:scale-95 cursor-pointer disabled:opacity-50"
             >
               {guardando ? "Guardando..." : "Guardar"}
             </button>
@@ -1573,7 +1866,7 @@ export default function PaginaDetallePropuesta() {
               type="button"
               disabled={autorizando}
               onClick={handleAutorizarYEnviarAPos}
-              className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center disabled:opacity-50"
+              className="h-10 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center disabled:opacity-50"
             >
               <span>{autorizando ? "Transfiriendo..." : "Autorizar"}</span>
             </button>

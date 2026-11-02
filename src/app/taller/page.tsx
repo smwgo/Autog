@@ -12,6 +12,7 @@ import ModalPresupuestoPdf from "@/components/taller/ModalPresupuestoPdf";
 import ModalFormularioRapido from "@/components/taller/ModalFormularioRapido";
 import LubricentroExpress from "./components/LubricentroExpress";
 import ModalCategoriasTaller from "./components/ModalCategoriasTaller";
+import CatalogoProductosServiciosTaller from "@/components/taller/CatalogoProductosServiciosTaller";
 import { getClientActiveBranch, getClientUserBranch } from "@/lib/branch";
 import { VoiceNoteRecord } from "@/lib/transcription";
 
@@ -176,6 +177,7 @@ export interface FindingItemLink {
   code?: string;
   category?: string;
   productId?: string;
+  imageUrl?: string | null;
 }
 
 export interface InspectionFinding {
@@ -5577,6 +5579,66 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                     </div>
                   )}
                 </div>
+
+                {/* CATÁLOGO EXPANDIBLE / COLAPSABLE DE PRODUCTOS Y SERVICIOS */}
+                <CatalogoProductosServiciosTaller
+                  itemsSeleccionados={ordenActiva?.items || []}
+                  onAgregarItem={(item, delta = 1) => {
+                    if (!ordenActiva) return;
+                    const itemsActuales = ordenActiva.items ? [...ordenActiva.items] : [];
+                    const itemIndex = itemsActuales.findIndex(
+                      (it: any) =>
+                        it.id === item.id ||
+                        (item.code && it.code === item.code) ||
+                        (it.name && it.name.toLowerCase() === item.name.toLowerCase())
+                    );
+                    let nuevosItems: any[];
+                    if (itemIndex >= 0) {
+                      const itExistente = itemsActuales[itemIndex];
+                      const nuevaCant = (Number(itExistente.qty) || 1) + delta;
+                      if (nuevaCant <= 0) {
+                        nuevosItems = itemsActuales.filter((_, idx) => idx !== itemIndex);
+                      } else {
+                        nuevosItems = [...itemsActuales];
+                        nuevosItems[itemIndex] = { ...itExistente, qty: nuevaCant };
+                      }
+                    } else {
+                      if (delta <= 0) return;
+                      const nuevoItem = {
+                        id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                        code: item.code || `PROD-${Date.now().toString(36).slice(-4)}`,
+                        name: item.fullName || item.name,
+                        price: Number(item.price) || 0,
+                        qty: Math.max(1, delta),
+                        type: item.type || "PART",
+                        category: item.category || "Productos",
+                        productId: item.id,
+                        imageUrl: item.imageUrl || null,
+                        status: "Pendiente",
+                      };
+                      nuevosItems = [...itemsActuales, nuevoItem];
+                    }
+                    const optOrder = { ...ordenActiva, items: nuevosItems };
+                    setOrdenActiva(optOrder);
+                    setAutosEnPista((prev) => prev.map((o) => (o.id === ordenActiva.id ? optOrder : o)));
+                    void sincronizarOrdenEnNeon({ items: nuevosItems });
+                  }}
+                  onEliminarItem={(codigoOId) => {
+                    if (!ordenActiva) return;
+                    const itemsFiltrados = (ordenActiva.items || []).filter(
+                      (it: any) => it.id !== codigoOId && it.code !== codigoOId && it.name !== codigoOId
+                    );
+                    const optOrder = { ...ordenActiva, items: itemsFiltrados };
+                    setOrdenActiva(optOrder);
+                    setAutosEnPista((prev) => prev.map((o) => (o.id === ordenActiva.id ? optOrder : o)));
+                    void sincronizarOrdenEnNeon({ items: itemsFiltrados });
+                  }}
+                  serviciosCatalogo={serviciosDb}
+                  productosCatalogo={productosInventario}
+                  titulo="Buscar productos y servicios"
+                  inicialmenteExpandido={false}
+                  mostrarChipsSeleccionados={false}
+                />
 
                 {/* Contenido en 2 columnas */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">

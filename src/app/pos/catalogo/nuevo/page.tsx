@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
+import SelectorModulos from "@/components/pos/SelectorModulos";
 
 export default function NuevoProductoPage() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function NuevoProductoPage() {
     name: "",
     brand: "",
     category: "General",
+    tipo: "Tienda",
     price: "",
     costPrice: "",
     stock: "0",
@@ -181,79 +183,67 @@ export default function NuevoProductoPage() {
                 <label className="block text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
                   Foto del Producto
                 </label>
-                <div className="flex flex-col sm:flex-row items-center gap-5 p-4 sm:p-5 rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-950/40 hover:border-blue-500/50 transition-colors">
-                  {/* Vista Previa */}
-                  <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 overflow-hidden flex items-center justify-center shrink-0 shadow-sm group">
-                    {formData.imageUrl ? (
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  {/* Vista Previa Interactiva (Tocar para subir) */}
+                  <label
+                    className={`relative w-28 h-28 sm:w-32 sm:h-32 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border-2 border-dashed border-zinc-300 dark:border-zinc-700 hover:border-blue-500 dark:hover:border-blue-400 overflow-hidden flex items-center justify-center shrink-0 shadow-sm group cursor-pointer transition-all select-none ${
+                      subiendoFoto ? "opacity-60 pointer-events-none" : ""
+                    }`}
+                  >
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={subiendoFoto}
+                      onChange={handleSubirFoto}
+                      className="hidden"
+                    />
+
+                    {subiendoFoto ? (
+                      <div className="flex flex-col items-center justify-center text-blue-600 dark:text-blue-400 gap-1.5 p-2 text-center">
+                        <svg className="animate-spin h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                        </svg>
+                        <span className="text-[10px] font-bold">Subiendo...</span>
+                      </div>
+                    ) : formData.imageUrl ? (
                       <>
                         <img
                           src={formData.imageUrl}
                           alt="Previsualización de producto"
-                          className="w-full h-full object-contain p-1.5"
+                          className="w-full h-full object-contain p-1.5 transition-transform group-hover:scale-105"
                         />
+                        {/* Overlay hover para cambiar foto */}
+                        <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white p-1 text-center">
+                          <span className="text-xl">📷</span>
+                          <span className="text-[10px] font-bold">Cambiar foto</span>
+                        </div>
+                        {/* Botón quitar foto */}
                         <button
                           type="button"
-                          onClick={() => setFormData((prev) => ({ ...prev, imageUrl: "" }))}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setFormData((prev) => ({ ...prev, imageUrl: "" }));
+                          }}
                           title="Quitar foto"
-                          className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center text-xs font-bold shadow-md cursor-pointer transition-transform active:scale-90"
+                          className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center text-xs font-bold shadow-md cursor-pointer transition-transform active:scale-90 z-10"
                         >
                           ✕
                         </button>
                       </>
                     ) : (
-                      <div className="flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500">
-                        <span className="text-3xl mb-1">📷</span>
-                        <span className="text-[11px] font-medium">Sin foto</span>
+                      <div className="flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors p-2 text-center">
+                        <span className="text-3xl mb-1 group-hover:scale-110 transition-transform">📷</span>
+                        <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Toca para subir</span>
+                        <span className="text-[10px] text-zinc-400">PC o móvil</span>
                       </div>
                     )}
-                  </div>
+                  </label>
 
-                  {/* Acciones de Carga */}
-                  <div className="flex-1 w-full space-y-3">
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <label className={`h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-semibold flex items-center gap-2 shadow-sm shadow-blue-500/20 cursor-pointer transition-all ${subiendoFoto ? "opacity-60 pointer-events-none" : ""}`}>
-                        {subiendoFoto ? (
-                          <>
-                            <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                            </svg>
-                            <span>Subiendo foto...</span>
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                            </svg>
-                            <span>{formData.imageUrl ? "Cambiar Imagen" : "Subir Foto desde Dispositivo"}</span>
-                          </>
-                        )}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          disabled={subiendoFoto}
-                          onChange={handleSubirFoto}
-                          className="hidden"
-                        />
-                      </label>
-                      <span className="text-xs text-zinc-400">o pega un enlace web directo:</span>
-                    </div>
-
-                    <div className="relative">
-                      <input
-                        type="url"
-                        name="imageUrl"
-                        placeholder="https://ejemplo.com/foto-producto.jpg"
-                        value={formData.imageUrl}
-                        onChange={handleChange}
-                        className="w-full h-10 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs outline-none focus:border-blue-500 font-mono text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400"
-                      />
-                    </div>
-                    {errorFoto && (
-                      <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">⚠️ {errorFoto}</p>
-                    )}
-                    <p className="text-[11px] text-zinc-400">Formatos admitidos: JPG, PNG, WEBP o AVIF (máx. 8 MB).</p>
-                  </div>
+                  {errorFoto && (
+                    <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">⚠️ {errorFoto}</p>
+                  )}
                 </div>
               </div>
 
@@ -301,16 +291,37 @@ export default function NuevoProductoPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
+                  Tipo / Módulo
+                </label>
+                <SelectorModulos
+                  value={formData.tipo}
+                  onChange={(nuevoTipo) => setFormData((prev) => ({ ...prev, tipo: nuevoTipo }))}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
                   Categoría
                 </label>
                 <input
                   type="text"
                   name="category"
-                  placeholder="Lubricantes, Filtros, Frenos..."
+                  list="lista-categorias-sugeridas"
+                  placeholder="Ej: Lubricantes, Filtros, Frenos, Baterías..."
                   value={formData.category}
                   onChange={handleChange}
-                  className="w-full h-12 px-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-transparent text-base outline-none focus:border-blue-500"
+                  className="w-full h-12 px-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base outline-none focus:border-blue-500"
                 />
+                <datalist id="lista-categorias-sugeridas">
+                  <option value="Lubricantes" />
+                  <option value="Filtros" />
+                  <option value="Frenos" />
+                  <option value="Baterías" />
+                  <option value="Suspensión" />
+                  <option value="Neumáticos" />
+                  <option value="Accesorios" />
+                  <option value="General" />
+                </datalist>
               </div>
 
               <div>

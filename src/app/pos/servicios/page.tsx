@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { parsearModulos } from "@/components/pos/SelectorModulos";
 
 interface WorkshopService {
   id: string;
   code: string;
   name: string;
   category: string;
+  tipo?: string | null;
   price: number | string;
   estimatedMinutes: number;
   description?: string | null;
@@ -432,6 +434,18 @@ export default function ServiciosPosPage() {
                           <span className="font-semibold text-teal-600 dark:text-teal-400">#{s.code}</span>
                           <span> • {s.category}</span>
                         </p>
+                        {s.tipo && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {parsearModulos(s.tipo).map((t) => (
+                              <span
+                                key={t}
+                                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/20"
+                              >
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -522,9 +536,23 @@ export default function ServiciosPosPage() {
                           )}
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800/40">
-                            {s.category}
-                          </span>
+                          <div className="flex flex-col gap-1 items-start">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800/40">
+                              {s.category}
+                            </span>
+                            {s.tipo && (
+                              <div className="flex flex-wrap gap-1 max-w-[170px]">
+                                {parsearModulos(s.tipo).map((t) => (
+                                  <span
+                                    key={t}
+                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/20"
+                                  >
+                                    {t}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3.5 px-4 text-xs text-zinc-500">
                           <div className="flex flex-col gap-0.5">

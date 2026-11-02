@@ -46,7 +46,7 @@ export default function TiendaPage() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("/api/productos");
+        const res = await fetch("/api/productos?modulo=Tienda");
         const data = await res.json();
         if (res.ok && data.success && data.productos?.length > 0) {
           setProducts(data.productos);
@@ -103,7 +103,7 @@ export default function TiendaPage() {
             }).catch(() => {});
           }
 
-          const reloadRes = await fetch("/api/productos");
+          const reloadRes = await fetch("/api/productos?modulo=Tienda");
           const reloadData = await reloadRes.json();
           if (reloadRes.ok && reloadData.success && reloadData.productos?.length > 0) {
             setProducts(reloadData.productos);

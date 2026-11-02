@@ -1104,7 +1104,11 @@ export default function InspeccionVehiculo({
       category?: string;
       type: "SERVICE" | "PART";
       productId?: string;
-    }
+      price?: number;
+      imageUrl?: string | null;
+      qty?: number;
+    },
+    deltaQty: number = 1
   ) => {
     if (!ordenActiva || !onUpdateOrden) {
       mostrarToast("No está disponible una orden activa para enviar elementos a la propuesta.", "err");
@@ -1114,20 +1118,49 @@ export default function InspeccionVehiculo({
     const pin = hallazgos.find((h) => h.id === targetPinId);
     if (!pin) return;
 
-    const itemLink: FindingItemLink = {
-      id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      name: itemData.name,
-      price: 0,
-      type: itemData.type,
-      qty: 1,
-      code: itemData.code,
-      category: itemData.category,
-      productId: itemData.type === "PART" ? itemData.id : undefined,
-    };
+    const itemsActuales = pin.linkedItems ? [...pin.linkedItems] : [];
+    const itemIndex = itemsActuales.findIndex(
+      (it) =>
+        it.id === itemData.id ||
+        (itemData.code && it.code === itemData.code) ||
+        (it.name && it.name.toLowerCase() === itemData.name.toLowerCase())
+    );
 
-    // 1. Guardar en los ítems vinculados del pin
-    const itemsActuales = pin.linkedItems || [];
-    const actualizadosPin = [...itemsActuales, itemLink];
+    let actualizadosPin: FindingItemLink[];
+    let itemLinkId = "";
+
+    if (itemIndex >= 0) {
+      const itExistente = itemsActuales[itemIndex];
+      itemLinkId = itExistente.id;
+      const nuevaCant = (Number(itExistente.qty) || 1) + deltaQty;
+      if (nuevaCant <= 0) {
+        // Eliminar si la cantidad llega a cero o menos
+        actualizadosPin = itemsActuales.filter((_, idx) => idx !== itemIndex);
+      } else {
+        actualizadosPin = [...itemsActuales];
+        actualizadosPin[itemIndex] = {
+          ...itExistente,
+          qty: nuevaCant,
+          price: Number(itemData.price !== undefined ? itemData.price : itExistente.price) || 0,
+        };
+      }
+    } else {
+      if (deltaQty <= 0) return;
+      itemLinkId = `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const itemLink: FindingItemLink = {
+        id: itemLinkId,
+        name: itemData.name,
+        price: Number(itemData.price) || 0,
+        type: itemData.type,
+        qty: Math.max(1, deltaQty),
+        code: itemData.code,
+        category: itemData.category,
+        productId: itemData.type === "PART" ? (itemData.productId || itemData.id) : undefined,
+        imageUrl: itemData.imageUrl || null,
+      };
+      actualizadosPin = [...itemsActuales, itemLink];
+    }
+
     const nuevosHallazgos = hallazgos.map((h) => {
       if (h.id === targetPinId) {
         return { ...h, linkedItems: actualizadosPin };
@@ -1139,30 +1172,48 @@ export default function InspeccionVehiculo({
 
     // 2. Sincronizar hacia ordenActiva.items (Presupuesto)
     if (onUpdateOrden) {
-      const itemsOrden = ordenActiva.items ? [...ordenActiva.items] : [];
-      const itemExistenteIndex = itemsOrden.findIndex((it) => it.id === itemLink.id);
+      let itemsOrden = ordenActiva.items ? [...ordenActiva.items] : [];
+      const itemExistenteIndex = itemsOrden.findIndex(
+        (it) =>
+          it.id === itemLinkId ||
+          (itemData.code && it.code === itemData.code) ||
+          (it.name && it.name.toLowerCase() === itemData.name.toLowerCase())
+      );
 
-      const nuevoOrderItem: OrderItem = {
-        id: itemLink.id,
-        code:
-          itemLink.code ||
-          `PIN-${pin.pinNumber || 1}-${Date.now().toString(36).slice(-4)}`,
-        type: itemLink.type,
-        name: itemLink.name,
-        category: `Inspección - Pin #${pin.pinNumber || 1} (${pin.vistaLabel || pin.vista})`,
-        qty: itemLink.qty,
-        price: 0,
-        productId: itemLink.productId,
-        status: "Pendiente",
-      };
+      const itemPinActualizado = actualizadosPin.find(
+        (it) => it.id === itemLinkId || (itemData.code && it.code === itemData.code)
+      );
 
-      if (itemExistenteIndex >= 0) {
-        itemsOrden[itemExistenteIndex] = nuevoOrderItem;
+      if (!itemPinActualizado) {
+        // Fue removido
+        itemsOrden = itemsOrden.filter((it, idx) => idx !== itemExistenteIndex);
       } else {
-        itemsOrden.push(nuevoOrderItem);
+        const nuevoOrderItem: OrderItem = {
+          id: itemPinActualizado.id,
+          code:
+            itemPinActualizado.code ||
+            `PIN-${pin.pinNumber || 1}-${Date.now().toString(36).slice(-4)}`,
+          type: itemPinActualizado.type,
+          name: itemPinActualizado.name,
+          category: `Inspección - Pin #${pin.pinNumber || 1} (${pin.vistaLabel || pin.vista})`,
+          qty: itemPinActualizado.qty,
+          price: Number(itemPinActualizado.price) || 0,
+          productId: itemPinActualizado.productId,
+          imageUrl: itemPinActualizado.imageUrl || null,
+          status: "Pendiente",
+        };
+
+        if (itemExistenteIndex >= 0) {
+          itemsOrden[itemExistenteIndex] = nuevoOrderItem;
+        } else {
+          itemsOrden.push(nuevoOrderItem);
+        }
       }
 
-      const nuevoTotalCost = itemsOrden.reduce((sum, it) => sum + ((Number(it.price) || 0) * (Number(it.qty) || 1)), 0);
+      const nuevoTotalCost = itemsOrden.reduce(
+        (sum, it) => sum + ((Number(it.price) || 0) * (Number(it.qty) || 1)),
+        0
+      );
       const ordenActualizada: UnifiedOrder = {
         ...ordenActiva,
         inspectionFindings: nuevosHallazgos,
@@ -1189,7 +1240,11 @@ export default function InspeccionVehiculo({
       }
     }
 
-    mostrarToast(`✓ "${itemLink.name}" añadido a la propuesta/presupuesto.`);
+    if (deltaQty > 0) {
+      mostrarToast(`✓ "${itemData.name}" añadido (${deltaQty > 1 ? `+${deltaQty}` : "+1"}).`);
+    } else {
+      mostrarToast(`Removido/Actualizado: "${itemData.name}"`, "ok");
+    }
   };
 
   const handleEliminarItemPin = async (targetPinId: string, itemId: string) => {

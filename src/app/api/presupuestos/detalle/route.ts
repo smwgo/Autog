@@ -52,6 +52,80 @@ export async function GET(request: Request) {
         );
       }
 
+      // 1.1 Obtener datos y fotos de perfil de Cliente y Vehículo
+      let clientPhoto: string | null = null;
+      let customerRecord: any = null;
+      try {
+        const idSearch = (order.clientIdDoc || "").trim();
+        const nameSearch = (order.client || "").trim();
+        const custId = order.customerId;
+
+        if (custId || idSearch || nameSearch) {
+          try {
+            customerRecord = await (prisma as any).customer.findFirst({
+              where: {
+                OR: [
+                  custId ? { id: custId } : null,
+                  idSearch ? { identification: idSearch } : null,
+                  nameSearch ? { name: nameSearch } : null,
+                ].filter(Boolean) as any,
+              },
+            });
+          } catch {}
+
+          if (!customerRecord) {
+            const cRows = (await prisma.$queryRawUnsafe(
+              `SELECT * FROM "Customer" WHERE "id" = $1 OR "identification" = $2 OR "name" ILIKE $3 LIMIT 1`,
+              custId || "",
+              idSearch || "",
+              nameSearch || ""
+            ).catch(() => [])) as any[];
+            if (cRows && cRows.length > 0) customerRecord = cRows[0];
+          }
+        }
+      } catch (cErr) {
+        console.warn("Aviso al buscar datos de cliente:", cErr);
+      }
+
+      if (customerRecord) {
+        clientPhoto = customerRecord.avatar || customerRecord.imageUrl || null;
+      }
+
+      let vehiclePhoto: string | null = null;
+      let vehicleRecord: any = null;
+      try {
+        const plateSearch = (order.plate || "").trim();
+        const vehId = order.vehicleId;
+
+        if (vehId || plateSearch) {
+          try {
+            vehicleRecord = await (prisma as any).vehicle.findFirst({
+              where: {
+                OR: [
+                  vehId ? { id: vehId } : null,
+                  plateSearch ? { plate: plateSearch } : null,
+                ].filter(Boolean) as any,
+              },
+            });
+          } catch {}
+
+          if (!vehicleRecord) {
+            const vRows = (await prisma.$queryRawUnsafe(
+              `SELECT * FROM "Vehicle" WHERE "id" = $1 OR "plate" ILIKE $2 LIMIT 1`,
+              vehId || "",
+              plateSearch || ""
+            ).catch(() => [])) as any[];
+            if (vRows && vRows.length > 0) vehicleRecord = vRows[0];
+          }
+        }
+      } catch (vErr) {
+        console.warn("Aviso al buscar datos de vehículo:", vErr);
+      }
+
+      if (vehicleRecord) {
+        vehiclePhoto = vehicleRecord.imageUrl || null;
+      }
+
       // 2. Obtener todas las evidencias multimedia asociadas desde Neon
       let evRows: any[] = [];
       try {
@@ -263,6 +337,11 @@ export async function GET(request: Request) {
           photos: todasLasFotosOrden,
           evidencePhotos,
           receptionPhotos,
+          clientPhoto: clientPhoto || customerRecord?.avatar || customerRecord?.imageUrl || null,
+          vehiclePhoto: vehiclePhoto || vehicleRecord?.imageUrl || (todasLasFotosOrden.length > 0 ? todasLasFotosOrden[0] : null),
+          customerId: customerRecord?.id || order.customerId || null,
+          vehicleId: vehicleRecord?.id || order.vehicleId || null,
+          customerType: customerRecord?.type || "Personal",
         },
         proveedores,
       });

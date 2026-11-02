@@ -20,6 +20,7 @@ export async function GET(request: Request) {
     const id = searchParams.get("id");
     const busqueda = searchParams.get("busqueda")?.trim().toLowerCase() || "";
     const categoria = searchParams.get("categoria") || "";
+    const modulo = (searchParams.get("modulo") || searchParams.get("tipo") || "").trim().toLowerCase();
 
     if (id) {
       const prod = await prisma.product.findUnique({
@@ -31,7 +32,9 @@ export async function GET(request: Request) {
           { status: 404 }
         );
       }
-      return NextResponse.json({ success: true, producto: prod });
+      const rawTipoRow: any = await prisma.$queryRawUnsafe(`SELECT "tipo" FROM "Product" WHERE "id" = $1 LIMIT 1`, id).catch(() => []);
+      const tipo = rawTipoRow?.[0]?.tipo || "Todos";
+      return NextResponse.json({ success: true, producto: { ...prod, tipo } });
     }
 
     let products = cachedProducts;
@@ -47,6 +50,15 @@ export async function GET(request: Request) {
       lastCacheTime = now;
     }
 
+    // Consultar tipos registrados en BD
+    const rawTipos: any = await prisma.$queryRawUnsafe(`SELECT "id", "tipo" FROM "Product"`).catch(() => []);
+    const tiposMap: Record<string, string> = {};
+    if (Array.isArray(rawTipos)) {
+      rawTipos.forEach((r: any) => {
+        if (r.id) tiposMap[r.id] = r.tipo || "Todos";
+      });
+    }
+
     // Extraer todas las categorías únicas disponibles en Neon
     const categoriesSet = new Set<string>();
     products.forEach((p) => {
@@ -54,7 +66,7 @@ export async function GET(request: Request) {
     });
     const categories = Array.from(categoriesSet);
 
-    // Filtrar en memoria por búsqueda y categoría
+    // Filtrar en memoria por búsqueda, categoría y módulo/tipo
     const filtrados = products.filter((p) => {
       const matchSearch =
         !busqueda ||
@@ -64,8 +76,20 @@ export async function GET(request: Request) {
 
       const matchCategory = !categoria || p.category === categoria;
 
-      return matchSearch && matchCategory;
+      const prodTipo = (tiposMap[p.id] || "Todos").toLowerCase();
+      const matchModulo =
+        !modulo ||
+        prodTipo === "todos" ||
+        prodTipo.includes("todos") ||
+        prodTipo.includes(modulo);
+
+      return matchSearch && matchCategory && matchModulo;
     });
+
+    const productosConTipo = filtrados.map((p) => ({
+      ...p,
+      tipo: tiposMap[p.id] || "Todos",
+    }));
 
     const totalProductos = products.length;
     const totalEnStock = products.filter((p) => p.status === "En Stock").length;
@@ -75,7 +99,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         success: true,
-        productos: filtrados,
+        productos: productosConTipo,
         categories,
         stats: {
           totalProductos,
@@ -103,7 +127,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { code, name, brand, category = "General", price, costPrice, stock = 0, minStock = 5, location, imageUrl } = body;
+    const { code, name, brand, category = "General", tipo = "Todos", price, costPrice, stock = 0, minStock = 5, location, imageUrl } = body;
     const rawCode = (code || "").toString().trim();
     const codigoLimpio = rawCode
       ? rawCode.toUpperCase()
@@ -152,10 +176,17 @@ export async function POST(request: Request) {
       },
     });
 
+    const finalTipo = Array.isArray(tipo) ? tipo.join(", ") : (tipo ? String(tipo).trim() : "Todos");
+    await prisma.$executeRawUnsafe(
+      `UPDATE "Product" SET "tipo" = $1 WHERE "id" = $2`,
+      finalTipo,
+      nuevoProducto.id
+    ).catch(() => {});
+
     cachedProducts = null;
     lastCacheTime = 0;
 
-    return NextResponse.json({ success: true, producto: nuevoProducto }, { status: 201 });
+    return NextResponse.json({ success: true, producto: { ...nuevoProducto, tipo: finalTipo } }, { status: 201 });
   } catch (error: any) {
     console.error("Error al crear producto en Neon:", error);
     return NextResponse.json(
@@ -169,7 +200,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, code, name, brand, category, price, costPrice, stock, minStock = 5, location, imageUrl } = body;
+    const { id, code, name, brand, category, tipo, price, costPrice, stock, minStock = 5, location, imageUrl } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, error: "ID de producto requerido" }, { status: 400 });
@@ -200,10 +231,19 @@ export async function PUT(request: Request) {
       },
     });
 
+    if (tipo !== undefined) {
+      const finalTipo = Array.isArray(tipo) ? tipo.join(", ") : (tipo ? String(tipo).trim() : "Todos");
+      await prisma.$executeRawUnsafe(
+        `UPDATE "Product" SET "tipo" = $1 WHERE "id" = $2`,
+        finalTipo,
+        id
+      ).catch(() => {});
+    }
+
     cachedProducts = null;
     lastCacheTime = 0;
 
-    return NextResponse.json({ success: true, producto: actualizado });
+    return NextResponse.json({ success: true, producto: { ...actualizado, tipo } });
   } catch (error: any) {
     console.error("Error al actualizar producto en Neon:", error);
     return NextResponse.json(

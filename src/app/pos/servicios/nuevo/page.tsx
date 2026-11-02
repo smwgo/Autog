@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
+import SelectorModulos from "@/components/pos/SelectorModulos";
 
 const TIEMPOS_RAPIDOS = [
   { label: "15 min", value: "15" },
@@ -25,6 +26,7 @@ export default function NuevoServicioPage() {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
+  const [tipo, setTipo] = useState("Taller");
   const [price, setPrice] = useState("");
   const [estimatedMinutes, setEstimatedMinutes] = useState("30");
   const [description, setDescription] = useState("");
@@ -61,6 +63,7 @@ export default function NuevoServicioPage() {
         code: code.trim().toUpperCase() || undefined,
         name: name.trim(),
         category: category.trim() || "General",
+        tipo,
         price: parseFloat(price),
         estimatedMinutes: parseInt(estimatedMinutes, 10) || 30,
         description: description.trim() || null,
@@ -200,8 +203,8 @@ export default function NuevoServicioPage() {
             </h2>
 
             <div className="space-y-5">
-              {/* Código & Categoría */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Código & Tipo / Módulo & Categoría */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -228,12 +231,19 @@ export default function NuevoServicioPage() {
 
                 <div>
                   <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
+                    Tipo / Módulo *
+                  </label>
+                  <SelectorModulos value={tipo} onChange={setTipo} />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
                     Categoría *
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="Ej: Mantenimiento"
+                    placeholder="Ej: Mantenimiento, Frenos..."
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full h-11 px-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-300 dark:border-zinc-700 text-base sm:text-sm font-normal focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"

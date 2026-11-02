@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import SelectorModulos, { parsearModulos } from "@/components/pos/SelectorModulos";
 
 interface Product {
   id: string;
@@ -12,6 +13,7 @@ interface Product {
   name: string;
   brand?: string | null;
   category: string;
+  tipo?: string | null;
   price: number | string;
   stock: number;
   minStock: number;
@@ -49,6 +51,7 @@ export default function CatalogoPage() {
     name: "",
     brand: "",
     category: "General",
+    tipo: "Tienda",
     price: "",
     stock: "0",
     minStock: "5",
@@ -105,6 +108,7 @@ export default function CatalogoPage() {
       name: "",
       brand: "",
       category: "General",
+      tipo: "Tienda",
       price: "",
       stock: "0",
       minStock: "5",
@@ -122,6 +126,7 @@ export default function CatalogoPage() {
       name: prod.name,
       brand: prod.brand || "",
       category: prod.category || "General",
+      tipo: prod.tipo || "Tienda",
       price: prod.price.toString(),
       stock: prod.stock.toString(),
       minStock: prod.minStock?.toString() || "5",
@@ -459,7 +464,7 @@ export default function CatalogoPage() {
                         </svg>
                       )}
                     </button>
-                    {Array.from(new Set(categories.map((c) => String(c).trim()).filter(Boolean))).map((cat, idx) => (
+                    {Array.from(new Set(["Tienda", "Taller", "Lubricentro", "Car Wash", "Tecnicentro", ...categories.map((c) => String(c).trim()).filter(Boolean)])).map((cat, idx) => (
                       <button
                         key={`cat-prod-${cat}-${idx}`}
                         type="button"
@@ -713,9 +718,23 @@ export default function CatalogoPage() {
                             </div>
                           </td>
                           <td className="py-3.5 px-4">
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
-                              {item.category}
-                            </span>
+                            <div className="flex flex-col gap-1 items-start">
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                                {item.category}
+                              </span>
+                              {item.tipo && (
+                                <div className="flex flex-wrap gap-1 max-w-[180px]">
+                                  {parsearModulos(item.tipo).map((t) => (
+                                    <span
+                                      key={t}
+                                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/20"
+                                    >
+                                      {t}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </td>
                           <td className="py-3.5 px-4 text-right font-black text-zinc-900 dark:text-white">
                             ${Number(item.price).toFixed(2)}
@@ -806,40 +825,53 @@ export default function CatalogoPage() {
                   <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
                     Foto del Producto
                   </label>
-                  <div className="flex items-center gap-3.5 p-3 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/40">
-                    <div className="relative w-14 h-14 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 overflow-hidden flex items-center justify-center shrink-0">
-                      {form.imageUrl ? (
+                  <div className="flex items-center gap-3">
+                    <label className={`relative w-20 h-20 rounded-xl bg-white dark:bg-zinc-800 border-2 border-dashed border-zinc-300 dark:border-zinc-700 hover:border-blue-500 dark:hover:border-blue-500 overflow-hidden flex flex-col items-center justify-center shrink-0 cursor-pointer transition-all group ${
+                      subiendoFotoModal ? "opacity-60 pointer-events-none" : ""
+                    }`}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={subiendoFotoModal}
+                        onChange={handleSubirFotoModal}
+                        className="hidden"
+                      />
+
+                      {subiendoFotoModal ? (
+                        <div className="flex flex-col items-center justify-center text-blue-600 gap-1 p-1">
+                          <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                          </svg>
+                          <span className="text-[9px] font-bold">Subiendo</span>
+                        </div>
+                      ) : form.imageUrl ? (
                         <>
-                          <img src={form.imageUrl} alt="Preview" className="w-full h-full object-contain p-1" />
+                          <img src={form.imageUrl} alt="Preview" className="w-full h-full object-contain p-1 transition-transform group-hover:scale-105" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
+                            Cambiar
+                          </div>
                           <button
                             type="button"
-                            onClick={() => setForm((prev) => ({ ...prev, imageUrl: "" }))}
-                            className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center cursor-pointer shadow-xs"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setForm((prev) => ({ ...prev, imageUrl: "" }));
+                            }}
+                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center justify-center cursor-pointer shadow-sm z-10"
                             title="Quitar foto"
                           >
                             ✕
                           </button>
                         </>
                       ) : (
-                        <span className="text-xl text-zinc-400">📷</span>
+                        <div className="flex flex-col items-center justify-center text-zinc-400 group-hover:text-blue-600 transition-colors p-1 text-center">
+                          <span className="text-xl">📷</span>
+                          <span className="text-[10px] font-medium text-zinc-600 dark:text-zinc-400">Toca para subir</span>
+                        </div>
                       )}
-                    </div>
-                    <div className="flex-1 min-w-0 space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <label className={`h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 ${subiendoFotoModal ? "opacity-60 pointer-events-none" : ""}`}>
-                          <span>{subiendoFotoModal ? "Subiendo..." : form.imageUrl ? "Cambiar Foto" : "Subir Imagen"}</span>
-                          <input type="file" accept="image/*" disabled={subiendoFotoModal} onChange={handleSubirFotoModal} className="hidden" />
-                        </label>
-                      </div>
-                      <input
-                        type="url"
-                        placeholder="O pega URL de imagen..."
-                        value={form.imageUrl}
-                        onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                        className="w-full h-7 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs outline-none focus:border-blue-500 font-mono text-zinc-700 dark:text-zinc-300"
-                      />
-                      {errorFotoModal && <p className="text-[11px] text-rose-500 font-medium">⚠️ {errorFotoModal}</p>}
-                    </div>
+                    </label>
+                    {errorFotoModal && <p className="text-xs text-rose-500 font-medium">⚠️ {errorFotoModal}</p>}
                   </div>
                 </div>
 
@@ -886,16 +918,40 @@ export default function CatalogoPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
+                      Tipo / Módulo
+                    </label>
+                    <SelectorModulos
+                      value={form.tipo}
+                      onChange={(nuevoTipo) => setForm({ ...form, tipo: nuevoTipo })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
                       Categoría
                     </label>
                     <input
                       type="text"
-                      placeholder="Lubricantes, Filtros, etc."
+                      list="lista-categorias-modal"
+                      placeholder="Ej: Lubricantes, Filtros, Frenos..."
                       value={form.category}
                       onChange={(e) => setForm({ ...form, category: e.target.value })}
-                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500"
+                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs outline-none focus:border-blue-500"
                     />
+                    <datalist id="lista-categorias-modal">
+                      <option value="Lubricantes" />
+                      <option value="Filtros" />
+                      <option value="Frenos" />
+                      <option value="Baterías" />
+                      <option value="Suspensión" />
+                      <option value="Neumáticos" />
+                      <option value="Accesorios" />
+                      <option value="General" />
+                    </datalist>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
                       Precio de Venta ($)
@@ -910,9 +966,6 @@ export default function CatalogoPage() {
                       className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm font-bold outline-none focus:border-blue-500"
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
                       Stock Actual
