@@ -440,7 +440,7 @@ export default function GestionUsuarios() {
                             </span>
                           </div>
                           <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5">
-                            {row.identification ? `Cédula: ${row.identification} • ` : ""}PIN: {row.pinCode}
+                            PIN: {row.pinCode}
                           </p>
                         </div>
                       </div>
@@ -635,7 +635,7 @@ export default function GestionUsuarios() {
                                   </span>
                                 </div>
                                 <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-                                  {row.identification ? `Cédula: ${row.identification} • ` : ""}PIN: {row.pinCode}
+                            PIN: {row.pinCode}
                                 </p>
                               </div>
                             </div>

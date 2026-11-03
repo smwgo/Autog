@@ -826,7 +826,17 @@
   "workshopHistory": [],
   "workshopEvidence": [],
   "orderRequest": [],
-  "user": [],
+  "user": [
+    {
+      "id": "cmw14z8k60000r1ba7n9bcqh1",
+      "email": "tiendaautogdaule@gmail.com",
+      "name": "Super Administrador",
+      "role": "ROOT",
+      "passwordHash": "$2b$10$Bosd6HmBNEnpna0QjbbWuOlQuHwOE9dwFLQTEYehBG/VcfgXcE7Pm",
+      "createdAt": "2026-11-03T20:37:04.444Z",
+      "updatedAt": "2026-11-03T20:37:04.445Z"
+    }
+  ],
   "cashRegister": [],
   "sale": [],
   "clientInvoice": [],

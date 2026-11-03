@@ -4,8 +4,8 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = "tiendaautodaule@gmail.com";
-  const password = "tienda*2026autorepuestotaller*500";
+  const email = "tiendaautogdaule@gmail.com";
+  const password = "tienda2026autog";
   const hashedPassword = await bcrypt.hash(password, 10);
 
   console.log("Upserting admin user...");

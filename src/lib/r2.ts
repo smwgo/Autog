@@ -146,7 +146,7 @@ export async function uploadToR2({
   const key = `${cleanFolder}/${safeFileName}`;
 
   const client = getR2Client();
-  const bucketName = process.env.R2_BUCKET_NAME || "autotech-storage";
+  const bucketName = process.env.R2_BUCKET_NAME || "autog";
 
   await client.send(
     new PutObjectCommand({
@@ -171,7 +171,7 @@ export async function getSignedDownloadUrl(
   expiresInSeconds = 300
 ): Promise<string> {
   const client = getR2Client();
-  const bucketName = process.env.R2_BUCKET_NAME || "autotech-storage";
+  const bucketName = process.env.R2_BUCKET_NAME || "autog";
 
   // Prevent path traversal in key
   const safeKey = key.replace(/\.\./g, "");
@@ -215,7 +215,7 @@ export async function getSignedUploadUrl({
   const key = `${cleanFolder}/${safeFileName}`;
 
   const client = getR2Client();
-  const bucketName = process.env.R2_BUCKET_NAME || "autotech-storage";
+  const bucketName = process.env.R2_BUCKET_NAME || "autog";
 
   const command = new PutObjectCommand({
     Bucket: bucketName,
@@ -244,7 +244,7 @@ export async function checkObjectExistsInR2(key: string): Promise<{
   }
   try {
     const client = getR2Client();
-    const bucketName = process.env.R2_BUCKET_NAME || "autotech-storage";
+    const bucketName = process.env.R2_BUCKET_NAME || "autog";
     const safeKey = key.replace(/\.\./g, "");
     const head = await client.send(
       new HeadObjectCommand({
@@ -276,7 +276,7 @@ export async function checkObjectExistsInR2(key: string): Promise<{
  */
 export async function deleteFromR2(key: string): Promise<void> {
   const client = getR2Client();
-  const bucketName = process.env.R2_BUCKET_NAME || "autotech-storage";
+  const bucketName = process.env.R2_BUCKET_NAME || "autog";
   const safeKey = key.replace(/\.\./g, "");
 
   await client.send(

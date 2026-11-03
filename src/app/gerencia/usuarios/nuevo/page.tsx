@@ -6,6 +6,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
 
+
+const PANELES_DISPONIBLES = [
+  { id: "Oficina", name: "Oficina", icon: "🏢", desc: "Administración, compras y finanzas" },
+  { id: "POS", name: "POS", icon: "🛒", desc: "Punto de venta y facturación" },
+  { id: "Taller", name: "Taller", icon: "🔧", desc: "Garaje, mecánica y órdenes" },
+  { id: "Presupuesto", name: "Presupuesto", icon: "📋", desc: "Propuestas y cotizaciones" },
+  { id: "Cliente", name: "Cliente", icon: "👤", desc: "Portal de autoservicio cliente" },
+  { id: "Gerencia", name: "Gerencia", icon: "📊", desc: "Super Administrador / Dirección" },
+];
+
 function NuevoUsuarioContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -18,8 +28,6 @@ function NuevoUsuarioContent() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Paso 1: Datos del Usuario
-  const [tipoPerfil, setTipoPerfil] = useState<"Operador" | "Administrador">("Operador");
-  const [identificacion, setIdentificacion] = useState("");
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
@@ -27,6 +35,32 @@ function NuevoUsuarioContent() {
   const [role, setRole] = useState("Especialista");
   const [branch, setBranch] = useState("Principal");
   const [status, setStatus] = useState("Activo");
+
+  const handleSelectPanel = (panelId: string) => {
+    setRole(panelId);
+    if (panelId === "Oficina") {
+      setAccessOficina(true);
+      setAccessPos(false);
+      setAccessTaller(false);
+    } else if (panelId === "POS") {
+      setAccessOficina(false);
+      setAccessPos(true);
+      setAccessTaller(false);
+    } else if (panelId === "Taller") {
+      setAccessOficina(false);
+      setAccessPos(false);
+      setAccessTaller(true);
+    } else if (panelId === "Presupuesto") {
+      setAccessOficina(true);
+      setAccessTaller(true);
+      setAccessPos(false);
+    } else if (panelId === "Gerencia") {
+      setAccessOficina(true);
+      setAccessPos(true);
+      setAccessTaller(true);
+    }
+  };
+
 
   // Paso 2: Accesos a Paneles (Oficina, POS, Taller / Garaje)
   const [accessOficina, setAccessOficina] = useState<boolean>(false);
@@ -47,10 +81,6 @@ function NuevoUsuarioContent() {
         if (res.ok && Array.isArray(data)) {
           const u = data.find((item: any) => item.id === editId);
           if (u) {
-            setTipoPerfil(
-              u.role?.toLowerCase().includes("admin") ? "Administrador" : "Operador"
-            );
-            setIdentificacion(u.identification || "");
             setNombre(u.name || "");
             setTelefono(u.phone || "");
             setEmail(u.email || "");
@@ -90,14 +120,11 @@ function NuevoUsuarioContent() {
 
       const payload: any = {
         id: editId || undefined,
-        identification: identificacion.trim() || undefined,
         name: nombre.trim(),
         email: email.trim().toLowerCase(),
         phone: telefono.trim() || undefined,
         pinCode: pinCode.trim() || "1234",
-        role:
-          role.trim() ||
-          (tipoPerfil === "Administrador" ? "Administrador" : "Operador"),
+        role: role.trim() || "Operador",
         branch: branch.trim() || "Sede Principal",
         status,
         accessOficina,
@@ -112,31 +139,29 @@ function NuevoUsuarioContent() {
       });
 
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "No se pudo guardar la información del usuario.");
+      if (!res.ok || !data.success) {
+        setErrorMsg(data.error || "No se pudo guardar la información del usuario.");
+        setGuardando(false);
+        return;
       }
 
-      router.push("/gerencia/usuarios");
+      router.push("/gerencia/usuarios?guardado=1");
     } catch (err: any) {
-      setErrorMsg(err.message || "Error al procesar la solicitud.");
-    } finally {
+      console.error("Error al guardar usuario:", err);
+      setErrorMsg("Error de conexión al guardar usuario.");
       setGuardando(false);
     }
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white font-sans selection:bg-blue-600 selection:text-white pb-24 md:pb-0">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
 
-      <main className="flex-grow flex items-start sm:items-center justify-center p-3 sm:p-6 md:p-12 relative overflow-y-auto pb-12 sm:pb-8">
-        {/* Glow de fondo ambiental sutil en celeste/azul idéntico a Nuevo Cliente en POS */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] sm:w-[800px] h-[250px] sm:h-[450px] bg-blue-600/10 dark:bg-blue-600/15 blur-[100px] sm:blur-[140px] pointer-events-none rounded-full" />
-
-        {/* Card Contenedor Estilo Onboarding */}
+      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full flex items-center justify-center">
         <div className="relative w-full max-w-4xl lg:max-w-5xl bg-white dark:bg-zinc-900/95 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-8 md:p-12 shadow-xl dark:shadow-2xl backdrop-blur-xl my-2 sm:my-auto text-zinc-900 dark:text-white">
-          {/* Header Superior */}
-          <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
-            <div className="flex items-center gap-3">
+          {/* Cabecera del Wizard */}
+          <div className="flex items-center justify-between pb-4 sm:pb-6 border-b border-zinc-200 dark:border-zinc-800/80 mb-5 sm:mb-8">
+            <div className="flex items-center gap-2.5 sm:gap-3">
               {paso === 1 ? (
                 <Link
                   href="/gerencia/usuarios"
@@ -214,83 +239,20 @@ function NuevoUsuarioContent() {
               {/* PASO 1: DATOS DEL USUARIO */}
               {paso === 1 && (
                 <form onSubmit={handleSiguiente} className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
-                  <div>
-                    <p className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-2.5 sm:mb-3">
-                      Perfil
-                    </p>
-
-                    <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setTipoPerfil("Operador");
-                          if (role === "Administrador") setRole("Especialista");
-                        }}
-                        className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border text-left flex items-center gap-2.5 sm:gap-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
-                          tipoPerfil === "Operador"
-                            ? "bg-blue-50 dark:bg-blue-500/10 border-blue-500 text-blue-900 dark:text-white shadow-md shadow-blue-500/10 ring-1 ring-blue-500/30"
-                            : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 text-zinc-700 dark:text-zinc-300"
-                        }`}
-                      >
-                        <div
-                          className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center transition-colors shrink-0 ${
-                            tipoPerfil === "Operador"
-                              ? "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
-                              : "bg-zinc-200/70 dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-400"
-                          }`}
-                        >
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                        </div>
-                        <span className="font-semibold text-xs sm:text-sm text-zinc-900 dark:text-white">Operador / Técnico</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setTipoPerfil("Administrador");
-                          setRole("Administrador");
-                          setAccessOficina(true);
-                          setAccessPos(true);
-                          setAccessTaller(true);
-                        }}
-                        className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border text-left flex items-center gap-2.5 sm:gap-3.5 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
-                          tipoPerfil === "Administrador"
-                            ? "bg-blue-50 dark:bg-blue-500/10 border-blue-500 text-blue-900 dark:text-white shadow-md shadow-blue-500/10 ring-1 ring-blue-500/30"
-                            : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 text-zinc-700 dark:text-zinc-300"
-                        }`}
-                      >
-                        <div
-                          className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center transition-colors shrink-0 ${
-                            tipoPerfil === "Administrador"
-                              ? "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
-                              : "bg-zinc-200/70 dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-400"
-                          }`}
-                        >
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                          </svg>
-                        </div>
-                        <span className="font-semibold text-xs sm:text-sm text-zinc-900 dark:text-white">Administrador</span>
-                      </button>
-                    </div>
-                  </div>
-
                   {/* Campos de Entrada */}
                   <div className="space-y-3.5 sm:space-y-4 pt-1">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                          Cédula / Identificación
+                          Nombres y Apellidos *
                         </label>
                         <input
+                          required
                           type="text"
-                          inputMode="numeric"
-                          placeholder="0912345678"
-                          value={identificacion}
-                          onChange={(e) => setIdentificacion(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors font-mono"
+                          placeholder="Carlos Rodríguez"
+                          value={nombre}
+                          onChange={(e) => setNombre(e.target.value)}
+                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
                         />
                       </div>
 
@@ -307,20 +269,6 @@ function NuevoUsuarioContent() {
                           className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors font-mono"
                         />
                       </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                        Nombres y Apellidos *
-                      </label>
-                      <input
-                        required
-                        type="text"
-                        placeholder="Carlos Rodríguez"
-                        value={nombre}
-                        onChange={(e) => setNombre(e.target.value)}
-                        className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
-                      />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
@@ -355,16 +303,67 @@ function NuevoUsuarioContent() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                          Cargo / Rol
+                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center justify-between">
+                          <span>Panel al que entra / Rol *</span>
+                          <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase">1 Clic para Asignar</span>
                         </label>
-                        <input
-                          type="text"
-                          placeholder="Ej: Jefe de Taller, Cajera POS, Contabilidad..."
-                          value={role}
-                          onChange={(e) => setRole(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
-                        />
+                        <div className="space-y-2">
+                          <select
+                            value={PANELES_DISPONIBLES.some(p => p.id.toLowerCase() === (role || "").toLowerCase()) ? role : (role ? "OTRO" : "Taller")}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === "OTRO") {
+                                setRole("");
+                              } else {
+                                handleSelectPanel(val);
+                              }
+                            }}
+                            className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white outline-none focus:border-blue-500 transition-colors font-medium cursor-pointer"
+                          >
+                            <option value="Oficina">🏢 Oficina (Administración y Finanzas)</option>
+                            <option value="POS">🛒 POS (Punto de Venta / Facturación)</option>
+                            <option value="Taller">🔧 Taller / Garaje (Mecánica y Órdenes)</option>
+                            <option value="Presupuesto">📋 Presupuesto (Propuestas y Cotizaciones)</option>
+                            <option value="Cliente">👤 Cliente (Portal Cliente)</option>
+                            <option value="Gerencia">📊 Gerencia (Dirección / Super Administrador)</option>
+                            <option value="OTRO">✍️ Otro (Cargo personalizado...)</option>
+                          </select>
+
+                          {/* Botones de selección rápida de panel */}
+                          <div className="flex flex-wrap gap-1.5 pt-0.5">
+                            {PANELES_DISPONIBLES.map((p) => {
+                              const isSelected = (role || "").toLowerCase() === p.id.toLowerCase();
+                              return (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onClick={() => handleSelectPanel(p.id)}
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 border transition-all cursor-pointer ${
+                                    isSelected
+                                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                                      : "bg-zinc-100 dark:bg-zinc-800/70 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700/60 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                                  }`}
+                                >
+                                  <span>{p.icon}</span>
+                                  <span>{p.name}</span>
+                                  {isSelected && <span className="text-[10px]">✓</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Campo de texto libre si selecciona OTRO */}
+                          {(!PANELES_DISPONIBLES.some(p => p.id.toLowerCase() === (role || "").toLowerCase()) || role === "") && (
+                            <input
+                              type="text"
+                              placeholder="Escribe el cargo o función específica..."
+                              value={role}
+                              onChange={(e) => setRole(e.target.value)}
+                              className="w-full h-11 px-3.5 rounded-xl border border-blue-300 dark:border-blue-700 bg-blue-50/30 dark:bg-blue-950/20 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 outline-none focus:border-blue-500 transition-colors mt-2"
+                              autoFocus
+                            />
+                          )}
+                        </div>
                       </div>
 
                       <div>
