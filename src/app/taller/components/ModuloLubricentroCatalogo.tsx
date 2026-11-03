@@ -3590,34 +3590,21 @@ export default function ModuloLubricentroCatalogo({
   };
 
   const productosBentoAMostrar = useMemo(() => {
-    let lista = BASE_LUBRICENTRO_POS_ITEMS.map((base) => {
-      const match = (productos || []).find(
-        (p) =>
-          p.id === base.id ||
-          p.code === base.code ||
-          (base.viscosity && (p.viscosity === base.viscosity || p.name?.toLowerCase().includes(base.viscosity.toLowerCase())))
-      );
-      return {
-        ...base,
-        stock: match?.stock !== undefined ? Number(match.stock) : (base.stock !== undefined ? base.stock : 25),
-        price: match?.price ? Number(match.price) : base.price,
-      };
-    });
-
+    // 1. Productos reales desde la base de datos (Neon)
+    const realProductsMapped: ItemBentoCatalogo[] = [];
     if (productos && productos.length > 0) {
-      const idsBase = new Set(lista.map((p) => p.id));
       for (const p of productos) {
-        if (!idsBase.has(p.id) && p.active !== false) {
-          lista.push({
+        if (p.active !== false) {
+          realProductsMapped.push({
             id: p.id,
             code: p.code || p.id,
             name: p.name,
-            fullName: p.name,
+            fullName: p.fullName || p.name,
             brand: p.brand || 'Genérico',
             price: Number(p.price) || 0,
             viscosity: p.viscosity || p.name,
             lubCategoryId: p.lubCategoryId || 'lub_aceite',
-            lubSubcategoryId: p.lubSubcategoryId || '',
+            lubSubcategoryId: p.lubSubcategoryId || 'lub_aceite_motor',
             presentation: p.presentation || 'Galón',
             unitOfMeasure: p.unitOfMeasure || 'Galón',
             type: p.type || 'PART',
@@ -3628,6 +3615,9 @@ export default function ModuloLubricentroCatalogo({
         }
       }
     }
+
+    // Solo productos reales de Neon / Base de datos
+    let lista = realProductsMapped;
 
     if (categoriaActivaId) {
       lista = lista.filter((p) => p.lubCategoryId === categoriaActivaId);
@@ -3643,7 +3633,7 @@ export default function ModuloLubricentroCatalogo({
         const uom = String(p.unitOfMeasure || '').toLowerCase();
         const name = String(p.name || p.fullName || '').toLowerCase();
         const env = envaseActivo.toLowerCase();
-        return pres.includes(env) || uom.includes(env) || name.includes(env);
+        return pres.includes(env) || uom.includes(env) || name.includes(env) || pres === '' || !pres;
       });
     }
 

@@ -240,36 +240,6 @@ const FALLBACK_KEYWORD_ICONS: Record<string, string> = {
   DEFAULT: "🚿",
 };
 
-// Servicios base de Car Wash con clasificación y precios según porte
-const SERVICIOS_BASE_CARWASH = [
-  // Lavado
-  { id: "cw_base_expres", name: "Lavado Exprés", category: "LAVADO", subcategory: "EXPRES", basePrice: 6.0, estimatedMinutes: 15, icon: "⚡" },
-  { id: "cw_base_completo", name: "Lavado Completo", category: "LAVADO", subcategory: "COMPLETO", basePrice: 12.0, estimatedMinutes: 35, icon: "🌊" },
-  { id: "cw_base_motor", name: "Lavado de Motor", category: "LAVADO", subcategory: "MOTOR", basePrice: 15.0, estimatedMinutes: 20, icon: "⚙️" },
-  { id: "cw_base_motos", name: "Lavado de Motos", category: "LAVADO", subcategory: "MOTOS", basePrice: 5.0, estimatedMinutes: 15, icon: "🏍️" },
-  // Chasis
-  { id: "cw_base_agua", name: "Lavado de Chasis Agua", category: "CHASIS", subcategory: "AGUA", basePrice: 8.0, estimatedMinutes: 20, icon: "💧" },
-  { id: "cw_base_grafitado", name: "Grafitado de Chasis", category: "CHASIS", subcategory: "GRAFITADO", basePrice: 14.0, estimatedMinutes: 20, icon: "🛡️" },
-  { id: "cw_base_desengrase", name: "Desengrase de Chasis", category: "CHASIS", subcategory: "DESENGRASE", basePrice: 16.0, estimatedMinutes: 20, icon: "🧪" },
-  { id: "cw_base_suspension", name: "Lavado de Suspensión", category: "CHASIS", subcategory: "SUSPENSION", basePrice: 10.0, estimatedMinutes: 20, icon: "🔧" },
-  // Interior
-  { id: "cw_base_aspirado", name: "Aspirado Interior", category: "INTERIOR", subcategory: "ASPIRADO", basePrice: 8.0, estimatedMinutes: 15, icon: "🧹" },
-  { id: "cw_base_tapiceria", name: "Limpieza de Tapicería", category: "INTERIOR", subcategory: "TAPICERIA", basePrice: 35.0, estimatedMinutes: 30, icon: "🛋️" },
-  { id: "cw_base_cuero", name: "Nutrición de Cuero", category: "INTERIOR", subcategory: "CUERO", basePrice: 25.0, estimatedMinutes: 30, icon: "🧴" },
-  { id: "cw_base_techo", name: "Limpieza de Techo", category: "INTERIOR", subcategory: "TECHO", basePrice: 18.0, estimatedMinutes: 30, icon: "🏠" },
-  { id: "cw_base_ozono", name: "Desinfección con Ozono", category: "INTERIOR", subcategory: "OZONO", basePrice: 15.0, estimatedMinutes: 30, icon: "🌬️" },
-  // Detailing
-  { id: "cw_base_cera", name: "Encerado Carnauba", category: "DETAILING", subcategory: "CERA", basePrice: 18.0, estimatedMinutes: 30, icon: "✨" },
-  { id: "cw_base_pulido", name: "Pulido Espejo", category: "DETAILING", subcategory: "PULIDO", basePrice: 45.0, estimatedMinutes: 30, icon: "🌟" },
-  { id: "cw_base_faros", name: "Restauración de Faros", category: "DETAILING", subcategory: "FAROS", basePrice: 20.0, estimatedMinutes: 30, icon: "💡" },
-  { id: "cw_base_gotaseca", name: "Eliminación Gotaseca", category: "DETAILING", subcategory: "GOTASECA", basePrice: 25.0, estimatedMinutes: 30, icon: "🌧️" },
-  { id: "cw_base_aros", name: "Descontaminado Aros", category: "DETAILING", subcategory: "AROS", basePrice: 15.0, estimatedMinutes: 30, icon: "🛞" },
-  // Extras
-  { id: "cw_base_aroma", name: "Ambientador de Aroma", category: "EXTRAS", subcategory: "AROMA", basePrice: 4.0, estimatedMinutes: 5, icon: "🌸" },
-  { id: "cw_base_silicona", name: "Silicona para Tablero", category: "EXTRAS", subcategory: "SILICONA", basePrice: 3.5, estimatedMinutes: 5, icon: "🧽" },
-  { id: "cw_base_shampoo", name: "Shampoo Espuma Activa", category: "EXTRAS", subcategory: "SHAMPOO", basePrice: 6.5, estimatedMinutes: 5, icon: "🫧" },
-  { id: "cw_base_microfibra", name: "Toalla Microfibra", category: "EXTRAS", subcategory: "MICROFIBRA", basePrice: 4.5, estimatedMinutes: 5, icon: "🧣" },
-];
 
 function classifyItemCategory(
   item: { name: string; code?: string; brand?: string; category?: string; categoryId?: string; description?: string }
@@ -800,32 +770,6 @@ export default function ModuloCarWashCatalogo({
         keyword: kw,
         itemIcon: FALLBACK_KEYWORD_ICONS[kw] || "📦",
       });
-    });
-
-    // 4. Catálogo base complementario para asegurar opciones en todas las categorías
-    SERVICIOS_BASE_CARWASH.forEach((base) => {
-      // Si el vehículo NO es una moto, no incluir servicios de moto
-      if (base.subcategory === "MOTOS" && selectedVehicleTypeId !== "vt_moto") return;
-      // Si el vehículo ES una moto, no incluir servicios de chasis/techo
-      if (selectedVehicleTypeId === "vt_moto" && (base.category === "CHASIS" || base.subcategory === "TECHO")) return;
-
-      const kw = extractKeyword(base.name);
-      if (!existingKeywords.has(kw)) {
-        const pInfo = computePriceForVehicle({ basePrice: base.basePrice }, selectedVehicleTypeId);
-        list.push({
-          id: base.id,
-          kind: "SERVICE",
-          name: base.name,
-          code: `CW-${base.id.toUpperCase()}`,
-          brand: "Car Wash",
-          price: pInfo.unitPrice,
-          durationMinutes: base.estimatedMinutes,
-          categoryMapped: base.category as any,
-          subcategoryMapped: base.subcategory,
-          keyword: kw,
-          itemIcon: base.icon,
-        });
-      }
     });
 
     return list;
@@ -1420,73 +1364,6 @@ export default function ModuloCarWashCatalogo({
     return null;
   }, [estadoAfecciones]);
 
-  // Pre-carga inicial automática para Car Wash (Exprés $8.00 + Grafitado $12.00 = $20.00 / 45 min)
-  const autoCargaCarWashHecha = useRef(false);
-  useEffect(() => {
-    if (autoCargaCarWashHecha.current) return;
-    if (!ordenActiva) return;
-    if (itemsOrden && itemsOrden.length > 0) {
-      autoCargaCarWashHecha.current = true;
-      return;
-    }
-    const itemExpres = todosLosItemsPOS.find((s) => s.keyword === "EXPRÉS" || s.id.includes("expres"));
-    const itemGrafitado = todosLosItemsPOS.find((s) => s.keyword === "GRAFITADO" || s.id.includes("grafitado"));
-    const initialItems: any[] = [];
-    if (itemExpres) {
-      initialItems.push({
-        id: `cw_${itemExpres.id}_init`,
-        key: `cw_init_${itemExpres.id}`,
-        serviceId: itemExpres.id,
-        type: "SERVICE",
-        category: "Lavado",
-        cwCategoryId: "LAVADO",
-        subCategory: "Car Wash",
-        code: itemExpres.code || "CW-EXPRES",
-        name: `${itemExpres.keyword} (${vehiculoActivo})`,
-        brand: "Car Wash",
-        presentation: `${itemExpres.durationMinutes || 15} min`,
-        unitOfMeasure: "Servicio",
-        price: itemExpres.price || 8.0,
-        total: itemExpres.price || 8.0,
-        qty: 1,
-        estimatedMinutes: itemExpres.durationMinutes || 15,
-        vehicleType: vehiculoActivo,
-        status: "Listo",
-        completed: true,
-        empleado_id: empleadoLogueado.id,
-        empleado_nombre: empleadoLogueado.nombre,
-      });
-    }
-    if (itemGrafitado) {
-      initialItems.push({
-        id: `cw_${itemGrafitado.id}_init`,
-        key: `cw_init_${itemGrafitado.id}`,
-        serviceId: itemGrafitado.id,
-        type: "SERVICE",
-        category: "Chasis",
-        cwCategoryId: "CHASIS",
-        subCategory: "Car Wash",
-        code: itemGrafitado.code || "CW-GRAFITADO",
-        name: `${itemGrafitado.keyword} (${vehiculoActivo})`,
-        brand: "Car Wash",
-        presentation: `${itemGrafitado.durationMinutes || 20} min`,
-        unitOfMeasure: "Servicio",
-        price: itemGrafitado.price || 12.0,
-        total: itemGrafitado.price || 12.0,
-        qty: 1,
-        estimatedMinutes: itemGrafitado.durationMinutes || 20,
-        vehicleType: vehiculoActivo,
-        status: "Listo",
-        completed: true,
-        empleado_id: empleadoLogueado.id,
-        empleado_nombre: empleadoLogueado.nombre,
-      });
-    }
-    if (initialItems.length > 0) {
-      autoCargaCarWashHecha.current = true;
-      void onActualizarItemsOrden(initialItems);
-    }
-  }, [ordenActiva, itemsOrden, onActualizarItemsOrden, vehiculoActivo, empleadoLogueado, todosLosItemsPOS]);
 
   const ESTADO_CIRCULOS_RECEPCION = useMemo(() => [
     {

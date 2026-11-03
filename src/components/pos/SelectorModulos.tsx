@@ -94,13 +94,13 @@ export default function SelectorModulos({
       <button
         type="button"
         onClick={() => setAbierto(!abierto)}
-        className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500/60 transition-colors text-left flex items-center justify-between gap-2 shadow-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+        className="w-full min-h-[48px] px-3.5 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors text-left flex items-center justify-between gap-2 shadow-2xs cursor-pointer focus:outline-none focus:border-blue-500"
         aria-haspopup="listbox"
         aria-expanded={abierto}
       >
         <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0 py-0.5">
           {todosSeleccionados ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200/80 dark:border-zinc-700/80">
               <span>⭐</span>
               <span>Todos los módulos (5)</span>
             </span>
@@ -110,13 +110,13 @@ export default function SelectorModulos({
               return (
                 <span
                   key={modId}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/80"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200/80 dark:border-zinc-700/80"
                 >
                   <span className="text-[11px]">{mod?.icon}</span>
                   <span>{modId}</span>
                   <span
                     onClick={(e) => toggleModulo(modId, e)}
-                    className="ml-0.5 text-blue-400 hover:text-rose-600 cursor-pointer font-bold px-0.5 text-[10px]"
+                    className="text-zinc-400 hover:text-rose-500 cursor-pointer font-bold ml-0.5 text-[10px] leading-none transition-colors"
                     title={`Quitar ${modId}`}
                   >
                     ✕
@@ -127,8 +127,8 @@ export default function SelectorModulos({
           )}
         </div>
 
-        <div className="flex items-center gap-1 text-zinc-400 flex-shrink-0">
-          <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+        <div className="flex items-center gap-1.5 text-zinc-400 flex-shrink-0">
+          <span className="text-xs font-medium text-zinc-400 font-mono">
             {seleccionados.length}/5
           </span>
           <svg
@@ -146,74 +146,65 @@ export default function SelectorModulos({
 
       {/* Menú desplegable multi-selección */}
       {abierto && (
-        <div className="absolute z-50 left-0 right-0 mt-1.5 p-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl space-y-1 animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute z-50 left-0 right-0 mt-1.5 p-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl shadow-black/5 space-y-0.5 animate-in fade-in zoom-in-95 duration-150">
           {/* Fila superior: Marcar / Desmarcar todos */}
-          <div className="flex items-center justify-between pb-2 mb-1 px-2 border-b border-zinc-100 dark:border-zinc-800">
-            <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-              Seleccionar módulos ({seleccionados.length} de {MODULOS_DISPONIBLES.length})
+          <div className="flex items-center justify-between px-2.5 py-1.5 mb-1 border-b border-zinc-100 dark:border-zinc-800/80">
+            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+              Módulos ({seleccionados.length}/{MODULOS_DISPONIBLES.length})
             </span>
             <button
               type="button"
               onClick={toggleTodos}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors cursor-pointer px-2 py-0.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-950/50"
+              className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 transition-colors cursor-pointer"
             >
-              {todosSeleccionados ? "Deseleccionar todos" : "✓ Marcar todos"}
+              {todosSeleccionados ? "Desmarcar todos" : "Marcar todos"}
             </button>
           </div>
 
           {/* Opciones con checkbox */}
-          <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
+          <div className="space-y-0.5 max-h-64 overflow-y-auto pr-0.5">
             {MODULOS_DISPONIBLES.map((mod) => {
               const estaMarcado = seleccionados.includes(mod.id);
               return (
                 <div
                   key={mod.id}
                   onClick={() => toggleModulo(mod.id)}
-                  className={`flex items-center justify-between p-2 rounded-xl cursor-pointer transition-all ${
+                  className={`flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors select-none ${
                     estaMarcado
-                      ? "bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-800/60"
-                      : "hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-transparent"
+                      ? "bg-zinc-100/80 dark:bg-zinc-800/80 text-zinc-900 dark:text-white"
+                      : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 hover:text-zinc-900 dark:hover:text-white"
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div
-                      className={`w-4 h-4 rounded-md border flex items-center justify-center transition-colors ${
+                      className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
                         estaMarcado
                           ? "bg-blue-600 border-blue-600 text-white"
-                          : "border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                          : "border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800"
                       }`}
                     >
                       {estaMarcado && (
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
                         </svg>
                       )}
                     </div>
-                    <span className="text-base">{mod.icon}</span>
-                    <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                    <span className="text-base leading-none">{mod.icon}</span>
+                    <span className="text-xs font-medium">
                       {mod.label}
                     </span>
                   </div>
-
-                  {estaMarcado && (
-                    <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">
-                      Activo
-                    </span>
-                  )}
                 </div>
               );
             })}
           </div>
 
-          {/* Pie de mensaje explicativo */}
-          <div className="pt-2 px-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-            <span className="text-[10px] text-zinc-400">
-              Aparecerá en los módulos que tengan el check activo.
-            </span>
+          {/* Pie de acción */}
+          <div className="pt-1.5 px-1 border-t border-zinc-100 dark:border-zinc-800/80 flex justify-end">
             <button
               type="button"
               onClick={() => setAbierto(false)}
-              className="text-xs font-bold px-3 py-1 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-lg hover:opacity-90 transition-opacity cursor-pointer"
+              className="text-xs font-semibold px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 rounded-lg transition-colors cursor-pointer shadow-2xs"
             >
               Listo
             </button>

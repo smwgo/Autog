@@ -19,7 +19,7 @@ export default function NuevoProductoPage() {
     code: "",
     name: "",
     brand: "",
-    category: "General",
+    category: "",
     tipo: "Tienda",
     price: "",
     costPrice: "",
@@ -81,10 +81,14 @@ export default function NuevoProductoPage() {
     setGuardando(true);
 
     try {
+      const payload = {
+        ...formData,
+        category: formData.category.trim() || "General",
+      };
       const res = await fetch("/api/productos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -159,7 +163,7 @@ export default function NuevoProductoPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>
-                  <span>Guardar Producto</span>
+                  <span>Guardar</span>
                 </>
               )}
             </button>
@@ -236,7 +240,6 @@ export default function NuevoProductoPage() {
                       <div className="flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors p-2 text-center">
                         <span className="text-3xl mb-1 group-hover:scale-110 transition-transform">📷</span>
                         <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Toca para subir</span>
-                        <span className="text-[10px] text-zinc-400">PC o móvil</span>
                       </div>
                     )}
                   </label>
@@ -249,7 +252,7 @@ export default function NuevoProductoPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
-                  Código / SKU
+                  Código
                 </label>
                 <input
                   type="text"
@@ -291,7 +294,7 @@ export default function NuevoProductoPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
-                  Tipo / Módulo
+                  Tipo
                 </label>
                 <SelectorModulos
                   value={formData.tipo}
@@ -306,22 +309,11 @@ export default function NuevoProductoPage() {
                 <input
                   type="text"
                   name="category"
-                  list="lista-categorias-sugeridas"
-                  placeholder="Ej: Lubricantes, Filtros, Frenos, Baterías..."
+                  placeholder="Lubricantes, filtros..."
                   value={formData.category}
                   onChange={handleChange}
                   className="w-full h-12 px-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base outline-none focus:border-blue-500"
                 />
-                <datalist id="lista-categorias-sugeridas">
-                  <option value="Lubricantes" />
-                  <option value="Filtros" />
-                  <option value="Frenos" />
-                  <option value="Baterías" />
-                  <option value="Suspensión" />
-                  <option value="Neumáticos" />
-                  <option value="Accesorios" />
-                  <option value="General" />
-                </datalist>
               </div>
 
               <div>
@@ -399,7 +391,7 @@ export default function NuevoProductoPage() {
               disabled={guardando}
               className="px-8 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold shadow-md shadow-blue-500/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
             >
-              {guardando ? "Guardando..." : "Guardar Producto"}
+              {guardando ? "Guardando..." : "Guardar"}
             </button>
           </div>
         </form>

@@ -570,7 +570,10 @@ async function getOrInitCarWashData() {
 
     const enrichedServices = allWorkshopServices
       .filter((s) => {
-        if (metaMap[s.id]) return !metaMap[s.id].archived;
+        if (s.id.startsWith("cw_base_") || s.code?.toLowerCase().startsWith("cw-base-")) {
+          return false;
+        }
+        if (metaMap[s.id]?.archived) return false;
         const catLow = (s.category || "").toLowerCase();
         const codeLow = (s.code || "").toLowerCase();
         const specLow = ((s as any).specialty || "").toLowerCase();
@@ -638,7 +641,57 @@ async function getOrInitCarWashData() {
       })
       .sort((a, b) => a.order - b.order);
 
-    const mappedProducts = (allProducts || []).map((p: any) => {
+    // Consultar tipos registrados en BD
+    const rawTipos: any = await prisma.$queryRawUnsafe(`SELECT "id", "tipo" FROM "Product"`).catch(() => []);
+    const tiposMap: Record<string, string> = {};
+    if (Array.isArray(rawTipos)) {
+      rawTipos.forEach((r: any) => {
+        if (r.id) tiposMap[r.id] = r.tipo || "";
+      });
+    }
+
+    const mappedProducts = (allProducts || [])
+      .filter((p: any) => {
+        const tipoLow = String(tiposMap[p.id] || (p as any).tipo || "").toLowerCase();
+        if (tipoLow.includes("car wash") || tipoLow.includes("carwash")) return true;
+        if (
+          tipoLow.includes("lubricentro") ||
+          tipoLow.includes("tienda") ||
+          tipoLow.includes("tecnicentro") ||
+          tipoLow.includes("taller")
+        ) {
+          return false;
+        }
+
+        const catLow = (p.category || "").toLowerCase();
+        const nameLow = (p.name || "").toLowerCase();
+
+        // Excluir aceites, lubricantes y filtros de motor
+        if (
+          catLow.includes("lubrican") ||
+          catLow.includes("aceit") ||
+          nameLow.includes("aceite") ||
+          /\b(\d{1,2}w-?\d{2})\b/i.test(nameLow) ||
+          catLow.includes("filtro") ||
+          nameLow.includes("filtro")
+        ) {
+          return false;
+        }
+
+        return (
+          catLow.includes("car wash") ||
+          catLow.includes("carwash") ||
+          catLow.includes("detailing") ||
+          catLow.includes("lavado") ||
+          catLow.includes("shampoo") ||
+          nameLow.includes("shampoo") ||
+          nameLow.includes("cera") ||
+          nameLow.includes("silicona") ||
+          nameLow.includes("ambientador") ||
+          nameLow.includes("microfibra")
+        );
+      })
+      .map((p: any) => {
       const catLow = (p.category || "").toLowerCase();
       const nameLow = (p.name || "").toLowerCase();
       let cwCatId = "cw_cat_exterior";

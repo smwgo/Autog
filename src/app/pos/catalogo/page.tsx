@@ -50,7 +50,7 @@ export default function CatalogoPage() {
     code: "",
     name: "",
     brand: "",
-    category: "General",
+    category: "",
     tipo: "Tienda",
     price: "",
     stock: "0",
@@ -107,7 +107,7 @@ export default function CatalogoPage() {
       code: "",
       name: "",
       brand: "",
-      category: "General",
+      category: "",
       tipo: "Tienda",
       price: "",
       stock: "0",
@@ -182,10 +182,14 @@ export default function CatalogoPage() {
 
     setGuardando(true);
     try {
+      const payload = {
+        ...form,
+        category: form.category.trim() || "General",
+      };
       const res = await fetch("/api/productos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -878,7 +882,7 @@ export default function CatalogoPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
-                      Código / SKU
+                      Código
                     </label>
                     <input
                       type="text"
@@ -918,7 +922,7 @@ export default function CatalogoPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
-                      Tipo / Módulo
+                      Tipo
                     </label>
                     <SelectorModulos
                       value={form.tipo}
@@ -932,22 +936,12 @@ export default function CatalogoPage() {
                     </label>
                     <input
                       type="text"
-                      list="lista-categorias-modal"
-                      placeholder="Ej: Lubricantes, Filtros, Frenos..."
+                      name="category"
+                      placeholder="Lubricantes, filtros..."
                       value={form.category}
                       onChange={(e) => setForm({ ...form, category: e.target.value })}
                       className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs outline-none focus:border-blue-500"
                     />
-                    <datalist id="lista-categorias-modal">
-                      <option value="Lubricantes" />
-                      <option value="Filtros" />
-                      <option value="Frenos" />
-                      <option value="Baterías" />
-                      <option value="Suspensión" />
-                      <option value="Neumáticos" />
-                      <option value="Accesorios" />
-                      <option value="General" />
-                    </datalist>
                   </div>
                 </div>
 

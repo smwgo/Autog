@@ -1040,8 +1040,11 @@ function inferirSubcategoriaParaProductoExistente(p: any): {
   presentation?: string;
 } {
   const txt = `${p.name || ""} ${p.category || ""} ${p.code || ""}`.toLowerCase();
-  const viscMatch = (p.name || "").match(/\b(\d{1,2}W-\d{2})\b/i);
-  const viscosity = viscMatch ? viscMatch[1].toUpperCase() : undefined;
+  const viscMatch = (p.name || "").match(/\b(\d{1,2}W-?\d{2})\b/i);
+  let viscosity: string | undefined = viscMatch ? viscMatch[1].toUpperCase() : undefined;
+  if (viscosity && !viscosity.includes("-")) {
+    viscosity = viscosity.replace(/(\d{1,2}w)(\d{2})/i, "$1-$2");
+  }
 
   let lubricantBase: string | undefined;
   if (txt.includes("semi-sint") || txt.includes("semisint")) lubricantBase = "Semisintético";
@@ -1049,9 +1052,10 @@ function inferirSubcategoriaParaProductoExistente(p: any): {
   else if (txt.includes("mineral")) lubricantBase = "Mineral";
 
   let presentation: string | undefined;
-  if (txt.includes("galón") || txt.includes("galon") || txt.includes("gal")) presentation = "1 galón";
+  if (txt.includes("galón") || txt.includes("galon") || txt.includes("gal")) presentation = "Galón";
   else if (txt.includes("4l") || txt.includes("4 litros")) presentation = "4 litros";
-  else if (txt.includes("1l") || txt.includes("1 litro")) presentation = "1 litro";
+  else if (txt.includes("1l") || txt.includes("1 litro") || txt.includes("litro")) presentation = "1 litro";
+  else presentation = "Galón";
 
   if (txt.includes("batería") || txt.includes("bateria") || txt.includes("agm") || txt.includes("efb")) {
     if (txt.includes("agm")) return { lubCategoryId: "lub_baterias", lubSubcategoryId: "lub_bat_agm" };
@@ -1196,15 +1200,32 @@ async function getOrInitConfigAndMeta() {
       });
     }
 
+    // Consultar tipos registrados en BD
+    const rawTipos: any = await prisma.$queryRawUnsafe(`SELECT "id", "tipo" FROM "Product"`).catch(() => []);
+    const tiposMap: Record<string, string> = {};
+    if (Array.isArray(rawTipos)) {
+      rawTipos.forEach((r: any) => {
+        if (r.id) tiposMap[r.id] = r.tipo || "Todos";
+      });
+    }
+
     // Construir lista enriquecida de productos de Lubricentro
     const categoriasLubNombres = ["lubricantes", "lubricentro", "aceites", "filtros", "baterías", "baterias", "fluidos", "transmisión", "transmision"];
+    const keywordsLubNombres = ["5w", "10w", "15w", "20w", "0w", "aceite", "oil", "amalie", "mobil", "shell", "motul", "valvoline", "castrol", "filtro", "batería", "bateria", "coolant", "refrigerante", "aditivo", "flush"];
+
     const enrichedProducts = allProducts
       .filter((p) => {
         if (metaMap[p.id]) return true;
+        const tipoLow = String(tiposMap[p.id] || (p as any).tipo || "").toLowerCase();
+        if (tipoLow.includes("lubricentro") || tipoLow === "todos") return true;
+
         const catLow = (p.category || "").toLowerCase();
         const codeLow = (p.code || "").toLowerCase();
+        const nameLow = (p.name || "").toLowerCase();
+
         return (
           categoriasLubNombres.some((c) => catLow.includes(c)) ||
+          keywordsLubNombres.some((k) => nameLow.includes(k)) ||
           codeLow.startsWith("lub-") ||
           codeLow.startsWith("flt-") ||
           codeLow.startsWith("bat-")
@@ -1234,15 +1255,15 @@ async function getOrInitConfigAndMeta() {
           createdAt: p.createdAt,
           updatedAt: p.updatedAt,
           // Metadatos enriquecidos de Lubricentro
-          lubCategoryId: existingMeta?.lubCategoryId || inferred.lubCategoryId,
-          lubSubcategoryId: existingMeta?.lubSubcategoryId || inferred.lubSubcategoryId,
+          lubCategoryId: existingMeta?.lubCategoryId || inferred.lubCategoryId || "lub_aceite",
+          lubSubcategoryId: existingMeta?.lubSubcategoryId || inferred.lubSubcategoryId || "lub_aceite_motor",
           manufacturerCode: existingMeta?.manufacturerCode || "",
           description: existingMeta?.description || "",
           lubricantBase: existingMeta?.lubricantBase || inferred.lubricantBase || "",
           viscosity: existingMeta?.viscosity || inferred.viscosity || "",
           specifications: existingMeta?.specifications || [],
-          presentation: existingMeta?.presentation || inferred.presentation || "Unidad",
-          unitOfMeasure: existingMeta?.unitOfMeasure || "Unidad",
+          presentation: existingMeta?.presentation || inferred.presentation || "Galón",
+          unitOfMeasure: existingMeta?.unitOfMeasure || "Galón",
           presentationsAvailable: existingMeta?.presentationsAvailable || [],
           galleryUrls: existingMeta?.galleryUrls || (p.imageUrl ? [p.imageUrl] : []),
           active,
