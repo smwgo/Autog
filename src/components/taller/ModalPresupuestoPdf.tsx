@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React from "react";
 import type { UnifiedOrder, InspectionFinding, OrderItem } from "@/app/taller/page";
 
 interface ModalPresupuestoPdfProps {
@@ -22,6 +22,19 @@ export default function ModalPresupuestoPdf({
   tallerTelefono = "+593 99 999 9999",
   tallerRuc = "1790000000001",
 }: ModalPresupuestoPdfProps) {
+  React.useEffect(() => {
+    if (abierto) {
+      const prevBodyOverflow = document.body.style.overflow;
+      const prevHtmlOverflow = document.documentElement.style.overflow;
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prevBodyOverflow;
+        document.documentElement.style.overflow = prevHtmlOverflow;
+      };
+    }
+  }, [abierto]);
+
   if (!abierto || !orden) return null;
 
   const rawItems: OrderItem[] =
@@ -125,7 +138,7 @@ export default function ModalPresupuestoPdf({
   };
 
   // Agrupación de trabajos por módulo y subcategoría
-  const gruposModulos = useMemo(() => {
+  const gruposModulos = (() => {
     const ordenModulos: Array<{ id: "Taller" | "Lubricentro" | "Car Wash" | "Tecnicentro"; icon: string }> = [
       { id: "Taller", icon: "🔧" },
       { id: "Lubricentro", icon: "🛢️" },
@@ -158,7 +171,7 @@ export default function ModalPresupuestoPdf({
           subcategorias,
         };
       });
-  }, [items]);
+  })();
 
   // Agrupar hallazgos por sección
   const secciones = [

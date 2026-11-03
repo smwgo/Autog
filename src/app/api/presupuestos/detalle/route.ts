@@ -277,6 +277,9 @@ export async function GET(request: Request) {
           supplierPhone: it.supplierPhone || "",
           purchaseStatus: it.purchaseStatus || "POR_PEDIR", // POR_PEDIR, PEDIDO_WHATSAPP, COMPRADO, RECIBIDO
           notes: it.notes || "",
+          imageUrl: it.imageUrl || it.photoUrl || it.image || (todasLasFotosOrden[index] ?? null),
+          inStock: it.inStock !== undefined ? Boolean(it.inStock) : Boolean(it.purchaseStatus === "STOCK_LOCAL"),
+          origin: it.origin || null,
         };
       });
 
@@ -289,6 +292,8 @@ export async function GET(request: Request) {
         price: Number(sv.price || 0),
         estimatedMinutes: Number(sv.estimatedMinutes || 30),
         mechanic: sv.mechanic || order.mechanic || "Taller",
+        imageUrl: sv.imageUrl || sv.photoUrl || null,
+        origin: sv.origin || null,
       }));
 
       // 4. Obtener proveedores disponibles para el autocompletado

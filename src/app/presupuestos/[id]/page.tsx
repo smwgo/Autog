@@ -87,6 +87,8 @@ interface OrdenDetalleCompleta {
   customerId?: string | null;
   vehicleId?: string | null;
   customerType?: string | null;
+  inspectionFindings?: any[];
+  receptionInventory?: any[];
 }
 
 function deducirEspecialidad(nombre: string, categoria: string = ""): EspecialidadTipo {
@@ -134,6 +136,92 @@ function renderBadgeEspecialidad(origen?: EspecialidadTipo) {
         </span>
       );
   }
+}
+
+function formatoPrimeraMayuscula(texto?: string): string {
+  if (!texto) return "";
+  const str = String(texto).trim();
+  if (!str) return "";
+  const res = str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  return res.replace(/\(([a-záéíóúñ])/gi, (m) => m.toUpperCase());
+}
+
+function clasificarItem(it: any): {
+  modulo: "Taller" | "Lubricentro" | "Car Wash" | "Tecnicentro";
+  moduloIcon: string;
+  subcategoria: string;
+} {
+  const cat = String(it.category || "").toLowerCase();
+  const sub = String(it.subCategory || it.subcategory || "").toLowerCase();
+  const name = String(it.name || "").toLowerCase();
+  const id = String(it.id || "").toLowerCase();
+
+  // 1. Tecnicentro
+  if (
+    cat.includes("tecnicentro") ||
+    sub.includes("tecnicentro") ||
+    id.startsWith("tc_") ||
+    name.match(/llanta|alineaci[ón]|balanceo|camber|enllanta|vulcaniz|parche|aro |rin |pit[ón]|v[áa]lvula|pastilla|disco.*freno|zapata|rectific|suspensi[ón]|amortiguador|terminal.*direcci[ón]|r[ót]ula|buje|bater[íi]a|borne/i)
+  ) {
+    let subCat = "Servicios";
+    if (name.match(/llanta|aro |rin /i) || cat.includes("llanta")) subCat = "Llantas";
+    else if (name.match(/alineaci[ón]|balanceo|camber|rotaci[ón]/i) || cat.includes("alineacion")) subCat = "Alineación y Balanceo";
+    else if (name.match(/enllanta|parche|vulcaniz|nitr[óo]geno|v[áa]lvula/i) || cat.includes("enllantaje")) subCat = "Enllantaje";
+    else if (name.match(/freno|pastilla|disco|zapata/i) || cat.includes("frenos")) subCat = "Frenos";
+    else if (name.match(/suspensi|amortiguador|terminal|r[ót]ula|buje|mesa/i) || cat.includes("suspension")) subCat = "Suspensión y Dirección";
+    else if (name.match(/bater[íi]a|borne/i) || cat.includes("bateria")) subCat = "Baterías";
+    else if (it.subCategory) subCat = String(it.subCategory);
+    else if (it.category && !cat.includes("tecnicentro")) subCat = String(it.category);
+
+    return { modulo: "Tecnicentro", moduloIcon: "⚡", subcategoria: subCat };
+  }
+
+  // 2. Car Wash
+  if (
+    cat.includes("car wash") ||
+    cat.includes("carwash") ||
+    cat.includes("lavado") ||
+    sub.includes("car wash") ||
+    sub.includes("carwash") ||
+    id.startsWith("cw_") ||
+    name.match(/lavado|aspirado|tapicer[íi]a|grafitado|chasis|cera|encerado|pulido|detailing|ozono|desengrase|shampoo|ambientador/i)
+  ) {
+    let subCat = "Lavado";
+    if (name.match(/chasis|grafitado|desengrase/i) || cat.includes("chasis")) subCat = "Chasis y Motor";
+    else if (name.match(/aspirado|tapicer[íi]a|cuero|techo|ozono|interior/i) || cat.includes("interior")) subCat = "Interior y Tapicería";
+    else if (name.match(/cera|encerado|pulido|faro|gotaseca|detailing/i) || cat.includes("detailing")) subCat = "Detailing y Pulido";
+    else if (name.match(/aroma|silicona|shampoo|toalla|insumo|producto/i) || cat.includes("extra")) subCat = "Insumos y Extras";
+    else if (it.subCategory && it.subCategory !== "Car Wash") subCat = String(it.subCategory);
+    else if (it.category && !cat.includes("car")) subCat = String(it.category);
+
+    return { modulo: "Car Wash", moduloIcon: "🧼", subcategoria: subCat };
+  }
+
+  // 3. Lubricentro
+  if (
+    cat.includes("lubricentro") ||
+    id.startsWith("lub_") ||
+    name.match(/aceite|filtro|valvulina|refrigerante|l[íi]quido.*freno|flush|aditivo|10w|20w|5w|0w|sint[ée]tico|mineral/i)
+  ) {
+    let subCat = "Mantenimiento";
+    if (name.match(/aceite|lubricante|10w|20w|5w|0w|motor/i) || cat.includes("aceite")) subCat = "Aceites";
+    else if (name.match(/filtro/i) || cat.includes("filtro")) subCat = "Filtros";
+    else if (name.match(/refrigerante|freno|hidr[áa]ulico|fluido/i) || cat.includes("fluido")) subCat = "Fluidos y Refrigerantes";
+    else if (name.match(/transmisi[ón]|atf|cvt|caja|diferencial/i) || cat.includes("transmision")) subCat = "Transmisión";
+    else if (name.match(/aditivo|flush|limpiador/i)) subCat = "Aditivos";
+    else if (it.category && it.category.includes("-")) subCat = it.category.split("-")[1].trim();
+    else if (it.subCategory) subCat = String(it.subCategory);
+
+    return { modulo: "Lubricentro", moduloIcon: "🛢️", subcategoria: subCat };
+  }
+
+  // 4. Taller
+  let subCat = "Mecánica General";
+  if (cat.includes("repuesto") || it.type === "PART") subCat = "Repuestos y Partes";
+  else if (it.subCategory) subCat = String(it.subCategory);
+  else if (it.category && !cat.includes("taller")) subCat = String(it.category);
+
+  return { modulo: "Taller", moduloIcon: "🔧", subcategoria: subCat };
 }
 
 export default function PaginaDetallePropuesta() {
@@ -212,7 +300,7 @@ export default function PaginaDetallePropuesta() {
         mostrarToast(mensajeExito);
         return;
       }
-    } catch {}
+    } catch { }
 
     mostrarToast("No se pudo copiar automáticamente.", "err");
   };
@@ -233,7 +321,7 @@ export default function PaginaDetallePropuesta() {
               const errJson = await res.json();
               errText = errJson.error || errText;
             }
-          } catch {}
+          } catch { }
           setError(errText);
           return;
         }
@@ -413,19 +501,19 @@ export default function PaginaDetallePropuesta() {
       try {
         const parsed = JSON.parse((orden as any).receptionPhotosJson);
         if (Array.isArray(parsed)) list.push(...parsed);
-      } catch {}
+      } catch { }
     }
     if (typeof (orden as any).evidencePhotosJson === "string") {
       try {
         const parsed = JSON.parse((orden as any).evidencePhotosJson);
         if (Array.isArray(parsed)) list.push(...parsed);
-      } catch {}
+      } catch { }
     }
     if (typeof (orden as any).photosJson === "string") {
       try {
         const parsed = JSON.parse((orden as any).photosJson);
         if (Array.isArray(parsed)) list.push(...parsed);
-      } catch {}
+      } catch { }
     }
     if (orden.evidencias && Array.isArray(orden.evidencias)) {
       for (const ev of orden.evidencias) {
@@ -436,6 +524,172 @@ export default function PaginaDetallePropuesta() {
     }
     return Array.from(new Set(list.filter(Boolean)));
   }, [orden]);
+
+  // Hallazgos de inspección estructurados (Diagnóstico)
+  const hallazgos = useMemo(() => {
+    if (!orden) return [];
+    let list: any[] = [];
+    if (Array.isArray(orden.inspectionFindings) && orden.inspectionFindings.length > 0) {
+      list = [...orden.inspectionFindings];
+    } else if (typeof (orden as any).inspectionFindingsJson === "string") {
+      try {
+        const parsed = JSON.parse((orden as any).inspectionFindingsJson);
+        if (Array.isArray(parsed) && parsed.length > 0) list = [...parsed];
+      } catch { }
+    }
+
+    // Fallback: parsear desde orden.notes si tiene el formato "Inspección 5 Vistas (X hallazgos): #1 [Vista] Tipo: Desc"
+    if (list.length === 0 && orden.notes && orden.notes.includes("Inspección 5 Vistas")) {
+      const regex = /#(\d+)\s+\[([^\]]+)\]\s+([^:]+):\s*([^#\n]+)/g;
+      let match;
+      while ((match = regex.exec(orden.notes)) !== null) {
+        const pinNum = parseInt(match[1], 10);
+        const vistaRaw = match[2].trim();
+        const vistaNorm = vistaRaw.toLowerCase().replace(/\s+/g, "_");
+        const tipo = match[3].trim();
+        const desc = match[4].trim();
+        list.push({
+          id: `hallazgo_${pinNum}`,
+          pinNumber: pinNum,
+          vista: vistaNorm,
+          vistaLabel: vistaRaw,
+          tipo,
+          descripcion: desc,
+          photoUrls: fotosVehiculo.length > 0 ? [fotosVehiculo[0]] : [],
+        });
+      }
+    }
+
+    return list.map((h: any, i: number) => {
+      const vista = String(h.vista || h.view || "frontal").toLowerCase();
+      const vistaLabel = h.vistaLabel || h.viewLabel || (vista.charAt(0).toUpperCase() + vista.slice(1).replace(/_/g, " "));
+      const pinNumber = h.pinNumber || h.pin || (i + 1);
+      const tipo = h.tipo || h.type || "Hallazgo";
+      const descripcion = h.descripcion || h.description || h.desc || "";
+      const photoUrls = Array.isArray(h.photoUrls) && h.photoUrls.length > 0
+        ? h.photoUrls
+        : (h.photoUrl ? [h.photoUrl] : (fotosVehiculo.length > 0 ? [fotosVehiculo[0]] : []));
+      return {
+        ...h,
+        id: h.id || `find_${i}`,
+        pinNumber,
+        vista,
+        vistaLabel,
+        tipo,
+        descripcion,
+        photoUrls,
+      };
+    });
+  }, [orden, fotosVehiculo]);
+
+  // Secciones de diagnóstico agrupadas por vista
+  const secciones = useMemo(() => {
+    return [
+      {
+        id: "carroceria",
+        nombre: "Carrocería",
+        icon: "🚗",
+        items: hallazgos.filter((h: any) =>
+          ["frontal", "trasera", "lateral_izq", "lateral_der", "superior"].includes(h.vista)
+        ),
+      },
+      {
+        id: "motor",
+        nombre: "Motor",
+        icon: "⚙️",
+        items: hallazgos.filter((h: any) => h.vista === "motor"),
+      },
+      {
+        id: "frenos",
+        nombre: "Frenos",
+        icon: "🛑",
+        items: hallazgos.filter((h: any) => h.vista === "frenos"),
+      },
+      {
+        id: "suspension",
+        nombre: "Suspensión",
+        icon: "🔧",
+        items: hallazgos.filter((h: any) => h.vista === "suspension"),
+      },
+      {
+        id: "electrico",
+        nombre: "Eléctrico",
+        icon: "⚡",
+        items: hallazgos.filter((h: any) => h.vista === "electrico"),
+      },
+      {
+        id: "aire",
+        nombre: "Aire Acondicionado",
+        icon: "❄️",
+        items: hallazgos.filter((h: any) => h.vista === "aire"),
+      },
+      {
+        id: "otros",
+        nombre: "Otros Hallazgos",
+        icon: "🔍",
+        items: hallazgos.filter(
+          (h: any) => !["frontal", "trasera", "lateral_izq", "lateral_der", "superior", "motor", "frenos", "suspension", "electrico", "aire"].includes(h.vista)
+        ),
+      },
+    ].filter((s) => s.items.length > 0);
+  }, [hallazgos]);
+
+  // Trabajos unificados de repuestos y servicios
+  const itemsPropuestaParaTrabajos = useMemo(() => {
+    const listaRepuestos = repuestos.map((r) => ({
+      id: r.id,
+      name: r.name,
+      qty: r.qty,
+      price: r.price,
+      type: "PART",
+      category: r.origin || "TALLER",
+    }));
+    const listaServicios = servicios.map((s) => ({
+      id: s.id,
+      name: s.name,
+      qty: 1,
+      price: s.price,
+      type: "SERVICE",
+      category: s.category || s.origin || "TALLER",
+    }));
+    return [...listaRepuestos, ...listaServicios];
+  }, [repuestos, servicios]);
+
+  // Agrupación de trabajos por módulo y subcategoría
+  const gruposModulos = useMemo(() => {
+    const ordenModulos: Array<{ id: "Taller" | "Lubricentro" | "Car Wash" | "Tecnicentro"; icon: string }> = [
+      { id: "Taller", icon: "🔧" },
+      { id: "Lubricentro", icon: "🛢️" },
+      { id: "Car Wash", icon: "🧼" },
+      { id: "Tecnicentro", icon: "⚡" },
+    ];
+
+    const mapa: Record<string, Record<string, any[]>> = {};
+
+    itemsPropuestaParaTrabajos.forEach((it) => {
+      const { modulo, subcategoria } = clasificarItem(it);
+      if (!mapa[modulo]) mapa[modulo] = {};
+      if (!mapa[modulo][subcategoria]) mapa[modulo][subcategoria] = [];
+      mapa[modulo][subcategoria].push(it);
+    });
+
+    return ordenModulos
+      .filter((m) => mapa[m.id] && Object.keys(mapa[m.id]).length > 0)
+      .map((m) => {
+        const subcategorias = Object.entries(mapa[m.id]).map(([subcat, listaItems]) => ({
+          nombre: subcat,
+          items: listaItems,
+        }));
+        const totalItemsModulo = subcategorias.reduce((sum, s) => sum + s.items.length, 0);
+        return {
+          id: m.id,
+          nombre: m.id,
+          icon: m.icon,
+          totalItems: totalItemsModulo,
+          subcategorias,
+        };
+      });
+  }, [itemsPropuestaParaTrabajos]);
 
   // Subir fotos directamente desde la propuesta a Cloudflare R2
   const handleSubirFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -461,7 +715,7 @@ export default function PaginaDetallePropuesta() {
         let data: any = null;
         try {
           data = await res.json();
-        } catch {}
+        } catch { }
         if (data && data.success && data.url) {
           const nuevaUrl = data.url;
           setOrden((prev) => {
@@ -612,14 +866,14 @@ export default function PaginaDetallePropuesta() {
             const errJson = await res.json();
             errText = errJson.error || errText;
           }
-        } catch {}
+        } catch { }
         mostrarToast(errText, "err");
         return;
       }
       let data: any = null;
       try {
         data = await res.json();
-      } catch {}
+      } catch { }
       if (data?.success) {
         mostrarToast("Factura / Presupuesto guardado correctamente.");
       } else {
@@ -659,14 +913,14 @@ export default function PaginaDetallePropuesta() {
             const errJson = await res.json();
             errText = errJson.error || errText;
           }
-        } catch {}
+        } catch { }
         mostrarToast(errText, "err");
         return;
       }
       let data: any = null;
       try {
         data = await res.json();
-      } catch {}
+      } catch { }
       if (data?.success) {
         mostrarToast("¡Presupuesto autorizado y enviado a Caja POS con éxito!");
         setOrden((prev) => (prev ? { ...prev, quoteStatus: "Aprobado", status: "EN_CAJA" } : null));
@@ -808,11 +1062,10 @@ export default function PaginaDetallePropuesta() {
       {/* Toast Notificaciones */}
       {toast && (
         <div
-          className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded-2xl shadow-2xl backdrop-blur-md border text-xs font-semibold flex items-center gap-2 animate-bounce print:hidden ${
-            toast.tipo === "ok"
-              ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
-              : "bg-rose-500/15 border-rose-500/30 text-rose-700 dark:text-rose-300"
-          }`}
+          className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded-2xl shadow-2xl backdrop-blur-md border text-xs font-semibold flex items-center gap-2 animate-bounce print:hidden ${toast.tipo === "ok"
+            ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+            : "bg-rose-500/15 border-rose-500/30 text-rose-700 dark:text-rose-300"
+            }`}
         >
           <span>{toast.tipo === "ok" ? "✓" : "✕"}</span>
           <span>{toast.msg}</span>
@@ -836,7 +1089,7 @@ export default function PaginaDetallePropuesta() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
               </Link>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
+              <h1 className="text-2xl sm:text-3xl font-normal tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
                 Propuesta
               </h1>
             </div>
@@ -846,7 +1099,7 @@ export default function PaginaDetallePropuesta() {
               <button
                 type="button"
                 onClick={handleImprimir}
-                className="h-10 px-3.5 sm:px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-200 active:scale-95 font-semibold text-xs sm:text-sm shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="h-10 px-3.5 sm:px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-200 active:scale-95 font-normal text-xs sm:text-sm shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 title="Imprimir Proforma"
                 aria-label="Imprimir Proforma"
               >
@@ -858,7 +1111,7 @@ export default function PaginaDetallePropuesta() {
               <button
                 type="button"
                 onClick={() => setModalWhatsApp(true)}
-                className="h-10 px-3.5 sm:px-4 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 font-semibold text-xs sm:text-sm transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                className="h-10 px-3.5 sm:px-4 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 font-normal text-xs sm:text-sm transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                 title="Catálogo Proveedores WhatsApp"
                 aria-label="Catálogo Proveedores WhatsApp"
               >
@@ -871,11 +1124,10 @@ export default function PaginaDetallePropuesta() {
                 type="button"
                 disabled={cambiandoEstado}
                 onClick={handleToggleEstado}
-                className={`h-10 px-3.5 sm:px-4 rounded-xl border flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold shadow-xs shrink-0 transition-all active:scale-95 cursor-pointer disabled:opacity-50 ${
-                  esAprobado
-                    ? "bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
-                    : "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/30 text-amber-600 dark:text-amber-400"
-                }`}
+                className={`h-10 px-3.5 sm:px-4 rounded-xl border flex items-center justify-center gap-1.5 text-xs sm:text-sm font-normal shadow-xs shrink-0 transition-all active:scale-95 cursor-pointer disabled:opacity-50 ${esAprobado
+                  ? "bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
+                  : "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                  }`}
                 title={esAprobado ? "Propuesta Aprobada (clic para poner En Espera)" : "Propuesta En Espera (clic para Aprobar)"}
               >
                 <span>{cambiandoEstado ? "..." : (esAprobado ? "✓" : "⏳")}</span>
@@ -889,7 +1141,7 @@ export default function PaginaDetallePropuesta() {
       {/* DOCUMENTO PRINCIPAL FORMATO FACTURA / PROFORMA */}
       <main className="max-w-6xl mx-auto p-3 sm:p-6 md:p-8 mt-4 sm:mt-6 print:m-0 print:p-0 print:max-w-none">
         <div className="bg-white dark:bg-[#0f0f13] border border-zinc-200 dark:border-white/10 rounded-3xl p-5 sm:p-8 md:p-10 shadow-2xl space-y-8 print:border-none print:shadow-none print:p-4 print:rounded-none">
-          
+
           {/* CABECERA DE LA FACTURA */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pb-6 border-b border-zinc-200 dark:border-white/10">
             <div>
@@ -908,10 +1160,10 @@ export default function PaginaDetallePropuesta() {
                     <span className="text-zinc-400 dark:text-zinc-500 font-light px-0.5">/</span>
                     <span className="text-zinc-900 dark:text-white">G</span>
                   </div>
-                  <p className="text-xs sm:text-sm font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mt-1">
+                  <p className="text-xs sm:text-sm font-normal text-zinc-500 dark:text-zinc-400 mt-1">
                     Centro Automotriz
                   </p>
-                  <p className="text-xs text-zinc-600 dark:text-zinc-400 font-medium mt-1">
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 font-normal mt-1">
                     {(() => {
                       const mecanicoLimpio = orden?.mechanic ? orden.mechanic.split("(")[0].trim() : "Carlos Rodríguez";
                       const notes = orden?.notes?.trim();
@@ -930,20 +1182,19 @@ export default function PaginaDetallePropuesta() {
 
             <div className="sm:text-right w-full sm:w-auto p-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 space-y-1.5 shrink-0">
               <div className="flex items-center gap-2 sm:justify-end flex-wrap">
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/25">
+                <span className="text-xs font-normal px-2.5 py-0.5 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/25">
                   Propuesta
                 </span>
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
-                    esAprobado
-                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                      : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
-                  }`}
+                  className={`text-xs font-normal px-2.5 py-0.5 rounded-md border ${esAprobado
+                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                    : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                    }`}
                 >
                   {esAprobado ? "✓ Aprobado" : "⏳ En Espera"}
                 </span>
               </div>
-              <h3 className="text-base sm:text-lg font-mono font-normal text-zinc-900 dark:text-white pt-1">
+              <h3 className="text-base sm:text-lg font-normal text-zinc-900 dark:text-white pt-1">
                 {orden.quoteNumber ? orden.quoteNumber.replace(/\bOT\s*#?/gi, "").replace(/-\s+/, "-").trim() : `COT-${limpiarNumeroOrden(orden.orderNumber)}`}
               </h3>
               <p className="text-sm sm:text-base font-normal text-zinc-600 dark:text-zinc-400 pt-0.5">
@@ -963,15 +1214,15 @@ export default function PaginaDetallePropuesta() {
                     <span className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-sm">
                       👤
                     </span>
-                    <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+                    <span className="text-sm font-normal text-zinc-700 dark:text-zinc-300">
                       Datos del Cliente
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    <span className="text-xs font-normal px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                       Titular
                     </span>
-                    <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400">
+                    <span className="text-xs font-normal px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400">
                       {orden.customerType || "Personal"}
                     </span>
                   </div>
@@ -1000,7 +1251,7 @@ export default function PaginaDetallePropuesta() {
 
                       {/* Overlay para Cambiar / Ver Foto */}
                       <label
-                        className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-bold cursor-pointer rounded-2xl print:hidden gap-0.5"
+                        className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-normal cursor-pointer rounded-2xl print:hidden gap-0.5"
                         title="Cambiar foto de perfil del cliente"
                       >
                         <span>📷</span>
@@ -1017,7 +1268,7 @@ export default function PaginaDetallePropuesta() {
 
                     {/* Botón flotante para subir/cambiar foto */}
                     <label
-                      className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold flex items-center justify-center shadow-md cursor-pointer border-2 border-white dark:border-[#121215] transition-all print:hidden active:scale-90"
+                      className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-normal flex items-center justify-center shadow-md cursor-pointer border-2 border-white dark:border-[#121215] transition-all print:hidden active:scale-90"
                       title="Subir foto del cliente"
                     >
                       <span>+</span>
@@ -1035,7 +1286,7 @@ export default function PaginaDetallePropuesta() {
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3
-                        className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white truncate"
+                        className="text-base sm:text-lg font-normal text-zinc-900 dark:text-white truncate"
                         title={orden.client}
                       >
                         {orden.client}
@@ -1043,7 +1294,7 @@ export default function PaginaDetallePropuesta() {
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap text-xs text-zinc-500 dark:text-zinc-400">
-                      <span className="font-mono px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-white/5 font-semibold text-zinc-800 dark:text-zinc-200">
+                      <span className="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-white/5 font-normal text-zinc-800 dark:text-zinc-200">
                         {orden.clientIdDoc || "CLI-000000"}
                       </span>
 
@@ -1053,7 +1304,7 @@ export default function PaginaDetallePropuesta() {
                           href={`https://wa.me/${orden.clientPhone.replace(/\D/g, "")}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-medium transition-colors"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-normal transition-colors"
                           title="Contactar al cliente vía WhatsApp"
                         >
                           <span>💬</span>
@@ -1066,7 +1317,7 @@ export default function PaginaDetallePropuesta() {
 
                     <div className="pt-0.5 flex items-center gap-1.5">
                       <span className="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                      <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 truncate">
+                      <span className="text-xs font-normal text-blue-600 dark:text-blue-400 truncate">
                         {orden.status || "En Taller"}
                       </span>
                     </div>
@@ -1076,19 +1327,19 @@ export default function PaginaDetallePropuesta() {
                 {/* Grid con campos estructurados del cliente */}
                 <div className="grid grid-cols-2 gap-2 sm:gap-2.5 pt-3.5">
                   <div className="p-2.5 rounded-xl bg-zinc-50/80 dark:bg-white/[0.03] border border-zinc-200/70 dark:border-white/5 flex flex-col justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                    <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">
                       Cédula / RUC
                     </span>
-                    <span className="text-xs sm:text-sm font-mono font-bold text-zinc-800 dark:text-zinc-200 mt-0.5 truncate">
+                    <span className="text-xs sm:text-sm font-normal text-zinc-800 dark:text-zinc-200 mt-0.5 truncate">
                       {orden.clientIdDoc || "CLI-151951"}
                     </span>
                   </div>
 
                   <div className="p-2.5 rounded-xl bg-zinc-50/80 dark:bg-white/[0.03] border border-zinc-200/70 dark:border-white/5 flex flex-col justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                    <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">
                       Teléfono / WhatsApp
                     </span>
-                    <span className="text-xs sm:text-sm font-mono font-medium text-zinc-800 dark:text-zinc-200 mt-0.5 truncate">
+                    <span className="text-xs sm:text-sm font-normal text-zinc-800 dark:text-zinc-200 mt-0.5 truncate">
                       {orden.clientPhone || "S/N"}
                     </span>
                   </div>
@@ -1105,14 +1356,14 @@ export default function PaginaDetallePropuesta() {
                     <span className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 text-sm">
                       🚗
                     </span>
-                    <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+                    <span className="text-sm font-normal text-zinc-700 dark:text-zinc-300">
                       Datos del Vehículo
                     </span>
                   </div>
 
                   {/* Placa estilo matriculación ecuatoriana */}
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs sm:text-sm font-mono font-black px-2.5 py-0.5 rounded-md bg-amber-400 text-black border border-amber-500 tracking-wider shadow-2xs uppercase">
+                    <span className="text-xs sm:text-sm font-normal px-2.5 py-0.5 rounded-md bg-amber-400 text-black border border-amber-500">
                       {orden.plate}
                     </span>
                   </div>
@@ -1142,7 +1393,7 @@ export default function PaginaDetallePropuesta() {
 
                           {/* Overlay para Cambiar / Ver Foto del Auto */}
                           <label
-                            className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-bold cursor-pointer rounded-2xl print:hidden gap-0.5"
+                            className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-normal cursor-pointer rounded-2xl print:hidden gap-0.5"
                             title="Cambiar foto de perfil del vehículo"
                           >
                             <span>📷</span>
@@ -1159,7 +1410,7 @@ export default function PaginaDetallePropuesta() {
 
                         {/* Botón flotante para subir/cambiar foto */}
                         <label
-                          className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-amber-500 hover:bg-amber-400 text-black text-[11px] font-black flex items-center justify-center shadow-md cursor-pointer border-2 border-white dark:border-[#121215] transition-all print:hidden active:scale-90"
+                          className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-amber-500 hover:bg-amber-400 text-black text-[11px] font-normal flex items-center justify-center shadow-md cursor-pointer border-2 border-white dark:border-[#121215] transition-all print:hidden active:scale-90"
                           title="Subir foto de perfil del vehículo"
                         >
                           <span>+</span>
@@ -1178,7 +1429,7 @@ export default function PaginaDetallePropuesta() {
                   {/* Marca / Modelo y Mecánico a cargo */}
                   <div className="min-w-0 flex-1 space-y-1">
                     <h3
-                      className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white truncate"
+                      className="text-base sm:text-lg font-normal text-zinc-900 dark:text-white truncate"
                       title={orden.vehicle}
                     >
                       {orden.vehicle}
@@ -1186,18 +1437,18 @@ export default function PaginaDetallePropuesta() {
 
                     <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
                       <span className="text-zinc-400">👨‍🔧</span>
-                      <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate">
+                      <span className="font-normal text-zinc-800 dark:text-zinc-200 truncate">
                         {orden.mechanic || "Carlos Rodríguez (Taller)"}
                       </span>
                     </div>
 
                     <div className="pt-0.5 flex items-center gap-2 text-xs">
-                      <span className="font-mono font-bold text-zinc-700 dark:text-zinc-300">
+                      <span className="font-normal text-zinc-700 dark:text-zinc-300">
                         {orden.mileage ? `${Number(orden.mileage).toLocaleString()} km` : "N/D"}
                       </span>
                       <span className="text-zinc-300 dark:text-zinc-700">•</span>
                       <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
-                        Tanque: <strong className="font-bold text-zinc-900 dark:text-white">{orden.fuelLevel || "1/2"}</strong>
+                        Tanque: <span className="font-normal text-zinc-900 dark:text-white">{orden.fuelLevel || "1/2"}</span>
                       </span>
                     </div>
                   </div>
@@ -1206,20 +1457,20 @@ export default function PaginaDetallePropuesta() {
                 {/* Grid con campos estructurados del vehículo */}
                 <div className="grid grid-cols-2 gap-2 sm:gap-2.5 pt-3.5">
                   <div className="p-2.5 rounded-xl bg-zinc-50/80 dark:bg-white/[0.03] border border-zinc-200/70 dark:border-white/5 flex flex-col justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                    <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">
                       Kilometraje Actual
                     </span>
-                    <span className="text-xs sm:text-sm font-mono font-bold text-zinc-800 dark:text-zinc-200 mt-0.5">
+                    <span className="text-xs sm:text-sm font-normal text-zinc-800 dark:text-zinc-200 mt-0.5">
                       {orden.mileage ? `${Number(orden.mileage).toLocaleString()} km` : "5000 km"}
                     </span>
                   </div>
 
                   <div className="p-2.5 rounded-xl bg-zinc-50/80 dark:bg-white/[0.03] border border-zinc-200/70 dark:border-white/5 flex flex-col justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                    <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">
                       Combustible / Estado
                     </span>
-                    <span className="text-xs sm:text-sm font-medium text-zinc-800 dark:text-zinc-200 mt-0.5">
-                      Tanque: <strong className="font-bold text-amber-600 dark:text-amber-400">{orden.fuelLevel || "E"}</strong>
+                    <span className="text-xs sm:text-sm font-normal text-zinc-800 dark:text-zinc-200 mt-0.5">
+                      Tanque: <span className="font-normal text-amber-600 dark:text-amber-400">{orden.fuelLevel || "E"}</span>
                     </span>
                   </div>
                 </div>
@@ -1227,21 +1478,18 @@ export default function PaginaDetallePropuesta() {
             </div>
           </div>
 
-          {/* FOTOS DE INSPECCIÓN Y EVIDENCIAS DEL VEHÍCULO */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/70 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-white/5">
-              <div className="flex items-center gap-2">
-                <span className="text-base">📸</span>
-                <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white tracking-wide">
-                  Fotos de Inspección & Evidencias del Vehículo
-                </span>
-                <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                  {fotosVehiculo.length} {fotosVehiculo.length === 1 ? "foto" : "fotos"}
-                </span>
-              </div>
+          {/* ===================================================================
+              SECCIÓN 1: HALLAZGOS DE INSPECCIÓN (DIAGNÓSTICO)
+              =================================================================== */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-1">
+              <h2 className="text-sm font-normal text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                <span>🔍</span>
+                <span>Diagnóstico ({hallazgos.length})</span>
+              </h2>
 
-              {/* Botón para subir fotos directamente */}
-              <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 print:hidden">
+              {/* Botón discreto para subir fotos si se desea */}
+              <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-normal transition-all cursor-pointer print:hidden">
                 <span>📷</span>
                 <span>{subiendoFoto ? "Subiendo..." : "Subir Foto"}</span>
                 <input
@@ -1255,47 +1503,189 @@ export default function PaginaDetallePropuesta() {
               </label>
             </div>
 
-            {fotosVehiculo.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 pt-1">
-                {fotosVehiculo.map((fotoUrl, idx) => (
+            {secciones.length === 0 ? (
+              <div className="py-4 text-center text-sm font-normal text-zinc-400 italic bg-zinc-50/50 dark:bg-white/[0.01] rounded-xl border border-dashed border-zinc-200 dark:border-white/10">
+                Sin hallazgos de inspección reportados.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {secciones.map((sec) => (
                   <div
-                    key={`foto-${idx}`}
-                    onClick={() => setFotoZoom(fotoUrl)}
-                    className="group relative aspect-4/3 rounded-xl overflow-hidden border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-black/40 cursor-pointer shadow-2xs hover:shadow-md hover:border-blue-500/50 transition-all"
+                    key={sec.id}
+                    className="rounded-xl border border-zinc-200 dark:border-white/10 overflow-hidden bg-white dark:bg-[#141418] text-sm"
                   >
-                    <img
-                      src={fotoUrl}
-                      alt={`Foto ${idx + 1}`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1">
-                      <span>🔍</span>
-                      <span>Ver</span>
+                    <div className="bg-zinc-100 dark:bg-white/[0.04] px-3.5 py-1.5 font-normal text-zinc-900 dark:text-zinc-100 flex items-center gap-2 border-b border-zinc-200 dark:border-white/10 text-sm">
+                      <span>{sec.icon}</span>
+                      <span>{formatoPrimeraMayuscula(sec.nombre)}</span>
+                      <span className="text-sm bg-zinc-200 dark:bg-white/10 px-2 py-0.5 rounded font-normal text-zinc-700 dark:text-zinc-300 ml-auto">
+                        {sec.items.length} {sec.items.length === 1 ? "punto" : "puntos"}
+                      </span>
                     </div>
-                    <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[10px] font-mono text-white/90">
-                      #{idx + 1}
+
+                    <div className="divide-y divide-zinc-100 dark:divide-white/5 p-2.5 space-y-2">
+                      {sec.items.map((pin: any) => {
+                        const fotosPin =
+                          pin.photoUrls && pin.photoUrls.length > 0
+                            ? pin.photoUrls
+                            : pin.photoUrl
+                            ? [pin.photoUrl]
+                            : fotosVehiculo.length > 0
+                            ? [fotosVehiculo[0]]
+                            : [];
+                        return (
+                          <div
+                            key={pin.id}
+                            className="pt-2 first:pt-0 flex items-start justify-between gap-3 text-sm"
+                          >
+                            <div className="space-y-1 min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="w-5 h-5 rounded-full bg-rose-600 text-white font-normal text-xs flex items-center justify-center shrink-0">
+                                  #{pin.pinNumber || 1}
+                                </span>
+                                <span className="font-normal text-zinc-900 dark:text-zinc-100 text-sm">
+                                  {formatoPrimeraMayuscula(pin.tipo)}
+                                </span>
+                                <span className="text-sm font-normal text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-white/5 px-2 py-0.5 rounded">
+                                  {formatoPrimeraMayuscula(pin.vistaLabel || pin.vista)}
+                                </span>
+                              </div>
+                              {pin.descripcion && (
+                                <p className="text-sm font-normal text-zinc-700 dark:text-zinc-300 italic pl-7">
+                                  &quot;{formatoPrimeraMayuscula(pin.descripcion)}&quot;
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Miniaturas de fotos tomadas en el pin */}
+                            {fotosPin.length > 0 && (
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {fotosPin.slice(0, 3).map((fUrl: string, fIdx: number) => (
+                                  <img
+                                    key={fIdx}
+                                    src={fUrl}
+                                    alt="Evidencia"
+                                    onClick={() => setFotoZoom(fUrl)}
+                                    className="w-10 h-10 rounded object-cover border border-zinc-300 dark:border-white/20 cursor-pointer hover:scale-105 transition-transform"
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
               </div>
+            )}
+
+            {/* Galería colapsable opcional de fotos generales del vehículo */}
+            {fotosVehiculo.length > 0 && (
+              <details className="pt-1 group">
+                <summary className="text-xs font-normal text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer list-none flex items-center gap-1.5 select-none">
+                  <span className="group-open:rotate-90 transition-transform text-[10px]">▶</span>
+                  <span>Ver fotos del vehículo ({fotosVehiculo.length})</span>
+                </summary>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 pt-2">
+                  {fotosVehiculo.map((fotoUrl, idx) => (
+                    <div
+                      key={`foto-galeria-${idx}`}
+                      onClick={() => setFotoZoom(fotoUrl)}
+                      className="group/img relative aspect-4/3 rounded-lg overflow-hidden border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-black/40 cursor-pointer hover:border-blue-500/50 transition-all"
+                    >
+                      <img
+                        src={fotoUrl}
+                        alt={`Foto ${idx + 1}`}
+                        className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-200"
+                        loading="lazy"
+                      />
+                      <div className="absolute bottom-1 right-1 px-1 py-0.2 rounded bg-black/60 text-[9px] font-mono text-white/90">
+                        #{idx + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
+
+          {/* ===================================================================
+              SECCIÓN 2: TRABAJOS AGRUPADOS POR MÓDULO (SIN VALORES)
+              =================================================================== */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-1">
+              <h2 className="text-sm font-normal text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                <span>💼</span>
+                <span>Trabajos ({itemsPropuestaParaTrabajos.length})</span>
+              </h2>
+            </div>
+
+            {gruposModulos.length === 0 ? (
+              <div className="py-4 text-center text-sm font-normal text-zinc-400 italic bg-zinc-50/50 dark:bg-white/[0.01] rounded-xl border border-dashed border-zinc-200 dark:border-white/10">
+                No se han agregado trabajos a la propuesta todavía.
+              </div>
             ) : (
-              <div className="py-6 px-4 rounded-xl border border-dashed border-zinc-300 dark:border-white/10 flex flex-col items-center justify-center text-center text-zinc-400">
-                <span className="text-3xl mb-1">📸</span>
-                <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                  No hay fotos registradas para este vehículo aún.
-                </p>
-                <label className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-200 hover:bg-zinc-300 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-800 dark:text-zinc-200 text-xs font-bold transition-all cursor-pointer print:hidden">
-                  <span>+ Agregar fotos de inspección</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    disabled={subiendoFoto}
-                    onChange={handleSubirFoto}
-                    className="hidden"
-                  />
-                </label>
+              <div className="space-y-3">
+                {gruposModulos.map((mod) => (
+                  <div
+                    key={mod.id}
+                    className="rounded-xl border border-zinc-200 dark:border-white/10 overflow-hidden bg-white dark:bg-[#141418] text-sm"
+                  >
+                    {/* Cabecera del Módulo (Taller, Lubricentro, Car Wash, Tecnicentro) */}
+                    <div className="bg-zinc-100 dark:bg-white/[0.04] px-3.5 py-1.5 font-normal text-zinc-900 dark:text-zinc-100 flex items-center gap-2 border-b border-zinc-200 dark:border-white/10 text-sm">
+                      <span>{mod.icon}</span>
+                      <span>{mod.nombre}</span>
+                      <span className="text-sm bg-zinc-200 dark:bg-white/10 px-2 py-0.5 rounded font-normal text-zinc-700 dark:text-zinc-300 ml-auto">
+                        {mod.totalItems} {mod.totalItems === 1 ? "trabajo" : "trabajos"}
+                      </span>
+                    </div>
+
+                    {/* Subcategorías y Lista de Trabajos */}
+                    <div className="divide-y divide-zinc-200 dark:divide-white/10">
+                      {mod.subcategorias.map((sub, sIdx) => (
+                        <div key={sIdx} className="bg-white dark:bg-[#141418]">
+                          {/* Subcategoría directamente debajo del módulo */}
+                          <div className="bg-zinc-50/70 dark:bg-white/[0.02] px-3.5 py-1.5 flex items-center justify-between border-b border-zinc-100 dark:border-white/5">
+                            <span className="font-normal text-zinc-700 dark:text-zinc-300 text-sm flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500"></span>
+                              {formatoPrimeraMayuscula(sub.nombre)}
+                            </span>
+                            <span className="text-sm font-normal text-zinc-500 dark:text-zinc-400">
+                              {sub.items.length} {sub.items.length === 1 ? "ítem" : "ítems"}
+                            </span>
+                          </div>
+
+                          {/* Lista de trabajos */}
+                          <div className="divide-y divide-zinc-100 dark:divide-white/5 px-3.5 py-1">
+                            {sub.items.map((it: any, itIdx: number) => {
+                              const cant = Number(it.qty) || 1;
+                              return (
+                                <div
+                                  key={it.id || itIdx}
+                                  className="py-2 flex items-center justify-between gap-3 text-sm"
+                                >
+                                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                    <span className="w-5 h-5 rounded-full bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-400 font-normal text-xs flex items-center justify-center shrink-0 border border-zinc-200 dark:border-white/10">
+                                      #{itIdx + 1}
+                                    </span>
+                                    <span className="font-normal text-zinc-900 dark:text-white truncate text-sm">
+                                      {formatoPrimeraMayuscula(it.name)}
+                                    </span>
+                                  </div>
+                                  {cant > 1 && (
+                                    <span className="text-sm font-normal text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-white/5 px-2 py-0.5 rounded-md shrink-0">
+                                      Cant: {cant}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -1398,11 +1788,10 @@ export default function PaginaDetallePropuesta() {
                             <div className="flex flex-col gap-1.5 items-center justify-center">
                               {/* Casillero / Switch interactivo */}
                               <label
-                                className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
-                                  item.inStock
-                                    ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
-                                    : "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300"
-                                }`}
+                                className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition-all ${item.inStock
+                                  ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
+                                  : "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300"
+                                  }`}
                               >
                                 <div className="flex items-center gap-2">
                                   <input
@@ -1999,11 +2388,10 @@ export default function PaginaDetallePropuesta() {
                   <button
                     type="button"
                     onClick={() => setNuevoEnStock(!nuevoEnStock)}
-                    className={`w-full h-10 rounded-xl text-xs font-semibold border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
-                      nuevoEnStock
-                        ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-400"
-                        : "bg-amber-50 dark:bg-amber-500/15 border-amber-300 dark:border-amber-500/40 text-amber-800 dark:text-amber-400"
-                    }`}
+                    className={`w-full h-10 rounded-xl text-xs font-semibold border transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${nuevoEnStock
+                      ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-400"
+                      : "bg-amber-50 dark:bg-amber-500/15 border-amber-300 dark:border-amber-500/40 text-amber-800 dark:text-amber-400"
+                      }`}
                   >
                     <span>{nuevoEnStock ? "📦 Sí hay en Bodega" : "🚚 Pedir a Proveedor"}</span>
                   </button>
