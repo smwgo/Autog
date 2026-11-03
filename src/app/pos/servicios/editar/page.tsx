@@ -170,36 +170,6 @@ function EditarServicioForm() {
             </h1>
           </div>
         </div>
-
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <Link
-            href="/pos/servicios"
-            className="px-5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-          >
-            Cancelar
-          </Link>
-          <button
-            type="button"
-            onClick={() => handleSubmit()}
-            disabled={guardando || mensajeExito}
-            className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold shadow-md shadow-blue-500/20 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-          >
-            {guardando ? (
-              <>
-                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                </svg>
-                <span>Guardando...</span>
-              </>
-            ) : (
-              <>
-                <span>✓</span>
-                <span>Guardar Cambios</span>
-              </>
-            )}
-          </button>
-        </div>
       </div>
 
       {/* Mensaje de Éxito */}
@@ -256,7 +226,7 @@ function EditarServicioForm() {
 
               <div>
                 <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 block">
-                  Tipo / Módulo *
+                  Tipo
                 </label>
                 <SelectorModulos value={tipo} onChange={setTipo} />
               </div>

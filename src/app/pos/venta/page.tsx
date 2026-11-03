@@ -1470,7 +1470,7 @@ export default function NuevaVentaPage() {
       <Header />
 
       {/* Barra Superior Ventas */}
-      <nav className="w-full bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-3 sm:px-6 py-2 shadow-xs sticky top-0 z-30">
+      <nav className="w-full bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-3 sm:px-6 py-2 shadow-xs">
         <div className="max-w-[1700px] mx-auto flex items-center justify-between gap-2.5 sm:gap-4 overflow-x-auto scrollbar-none">
           {/* Lado Izquierdo: [←] Venta (productos.length) */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
@@ -1563,7 +1563,7 @@ export default function NuevaVentaPage() {
         </div>
       </nav>
 
-      <main className="flex-grow flex flex-col md:flex-row p-3 sm:p-4 md:p-6 gap-4 md:gap-6 w-full max-w-[1600px] mx-auto min-h-[calc(100vh-80px)] md:h-[calc(100vh-80px)]">
+      <main className="flex-grow flex flex-col md:flex-row p-3 sm:p-4 md:p-6 gap-4 md:gap-6 w-full max-w-[1600px] mx-auto min-h-[calc(100vh-80px)]">
         {/* Selector de Vista en Móvil (Android / iOS) */}
         <div className="flex md:hidden items-center bg-zinc-200 dark:bg-zinc-800 p-1 rounded-2xl gap-1 shrink-0">
           <button
@@ -1598,7 +1598,7 @@ export default function NuevaVentaPage() {
         </div>
 
         {/* Panel Izquierdo: Catálogo y Búsqueda */}
-        <div className={`${vistaMovil === "carrito" ? "hidden md:flex" : "flex"} flex-grow flex-col h-full bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden`}>
+        <div className={`${vistaMovil === "carrito" ? "hidden md:flex" : "flex"} flex-grow flex-col bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden`}>
           <div className="p-4 sm:p-6 border-b border-zinc-100 dark:border-zinc-800 flex flex-col gap-3 sm:gap-4">
 
             <div className="flex items-center gap-2 sm:gap-2.5 w-full">
@@ -1781,7 +1781,7 @@ export default function NuevaVentaPage() {
           </div>
 
           {/* Rejilla de Productos */}
-          <div className="flex-grow p-6 overflow-y-auto bg-zinc-50/50 dark:bg-zinc-900/50">
+          <div className="flex-grow p-6 bg-zinc-50/50 dark:bg-zinc-900/50">
             {cargandoProductos ? (
               <div className="h-full flex flex-col items-center justify-center text-zinc-400 p-8 space-y-3">
                 <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
@@ -1955,7 +1955,7 @@ export default function NuevaVentaPage() {
         </div>
 
         {/* Panel Derecho: Carrito / Ticket - Fijo con la Página y Sin Scroll en Vacío */}
-        <div className={`${vistaMovil === "catalogo" ? "hidden md:flex" : "flex"} w-full md:w-[420px] lg:w-[450px] flex-shrink-0 flex-col bg-white dark:bg-zinc-950 p-3 sm:p-3.5 gap-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800/80 shadow-2xl md:sticky md:top-4 md:self-start md:max-h-[calc(100vh-2rem)] transition-all`}>
+        <div className={`${vistaMovil === "catalogo" ? "hidden md:flex" : "flex"} w-full md:w-[420px] lg:w-[450px] flex-shrink-0 flex-col bg-white dark:bg-zinc-950 p-3 sm:p-3.5 gap-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800/80 shadow-2xl md:self-start transition-all`}>
           {/* Botón Volver al Catálogo en Móvil */}
           <div className="md:hidden p-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800/80 flex items-center justify-between">
             <button
