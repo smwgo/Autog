@@ -114,7 +114,7 @@ export default function GestionPersonal() {
             <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-1.5 sm:mb-2">
               <Link href="/gerencia" className="hover:text-blue-600 transition-colors">Gerencia</Link>
               <span>/</span>
-              <span className="text-zinc-900 dark:text-zinc-100 font-medium">Gestión de Personal</span>
+              <span className="text-zinc-900 dark:text-zinc-100 font-medium">Nómina y Personal</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               Directorio de Empleados

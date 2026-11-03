@@ -8,7 +8,7 @@ import { GerenciaExecutiveKpis } from "@/components/gerencia/GerenciaExecutiveKp
 
 const modules = [
   {
-    title: "Tablero",
+    title: "Indicadores",
     href: "/gerencia/dashboard",
     color: "bg-blue-600",
     gradient: "from-blue-600 via-indigo-600 to-blue-700",
@@ -33,7 +33,7 @@ const modules = [
     ),
   },
   {
-    title: "Personal",
+    title: "Nómina",
     href: "/gerencia/personal",
     color: "bg-purple-500",
     gradient: "from-purple-500 via-indigo-500 to-purple-600",
@@ -47,28 +47,14 @@ const modules = [
     ),
   },
   {
-    title: "Inventario",
-    href: "/gerencia/inventario",
+    title: "Tareas",
+    href: "/gerencia/tareas",
     color: "bg-amber-500",
     gradient: "from-amber-500 via-orange-500 to-amber-600",
     icon: (
       <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="m7.5 4.27 9 5.15" />
-        <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-        <path d="m3.3 7 8.7 5 8.7-5" />
-        <path d="M12 22V12" />
-      </svg>
-    ),
-  },
-  {
-    title: "Auditoría",
-    href: "/gerencia/auditoria",
-    color: "bg-rose-500",
-    gradient: "from-rose-500 via-red-500 to-rose-600",
-    icon: (
-      <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-        <path d="m9 12 2 2 4-4" />
+        <path d="M9 11l3 3L22 4" />
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
       </svg>
     ),
   },
@@ -106,7 +92,7 @@ export default function GerenciaPanel() {
       <Header />
       <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full space-y-8">
         {/* Panel Ejecutivo KPI (Estilo CEO - Dirección) */}
-        <GerenciaExecutiveKpis backHref="/" />
+        <GerenciaExecutiveKpis backHref="/acceso" />
 
         {/* Sección de Módulos de Gestión */}
         <div>

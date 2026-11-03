@@ -85,7 +85,7 @@ export default function OficinaPanel() {
         <div className="mb-6 sm:mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3.5">
             <Link 
-              href="/gerencia" 
+              href="/acceso" 
               aria-label="Volver"
               className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-zinc-500/10 dark:bg-zinc-800/30 hover:bg-zinc-500/20 dark:hover:bg-zinc-800/60 border border-zinc-300/40 dark:border-zinc-700/30 text-zinc-700 dark:text-zinc-200 backdrop-blur-sm transition-all flex items-center justify-center shrink-0 active:scale-95"
             >

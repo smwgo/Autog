@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     return await withRetry(async () => {
       // 1. Determinar rango de fechas
       const now = new Date();
-      let startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      let startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
       let endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
       const mesCorto = (d: Date) => d.toLocaleString("es-ES", { month: "short" }).toUpperCase().replace(".", "");
@@ -21,35 +21,73 @@ export async function GET(request: Request) {
 
       let dateLabel = `${pad2(1)} ${mesCorto(now)} ${now.getFullYear()} — ${pad2(endDate.getDate())} ${mesCorto(now)} ${now.getFullYear()}`;
 
-      if (periodo === "hoy") {
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      if (desdeParam && hastaParam) {
+        const partsStart = desdeParam.split("-").map(Number);
+        const partsEnd = hastaParam.split("-").map(Number);
+        if (partsStart.length === 3 && partsEnd.length === 3) {
+          startDate = new Date(partsStart[0], partsStart[1] - 1, partsStart[2], 0, 0, 0, 0);
+          endDate = new Date(partsEnd[0], partsEnd[1] - 1, partsEnd[2], 23, 59, 59, 999);
+        } else {
+          startDate = new Date(desdeParam);
+          endDate = new Date(hastaParam);
+          endDate.setHours(23, 59, 59, 999);
+        }
+        dateLabel = `${pad2(startDate.getDate())} ${mesCorto(startDate)} ${startDate.getFullYear()} — ${pad2(endDate.getDate())} ${mesCorto(endDate)} ${endDate.getFullYear()}`;
+      } else if (periodo === "hoy") {
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
         endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
         dateLabel = `HOY, ${pad2(now.getDate())} ${mesCorto(now)} ${now.getFullYear()}`;
       } else if (periodo === "esta_semana") {
         const dayOfWeek = now.getDay();
         const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday, 0, 0, 0, 0);
         endDate = new Date(startDate.getTime() + 6 * 24 * 60 * 60 * 1000 + 86399999);
         dateLabel = `${pad2(startDate.getDate())} ${mesCorto(startDate)} — ${pad2(endDate.getDate())} ${mesCorto(endDate)} ${now.getFullYear()}`;
       } else if (periodo === "este_anio") {
-        startDate = new Date(now.getFullYear(), 0, 1);
+        startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
         endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
         dateLabel = `AÑO ${now.getFullYear()} (ENE — DIC)`;
       } else if (periodo === "todo") {
-        startDate = new Date(2020, 0, 1);
-        endDate = new Date(now.getFullYear() + 1, 11, 31);
+        startDate = new Date(2020, 0, 1, 0, 0, 0, 0);
+        endDate = new Date(now.getFullYear() + 2, 11, 31, 23, 59, 59, 999);
         dateLabel = `HISTÓRICO COMPLETO`;
-      } else if (desdeParam && hastaParam) {
-        startDate = new Date(desdeParam);
-        endDate = new Date(hastaParam);
-        dateLabel = `${pad2(startDate.getDate())} ${mesCorto(startDate)} — ${pad2(endDate.getDate())} ${mesCorto(endDate)} ${endDate.getFullYear()}`;
       }
 
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
       const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-      // 2. Consultar ventas en periodo y hoy
-      const [salesPeriod, salesToday, workshopOrders, posCredits, cashMovements] = await Promise.all([
+      // Helper para extraer fecha real de un registro
+      const getRecordDate = (rec: any): Date => {
+        if (rec.completedAt) {
+          const d = new Date(rec.completedAt);
+          if (!isNaN(d.getTime())) return d;
+        }
+        if (rec.dateIn) {
+          const d = new Date(rec.dateIn);
+          if (!isNaN(d.getTime())) return d;
+        }
+        if (rec.createdAt) {
+          const d = new Date(rec.createdAt);
+          if (!isNaN(d.getTime()) && d.getFullYear() > 2000) return d;
+        }
+        if (rec.updatedAt) {
+          const d = new Date(rec.updatedAt);
+          if (!isNaN(d.getTime())) return d;
+        }
+        return now;
+      };
+
+      // 2. Consultar entidades del sistema
+      const [
+        salesPeriod,
+        salesToday,
+        workshopOrders,
+        posCredits,
+        cashMovements,
+        clientQuotes,
+        clientInvoices,
+        financialTransactions,
+      ] = await Promise.all([
         prisma.sale.findMany({
           where: { createdAt: { gte: startDate, lte: endDate } },
           select: { id: true, total: true, paymentMethod: true, createdAt: true },
@@ -59,59 +97,133 @@ export async function GET(request: Request) {
           select: { id: true, total: true },
         }).catch(() => []),
         prisma.workshopOrder.findMany({
-          select: { id: true, orderNumber: true, status: true, client: true, vehicle: true, plate: true, totalCost: true, createdAt: true, completedAt: true },
+          select: {
+            id: true,
+            orderNumber: true,
+            status: true,
+            client: true,
+            vehicle: true,
+            plate: true,
+            totalCost: true,
+            createdAt: true,
+            dateIn: true,
+            updatedAt: true,
+            completedAt: true,
+            itemsJson: true,
+            quoteNumber: true,
+          },
         }).catch(() => []),
         prisma.posCreditAccount.findMany({
           select: { id: true, currentBalance: true, status: true },
         }).catch(() => []),
         prisma.cashMovement.findMany({
-          where: { createdAt: { gte: startDate, lte: endDate } },
           select: { id: true, amount: true, type: true, createdAt: true },
+        }).catch(() => []),
+        prisma.clientQuote.findMany({
+          select: { id: true, quoteNumber: true, total: true, subtotal: true, status: true, createdAt: true, updatedAt: true },
+        }).catch(() => []),
+        prisma.clientInvoice.findMany({
+          select: { id: true, invoiceNumber: true, amount: true, status: true, createdAt: true },
+        }).catch(() => []),
+        prisma.financialTransaction.findMany({
+          select: { id: true, amount: true, isIncome: true, createdAt: true },
         }).catch(() => []),
       ]);
 
-      // 3. Cálculos de Facturación y Cobro
-      const ventasTotal = salesPeriod.reduce((acc, s) => acc + Number(s.total || 0), 0);
-      
+      // Mapeo de cotizaciones por quoteNumber para valorización precisa de órdenes
+      const quoteMap = new Map<string, number>();
+      clientQuotes.forEach((q) => {
+        if (q.quoteNumber) quoteMap.set(q.quoteNumber, Number(q.total || q.subtotal || 0));
+      });
+
+      // Calcular valor de orden de trabajo
+      const getOrderValue = (o: any): number => {
+        if (o.quoteNumber && quoteMap.has(o.quoteNumber)) {
+          const qVal = quoteMap.get(o.quoteNumber)!;
+          if (qVal > 0) return qVal;
+        }
+        if (o.totalCost && Number(o.totalCost) > 0) return Number(o.totalCost);
+        if (o.itemsJson) {
+          try {
+            const items = typeof o.itemsJson === "string" ? JSON.parse(o.itemsJson) : o.itemsJson;
+            if (Array.isArray(items)) {
+              const sum = items.reduce((acc: number, it: any) => acc + (Number(it.price || 0) * Number(it.qty || 1)), 0);
+              if (sum > 0) return Number(sum.toFixed(2));
+            }
+          } catch {}
+        }
+        return 0;
+      };
+
+      // 3. Filtrar por fechas
       const ordersInPeriod = workshopOrders.filter((o) => {
-        const d = new Date(o.completedAt || o.createdAt);
+        const d = getRecordDate(o);
         return d >= startDate && d <= endDate;
       });
-      const tallerFacturado = ordersInPeriod.reduce((acc, o) => acc + Number(o.totalCost || 0), 0);
 
-      // 1. VENTAS TOTALES / FACTURACIÓN TOTAL (Taller + Lubricentro + Tienda)
-      const ventasTotales = Number((ventasTotal + tallerFacturado).toFixed(2));
+      const movementsInPeriod = cashMovements.filter((m) => {
+        const d = getRecordDate(m);
+        return d >= startDate && d <= endDate;
+      });
 
-      // 2. COBRADO EN CAJA: Ventas de contado/transferencia + Órdenes terminadas/cobradas
-      const cobradoVentas = salesPeriod.reduce((acc, s) => {
+      const invoicesInPeriod = clientInvoices.filter((inv) => {
+        const d = getRecordDate(inv);
+        return d >= startDate && d <= endDate;
+      });
+
+      const transactionsInPeriod = financialTransactions.filter((t) => {
+        const d = getRecordDate(t);
+        return d >= startDate && d <= endDate;
+      });
+
+      // 1. VENTAS TOTALES (Taller + Tienda POS + Facturación Electrónica SRI)
+      const ventasPosPeriodo = salesPeriod.reduce((acc, s) => acc + Number(s.total || 0), 0);
+      const tallerFacturadoPeriodo = ordersInPeriod.reduce((acc, o) => acc + getOrderValue(o), 0);
+      const facturasMontoPeriodo = invoicesInPeriod
+        .filter((i) => i.status === "Autorizado" || i.status === "Pagada")
+        .reduce((acc, i) => acc + Number(i.amount || 0), 0);
+      const ingresosFinancieros = transactionsInPeriod
+        .filter((t) => t.isIncome)
+        .reduce((acc, t) => acc + Number(t.amount || 0), 0);
+
+      const ventasTotales = Number(
+        (ventasPosPeriodo + tallerFacturadoPeriodo + facturasMontoPeriodo + ingresosFinancieros).toFixed(2)
+      );
+
+      // 2. COBRADO EN CAJA (Ventas POS en efectivo/transferencia + Órdenes terminadas/cobradas + Movimientos INGRESO)
+      const cobradoPos = salesPeriod.reduce((acc, s) => {
         if (s.paymentMethod === "Crédito") return acc;
         return acc + Number(s.total || 0);
       }, 0);
-      const tallerCobrado = ordersInPeriod.reduce((acc, o) => {
+      const cobradoTaller = ordersInPeriod.reduce((acc, o) => {
         const st = (o.status || "").toLowerCase();
-        if (st.includes("finaliz") || st.includes("entregad") || st.includes("caja")) {
-          return acc + Number(o.totalCost || 0);
+        if (st.includes("finaliz") || st.includes("entregad") || st.includes("caja") || st.includes("cobrad")) {
+          return acc + getOrderValue(o);
         }
         return acc;
       }, 0);
-      const cobradoEnCaja = Number((cobradoVentas + tallerCobrado).toFixed(2));
+      const ingresosCaja = movementsInPeriod
+        .filter((m) => m.type === "INGRESO" || m.type === "VENTA")
+        .reduce((acc, m) => acc + Number(m.amount || 0), 0);
 
-      // 3. $ HOY: Facturación y órdenes del día de hoy
+      const cobradoEnCaja = Number((cobradoPos + cobradoTaller + facturasMontoPeriodo + ingresosCaja).toFixed(2));
+
+      // 3. VENTAS HOY (Órdenes de hoy + Ventas POS de hoy + Transacciones de hoy)
       const ordersToday = workshopOrders.filter((o) => {
-        const d = new Date(o.completedAt || o.createdAt);
+        const d = getRecordDate(o);
         return d >= todayStart && d <= todayEnd;
       });
-      const tallerHoy = ordersToday.reduce((acc, o) => acc + Number(o.totalCost || 0), 0);
-      const ventasHoy = salesToday.reduce((acc, s) => acc + Number(s.total || 0), 0);
-      const montoHoy = Number((ventasHoy + tallerHoy).toFixed(2));
+      const tallerHoy = ordersToday.reduce((acc, o) => acc + getOrderValue(o), 0);
+      const ventasPosHoy = salesToday.reduce((acc, s) => acc + Number(s.total || 0), 0);
+      const montoHoy = Number((ventasPosHoy + tallerHoy).toFixed(2));
 
-      // 4. TICKET PROMEDIO POR AUTO / ORDEN
-      const totalTransacciones = salesPeriod.length + ordersInPeriod.length;
+      // 4. TICKET PROMEDIO POR AUTO / TRANSACCIÓN
+      const totalTransacciones = salesPeriod.length + ordersInPeriod.length + invoicesInPeriod.length;
       const ticketPromedio = totalTransacciones > 0
         ? Number((ventasTotales / totalTransacciones).toFixed(2))
-        : 0;
+        : ventasTotales > 0 ? ventasTotales : 0;
 
-      // 5. AUTOS EN PISTA: Vehículos en atención en bahías de taller y lubricentro
+      // 5. AUTOS EN PISTA (Vehículos activos en bahías de taller/lubricentro)
       const autosEnPista = workshopOrders.filter((o) => {
         const st = (o.status || "").toLowerCase();
         return !st.includes("finaliz") && !st.includes("entregad") && !st.includes("cancelad");
@@ -124,21 +236,30 @@ export async function GET(request: Request) {
       }).length;
       const autosEntregados = salesPeriod.length + ordenesTerminadas;
 
-      // 7. GASTOS Y REPUESTOS: Salidas de caja menor, compras operativas
-      const gastosYRepuestos = Number(
-        cashMovements
-          .filter((m) => m.type === "GASTO" || m.type === "RETIRO")
-          .reduce((acc, m) => acc + Number(m.amount || 0), 0)
-          .toFixed(2)
-      );
+      // 7. GASTOS Y REPUESTOS (Egresos de caja, compras operativas, gastos financieros)
+      const egresosCaja = movementsInPeriod
+        .filter((m) => m.type === "GASTO" || m.type === "RETIRO")
+        .reduce((acc, m) => acc + Number(m.amount || 0), 0);
+      const egresosFinancieros = transactionsInPeriod
+        .filter((t) => !t.isIncome)
+        .reduce((acc, t) => acc + Number(t.amount || 0), 0);
+      const gastosYRepuestos = Number((egresosCaja + egresosFinancieros).toFixed(2));
 
-      // 8. CUENTAS POR COBRAR: Créditos pendientes de cobro a clientes
+      // 8. CUENTAS POR COBRAR (Cartera de clientes con crédito pendiente)
       const carteraCreditoTotal = Number(
         posCredits.reduce((acc, c) => acc + Number(c.currentBalance || 0), 0).toFixed(2)
       );
-      const cuentasPorCobrar = carteraCreditoTotal;
+      // Incluir órdenes de taller entregadas pendientes de cobro
+      const ordenesPorCobrar = workshopOrders.reduce((acc, o) => {
+        const st = (o.status || "").toLowerCase();
+        if (st.includes("entregad") || st.includes("por cobrar") || st.includes("pendiente de pago")) {
+          return acc + getOrderValue(o);
+        }
+        return acc;
+      }, 0);
+      const cuentasPorCobrar = Number((carteraCreditoTotal + ordenesPorCobrar).toFixed(2));
 
-      // 9. CÁLCULO REAL DE GRÁFICO SEMANAL (Lunes a Domingo) sin Mock Data
+      // 9. CÁLCULO REAL DE GRÁFICO SEMANAL (Lunes a Domingo)
       const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
       const weekOrder = [1, 2, 3, 4, 5, 6, 0]; // Lun a Dom
 
@@ -148,12 +269,12 @@ export async function GET(request: Request) {
           .filter((s) => new Date(s.createdAt).getDay() === dayIdx)
           .reduce((acc, s) => acc + Number(s.total || 0), 0);
         const dayOrders = ordersInPeriod
-          .filter((o) => new Date(o.completedAt || o.createdAt).getDay() === dayIdx)
-          .reduce((acc, o) => acc + Number(o.totalCost || 0), 0);
+          .filter((o) => getRecordDate(o).getDay() === dayIdx)
+          .reduce((acc, o) => acc + getOrderValue(o), 0);
         const income = Number((daySales + dayOrders).toFixed(2));
 
         const expense = Number(
-          cashMovements
+          movementsInPeriod
             .filter((m) => (m.type === "GASTO" || m.type === "RETIRO") && new Date(m.createdAt).getDay() === dayIdx)
             .reduce((acc, m) => acc + Number(m.amount || 0), 0)
             .toFixed(2)
@@ -173,7 +294,6 @@ export async function GET(request: Request) {
         success: true,
         periodo,
         dateLabel,
-        // Compatibilidad con vistas previas
         ingresosHoy: montoHoy,
         ordenesActivas: autosEnPista,
         egresosTotal: gastosYRepuestos,
@@ -189,7 +309,7 @@ export async function GET(request: Request) {
           autosEntregados,
           gastosYRepuestos,
           cuentasPorCobrar,
-          // Compatibilidad con nombres anteriores
+          // Compatibilidad
           capitalActivo: ventasTotales,
           cobrado: cobradoEnCaja,
           autosActivos: autosEnPista,
@@ -205,8 +325,8 @@ export async function GET(request: Request) {
           client: o.client,
           vehicle: o.vehicle,
           status: o.status,
-          amount: Number(o.totalCost || 0),
-          createdAt: o.createdAt,
+          amount: getOrderValue(o),
+          createdAt: getRecordDate(o).toISOString(),
         })),
       });
     });

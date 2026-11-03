@@ -93,7 +93,7 @@ export default function DashboardGeneral() {
           <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500">
             <Link href="/gerencia" className="hover:text-blue-600 transition-colors">Gerencia</Link>
             <span>/</span>
-            <span className="text-zinc-900 dark:text-zinc-100 font-medium">Tablero General</span>
+            <span className="text-zinc-900 dark:text-zinc-100 font-medium">Indicadores</span>
           </div>
           <button
             onClick={handleExport}

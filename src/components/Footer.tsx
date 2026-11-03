@@ -30,7 +30,7 @@ export function Footer() {
               <p>Padre Aguirre y Olmedo</p>
             </li>
             <li className="pt-2">
-              <p className="font-medium text-zinc-300">Sucursal Sur</p>
+              <p className="font-medium text-zinc-300">Sucursal Norte</p>
               <p>Av. Vicente Piedrahita y Pompeyo Garcia</p>
             </li>
           </ul>

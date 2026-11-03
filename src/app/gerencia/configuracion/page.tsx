@@ -452,7 +452,7 @@ export default function ConfiguracionSistema() {
                   type="text"
                   value={branchForm.name}
                   onChange={(e) => setBranchForm({ ...branchForm, name: e.target.value })}
-                  placeholder="Sucursal Sur"
+                  placeholder="Sucursal Norte"
                   className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                 />
               </div>

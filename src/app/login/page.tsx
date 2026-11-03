@@ -15,6 +15,39 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDark, setIsDark] = useState(false);
+
+  // Sincronizar tema claro / oscuro con el sistema y localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isDarkMode =
+        document.documentElement.classList.contains("dark") ||
+        localStorage.getItem("theme") === "dark" ||
+        (!("theme" in localStorage) && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      setIsDark(isDarkMode);
+      if (isDarkMode) {
+        document.documentElement.classList.add("dark");
+        document.documentElement.classList.remove("light");
+      } else {
+        document.documentElement.classList.remove("dark");
+        document.documentElement.classList.add("light");
+      }
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    if (isDark) {
+      document.documentElement.classList.remove("dark");
+      document.documentElement.classList.add("light");
+      localStorage.setItem("theme", "light");
+      setIsDark(false);
+    } else {
+      document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+      localStorage.setItem("theme", "dark");
+      setIsDark(true);
+    }
+  };
 
   // Cargar credenciales guardadas de localStorage al montar el componente
   useEffect(() => {
@@ -78,8 +111,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-[calc(100dvh-64px)] items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4 py-8 sm:py-12">
-      <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl shadow-xl p-6 sm:p-8 border border-zinc-100 dark:border-zinc-800 relative">
+    <div className="flex min-h-[calc(100dvh-64px)] items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4 py-8 sm:py-12 transition-colors">
+      <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl shadow-xl p-6 sm:p-8 border border-zinc-100 dark:border-zinc-800 relative transition-colors">
+        {/* Botón Volver al Inicio */}
         <Link
           href="/"
           aria-label="Volver al inicio"
@@ -89,6 +123,25 @@ export default function LoginPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
           </svg>
         </Link>
+
+        {/* Botón Selector Modo Claro / Modo Oscuro */}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label="Cambiar tema"
+          className="absolute top-6 sm:top-8 right-6 sm:right-8 text-zinc-400 hover:text-blue-600 dark:hover:text-amber-400 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center -m-2 rounded-xl cursor-pointer active:scale-95"
+          title={isDark ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
+        >
+          {isDark ? (
+            <svg className="w-5 h-5 text-amber-400 hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          ) : (
+            <svg className="w-5 h-5 text-zinc-600 hover:-rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+          )}
+        </button>
 
         <div className="text-center mb-8 mt-2">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 mb-3 shadow-inner">
