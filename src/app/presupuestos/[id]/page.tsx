@@ -911,6 +911,19 @@ export default function PaginaDetallePropuesta() {
                   <p className="text-xs sm:text-sm font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mt-1">
                     Centro Automotriz
                   </p>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 font-medium mt-1">
+                    {(() => {
+                      const mecanicoLimpio = orden?.mechanic ? orden.mechanic.split("(")[0].trim() : "Carlos Rodríguez";
+                      const notes = orden?.notes?.trim();
+                      if (!notes) {
+                        return `Ingreso a taller | Ingresado por: ${mecanicoLimpio}`;
+                      }
+                      if (notes.toLowerCase().includes("ingresado por:")) {
+                        return notes;
+                      }
+                      return `${notes} | Ingresado por: ${mecanicoLimpio}`;
+                    })()}
+                  </p>
                 </div>
               </div>
             </div>
@@ -1081,19 +1094,6 @@ export default function PaginaDetallePropuesta() {
                   </div>
                 </div>
               </div>
-
-              {/* Motivo de Ingreso / Observaciones */}
-              <div className="pt-2 border-t border-zinc-100 dark:border-white/5 space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 flex items-center gap-1">
-                  <span>📝</span>
-                  <span>Motivo de Ingreso / Observaciones</span>
-                </span>
-                <div className="p-2.5 rounded-xl bg-zinc-50/80 dark:bg-white/[0.03] border border-zinc-200/70 dark:border-white/5 text-xs text-zinc-700 dark:text-zinc-300">
-                  <p className="line-clamp-2">
-                    {orden.notes || "Revisión general, mantenimiento preventivo e inspección técnica vehicular."}
-                  </p>
-                </div>
-              </div>
             </div>
 
             {/* 2. TARJETA PERFIL DEL VEHÍCULO */}
@@ -1223,61 +1223,6 @@ export default function PaginaDetallePropuesta() {
                     </span>
                   </div>
                 </div>
-              </div>
-
-              {/* Tira rápida de galería / Más fotos del vehículo */}
-              <div className="pt-2 border-t border-zinc-100 dark:border-white/5 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 flex items-center gap-1">
-                    <span>📷</span>
-                    <span>Fotos del Vehículo ({fotosVehiculo.length})</span>
-                  </span>
-                  <label className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1 print:hidden">
-                    <span>+ Subir fotos</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      disabled={subiendoFoto}
-                      onChange={handleSubirFoto}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-
-                {fotosVehiculo.length > 0 ? (
-                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
-                    {fotosVehiculo.slice(0, 5).map((fotoUrl, idx) => (
-                      <div
-                        key={`veh-mini-${idx}`}
-                        onClick={() => setFotoZoom(fotoUrl)}
-                        className="group relative aspect-4/3 rounded-lg overflow-hidden border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-black/40 cursor-pointer shadow-2xs hover:border-blue-500 transition-all"
-                      >
-                        <img
-                          src={fotoUrl}
-                          alt={`Vehículo ${idx + 1}`}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[9px] font-bold">
-                          🔍
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <label className="p-2.5 rounded-xl border border-dashed border-zinc-300 dark:border-white/10 flex items-center justify-center gap-1.5 text-zinc-400 text-xs hover:border-blue-500 hover:text-blue-500 transition-all cursor-pointer">
-                    <span>📷</span>
-                    <span>Sin fotos adicionales. Clic para agregar.</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      disabled={subiendoFoto}
-                      onChange={handleSubirFoto}
-                      className="hidden"
-                    />
-                  </label>
-                )}
               </div>
             </div>
           </div>
