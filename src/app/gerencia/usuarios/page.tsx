@@ -35,7 +35,7 @@ function obtenerAccesoUnico(row: AppUserRecord): string {
   if (row.accessPos) return "POS";
   if (row.accessTaller) return "Taller";
   if (row.accessOficina) return "Oficina";
-  return row.role || "Cliente";
+  return row.role || "Sin rol";
 }
 
 interface SeccionUsuariosGrupoProps {
@@ -415,7 +415,6 @@ export default function GestionUsuarios() {
       if (filtro === "oficina") return acceso === "oficina";
       if (filtro === "taller") return acceso === "taller";
       if (filtro === "propuesta" || filtro === "presupuesto") return acceso === "propuesta" || acceso === "presupuesto";
-      if (filtro === "cliente") return acceso === "cliente";
       if (filtro === "activo") return u.status === "Activo";
       if (filtro === "suspendido") return u.status !== "Activo";
 
@@ -487,8 +486,6 @@ export default function GestionUsuarios() {
       ? "Taller / Garaje"
       : filtro === "propuesta" || filtro === "presupuesto"
       ? "Propuesta"
-      : filtro === "cliente"
-      ? "Cliente"
       : "Todos";
 
   return (
@@ -714,7 +711,6 @@ export default function GestionUsuarios() {
                     { id: "oficina", label: "Oficina" },
                     { id: "taller", label: "Taller / Garaje" },
                     { id: "propuesta", label: "Propuesta" },
-                    { id: "cliente", label: "Cliente" },
                   ].map((opcion) => (
                     <button
                       key={opcion.id}

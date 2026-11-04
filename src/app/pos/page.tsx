@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
-import { getClientUserBranch, getClientActiveBranch, SedeType } from "@/lib/branch";
+import { getClientUserBranch, getClientActiveBranch } from "@/lib/branch";
 import { BranchTabs } from "@/components/pos/BranchTabs";
 
 const modules = [
@@ -153,18 +153,6 @@ const modules = [
 ];
 
 export default function PosPanel() {
-  // Sede asignada al operador
-  const [userBranch, setUserBranch] = useState<SedeType>("PRINCIPAL");
-
-  useEffect(() => {
-    const syncBranch = () => {
-      setUserBranch(getClientUserBranch());
-    };
-    syncBranch();
-    window.addEventListener("autog-branch-change", syncBranch);
-    return () => window.removeEventListener("autog-branch-change", syncBranch);
-  }, []);
-
   // Estado de Caja (igual que en POS de Venta)
   const [cajaActiva, setCajaActiva] = useState<any | null>(null);
   const [cajaInfo, setCajaInfo] = useState<{ initialCash: number; expectedCash: number } | null>(null);

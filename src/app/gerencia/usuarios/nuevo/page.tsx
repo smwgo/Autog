@@ -99,8 +99,8 @@ function NuevoUsuarioContent() {
   const handleBranchChange = (newBranch: string) => {
     setBranch(newBranch);
     if (newBranch.toLowerCase().includes("sucursal")) {
-      // En Sucursal solo se permite POS, Taller o Cliente
-      if (role !== "POS" && role !== "Taller" && role !== "Cliente") {
+      // En Sucursal solo se permite POS o Taller
+      if (role !== "POS" && role !== "Taller") {
         handleSelectPanel("Taller");
       }
     }
@@ -117,8 +117,8 @@ function NuevoUsuarioContent() {
     }
 
     const isSucursal = branch.toLowerCase().includes("sucursal");
-    if (isSucursal && role !== "POS" && role !== "Taller" && role !== "Cliente") {
-      setErrorMsg("En Sucursal únicamente se permite acceso a POS, Taller o Cliente.");
+    if (isSucursal && role !== "POS" && role !== "Taller") {
+      setErrorMsg("En Sucursal únicamente se permite acceso a POS o Taller.");
       return;
     }
 
@@ -304,7 +304,7 @@ function NuevoUsuarioContent() {
                     <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center justify-between">
                       <span>Acceso *</span>
                       {branch.toLowerCase().includes("sucursal") && (
-                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">POS, Taller o Cliente</span>
+                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">POS o Taller</span>
                       )}
                     </label>
                     <select
@@ -316,7 +316,6 @@ function NuevoUsuarioContent() {
                       {!branch.toLowerCase().includes("sucursal") && <option value="Oficina">🏢 Oficina</option>}
                       <option value="Taller">🔧 Taller</option>
                       {!branch.toLowerCase().includes("sucursal") && <option value="Propuesta">📋 Propuesta</option>}
-                      <option value="Cliente">👤 Cliente</option>
                     </select>
                   </div>
 

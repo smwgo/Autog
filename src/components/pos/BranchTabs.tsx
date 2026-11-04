@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   getClientUserBranch,
   getClientActiveBranch,
@@ -15,47 +15,64 @@ interface BranchTabsProps {
   size?: "sm" | "md";
 }
 
+const OPTIONS: { value: FiltroSedeType; label: string; icon: string }[] = [
+  { value: "PRINCIPAL", label: "Sede Principal", icon: "🏢" },
+  { value: "SUCURSAL",  label: "Sucursal",       icon: "📍" },
+  { value: "AMBOS",     label: "Ambas",           icon: "🌐" },
+];
+
 export function BranchTabs({ onChange, className = "", size = "md" }: BranchTabsProps) {
   const [userBranch, setUserBranch] = useState<SedeType>("PRINCIPAL");
   const [activeBranch, setActiveBranchState] = useState<FiltroSedeType>("PRINCIPAL");
   const [mounted, setMounted] = useState(false);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
-    const uBranch = getClientUserBranch();
-    const aBranch = getClientActiveBranch();
-    setUserBranch(uBranch);
-    setActiveBranchState(aBranch);
+    setUserBranch(getClientUserBranch());
+    setActiveBranchState(getClientActiveBranch());
 
-    const handleBranchChange = (e: any) => {
+    const handleBranchChange = () => {
       setUserBranch(getClientUserBranch());
       setActiveBranchState(getClientActiveBranch());
     };
-
     window.addEventListener("autog-branch-change", handleBranchChange);
     return () => window.removeEventListener("autog-branch-change", handleBranchChange);
   }, []);
 
+  // Cerrar al click fuera
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
   const handleSelect = (branch: FiltroSedeType) => {
-    if (userBranch === "SUCURSAL") return; // Operador de sucursal bloqueado en sucursal
+    if (userBranch === "SUCURSAL") return;
     setActiveBranchState(branch);
     setClientActiveBranch(branch);
+    setOpen(false);
     if (onChange) onChange(branch);
   };
 
+  // Skeleton antes de montar
   if (!mounted) {
     return (
-      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800/60 text-xs text-zinc-400 ${className}`}>
+      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 text-xs text-zinc-400 ${className}`}>
         <span>🏢 Sede</span>
       </div>
     );
   }
 
-  // Si el usuario pertenece a Sucursal, solo ve y opera en Sucursal (sin selector)
+  // Usuario de Sucursal: solo etiqueta fija, sin menú
   if (userBranch === "SUCURSAL") {
     return (
       <div
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 text-xs font-bold shadow-xs ${className}`}
+        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 text-xs font-bold shadow-xs ${className}`}
         title="Operando exclusivamente en Sucursal"
       >
         <span>📍</span>
@@ -64,57 +81,64 @@ export function BranchTabs({ onChange, className = "", size = "md" }: BranchTabs
     );
   }
 
-  // Para usuarios de Sede Principal / Administrador: puede alternar Principal / Sucursal / Ambas
+  const active = OPTIONS.find((o) => o.value === activeBranch) ?? OPTIONS[0];
+  const isSmall = size === "sm";
+
   return (
-    <div
-      className={`inline-flex items-center p-1 rounded-2xl bg-zinc-100/90 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs ${className}`}
-      role="tablist"
-      aria-label="Filtro de Sede"
-    >
+    <div ref={ref} className={`relative inline-block ${className}`}>
       <button
         type="button"
-        role="tab"
-        aria-selected={activeBranch === "PRINCIPAL"}
-        onClick={() => handleSelect("PRINCIPAL")}
-        className={`flex items-center gap-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-          activeBranch === "PRINCIPAL"
-            ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm border border-zinc-200/60 dark:border-zinc-700 font-bold"
-            : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-800/50"
-        } ${size === "sm" ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5"}`}
+        onClick={() => setOpen((v) => !v)}
+        className={`inline-flex items-center gap-1.5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-600 transition-all cursor-pointer active:scale-95 font-semibold text-zinc-700 dark:text-zinc-200 ${
+          isSmall ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5 text-xs"
+        }`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
       >
-        <span>🏢</span>
-        <span><span className="hidden sm:inline">Sede </span>Principal</span>
+        <span>{active.icon}</span>
+        <span>{active.label}</span>
+        <svg
+          className={`w-3 h-3 text-zinc-400 transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+        </svg>
       </button>
 
-      <button
-        type="button"
-        role="tab"
-        aria-selected={activeBranch === "SUCURSAL"}
-        onClick={() => handleSelect("SUCURSAL")}
-        className={`flex items-center gap-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-          activeBranch === "SUCURSAL"
-            ? "bg-white dark:bg-zinc-800 text-amber-600 dark:text-amber-400 shadow-sm border border-zinc-200/60 dark:border-zinc-700 font-bold"
-            : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-800/50"
-        } ${size === "sm" ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5"}`}
-      >
-        <span>📍</span>
-        <span>Sucursal</span>
-      </button>
-
-      <button
-        type="button"
-        role="tab"
-        aria-selected={activeBranch === "AMBOS"}
-        onClick={() => handleSelect("AMBOS")}
-        className={`flex items-center gap-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-          activeBranch === "AMBOS"
-            ? "bg-white dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 shadow-sm border border-zinc-200/60 dark:border-zinc-700 font-bold"
-            : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-800/50"
-        } ${size === "sm" ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5"}`}
-      >
-        <span>🌐</span>
-        <span>Ambas</span>
-      </button>
+      {open && (
+        <div
+          role="listbox"
+          className="absolute left-0 mt-1.5 min-w-[148px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 py-1 animate-in fade-in zoom-in-95 duration-100 origin-top-left"
+        >
+          {OPTIONS.map((opt) => {
+            const isActive = activeBranch === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="option"
+                aria-selected={isActive}
+                onClick={() => handleSelect(opt.value)}
+                className={`w-full flex items-center gap-2 px-3.5 py-2.5 text-sm transition-colors cursor-pointer ${
+                  isActive
+                    ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400 font-semibold"
+                    : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80"
+                }`}
+              >
+                <span>{opt.icon}</span>
+                <span className="flex-1 text-left">{opt.label}</span>
+                {isActive && (
+                  <svg className="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
