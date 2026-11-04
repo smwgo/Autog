@@ -479,22 +479,11 @@ export default function GestionUsuarios() {
                       </div>
                     </div>
 
-                    {/* Datos secundarios (WhatsApp, Correo, Estado) */}
+                    {/* Datos secundarios (Correo, Estado) */}
                     <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                      {row.phone ? (
-                        <a
-                          href={`https://wa.me/${row.phone.replace(/\D/g, "")}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 font-medium active:scale-95"
-                        >
-                          <span>📱</span> {row.phone}
-                        </a>
-                      ) : (
-                        <span className="text-zinc-400 dark:text-zinc-500 italic px-2 py-0.5">
-                          {row.email}
-                        </span>
-                      )}
+                      <span className="text-zinc-700 dark:text-zinc-300 font-medium px-1">
+                        {row.email}
+                      </span>
 
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-medium border ${
@@ -571,7 +560,7 @@ export default function GestionUsuarios() {
                 <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400">
                   <tr>
                     <th className="px-6 py-4 font-medium">Usuario</th>
-                    <th className="px-6 py-4 font-medium">Contacto / Correo</th>
+                    <th className="px-6 py-4 font-medium">Correo Electrónico</th>
                     <th className="px-6 py-4 font-medium">Acceso a Paneles</th>
                     <th className="px-6 py-4 font-medium">Sucursal / Estado</th>
                     <th className="px-6 py-4 font-medium text-right">Acciones</th>
@@ -642,21 +631,9 @@ export default function GestionUsuarios() {
                           </td>
 
                           <td className="px-6 py-4">
-                            {row.phone ? (
-                              <div className="space-y-0.5">
-                                <p className="text-zinc-900 dark:text-zinc-200 font-medium text-xs flex items-center gap-1.5">
-                                  <span className="text-emerald-500">📱</span> {row.phone}
-                                </p>
-                                <p className="text-xs text-zinc-500 dark:text-zinc-400">{row.email}</p>
-                              </div>
-                            ) : (
-                              <div className="space-y-0.5">
-                                <p className="text-xs text-zinc-900 dark:text-zinc-200 font-medium">{row.email}</p>
-                                <span className="text-xs text-zinc-400 dark:text-zinc-500 italic">
-                                  Sin WhatsApp
-                                </span>
-                              </div>
-                            )}
+                            <span className="text-xs text-zinc-900 dark:text-zinc-200 font-medium">
+                              {row.email}
+                            </span>
                           </td>
 
                           <td className="px-6 py-4">

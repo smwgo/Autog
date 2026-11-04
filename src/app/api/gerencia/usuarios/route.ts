@@ -114,7 +114,7 @@ export async function POST(req: Request) {
       return user;
     });
 
-    return NextResponse.json(created);
+    return NextResponse.json({ success: true, ...created });
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || "Error al crear usuario en Neon PostgreSQL" },
@@ -192,7 +192,7 @@ export async function PUT(req: Request) {
       return user;
     });
 
-    return NextResponse.json(updated);
+    return NextResponse.json({ success: true, ...updated });
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || "Error al actualizar usuario en Neon PostgreSQL" },

@@ -34,22 +34,42 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
   const [menuFechaAbierto, setMenuFechaAbierto] = useState<boolean>(false);
   const [presetActivo, setPresetActivo] = useState<string | null>("MES");
   const menuFechaRef = useRef<HTMLDivElement>(null);
-  const [sucursalSeleccionada, setSucursalSeleccionada] = useState<string>("Sucursal");
+  const [sucursalSeleccionada, setSucursalSeleccionada] = useState<string>("Ambas");
   const [menuSucursalAbierto, setMenuSucursalAbierto] = useState<boolean>(false);
   const [sucursales, setSucursales] = useState<string[]>([
-    "Todas las Sucursales",
-    "Sede Principal (Daule)",
-    "Sucursal Samborondón",
+    "Principal",
+    "Sucursal",
+    "Ambas",
   ]);
   const menuSucursalRef = useRef<HTMLDivElement>(null);
+  const [userName, setUserName] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const local = localStorage.getItem("currentUser");
+        if (local) {
+          const parsed = JSON.parse(local);
+          if (parsed?.name) setUserName(parsed.name);
+        }
+      } catch {}
+    }
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && data?.user?.name) {
+          setUserName(data.user.name);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch("/api/gerencia/configuracion")
       .then((res) => res.json())
       .then((data) => {
         if (data?.branches && Array.isArray(data.branches) && data.branches.length > 0) {
-          const names = data.branches.map((b: any) => b.name);
-          setSucursales(["Todas las Sucursales", ...names]);
+          setSucursales(["Principal", "Sucursal", "Ambas"]);
         }
       })
       .catch(() => {});
@@ -75,12 +95,16 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
     });
   };
 
-  const cargarMetricas = useCallback(async (p: string, fDesde?: string, fHasta?: string) => {
+  const cargarMetricas = useCallback(async (p: string, fDesde?: string, fHasta?: string, branch?: string) => {
     setCargando(true);
     try {
       let url = `/api/gerencia/resumen?periodo=${p}`;
       if (fDesde && fHasta) {
         url += `&desde=${fDesde}&hasta=${fHasta}`;
+      }
+      const b = branch !== undefined ? branch : sucursalSeleccionada;
+      if (b && b !== "Ambas") {
+        url += `&sucursal=${encodeURIComponent(b)}`;
       }
       const res = await fetch(url);
       const data = await res.json();
@@ -94,11 +118,11 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
     } finally {
       setCargando(false);
     }
-  }, [onDataLoaded]);
+  }, [onDataLoaded, sucursalSeleccionada]);
 
   // Carga inicial
   useEffect(() => {
-    cargarMetricas("personalizado", fechaDesde, fechaHasta);
+    cargarMetricas("personalizado", fechaDesde, fechaHasta, "Ambas");
   }, []);
 
   // Presets rápidos: HOY, SEMANA, QUINCENA, MES
@@ -134,7 +158,7 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
   const aplicarFiltro = () => {
     if (!fechaDesde || !fechaHasta) return;
     setMenuFechaAbierto(false);
-    cargarMetricas("personalizado", fechaDesde, fechaHasta);
+    cargarMetricas("personalizado", fechaDesde, fechaHasta, sucursalSeleccionada);
   };
 
   // Cerrar menú al hacer clic fuera
@@ -173,13 +197,21 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#0096c7] dark:text-[#38bdf8] flex items-center gap-2">
               <span>GERENCIA</span>
             </h1>
-            <p className="text-[11px] sm:text-xs font-semibold tracking-wider text-zinc-500 dark:text-zinc-400 uppercase">
-              CEO — DIRECCIÓN
+            <p className="text-[11px] sm:text-xs font-semibold tracking-wider text-zinc-500 dark:text-zinc-400 uppercase flex items-center gap-1.5 flex-wrap">
+              <span>CEO — DIRECCIÓN</span>
+              {userName && (
+                <>
+                  <span className="text-zinc-300 dark:text-zinc-600 font-bold">•</span>
+                  <span className="text-[#0096c7] dark:text-[#38bdf8] font-bold tracking-normal">
+                    {userName.toLowerCase().includes("administrador") ? "Admin" : userName.trim().split(/\s+/)[0]}
+                  </span>
+                </>
+              )}
             </p>
           </div>
         </div>
 
-        {/* Selectores Estilo Pill: Sucursal y Fecha */}
+        {/* Selectores: Sucursal y Fecha */}
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap self-start sm:self-auto">
           {/* Selector de Sucursal */}
           <div className="relative" ref={menuSucursalRef}>
@@ -189,7 +221,7 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
                 setMenuSucursalAbierto(!menuSucursalAbierto);
                 setMenuFechaAbierto(false);
               }}
-              className="h-10 px-4 rounded-full bg-white hover:bg-zinc-50 dark:bg-[#0a0f16] dark:hover:bg-[#111722] border border-zinc-200/80 dark:border-zinc-800 text-xs font-normal text-zinc-700 dark:text-zinc-200 flex items-center gap-2 transition-all shadow-sm cursor-pointer active:scale-95"
+              className="h-10 px-4 rounded-xl bg-white hover:bg-zinc-50 dark:bg-[#0a0f16] dark:hover:bg-[#111722] border border-zinc-200/80 dark:border-zinc-800 text-xs font-normal text-zinc-700 dark:text-zinc-200 flex items-center gap-2 transition-all shadow-sm cursor-pointer active:scale-95"
             >
               <span className="text-sm">🏪</span>
               <span className="font-normal text-xs tracking-normal text-zinc-700 dark:text-zinc-200">
@@ -209,26 +241,23 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
             {/* Menú desplegable de Sucursales */}
             {menuSucursalAbierto && (
               <div className="absolute right-0 sm:left-0 sm:right-auto mt-2 w-56 rounded-2xl bg-white dark:bg-[#0b0f17] border border-zinc-200 dark:border-zinc-800/90 shadow-2xl p-2 z-50 animate-fade-in space-y-1">
-                <div className="px-3 py-1.5 text-[10px] uppercase font-semibold text-zinc-400 tracking-wider">
-                  Seleccionar Sucursal
-                </div>
                 {sucursales.map((suc) => (
                   <button
                     key={suc}
                     type="button"
                     onClick={() => {
-                      setSucursalSeleccionada(suc === "Todas las Sucursales" ? "Sucursal" : suc);
+                      setSucursalSeleccionada(suc);
                       setMenuSucursalAbierto(false);
-                      cargarMetricas("personalizado", fechaDesde, fechaHasta);
+                      cargarMetricas("personalizado", fechaDesde, fechaHasta, suc);
                     }}
                     className={`w-full px-3 py-2 rounded-xl text-left text-xs font-normal transition-colors flex items-center justify-between ${
-                      (sucursalSeleccionada === suc || (sucursalSeleccionada === "Sucursal" && suc === "Todas las Sucursales"))
+                      sucursalSeleccionada === suc
                         ? "bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 font-medium"
                         : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/60"
                     }`}
                   >
                     <span className="truncate">{suc}</span>
-                    {(sucursalSeleccionada === suc || (sucursalSeleccionada === "Sucursal" && suc === "Todas las Sucursales")) && (
+                    {sucursalSeleccionada === suc && (
                       <span className="text-cyan-500 font-bold">✓</span>
                     )}
                   </button>
@@ -237,7 +266,7 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
             )}
           </div>
 
-          {/* Selector de Rango de Fecha Estilo Pill adaptativo */}
+          {/* Selector de Rango de Fecha */}
           <div className="relative" ref={menuFechaRef}>
             <button
               type="button"
@@ -245,7 +274,7 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
                 setMenuFechaAbierto(!menuFechaAbierto);
                 setMenuSucursalAbierto(false);
               }}
-              className="h-10 px-4 rounded-full bg-white hover:bg-zinc-50 dark:bg-[#0a0f16] dark:hover:bg-[#111722] border border-zinc-200/80 dark:border-zinc-800 text-xs font-normal text-zinc-700 dark:text-zinc-200 flex items-center gap-2.5 transition-all shadow-sm cursor-pointer active:scale-95"
+              className="h-10 px-4 rounded-xl bg-white hover:bg-zinc-50 dark:bg-[#0a0f16] dark:hover:bg-[#111722] border border-zinc-200/80 dark:border-zinc-800 text-xs font-normal text-zinc-700 dark:text-zinc-200 flex items-center gap-2.5 transition-all shadow-sm cursor-pointer active:scale-95"
             >
               <svg
                 className="w-4 h-4 text-cyan-500 dark:text-cyan-400 shrink-0"
@@ -275,11 +304,11 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
 
           {/* Menú Flotante Modal: Selector de Fechas */}
           {menuFechaAbierto && (
-            <div className="absolute right-0 mt-2 w-[320px] sm:w-[360px] rounded-3xl bg-[#0b0f17] border border-zinc-800/90 shadow-2xl p-5 sm:p-6 z-50 animate-fade-in space-y-4">
+            <div className="absolute right-0 mt-2 w-[320px] sm:w-[360px] rounded-2xl bg-white dark:bg-[#0b0f17] border border-zinc-200 dark:border-zinc-800/90 shadow-2xl p-5 sm:p-6 z-50 animate-fade-in space-y-4">
               {/* Fila DESDE y HASTA */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] sm:text-[11px] font-normal tracking-wider text-zinc-400 uppercase block mb-1.5">
+                  <label className="text-[10px] sm:text-[11px] font-semibold tracking-wider text-zinc-500 dark:text-zinc-400 uppercase block mb-1.5">
                     DESDE
                   </label>
                   <input
@@ -289,11 +318,11 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
                       setFechaDesde(e.target.value);
                       setPresetActivo(null);
                     }}
-                    className="w-full h-12 sm:h-13 rounded-2xl bg-[#111722] border border-zinc-800/90 hover:border-zinc-700 focus:border-cyan-500/80 text-white font-normal text-sm sm:text-base px-3 text-center [color-scheme:dark] outline-none transition-all cursor-pointer"
+                    className="w-full h-11 sm:h-12 rounded-xl bg-zinc-50 hover:bg-zinc-100/70 focus:bg-white dark:bg-[#111722] dark:hover:bg-[#161e2c] border border-zinc-200 dark:border-zinc-800/90 hover:border-zinc-300 dark:hover:border-zinc-700 focus:border-cyan-500 text-zinc-900 dark:text-white font-medium text-xs sm:text-sm px-3 text-center [color-scheme:light] dark:[color-scheme:dark] outline-none transition-all cursor-pointer shadow-sm"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] sm:text-[11px] font-normal tracking-wider text-zinc-400 uppercase block mb-1.5">
+                  <label className="text-[10px] sm:text-[11px] font-semibold tracking-wider text-zinc-500 dark:text-zinc-400 uppercase block mb-1.5">
                     HASTA
                   </label>
                   <input
@@ -303,7 +332,7 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
                       setFechaHasta(e.target.value);
                       setPresetActivo(null);
                     }}
-                    className="w-full h-12 sm:h-13 rounded-2xl bg-[#111722] border border-zinc-800/90 hover:border-zinc-700 focus:border-cyan-500/80 text-white font-normal text-sm sm:text-base px-3 text-center [color-scheme:dark] outline-none transition-all cursor-pointer"
+                    className="w-full h-11 sm:h-12 rounded-xl bg-zinc-50 hover:bg-zinc-100/70 focus:bg-white dark:bg-[#111722] dark:hover:bg-[#161e2c] border border-zinc-200 dark:border-zinc-800/90 hover:border-zinc-300 dark:hover:border-zinc-700 focus:border-cyan-500 text-zinc-900 dark:text-white font-medium text-xs sm:text-sm px-3 text-center [color-scheme:light] dark:[color-scheme:dark] outline-none transition-all cursor-pointer shadow-sm"
                   />
                 </div>
               </div>
@@ -313,10 +342,10 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
                 <button
                   type="button"
                   onClick={() => seleccionarPreset("HOY")}
-                  className={`h-11 sm:h-12 rounded-2xl text-xs font-normal tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center ${
+                  className={`h-10 sm:h-11 rounded-xl text-xs font-semibold tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center ${
                     presetActivo === "HOY"
-                      ? "bg-[#0e2238] border-2 border-cyan-500 text-cyan-400 shadow-sm shadow-cyan-950/60"
-                      : "bg-[#111722] border border-zinc-800/90 text-zinc-200 hover:border-zinc-700 hover:text-white"
+                      ? "bg-cyan-50 dark:bg-[#0e2238] border-2 border-cyan-500 text-cyan-700 dark:text-cyan-400 shadow-sm shadow-cyan-500/10 dark:shadow-cyan-950/60"
+                      : "bg-zinc-50 hover:bg-zinc-100 dark:bg-[#111722] dark:hover:bg-[#161e2c] border border-zinc-200 dark:border-zinc-800/90 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
                   }`}
                 >
                   HOY
@@ -324,10 +353,10 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
                 <button
                   type="button"
                   onClick={() => seleccionarPreset("SEMANA")}
-                  className={`h-11 sm:h-12 rounded-2xl text-xs font-normal tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center ${
+                  className={`h-10 sm:h-11 rounded-xl text-xs font-semibold tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center ${
                     presetActivo === "SEMANA"
-                      ? "bg-[#0e2238] border-2 border-cyan-500 text-cyan-400 shadow-sm shadow-cyan-950/60"
-                      : "bg-[#111722] border border-zinc-800/90 text-zinc-200 hover:border-zinc-700 hover:text-white"
+                      ? "bg-cyan-50 dark:bg-[#0e2238] border-2 border-cyan-500 text-cyan-700 dark:text-cyan-400 shadow-sm shadow-cyan-500/10 dark:shadow-cyan-950/60"
+                      : "bg-zinc-50 hover:bg-zinc-100 dark:bg-[#111722] dark:hover:bg-[#161e2c] border border-zinc-200 dark:border-zinc-800/90 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
                   }`}
                 >
                   SEMANA
@@ -335,10 +364,10 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
                 <button
                   type="button"
                   onClick={() => seleccionarPreset("QUINCENA")}
-                  className={`h-11 sm:h-12 rounded-2xl text-xs font-normal tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center ${
+                  className={`h-10 sm:h-11 rounded-xl text-xs font-semibold tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center ${
                     presetActivo === "QUINCENA"
-                      ? "bg-[#0e2238] border-2 border-cyan-500 text-cyan-400 shadow-sm shadow-cyan-950/60"
-                      : "bg-[#111722] border border-zinc-800/90 text-zinc-200 hover:border-zinc-700 hover:text-white"
+                      ? "bg-cyan-50 dark:bg-[#0e2238] border-2 border-cyan-500 text-cyan-700 dark:text-cyan-400 shadow-sm shadow-cyan-500/10 dark:shadow-cyan-950/60"
+                      : "bg-zinc-50 hover:bg-zinc-100 dark:bg-[#111722] dark:hover:bg-[#161e2c] border border-zinc-200 dark:border-zinc-800/90 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
                   }`}
                 >
                   QUINCENA
@@ -346,10 +375,10 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
                 <button
                   type="button"
                   onClick={() => seleccionarPreset("MES")}
-                  className={`h-11 sm:h-12 rounded-2xl text-xs font-normal tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center ${
+                  className={`h-10 sm:h-11 rounded-xl text-xs font-semibold tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center ${
                     presetActivo === "MES"
-                      ? "bg-[#0e2238] border-2 border-cyan-500 text-cyan-400 shadow-sm shadow-cyan-950/60"
-                      : "bg-[#111722] border border-zinc-800/90 text-zinc-200 hover:border-zinc-700 hover:text-white"
+                      ? "bg-cyan-50 dark:bg-[#0e2238] border-2 border-cyan-500 text-cyan-700 dark:text-cyan-400 shadow-sm shadow-cyan-500/10 dark:shadow-cyan-950/60"
+                      : "bg-zinc-50 hover:bg-zinc-100 dark:bg-[#111722] dark:hover:bg-[#161e2c] border border-zinc-200 dark:border-zinc-800/90 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
                   }`}
                 >
                   MES
@@ -360,9 +389,9 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
               <button
                 type="button"
                 onClick={aplicarFiltro}
-                className="w-full h-12 sm:h-13 rounded-2xl border border-cyan-500/80 bg-[#091b2c] hover:bg-[#0c243d] active:scale-[0.99] text-cyan-400 font-normal tracking-wider text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-cyan-950/40 cursor-pointer"
+                className="w-full h-11 sm:h-12 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-semibold tracking-wider text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-cyan-600/20 active:scale-[0.99] cursor-pointer dark:bg-[#091b2c] dark:hover:bg-[#0c243d] dark:border dark:border-cyan-500/80 dark:text-cyan-400 dark:shadow-cyan-950/40"
               >
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+                <svg className="w-4 h-4 text-white dark:text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
                   <circle cx="12" cy="12" r="10" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="m9 12 2 2 4-4" />
                 </svg>

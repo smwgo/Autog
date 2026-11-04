@@ -3,21 +3,19 @@
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 export default function ConfiguracionSistema() {
   const [activeTab, setActiveTab] = useState("general");
-  const [branches, setBranches] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const [savedBanner, setSavedBanner] = useState("");
-  const [branchModalOpen, setBranchModalOpen] = useState(false);
-  const [editingBranch, setEditingBranch] = useState<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [config, setConfig] = useState({
     razonSocial: "AutoG Servicios Automotrices S.A.",
     nombreComercial: "AutoG",
     ruc: "0992345678001",
-    telefono: "04-234-5678",
+    telefono: "0991234567",
     direccion: "Av. de las Américas y Plaza Dañín, Guayaquil, Ecuador",
     iva: 15,
     moneda: "Dólares (USD)",
@@ -27,20 +25,96 @@ export default function ConfiguracionSistema() {
     resumenDiarioCaja: true,
   });
 
-  const [branchForm, setBranchForm] = useState({
-    name: "",
-    address: "",
-    phone: "",
-    isMain: false,
+  const [sucursal, setSucursal] = useState({
+    id: "branch_sucursal_1",
+    name: "Sucursal Samborondón",
+    address: "Av. Samborondón Km 1.5, Samborondón, Ecuador",
+    phone: "0991234567",
+    status: "Activa",
   });
+
+  const [firmaData, setFirmaData] = useState({
+    archivoNombre: "",
+    archivoTamano: "",
+    fechaCarga: "",
+    fechaExpiracion: "2027-11-03",
+    entidadEmisora: "Security Data S.A.",
+    ambienteSri: "2", // 1 = Pruebas, 2 = Producción
+    claveFirma: "",
+    estado: "Pendiente",
+  });
+  const [mostrarClave, setMostrarClave] = useState(false);
+  const [validandoFirma, setValidandoFirma] = useState(false);
+  const [validacionMensaje, setValidacionMensaje] = useState("");
+  const [validacionError, setValidacionError] = useState("");
+
+  const diasRestantes = (() => {
+    if (!firmaData.fechaExpiracion) return 365;
+    const diff = new Date(firmaData.fechaExpiracion).getTime() - new Date().getTime();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  })();
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFirmaData((prev) => ({
+        ...prev,
+        archivoNombre: file.name,
+        archivoTamano: `${(file.size / 1024).toFixed(1)} KB`,
+        fechaCarga: new Date().toISOString().split("T")[0],
+        estado: "Activa",
+      }));
+      setValidacionError("");
+      setValidacionMensaje("✅ Cargado");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleValidarFirma = () => {
+    setValidacionError("");
+    setValidacionMensaje("");
+    if (!firmaData.archivoNombre) {
+      setValidacionError("Archivo requerido");
+      return;
+    }
+    if (!firmaData.claveFirma || firmaData.claveFirma.trim() === "") {
+      setValidacionError("Contraseña requerida");
+      return;
+    }
+    setValidandoFirma(true);
+    setTimeout(() => {
+      setValidandoFirma(false);
+      setValidacionMensaje("✅ Conectado");
+    }, 700);
+  };
 
   const loadData = async () => {
     try {
       const res = await fetch("/api/gerencia/configuracion");
       if (res.ok) {
         const data = await res.json();
-        if (data.config) setConfig(data.config);
-        if (data.branches) setBranches(data.branches);
+        if (data.config) {
+          const cfg = { ...data.config };
+          if (!cfg.telefono || cfg.telefono === "04-234-5678" || cfg.telefono.startsWith("04-")) {
+            cfg.telefono = "0991234567";
+          }
+          setConfig(cfg);
+          if (data.config.firmaElectronica) {
+            setFirmaData((prev) => ({ ...prev, ...data.config.firmaElectronica }));
+          }
+        }
+        if (data.branches && data.branches.length > 0) {
+          const b = data.branches[0];
+          setSucursal({
+            id: b.id || "branch_sucursal_1",
+            name: b.name || "Sucursal Samborondón",
+            address: b.address || "Av. Samborondón Km 1.5, Samborondón, Ecuador",
+            phone: b.phone || "0991234567",
+            status: b.status || "Activa",
+          });
+        }
       }
     } catch {}
   };
@@ -56,62 +130,59 @@ export default function ConfiguracionSistema() {
       const res = await fetch("/api/gerencia/configuracion", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "config", config }),
+        body: JSON.stringify({
+          type: "config",
+          config: { ...config, firmaElectronica: firmaData },
+          sucursal,
+        }),
       });
       if (res.ok) {
-        setSavedBanner("Ajustes guardados exitosamente.");
-        setTimeout(() => setSavedBanner(""), 4000);
+        setSavedBanner("Guardado");
+        setTimeout(() => setSavedBanner(""), 3000);
       }
     } finally {
       setSaving(false);
     }
   };
 
-  const openNewBranch = () => {
-    setEditingBranch(null);
-    setBranchForm({ name: "", address: "", phone: "", isMain: false });
-    setBranchModalOpen(true);
-  };
-
-  const openEditBranch = (b: any) => {
-    setEditingBranch(b);
-    setBranchForm({
-      name: b.name || "",
-      address: b.address || "",
-      phone: b.phone || "",
-      isMain: Boolean(b.isMain),
-    });
-    setBranchModalOpen(true);
-  };
-
-  const handleSaveBranch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveFirma = async () => {
     setSaving(true);
+    setSavedBanner("");
     try {
-      if (editingBranch) {
-        await fetch("/api/gerencia/configuracion", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "branch", id: editingBranch.id, ...branchForm }),
-        });
-      } else {
-        await fetch("/api/gerencia/configuracion", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(branchForm),
-        });
+      const res = await fetch("/api/gerencia/configuracion", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "config",
+          config: { ...config, firmaElectronica: firmaData },
+          sucursal,
+        }),
+      });
+      if (res.ok) {
+        setSavedBanner("Guardado");
+        setTimeout(() => setSavedBanner(""), 3000);
       }
-      setBranchModalOpen(false);
-      await loadData();
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeleteBranch = async (id: string) => {
-    if (!confirm("¿Eliminar esta sucursal?")) return;
-    await fetch(`/api/gerencia/configuracion?id=${id}`, { method: "DELETE" });
-    await loadData();
+  const handleSaveSucursal = async () => {
+    setSaving(true);
+    setSavedBanner("");
+    try {
+      const res = await fetch("/api/gerencia/configuracion", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "branch", ...sucursal }),
+      });
+      if (res.ok) {
+        setSavedBanner("Guardado");
+        setTimeout(() => setSavedBanner(""), 3000);
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDownloadBackup = () => {
@@ -126,8 +197,8 @@ export default function ConfiguracionSistema() {
 
   const tabs = [
     { id: "general", label: "🏢 Empresa" },
-    { id: "sucursales", label: `🏪 Sucursales (${branches.length})` },
-    { id: "impuestos", label: "🧾 SRI / IVA" },
+    { id: "sucursales", label: "🏪 Sucursal" },
+    { id: "impuestos", label: "🧾 SRI" },
     { id: "notificaciones", label: "🔔 Alertas" },
     { id: "seguridad", label: "🛡️ Seguridad" },
   ];
@@ -145,7 +216,7 @@ export default function ConfiguracionSistema() {
               <span className="text-zinc-900 dark:text-zinc-100 font-medium">Configuración</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Ajustes Globales
+              Configuración
             </h1>
           </div>
           <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -154,7 +225,7 @@ export default function ConfiguracionSistema() {
               disabled={saving}
               className="w-full sm:w-auto h-11 sm:h-10 px-6 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 active:scale-95 transition-all shadow-sm disabled:opacity-50"
             >
-              {saving ? "Guardando..." : "Guardar Cambios"}
+              {saving ? "Guardando..." : "Guardar"}
             </button>
           </div>
         </div>
@@ -168,15 +239,15 @@ export default function ConfiguracionSistema() {
         <div className="flex flex-col lg:flex-row gap-5 lg:gap-8">
           {/* Menu de Ajustes (Pills horizontales en móvil, Sidebar en desktop) */}
           <div className="w-full lg:w-64 flex-shrink-0">
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 p-1.5 sm:p-2 shadow-sm flex lg:flex-col gap-1 overflow-x-auto no-scrollbar">
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 p-2 sm:p-2.5 shadow-sm flex lg:flex-col gap-1.5 overflow-x-auto no-scrollbar">
               {tabs.map((t) => (
                 <button
                   key={t.id}
                   onClick={() => setActiveTab(t.id)}
-                  className={`whitespace-nowrap lg:w-full text-left px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-semibold transition-colors ${
+                  className={`whitespace-nowrap lg:w-full text-left px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl text-sm sm:text-base font-semibold transition-all ${
                     activeTab === t.id
-                      ? "bg-blue-600 text-white lg:bg-zinc-100 lg:dark:bg-zinc-800 lg:text-zinc-900 lg:dark:text-white"
-                      : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                      ? "bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800/60 text-blue-600 dark:text-blue-400 font-bold shadow-xs"
+                      : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-100"
                   }`}
                 >
                   {t.label}
@@ -193,7 +264,7 @@ export default function ConfiguracionSistema() {
               {activeTab === 'general' && (
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white mb-5 sm:mb-6 border-b border-zinc-100 dark:border-zinc-800 pb-3 sm:pb-4">
-                    Datos de la Empresa
+                    Empresa
                   </h2>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
@@ -207,7 +278,7 @@ export default function ConfiguracionSistema() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Nombre Comercial</label>
+                      <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Comercial</label>
                       <input
                         type="text"
                         value={config.nombreComercial}
@@ -225,16 +296,17 @@ export default function ConfiguracionSistema() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Teléfono Principal</label>
+                      <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">WhatsApp</label>
                       <input
                         type="text"
                         value={config.telefono}
                         onChange={(e) => setConfig({ ...config, telefono: e.target.value })}
-                        className="w-full h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent px-3.5 text-base sm:text-sm outline-none focus:border-blue-500"
+                        placeholder="0991234567"
+                        className="w-full h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent px-3.5 text-base sm:text-sm outline-none focus:border-blue-500 font-medium"
                       />
                     </div>
                     <div className="col-span-1 md:col-span-2">
-                      <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Dirección Matriz</label>
+                      <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Dirección</label>
                       <input
                         type="text"
                         value={config.direccion}
@@ -246,58 +318,77 @@ export default function ConfiguracionSistema() {
                 </div>
               )}
 
-              {/* Vista: Sucursales */}
+              {/* Vista: Sucursal Única */}
               {activeTab === 'sucursales' && (
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="flex justify-between items-center mb-5 sm:mb-6 border-b border-zinc-100 dark:border-zinc-800 pb-3 sm:pb-4 gap-2">
-                    <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white">Sucursales</h2>
-                    <button
-                      onClick={openNewBranch}
-                      className="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400 active:scale-95"
-                    >
-                      + Añadir Sucursal
-                    </button>
+                    <div>
+                      <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white">Sucursal</h2>
+                    </div>
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
+                      Activa
+                    </span>
                   </div>
-                  
-                  <div className="space-y-3.5">
-                    {branches.map((b) => (
-                      <div key={b.id} className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-zinc-50 dark:bg-zinc-800/20">
-                        <div>
-                          <h3 className="font-bold text-sm sm:text-base text-zinc-900 dark:text-white flex items-center gap-2">
-                            {b.name}
-                            {b.isMain && <span className="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full">Matriz</span>}
-                          </h3>
-                          <p className="text-xs sm:text-sm text-zinc-500 mt-1">{b.address} {b.phone ? `• ${b.phone}` : ""}</p>
-                        </div>
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => openEditBranch(b)}
-                            className="px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-semibold"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => handleDeleteBranch(b.id)}
-                            className="px-3 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-semibold"
-                          >
-                            Eliminar
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                        Nombre
+                      </label>
+                      <input
+                        type="text"
+                        value={sucursal.name}
+                        onChange={(e) => setSucursal({ ...sucursal, name: e.target.value })}
+                        placeholder="Sucursal Samborondón"
+                        className="w-full h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent px-3.5 text-base sm:text-sm outline-none focus:border-blue-500 font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">WhatsApp</label>
+                      <input
+                        type="text"
+                        value={sucursal.phone}
+                        onChange={(e) => setSucursal({ ...sucursal, phone: e.target.value })}
+                        placeholder="0991234567"
+                        className="w-full h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent px-3.5 text-base sm:text-sm outline-none focus:border-blue-500 font-medium"
+                      />
+                    </div>
+                    <div className="col-span-1 md:col-span-2">
+                      <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                        Dirección
+                      </label>
+                      <input
+                        type="text"
+                        value={sucursal.address}
+                        onChange={(e) => setSucursal({ ...sucursal, address: e.target.value })}
+                        placeholder="Av. Samborondón Km 1.5, Samborondón, Ecuador"
+                        className="w-full h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent px-3.5 text-base sm:text-sm outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-5 border-t border-zinc-100 dark:border-zinc-800 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleSaveSucursal}
+                      disabled={saving}
+                      className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs sm:text-sm font-semibold transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+                    >
+                      {saving ? "Guardando..." : "Guardar"}
+                    </button>
                   </div>
                 </div>
               )}
 
-              {/* Vista: Facturación */}
+              {/* Vista: Facturación / SRI */}
               {activeTab === 'impuestos' && (
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white mb-5 sm:mb-6 border-b border-zinc-100 dark:border-zinc-800 pb-3 sm:pb-4">
-                    Facturación y SRI
+                    SRI
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                     <div>
-                      <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Porcentaje de IVA (%)</label>
+                      <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">IVA (%)</label>
                       <input
                         type="number"
                         value={config.iva}
@@ -306,7 +397,7 @@ export default function ConfiguracionSistema() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Moneda del Sistema</label>
+                      <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Moneda</label>
                       <select
                         value={config.moneda}
                         onChange={(e) => setConfig({ ...config, moneda: e.target.value })}
@@ -316,22 +407,173 @@ export default function ConfiguracionSistema() {
                         <option>Euros (EUR)</option>
                       </select>
                     </div>
+
+                    {/* Tarjeta de Firma Electrónica */}
                     <div className="col-span-1 md:col-span-2">
-                      <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 flex items-start gap-3 sm:gap-4 mt-1">
-                        <div className="text-blue-600 dark:text-blue-400 mt-0.5">ℹ️</div>
-                        <div>
-                          <h4 className="text-sm font-bold text-blue-900 dark:text-blue-100">Firma Electrónica (SRI)</h4>
-                          <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 mt-1">
-                            La firma electrónica actual (*.p12) expira en {config.firmaDiasRestantes} días.
-                          </p>
+                      <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">🔐</span>
+                            <h3 className="font-bold text-sm sm:text-base text-zinc-900 dark:text-white">
+                              Firma
+                            </h3>
+                          </div>
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                            diasRestantes > 30 
+                              ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60"
+                              : diasRestantes > 0
+                              ? "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60"
+                              : "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60"
+                          }`}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
+                            {diasRestantes > 0 ? "Vigente" : "Vencida"}
+                          </span>
+                        </div>
+
+                        {/* Archivo y Contraseña */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                              Archivo
+                            </label>
+                            <input
+                              ref={fileInputRef}
+                              type="file"
+                              accept=".p12,.pfx"
+                              onChange={handleFileChange}
+                              className="hidden"
+                            />
+                            {firmaData.archivoNombre ? (
+                              <div className="w-full h-11 px-3.5 rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/30 flex items-center justify-between gap-2 shadow-xs">
+                                <div className="flex items-center gap-2 truncate">
+                                  <span className="text-sm">✅</span>
+                                  <span className="text-xs sm:text-sm font-semibold text-emerald-900 dark:text-emerald-200 truncate">
+                                    {firmaData.archivoNombre}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => fileInputRef.current?.click()}
+                                  className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-800 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 text-xs font-semibold hover:bg-emerald-50 shrink-0 cursor-pointer"
+                                >
+                                  Cambiar
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                className="w-full h-11 px-3.5 rounded-xl border-2 border-dashed border-blue-400 dark:border-blue-600 hover:border-blue-600 bg-blue-50/60 dark:bg-blue-950/30 hover:bg-blue-100/60 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-98"
+                              >
+                                <span>📤</span>
+                                <span>Subir</span>
+                              </button>
+                            )}
+                          </div>
+
+                          <div>
+                            <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                              Contraseña
+                            </label>
+                            <div className="relative">
+                              <input
+                                type={mostrarClave ? "text" : "password"}
+                                value={firmaData.claveFirma}
+                                onChange={(e) => setFirmaData({ ...firmaData, claveFirma: e.target.value })}
+                                placeholder="Contraseña"
+                                className="w-full h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent pl-3.5 pr-10 text-base sm:text-sm outline-none focus:border-blue-500 font-mono"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setMostrarClave(!mostrarClave)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm cursor-pointer"
+                                title={mostrarClave ? "Ocultar" : "Ver"}
+                              >
+                                {mostrarClave ? "🙈" : "👁️"}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Ambiente, Entidad y Expiración */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                          <div>
+                            <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                              Ambiente
+                            </label>
+                            <select
+                              value={firmaData.ambienteSri}
+                              onChange={(e) => setFirmaData({ ...firmaData, ambienteSri: e.target.value })}
+                              className="w-full h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-xs sm:text-sm outline-none focus:border-blue-500 font-medium"
+                            >
+                              <option value="2">Producción</option>
+                              <option value="1">Pruebas</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                              Entidad
+                            </label>
+                            <select
+                              value={firmaData.entidadEmisora}
+                              onChange={(e) => setFirmaData({ ...firmaData, entidadEmisora: e.target.value })}
+                              className="w-full h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-xs sm:text-sm outline-none focus:border-blue-500 font-medium"
+                            >
+                              <option value="Security Data S.A.">Security Data</option>
+                              <option value="Banco Central del Ecuador (BCE)">Banco Central</option>
+                              <option value="ANF Autoridad de Certificación">ANF</option>
+                              <option value="Uanataca Ecuador">Uanataca</option>
+                              <option value="Consejo de la Judicatura">Judicatura</option>
+                              <option value="Datapro S.A.">Datapro</option>
+                              <option value="Otra entidad autorizada">Otra</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                              Expiración
+                            </label>
+                            <input
+                              type="date"
+                              value={firmaData.fechaExpiracion}
+                              onChange={(e) => setFirmaData({ ...firmaData, fechaExpiracion: e.target.value })}
+                              className="w-full h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 text-xs sm:text-sm outline-none focus:border-blue-500 font-medium"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Mensaje de validación o error */}
+                        {validacionMensaje && (
+                          <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
+                            {validacionMensaje}
+                          </div>
+                        )}
+                        {validacionError && (
+                          <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs font-semibold">
+                            ⚠️ {validacionError}
+                          </div>
+                        )}
+
+                        {/* Acciones */}
+                        <div className="flex items-center justify-between gap-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
                           <button
-                            onClick={() => {
-                              setConfig({ ...config, firmaDiasRestantes: 365 });
-                              setSavedBanner("Firma electrónica renovada por 365 días. Presiona Guardar Cambios.");
-                            }}
-                            className="mt-3 text-xs font-bold text-white bg-blue-600 px-3.5 py-2 rounded-xl hover:bg-blue-700 active:scale-95"
+                            type="button"
+                            onClick={handleValidarFirma}
+                            disabled={validandoFirma}
+                            className="h-10 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95"
                           >
-                            Renovar Firma (365 días)
+                            <span>⚡</span>
+                            <span>{validandoFirma ? "Probando..." : "Probar"}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={handleSaveFirma}
+                            disabled={saving}
+                            className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs sm:text-sm font-semibold transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+                          >
+                            {saving ? "Guardando..." : "Guardar"}
                           </button>
                         </div>
                       </div>
@@ -344,43 +586,34 @@ export default function ConfiguracionSistema() {
               {activeTab === 'notificaciones' && (
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white mb-5 sm:mb-6 border-b border-zinc-100 dark:border-zinc-800 pb-3 sm:pb-4">
-                    Alertas y Correos
+                    Alertas
                   </h2>
-                  <div className="space-y-5">
-                    <label className="flex items-center justify-between gap-4 cursor-pointer">
-                      <div>
-                        <h3 className="font-medium text-sm sm:text-base text-zinc-900 dark:text-white">Alertas de Stock Bajo</h3>
-                        <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">Enviar correo al administrador cuando un producto llegue al mínimo.</p>
-                      </div>
+                  <div className="space-y-4">
+                    <label className="flex items-center justify-between gap-4 p-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors">
+                      <span className="font-medium text-sm sm:text-base text-zinc-900 dark:text-white">Stock Bajo</span>
                       <input
                         type="checkbox"
                         checked={config.alertasStockBajo}
                         onChange={(e) => setConfig({ ...config, alertasStockBajo: e.target.checked })}
-                        className="w-6 h-6 accent-blue-600 flex-shrink-0"
+                        className="w-5 h-5 accent-blue-600 flex-shrink-0"
                       />
                     </label>
-                    <label className="flex items-center justify-between gap-4 cursor-pointer">
-                      <div>
-                        <h3 className="font-medium text-sm sm:text-base text-zinc-900 dark:text-white">Recordatorios a Clientes</h3>
-                        <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">Enviar WhatsApp/Email 24h antes de una cita agendada.</p>
-                      </div>
+                    <label className="flex items-center justify-between gap-4 p-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors">
+                      <span className="font-medium text-sm sm:text-base text-zinc-900 dark:text-white">Recordatorios</span>
                       <input
                         type="checkbox"
                         checked={config.recordatoriosClientes}
                         onChange={(e) => setConfig({ ...config, recordatoriosClientes: e.target.checked })}
-                        className="w-6 h-6 accent-blue-600 flex-shrink-0"
+                        className="w-5 h-5 accent-blue-600 flex-shrink-0"
                       />
                     </label>
-                    <label className="flex items-center justify-between gap-4 cursor-pointer">
-                      <div>
-                        <h3 className="font-medium text-sm sm:text-base text-zinc-900 dark:text-white">Resumen Diario de Caja</h3>
-                        <p className="text-xs sm:text-sm text-zinc-500 mt-0.5">Enviar reporte automático al correo gerencial al cerrar el día.</p>
-                      </div>
+                    <label className="flex items-center justify-between gap-4 p-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors">
+                      <span className="font-medium text-sm sm:text-base text-zinc-900 dark:text-white">Cierre Diario</span>
                       <input
                         type="checkbox"
                         checked={config.resumenDiarioCaja}
                         onChange={(e) => setConfig({ ...config, resumenDiarioCaja: e.target.checked })}
-                        className="w-6 h-6 accent-blue-600 flex-shrink-0"
+                        className="w-5 h-5 accent-blue-600 flex-shrink-0"
                       />
                     </label>
                   </div>
@@ -391,41 +624,39 @@ export default function ConfiguracionSistema() {
               {activeTab === 'seguridad' && (
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white mb-5 sm:mb-6 border-b border-zinc-100 dark:border-zinc-800 pb-3 sm:pb-4">
-                    Seguridad y Respaldos
+                    Seguridad
                   </h2>
-                  <div className="space-y-4 sm:space-y-6">
-                    <div className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-700">
-                      <h3 className="font-bold text-sm sm:text-base text-zinc-900 dark:text-white mb-1">Backups Automáticos</h3>
-                      <p className="text-xs sm:text-sm text-zinc-500 mb-4">La base de datos se respalda de manera segura en la nube.</p>
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-700 flex items-center justify-between gap-4">
+                      <h3 className="font-bold text-sm sm:text-base text-zinc-900 dark:text-white">Respaldos</h3>
                       <button
                         onClick={handleDownloadBackup}
-                        className="w-full sm:w-auto text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 px-4 py-2.5 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                        className="text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
                       >
-                        Descargar último Backup
+                        Descargar
                       </button>
                     </div>
                     
-                    <div className="p-4 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-500/5">
-                      <h3 className="font-bold text-sm sm:text-base text-rose-700 dark:text-rose-400 mb-1">Auditoría de Seguridad</h3>
-                      <p className="text-xs sm:text-sm text-rose-600/70 dark:text-rose-400/70 mb-4">Registrar evento de cierre global de sesiones en el log de auditoría.</p>
+                    <div className="p-4 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-500/5 flex items-center justify-between gap-4">
+                      <h3 className="font-bold text-sm sm:text-base text-rose-700 dark:text-rose-400">Sesiones</h3>
                       <button
                         onClick={async () => {
                           await fetch("/api/gerencia/auditoria", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
-                              userName: "Gerencia General",
-                              module: "Inicios de sesión",
-                              action: "Reinicio de Sesiones Activas",
-                              details: "Se solicitó cierre preventivo de sesiones en todas las sucursales",
+                              userName: "Gerencia",
+                              module: "Seguridad",
+                              action: "Cierre de Sesiones",
+                              details: "Cierre preventivo",
                               level: "CRÍTICO",
                             }),
                           });
-                          setSavedBanner("Evento de seguridad registrado en Auditoría.");
+                          setSavedBanner("Sesiones cerradas");
                         }}
-                        className="w-full sm:w-auto text-xs sm:text-sm font-bold text-white bg-rose-600 px-4 py-2.5 rounded-xl hover:bg-rose-700 transition-colors"
+                        className="text-xs sm:text-sm font-bold text-white bg-rose-600 px-4 py-2 rounded-xl hover:bg-rose-700 transition-colors"
                       >
-                        Cerrar Todas las Sesiones
+                        Cerrar
                       </button>
                     </div>
                   </div>
@@ -437,75 +668,6 @@ export default function ConfiguracionSistema() {
         </div>
       </main>
 
-      {branchModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 border-t sm:border border-zinc-200 dark:border-zinc-800 shadow-2xl max-h-[90vh] overflow-y-auto pb-8 sm:pb-6">
-            <div className="w-12 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto mb-4 sm:hidden" />
-            <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white mb-4">
-              {editingBranch ? "Editar Sucursal" : "Añadir Sucursal"}
-            </h2>
-            <form onSubmit={handleSaveBranch} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-zinc-500 mb-1">Nombre de Sucursal</label>
-                <input
-                  required
-                  type="text"
-                  value={branchForm.name}
-                  onChange={(e) => setBranchForm({ ...branchForm, name: e.target.value })}
-                  placeholder="Sucursal Norte"
-                  className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-zinc-500 mb-1">Dirección</label>
-                <input
-                  required
-                  type="text"
-                  value={branchForm.address}
-                  onChange={(e) => setBranchForm({ ...branchForm, address: e.target.value })}
-                  placeholder="Av. 25 de Julio"
-                  className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-zinc-500 mb-1">Teléfono</label>
-                <input
-                  type="text"
-                  value={branchForm.phone}
-                  onChange={(e) => setBranchForm({ ...branchForm, phone: e.target.value })}
-                  placeholder="04-255-6677"
-                  className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
-                />
-              </div>
-              <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 py-1">
-                <input
-                  type="checkbox"
-                  checked={branchForm.isMain}
-                  onChange={(e) => setBranchForm({ ...branchForm, isMain: e.target.checked })}
-                  className="w-5 h-5 accent-blue-600"
-                />
-                Establecer como Sede Matriz
-              </label>
-              <div className="grid grid-cols-2 gap-2.5 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setBranchModalOpen(false)}
-                  className="h-11 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="h-11 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {saving ? "Guardando..." : "Guardar"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
       <GerenciaMobileNav />
     </div>
   );

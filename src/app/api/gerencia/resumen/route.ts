@@ -9,6 +9,10 @@ export async function GET(request: Request) {
     const periodo = searchParams.get("periodo") || "este_mes";
     const desdeParam = searchParams.get("desde");
     const hastaParam = searchParams.get("hasta");
+    const sucursalParam = searchParams.get("sucursal") || searchParams.get("branch") || searchParams.get("sede");
+
+    const rawBranch = (sucursalParam || "").trim().toUpperCase();
+    const filterBranch = (rawBranch === "PRINCIPAL" || rawBranch === "SUCURSAL") ? rawBranch : null;
 
     return await withRetry(async () => {
       // 1. Determinar rango de fechas
@@ -90,17 +94,28 @@ export async function GET(request: Request) {
       ] = await Promise.all([
         prisma.sale.findMany({
           where: { createdAt: { gte: startDate, lte: endDate } },
-          select: { id: true, total: true, paymentMethod: true, createdAt: true },
+          select: {
+            id: true,
+            total: true,
+            paymentMethod: true,
+            createdAt: true,
+            customer: { select: { branch: true, assignedToSucursal: true } },
+          },
         }).catch(() => []),
         prisma.sale.findMany({
           where: { createdAt: { gte: todayStart, lte: todayEnd } },
-          select: { id: true, total: true },
+          select: {
+            id: true,
+            total: true,
+            customer: { select: { branch: true, assignedToSucursal: true } },
+          },
         }).catch(() => []),
         prisma.workshopOrder.findMany({
           select: {
             id: true,
             orderNumber: true,
             status: true,
+            branch: true,
             client: true,
             vehicle: true,
             plate: true,
@@ -155,29 +170,82 @@ export async function GET(request: Request) {
         return 0;
       };
 
+      // Filtrar por sucursal / sede (PRINCIPAL, SUCURSAL o null/AMBAS)
+      const isSaleInBranch = (s: any) => {
+        if (!filterBranch) return true;
+        const b = (s.customer?.branch || "PRINCIPAL").toUpperCase();
+        if (filterBranch === "SUCURSAL") {
+          return b === "SUCURSAL" || s.customer?.assignedToSucursal === true;
+        }
+        return b === "PRINCIPAL" && !s.customer?.assignedToSucursal;
+      };
+
+      const branchSalesPeriod = filterBranch ? salesPeriod.filter(isSaleInBranch) : salesPeriod;
+      const branchSalesToday = filterBranch ? salesToday.filter(isSaleInBranch) : salesToday;
+
+      const branchWorkshopOrders = filterBranch
+        ? workshopOrders.filter((o: any) => (o.branch || "PRINCIPAL").toUpperCase() === filterBranch)
+        : workshopOrders;
+
+      const orderBranchMap = new Map<string, string>();
+      workshopOrders.forEach((o: any) => {
+        const b = (o.branch || "PRINCIPAL").toUpperCase();
+        if (o.id) orderBranchMap.set(o.id, b);
+        if (o.orderNumber) orderBranchMap.set(o.orderNumber, b);
+      });
+
+      const branchInvoices = filterBranch
+        ? clientInvoices.filter((inv: any) => {
+            if (!inv.orderId) return filterBranch === "PRINCIPAL";
+            const b = orderBranchMap.get(inv.orderId) || "PRINCIPAL";
+            return b === filterBranch;
+          })
+        : clientInvoices;
+
+      const branchMovements = filterBranch
+        ? cashMovements.filter((m: any) => {
+            const b = (m.branch || "PRINCIPAL").toUpperCase();
+            return b === filterBranch;
+          })
+        : cashMovements;
+
+      const branchTransactions = filterBranch
+        ? financialTransactions.filter((t: any) => {
+            const b = (t.branch || "PRINCIPAL").toUpperCase();
+            return b === filterBranch;
+          })
+        : financialTransactions;
+
+      const branchCredits = filterBranch
+        ? posCredits.filter((c: any) => {
+            const b = (c.branch || "PRINCIPAL").toUpperCase();
+            return b === filterBranch;
+          })
+        : posCredits;
+
       // 3. Filtrar por fechas
-      const ordersInPeriod = workshopOrders.filter((o) => {
+      const ordersInPeriod = branchWorkshopOrders.filter((o) => {
         const d = getRecordDate(o);
         return d >= startDate && d <= endDate;
       });
 
-      const movementsInPeriod = cashMovements.filter((m) => {
+      const movementsInPeriod = branchMovements.filter((m) => {
         const d = getRecordDate(m);
         return d >= startDate && d <= endDate;
       });
 
-      const invoicesInPeriod = clientInvoices.filter((inv) => {
+      const invoicesInPeriod = branchInvoices.filter((inv) => {
         const d = getRecordDate(inv);
         return d >= startDate && d <= endDate;
       });
 
-      const transactionsInPeriod = financialTransactions.filter((t) => {
+      const transactionsInPeriod = branchTransactions.filter((t) => {
         const d = getRecordDate(t);
         return d >= startDate && d <= endDate;
       });
 
       // 1. VENTAS TOTALES (Taller + Tienda POS + Facturación Electrónica SRI)
-      const ventasPosPeriodo = salesPeriod.reduce((acc, s) => acc + Number(s.total || 0), 0);
+      const ventasPosPeriodo = branchSalesPeriod.reduce((acc, s) => acc + Number(s.total || 0), 0);
       const tallerFacturadoPeriodo = ordersInPeriod.reduce((acc, o) => acc + getOrderValue(o), 0);
       const facturasMontoPeriodo = invoicesInPeriod
         .filter((i) => i.status === "Autorizado" || i.status === "Pagada")
@@ -191,7 +259,7 @@ export async function GET(request: Request) {
       );
 
       // 2. COBRADO EN CAJA (Ventas POS en efectivo/transferencia + Órdenes terminadas/cobradas + Movimientos INGRESO)
-      const cobradoPos = salesPeriod.reduce((acc, s) => {
+      const cobradoPos = branchSalesPeriod.reduce((acc, s) => {
         if (s.paymentMethod === "Crédito") return acc;
         return acc + Number(s.total || 0);
       }, 0);
@@ -209,32 +277,32 @@ export async function GET(request: Request) {
       const cobradoEnCaja = Number((cobradoPos + cobradoTaller + facturasMontoPeriodo + ingresosCaja).toFixed(2));
 
       // 3. VENTAS HOY (Órdenes de hoy + Ventas POS de hoy + Transacciones de hoy)
-      const ordersToday = workshopOrders.filter((o) => {
+      const ordersToday = branchWorkshopOrders.filter((o) => {
         const d = getRecordDate(o);
         return d >= todayStart && d <= todayEnd;
       });
       const tallerHoy = ordersToday.reduce((acc, o) => acc + getOrderValue(o), 0);
-      const ventasPosHoy = salesToday.reduce((acc, s) => acc + Number(s.total || 0), 0);
+      const ventasPosHoy = branchSalesToday.reduce((acc, s) => acc + Number(s.total || 0), 0);
       const montoHoy = Number((ventasPosHoy + tallerHoy).toFixed(2));
 
       // 4. TICKET PROMEDIO POR AUTO / TRANSACCIÓN
-      const totalTransacciones = salesPeriod.length + ordersInPeriod.length + invoicesInPeriod.length;
+      const totalTransacciones = branchSalesPeriod.length + ordersInPeriod.length + invoicesInPeriod.length;
       const ticketPromedio = totalTransacciones > 0
         ? Number((ventasTotales / totalTransacciones).toFixed(2))
         : ventasTotales > 0 ? ventasTotales : 0;
 
       // 5. AUTOS EN PISTA (Vehículos activos en bahías de taller/lubricentro)
-      const autosEnPista = workshopOrders.filter((o) => {
+      const autosEnPista = branchWorkshopOrders.filter((o) => {
         const st = (o.status || "").toLowerCase();
         return !st.includes("finaliz") && !st.includes("entregad") && !st.includes("cancelad");
       }).length;
 
       // 6. AUTOS ENTREGADOS / SERVICIOS COMPLETADOS
-      const ordenesTerminadas = workshopOrders.filter((o) => {
+      const ordenesTerminadas = branchWorkshopOrders.filter((o) => {
         const st = (o.status || "").toLowerCase();
         return st.includes("finaliz") || st.includes("entregad") || st.includes("caja");
       }).length;
-      const autosEntregados = salesPeriod.length + ordenesTerminadas;
+      const autosEntregados = branchSalesPeriod.length + ordenesTerminadas;
 
       // 7. GASTOS Y REPUESTOS (Egresos de caja, compras operativas, gastos financieros)
       const egresosCaja = movementsInPeriod
@@ -247,10 +315,10 @@ export async function GET(request: Request) {
 
       // 8. CUENTAS POR COBRAR (Cartera de clientes con crédito pendiente)
       const carteraCreditoTotal = Number(
-        posCredits.reduce((acc, c) => acc + Number(c.currentBalance || 0), 0).toFixed(2)
+        branchCredits.reduce((acc, c) => acc + Number(c.currentBalance || 0), 0).toFixed(2)
       );
       // Incluir órdenes de taller entregadas pendientes de cobro
-      const ordenesPorCobrar = workshopOrders.reduce((acc, o) => {
+      const ordenesPorCobrar = branchWorkshopOrders.reduce((acc, o) => {
         const st = (o.status || "").toLowerCase();
         if (st.includes("entregad") || st.includes("por cobrar") || st.includes("pendiente de pago")) {
           return acc + getOrderValue(o);
@@ -265,7 +333,7 @@ export async function GET(request: Request) {
 
       const dayData = weekOrder.map((dayIdx) => {
         const dayLabel = dayNames[dayIdx];
-        const daySales = salesPeriod
+        const daySales = branchSalesPeriod
           .filter((s) => new Date(s.createdAt).getDay() === dayIdx)
           .reduce((acc, s) => acc + Number(s.total || 0), 0);
         const dayOrders = ordersInPeriod
@@ -319,7 +387,8 @@ export async function GET(request: Request) {
           carteraCreditoTotal,
         },
         weeklyChart,
-        ultimasOrdenes: workshopOrders.slice(0, 8).map((o) => ({
+        sucursal: filterBranch || "AMBAS",
+        ultimasOrdenes: branchWorkshopOrders.slice(0, 8).map((o) => ({
           id: o.id,
           orderNumber: o.orderNumber,
           client: o.client,

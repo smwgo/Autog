@@ -462,7 +462,7 @@ export default function GestionCaja() {
                           <p className="font-bold text-sm text-white font-mono">{s.sessionNumber}</p>
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800/80 border border-zinc-700/60 text-zinc-300 font-medium flex items-center gap-1">
                             <span>👤</span>
-                            <span>{s.cashier || "Super Administrador"}</span>
+                            <span>{s.cashier || "POS"}</span>
                           </span>
                         </div>
                         <p className="text-[11px] text-zinc-400 mt-0.5">
@@ -578,7 +578,7 @@ export default function GestionCaja() {
                               <p className="font-bold text-white font-mono">{s.sessionNumber}</p>
                               <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-zinc-800/80 border border-zinc-700/60 text-zinc-300 font-medium flex items-center gap-1">
                                 <span>👤</span>
-                                <span>{s.cashier || "Super Administrador"}</span>
+                                <span>{s.cashier || "POS"}</span>
                               </span>
                             </div>
                             <p className="text-xs text-zinc-400 mt-0.5">
@@ -929,7 +929,7 @@ export default function GestionCaja() {
               </div>
               <div className="flex justify-between py-1.5 border-b border-zinc-800/60">
                 <span className="text-zinc-400">Cajero:</span>
-                <span className="font-bold text-white">{sesionDetalle.cashier || "Super Administrador"}</span>
+                <span className="font-bold text-white">{sesionDetalle.cashier || "POS"}</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-zinc-800/60">
                 <span className="text-zinc-400">Fondo:</span>

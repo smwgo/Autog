@@ -65,7 +65,7 @@
       "paymentsJson": "[]",
       "stockDeducted": false,
       "branch": "PRINCIPAL",
-      "createdAt": "2026-11-03T07:28:10.560Z",
+      "createdAt": "2026-11-03T20:09:04.122Z",
       "updatedAt": "2026-11-03T18:02:40.530Z",
       "id": "ord_4wroz0vmw0d8svt",
       "orderNumber": "OT #00001",
@@ -80,10 +80,11 @@
       "nextOilChangeKm": null,
       "servicesJson": "[\"AMALIE XLO ULTIMATE 15W40\"]",
       "notes": "Ingreso a taller | Ingresado por: Carlos Rodríguez • Inspección 5 Vistas (1 hallazgos): #1 [Frontal] Rayón: Daño",
-      "totalCost": 1,
+      "totalCost": "1",
       "receptionSignatureUrl": null,
       "inspectionTemplateId": null,
-      "quoteNumber": "COT-OT #00001"
+      "quoteNumber": "COT-OT #00001",
+      "completedAt": null
     }
   ],
   "employee": [],
@@ -684,8 +685,8 @@
       "clientName": "Lorena Camba",
       "status": "Pendiente",
       "itemsJson": "[{\"key\":\"lub_bento_cmw044rywqtmziav2_1793728944821\",\"productId\":\"cmw044rywqtmziav2\",\"id\":\"cmw044rywqtmziav2\",\"code\":\"AM-79107-36\",\"name\":\"AMALIE XLO ULTIMATE 15W40\",\"fullName\":\"AMALIE XLO ULTIMATE 15W40\",\"brand\":\"Genérico\",\"presentation\":\"Galón\",\"unitOfMeasure\":\"Galón\",\"price\":1,\"qty\":1,\"maxStock\":999,\"subtotal\":1,\"type\":\"PART\",\"lubCategoryId\":\"lub_aceite\",\"lubSubcategoryId\":\"lub_aceite_motor\"}]",
-      "subtotal": 1,
-      "total": 1.15,
+      "subtotal": "1",
+      "total": "1.15",
       "quoteNumber": "COT-OT #00001",
       "date": "2026-11-03",
       "vehicle": "mazda Sportage 2026",
@@ -838,21 +839,125 @@
       "email": "tiendaautogdaule@gmail.com",
       "name": "Super Administrador",
       "role": "ROOT",
-      "passwordHash": "$2b$10$Bosd6HmBNEnpna0QjbbWuOlQuHwOE9dwFLQTEYehBG/VcfgXcE7Pm",
-      "createdAt": "2026-11-03T20:37:04.444Z",
-      "updatedAt": "2026-11-03T20:37:04.445Z"
+      "passwordHash": "$2b$10$R3U8xgXS3eqAu73RfKPNwOmNR6ycMMns9yhcQqhN7MrJGMeZu4bnq",
+      "createdAt": "2026-11-03T20:24:33.558Z",
+      "updatedAt": "2026-11-03T20:24:33.558Z",
+      "avatar": null
+    },
+    {
+      "id": "cmw14eae20000bn1y85knubal",
+      "name": "Super Administrador",
+      "email": "tiendaautodaule@gmail.com",
+      "role": "ROOT"
     }
   ],
   "cashRegister": [],
   "sale": [],
   "clientInvoice": [],
-  "auditLog": [],
+  "auditLog": [
+    {
+      "id": "cmw1kdrm60001yizt1c6i86zs",
+      "dateLabel": "03-nov, 10:35 p. m.",
+      "userName": "Gerencia",
+      "ipAddress": "192.168.1.10",
+      "module": "USUARIOS",
+      "action": "CREAR_USUARIO",
+      "details": "Usuario POS (pos@gmail.com) creado con acceso a: POS",
+      "level": "INFO",
+      "createdAt": "2026-11-04T03:35:45.678Z"
+    },
+    {
+      "id": "cmw1kiod90002yizt2jlwertm",
+      "dateLabel": "03-nov, 10:39 p. m.",
+      "userName": "Gerencia",
+      "ipAddress": "192.168.1.10",
+      "module": "USUARIOS",
+      "action": "ELIMINAR_USUARIO",
+      "details": "Usuario eliminado: POS (pos@gmail.com)",
+      "level": "ADVERTENCIA",
+      "createdAt": "2026-11-04T03:39:34.750Z"
+    },
+    {
+      "id": "cmw1kk89h0004yiztjayatpxr",
+      "dateLabel": "03-nov, 10:40 p. m.",
+      "userName": "Gerencia",
+      "ipAddress": "192.168.1.10",
+      "module": "USUARIOS",
+      "action": "CREAR_USUARIO",
+      "details": "Usuario POS (pos@gmail.com) creado con acceso a: POS",
+      "level": "INFO",
+      "createdAt": "2026-11-04T03:40:47.189Z"
+    },
+    {
+      "id": "cmw1kkgtc0005yiztcggwsqoj",
+      "dateLabel": "03-nov, 10:40 p. m.",
+      "userName": "Gerencia",
+      "ipAddress": "192.168.1.10",
+      "module": "USUARIOS",
+      "action": "ACTUALIZAR_ACCESO_USUARIO",
+      "details": "Permisos actualizados para POS Actualizado: [POS] (Activo)",
+      "level": "INFO",
+      "createdAt": "2026-11-04T03:40:58.272Z"
+    },
+    {
+      "id": "cmw1kknh70006yiztwzh9l414",
+      "dateLabel": "03-nov, 10:41 p. m.",
+      "userName": "Gerencia",
+      "ipAddress": "192.168.1.10",
+      "module": "USUARIOS",
+      "action": "ELIMINAR_USUARIO",
+      "details": "Usuario eliminado: POS Actualizado (pos@gmail.com)",
+      "level": "ADVERTENCIA",
+      "createdAt": "2026-11-04T03:41:06.907Z"
+    },
+    {
+      "id": "cmw1kn8s20008yizth1ip3wjj",
+      "dateLabel": "03-nov, 10:43 p. m.",
+      "userName": "Gerencia",
+      "ipAddress": "192.168.1.10",
+      "module": "USUARIOS",
+      "action": "CREAR_USUARIO",
+      "details": "Usuario POS (pos@gmail.com) creado con acceso a: POS",
+      "level": "INFO",
+      "createdAt": "2026-11-04T03:43:07.827Z"
+    }
+  ],
   "workshopInspection": [],
   "workshopTask": [],
   "posCreditAccount": [],
   "cashMovement": [],
-  "appUserAccess": [],
-  "branch": [],
+  "appUserAccess": [
+    {
+      "id": "cmw1kn8ca0007yiztb4h57pjq",
+      "identification": null,
+      "name": "POS",
+      "email": "pos@gmail.com",
+      "phone": null,
+      "username": "pos",
+      "pinCode": "123456",
+      "role": "POS",
+      "branch": "Principal",
+      "accessOficina": false,
+      "accessPos": true,
+      "accessTaller": false,
+      "status": "Activo",
+      "lastAccess": "Hoy",
+      "createdAt": "2026-11-04T03:43:07.257Z",
+      "updatedAt": "2026-11-04T04:00:41.074Z"
+    }
+  ],
+  "branch": [
+    {
+      "id": "branch_sucursal_1",
+      "name": "Sucursal Samborondón",
+      "address": "Av. Samborondón Km 1.5, Samborondón, Ecuador",
+      "phone": "0991234567",
+      "isMain": false,
+      "status": "Activa",
+      "createdAt": "2026-11-04T02:32:52.570Z",
+      "updatedAt": "2026-11-04T02:32:52.570Z"
+    }
+  ],
   "supplier": [],
   "financialTransaction": []
 }

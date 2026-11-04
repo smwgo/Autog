@@ -6,35 +6,27 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
 
-
-const PANELES_DISPONIBLES = [
-  { id: "Oficina", name: "Oficina", icon: "🏢", desc: "Administración, compras y finanzas" },
-  { id: "POS", name: "POS", icon: "🛒", desc: "Punto de venta y facturación" },
-  { id: "Taller", name: "Taller", icon: "🔧", desc: "Garaje, mecánica y órdenes" },
-  { id: "Presupuesto", name: "Presupuesto", icon: "📋", desc: "Propuestas y cotizaciones" },
-  { id: "Cliente", name: "Cliente", icon: "👤", desc: "Portal de autoservicio cliente" },
-  { id: "Gerencia", name: "Gerencia", icon: "📊", desc: "Super Administrador / Dirección" },
-];
-
 function NuevoUsuarioContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
 
-  // Paso actual (1: Datos del usuario, 2: Accesos a la aplicación)
-  const [paso, setPaso] = useState<1 | 2>(1);
   const [cargando, setCargando] = useState(Boolean(editId));
   const [guardando, setGuardando] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Paso 1: Datos del Usuario
+  // Datos del Usuario
   const [nombre, setNombre] = useState("");
-  const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
   const [pinCode, setPinCode] = useState("1234");
-  const [role, setRole] = useState("Especialista");
+  const [role, setRole] = useState("Taller");
   const [branch, setBranch] = useState("Principal");
   const [status, setStatus] = useState("Activo");
+
+  // Accesos a Paneles calculados automáticamente según el Rol
+  const [accessOficina, setAccessOficina] = useState<boolean>(false);
+  const [accessPos, setAccessPos] = useState<boolean>(false);
+  const [accessTaller, setAccessTaller] = useState<boolean>(true);
 
   const handleSelectPanel = (panelId: string) => {
     setRole(panelId);
@@ -58,14 +50,12 @@ function NuevoUsuarioContent() {
       setAccessOficina(true);
       setAccessPos(true);
       setAccessTaller(true);
+    } else {
+      setAccessOficina(false);
+      setAccessPos(false);
+      setAccessTaller(false);
     }
   };
-
-
-  // Paso 2: Accesos a Paneles (Oficina, POS, Taller / Garaje)
-  const [accessOficina, setAccessOficina] = useState<boolean>(false);
-  const [accessPos, setAccessPos] = useState<boolean>(false);
-  const [accessTaller, setAccessTaller] = useState<boolean>(true);
 
   useEffect(() => {
     if (!editId) {
@@ -82,11 +72,10 @@ function NuevoUsuarioContent() {
           const u = data.find((item: any) => item.id === editId);
           if (u) {
             setNombre(u.name || "");
-            setTelefono(u.phone || "");
             setEmail(u.email || "");
             setPinCode(u.pinCode || "1234");
-            setRole(u.role || "Especialista");
-            setBranch(u.branch || "Sede Principal");
+            setRole(u.role || "Taller");
+            setBranch(u.branch || "Principal");
             setStatus(u.status || "Activo");
             setAccessOficina(Boolean(u.accessOficina));
             setAccessPos(Boolean(u.accessPos));
@@ -103,17 +92,13 @@ function NuevoUsuarioContent() {
     cargarUsuario();
   }, [editId]);
 
-  const handleSiguiente = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nombre.trim() || !email.trim()) {
-      setErrorMsg("Completa el nombre completo y el correo electrónico del usuario.");
+      setErrorMsg("Completa el nombre y correo del usuario.");
       return;
     }
-    setErrorMsg(null);
-    setPaso(2);
-  };
 
-  const handleSubmitFinal = async () => {
     try {
       setGuardando(true);
       setErrorMsg(null);
@@ -122,14 +107,13 @@ function NuevoUsuarioContent() {
         id: editId || undefined,
         name: nombre.trim(),
         email: email.trim().toLowerCase(),
-        phone: telefono.trim() || undefined,
         pinCode: pinCode.trim() || "1234",
-        role: role.trim() || "Operador",
-        branch: branch.trim() || "Sede Principal",
+        role: role.trim() || "Taller",
+        branch: branch.trim() || "Principal",
         status,
-        accessOficina,
-        accessPos,
-        accessTaller,
+        accessOficina: role === "Oficina" || role === "Presupuesto" || role === "Gerencia" || accessOficina,
+        accessPos: role === "POS" || role === "Gerencia" || accessPos,
+        accessTaller: role === "Taller" || role === "Presupuesto" || role === "Gerencia" || accessTaller,
       };
 
       const res = await fetch("/api/gerencia/usuarios", {
@@ -139,7 +123,7 @@ function NuevoUsuarioContent() {
       });
 
       const data = await res.json();
-      if (!res.ok || !data.success) {
+      if (!res.ok || data.error) {
         setErrorMsg(data.error || "No se pudo guardar la información del usuario.");
         setGuardando(false);
         return;
@@ -158,67 +142,32 @@ function NuevoUsuarioContent() {
       <Header />
 
       <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full flex items-center justify-center">
-        <div className="relative w-full max-w-4xl lg:max-w-5xl bg-white dark:bg-zinc-900/95 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl sm:rounded-3xl p-4 sm:p-8 md:p-12 shadow-xl dark:shadow-2xl backdrop-blur-xl my-2 sm:my-auto text-zinc-900 dark:text-white">
-          {/* Cabecera del Wizard */}
-          <div className="flex items-center justify-between pb-4 sm:pb-6 border-b border-zinc-200 dark:border-zinc-800/80 mb-5 sm:mb-8">
+        <div className="relative w-full max-w-2xl bg-white dark:bg-zinc-900/95 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xl dark:shadow-2xl backdrop-blur-xl my-2 sm:my-auto text-zinc-900 dark:text-white">
+          {/* Cabecera */}
+          <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800/80 mb-6">
             <div className="flex items-center gap-2.5 sm:gap-3">
-              {paso === 1 ? (
-                <Link
-                  href="/gerencia/usuarios"
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 active:scale-95 transition-all"
-                  title="Volver a Usuarios"
-                  aria-label="Volver"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                  </svg>
-                </Link>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setPaso(1)}
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer"
-                  title="Volver al paso anterior"
-                  aria-label="Volver al paso anterior"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                  </svg>
-                </button>
-              )}
-              <h1 className="text-base sm:text-xl font-bold text-zinc-900 dark:text-white tracking-tight">
-                {editId
-                  ? paso === 1
-                    ? "Editar Usuario"
-                    : "Editar Accesos a Paneles"
-                  : paso === 1
-                  ? "Registro de Usuario"
-                  : "Accesos a la Aplicación"}
+              <Link
+                href="/gerencia/usuarios"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 active:scale-95 transition-all"
+                title="Volver"
+                aria-label="Volver"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </Link>
+              <h1 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white tracking-tight">
+                {editId ? "Editar Usuario" : "Nuevo Usuario"}
               </h1>
             </div>
 
             <Link
               href="/gerencia/usuarios"
               className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800/50 dark:hover:bg-zinc-800 active:scale-95 transition-all"
-              title="Cerrar y volver a Usuarios"
+              title="Cerrar"
             >
               ✕
             </Link>
-          </div>
-
-          {/* Barra de Progreso por Pasos */}
-          <div className="flex items-center gap-3 mb-5 sm:mb-8">
-            <div className="flex-1 flex gap-2">
-              <div className="h-1.5 flex-1 rounded-full bg-blue-600 transition-all duration-300" />
-              <div
-                className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-                  paso === 2 ? "bg-blue-600" : "bg-zinc-200 dark:bg-zinc-800"
-                }`}
-              />
-            </div>
-            <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400 shrink-0 font-medium">
-              {paso} de 2
-            </span>
           </div>
 
           {/* Mensaje de error si ocurre */}
@@ -232,362 +181,123 @@ function NuevoUsuarioContent() {
           {cargando ? (
             <div className="py-20 text-center">
               <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-zinc-500 dark:text-zinc-400 text-sm">Cargando datos del usuario...</p>
+              <p className="text-zinc-500 dark:text-zinc-400 text-sm">Cargando...</p>
             </div>
           ) : (
-            <>
-              {/* PASO 1: DATOS DEL USUARIO */}
-              {paso === 1 && (
-                <form onSubmit={handleSiguiente} className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
-                  {/* Campos de Entrada */}
-                  <div className="space-y-3.5 sm:space-y-4 pt-1">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                          Nombres y Apellidos *
-                        </label>
-                        <input
-                          required
-                          type="text"
-                          placeholder="Carlos Rodríguez"
-                          value={nombre}
-                          onChange={(e) => setNombre(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
-                        />
-                      </div>
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 animate-in fade-in duration-300">
+              {/* Campos de Entrada */}
+              <div className="space-y-4 pt-1">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                    Nombre *
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="Carlos Rodríguez"
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
 
-                      <div>
-                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                          WhatsApp
-                        </label>
-                        <input
-                          type="tel"
-                          inputMode="tel"
-                          placeholder="0991234567"
-                          value={telefono}
-                          onChange={(e) => setTelefono(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors font-mono"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                          Correo Electrónico *
-                        </label>
-                        <input
-                          required
-                          type="email"
-                          placeholder="usuario@autog.com"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                          PIN / Clave de Acceso *
-                        </label>
-                        <input
-                          required
-                          type="text"
-                          placeholder="4821"
-                          value={pinCode}
-                          onChange={(e) => setPinCode(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors font-mono"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center justify-between">
-                          <span>Panel al que entra / Rol *</span>
-                          <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase">1 Clic para Asignar</span>
-                        </label>
-                        <div className="space-y-2">
-                          <select
-                            value={PANELES_DISPONIBLES.some(p => p.id.toLowerCase() === (role || "").toLowerCase()) ? role : (role ? "OTRO" : "Taller")}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val === "OTRO") {
-                                setRole("");
-                              } else {
-                                handleSelectPanel(val);
-                              }
-                            }}
-                            className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white outline-none focus:border-blue-500 transition-colors font-medium cursor-pointer"
-                          >
-                            <option value="Oficina">🏢 Oficina (Administración y Finanzas)</option>
-                            <option value="POS">🛒 POS (Punto de Venta / Facturación)</option>
-                            <option value="Taller">🔧 Taller / Garaje (Mecánica y Órdenes)</option>
-                            <option value="Presupuesto">📋 Presupuesto (Propuestas y Cotizaciones)</option>
-                            <option value="Cliente">👤 Cliente (Portal Cliente)</option>
-                            <option value="Gerencia">📊 Gerencia (Dirección / Super Administrador)</option>
-                            <option value="OTRO">✍️ Otro (Cargo personalizado...)</option>
-                          </select>
-
-                          {/* Botones de selección rápida de panel */}
-                          <div className="flex flex-wrap gap-1.5 pt-0.5">
-                            {PANELES_DISPONIBLES.map((p) => {
-                              const isSelected = (role || "").toLowerCase() === p.id.toLowerCase();
-                              return (
-                                <button
-                                  key={p.id}
-                                  type="button"
-                                  onClick={() => handleSelectPanel(p.id)}
-                                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 border transition-all cursor-pointer ${
-                                    isSelected
-                                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                                      : "bg-zinc-100 dark:bg-zinc-800/70 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700/60 hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                                  }`}
-                                >
-                                  <span>{p.icon}</span>
-                                  <span>{p.name}</span>
-                                  {isSelected && <span className="text-[10px]">✓</span>}
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          {/* Campo de texto libre si selecciona OTRO */}
-                          {(!PANELES_DISPONIBLES.some(p => p.id.toLowerCase() === (role || "").toLowerCase()) || role === "") && (
-                            <input
-                              type="text"
-                              placeholder="Escribe el cargo o función específica..."
-                              value={role}
-                              onChange={(e) => setRole(e.target.value)}
-                              className="w-full h-11 px-3.5 rounded-xl border border-blue-300 dark:border-blue-700 bg-blue-50/30 dark:bg-blue-950/20 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 outline-none focus:border-blue-500 transition-colors mt-2"
-                              autoFocus
-                            />
-                          )}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                          Sede / Sucursal Asignada
-                        </label>
-                        <select
-                          value={branch.toLowerCase().includes("sucursal") ? "Sucursal" : "Principal"}
-                          onChange={(e) => setBranch(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white outline-none focus:border-blue-500 transition-colors cursor-pointer"
-                        >
-                          <option value="Principal">🏢 Principal (Matriz)</option>
-                          <option value="Sucursal">🏪 Sucursal</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Barra Inferior */}
-                  <div className="pt-5 sm:pt-6 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-col-reverse sm:flex-row items-center justify-between gap-3 sm:gap-4">
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400 text-center sm:text-left">
-                      {editId ? "Paso 1: Modifica los datos del usuario" : "Paso 1: Datos principales del usuario"}
-                    </span>
-
-                    <button
-                      type="submit"
-                      className="w-full sm:w-auto h-12 px-7 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 text-sm cursor-pointer"
-                    >
-                      <span>Continuar</span>
-                      <span>&rarr;</span>
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {/* PASO 2: ACCESOS A LOS PANELES DE LA APLICACIÓN (OFICINA, POS, TALLER/GARAJE) */}
-              {paso === 2 && (
-                <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                   <div>
-                    <p className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-2.5 sm:mb-3">
-                      Selecciona a qué paneles de la aplicación tendrá acceso este usuario:
-                    </p>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                      {/* Panel Oficina */}
-                      <button
-                        type="button"
-                        onClick={() => setAccessOficina(!accessOficina)}
-                        className={`p-4 sm:p-5 rounded-xl sm:rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
-                          accessOficina
-                            ? "bg-blue-50 dark:bg-blue-500/15 border-blue-500 text-blue-900 dark:text-white shadow-md shadow-blue-500/10 ring-1 ring-blue-500/30"
-                            : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 text-zinc-700 dark:text-zinc-300"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <div
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-colors shrink-0 ${
-                              accessOficina
-                                ? "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
-                                : "bg-zinc-200/70 dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-400"
-                            }`}
-                          >
-                            🏢
-                          </div>
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                              accessOficina
-                                ? "bg-blue-600 text-white"
-                                : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
-                            }`}
-                          >
-                            {accessOficina ? "✓ Activo" : "Sin acceso"}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-bold text-sm sm:text-base text-zinc-900 dark:text-white">Oficina</p>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                            Compras, proveedores, facturación y contabilidad
-                          </p>
-                        </div>
-                      </button>
-
-                      {/* Panel POS */}
-                      <button
-                        type="button"
-                        onClick={() => setAccessPos(!accessPos)}
-                        className={`p-4 sm:p-5 rounded-xl sm:rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
-                          accessPos
-                            ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-500 text-emerald-900 dark:text-white shadow-md shadow-emerald-500/10 ring-1 ring-emerald-500/30"
-                            : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 text-zinc-700 dark:text-zinc-300"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <div
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-colors shrink-0 ${
-                              accessPos
-                                ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                                : "bg-zinc-200/70 dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-400"
-                            }`}
-                          >
-                            🛒
-                          </div>
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                              accessPos
-                                ? "bg-emerald-600 text-white"
-                                : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
-                            }`}
-                          >
-                            {accessPos ? "✓ Activo" : "Sin acceso"}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-bold text-sm sm:text-base text-zinc-900 dark:text-white">POS</p>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                            Punto de venta, caja, despacho y clientes
-                          </p>
-                        </div>
-                      </button>
-
-                      {/* Panel Taller / Garaje */}
-                      <button
-                        type="button"
-                        onClick={() => setAccessTaller(!accessTaller)}
-                        className={`p-4 sm:p-5 rounded-xl sm:rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all duration-200 cursor-pointer active:scale-[0.98] ${
-                          accessTaller
-                            ? "bg-amber-50 dark:bg-amber-500/15 border-amber-500 text-amber-900 dark:text-white shadow-md shadow-amber-500/10 ring-1 ring-amber-500/30"
-                            : "bg-zinc-50 hover:bg-zinc-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 text-zinc-700 dark:text-zinc-300"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <div
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-colors shrink-0 ${
-                              accessTaller
-                                ? "bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400"
-                                : "bg-zinc-200/70 dark:bg-white/[0.05] text-zinc-600 dark:text-zinc-400"
-                            }`}
-                          >
-                            🔧
-                          </div>
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                              accessTaller
-                                ? "bg-amber-600 text-white"
-                                : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
-                            }`}
-                          >
-                            {accessTaller ? "✓ Activo" : "Sin acceso"}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-bold text-sm sm:text-base text-zinc-900 dark:text-white">Taller / Garaje</p>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                            Recepción, inspección, lubricentro y órdenes
-                          </p>
-                        </div>
-                      </button>
-                    </div>
+                    <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                      Correo *
+                    </label>
+                    <input
+                      required
+                      type="email"
+                      placeholder="usuario@autog.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
+                    />
                   </div>
 
-                  {/* Estado de Cuenta y Resumen */}
-                  <div className="space-y-3.5 sm:space-y-4 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800/80 animate-in fade-in duration-200">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                          Estado del Usuario
-                        </label>
-                        <select
-                          value={status}
-                          onChange={(e) => setStatus(e.target.value)}
-                          className="w-full h-11 sm:h-12 px-3 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base sm:text-sm text-zinc-900 dark:text-white outline-none focus:border-blue-500 transition-colors cursor-pointer"
-                        >
-                          <option value="Activo">Activo (Con acceso habilitado)</option>
-                          <option value="Suspendido">Suspendido (Acceso bloqueado)</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                          Resumen de Credenciales
-                        </label>
-                        <div className="h-11 sm:h-12 px-3.5 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 flex items-center justify-between text-xs">
-                          <span className="text-zinc-600 dark:text-zinc-300 truncate">{email || "Sin correo"}</span>
-                          <span className="font-mono font-bold text-blue-600 dark:text-blue-400 shrink-0 ml-2">
-                            PIN: {pinCode}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Barra Inferior */}
-                  <div className="pt-5 sm:pt-6 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-col-reverse sm:flex-row items-center justify-between gap-2.5 sm:gap-4">
-                    <button
-                      type="button"
-                      onClick={() => setPaso(1)}
-                      className="w-full sm:w-auto h-11 sm:h-12 px-5 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-transparent text-zinc-700 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800/50 text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-sm"
-                    >
-                      <span>&larr;</span>
-                      <span>Atrás</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={guardando}
-                      onClick={handleSubmitFinal}
-                      className="w-full sm:w-auto h-12 px-7 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 text-sm disabled:opacity-50 cursor-pointer"
-                    >
-                      {guardando ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>Guardando...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>{editId ? "Guardar Cambios" : "Finalizar y Guardar"}</span>
-                          <span>✓</span>
-                        </>
-                      )}
-                    </button>
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                      PIN *
+                    </label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="4821"
+                      value={pinCode}
+                      onChange={(e) => setPinCode(e.target.value)}
+                      className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors font-mono"
+                    />
                   </div>
                 </div>
-              )}
-            </>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                      Rol *
+                    </label>
+                    <select
+                      value={role}
+                      onChange={(e) => handleSelectPanel(e.target.value)}
+                      className="w-full h-11 sm:h-12 px-3 sm:px-3.5 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white outline-none focus:border-blue-500 transition-colors font-medium cursor-pointer"
+                    >
+                      <option value="Oficina">Oficina</option>
+                      <option value="POS">POS</option>
+                      <option value="Taller">Taller</option>
+                      <option value="Presupuesto">Presupuesto</option>
+                      <option value="Cliente">Cliente</option>
+                      <option value="Gerencia">Gerencia</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                      Sucursal
+                    </label>
+                    <select
+                      value={branch.toLowerCase().includes("sucursal") ? "Sucursal" : "Principal"}
+                      onChange={(e) => setBranch(e.target.value)}
+                      className="w-full h-11 sm:h-12 px-3 sm:px-3.5 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white outline-none focus:border-blue-500 transition-colors cursor-pointer"
+                    >
+                      <option value="Principal">Principal</option>
+                      <option value="Sucursal">Sucursal</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                      Estado
+                    </label>
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value)}
+                      className="w-full h-11 sm:h-12 px-3 sm:px-3.5 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white outline-none focus:border-blue-500 transition-colors cursor-pointer"
+                    >
+                      <option value="Activo">Activo</option>
+                      <option value="Suspendido">Suspendido</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botón Guardar */}
+              <div className="pt-5 sm:pt-6 border-t border-zinc-200 dark:border-zinc-800/80 flex items-center justify-end gap-3 sm:gap-4">
+                <button
+                  type="submit"
+                  disabled={guardando}
+                  className="w-full sm:w-auto h-11 sm:h-12 px-7 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 text-sm disabled:opacity-50 cursor-pointer"
+                >
+                  {guardando ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <span>Guardar</span>
+                  )}
+                </button>
+              </div>
+            </form>
           )}
         </div>
       </main>

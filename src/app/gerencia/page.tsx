@@ -94,13 +94,8 @@ export default function GerenciaPanel() {
         {/* Panel Ejecutivo KPI (Estilo CEO - Dirección) */}
         <GerenciaExecutiveKpis backHref="/acceso" />
 
-        {/* Sección de Módulos de Gestión */}
+        {/* Sección de Módulos */}
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xs sm:text-sm font-bold tracking-widest text-zinc-400 dark:text-zinc-500 uppercase">
-              Módulos de Gestión
-            </h2>
-          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
           {modules.map((mod, index) => (
             <Link 

@@ -6,7 +6,7 @@ import { z } from "zod";
 export const dynamic = "force-dynamic";
 
 const LoginSchema = z.object({
-  email: z.string().email("Correo electrónico inválido"),
+  email: z.string().min(1, "El correo es requerido"),
   password: z.string().min(1, "La contraseña es requerida"),
 });
 
@@ -26,52 +26,133 @@ export async function POST(req: Request) {
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
-    console.log(`[LOGIN ATTEMPT] Email: '${cleanEmail}'`);
+    console.log(`[LOGIN ATTEMPT] Identifier: '${cleanEmail}'`);
 
-    const user = await withRetry(() =>
-      prisma.user.findUnique({
-        where: { email: cleanEmail },
+    let authenticatedUser: any = null;
+    let redirectTo = "/gerencia";
+
+    // 1. Verificar si existe en la tabla User tradicional (ROOT / Admin)
+    const legacyUser = await withRetry(() =>
+      prisma.user.findFirst({
+        where: cleanEmail.includes("@")
+          ? { email: cleanEmail }
+          : { OR: [{ email: cleanEmail }, { name: cleanEmail }] },
       })
     );
 
-    console.log(`[LOGIN USER LOOKUP] Found user:`, user ? { id: user.id, email: user.email, role: user.role, hasHash: !!user.passwordHash } : null);
+    if (legacyUser && legacyUser.passwordHash) {
+      const match =
+        (await bcrypt.compare(cleanPassword, legacyUser.passwordHash)) ||
+        (await bcrypt.compare(password, legacyUser.passwordHash));
 
-    if (!user || !user.passwordHash) {
+      if (match) {
+        const isSuperAdmin = legacyUser.role === "ROOT";
+        redirectTo = isSuperAdmin ? "/gerencia" : "/cliente";
+        authenticatedUser = {
+          id: legacyUser.id,
+          email: legacyUser.email,
+          name: legacyUser.name,
+          role: legacyUser.role,
+          isSuperAdmin,
+        };
+      }
+    }
+
+    // 2. Si no autenticó en User, verificar en la tabla AppUserAccess (Usuarios creados en Gerencia)
+    if (!authenticatedUser) {
+      const appUser = await withRetry(() =>
+        cleanEmail.includes("@")
+          ? prisma.appUserAccess.findUnique({ where: { email: cleanEmail } })
+          : prisma.appUserAccess.findFirst({
+              where: {
+                OR: [{ email: cleanEmail }, { username: cleanEmail }, { name: cleanEmail }],
+              },
+            })
+      );
+
+      if (appUser) {
+        if (appUser.status && appUser.status.toLowerCase() === "suspendido") {
+          return NextResponse.json(
+            { success: false, error: "Usuario suspendido. Contacta a Gerencia." },
+            { status: 403 }
+          );
+        }
+
+        // Comparar contraseña con pinCode (o hash bcrypt si fuera el caso)
+        let match = false;
+        const storedPin = String(appUser.pinCode || "").trim();
+
+        if (storedPin) {
+          if (cleanPassword === storedPin || password === storedPin) {
+            match = true;
+          } else if (storedPin.startsWith("$2a$") || storedPin.startsWith("$2b$")) {
+            match = await bcrypt.compare(cleanPassword, storedPin);
+          }
+        }
+
+        if (match) {
+          const roleUpper = (appUser.role || "").toUpperCase();
+          const isGerente =
+            roleUpper === "GERENCIA" ||
+            roleUpper === "ROOT" ||
+            roleUpper === "ADMIN" ||
+            roleUpper === "GERENTE";
+
+          // Determinar panel de destino
+          if (isGerente) {
+            redirectTo = "/gerencia";
+          } else if (roleUpper === "POS" || appUser.accessPos) {
+            redirectTo = "/pos";
+          } else if (roleUpper === "TALLER" || appUser.accessTaller) {
+            redirectTo = "/taller";
+          } else if (roleUpper === "OFICINA" || appUser.accessOficina) {
+            redirectTo = "/oficina";
+          } else if (roleUpper === "PRESUPUESTO" || roleUpper === "PRESUPUESTOS") {
+            redirectTo = "/presupuestos";
+          } else if (roleUpper === "CLIENTE") {
+            redirectTo = "/cliente";
+          } else {
+            redirectTo = "/pos";
+          }
+
+          authenticatedUser = {
+            id: appUser.id,
+            email: appUser.email,
+            name: appUser.name,
+            role: appUser.role,
+            branch: appUser.branch || "Principal",
+            accessOficina: Boolean(appUser.accessOficina),
+            accessPos: Boolean(appUser.accessPos),
+            accessTaller: Boolean(appUser.accessTaller),
+            isSuperAdmin: isGerente,
+          };
+
+          // Actualizar último acceso del usuario
+          try {
+            await prisma.appUserAccess.update({
+              where: { id: appUser.id },
+              data: { lastAccess: "Hoy" },
+            });
+          } catch {}
+        }
+      }
+    }
+
+    if (!authenticatedUser) {
       return NextResponse.json(
         { success: false, error: "Credenciales incorrectas. Verifica tu correo y contraseña." },
         { status: 401 }
       );
     }
-
-    const match = (await bcrypt.compare(cleanPassword, user.passwordHash)) || (await bcrypt.compare(password, user.passwordHash));
-    console.log(`[LOGIN BCRYPT MATCH]:`, match);
-
-    if (!match) {
-      return NextResponse.json(
-        { success: false, error: "Credenciales incorrectas. Verifica tu correo y contraseña." },
-        { status: 401 }
-      );
-    }
-
-    const isSuperAdmin = user.role === "ROOT";
-    const redirectTo = isSuperAdmin ? "/gerencia" : "/cliente";
-
-    const userData = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      isSuperAdmin,
-    };
 
     const response = NextResponse.json({
       success: true,
       message: "Inicio de sesión exitoso",
-      user: userData,
+      user: authenticatedUser,
       redirectTo,
     });
 
-    response.cookies.set("auth_session", JSON.stringify(userData), {
+    response.cookies.set("auth_session", JSON.stringify(authenticatedUser), {
       httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
