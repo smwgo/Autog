@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 export async function GET(request: Request) {
   try {
     // 1. Obtener usuario del sistema para asignar como cajero por defecto
-    let defaultUserName = "Super Administrador";
+    let defaultUserName = "POS";
     try {
       const defaultUser = await prisma.user.findFirst({
         select: { name: true },
@@ -212,7 +212,7 @@ export async function POST(request: Request) {
       const monto = parseFloat(initialCash) || 0;
       const sessionNumber = `CAJA-${Date.now().toString().slice(-6)}`;
 
-      let defaultUserName = "Super Administrador";
+      let defaultUserName = "POS";
       try {
         const defaultUser = await prisma.user.findFirst({
           select: { name: true },

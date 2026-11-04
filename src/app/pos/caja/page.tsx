@@ -996,7 +996,7 @@ export default function GestionCaja() {
               </div>
               <div className="flex justify-between text-zinc-400">
                 <span>Cajero:</span>
-                <span className="font-semibold text-white">{sesionParaEliminar.cashier || "Super Administrador"}</span>
+                <span className="font-semibold text-white">{sesionParaEliminar.cashier || "POS"}</span>
               </div>
             </div>
 
