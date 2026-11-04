@@ -44,7 +44,7 @@ function NuevoUsuarioContent() {
       setAccessOficina(false);
       setAccessPos(false);
       setAccessTaller(true);
-    } else if (panelId === "Presupuesto") {
+    } else if (panelId === "Presupuesto" || panelId === "Propuesta") {
       setAccessOficina(true);
       setAccessTaller(true);
       setAccessPos(false);
@@ -308,14 +308,14 @@ function NuevoUsuarioContent() {
                       )}
                     </label>
                     <select
-                      value={role}
+                      value={role === "Presupuesto" ? "Propuesta" : role}
                       onChange={(e) => handleSelectPanel(e.target.value)}
                       className="w-full h-11 sm:h-12 px-3 sm:px-3.5 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white outline-none focus:border-blue-500 transition-colors font-medium cursor-pointer"
                     >
                       <option value="POS">🛒 POS</option>
                       {!branch.toLowerCase().includes("sucursal") && <option value="Oficina">🏢 Oficina</option>}
                       <option value="Taller">🔧 Taller</option>
-                      {!branch.toLowerCase().includes("sucursal") && <option value="Presupuesto">📋 Presupuesto</option>}
+                      {!branch.toLowerCase().includes("sucursal") && <option value="Propuesta">📋 Propuesta</option>}
                       <option value="Cliente">👤 Cliente</option>
                     </select>
                   </div>

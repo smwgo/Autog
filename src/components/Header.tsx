@@ -190,7 +190,7 @@ export function Header() {
     if (pathname.startsWith("/pos") || currentUser?.role === "POS" || currentUser?.accessPos) return "/pos";
     if (pathname.startsWith("/taller") || currentUser?.role === "Taller" || currentUser?.accessTaller) return "/taller";
     if (pathname.startsWith("/oficina") || currentUser?.role === "Oficina" || currentUser?.accessOficina) return "/oficina";
-    if (currentUser?.role === "Presupuesto") return "/presupuestos";
+    if (currentUser?.role === "Presupuesto" || currentUser?.role === "Propuesta") return "/presupuestos";
     if (currentUser?.role === "Cliente") return "/cliente";
     return "/gerencia";
   })();
@@ -198,7 +198,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md pt-[env(safe-area-inset-top,0px)]">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 md:px-12">
-        <Link href="/" className="flex items-center gap-2 min-h-[44px]">
+        <Link href="/" className="flex shrink-0 items-center gap-2 min-h-[44px]">
           <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-blue-500/20">
             {/* Ícono automotriz (Llave/Herramienta) */}
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -213,7 +213,7 @@ export function Header() {
           </span>
         </Link>
         <div className="hidden md:flex gap-6"></div>
-        <div className="flex items-center gap-2 sm:gap-5 text-zinc-600 dark:text-zinc-300">
+        <div className="flex shrink-0 items-center gap-0 sm:gap-5 text-zinc-600 dark:text-zinc-300">
           
           <button onClick={toggleTheme} aria-label="Toggle Theme" className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:text-blue-600 transition-colors">
             {isDark ? (
@@ -283,20 +283,21 @@ export function Header() {
           </div>
           {/* Perfil de Usuario Logeado */}
           {currentUser || pathname.startsWith("/pos") || pathname.startsWith("/taller") || pathname.startsWith("/oficina") || pathname.startsWith("/gerencia") ? (
-            <div className="flex items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5">
               <Link
                 href={userPanelHref}
                 suppressHydrationWarning
-                className="flex items-center gap-2 h-9 px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all cursor-pointer shadow-sm active:scale-95 text-xs font-semibold text-zinc-800 dark:text-zinc-200"
+                aria-label={`${singleWordName} — Sede: ${isSucursalUser ? "Sucursal" : "Principal"}`}
+                className="flex items-center gap-1 sm:gap-2 h-11 px-1.5 sm:px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all cursor-pointer shadow-sm active:scale-95 text-xs font-semibold text-zinc-800 dark:text-zinc-200"
                 title={`${singleWordName} — Sede: ${isSucursalUser ? "Sucursal" : "Principal"}`}
               >
                 <svg className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-                <span suppressHydrationWarning>{singleWordName}</span>
+                <span suppressHydrationWarning className="max-[374px]:hidden">{singleWordName}</span>
                 <span
                   suppressHydrationWarning
-                  className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${
+                  className={`hidden sm:inline-flex px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${
                     isSucursalUser
                       ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
                       : "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/25"
@@ -308,7 +309,7 @@ export function Header() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="h-9 px-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-rose-50 hover:border-rose-300 dark:hover:bg-rose-950/30 dark:hover:border-rose-900 text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 transition-all cursor-pointer shadow-sm active:scale-95 text-xs font-semibold"
+                className="h-11 min-w-[44px] px-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-rose-50 hover:border-rose-300 dark:hover:bg-rose-950/30 dark:hover:border-rose-900 text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 transition-all cursor-pointer shadow-sm active:scale-95 text-xs font-semibold"
                 title="Salir"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

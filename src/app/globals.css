@@ -317,3 +317,37 @@ a.bg-black:hover {
 }
 
 
+
+/* ========================================================
+   OPTIMIZACIONES MÓVILES (iOS Safari & Android Chrome)
+   ======================================================== */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Prevenir auto-zoom involuntario al enfocar inputs en iOS Safari */
+@media screen and (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Utilidades para Safe Area (Notch, Dynamic Island y Home Indicator) */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.pl-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+.pr-safe {
+  padding-right: env(safe-area-inset-right, 0px);
+}

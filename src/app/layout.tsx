@@ -15,6 +15,19 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "AutoG - Sistema Automotriz y POS",
   description: "Sistema de gestión automotriz, taller y punto de venta",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "AutoG",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  icons: {
+    icon: "/autog-icon.svg",
+    apple: "/autog-icon.svg",
+  },
 };
 
 export const viewport: Viewport = {

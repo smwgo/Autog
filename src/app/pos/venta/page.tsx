@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
-import { getClientUserBranch, SedeType } from "@/lib/branch";
+import { getClientUserBranch, getClientActiveBranch, SedeType } from "@/lib/branch";
+import { BranchTabs } from "@/components/pos/BranchTabs";
 
 interface Product {
   id: string;
@@ -649,7 +650,9 @@ export default function NuevaVentaPage() {
   // Verificar apertura de caja al entrar a Venta
   const verificarCajaApertura = useCallback(async (autoOpenOnMissing: boolean = true) => {
     try {
-      const res = await fetch("/api/caja");
+      const activeBr = getClientActiveBranch();
+      const uBr = getClientUserBranch();
+      const res = await fetch(`/api/caja?sede=${encodeURIComponent(activeBr)}&userBranch=${encodeURIComponent(uBr)}`);
       const json = await res.json();
       if (res.ok && json.success) {
         const active = json.activeSession || null;
@@ -704,12 +707,14 @@ export default function NuevaVentaPage() {
 
     setGuardandoApertura(true);
     try {
+      const activeBr = getClientActiveBranch();
       const res = await fetch("/api/caja", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "SET_INITIAL",
           initialCash: monto,
+          branch: activeBr,
         }),
       });
       const json = await res.json();
@@ -1260,6 +1265,8 @@ export default function NuevaVentaPage() {
         discount: descuentoCalculado,
         taxPercent: ivaPorcentaje / 100,
         notes: notasFinales,
+        branch: userBranch === "SUCURSAL" ? "SUCURSAL" : (getClientActiveBranch() === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL"),
+        sede: userBranch === "SUCURSAL" ? "SUCURSAL" : (getClientActiveBranch() === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL"),
         items: cart.map((i) => ({
           productId: i.product.id,
           code: i.product.code,
@@ -1285,10 +1292,12 @@ export default function NuevaVentaPage() {
       const montoParaCredito = metodoPago === "Crédito" ? total : (metodoPago === "Mixto" ? mixtoCreditoNum : 0);
       if (montoParaCredito > 0) {
         try {
+          const credBranch = userBranch === "SUCURSAL" ? "SUCURSAL" : (getClientActiveBranch() === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL");
           await fetch("/api/pos/creditos", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              branch: credBranch,
               customerName: custName,
               identification: custIdent,
               phone: custPhone,
@@ -1502,16 +1511,7 @@ export default function NuevaVentaPage() {
             <span className="inline-flex items-center justify-center px-2 py-0.5 sm:px-2.5 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 shrink-0">
               {productos.length}
             </span>
-            <span
-              className={`px-2 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1 shrink-0 ${
-                userBranch === "SUCURSAL"
-                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
-                  : "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/25"
-              }`}
-            >
-              <span>{userBranch === "SUCURSAL" ? "📍" : "🏢"}</span>
-              <span>{userBranch === "SUCURSAL" ? "Sucursal" : "Principal"}</span>
-            </span>
+            <BranchTabs onChange={() => verificarCajaApertura(false)} size="sm" />
           </div>
 
           {/* Lado Derecho: 4 botones de acción cuadrados de solo icono (Historial, Notas, Pausar, Anular) */}

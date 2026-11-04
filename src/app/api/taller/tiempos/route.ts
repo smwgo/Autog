@@ -3,48 +3,6 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-const SEED_TIME_LOGS = [
-  {
-    logNumber: "TR-001",
-    task: "Diagnóstico Computarizado de Motor",
-    orderId: "ORD-2023-001",
-    vehicle: "Toyota Hilux 2020 (ABC-123)",
-    mechanic: "Carlos Rodríguez",
-    date: "2024-10-15",
-    duration: "2h 15m",
-    durationMinutes: 135,
-    status: "Finalizado",
-    revenue: 85.0,
-    notes: "Pruebas de compresión y escaneo OBD2 completo.",
-  },
-  {
-    logNumber: "TR-002",
-    task: "Cambio de Aceite y Filtros",
-    orderId: "ORD-2023-002",
-    vehicle: "Honda Civic 2018 (XYZ-987)",
-    mechanic: "Luis Martínez",
-    date: "2024-10-15",
-    duration: "0h 45m",
-    durationMinutes: 45,
-    status: "Finalizado",
-    revenue: 30.0,
-    notes: "Servicio rápido en bahía 1.",
-  },
-  {
-    logNumber: "TR-003",
-    task: "Revisión y Calibración de Frenos",
-    orderId: "ORD-2023-003",
-    vehicle: "Ford Ranger 2021 (DEF-456)",
-    mechanic: "Ana Torres",
-    date: "2024-10-14",
-    duration: "1h 30m",
-    durationMinutes: 90,
-    status: "Finalizado",
-    revenue: 55.0,
-    notes: "Ajuste de freno de mano y limpieza de mordazas.",
-  },
-];
-
 function generateId(): string {
   return "tlog_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 }
@@ -101,31 +59,6 @@ export async function GET(request: Request) {
 
     return await withRetry(async () => {
       await ensureTableExists();
-
-      const countResult: any = await prisma.$queryRawUnsafe('SELECT COUNT(*)::int as count FROM "WorkshopTimeLog"');
-      const count = countResult?.[0]?.count || 0;
-
-      if (count === 0) {
-        for (const t of SEED_TIME_LOGS) {
-          const id = generateId();
-          await prisma.$executeRawUnsafe(
-            `INSERT INTO "WorkshopTimeLog" ("id", "logNumber", "task", "orderId", "vehicle", "mechanic", "date", "duration", "durationMinutes", "status", "revenue", "notes", "createdAt", "updatedAt")
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())`,
-            id,
-            t.logNumber,
-            t.task,
-            t.orderId,
-            t.vehicle,
-            t.mechanic,
-            t.date,
-            t.duration,
-            t.durationMinutes,
-            t.status,
-            t.revenue,
-            t.notes
-          );
-        }
-      }
 
       let query = 'SELECT * FROM "WorkshopTimeLog" WHERE 1=1';
       const params: any[] = [];

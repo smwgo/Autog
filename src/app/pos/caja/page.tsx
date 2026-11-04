@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { BranchTabs } from "@/components/pos/BranchTabs";
+import { getClientUserBranch, getClientActiveBranch } from "@/lib/branch";
 
 interface CashSession {
   id: string;
@@ -107,7 +109,12 @@ export default function GestionCaja() {
     try {
       setCargando(true);
       setError(null);
-      const res = await fetch("/api/caja");
+      const activeBr = getClientActiveBranch();
+      const uBr = getClientUserBranch();
+      const params = new URLSearchParams();
+      params.set("sede", activeBr);
+      params.set("userBranch", uBr);
+      const res = await fetch(`/api/caja?${params.toString()}`);
       const json = await res.json();
       if (!res.ok || !json.success) {
         throw new Error(json.error || "Error al cargar caja");
@@ -127,6 +134,14 @@ export default function GestionCaja() {
 
   useEffect(() => {
     cargarCaja();
+  }, [cargarCaja]);
+
+  useEffect(() => {
+    const handleBranch = () => {
+      cargarCaja();
+    };
+    window.addEventListener("autog-branch-change", handleBranch);
+    return () => window.removeEventListener("autog-branch-change", handleBranch);
   }, [cargarCaja]);
 
   // Cerrar dropdown al hacer clic fuera
@@ -173,12 +188,14 @@ export default function GestionCaja() {
 
     setGuardandoFondo(true);
     try {
+      const activeBr = getClientActiveBranch();
       const res = await fetch("/api/caja", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "SET_INITIAL",
           initialCash: monto,
+          branch: activeBr,
         }),
       });
       const json = await res.json();
@@ -207,6 +224,7 @@ export default function GestionCaja() {
 
     setGuardandoMovimiento(true);
     try {
+      const activeBr = getClientActiveBranch();
       const res = await fetch("/api/caja", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -214,6 +232,7 @@ export default function GestionCaja() {
           type: tipoMovimiento,
           amount: monto,
           concept: conceptoMovimiento,
+          branch: activeBr,
         }),
       });
       const json = await res.json();
@@ -293,6 +312,7 @@ export default function GestionCaja() {
           <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
             {stats.totalSesiones}
           </span>
+          <BranchTabs onChange={() => cargarCaja()} size="sm" />
         </div>
 
         {/* 4 Tarjetas Métricas Superiores Desplegables en Móvil: debajo de Estado */}

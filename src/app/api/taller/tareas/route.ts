@@ -3,81 +3,6 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-const SEED_TASKS = [
-  {
-    taskNumber: "TSK-101",
-    title: "Cambio de Aceite y Filtros",
-    vehicle: "Toyota Hilux (ABC-123)",
-    plate: "ABC-123",
-    orderNumber: "ORD-2023-001",
-    mechanic: "Carlos Rodríguez",
-    status: "pending",
-    priority: "Baja",
-    timeEst: "1h 30m",
-    notes: "Usar aceite sintético 5W-30 y filtro original.",
-  },
-  {
-    taskNumber: "TSK-102",
-    title: "Revisión y Calibración de Frenos",
-    vehicle: "Honda Civic (XYZ-987)",
-    plate: "XYZ-987",
-    orderNumber: "ORD-2023-002",
-    mechanic: "Luis Martínez",
-    status: "in-progress",
-    priority: "Alta",
-    timeEst: "2h 00m",
-    notes: "Verificar desgaste de pastillas delanteras y nivel de líquido DOT 4.",
-  },
-  {
-    taskNumber: "TSK-103",
-    title: "Alineación 3D y Balanceo",
-    vehicle: "Ford Ranger (DEF-456)",
-    plate: "DEF-456",
-    orderNumber: "ORD-2023-003",
-    mechanic: "Carlos Rodríguez",
-    status: "pending",
-    priority: "Media",
-    timeEst: "1h 00m",
-    notes: "Corregir vibración reportada a más de 80 km/h.",
-  },
-  {
-    taskNumber: "TSK-104",
-    title: "Diagnóstico Computarizado OBD2",
-    vehicle: "Nissan Versa (JHF-432)",
-    plate: "JHF-432",
-    orderNumber: "ORD-2023-001",
-    mechanic: "Andrés Castro",
-    status: "in-progress",
-    priority: "Alta",
-    timeEst: "1h 30m",
-    notes: "Escaneo de códigos de falla en motor y sensores de oxígeno.",
-  },
-  {
-    taskNumber: "TSK-105",
-    title: "Cambio de Batería y Test de Alternador",
-    vehicle: "Kia Rio (KLM-987)",
-    plate: "KLM-987",
-    orderNumber: "ORD-2023-004",
-    mechanic: "Luis Martínez",
-    status: "done",
-    priority: "Baja",
-    timeEst: "0h 45m",
-    notes: "Batería nueva instalada y carga verificada a 14.2V.",
-  },
-  {
-    taskNumber: "TSK-106",
-    title: "Inspección General de 35 Puntos",
-    vehicle: "Chevrolet Spark (GHI-789)",
-    plate: "GHI-789",
-    orderNumber: "ORD-2023-004",
-    mechanic: "Ana Torres",
-    status: "done",
-    priority: "Media",
-    timeEst: "1h 15m",
-    notes: "Control de calidad completado sin novedades.",
-  },
-];
-
 function generateId(): string {
   return "tsk_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 }
@@ -127,30 +52,6 @@ export async function GET(request: Request) {
 
     return await withRetry(async () => {
       await ensureTableExists();
-
-      const countResult: any = await prisma.$queryRawUnsafe('SELECT COUNT(*)::int as count FROM "WorkshopTask"');
-      const count = countResult?.[0]?.count || 0;
-
-      if (count === 0) {
-        for (const t of SEED_TASKS) {
-          const id = generateId();
-          await prisma.$executeRawUnsafe(
-            `INSERT INTO "WorkshopTask" ("id", "taskNumber", "title", "vehicle", "plate", "orderNumber", "mechanic", "status", "priority", "timeEst", "notes", "createdAt", "updatedAt")
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())`,
-            id,
-            t.taskNumber,
-            t.title,
-            t.vehicle,
-            t.plate,
-            t.orderNumber,
-            t.mechanic,
-            t.status,
-            t.priority,
-            t.timeEst,
-            t.notes
-          );
-        }
-      }
 
       let query = 'SELECT * FROM "WorkshopTask" WHERE 1=1';
       const params: any[] = [];

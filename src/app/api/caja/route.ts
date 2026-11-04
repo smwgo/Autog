@@ -4,6 +4,15 @@ import { prisma } from "@/lib/prisma";
 // GET: Consultar lista de sesiones de caja en Neon, métricas y estado activo
 export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const sedeParam = (searchParams.get("sede") || "").toUpperCase();
+    const userBranchParam = (searchParams.get("userBranch") || "").toUpperCase();
+
+    // Determinar modo de sede
+    const isSucursal = userBranchParam === "SUCURSAL" || sedeParam === "SUCURSAL";
+    const isAmbos = !isSucursal && (sedeParam === "AMBOS" || sedeParam === "AMBAS");
+    const targetBranch = isSucursal ? "SUCURSAL" : "PRINCIPAL";
+
     // 1. Obtener usuario del sistema para asignar como cajero por defecto
     let defaultUserName = "POS";
     try {
@@ -60,27 +69,52 @@ export async function GET(request: Request) {
       }
     }
 
-    // Mapear el cajero en cada sesión y asegurar que los montos sean numéricos
-    const sessionsWithCashier = dbSessions.map((s: any) => {
-      let cashier = s.cashier || defaultUserName;
-      if (s.notes && s.notes.includes("Cajero:")) {
-        cashier = s.notes.split("Cajero:")[1].trim();
-      }
-      return {
-        ...s,
-        initialCash: parseFloat(s.initialCash?.toString() || "0"),
-        declaredCash: s.declaredCash != null ? parseFloat(s.declaredCash?.toString() || "0") : null,
-        expectedCash: s.expectedCash != null ? parseFloat(s.expectedCash?.toString() || "0") : parseFloat(s.initialCash?.toString() || "0"),
-        differenceCash: s.differenceCash != null ? parseFloat(s.differenceCash?.toString() || "0") : 0,
-        cashier,
-      };
-    });
+    // Obtener sedes asignadas de CashRegister de la base de datos
+    const branchRows = (await prisma.$queryRawUnsafe(
+      `SELECT "id", COALESCE("branch", 'PRINCIPAL') AS "branch" FROM "CashRegister"`
+    ).catch(() => [])) as any[];
+    const branchMap = new Map<string, string>();
+    for (const r of branchRows) {
+      branchMap.set(r.id, (r.branch || "PRINCIPAL").toUpperCase());
+    }
 
-    // 3. Buscar sesión activa actualmente
+    // Mapear y filtrar sesiones según la sede activa
+    const sessionsWithCashier = dbSessions
+      .map((s: any) => {
+        let cashier = s.cashier || defaultUserName;
+        if (s.notes && s.notes.includes("Cajero:")) {
+          cashier = s.notes.split("Cajero:")[1].trim();
+        }
+        const sBranch = branchMap.get(s.id) || (s.branch || "PRINCIPAL").toUpperCase();
+        return {
+          ...s,
+          branch: sBranch === "SUCURSAL" ? "Sucursal" : "Principal",
+          _branchUpper: sBranch,
+          initialCash: parseFloat(s.initialCash?.toString() || "0"),
+          declaredCash: s.declaredCash != null ? parseFloat(s.declaredCash?.toString() || "0") : null,
+          expectedCash: s.expectedCash != null ? parseFloat(s.expectedCash?.toString() || "0") : parseFloat(s.initialCash?.toString() || "0"),
+          differenceCash: s.differenceCash != null ? parseFloat(s.differenceCash?.toString() || "0") : 0,
+          cashier,
+        };
+      })
+      .filter((s: any) => {
+        // En Sucursal: ÚNICAMENTE sesiones de Sucursal
+        if (isSucursal) {
+          return s._branchUpper === "SUCURSAL";
+        }
+        // En Principal con "Ambas": ver todas las sesiones combinadas
+        if (isAmbos) {
+          return true;
+        }
+        // En Principal por defecto: ver solo sesiones de Principal
+        return s._branchUpper !== "SUCURSAL";
+      });
+
+    // 3. Buscar sesión activa actualmente en la sede seleccionada
     const activeSession = sessionsWithCashier.find((s) => s.status === "ABIERTA") || null;
     const initialCash = activeSession ? parseFloat(activeSession.initialCash?.toString() || "0") : 0;
 
-    // 4. Obtener ÚNICAMENTE las ventas realizadas durante la sesión activa actual
+    // 4. Obtener ÚNICAMENTE las ventas realizadas durante la sesión activa actual en la sede correspondiente
     let salesCash = 0;
     let salesCard = 0;
     let salesTransfer = 0;
@@ -89,12 +123,28 @@ export async function GET(request: Request) {
 
     if (activeSession && activeSession.openedAt) {
       try {
-        const sessionSales = await prisma.sale.findMany({
+        const sessionBranch = activeSession._branchUpper || targetBranch;
+
+        const saleBranchRows = (await prisma.$queryRawUnsafe(
+          `SELECT "id", COALESCE("branch", 'PRINCIPAL') AS "branch" FROM "Sale"`
+        ).catch(() => [])) as any[];
+        const saleBranchMap = new Map<string, string>();
+        for (const r of saleBranchRows) {
+          saleBranchMap.set(r.id, (r.branch || "PRINCIPAL").toUpperCase());
+        }
+
+        const rawSessionSales = await prisma.sale.findMany({
           where: {
             createdAt: { gte: new Date(activeSession.openedAt) },
             status: { not: "ANULADA" },
           },
           orderBy: { createdAt: "desc" },
+        });
+
+        const sessionSales = rawSessionSales.filter((s) => {
+          const b = saleBranchMap.get(s.id) || "PRINCIPAL";
+          if (sessionBranch === "SUCURSAL") return b === "SUCURSAL";
+          return b !== "SUCURSAL";
         });
 
         sessionSalesCount = sessionSales.length;
@@ -119,7 +169,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // 5. Movimientos (Gastos e Ingresos) de la sesión activa actual
+    // 5. Movimientos (Gastos e Ingresos) de la sesión activa actual en la sede
     let movements: any[] = [];
     let totalExpenses = 0;
     let totalIncome = 0;
@@ -134,7 +184,22 @@ export async function GET(request: Request) {
           orderBy: { createdAt: "desc" },
         });
 
-        movements = records.map((r: any) => ({
+        const movBranchRows = (await prisma.$queryRawUnsafe(
+          `SELECT "id", COALESCE("branch", 'PRINCIPAL') AS "branch" FROM "OrderRequest"`
+        ).catch(() => [])) as any[];
+        const movBranchMap = new Map<string, string>();
+        for (const r of movBranchRows) {
+          movBranchMap.set(r.id, (r.branch || "PRINCIPAL").toUpperCase());
+        }
+
+        const sessionBranch = activeSession._branchUpper || targetBranch;
+        const filteredRecords = records.filter((r: any) => {
+          const b = movBranchMap.get(r.id) || "PRINCIPAL";
+          if (sessionBranch === "SUCURSAL") return b === "SUCURSAL";
+          return b !== "SUCURSAL";
+        });
+
+        movements = filteredRecords.map((r: any) => ({
           id: r.id,
           type: r.status === "INGRESO" ? "INGRESO" : "GASTO",
           concept: r.itemsSummary,
@@ -206,11 +271,26 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { action, type, amount, concept, initialCash, cashier } = body;
+    const postBranch = String(body.branch || body.sede || "").toUpperCase().includes("SUCURSAL")
+      ? "SUCURSAL"
+      : "PRINCIPAL";
 
     // Caso 1: Abrir nueva sesión de caja o configurar fondo inicial
     if (action === "SET_INITIAL" || action === "OPEN_SESSION") {
       const monto = parseFloat(initialCash) || 0;
       const sessionNumber = `CAJA-${Date.now().toString().slice(-6)}`;
+
+      // Evitar dos cajas abiertas en la misma sede
+      const yaAbierta = await prisma.cashRegister.findFirst({
+        where: { status: "ABIERTA", branch: postBranch },
+      });
+      if (yaAbierta) {
+        return NextResponse.json({
+          success: true,
+          session: yaAbierta,
+          message: "Ya existe una caja abierta en esta sede",
+        });
+      }
 
       let defaultUserName = "POS";
       try {
@@ -235,6 +315,7 @@ export async function POST(request: Request) {
             initialCash: monto,
             expectedCash: monto,
             notes: `Cajero: ${cashierName}`,
+            branch: postBranch,
             openedAt: new Date(),
           },
         });
@@ -243,7 +324,7 @@ export async function POST(request: Request) {
       }
 
       // Registro complementario en orderRequest
-      await (prisma as any).orderRequest.create({
+      const legacy = await (prisma as any).orderRequest.create({
         data: {
           requestNumber: sessionNumber,
           type: "CAJA_SESSION",
@@ -253,6 +334,9 @@ export async function POST(request: Request) {
           status: "ABIERTA",
         },
       });
+      await prisma
+        .$executeRawUnsafe(`UPDATE "OrderRequest" SET "branch" = $1 WHERE "id" = $2`, postBranch, legacy.id)
+        .catch(() => {});
 
       return NextResponse.json({
         success: true,
@@ -273,6 +357,9 @@ export async function POST(request: Request) {
         status: type === "INGRESO" ? "INGRESO" : "GASTO",
       },
     });
+    await prisma
+      .$executeRawUnsafe(`UPDATE "OrderRequest" SET "branch" = $1 WHERE "id" = $2`, postBranch, nuevoMov.id)
+      .catch(() => {});
 
     return NextResponse.json({
       success: true,
@@ -348,8 +435,11 @@ export async function PUT(request: Request) {
     // 3. Si aún no se cerró ninguna sesión, buscar y cerrar cualquier sesión ABIERTA activa
     if (!sesionCerrada) {
       try {
+        const putBranch = String(body.branch || body.sede || "").toUpperCase().includes("SUCURSAL")
+          ? "SUCURSAL"
+          : "PRINCIPAL";
         const abiertaReg = await prisma.cashRegister.findFirst({
-          where: { status: "ABIERTA" },
+          where: { status: "ABIERTA", branch: putBranch },
           orderBy: { openedAt: "desc" },
         });
         if (abiertaReg) {

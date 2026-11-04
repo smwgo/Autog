@@ -3,77 +3,6 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-const SEED_HISTORY = [
-  {
-    serviceCode: "SRV-8901",
-    date: "2024-10-12",
-    vehicle: "Toyota Corolla 2020",
-    plate: "ABC-123",
-    client: "Juan Pérez",
-    servicesJson: JSON.stringify([
-      "Cambio de aceite sintético",
-      "Cambio de filtro de aire",
-      "Revisión de niveles y fluidos",
-    ]),
-    cost: 120.0,
-    mechanic: "Carlos Rodríguez",
-    mileage: "45,200 km",
-    notes: "Mantenimiento preventivo completado. Próximo cambio a los 50,000 km.",
-    orderNumber: "ORD-2023-001",
-  },
-  {
-    serviceCode: "SRV-8845",
-    date: "2024-10-05",
-    vehicle: "Honda Civic 2018",
-    plate: "XYZ-987",
-    client: "María Gómez",
-    servicesJson: JSON.stringify([
-      "Cambio de pastillas de freno",
-      "Rectificación de discos delanteros",
-      "Purga de líquido de frenos DOT 4",
-    ]),
-    cost: 250.0,
-    mechanic: "Luis Martínez",
-    mileage: "68,100 km",
-    notes: "Sistema de frenado calibrado y probado en ruta.",
-    orderNumber: "ORD-2023-002",
-  },
-  {
-    serviceCode: "SRV-8712",
-    date: "2024-09-24",
-    vehicle: "Ford Ranger 2021",
-    plate: "DEF-456",
-    client: "Empresa Logística SA",
-    servicesJson: JSON.stringify([
-      "Mantenimiento preventivo 50K",
-      "Alineación 3D y balanceo computarizado",
-      "Rotación de neumáticos",
-    ]),
-    cost: 480.0,
-    mechanic: "Ana Torres",
-    mileage: "50,050 km",
-    notes: "Unidad de flota corporativa entregada en óptimas condiciones.",
-    orderNumber: "ORD-2023-003",
-  },
-  {
-    serviceCode: "SRV-8650",
-    date: "2024-09-14",
-    vehicle: "Nissan Versa 2019",
-    plate: "JHF-432",
-    client: "Roberto Sánchez",
-    servicesJson: JSON.stringify([
-      "Diagnóstico electrónico de motor",
-      "Cambio de bujías Iridium",
-      "Limpieza ultrasónica de inyectores",
-    ]),
-    cost: 190.0,
-    mechanic: "Carlos Rodríguez",
-    mileage: "82,400 km",
-    notes: "Se eliminó código P0300 y mejoró consumo de combustible.",
-    orderNumber: "ORD-2023-004",
-  },
-];
-
 function generateId(): string {
   return "hst_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 }
@@ -123,31 +52,6 @@ export async function GET(request: Request) {
 
     return await withRetry(async () => {
       await ensureTableExists();
-
-      const countResult: any = await prisma.$queryRawUnsafe('SELECT COUNT(*)::int as count FROM "WorkshopHistory"');
-      const count = countResult?.[0]?.count || 0;
-
-      if (count === 0) {
-        for (const h of SEED_HISTORY) {
-          const id = generateId();
-          await prisma.$executeRawUnsafe(
-            `INSERT INTO "WorkshopHistory" ("id", "serviceCode", "date", "vehicle", "plate", "client", "servicesJson", "cost", "mechanic", "mileage", "notes", "orderNumber", "createdAt", "updatedAt")
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())`,
-            id,
-            h.serviceCode,
-            h.date,
-            h.vehicle,
-            h.plate,
-            h.client,
-            h.servicesJson,
-            h.cost,
-            h.mechanic,
-            h.mileage,
-            h.notes,
-            h.orderNumber
-          );
-        }
-      }
 
       let query = 'SELECT * FROM "WorkshopHistory" WHERE 1=1';
       const params: any[] = [];

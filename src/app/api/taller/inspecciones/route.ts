@@ -3,89 +3,6 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-const SEED_INSPECTIONS = [
-  {
-    inspectionNumber: "INSP-001",
-    vehicle: "Nissan Versa 2021",
-    plate: "JHF-432",
-    client: "Roberto Mendoza",
-    type: "Recepción",
-    status: "Pendiente",
-    assignedTo: "Carlos Rodríguez",
-    fuelLevel: "1/2",
-    mileage: "45,200 km",
-    checklistJson: JSON.stringify({
-      luces: "OK",
-      frenos: "Atención",
-      neumaticos: "OK",
-      parabrisas: "OK",
-      carroceria: "Rayón puerta derecha",
-      bateria: "OK",
-    }),
-    notes: "Ingresa por mantenimiento programado.",
-  },
-  {
-    inspectionNumber: "INSP-002",
-    vehicle: "Kia Rio 2019",
-    plate: "KLM-987",
-    client: "Andrea Salazar",
-    type: "Diagnóstico",
-    status: "En Progreso",
-    assignedTo: "Luis Martínez",
-    fuelLevel: "1/4",
-    mileage: "78,500 km",
-    checklistJson: JSON.stringify({
-      luces: "OK",
-      frenos: "OK",
-      neumaticos: "Desgaste frontal",
-      parabrisas: "OK",
-      carroceria: "OK",
-      bateria: "Voltaje bajo",
-    }),
-    notes: "Dificultad al encender en frío.",
-  },
-  {
-    inspectionNumber: "INSP-003",
-    vehicle: "Toyota Corolla 2022",
-    plate: "RTY-112",
-    client: "Carlos Paredes",
-    type: "Pre-Entrega",
-    status: "Completado",
-    assignedTo: "Ana Torres",
-    fuelLevel: "3/4",
-    mileage: "24,000 km",
-    checklistJson: JSON.stringify({
-      luces: "OK",
-      frenos: "OK",
-      neumaticos: "OK",
-      parabrisas: "OK",
-      carroceria: "Lavado completo",
-      bateria: "OK",
-    }),
-    notes: "Inspección final de control de calidad aprobada.",
-  },
-  {
-    inspectionNumber: "INSP-004",
-    vehicle: "Ford Escape 2018",
-    plate: "QWE-554",
-    client: "Mariana Silva",
-    type: "Recepción",
-    status: "Pendiente",
-    assignedTo: "Carlos Rodríguez",
-    fuelLevel: "Lleno",
-    mileage: "92,100 km",
-    checklistJson: JSON.stringify({
-      luces: "Luz stop quemada",
-      frenos: "OK",
-      neumaticos: "OK",
-      parabrisas: "OK",
-      carroceria: "Golpe leve parachoque",
-      bateria: "OK",
-    }),
-    notes: "Revisión general previa a viaje largo.",
-  },
-];
-
 function generateId(): string {
   return "insp_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 }
@@ -113,32 +30,6 @@ export async function GET(request: Request) {
     const busqueda = searchParams.get("busqueda");
 
     return await withRetry(async () => {
-      // Auto-seed si la tabla está vacía
-      const countResult: any = await prisma.$queryRawUnsafe('SELECT COUNT(*)::int as count FROM "WorkshopInspection"');
-      const count = countResult?.[0]?.count || 0;
-
-      if (count === 0) {
-        for (const i of SEED_INSPECTIONS) {
-          const id = generateId();
-          await prisma.$executeRawUnsafe(
-            `INSERT INTO "WorkshopInspection" ("id", "inspectionNumber", "vehicle", "plate", "client", "type", "status", "assignedTo", "fuelLevel", "mileage", "checklistJson", "notes", "createdAt", "updatedAt")
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())`,
-            id,
-            i.inspectionNumber,
-            i.vehicle,
-            i.plate,
-            i.client,
-            i.type,
-            i.status,
-            i.assignedTo,
-            i.fuelLevel,
-            i.mileage,
-            i.checklistJson,
-            i.notes
-          );
-        }
-      }
-
       let query = 'SELECT * FROM "WorkshopInspection" WHERE 1=1';
       const params: any[] = [];
       let pIdx = 1;

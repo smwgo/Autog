@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { BranchTabs } from "@/components/pos/BranchTabs";
+import { getClientUserBranch, getClientActiveBranch } from "@/lib/branch";
 
 interface CreditAccount {
   id: string;
@@ -43,7 +45,13 @@ export default function CreditosPage() {
   const fetchCreditos = useCallback(async () => {
     try {
       setCargando(true);
-      const res = await fetch(`/api/pos/creditos?t=${Date.now()}`, {
+      const activeBr = getClientActiveBranch();
+      const uBr = getClientUserBranch();
+      const params = new URLSearchParams();
+      params.set("sede", activeBr);
+      params.set("userBranch", uBr);
+      params.set("t", Date.now().toString());
+      const res = await fetch(`/api/pos/creditos?${params.toString()}`, {
         cache: "no-store",
         headers: {
           "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -60,6 +68,14 @@ export default function CreditosPage() {
       setCargando(false);
     }
   }, []);
+
+  useEffect(() => {
+    const handleBranch = () => {
+      fetchCreditos();
+    };
+    window.addEventListener("autog-branch-change", handleBranch);
+    return () => window.removeEventListener("autog-branch-change", handleBranch);
+  }, [fetchCreditos]);
 
   useEffect(() => {
     fetchCreditos();
@@ -174,6 +190,7 @@ export default function CreditosPage() {
             <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
               {creditos.length}
             </span>
+            <BranchTabs onChange={() => fetchCreditos()} size="sm" />
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto">

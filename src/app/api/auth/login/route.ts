@@ -108,7 +108,7 @@ export async function POST(req: Request) {
             redirectTo = "/taller";
           } else if (roleUpper === "OFICINA" || appUser.accessOficina) {
             redirectTo = "/oficina";
-          } else if (roleUpper === "PRESUPUESTO" || roleUpper === "PRESUPUESTOS") {
+          } else if (roleUpper === "PRESUPUESTO" || roleUpper === "PRESUPUESTOS" || roleUpper === "PROPUESTA" || roleUpper === "PROPUESTAS") {
             redirectTo = "/presupuestos";
           } else if (roleUpper === "CLIENTE") {
             redirectTo = "/cliente";

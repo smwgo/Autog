@@ -34,6 +34,7 @@ async function ensureCreditsTable() {
 }
 
 function mapCreditRow(r: any) {
+  const b = (r.branch || "PRINCIPAL").toUpperCase();
   return {
     id: r.id,
     customerName: r.customerName,
@@ -46,17 +47,32 @@ function mapCreditRow(r: any) {
     lastPaymentDate: r.lastPaymentDate || undefined,
     lastPaymentAmount: r.lastPaymentAmount !== null && r.lastPaymentAmount !== undefined ? Number(r.lastPaymentAmount) : undefined,
     notes: r.notes || "",
+    branch: b === "SUCURSAL" ? "Sucursal" : "Principal",
+    _branchUpper: b,
     createdAt: r.createdAt,
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const sedeParam = (searchParams.get("sede") || "").toUpperCase();
+    const userBranchParam = (searchParams.get("userBranch") || "").toUpperCase();
+    const isSucursal = userBranchParam === "SUCURSAL" || sedeParam === "SUCURSAL";
+    const isAmbos = !isSucursal && (sedeParam === "AMBOS" || sedeParam === "AMBAS");
+
     await ensureCreditsTable();
+    await prisma.$executeRawUnsafe(`ALTER TABLE "PosCreditAccount" ADD COLUMN IF NOT EXISTS "branch" TEXT DEFAULT 'PRINCIPAL'`).catch(() => {});
+
     const rows: any[] = await prisma.$queryRawUnsafe(
       `SELECT * FROM "PosCreditAccount" ORDER BY "createdAt" DESC`
     );
-    const creditos = rows.map(mapCreditRow);
+    const allCredits = rows.map(mapCreditRow);
+    const creditos = allCredits.filter((c: any) => {
+      if (isSucursal) return c._branchUpper === "SUCURSAL";
+      if (isAmbos) return true;
+      return c._branchUpper !== "SUCURSAL";
+    });
 
     return NextResponse.json(
       { success: true, creditos },
@@ -89,7 +105,13 @@ export async function POST(req: Request) {
       dueDate = "2026-12-31",
       status = "AL_DIA",
       notes = "",
+      branch,
+      sede,
     } = body;
+
+    const credBranch = (branch || sede || "").toString().toUpperCase().includes("SUCURSAL")
+      ? "SUCURSAL"
+      : "PRINCIPAL";
 
     if (!customerName || !identification) {
       return NextResponse.json(
@@ -100,11 +122,13 @@ export async function POST(req: Request) {
 
     const created = await withRetry(async () => {
       await ensureCreditsTable();
+      await prisma.$executeRawUnsafe(`ALTER TABLE "PosCreditAccount" ADD COLUMN IF NOT EXISTS "branch" TEXT DEFAULT 'PRINCIPAL'`).catch(() => {});
 
-      // Verificar si ya existe una cuenta de crédito con esa identificación
+      // Verificar si ya existe una cuenta de crédito con esa identificación en esta sede
       const existingRows: any[] = await prisma.$queryRawUnsafe(
-        `SELECT * FROM "PosCreditAccount" WHERE "identification" = $1 LIMIT 1`,
-        String(identification).trim()
+        `SELECT * FROM "PosCreditAccount" WHERE "identification" = $1 AND COALESCE("branch", 'PRINCIPAL') = $2 LIMIT 1`,
+        String(identification).trim(),
+        credBranch
       );
 
       if (existingRows.length > 0) {
@@ -139,8 +163,8 @@ export async function POST(req: Request) {
 
       const id = `cred-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       await prisma.$executeRawUnsafe(
-        `INSERT INTO "PosCreditAccount" ("id", "customerName", "identification", "phone", "creditLimit", "currentBalance", "dueDate", "status", "notes", "createdAt", "updatedAt")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        `INSERT INTO "PosCreditAccount" ("id", "customerName", "identification", "phone", "creditLimit", "currentBalance", "dueDate", "status", "notes", "branch", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
         id,
         String(customerName).trim(),
         String(identification).trim(),
@@ -149,7 +173,8 @@ export async function POST(req: Request) {
         Number(currentBalance) || 0,
         String(dueDate),
         String(status || "AL_DIA"),
-        String(notes || "")
+        String(notes || ""),
+        credBranch
       );
 
       const rows: any[] = await prisma.$queryRawUnsafe(

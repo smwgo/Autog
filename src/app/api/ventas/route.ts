@@ -114,7 +114,13 @@ export async function POST(request: Request) {
       taxPercent = 0.16,
       vehiclePlate = null,
       vehicleModel = null,
+      branch = null,
+      sede = null,
     } = body;
+
+    const targetBranch = (branch || sede || "").toString().toUpperCase().includes("SUCURSAL")
+      ? "SUCURSAL"
+      : "PRINCIPAL";
 
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -221,6 +227,18 @@ export async function POST(request: Request) {
           items: true,
         },
       });
+
+      // Asignar sede a la venta de forma atómica
+      try {
+        await tx.$executeRawUnsafe(
+          `UPDATE "Sale" SET "branch" = $1 WHERE "id" = $2`,
+          targetBranch,
+          createdSale.id
+        );
+      } catch (brErr) {
+        console.warn("Aviso al asignar branch a Sale:", brErr);
+      }
+
       if (vehiclePlate) {
         try {
           const histId = "hst_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
@@ -246,9 +264,12 @@ export async function POST(request: Request) {
         }
       }
 
-      // Sincronizar automáticamente con la sesión de caja abierta en Neon
+      // Sincronizar automáticamente con la sesión de caja abierta en Neon para ESTA sede
       const activeSession = await tx.cashRegister.findFirst({
-        where: { status: "ABIERTA" },
+        where: {
+          status: "ABIERTA",
+          branch: targetBranch,
+        },
         orderBy: { openedAt: "desc" },
       });
 

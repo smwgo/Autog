@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { BranchTabs } from "@/components/pos/BranchTabs";
+import { getClientUserBranch, getClientActiveBranch } from "@/lib/branch";
 
 interface CotizacionItem {
   id?: string;
@@ -108,9 +110,13 @@ export default function CotizacionesPosPage() {
   const cargarCotizaciones = useCallback(async (busqueda = "", silencioso = false) => {
     try {
       if (!silencioso) setCargando(true);
-      const url = busqueda.trim()
-        ? `/api/cotizaciones?busqueda=${encodeURIComponent(busqueda.trim())}`
-        : "/api/cotizaciones";
+      const activeBr = getClientActiveBranch();
+      const uBr = getClientUserBranch();
+      const params = new URLSearchParams();
+      if (busqueda.trim()) params.set("busqueda", busqueda.trim());
+      params.set("sede", activeBr);
+      params.set("userBranch", uBr);
+      const url = `/api/cotizaciones?${params.toString()}`;
       const res = await fetch(url);
       const data = await res.json();
       if (res.ok && data.success) {
@@ -129,6 +135,14 @@ export default function CotizacionesPosPage() {
   useEffect(() => {
     cargarCotizaciones();
   }, [cargarCotizaciones]);
+
+  useEffect(() => {
+    const handleBranch = () => {
+      cargarCotizaciones(searchTerm, true);
+    };
+    window.addEventListener("autog-branch-change", handleBranch);
+    return () => window.removeEventListener("autog-branch-change", handleBranch);
+  }, [cargarCotizaciones, searchTerm]);
 
   // Manejo de búsqueda instantánea con debounce
   useEffect(() => {
@@ -258,6 +272,7 @@ export default function CotizacionesPosPage() {
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold bg-purple-600 text-white shadow-sm shadow-purple-500/20 shrink-0">
                 {cotizaciones.length}
               </span>
+              <BranchTabs onChange={() => cargarCotizaciones(searchTerm, true)} size="sm" />
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">

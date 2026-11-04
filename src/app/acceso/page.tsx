@@ -33,7 +33,12 @@ export default async function AccesoPage() {
           redirect("/taller");
         } else if (roleUpper === "OFICINA" || user.accessOficina) {
           redirect("/oficina");
-        } else if (roleUpper === "PRESUPUESTO" || roleUpper === "PRESUPUESTOS") {
+        } else if (
+          roleUpper === "PRESUPUESTO" ||
+          roleUpper === "PRESUPUESTOS" ||
+          roleUpper === "PROPUESTA" ||
+          roleUpper === "PROPUESTAS"
+        ) {
           redirect("/presupuestos");
         } else if (roleUpper === "CLIENTE") {
           redirect("/cliente");

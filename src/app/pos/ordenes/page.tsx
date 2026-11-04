@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
+import { BranchTabs } from "@/components/pos/BranchTabs";
+import { getClientUserBranch, getClientActiveBranch } from "@/lib/branch";
 
 interface OrderItem {
   id: string;
@@ -111,7 +113,12 @@ export default function PosOrdenesPage() {
   const cargarOrdenes = useCallback(async () => {
     try {
       setCargando(true);
-      const res = await fetch("/api/taller/ordenes", { cache: "no-store" });
+      const activeBr = getClientActiveBranch();
+      const uBr = getClientUserBranch();
+      const params = new URLSearchParams();
+      params.set("sede", activeBr);
+      params.set("userBranch", uBr);
+      const res = await fetch(`/api/taller/ordenes?${params.toString()}`, { cache: "no-store" });
       const data = await res.json();
       if (data.success && Array.isArray(data.orders)) {
         setOrders(data.orders);
@@ -126,6 +133,14 @@ export default function PosOrdenesPage() {
 
   useEffect(() => {
     cargarOrdenes();
+  }, [cargarOrdenes]);
+
+  useEffect(() => {
+    const handleBranch = () => {
+      cargarOrdenes();
+    };
+    window.addEventListener("autog-branch-change", handleBranch);
+    return () => window.removeEventListener("autog-branch-change", handleBranch);
   }, [cargarOrdenes]);
 
   // Cambiar estado rápido de una orden
@@ -281,6 +296,7 @@ export default function PosOrdenesPage() {
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400">
                   {cargando ? "..." : totalOrdenes}
                 </span>
+                <BranchTabs onChange={() => cargarOrdenes()} size="sm" />
               </div>
             </div>
           </div>

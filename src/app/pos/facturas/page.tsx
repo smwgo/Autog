@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { BranchTabs } from "@/components/pos/BranchTabs";
+import { getClientUserBranch, getClientActiveBranch } from "@/lib/branch";
 
 interface SaleItem {
   id: string;
@@ -93,9 +95,13 @@ export default function FacturasPosPage() {
   const cargarVentas = useCallback(async (busqueda = "", silencioso = false) => {
     try {
       if (!silencioso) setCargando(true);
-      const url = busqueda.trim()
-        ? `/api/ventas?busqueda=${encodeURIComponent(busqueda.trim())}`
-        : "/api/ventas";
+      const activeBr = getClientActiveBranch();
+      const uBr = getClientUserBranch();
+      const params = new URLSearchParams();
+      if (busqueda.trim()) params.set("busqueda", busqueda.trim());
+      params.set("sede", activeBr);
+      params.set("userBranch", uBr);
+      const url = `/api/ventas?${params.toString()}`;
       const res = await fetch(url);
       const data = await res.json();
       if (res.ok && data.success) {
@@ -114,6 +120,14 @@ export default function FacturasPosPage() {
   useEffect(() => {
     cargarVentas();
   }, [cargarVentas]);
+
+  useEffect(() => {
+    const handleBranch = () => {
+      cargarVentas(searchTerm, true);
+    };
+    window.addEventListener("autog-branch-change", handleBranch);
+    return () => window.removeEventListener("autog-branch-change", handleBranch);
+  }, [cargarVentas, searchTerm]);
 
   // Manejo de búsqueda instantánea
   useEffect(() => {
@@ -241,6 +255,7 @@ export default function FacturasPosPage() {
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20 shrink-0">
                 {ventas.length}
               </span>
+              <BranchTabs onChange={() => cargarVentas(searchTerm, true)} size="sm" />
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">

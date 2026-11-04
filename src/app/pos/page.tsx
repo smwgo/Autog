@@ -4,7 +4,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
-import { getClientUserBranch, SedeType } from "@/lib/branch";
+import { getClientUserBranch, getClientActiveBranch, SedeType } from "@/lib/branch";
+import { BranchTabs } from "@/components/pos/BranchTabs";
 
 const modules = [
   {
@@ -181,7 +182,9 @@ export default function PosPanel() {
   // Consultar estado de caja
   const verificarCajaApertura = useCallback(async () => {
     try {
-      const res = await fetch("/api/caja");
+      const activeBr = getClientActiveBranch();
+      const uBr = getClientUserBranch();
+      const res = await fetch(`/api/caja?sede=${encodeURIComponent(activeBr)}&userBranch=${encodeURIComponent(uBr)}`);
       const json = await res.json();
       if (res.ok && json.success) {
         const active = json.activeSession || null;
@@ -226,12 +229,14 @@ export default function PosPanel() {
 
     setGuardandoApertura(true);
     try {
+      const activeBr = getClientActiveBranch();
       const res = await fetch("/api/caja", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "SET_INITIAL",
           initialCash: monto,
+          branch: activeBr,
         }),
       });
       const json = await res.json();
@@ -290,7 +295,7 @@ export default function PosPanel() {
       <Header />
       <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
         {/* Cabecera: Flecha de regreso, Título POS y Botón de Estado de Caja */}
-        <div className="mb-6 sm:mb-8 flex items-center justify-between">
+        <div className="mb-6 sm:mb-8 grid grid-cols-[1fr_auto] items-center gap-3 sm:flex sm:justify-between">
           <div className="flex items-center gap-3.5">
             <Link 
               href="/acceso" 
@@ -305,23 +310,18 @@ export default function PosPanel() {
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                 POS
               </h1>
-              <span
-                className={`px-2.5 sm:px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 shadow-xs ${
-                  userBranch === "SUCURSAL"
-                    ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
-                    : "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/25"
-                }`}
-              >
-                <span>{userBranch === "SUCURSAL" ? "📍" : "🏢"}</span>
-                <span>{userBranch === "SUCURSAL" ? "Sucursal" : "Sede Principal"}</span>
-              </span>
             </div>
+          </div>
+
+          <div className="order-2 col-span-2 sm:order-none sm:col-span-1">
+            <BranchTabs onChange={() => verificarCajaApertura()} size="sm" />
           </div>
 
           {/* Botón de Caja: Exactamente igual al de POS de Venta */}
           {cajaActiva ? (
             <button
               type="button"
+              data-pos-cash-button
               onClick={() => {
                 verificarCajaApertura();
                 setMostrarModalCierre(true);
@@ -334,6 +334,7 @@ export default function PosPanel() {
           ) : (
             <button
               type="button"
+              data-pos-cash-button
               onClick={() => {
                 if (typeof window !== "undefined") {
                   sessionStorage.removeItem("pos_caja_omitida");

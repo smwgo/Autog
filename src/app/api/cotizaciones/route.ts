@@ -8,15 +8,36 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const busqueda = searchParams.get("busqueda")?.trim().toLowerCase() || "";
+    const sedeParam = (searchParams.get("sede") || "").toUpperCase();
+    const userBranchParam = (searchParams.get("userBranch") || "").toUpperCase();
+    const isSucursal = userBranchParam === "SUCURSAL" || sedeParam === "SUCURSAL";
+    const isAmbos = !isSucursal && (sedeParam === "AMBOS" || sedeParam === "AMBAS");
 
-    const cotizaciones: any[] = await withRetry(() =>
-      (prisma as any).orderRequest.findMany({
-        where: { type: "COTIZACION" },
-        orderBy: { createdAt: "desc" },
+    const [cotizaciones, branchRows]: [any[], any[]] = await Promise.all([
+      withRetry(() =>
+        (prisma as any).orderRequest.findMany({
+          where: { type: "COTIZACION" },
+          orderBy: { createdAt: "desc" },
+        })
+      ) as Promise<any[]>,
+      (prisma.$queryRawUnsafe(
+        `SELECT "id", COALESCE("branch", 'PRINCIPAL') AS "branch" FROM "OrderRequest" WHERE "type" = 'COTIZACION'`
+      ) as Promise<any[]>).catch(() => []),
+    ]);
+    const branchMap = new Map<string, string>();
+    for (const r of branchRows) branchMap.set(r.id, (r.branch || "PRINCIPAL").toUpperCase());
+
+    const filtradas = cotizaciones
+      .map((c: any) => {
+        const b = branchMap.get(c.id) || "PRINCIPAL";
+        return { ...c, branch: b === "SUCURSAL" ? "Sucursal" : "Principal", _branchUpper: b };
       })
-    );
-
-    const filtradas = cotizaciones.filter((c: any) => {
+      .filter((c: any) => {
+        if (isSucursal) return c._branchUpper === "SUCURSAL";
+        if (isAmbos) return true;
+        return c._branchUpper !== "SUCURSAL";
+      })
+      .filter((c: any) => {
       if (!busqueda) return true;
       return (
         c.requestNumber.toLowerCase().includes(busqueda) ||
@@ -80,6 +101,13 @@ export async function POST(request: Request) {
         },
       })
     );
+
+    const cotBranch = String(body.branch || body.sede || "").toUpperCase().includes("SUCURSAL")
+      ? "SUCURSAL"
+      : "PRINCIPAL";
+    await prisma
+      .$executeRawUnsafe(`UPDATE "OrderRequest" SET "branch" = $1 WHERE "id" = $2`, cotBranch, (cotizacion as any).id)
+      .catch(() => {});
 
     return NextResponse.json({
       success: true,

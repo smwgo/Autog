@@ -3,47 +3,6 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-const SEED_PART_REQUESTS = [
-  {
-    requestNumber: "REQ-5012",
-    mechanic: "Carlos Rodríguez",
-    orderId: "ORD-2023-001",
-    vehicle: "Toyota Hilux (ABC-123)",
-    itemsJson: JSON.stringify([
-      { name: "Filtro de Aceite", quantity: 1, available: true },
-      { name: "Aceite Sintético 5W-30 (Litros)", quantity: 4, available: true },
-    ]),
-    status: "Aprobado",
-    urgency: "Normal",
-    notes: "Repuestos para mantenimiento preventivo de 45,000 km.",
-  },
-  {
-    requestNumber: "REQ-5013",
-    mechanic: "Luis Martínez",
-    orderId: "ORD-2023-002",
-    vehicle: "Honda Civic (XYZ-987)",
-    itemsJson: JSON.stringify([
-      { name: "Juego de Pastillas de Freno Cerámicas", quantity: 2, available: true },
-      { name: "Líquido de Frenos DOT 4", quantity: 1, available: true },
-    ]),
-    status: "Pendiente",
-    urgency: "Alta",
-    notes: "Cliente espera entrega hoy a las 17:00.",
-  },
-  {
-    requestNumber: "REQ-5010",
-    mechanic: "Ana Torres",
-    orderId: "ORD-2023-004",
-    vehicle: "Chevrolet Spark (GHI-789)",
-    itemsJson: JSON.stringify([
-      { name: "Bujías Iridium", quantity: 4, available: true },
-    ]),
-    status: "Entregado",
-    urgency: "Normal",
-    notes: "Entregado por bodega y montado en bahía 2.",
-  },
-];
-
 function generateId(): string {
   return "req_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 }
@@ -90,28 +49,6 @@ export async function GET(request: Request) {
 
     return await withRetry(async () => {
       await ensureTableExists();
-
-      const countResult: any = await prisma.$queryRawUnsafe('SELECT COUNT(*)::int as count FROM "WorkshopPartRequest"');
-      const count = countResult?.[0]?.count || 0;
-
-      if (count === 0) {
-        for (const req of SEED_PART_REQUESTS) {
-          const id = generateId();
-          await prisma.$executeRawUnsafe(
-            `INSERT INTO "WorkshopPartRequest" ("id", "requestNumber", "mechanic", "orderId", "vehicle", "itemsJson", "status", "urgency", "notes", "createdAt", "updatedAt")
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())`,
-            id,
-            req.requestNumber,
-            req.mechanic,
-            req.orderId,
-            req.vehicle,
-            req.itemsJson,
-            req.status,
-            req.urgency,
-            req.notes
-          );
-        }
-      }
 
       // Consultar productos reales en inventario de Neon para verificar stock real
       let products: any[] = [];
