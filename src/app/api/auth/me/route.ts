@@ -20,22 +20,26 @@ export async function GET() {
 
       if (parsed && (parsed.email || parsed.id || parsed.role)) {
         const roleUpper = (parsed.role || "").toUpperCase();
+        const branchUpper = String(parsed.branch || "").toUpperCase();
+        const isSucursal = branchUpper.includes("SUCURSAL");
+        const branchFormatted = isSucursal ? "Sucursal" : "Principal";
+
         let singleWord = "Usuario";
 
-        if (roleUpper === "POS" || parsed.name === "POS" || parsed.email?.includes("pos@")) {
-          singleWord = "POS";
-        } else if (roleUpper === "TALLER" || parsed.name === "Taller") {
-          singleWord = "Taller";
-        } else if (roleUpper === "OFICINA" || parsed.name === "Oficina") {
-          singleWord = "Oficina";
+        if (parsed.name && parsed.name.trim()) {
+          singleWord = parsed.name.trim();
+        } else if (roleUpper === "POS" || parsed.email?.includes("pos@")) {
+          singleWord = isSucursal ? "POS 2" : "POS";
+        } else if (roleUpper === "TALLER") {
+          singleWord = isSucursal ? "Taller 2" : "Taller";
+        } else if (roleUpper === "OFICINA") {
+          singleWord = isSucursal ? "Oficina 2" : "Oficina";
         } else if (roleUpper === "PRESUPUESTO") {
           singleWord = "Presupuesto";
         } else if (roleUpper === "CLIENTE") {
           singleWord = "Cliente";
-        } else if (parsed.name && (parsed.name.toLowerCase().includes("administrador") || parsed.name.toLowerCase().includes("admin") || roleUpper === "ROOT")) {
+        } else if (roleUpper === "ROOT" || roleUpper === "GERENCIA" || roleUpper === "ADMIN") {
           singleWord = "Admin";
-        } else if (parsed.name) {
-          singleWord = parsed.name.trim().split(/\s+/)[0] || "Usuario";
         }
 
         return NextResponse.json({
@@ -44,6 +48,7 @@ export async function GET() {
             ...parsed,
             name: singleWord,
             fullName: parsed.name || singleWord,
+            branch: branchFormatted,
           },
         });
       }

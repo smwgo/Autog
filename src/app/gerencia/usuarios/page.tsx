@@ -45,6 +45,7 @@ interface SeccionUsuariosGrupoProps {
   lista: AppUserRecord[];
   cargando: boolean;
   eliminandoId: string | null;
+  totalUsuarios: number;
   onSolicitarEliminar: (id: string, name: string) => void;
 }
 
@@ -55,6 +56,7 @@ function SeccionUsuariosGrupo({
   lista,
   cargando,
   eliminandoId,
+  totalUsuarios,
   onSolicitarEliminar,
 }: SeccionUsuariosGrupoProps) {
   return (
@@ -100,16 +102,22 @@ function SeccionUsuariosGrupo({
           >
             {icono}
           </div>
-          <Link
-            href="/gerencia/usuarios/nuevo"
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-white text-xs font-semibold shadow-sm transition-all cursor-pointer ${
-              color === "blue"
-                ? "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20"
-                : "bg-amber-600 hover:bg-amber-700 shadow-amber-500/20"
-            }`}
-          >
-            <span>+</span> Registrar en {titulo}
-          </Link>
+          {totalUsuarios >= 14 ? (
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs font-semibold cursor-not-allowed">
+              🔒 Límite de 14 usuarios alcanzado
+            </span>
+          ) : (
+            <Link
+              href="/gerencia/usuarios/nuevo"
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-white text-xs font-semibold shadow-sm transition-all cursor-pointer ${
+                color === "blue"
+                  ? "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20"
+                  : "bg-amber-600 hover:bg-amber-700 shadow-amber-500/20"
+              }`}
+            >
+              <span>+</span> Registrar en {titulo}
+            </Link>
+          )}
         </div>
       ) : (
         <>
@@ -513,21 +521,38 @@ export default function GestionUsuarios() {
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
               Usuarios
             </h1>
-            <span className="inline-flex items-center justify-center px-2 min-w-6 h-6 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20 shrink-0">
-              {stats.totalUsuarios}
+            <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20 shrink-0">
+              {stats.totalUsuarios} / 14
             </span>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <Link
-              href="/gerencia/usuarios/nuevo"
-              className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-              </svg>
-              <span>Nuevo Usuario</span>
-            </Link>
+            {stats.totalUsuarios >= 14 ? (
+              <button
+                type="button"
+                onClick={() =>
+                  mostrarToast(
+                    "Has alcanzado el límite máximo de 14 usuarios permitidos entre ambas sedes.",
+                    "error"
+                  )
+                }
+                className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 cursor-not-allowed"
+                title="Límite máximo de 14 usuarios alcanzado"
+              >
+                <span>🔒</span>
+                <span>Límite 14/14</span>
+              </button>
+            ) : (
+              <Link
+                href="/gerencia/usuarios/nuevo"
+                className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                </svg>
+                <span>Nuevo Usuario</span>
+              </Link>
+            )}
           </div>
         </div>
 
@@ -562,10 +587,10 @@ export default function GestionUsuarios() {
               </div>
               <div>
                 <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                  {cargando && stats.totalUsuarios === 0 ? "..." : stats.totalUsuarios}
+                  {cargando && stats.totalUsuarios === 0 ? "..." : `${stats.totalUsuarios} / 14`}
                 </p>
                 <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">
-                  Total Usuarios
+                  Total Usuarios (Máx 14)
                 </h3>
               </div>
             </div>
@@ -741,13 +766,13 @@ export default function GestionUsuarios() {
           >
             <span>Todas</span>
             <span
-              className={`px-1.5 py-0.2 rounded-full text-[11px] font-bold ${
+              className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
                 tabSucursal === "todas"
                   ? "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
                   : "bg-zinc-300/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
               }`}
             >
-              {usuarios.length}
+              {usuarios.length} / 14
             </span>
           </button>
 
@@ -805,6 +830,7 @@ export default function GestionUsuarios() {
               lista={usuariosPrincipal}
               cargando={cargando}
               eliminandoId={eliminandoId}
+              totalUsuarios={stats.totalUsuarios}
               onSolicitarEliminar={solicitarEliminar}
             />
           )}
@@ -832,6 +858,7 @@ export default function GestionUsuarios() {
               lista={usuariosSucursal}
               cargando={cargando}
               eliminandoId={eliminandoId}
+              totalUsuarios={stats.totalUsuarios}
               onSolicitarEliminar={solicitarEliminar}
             />
           )}

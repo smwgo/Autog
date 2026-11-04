@@ -11,9 +11,11 @@ function NuevoUsuarioContent() {
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
 
-  const [cargando, setCargando] = useState(Boolean(editId));
+  const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [totalUsuariosExistentes, setTotalUsuariosExistentes] = useState<number>(0);
+  const limiteAlcanzado = !editId && totalUsuariosExistentes >= 14;
 
   // Datos del Usuario
   const [nombre, setNombre] = useState("");
@@ -58,29 +60,30 @@ function NuevoUsuarioContent() {
   };
 
   useEffect(() => {
-    if (!editId) {
-      setPinCode(String(Math.floor(1000 + Math.random() * 9000)));
-      return;
-    }
-
-    const cargarUsuario = async () => {
+    const verificarLimiteYCargar = async () => {
       try {
+        if (!editId) {
+          setPinCode(String(Math.floor(1000 + Math.random() * 9000)));
+        }
         setCargando(true);
         const res = await fetch("/api/gerencia/usuarios", { cache: "no-store" });
         const data = await res.json();
         if (res.ok && Array.isArray(data)) {
-          const u = data.find((item: any) => item.id === editId);
-          if (u) {
-            setNombre(u.name || "");
-            const uEmail = u.email || "";
-            setEmail(uEmail.toLowerCase().endsWith("@gmail.com") ? uEmail.replace(/@gmail\.com$/i, "") : uEmail);
-            setPinCode(u.pinCode || "1234");
-            setRole(u.role || "Taller");
-            setBranch(u.branch || "Principal");
-            setStatus(u.status || "Activo");
-            setAccessOficina(Boolean(u.accessOficina));
-            setAccessPos(Boolean(u.accessPos));
-            setAccessTaller(Boolean(u.accessTaller));
+          setTotalUsuariosExistentes(data.length);
+          if (editId) {
+            const u = data.find((item: any) => item.id === editId);
+            if (u) {
+              setNombre(u.name || "");
+              const uEmail = u.email || "";
+              setEmail(uEmail.toLowerCase().endsWith("@gmail.com") ? uEmail.replace(/@gmail\.com$/i, "") : uEmail);
+              setPinCode(u.pinCode || "1234");
+              setRole(u.role || "Taller");
+              setBranch(u.branch || "Principal");
+              setStatus(u.status || "Activo");
+              setAccessOficina(Boolean(u.accessOficina));
+              setAccessPos(Boolean(u.accessPos));
+              setAccessTaller(Boolean(u.accessTaller));
+            }
           }
         }
       } catch (err) {
@@ -90,8 +93,18 @@ function NuevoUsuarioContent() {
       }
     };
 
-    cargarUsuario();
+    verificarLimiteYCargar();
   }, [editId]);
+
+  const handleBranchChange = (newBranch: string) => {
+    setBranch(newBranch);
+    if (newBranch.toLowerCase().includes("sucursal")) {
+      // En Sucursal solo se permite POS, Taller o Cliente
+      if (role !== "POS" && role !== "Taller" && role !== "Cliente") {
+        handleSelectPanel("Taller");
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,6 +113,17 @@ function NuevoUsuarioContent() {
 
     if (!cleanName || !rawEmail) {
       setErrorMsg("Completa el nombre y correo del usuario.");
+      return;
+    }
+
+    const isSucursal = branch.toLowerCase().includes("sucursal");
+    if (isSucursal && role !== "POS" && role !== "Taller" && role !== "Cliente") {
+      setErrorMsg("En Sucursal únicamente se permite acceso a POS, Taller o Cliente.");
+      return;
+    }
+
+    if (!editId && totalUsuariosExistentes >= 14) {
+      setErrorMsg("Límite máximo alcanzado: solo se permite un máximo de 14 usuarios entre ambas sedes.");
       return;
     }
 
@@ -162,9 +186,22 @@ function NuevoUsuarioContent() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
               </Link>
-              <h1 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white tracking-tight">
-                {editId ? "Editar Usuario" : "Nuevo Usuario"}
-              </h1>
+              <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+                <h1 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white tracking-tight">
+                  {editId ? "Editar Usuario" : "Nuevo Usuario"}
+                </h1>
+                {!editId && (
+                  <span
+                    className={`text-xs px-2.5 py-0.5 rounded-full font-bold border ${
+                      limiteAlcanzado
+                        ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-800"
+                        : "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800"
+                    }`}
+                  >
+                    {totalUsuariosExistentes} / 14 usuarios
+                  </span>
+                )}
+              </div>
             </div>
 
             <Link
@@ -175,6 +212,19 @@ function NuevoUsuarioContent() {
               ✕
             </Link>
           </div>
+
+          {/* Banner de Límite Alcanzado (Máx 14) */}
+          {limiteAlcanzado && (
+            <div className="mb-4 sm:mb-6 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 text-xs sm:text-sm flex items-start gap-3">
+              <span className="text-xl shrink-0">⚠️</span>
+              <div>
+                <p className="font-bold">Límite de 14 usuarios alcanzado ({totalUsuariosExistentes}/14)</p>
+                <p className="mt-0.5 opacity-90 text-xs leading-relaxed">
+                  Solo se permite un máximo de 14 usuarios en total (Sede Principal + Sucursal). Para crear un usuario nuevo, debes eliminar o editar uno existente.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Mensaje de error si ocurre */}
           {errorMsg && (
@@ -251,8 +301,11 @@ function NuevoUsuarioContent() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                      Acceso *
+                    <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center justify-between">
+                      <span>Acceso *</span>
+                      {branch.toLowerCase().includes("sucursal") && (
+                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">POS, Taller o Cliente</span>
+                      )}
                     </label>
                     <select
                       value={role}
@@ -260,9 +313,9 @@ function NuevoUsuarioContent() {
                       className="w-full h-11 sm:h-12 px-3 sm:px-3.5 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white outline-none focus:border-blue-500 transition-colors font-medium cursor-pointer"
                     >
                       <option value="POS">🛒 POS</option>
-                      <option value="Oficina">🏢 Oficina</option>
+                      {!branch.toLowerCase().includes("sucursal") && <option value="Oficina">🏢 Oficina</option>}
                       <option value="Taller">🔧 Taller</option>
-                      <option value="Presupuesto">📋 Presupuesto</option>
+                      {!branch.toLowerCase().includes("sucursal") && <option value="Presupuesto">📋 Presupuesto</option>}
                       <option value="Cliente">👤 Cliente</option>
                     </select>
                   </div>
@@ -273,7 +326,7 @@ function NuevoUsuarioContent() {
                     </label>
                     <select
                       value={branch.toLowerCase().includes("sucursal") ? "Sucursal" : "Principal"}
-                      onChange={(e) => setBranch(e.target.value)}
+                      onChange={(e) => handleBranchChange(e.target.value)}
                       className="w-full h-11 sm:h-12 px-3 sm:px-3.5 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white outline-none focus:border-blue-500 transition-colors cursor-pointer"
                     >
                       <option value="Principal">Principal</option>
@@ -301,14 +354,20 @@ function NuevoUsuarioContent() {
               <div className="pt-5 sm:pt-6 border-t border-zinc-200 dark:border-zinc-800/80 flex items-center justify-end gap-3 sm:gap-4">
                 <button
                   type="submit"
-                  disabled={guardando}
-                  className="w-full sm:w-auto h-11 sm:h-12 px-7 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 text-sm disabled:opacity-50 cursor-pointer"
+                  disabled={guardando || limiteAlcanzado}
+                  className={`w-full sm:w-auto h-11 sm:h-12 px-7 font-bold rounded-xl transition-all flex items-center justify-center gap-2 text-sm shadow-lg ${
+                    limiteAlcanzado
+                      ? "bg-zinc-300 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 cursor-not-allowed shadow-none"
+                      : "bg-blue-600 hover:bg-blue-500 active:scale-95 text-white shadow-blue-600/25 cursor-pointer disabled:opacity-50"
+                  }`}
                 >
                   {guardando ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       <span>Guardando...</span>
                     </>
+                  ) : limiteAlcanzado ? (
+                    <span>Límite 14/14 Alcanzado</span>
                   ) : (
                     <span>Guardar</span>
                   )}

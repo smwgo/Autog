@@ -272,7 +272,7 @@ export default function GestionCaja() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-emerald-500/20 selection:text-emerald-300 pb-24 md:pb-0">
+    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans selection:bg-emerald-500/20 selection:text-emerald-300 pb-24 md:pb-0">
       <Header />
 
       <main className="flex-grow p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full flex flex-col gap-6">
@@ -299,54 +299,54 @@ export default function GestionCaja() {
         <CollapsibleMetrics className="order-3 sm:order-2">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             {/* Abiertas */}
-            <div className="bg-zinc-900/80 border border-zinc-800/80 p-4 sm:p-5 rounded-3xl flex items-center gap-3.5 backdrop-blur-sm">
-              <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center text-xl shrink-0">
+            <div className="bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800/80 p-4 sm:p-5 rounded-3xl flex items-center gap-3.5 shadow-sm backdrop-blur-sm">
+              <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/25 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0">
                 🟢
               </div>
               <div>
-                <p className="text-xl sm:text-2xl font-black text-white">
+                <p className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white">
                   {cargando ? "..." : stats.abiertas}
                 </p>
-                <h3 className="text-zinc-400 text-xs font-semibold">Abiertas</h3>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs font-semibold">Abiertas</h3>
               </div>
             </div>
 
             {/* Fondo */}
-            <div className="bg-zinc-900/80 border border-zinc-800/80 p-4 sm:p-5 rounded-3xl flex items-center gap-3.5 backdrop-blur-sm">
-              <div className="w-11 h-11 rounded-2xl bg-sky-500/15 border border-sky-500/25 text-sky-400 flex items-center justify-center text-xl shrink-0">
+            <div className="bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800/80 p-4 sm:p-5 rounded-3xl flex items-center gap-3.5 shadow-sm backdrop-blur-sm">
+              <div className="w-11 h-11 rounded-2xl bg-sky-50 dark:bg-sky-500/15 border border-sky-200 dark:border-sky-500/25 text-sky-600 dark:text-sky-400 flex items-center justify-center text-xl shrink-0">
                 🪙
               </div>
               <div>
-                <p className="text-xl sm:text-2xl font-black text-white">
+                <p className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white">
                   {cargando ? "..." : `$${stats.fondoTotal.toFixed(2)}`}
                 </p>
-                <h3 className="text-zinc-400 text-xs font-semibold">Fondo</h3>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs font-semibold">Fondo</h3>
               </div>
             </div>
 
             {/* Ventas */}
-            <div className="bg-zinc-900/80 border border-zinc-800/80 p-4 sm:p-5 rounded-3xl flex items-center gap-3.5 backdrop-blur-sm">
-              <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/25 text-amber-400 flex items-center justify-center text-xl shrink-0">
+            <div className="bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800/80 p-4 sm:p-5 rounded-3xl flex items-center gap-3.5 shadow-sm backdrop-blur-sm">
+              <div className="w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/25 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl shrink-0">
                 🛒
               </div>
               <div>
-                <p className="text-xl sm:text-2xl font-black text-white">
+                <p className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white">
                   {cargando ? "..." : `$${stats.ventasTotal.toFixed(2)}`}
                 </p>
-                <h3 className="text-zinc-400 text-xs font-semibold">Ventas</h3>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs font-semibold">Ventas</h3>
               </div>
             </div>
 
             {/* Cerradas */}
-            <div className="bg-zinc-900/80 border border-zinc-800/80 p-4 sm:p-5 rounded-3xl flex items-center gap-3.5 backdrop-blur-sm">
-              <div className="w-11 h-11 rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-400 flex items-center justify-center text-xl shrink-0">
+            <div className="bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800/80 p-4 sm:p-5 rounded-3xl flex items-center gap-3.5 shadow-sm backdrop-blur-sm">
+              <div className="w-11 h-11 rounded-2xl bg-purple-50 dark:bg-purple-500/15 border border-purple-200 dark:border-purple-500/25 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xl shrink-0">
                 🔒
               </div>
               <div>
-                <p className="text-xl sm:text-2xl font-black text-white">
+                <p className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white">
                   {cargando ? "..." : stats.cerradas}
                 </p>
-                <h3 className="text-zinc-400 text-xs font-semibold">Cerradas</h3>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs font-semibold">Cerradas</h3>
               </div>
             </div>
           </div>
@@ -439,28 +439,28 @@ export default function GestionCaja() {
         </div>
 
         {/* Tabla Desktop y Tarjetas Móviles */}
-        <div className="order-4 bg-zinc-900/60 border border-zinc-800 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl backdrop-blur-sm">
+        <div className="order-4 bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-2xl sm:rounded-3xl overflow-hidden shadow-sm dark:shadow-2xl backdrop-blur-sm">
           {/* Vista Móvil */}
-          <div className="md:hidden divide-y divide-zinc-800/80">
+          <div className="md:hidden divide-y divide-zinc-100 dark:divide-zinc-800/80">
             {cargando && sesiones.length === 0 ? (
               <div className="p-8 text-center text-zinc-400 text-sm">Cargando...</div>
             ) : sesionesFiltradas.length === 0 ? (
               <div className="p-10 text-center text-zinc-500 text-sm flex flex-col items-center gap-2">
                 <span className="text-3xl">💵</span>
-                <span>Sin sesiones</span>
+                <span className="text-zinc-500 dark:text-zinc-400 font-medium">Sin sesiones</span>
               </div>
             ) : (
               sesionesFiltradas.map((s) => (
                 <div key={s.id} className="p-4 flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-zinc-800/70 border border-zinc-700/50 flex items-center justify-center text-sm">
+                      <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800/70 border border-zinc-200 dark:border-zinc-700/50 flex items-center justify-center text-sm">
                         {s.status === "ABIERTA" ? "🟢" : "🔒"}
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <p className="font-bold text-sm text-white font-mono">{s.sessionNumber}</p>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800/80 border border-zinc-700/60 text-zinc-300 font-medium flex items-center gap-1">
+                          <p className="font-bold text-sm text-zinc-900 dark:text-white font-mono">{s.sessionNumber}</p>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60 text-zinc-700 dark:text-zinc-300 font-medium flex items-center gap-1">
                             <span>👤</span>
                             <span>{s.cashier || "POS"}</span>
                           </span>
@@ -476,24 +476,24 @@ export default function GestionCaja() {
                     <span
                       className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider border ${
                         s.status === "ABIERTA"
-                          ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
-                          : "bg-zinc-800/70 text-zinc-400 border-zinc-700/40"
+                          ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30"
+                          : "bg-zinc-100 dark:bg-zinc-800/70 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700/40"
                       }`}
                     >
                       {s.status}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs bg-zinc-950/40 p-2.5 rounded-xl border border-zinc-800/60">
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-zinc-50 dark:bg-zinc-950/40 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800/60">
                     <div>
                       <span className="text-zinc-500">Fondo: </span>
-                      <span className="font-bold text-white">${toMonto(s.initialCash)}</span>
+                      <span className="font-bold text-zinc-900 dark:text-white">${toMonto(s.initialCash)}</span>
                     </div>
                     <div>
                       <span className="text-zinc-500">
                         {s.status === "ABIERTA" ? "Esperado:" : "Declarado:"}{" "}
                       </span>
-                      <span className="font-bold text-emerald-400">
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
                         ${toMonto(s.status === "ABIERTA" ? s.expectedCash : s.declaredCash)}
                       </span>
                     </div>
@@ -506,14 +506,14 @@ export default function GestionCaja() {
                           setSesionParaCerrar(s);
                           setConteoEfectivo("");
                         }}
-                        className="flex-1 h-11 min-h-[44px] rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all flex items-center justify-center cursor-pointer"
+                        className="flex-1 h-11 min-h-[44px] rounded-xl bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 active:scale-95 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 text-xs font-bold transition-all flex items-center justify-center cursor-pointer"
                       >
                         Cerrar
                       </button>
                     ) : (
                       <button
                         onClick={() => setSesionDetalle(s)}
-                        className="flex-1 h-11 min-h-[44px] rounded-xl bg-zinc-800/40 hover:bg-zinc-800/70 active:scale-95 text-zinc-300 border border-zinc-700/40 text-xs font-semibold transition-all flex items-center justify-center cursor-pointer"
+                        className="flex-1 h-11 min-h-[44px] rounded-xl bg-zinc-100 dark:bg-zinc-800/40 hover:bg-zinc-200 dark:hover:bg-zinc-800/70 active:scale-95 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/40 text-xs font-semibold transition-all flex items-center justify-center cursor-pointer"
                       >
                         Arqueo
                       </button>
@@ -521,7 +521,7 @@ export default function GestionCaja() {
                     <button
                       onClick={() => setSesionParaEliminar(s)}
                       title="Eliminar sesión"
-                      className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-red-500/10 hover:bg-red-500/20 active:scale-95 text-red-400 hover:text-red-300 border border-red-500/20 flex items-center justify-center transition-all cursor-pointer shrink-0"
+                      className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 active:scale-95 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 flex items-center justify-center transition-all cursor-pointer shrink-0"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -536,7 +536,7 @@ export default function GestionCaja() {
           {/* Vista Tabla Desktop */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-zinc-950/60 border-b border-zinc-800 text-zinc-400 text-xs font-semibold">
+              <thead className="bg-zinc-50 dark:bg-zinc-950/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 text-xs font-semibold">
                 <tr>
                   <th className="px-6 py-4">Sesión</th>
                   <th className="px-6 py-4">Estado</th>
@@ -546,7 +546,7 @@ export default function GestionCaja() {
                   <th className="px-6 py-4 text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800/60">
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
                 {cargando && sesiones.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center text-zinc-500 text-sm">
@@ -558,7 +558,7 @@ export default function GestionCaja() {
                     <td colSpan={6} className="px-6 py-16 text-center text-zinc-500 text-sm">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <span className="text-3xl">💵</span>
-                        <span>Sin registros de caja</span>
+                        <span className="text-zinc-500 dark:text-zinc-400 font-medium">Sin registros de caja</span>
                       </div>
                     </td>
                   </tr>
@@ -566,22 +566,22 @@ export default function GestionCaja() {
                   sesionesFiltradas.map((s) => (
                     <tr
                       key={s.id}
-                      className="hover:bg-zinc-800/20 transition-colors"
+                      className="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/20 transition-colors"
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-2xl bg-zinc-800/60 border border-zinc-700/40 flex items-center justify-center text-base">
+                          <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/40 flex items-center justify-center text-base">
                             {s.status === "ABIERTA" ? "🟢" : "🔒"}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <p className="font-bold text-white font-mono">{s.sessionNumber}</p>
-                              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-zinc-800/80 border border-zinc-700/60 text-zinc-300 font-medium flex items-center gap-1">
+                              <p className="font-bold text-zinc-900 dark:text-white font-mono">{s.sessionNumber}</p>
+                              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60 text-zinc-700 dark:text-zinc-300 font-medium flex items-center gap-1">
                                 <span>👤</span>
                                 <span>{s.cashier || "POS"}</span>
                               </span>
                             </div>
-                            <p className="text-xs text-zinc-400 mt-0.5">
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                               {new Date(s.openedAt).toLocaleTimeString("es-EC", {
                                 hour: "2-digit",
                                 minute: "2-digit",
@@ -595,8 +595,8 @@ export default function GestionCaja() {
                         <span
                           className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
                             s.status === "ABIERTA"
-                              ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
-                              : "bg-zinc-800/70 text-zinc-400 border-zinc-700/40"
+                              ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30"
+                              : "bg-zinc-100 dark:bg-zinc-800/70 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700/40"
                           }`}
                         >
                           <span
@@ -608,7 +608,7 @@ export default function GestionCaja() {
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 font-semibold text-white">
+                      <td className="px-6 py-4 font-semibold text-zinc-900 dark:text-white">
                         ${toMonto(s.initialCash)}
                       </td>
 
@@ -632,14 +632,14 @@ export default function GestionCaja() {
                                 setSesionParaCerrar(s);
                                 setConteoEfectivo("");
                               }}
-                              className="px-3.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all shadow-[0_0_15px_rgba(16,185,129,0.1)] cursor-pointer"
+                              className="px-3.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 active:scale-95 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 text-xs font-bold transition-all shadow-[0_0_15px_rgba(16,185,129,0.1)] cursor-pointer"
                             >
                               Cerrar
                             </button>
                           ) : (
                             <button
                               onClick={() => setSesionDetalle(s)}
-                              className="px-3.5 py-1.5 rounded-xl bg-zinc-800/40 hover:bg-zinc-800/70 active:scale-95 text-zinc-300 border border-zinc-700/40 text-xs font-semibold transition-all cursor-pointer"
+                              className="px-3.5 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800/40 hover:bg-zinc-200 dark:hover:bg-zinc-800/70 active:scale-95 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/40 text-xs font-semibold transition-all cursor-pointer"
                             >
                               Arqueo
                             </button>
@@ -647,7 +647,7 @@ export default function GestionCaja() {
                           <button
                             onClick={() => setSesionParaEliminar(s)}
                             title="Eliminar sesión"
-                            className="w-8 h-8 rounded-xl bg-red-500/10 hover:bg-red-500/20 active:scale-95 text-red-400 hover:text-red-300 border border-red-500/20 flex items-center justify-center transition-all cursor-pointer"
+                            className="w-8 h-8 rounded-xl bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 active:scale-95 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 flex items-center justify-center transition-all cursor-pointer"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -667,14 +667,14 @@ export default function GestionCaja() {
       {/* MODAL 1: CERRAR / ARQUEO DE CAJA */}
       {sesionParaCerrar && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+          <div className="relative w-full max-w-md rounded-t-3xl sm:rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl text-zinc-900 dark:text-white flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-zinc-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center text-lg">
                   🔒
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">Cierre</h3>
+                  <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Cierre</h3>
                   <span className="text-xs text-zinc-400 font-mono">
                     {sesionParaCerrar.sessionNumber}
                   </span>
@@ -682,14 +682,14 @@ export default function GestionCaja() {
               </div>
               <button
                 onClick={() => setSesionParaCerrar(null)}
-                className="w-8 h-8 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center text-sm"
+                className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center text-sm"
               >
                 ✕
               </button>
             </div>
 
             {/* Cuadro Resumen de Esperado */}
-            <div className="bg-zinc-950/70 border border-zinc-800/80 p-4 rounded-2xl flex justify-between items-center">
+            <div className="bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-zinc-800/80 p-4 rounded-2xl flex justify-between items-center">
               <div>
                 <span className="text-xs text-zinc-400 font-medium">Esperado</span>
                 <p className="text-2xl font-black text-emerald-400">
@@ -718,7 +718,7 @@ export default function GestionCaja() {
                 <label className="block text-xs font-bold text-zinc-400 mb-2">
                   Contado
                 </label>
-                <div className="relative flex items-center bg-zinc-950/70 border border-zinc-800 focus-within:border-emerald-500/50 rounded-2xl px-4 py-3">
+                <div className="relative flex items-center bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-zinc-800 focus-within:border-emerald-500/50 rounded-2xl px-4 py-3">
                   <span className="text-2xl font-bold text-zinc-500 mr-2">$</span>
                   <input
                     type="number"
@@ -728,7 +728,7 @@ export default function GestionCaja() {
                     placeholder="0.00"
                     value={conteoEfectivo}
                     onChange={(e) => setConteoEfectivo(e.target.value)}
-                    className="w-full text-2xl font-black text-white bg-transparent focus:outline-none"
+                    className="w-full text-2xl font-black text-zinc-900 dark:text-white bg-transparent focus:outline-none"
                   />
                 </div>
               </div>
@@ -765,7 +765,7 @@ export default function GestionCaja() {
                   placeholder="Opcional..."
                   value={conteoNotas}
                   onChange={(e) => setConteoNotas(e.target.value)}
-                  className="w-full h-11 px-3.5 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-xs text-white focus:outline-none focus:border-zinc-700"
+                  className="w-full h-11 px-3.5 rounded-xl border border-zinc-800 bg-zinc-50 dark:bg-zinc-950/60 text-base sm:text-xs text-white focus:outline-none focus:border-zinc-700"
                 />
               </div>
 
@@ -780,7 +780,7 @@ export default function GestionCaja() {
                 <button
                   type="submit"
                   disabled={cerrandoCaja}
-                  className="flex-1 h-11 py-3 px-4 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] text-xs font-bold transition-all flex items-center justify-center cursor-pointer"
+                  className="flex-1 h-11 py-3 px-4 rounded-2xl bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 active:scale-95 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] text-xs font-bold transition-all flex items-center justify-center cursor-pointer"
                 >
                   {cerrandoCaja ? "Cerrando..." : "Cerrar"}
                 </button>
@@ -793,19 +793,19 @@ export default function GestionCaja() {
       {/* MODAL 2: FONDO / APERTURA */}
       {mostrarModalFondo && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-5 text-center max-h-[90vh] overflow-y-auto">
+          <div className="relative w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl text-zinc-900 dark:text-white flex flex-col gap-5 text-center max-h-[90vh] overflow-y-auto">
             <div className="flex flex-col items-center gap-2.5">
               <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-xl">
                 💵
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">Apertura</h3>
+                <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Apertura</h3>
                 <span className="text-xs text-zinc-400">Fondo</span>
               </div>
             </div>
 
             <form onSubmit={handleGuardarFondo} className="flex flex-col gap-4">
-              <div className="relative flex items-center bg-zinc-950/70 border border-zinc-800 focus-within:border-emerald-500/50 rounded-2xl px-4 py-3">
+              <div className="relative flex items-center bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-zinc-800 focus-within:border-emerald-500/50 rounded-2xl px-4 py-3">
                 <span className="text-2xl font-bold text-zinc-500 mr-2">$</span>
                 <input
                   type="number"
@@ -815,7 +815,7 @@ export default function GestionCaja() {
                   placeholder="0.00"
                   value={montoFondo}
                   onChange={(e) => setMontoFondo(e.target.value)}
-                  className="w-full text-2xl font-black text-white text-center bg-transparent focus:outline-none"
+                  className="w-full text-2xl font-black text-zinc-900 dark:text-white text-center bg-transparent focus:outline-none"
                 />
               </div>
 
@@ -830,7 +830,7 @@ export default function GestionCaja() {
                 <button
                   type="submit"
                   disabled={guardandoFondo}
-                  className="flex-1 h-11 py-3 px-4 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] text-xs font-bold transition-all flex items-center justify-center cursor-pointer"
+                  className="flex-1 h-11 py-3 px-4 rounded-2xl bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 active:scale-95 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)] text-xs font-bold transition-all flex items-center justify-center cursor-pointer"
                 >
                   {guardandoFondo ? "Guardando..." : "Abrir"}
                 </button>
@@ -843,12 +843,12 @@ export default function GestionCaja() {
       {/* MODAL 3: GASTO / INGRESO */}
       {mostrarModalMovimiento && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
-              <h3 className="text-base font-bold text-white capitalize">{tipoMovimiento.toLowerCase()}</h3>
+          <div className="relative w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl text-zinc-900 dark:text-white flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-800">
+              <h3 className="text-base font-bold text-zinc-900 dark:text-white capitalize">{tipoMovimiento.toLowerCase()}</h3>
               <button
                 onClick={() => setMostrarModalMovimiento(false)}
-                className="w-8 h-8 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center text-sm"
+                className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center text-sm"
               >
                 ✕
               </button>
@@ -857,7 +857,7 @@ export default function GestionCaja() {
             <form onSubmit={handleGuardarMovimiento} className="flex flex-col gap-4">
               <div>
                 <label className="block text-xs font-bold text-zinc-400 mb-2">Monto</label>
-                <div className="relative flex items-center bg-zinc-950/70 border border-zinc-800 focus-within:border-emerald-500/50 rounded-2xl px-4 py-3">
+                <div className="relative flex items-center bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-zinc-800 focus-within:border-emerald-500/50 rounded-2xl px-4 py-3">
                   <span className="text-2xl font-bold text-zinc-500 mr-2">$</span>
                   <input
                     type="number"
@@ -867,7 +867,7 @@ export default function GestionCaja() {
                     placeholder="0.00"
                     value={montoMovimiento}
                     onChange={(e) => setMontoMovimiento(e.target.value)}
-                    className="w-full text-2xl font-black text-white bg-transparent focus:outline-none"
+                    className="w-full text-2xl font-black text-zinc-900 dark:text-white bg-transparent focus:outline-none"
                   />
                 </div>
               </div>
@@ -879,7 +879,7 @@ export default function GestionCaja() {
                   placeholder="Detalle..."
                   value={conceptoMovimiento}
                   onChange={(e) => setConceptoMovimiento(e.target.value)}
-                  className="w-full h-11 px-3.5 rounded-xl border border-zinc-800 bg-zinc-950/60 text-base sm:text-xs text-white focus:outline-none focus:border-zinc-700"
+                  className="w-full h-11 px-3.5 rounded-xl border border-zinc-800 bg-zinc-50 dark:bg-zinc-950/60 text-base sm:text-xs text-white focus:outline-none focus:border-zinc-700"
                 />
               </div>
 
@@ -911,37 +911,37 @@ export default function GestionCaja() {
       {/* MODAL 4: DETALLE / ARQUEO DE SESIÓN CERRADA */}
       {sesionDetalle && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
-              <h3 className="text-base font-bold text-white">Arqueo</h3>
+          <div className="relative w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl text-zinc-900 dark:text-white flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-800">
+              <h3 className="text-base font-bold text-zinc-900 dark:text-white">Arqueo</h3>
               <button
                 onClick={() => setSesionDetalle(null)}
-                className="w-8 h-8 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white flex items-center justify-center text-sm"
+                className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white flex items-center justify-center text-sm"
               >
                 ✕
               </button>
             </div>
 
             <div className="space-y-2.5 text-xs">
-              <div className="flex justify-between py-1.5 border-b border-zinc-800/60">
+              <div className="flex justify-between py-1.5 border-b border-zinc-200 dark:border-zinc-800/60">
                 <span className="text-zinc-400">Sesión:</span>
                 <span className="font-mono font-bold text-white">{sesionDetalle.sessionNumber}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-zinc-800/60">
+              <div className="flex justify-between py-1.5 border-b border-zinc-200 dark:border-zinc-800/60">
                 <span className="text-zinc-400">Cajero:</span>
                 <span className="font-bold text-white">{sesionDetalle.cashier || "POS"}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-zinc-800/60">
+              <div className="flex justify-between py-1.5 border-b border-zinc-200 dark:border-zinc-800/60">
                 <span className="text-zinc-400">Fondo:</span>
                 <span className="font-bold text-white">${toMonto(sesionDetalle.initialCash)}</span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-zinc-800/60">
+              <div className="flex justify-between py-1.5 border-b border-zinc-200 dark:border-zinc-800/60">
                 <span className="text-zinc-400">Declarado:</span>
                 <span className="font-bold text-emerald-400">
                   ${toMonto(sesionDetalle.declaredCash)}
                 </span>
               </div>
-              <div className="flex justify-between py-1.5 border-b border-zinc-800/60">
+              <div className="flex justify-between py-1.5 border-b border-zinc-200 dark:border-zinc-800/60">
                 <span className="text-zinc-400">Diferencia:</span>
                 <span
                   className={`font-bold ${
@@ -971,19 +971,19 @@ export default function GestionCaja() {
       {/* MODAL 5: CONFIRMACIÓN DE ELIMINACIÓN DE SESIÓN */}
       {sesionParaEliminar && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-zinc-800 p-6 shadow-2xl flex flex-col items-center text-center gap-4 max-h-[90vh] overflow-y-auto">
+          <div className="relative w-full max-w-sm rounded-t-3xl sm:rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl text-zinc-900 dark:text-white flex flex-col items-center text-center gap-4 max-h-[90vh] overflow-y-auto">
             <div className="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-400 flex items-center justify-center text-2xl">
               🗑️
             </div>
             
             <div>
-              <h3 className="text-lg font-bold text-white">¿Eliminar sesión?</h3>
+              <h3 className="text-lg font-bold text-zinc-900 dark:text-white">¿Eliminar sesión?</h3>
               <p className="text-sm font-mono font-semibold text-zinc-300 mt-1">
                 {sesionParaEliminar.sessionNumber}
               </p>
             </div>
 
-            <div className="w-full p-3.5 rounded-2xl bg-zinc-950/70 border border-zinc-800 text-left text-xs space-y-1.5">
+            <div className="w-full p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-zinc-800 text-left text-xs space-y-1.5">
               <div className="flex justify-between text-zinc-400">
                 <span>Estado:</span>
                 <span className={`font-bold ${sesionParaEliminar.status === "ABIERTA" ? "text-emerald-400" : "text-zinc-300"}`}>

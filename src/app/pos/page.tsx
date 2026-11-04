@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
+import { getClientUserBranch, SedeType } from "@/lib/branch";
 
 const modules = [
   {
@@ -151,6 +152,18 @@ const modules = [
 ];
 
 export default function PosPanel() {
+  // Sede asignada al operador
+  const [userBranch, setUserBranch] = useState<SedeType>("PRINCIPAL");
+
+  useEffect(() => {
+    const syncBranch = () => {
+      setUserBranch(getClientUserBranch());
+    };
+    syncBranch();
+    window.addEventListener("autog-branch-change", syncBranch);
+    return () => window.removeEventListener("autog-branch-change", syncBranch);
+  }, []);
+
   // Estado de Caja (igual que en POS de Venta)
   const [cajaActiva, setCajaActiva] = useState<any | null>(null);
   const [cajaInfo, setCajaInfo] = useState<{ initialCash: number; expectedCash: number } | null>(null);
@@ -288,9 +301,21 @@ export default function PosPanel() {
                 <path d="M19 12H5M12 19l-7-7 7-7" />
               </svg>
             </Link>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-              POS
-            </h1>
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                POS
+              </h1>
+              <span
+                className={`px-2.5 sm:px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 shadow-xs ${
+                  userBranch === "SUCURSAL"
+                    ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                    : "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/25"
+                }`}
+              >
+                <span>{userBranch === "SUCURSAL" ? "📍" : "🏢"}</span>
+                <span>{userBranch === "SUCURSAL" ? "Sucursal" : "Sede Principal"}</span>
+              </span>
+            </div>
           </div>
 
           {/* Botón de Caja: Exactamente igual al de POS de Venta */}

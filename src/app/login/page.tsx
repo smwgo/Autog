@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { normalizeSede, setClientUserBranch, setClientActiveBranch } from "@/lib/branch";
 
 const DEFAULT_EMAIL = "tiendaautogdaule@gmail.com";
 const DEFAULT_PASSWORD = "tienda2026autog";
@@ -102,6 +103,12 @@ export default function LoginPage() {
 
         // Guardar usuario en localStorage para el cliente
         localStorage.setItem("currentUser", JSON.stringify(data.user));
+
+        // Configurar la sede del usuario según su correo y asignación de sede
+        const userBranch = normalizeSede(data.user?.branch);
+        setClientUserBranch(userBranch);
+        setClientActiveBranch(userBranch);
+
         window.location.href = data.redirectTo || "/gerencia";
       }
     } catch (err: any) {

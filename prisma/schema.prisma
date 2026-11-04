@@ -746,6 +746,7 @@ model Sale {
   total         Decimal    @db.Decimal(12, 2)
   paymentMethod String     @default("Efectivo")
   status        String     @default("Completada")
+  branch        String     @default("PRINCIPAL")
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   customer      Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
@@ -753,6 +754,7 @@ model Sale {
 
   @@index([saleNumber])
   @@index([createdAt])
+  @@index([branch])
 }
 
 model SaleItem {
@@ -809,6 +811,7 @@ model CashRegister {
   totalSalesTransfer Decimal?       @default(0) @db.Decimal(12, 2)
   totalExpenses      Decimal?       @default(0) @db.Decimal(12, 2)
   notes              String?
+  branch             String         @default("PRINCIPAL")
   openedAt           DateTime       @default(now())
   closedAt           DateTime?
   movements          CashMovement[]
@@ -816,6 +819,7 @@ model CashRegister {
   @@index([sessionNumber])
   @@index([status])
   @@index([openedAt])
+  @@index([branch])
 }
 
 model CashMovement {

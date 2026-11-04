@@ -59,6 +59,21 @@ export async function POST(req: Request) {
       );
     }
 
+    // Límite estricto de máximo 14 usuarios en total (Sede Principal + Sucursal combinadas)
+    const MAX_USUARIOS_TOTAL = 14;
+    const totalActual = await withRetry(async () => {
+      return await prisma.appUserAccess.count();
+    });
+
+    if (totalActual >= MAX_USUARIOS_TOTAL) {
+      return NextResponse.json(
+        {
+          error: `Límite alcanzado: solo se permite un máximo de ${MAX_USUARIOS_TOTAL} usuarios entre ambas sedes (actual: ${totalActual}/${MAX_USUARIOS_TOTAL}). Elimina un usuario para poder registrar uno nuevo.`,
+        },
+        { status: 400 }
+      );
+    }
+
     const created = await withRetry(async () => {
       const dup = await prisma.appUserAccess.findUnique({
         where: { email: cleanEmail },
@@ -74,11 +89,17 @@ export async function POST(req: Request) {
         cleanEmail.split("@")[0] ||
         `user${Math.floor(100 + Math.random() * 900)}`;
       const pinCode = String(body.pinCode || "1234").trim() || "1234";
-      const role = String(body.role || "Operador").trim();
       const branch = String(body.branch || "Sede Principal").trim();
-      const accessOficina = Boolean(body.accessOficina);
-      const accessPos = Boolean(body.accessPos);
-      const accessTaller = Boolean(body.accessTaller);
+      let role = String(body.role || "Taller").trim();
+      const isSucursal = branch.toLowerCase().includes("sucursal");
+
+      if (isSucursal && role !== "POS" && role !== "Taller" && role !== "Cliente") {
+        throw new Error("En Sucursal solo se permite acceso a POS, Taller y Cliente.");
+      }
+
+      const accessOficina = isSucursal ? false : Boolean(body.accessOficina);
+      const accessPos = role === "POS" || (!isSucursal && Boolean(body.accessPos));
+      const accessTaller = role === "Taller" || (!isSucursal && Boolean(body.accessTaller));
       const status = String(body.status || "Activo").trim();
 
       const user = await prisma.appUserAccess.create({
@@ -149,14 +170,17 @@ export async function PUT(req: Request) {
       const nextUsername =
         body.username !== undefined ? String(body.username).trim() : curr.username;
       const nextPin = body.pinCode !== undefined ? String(body.pinCode).trim() : curr.pinCode;
-      const nextRole = body.role !== undefined ? String(body.role).trim() : curr.role;
       const nextBranch = body.branch !== undefined ? String(body.branch).trim() : curr.branch;
-      const nextOficina =
-        body.accessOficina !== undefined ? Boolean(body.accessOficina) : Boolean(curr.accessOficina);
-      const nextPos =
-        body.accessPos !== undefined ? Boolean(body.accessPos) : Boolean(curr.accessPos);
-      const nextTaller =
-        body.accessTaller !== undefined ? Boolean(body.accessTaller) : Boolean(curr.accessTaller);
+      let nextRole = body.role !== undefined ? String(body.role).trim() : curr.role;
+      const isNextSucursal = nextBranch.toLowerCase().includes("sucursal");
+
+      if (isNextSucursal && nextRole !== "POS" && nextRole !== "Taller" && nextRole !== "Cliente") {
+        throw new Error("En Sucursal solo se permite acceso a POS, Taller y Cliente.");
+      }
+
+      const nextOficina = isNextSucursal ? false : (body.accessOficina !== undefined ? Boolean(body.accessOficina) : Boolean(curr.accessOficina));
+      const nextPos = nextRole === "POS" || (!isNextSucursal && (body.accessPos !== undefined ? Boolean(body.accessPos) : Boolean(curr.accessPos)));
+      const nextTaller = nextRole === "Taller" || (!isNextSucursal && (body.accessTaller !== undefined ? Boolean(body.accessTaller) : Boolean(curr.accessTaller)));
       const nextStatus = body.status !== undefined ? String(body.status).trim() : curr.status;
 
       const user = await prisma.appUserAccess.update({

@@ -53,6 +53,7 @@ export async function POST(req: Request) {
           email: legacyUser.email,
           name: legacyUser.name,
           role: legacyUser.role,
+          branch: "Principal",
           isSuperAdmin,
         };
       }
@@ -120,7 +121,10 @@ export async function POST(req: Request) {
             email: appUser.email,
             name: appUser.name,
             role: appUser.role,
-            branch: appUser.branch || "Principal",
+            branch:
+              appUser.branch && appUser.branch.toLowerCase().includes("sucursal")
+                ? "Sucursal"
+                : "Principal",
             accessOficina: Boolean(appUser.accessOficina),
             accessPos: Boolean(appUser.accessPos),
             accessTaller: Boolean(appUser.accessTaller),

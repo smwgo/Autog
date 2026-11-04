@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
+import { getClientUserBranch, SedeType } from "@/lib/branch";
 
 interface Product {
   id: string;
@@ -196,6 +197,18 @@ export default function NuevaVentaPage() {
     });
     return base;
   }, [filtroTipo, productos]);
+
+  // Sede asignada al operador POS
+  const [userBranch, setUserBranch] = useState<SedeType>("PRINCIPAL");
+
+  useEffect(() => {
+    const syncBranch = () => {
+      setUserBranch(getClientUserBranch());
+    };
+    syncBranch();
+    window.addEventListener("autog-branch-change", syncBranch);
+    return () => window.removeEventListener("autog-branch-change", syncBranch);
+  }, []);
 
   // Clientes
   const [clientes, setClientes] = useState<Customer[]>(() => {
@@ -1488,6 +1501,16 @@ export default function NuevaVentaPage() {
             </h1>
             <span className="inline-flex items-center justify-center px-2 py-0.5 sm:px-2.5 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 shrink-0">
               {productos.length}
+            </span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1 shrink-0 ${
+                userBranch === "SUCURSAL"
+                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                  : "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/25"
+              }`}
+            >
+              <span>{userBranch === "SUCURSAL" ? "📍" : "🏢"}</span>
+              <span>{userBranch === "SUCURSAL" ? "Sucursal" : "Principal"}</span>
             </span>
           </div>
 

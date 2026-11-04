@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
+import { normalizeSede, setClientUserBranch } from "@/lib/branch";
 
 interface CurrentUser {
   id?: string;
   name?: string;
   email?: string;
   role?: string;
+  branch?: string;
   isSuperAdmin?: boolean;
   accessOficina?: boolean;
   accessPos?: boolean;
@@ -17,6 +19,7 @@ interface CurrentUser {
 
 export function Header() {
   const pathname = usePathname() || "";
+  const [mounted, setMounted] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -38,6 +41,7 @@ export function Header() {
   };
 
   useEffect(() => {
+    setMounted(true);
     // Check initial theme from localStorage or system preference
     if (typeof window !== 'undefined') {
       const isDarkMode = document.documentElement.classList.contains('dark') || 
@@ -77,6 +81,9 @@ export function Header() {
           const parsed = JSON.parse(local);
           if (parsed && (parsed.name || parsed.email)) {
             setCurrentUser(parsed);
+            if (parsed.branch) {
+              setClientUserBranch(normalizeSede(parsed.branch));
+            }
           }
         }
       } catch {}
@@ -88,6 +95,9 @@ export function Header() {
       .then((data) => {
         if (data?.success && data?.user) {
           setCurrentUser(data.user);
+          if (data.user.branch) {
+            setClientUserBranch(normalizeSede(data.user.branch));
+          }
           if (typeof window !== "undefined") {
             try {
               localStorage.setItem("currentUser", JSON.stringify(data.user));
@@ -116,10 +126,23 @@ export function Header() {
       try {
         localStorage.removeItem("currentUser");
         localStorage.removeItem("user_profile");
+        localStorage.removeItem("autog_user_branch");
+        localStorage.removeItem("autog_active_branch");
       } catch {}
       window.location.href = "/login";
     }
   };
+
+  const isSucursalUser = (() => {
+    if (!mounted) return false;
+    const b = (currentUser?.branch || "").toUpperCase();
+    if (b.includes("SUCURSAL")) return true;
+    if (typeof window !== "undefined") {
+      const stored = (localStorage.getItem("autog_user_branch") || "").toUpperCase();
+      if (stored.includes("SUCURSAL")) return true;
+    }
+    return false;
+  })();
 
   const singleWordName = (() => {
     const inPos = pathname.startsWith("/pos");
@@ -131,15 +154,18 @@ export function Header() {
       const r = (currentUser.role || "").toUpperCase();
       const raw = (currentUser.name || currentUser.email?.split("@")[0] || "").trim();
 
-      // Si el rol o nombre es POS o el correo pertenece al POS
+      // Si el nombre tiene un número o identificador específico (ej. "POS 2"), respetarlo
+      if (raw.toUpperCase() === "POS 2" || currentUser.email?.toLowerCase().includes("pos2@")) {
+        return "POS 2";
+      }
       if (r === "POS" || raw.toUpperCase() === "POS" || currentUser.email?.toLowerCase().includes("pos@")) {
         return "POS";
       }
       if (r === "TALLER" || raw.toUpperCase() === "TALLER") {
-        return "Taller";
+        return raw.toUpperCase().includes("2") ? "Taller 2" : "Taller";
       }
       if (r === "OFICINA" || raw.toUpperCase() === "OFICINA") {
-        return "Oficina";
+        return raw.toUpperCase().includes("2") ? "Oficina 2" : "Oficina";
       }
 
       // Si estamos en un módulo operativo específico
@@ -151,7 +177,7 @@ export function Header() {
         return "Admin";
       }
 
-      return raw.split(/\s+/)[0] || (inPos ? "POS" : inTaller ? "Taller" : inOficina ? "Oficina" : "Admin");
+      return raw || (inPos ? "POS" : inTaller ? "Taller" : inOficina ? "Oficina" : "Admin");
     }
 
     if (inPos) return "POS";
@@ -260,13 +286,24 @@ export function Header() {
             <div className="flex items-center gap-1.5">
               <Link
                 href={userPanelHref}
-                className="flex items-center gap-1.5 h-9 px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all cursor-pointer shadow-sm active:scale-95 text-xs font-semibold text-zinc-800 dark:text-zinc-200"
-                title={singleWordName}
+                suppressHydrationWarning
+                className="flex items-center gap-2 h-9 px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all cursor-pointer shadow-sm active:scale-95 text-xs font-semibold text-zinc-800 dark:text-zinc-200"
+                title={`${singleWordName} — Sede: ${isSucursalUser ? "Sucursal" : "Principal"}`}
               >
                 <svg className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-                <span>{singleWordName}</span>
+                <span suppressHydrationWarning>{singleWordName}</span>
+                <span
+                  suppressHydrationWarning
+                  className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${
+                    isSucursalUser
+                      ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                      : "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/25"
+                  }`}
+                >
+                  {isSucursalUser ? "📍 Sucursal" : "🏢 Principal"}
+                </span>
               </Link>
               <button
                 type="button"

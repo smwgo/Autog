@@ -31,6 +31,8 @@ export async function GET(request: Request) {
     }
 
     const busqueda = searchParams.get("busqueda")?.trim().toLowerCase() || "";
+    const sedeParam = (searchParams.get("sede") || "").toUpperCase();
+    const userBranchParam = (searchParams.get("userBranch") || "").toUpperCase();
 
     const where: any = {};
     if (busqueda) {
@@ -41,7 +43,7 @@ export async function GET(request: Request) {
       ];
     }
 
-    const [sales, totalVentas] = await Promise.all([
+    const [sales, branchRows] = await Promise.all([
       prisma.sale.findMany({
         where,
         include: {
@@ -51,15 +53,44 @@ export async function GET(request: Request) {
         orderBy: {
           createdAt: "desc",
         },
-        take: 100,
+        take: 200,
       }),
-      prisma.sale.count(),
+      prisma.$queryRawUnsafe(
+        `SELECT "id", COALESCE("branch", 'PRINCIPAL') AS "branch" FROM "Sale"`
+      ).catch(() => []) as Promise<any[]>,
     ]);
+
+    const branchMap = new Map<string, string>();
+    for (const r of branchRows) {
+      branchMap.set(r.id, (r.branch || "PRINCIPAL").toUpperCase());
+    }
+
+    const filteredSales = sales
+      .map((s: any) => {
+        const sBranch = branchMap.get(s.id) || "PRINCIPAL";
+        return {
+          ...s,
+          branch: sBranch === "SUCURSAL" ? "Sucursal" : "Principal",
+          _branchUpper: sBranch,
+        };
+      })
+      .filter((s: any) => {
+        // En Sucursal: ÚNICAMENTE ver ventas de Sucursal
+        if (userBranchParam === "SUCURSAL" || sedeParam === "SUCURSAL") {
+          return s._branchUpper === "SUCURSAL";
+        }
+        // En Principal si selecciona "Ambas": ver todo junto
+        if (sedeParam === "AMBOS" || sedeParam === "AMBAS") {
+          return true;
+        }
+        // En Principal por defecto: solo ventas de Principal
+        return s._branchUpper !== "SUCURSAL";
+      });
 
     return NextResponse.json({
       success: true,
-      ventas: sales,
-      totalVentas,
+      ventas: filteredSales,
+      totalVentas: filteredSales.length,
     });
   } catch (error: any) {
     console.error("Error al obtener ventas de Neon:", error);
