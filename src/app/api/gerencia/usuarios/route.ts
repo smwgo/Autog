@@ -49,7 +49,8 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const cleanName = String(body.name || "").trim();
-    const cleanEmail = String(body.email || "").trim().toLowerCase();
+    const rawEmail = String(body.email || "").trim().toLowerCase();
+    const cleanEmail = rawEmail ? (rawEmail.includes("@") ? rawEmail : `${rawEmail}@gmail.com`) : "";
 
     if (!cleanName || !cleanEmail) {
       return NextResponse.json(
@@ -141,8 +142,8 @@ export async function PUT(req: Request) {
       const nextIdentification =
         body.identification !== undefined ? (String(body.identification).trim() || null) : curr.identification;
       const nextName = body.name !== undefined ? String(body.name).trim() : curr.name;
-      const nextEmail =
-        body.email !== undefined ? String(body.email).trim().toLowerCase() : curr.email;
+      const rawNextEmail = body.email !== undefined ? String(body.email).trim().toLowerCase() : undefined;
+      const nextEmail = rawNextEmail !== undefined ? (rawNextEmail.includes("@") ? rawNextEmail : `${rawNextEmail}@gmail.com`) : curr.email;
       const nextPhone =
         body.phone !== undefined ? (String(body.phone).trim() || null) : curr.phone;
       const nextUsername =

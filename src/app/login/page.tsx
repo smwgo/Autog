@@ -170,7 +170,7 @@ export default function LoginPage() {
             <input
               id="email"
               name="email"
-              type="email"
+              type="text"
               autoComplete="username"
               required
               value={email}

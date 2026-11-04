@@ -19,14 +19,14 @@ function NuevoUsuarioContent() {
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [pinCode, setPinCode] = useState("1234");
-  const [role, setRole] = useState("Taller");
+  const [role, setRole] = useState("POS");
   const [branch, setBranch] = useState("Principal");
   const [status, setStatus] = useState("Activo");
 
   // Accesos a Paneles calculados automáticamente según el Rol
   const [accessOficina, setAccessOficina] = useState<boolean>(false);
-  const [accessPos, setAccessPos] = useState<boolean>(false);
-  const [accessTaller, setAccessTaller] = useState<boolean>(true);
+  const [accessPos, setAccessPos] = useState<boolean>(true);
+  const [accessTaller, setAccessTaller] = useState<boolean>(false);
 
   const handleSelectPanel = (panelId: string) => {
     setRole(panelId);
@@ -72,7 +72,8 @@ function NuevoUsuarioContent() {
           const u = data.find((item: any) => item.id === editId);
           if (u) {
             setNombre(u.name || "");
-            setEmail(u.email || "");
+            const uEmail = u.email || "";
+            setEmail(uEmail.toLowerCase().endsWith("@gmail.com") ? uEmail.replace(/@gmail\.com$/i, "") : uEmail);
             setPinCode(u.pinCode || "1234");
             setRole(u.role || "Taller");
             setBranch(u.branch || "Principal");
@@ -94,10 +95,15 @@ function NuevoUsuarioContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nombre.trim() || !email.trim()) {
+    const cleanName = nombre.trim();
+    let rawEmail = email.trim().toLowerCase();
+
+    if (!cleanName || !rawEmail) {
       setErrorMsg("Completa el nombre y correo del usuario.");
       return;
     }
+
+    const finalEmail = rawEmail.includes("@") ? rawEmail : `${rawEmail}@gmail.com`;
 
     try {
       setGuardando(true);
@@ -105,15 +111,15 @@ function NuevoUsuarioContent() {
 
       const payload: any = {
         id: editId || undefined,
-        name: nombre.trim(),
-        email: email.trim().toLowerCase(),
+        name: cleanName,
+        email: finalEmail,
         pinCode: pinCode.trim() || "1234",
         role: role.trim() || "Taller",
         branch: branch.trim() || "Principal",
         status,
-        accessOficina: role === "Oficina" || role === "Presupuesto" || role === "Gerencia" || accessOficina,
-        accessPos: role === "POS" || role === "Gerencia" || accessPos,
-        accessTaller: role === "Taller" || role === "Presupuesto" || role === "Gerencia" || accessTaller,
+        accessOficina,
+        accessPos,
+        accessTaller,
       };
 
       const res = await fetch("/api/gerencia/usuarios", {
@@ -203,17 +209,29 @@ function NuevoUsuarioContent() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                      Correo *
+                    <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center justify-between">
+                      <span>Correo *</span>
+                      <span className="text-[11px] text-blue-600 dark:text-blue-400 font-medium">@gmail.com por defecto</span>
                     </label>
-                    <input
-                      required
-                      type="email"
-                      placeholder="usuario@autog.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"
-                    />
+                    <div className="relative flex items-center">
+                      <input
+                        required
+                        type="text"
+                        placeholder="ej. taller"
+                        value={email}
+                        onChange={(e) => {
+                          let val = e.target.value.trim().toLowerCase();
+                          if (val.endsWith("@gmail.com")) {
+                            val = val.replace(/@gmail\.com$/, "");
+                          }
+                          setEmail(val);
+                        }}
+                        className="w-full h-11 sm:h-12 pl-3.5 sm:pl-4 pr-24 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors font-mono"
+                      />
+                      <div className="absolute right-2 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-600 dark:text-zinc-300 select-none pointer-events-none">
+                        @gmail.com
+                      </div>
+                    </div>
                   </div>
 
                   <div>
@@ -234,19 +252,18 @@ function NuevoUsuarioContent() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                      Rol *
+                      Acceso *
                     </label>
                     <select
                       value={role}
                       onChange={(e) => handleSelectPanel(e.target.value)}
                       className="w-full h-11 sm:h-12 px-3 sm:px-3.5 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white outline-none focus:border-blue-500 transition-colors font-medium cursor-pointer"
                     >
-                      <option value="Oficina">Oficina</option>
-                      <option value="POS">POS</option>
-                      <option value="Taller">Taller</option>
-                      <option value="Presupuesto">Presupuesto</option>
-                      <option value="Cliente">Cliente</option>
-                      <option value="Gerencia">Gerencia</option>
+                      <option value="POS">🛒 POS</option>
+                      <option value="Oficina">🏢 Oficina</option>
+                      <option value="Taller">🔧 Taller</option>
+                      <option value="Presupuesto">📋 Presupuesto</option>
+                      <option value="Cliente">👤 Cliente</option>
                     </select>
                   </div>
 

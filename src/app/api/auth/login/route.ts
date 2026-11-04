@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       prisma.user.findFirst({
         where: cleanEmail.includes("@")
           ? { email: cleanEmail }
-          : { OR: [{ email: cleanEmail }, { name: cleanEmail }] },
+          : { OR: [{ email: cleanEmail }, { email: `${cleanEmail}@gmail.com` }, { name: cleanEmail }] },
       })
     );
 
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
           ? prisma.appUserAccess.findUnique({ where: { email: cleanEmail } })
           : prisma.appUserAccess.findFirst({
               where: {
-                OR: [{ email: cleanEmail }, { username: cleanEmail }, { name: cleanEmail }],
+                OR: [{ email: cleanEmail }, { email: `${cleanEmail}@gmail.com` }, { username: cleanEmail }, { name: cleanEmail }],
               },
             })
       );
