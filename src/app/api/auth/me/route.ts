@@ -34,7 +34,12 @@ export async function GET() {
           singleWord = isSucursal ? "Taller 2" : "Taller";
         } else if (roleUpper === "OFICINA") {
           singleWord = isSucursal ? "Oficina 2" : "Oficina";
-        } else if (roleUpper === "PRESUPUESTO") {
+        } else if (
+          roleUpper === "PRESUPUESTO" ||
+          roleUpper === "PRESUPUESTOS" ||
+          roleUpper === "PROPUESTA" ||
+          roleUpper === "PROPUESTAS"
+        ) {
           singleWord = "Presupuesto";
         } else if (roleUpper === "CLIENTE") {
           singleWord = "Cliente";

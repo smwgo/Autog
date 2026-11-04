@@ -102,14 +102,19 @@ export async function POST(req: Request) {
           // Determinar panel de destino
           if (isGerente) {
             redirectTo = "/gerencia";
+          } else if (
+            roleUpper === "PRESUPUESTO" ||
+            roleUpper === "PRESUPUESTOS" ||
+            roleUpper === "PROPUESTA" ||
+            roleUpper === "PROPUESTAS"
+          ) {
+            redirectTo = "/presupuestos";
           } else if (roleUpper === "POS" || appUser.accessPos) {
             redirectTo = "/pos";
           } else if (roleUpper === "TALLER" || appUser.accessTaller) {
             redirectTo = "/taller";
           } else if (roleUpper === "OFICINA" || appUser.accessOficina) {
             redirectTo = "/oficina";
-          } else if (roleUpper === "PRESUPUESTO" || roleUpper === "PRESUPUESTOS" || roleUpper === "PROPUESTA" || roleUpper === "PROPUESTAS") {
-            redirectTo = "/presupuestos";
           } else if (roleUpper === "CLIENTE") {
             redirectTo = "/cliente";
           } else {

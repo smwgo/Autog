@@ -187,10 +187,13 @@ export function Header() {
   })();
 
   const userPanelHref = (() => {
+    const role = (currentUser?.role || "").toUpperCase();
+    if (role === "PRESUPUESTO" || role === "PRESUPUESTOS" || role === "PROPUESTA" || role === "PROPUESTAS") {
+      return "/presupuestos";
+    }
     if (pathname.startsWith("/pos") || currentUser?.role === "POS" || currentUser?.accessPos) return "/pos";
     if (pathname.startsWith("/taller") || currentUser?.role === "Taller" || currentUser?.accessTaller) return "/taller";
     if (pathname.startsWith("/oficina") || currentUser?.role === "Oficina" || currentUser?.accessOficina) return "/oficina";
-    if (currentUser?.role === "Presupuesto" || currentUser?.role === "Propuesta") return "/presupuestos";
     if (currentUser?.role === "Cliente") return "/cliente";
     return "/gerencia";
   })();
