@@ -220,7 +220,7 @@ export function Header() {
   return (
     <>
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md pt-[env(safe-area-inset-top,0px)]">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 md:px-12">
+      <div className="container mx-auto flex min-h-16 flex-wrap items-center justify-between gap-y-1 py-2 px-4 sm:h-16 sm:flex-nowrap sm:py-0 sm:px-6 md:px-12">
         <Link href="/" className="flex shrink-0 items-center gap-2 min-h-[44px]">
           <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-blue-500/20">
             {/* Ícono automotriz (Llave/Herramienta) */}
@@ -236,9 +236,9 @@ export function Header() {
           </span>
         </Link>
         <div className="hidden md:flex gap-6"></div>
-        <div className="flex shrink-0 items-center gap-0.5 sm:gap-3 text-zinc-600 dark:text-zinc-300">
+        <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:ml-0 sm:gap-3 text-zinc-600 dark:text-zinc-300">
           {mounted && isAdministrator && (
-            <BranchTabs iconOnly />
+            <BranchTabs iconOnly isAdmin={isAdministrator} />
           )}
 
           <button onClick={toggleTheme} aria-label="Toggle Theme" className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:text-blue-600 transition-colors">

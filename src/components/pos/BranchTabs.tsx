@@ -15,6 +15,7 @@ interface BranchTabsProps {
   className?: string;
   size?: "sm" | "md";
   iconOnly?: boolean;
+  isAdmin?: boolean;
 }
 
 const OPTIONS: { value: FiltroSedeType; label: string; icon: string }[] = [
@@ -33,13 +34,14 @@ function checkIsAdminUser(user: any): boolean {
   );
 }
 
-export function BranchTabs({ onChange, className = "", size = "sm", iconOnly = false }: BranchTabsProps) {
+export function BranchTabs({ onChange, className = "", size = "sm", iconOnly = false, isAdmin: isAdminOverride }: BranchTabsProps) {
   const [userBranch, setUserBranch] = useState<SedeType>("PRINCIPAL");
   const [activeBranch, setActiveBranchState] = useState<FiltroSedeType>("PRINCIPAL");
   const [isAdmin, setIsAdmin] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const isAdminUser = isAdminOverride ?? isAdmin;
 
   useEffect(() => {
     setMounted(true);
@@ -114,7 +116,7 @@ export function BranchTabs({ onChange, className = "", size = "sm", iconOnly = f
   }, [open]);
 
   const handleSelect = (branch: FiltroSedeType) => {
-    if (!isAdmin && userBranch === "SUCURSAL") return;
+    if (!isAdminUser && userBranch === "SUCURSAL") return;
     setActiveBranchState(branch);
     setClientActiveBranch(branch);
     setOpen(false);
@@ -122,7 +124,7 @@ export function BranchTabs({ onChange, className = "", size = "sm", iconOnly = f
   };
 
   // Este botón solo sale en la barra superior (iconOnly) y solo para administradores
-  if (!mounted || !isAdmin || !iconOnly) {
+  if (!mounted || !isAdminUser || !iconOnly) {
     return null;
   }
 
