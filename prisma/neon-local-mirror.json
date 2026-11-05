@@ -1439,7 +1439,7 @@
       "differenceCash": null,
       "differenceCard": null,
       "differenceTransfer": null,
-      "totalSalesCash": "0",
+      "totalSalesCash": "69.6",
       "totalSalesCard": "0",
       "totalSalesTransfer": "0",
       "totalExpenses": "0",
@@ -1448,9 +1448,90 @@
       "openedAt": "2026-11-04T19:42:39.569Z",
       "closedAt": null,
       "movements": []
+    },
+    {
+      "id": "cmw43f0eq00003grdix9prlqm",
+      "sessionNumber": "CAJA-248648",
+      "status": "ABIERTA",
+      "initialCash": "25",
+      "declaredCash": null,
+      "declaredCard": null,
+      "declaredTransfer": null,
+      "expectedCash": "25",
+      "differenceCash": null,
+      "differenceCard": null,
+      "differenceTransfer": null,
+      "totalSalesCash": "0",
+      "totalSalesCard": "0",
+      "totalSalesTransfer": "0",
+      "totalExpenses": "0",
+      "notes": "Cajero: Super Administrador",
+      "branch": "SUCURSAL",
+      "openedAt": "2026-11-05T22:04:08.785Z",
+      "closedAt": null,
+      "movements": []
     }
   ],
-  "sale": [],
+  "sale": [
+    {
+      "id": "cmw445ojl000iu0chpnrd23fe",
+      "saleNumber": "VENTA-001",
+      "customerId": null,
+      "customerName": "Diego",
+      "subtotal": "60",
+      "tax": "9.6",
+      "discount": "0",
+      "total": "69.6",
+      "paymentMethod": "Efectivo",
+      "status": "Completada",
+      "branch": "PRINCIPAL",
+      "createdAt": "2026-11-05T22:24:53.122Z",
+      "updatedAt": "2026-11-05T22:24:53.122Z",
+      "items": [
+        {
+          "id": "cmw445ojl000ku0chhvhotq00",
+          "saleId": "cmw445ojl000iu0chpnrd23fe",
+          "productId": null,
+          "code": "TC-TC_ALI_COMPLETA",
+          "name": "Alineación Completa 3D",
+          "price": "25",
+          "quantity": 1,
+          "total": "25"
+        },
+        {
+          "id": "cmw445ojl000lu0ch3nucb4df",
+          "saleId": "cmw445ojl000iu0chpnrd23fe",
+          "productId": null,
+          "code": "TC-TC_BAL_DINAMICO",
+          "name": "Balanceo Dinámico",
+          "price": "5",
+          "quantity": 1,
+          "total": "5"
+        },
+        {
+          "id": "cmw445ojl000mu0ch292c4fzi",
+          "saleId": "cmw445ojl000iu0chpnrd23fe",
+          "productId": null,
+          "code": "SRV-1",
+          "name": "Servicio Técnico",
+          "price": "15",
+          "quantity": 1,
+          "total": "15"
+        },
+        {
+          "id": "cmw445ojl000nu0chgtx1xvkd",
+          "saleId": "cmw445ojl000iu0chpnrd23fe",
+          "productId": null,
+          "code": "SRV-2",
+          "name": "Servicio Técnico",
+          "price": "15",
+          "quantity": 1,
+          "total": "15"
+        }
+      ],
+      "customer": null
+    }
+  ],
   "clientInvoice": [
     {
       "id": "inv_5nkkjw8mw2ix55c",
