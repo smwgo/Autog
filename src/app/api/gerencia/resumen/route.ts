@@ -7,6 +7,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const periodo = searchParams.get("periodo") || "este_mes";
+    const agrupacion = searchParams.get("agrupacion");
     const desdeParam = searchParams.get("desde");
     const hastaParam = searchParams.get("hasta");
     const sucursalParam = searchParams.get("sucursal") || searchParams.get("branch") || searchParams.get("sede");
@@ -322,28 +323,36 @@ export async function GET(request: Request) {
       }, 0);
       const cuentasPorCobrar = Number((carteraCreditoTotal + ordenesPorCobrar).toFixed(2));
 
-      // 9. CÁLCULO REAL DE GRÁFICO SEMANAL (Lunes a Domingo)
+      // 9. Ingresos y gastos agrupados por día de semana o por mes.
+      const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
       const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-      const weekOrder = [1, 2, 3, 4, 5, 6, 0]; // Lun a Dom
+      const monthChart = agrupacion === "mes";
+      const chartPeriods = monthChart
+        ? monthNames.map((name, month) => ({ index: month, label: name }))
+        : [1, 2, 3, 4, 5, 6, 0].map((day) => ({ index: day, label: dayNames[day] }));
 
-      const dayData = weekOrder.map((dayIdx) => {
-        const dayLabel = dayNames[dayIdx];
+      const dayData = chartPeriods.map(({ index, label }) => {
+        const matchesPeriod = (date: Date) =>
+          monthChart ? date.getMonth() === index : date.getDay() === index;
         const daySales = branchSalesPeriod
-          .filter((s) => new Date(s.createdAt).getDay() === dayIdx)
-          .reduce((acc, s) => acc + Number(s.total || 0), 0);
+          .filter((sale) => matchesPeriod(new Date(sale.createdAt)))
+          .reduce((acc, sale) => acc + Number(sale.total || 0), 0);
         const dayOrders = ordersInPeriod
-          .filter((o) => getRecordDate(o).getDay() === dayIdx)
-          .reduce((acc, o) => acc + getOrderValue(o), 0);
+          .filter((order) => matchesPeriod(getRecordDate(order)))
+          .reduce((acc, order) => acc + getOrderValue(order), 0);
         const income = Number((daySales + dayOrders).toFixed(2));
 
         const expense = Number(
           movementsInPeriod
-            .filter((m) => (m.type === "GASTO" || m.type === "RETIRO") && new Date(m.createdAt).getDay() === dayIdx)
-            .reduce((acc, m) => acc + Number(m.amount || 0), 0)
+            .filter((movement) =>
+              (movement.type === "GASTO" || movement.type === "RETIRO") &&
+              matchesPeriod(new Date(movement.createdAt))
+            )
+            .reduce((acc, movement) => acc + Number(movement.amount || 0), 0)
             .toFixed(2)
         );
 
-        return { day: dayLabel, income, expense };
+        return { day: label, income, expense };
       });
 
       const maxChartVal = Math.max(...dayData.map((d) => Math.max(d.income, d.expense)), 1);

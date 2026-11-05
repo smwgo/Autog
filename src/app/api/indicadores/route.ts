@@ -26,8 +26,13 @@ export async function GET(request: Request) {
 
     const database = getNeonPrismaClient();
     const data = await withRetry(async () => {
+      const salesWhere = {
+        createdAt: { gte: startDate, lte: endDate },
+        status: { not: "Anulada" },
+      };
       const [
         salesCount,
+        soldItems,
         customerCount,
         products,
         orders,
@@ -37,7 +42,16 @@ export async function GET(request: Request) {
         employees,
         users,
       ] = await Promise.all([
-        database.sale.count({ where: { createdAt: { gte: startDate, lte: endDate } } }),
+        database.sale.count({ where: salesWhere }),
+        database.saleItem.findMany({
+          where: { sale: salesWhere },
+          select: {
+            name: true,
+            productId: true,
+            quantity: true,
+            product: { select: { category: true, tipo: true } },
+          },
+        }),
         database.customer.count(),
         database.product.findMany({
           select: { stock: true, stockNorte: true, minStock: true },
@@ -55,8 +69,32 @@ export async function GET(request: Request) {
       const closedQuoteStatuses = ["aprob", "acept", "rechaz", "cancel", "vencid"];
       const inactiveEmployeeStatuses = ["inactiv", "suspend", "baja", "desactiv"];
 
+      const bestSellerByType = (isProduct: boolean) => {
+        const totals = new Map<string, { name: string; quantity: number }>();
+        for (const item of soldItems) {
+          const itemIsService =
+            !item.productId ||
+            /servicio|service|taller/i.test(`${item.product?.category ?? ""} ${item.product?.tipo ?? ""}`);
+          if (itemIsService === isProduct) continue;
+          const name = item.name.trim();
+          if (!name) continue;
+          const key = name.toLocaleLowerCase();
+          const current = totals.get(key);
+          totals.set(key, {
+            name: current?.name ?? name,
+            quantity: (current?.quantity ?? 0) + item.quantity,
+          });
+        }
+
+        return [...totals.values()].sort((a, b) => b.quantity - a.quantity)[0] ?? null;
+      };
+
       return {
         salesCount,
+        bestSellers: {
+          product: bestSellerByType(true),
+          service: bestSellerByType(false),
+        },
         customers: customerCount,
         inventory: {
           products: products.length,

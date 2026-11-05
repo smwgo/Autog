@@ -107,6 +107,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
       customerId = null,
+      customerIdentification = null,
       customerName = "Consumidor Final",
       items = [],
       paymentMethod = "Efectivo",
@@ -131,6 +132,24 @@ export async function POST(request: Request) {
 
     // 1. Ejecutar verificación de precios, creación de venta, descuento de stock y actualización de caja en una sola transacción atómica
     const sale = await prisma.$transaction(async (tx) => {
+      let linkedCustomer = null;
+      if (typeof customerId === "string" && customerId.trim()) {
+        linkedCustomer = await tx.customer.findUnique({
+          where: { id: customerId.trim() },
+          select: { id: true, name: true },
+        });
+      }
+      if (
+        !linkedCustomer &&
+        typeof customerIdentification === "string" &&
+        customerIdentification.trim()
+      ) {
+        linkedCustomer = await tx.customer.findUnique({
+          where: { identification: customerIdentification.trim() },
+          select: { id: true, name: true },
+        });
+      }
+
       let subtotalCalc = 0;
       const saleItemsData = [];
 
@@ -139,35 +158,42 @@ export async function POST(request: Request) {
         const quantity = Math.max(1, parseInt((item.qty || item.quantity || 1).toString(), 10) || 1);
         let name = item.name || "Producto General";
         let code = item.code || "S/C";
+        let validProductId: string | null = null;
+        let dbProduct = null;
 
-        // Si tiene productId, verificar precio y existencia autorizada en Neon
         if (item.productId) {
-          const dbProduct = await tx.product.findUnique({
+          dbProduct = await tx.product.findUnique({
             where: { id: item.productId },
           });
-          if (dbProduct) {
-            price = parseFloat(dbProduct.price.toString());
-            name = dbProduct.name;
-            code = dbProduct.code;
+        }
+        if (!dbProduct && typeof item.code === "string" && item.code.trim()) {
+          dbProduct = await tx.product.findUnique({
+            where: { code: item.code.trim() },
+          });
+        }
 
-            // Descontar inventario dentro de la transacción
-            const newStock = Math.max(0, dbProduct.stock - quantity);
-            const newStatus = calcularEstado(newStock, dbProduct.minStock);
-            await tx.product.update({
-              where: { id: dbProduct.id },
-              data: {
-                stock: newStock,
-                status: newStatus,
-              },
-            });
-          }
+        if (dbProduct) {
+          validProductId = dbProduct.id;
+          price = parseFloat(dbProduct.price.toString());
+          name = dbProduct.name;
+          code = dbProduct.code;
+
+          const newStock = Math.max(0, dbProduct.stock - quantity);
+          const newStatus = calcularEstado(newStock, dbProduct.minStock);
+          await tx.product.update({
+            where: { id: dbProduct.id },
+            data: {
+              stock: newStock,
+              status: newStatus,
+            },
+          });
         }
 
         const itemTotal = price * quantity;
         subtotalCalc += itemTotal;
 
         saleItemsData.push({
-          productId: item.productId || null,
+          productId: validProductId,
           code,
           name,
           price,
@@ -204,8 +230,8 @@ export async function POST(request: Request) {
       const createdSale = await tx.sale.create({
         data: {
           saleNumber,
-          customerId: customerId || null,
-          customerName: customerName || "Consumidor Final",
+          customerId: linkedCustomer?.id ?? null,
+          customerName: linkedCustomer?.name || customerName || "Consumidor Final",
           subtotal: subtotalCalc,
           tax: taxCalc,
           discount: numDiscount,

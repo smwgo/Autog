@@ -1247,6 +1247,7 @@ export default function NuevaVentaPage() {
 
       const payload = {
         customerId: clienteSeleccionado?.id || null,
+        customerIdentification: clienteSeleccionado?.identification || null,
         customerName: custName,
         vehiclePlate: vehiculoSeleccionado?.plate || null,
         vehicleModel: vehiculoSeleccionado ? `${vehiculoSeleccionado.brand} ${vehiculoSeleccionado.model}` : null,

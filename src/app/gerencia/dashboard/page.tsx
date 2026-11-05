@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
 
@@ -39,6 +39,10 @@ interface Summary {
 
 interface ApplicationStats {
   salesCount: number;
+  bestSellers: {
+    product: { name: string; quantity: number } | null;
+    service: { name: string; quantity: number } | null;
+  };
   customers: number;
   inventory: { products: number; units: number; lowStock: number };
   workshop: { activeOrders: number; openTasks: number };
@@ -133,12 +137,38 @@ function Icon({ name, className = "h-5 w-5" }: { name: string; className?: strin
 
 export default function DashboardGeneral() {
   const [period, setPeriod] = useState<Period>("month");
+  const [periodMenuOpen, setPeriodMenuOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [stats, setStats] = useState<ApplicationStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const periodMenuRef = useRef<HTMLDivElement>(null);
+  const periodButtonRef = useRef<HTMLButtonElement>(null);
   const dateRange = useMemo(() => getDateRange(period), [period]);
+
+  useEffect(() => {
+    if (!periodMenuOpen) return;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!periodMenuRef.current?.contains(event.target as Node)) {
+        setPeriodMenuOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setPeriodMenuOpen(false);
+        periodButtonRef.current?.focus();
+      }
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [periodMenuOpen]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -147,7 +177,7 @@ export default function DashboardGeneral() {
     const loadDashboard = async () => {
       try {
         const [summaryResponse, statsResponse] = await Promise.all([
-          fetch(`/api/gerencia/resumen?periodo=personalizado&${query}`, { signal: controller.signal }),
+            fetch(`/api/gerencia/resumen?periodo=personalizado&${query}${period === "year" ? "&agrupacion=mes" : ""}`, { signal: controller.signal }),
           fetch(`/api/indicadores?${query}`, { signal: controller.signal }),
         ]);
         const [summaryResult, statsResult] = await Promise.all([
@@ -178,7 +208,7 @@ export default function DashboardGeneral() {
 
     loadDashboard();
     return () => controller.abort();
-  }, [dateRange, reloadKey]);
+  }, [dateRange, period, reloadKey]);
 
   const setSelectedPeriod = (value: Period) => {
     setLoading(true);
@@ -195,47 +225,6 @@ export default function DashboardGeneral() {
     setStats(null);
     setReloadKey((key) => key + 1);
   };
-
-  const handleExport = () => {
-    if (!summary || !stats) return;
-    const rows: (string | number)[][] = [
-      ["Indicador", "Valor"],
-      ["Periodo", summary.dateLabel],
-      ["Cobertura", "Todas las sedes y módulos"],
-      ["Ventas totales", summary.metrics.ventasTotales],
-      ["Cobrado", summary.metrics.cobradoEnCaja],
-      ["Transacciones POS", stats.salesCount],
-      ["Clientes registrados", stats.customers],
-      ["Órdenes de taller activas", stats.workshop.activeOrders],
-      ["Tareas de taller abiertas", stats.workshop.openTasks],
-      ["Productos en catálogo", stats.inventory.products],
-      ["Unidades en inventario", stats.inventory.units],
-      ["Productos con stock bajo", stats.inventory.lowStock],
-      ["Citas por atender", stats.appointments],
-      ["Cotizaciones pendientes", stats.pendingQuotes],
-      ["Personal activo", stats.teamMembers],
-      ["Usuarios del sistema", stats.systemUsers],
-      ["Gastos del periodo", summary.metrics.gastosYRepuestos],
-      ["Cuentas por cobrar", summary.metrics.cuentasPorCobrar],
-    ];
-    const csv = rows
-      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
-      .join("\r\n");
-    const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "indicadores-autog.csv";
-    link.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
-
-  const primaryCards = [
-    { label: "Ingresos del período", value: summary ? formatCurrency(summary.metrics.ventasTotales) : "—", hint: periodLabels[period], icon: "sales", color: "text-cyan-600 dark:text-cyan-400", iconBg: "bg-cyan-500/10" },
-    { label: "Ventas en POS", value: stats ? String(stats.salesCount) : "—", hint: "transacciones", icon: "cash", color: "text-emerald-600 dark:text-emerald-400", iconBg: "bg-emerald-500/10" },
-    { label: "Clientes registrados", value: stats ? String(stats.customers) : "—", hint: "en toda la aplicación", icon: "customers", color: "text-violet-600 dark:text-violet-400", iconBg: "bg-violet-500/10" },
-    { label: "Órdenes activas", value: stats ? String(stats.workshop.activeOrders) : "—", hint: "en taller", icon: "workshop", color: "text-amber-600 dark:text-amber-400", iconBg: "bg-amber-500/10" },
-  ];
 
   const modules = [
     { title: "Punto de venta", description: "Ventas y cobros", icon: "cash", href: "/pos", color: "text-emerald-500", value: stats ? `${stats.salesCount} ventas` : "—", detail: summary ? `${formatCurrency(summary.metrics.cobradoEnCaja)} cobrados` : "Cargando…" },
@@ -267,34 +256,60 @@ export default function DashboardGeneral() {
             <h1 className="text-xl font-bold tracking-tight text-zinc-950 dark:text-white sm:text-2xl">Indicadores</h1>
           </div>
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-            <label className="sr-only" htmlFor="indicator-period">Período</label>
-            <select
-              id="indicator-period"
-              value={period}
-              onChange={(event) => setSelectedPeriod(event.target.value as Period)}
-              className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700 shadow-sm outline-none transition focus:border-blue-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200"
-            >
-              {(Object.entries(periodLabels) as [Period, string][]).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
-            <button
-              type="button"
-              onClick={refresh}
-              disabled={loading}
-              aria-label="Actualizar indicadores"
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-blue-300 hover:text-blue-600 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
-            >
-              <svg className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 7v5h-5M4 17v-5h5" /><path d="M5.6 9a7 7 0 0 1 11.6-2L20 12M4 12l2.8 5a7 7 0 0 0 11.6-2" /></svg>
-            </button>
-            <button
-              type="button"
-              onClick={handleExport}
-              disabled={!summary || !stats || loading}
-              aria-label="Exportar CSV"
-              title="Exportar CSV"
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v4h14v-4" /></svg>
-            </button>
+            <div className="relative" ref={periodMenuRef}>
+              <button
+                ref={periodButtonRef}
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded={periodMenuOpen}
+                aria-controls="indicator-period-menu"
+                onClick={() => setPeriodMenuOpen((isOpen) => !isOpen)}
+                className="inline-flex h-10 min-w-36 items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-3.5 text-sm font-medium text-zinc-700 shadow-sm transition hover:border-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-zinc-700"
+              >
+                <span>{periodLabels[period]}</span>
+                <svg
+                  aria-hidden="true"
+                  className={`h-4 w-4 text-zinc-400 transition-transform ${periodMenuOpen ? "rotate-180" : ""}`}
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path fillRule="evenodd" d="M5.22 7.22a.75.75 0 0 1 1.06 0L10 10.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 8.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                </svg>
+              </button>
+              {periodMenuOpen && (
+                <div
+                  id="indicator-period-menu"
+                  role="menu"
+                  aria-label="Seleccionar período"
+                  className="absolute right-0 z-30 mt-2 w-48 origin-top-right rounded-xl border border-zinc-200/80 bg-white p-1.5 shadow-lg shadow-zinc-900/10 ring-1 ring-black/5 dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-black/30 dark:ring-white/5"
+                >
+                  {(Object.entries(periodLabels) as [Period, string][]).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={period === value}
+                      onClick={() => {
+                        setSelectedPeriod(value);
+                        setPeriodMenuOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm transition ${
+                        period === value
+                          ? "bg-zinc-100 font-semibold text-zinc-900 dark:bg-zinc-800 dark:text-white"
+                          : "text-zinc-600 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/70"
+                      }`}
+                    >
+                      {label}
+                      {period === value && (
+                        <svg aria-hidden="true" className="h-4 w-4 text-blue-600 dark:text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.2 7.26a1 1 0 0 1-1.42.003L3.294 9.17a1 1 0 1 1 1.412-1.416l4.086 4.078 6.498-6.548a1 1 0 0 1 1.414.006Z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -305,54 +320,39 @@ export default function DashboardGeneral() {
           </div>
         )}
 
-        <section aria-label="Indicadores principales" className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
-          {primaryCards.map((card) => (
-            <article key={card.label} className="min-w-0 rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-[#111722] sm:rounded-3xl sm:p-5">
-              <div className="flex items-start justify-between gap-2">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${card.iconBg} ${card.color}`}><Icon name={card.icon} /></div>
-                {loading && <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500" />}
-              </div>
-              <p className="mt-5 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400 sm:text-sm">{card.label}</p>
-              <p className={`mt-1 truncate text-2xl font-bold tracking-tight sm:text-3xl ${card.color}`}>{loading && !summary && !stats ? "…" : card.value}</p>
-              <p className="mt-1 truncate text-[11px] text-zinc-400 dark:text-zinc-500 sm:text-xs">{card.hint}</p>
-            </article>
-          ))}
-        </section>
-
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_1fr]">
           <div className="rounded-3xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-[#111722] sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">Rendimiento</p>
-                <h3 className="mt-1 text-lg font-bold text-zinc-900 dark:text-white">Ingresos y gastos por día de semana</h3>
               </div>
               <div className="flex flex-wrap gap-3 text-xs">
                 <span className="inline-flex items-center gap-1.5 text-zinc-500"><i className="h-2.5 w-2.5 rounded-sm bg-blue-500" />Ingresos</span>
-                <span className="inline-flex items-center gap-1.5 text-zinc-500"><i className="h-2.5 w-2.5 rounded-sm bg-zinc-300 dark:bg-zinc-600" />Gastos</span>
+                <span className="inline-flex items-center gap-1.5 text-zinc-500"><i className="h-2.5 w-2.5 rounded-sm bg-rose-500" />Gastos</span>
               </div>
             </div>
-            <div className="mt-7 flex h-48 items-end justify-between gap-2 sm:h-56 sm:gap-4">
+            <div className={`mt-7 flex h-48 items-end justify-between sm:h-56 ${period === "year" ? "gap-1 sm:gap-2" : "gap-2 sm:gap-4"}`}>
               {chart.map((day) => (
                 <div key={day.day} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
-                  <div className="flex h-full w-full items-end justify-center gap-1.5">
+                  <div className={`flex h-full w-full items-end justify-center ${period === "year" ? "gap-0.5 sm:gap-1" : "gap-1.5"}`}>
                     <div
                       title={`${day.day}: ingresos ${formatCurrency(day.income)}`}
-                      className="w-full max-w-7 rounded-t-md bg-blue-500 transition-all"
+                      className={`w-full rounded-t-md bg-blue-500 transition-all ${period === "year" ? "max-w-4" : "max-w-7"}`}
                       style={{ height: `${day.income ? Math.max(5, (day.income / maxChartValue) * 100) : 2}%` }}
                     />
                     <div
                       title={`${day.day}: gastos ${formatCurrency(day.expense)}`}
-                      className="w-full max-w-7 rounded-t-md bg-zinc-200 transition-all dark:bg-zinc-700"
+                      className={`w-full rounded-t-md bg-rose-500 transition-all ${period === "year" ? "max-w-4" : "max-w-7"}`}
                       style={{ height: `${day.expense ? Math.max(5, (day.expense / maxChartValue) * 100) : 2}%` }}
                     />
                   </div>
-                  <span className="text-[11px] font-medium text-zinc-400">{day.day}</span>
+                  <span className={`font-medium text-zinc-400 ${period === "year" ? "text-[9px] sm:text-[11px]" : "text-[11px]"}`}>{day.day}</span>
                 </div>
               ))}
               {!chart.length && <p className="w-full self-center text-center text-sm text-zinc-400">{loading ? "Cargando actividad…" : "No hay actividad para mostrar."}</p>}
             </div>
             <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 border-t border-zinc-100 pt-4 text-sm dark:border-zinc-800">
-              <span className="text-zinc-500">Ingresos <strong className="ml-1 text-zinc-900 dark:text-white">{summary ? formatCurrency(summary.metrics.ventasTotales) : "—"}</strong></span>
+              <span className="text-zinc-500">Ingresos <strong className="ml-1 text-blue-500">{summary ? formatCurrency(summary.metrics.ventasTotales) : "—"}</strong></span>
               <span className="text-zinc-500">Gastos <strong className="ml-1 text-rose-500">{summary ? formatCurrency(summary.metrics.gastosYRepuestos) : "—"}</strong></span>
               <span className="text-zinc-500">Por cobrar <strong className="ml-1 text-amber-600 dark:text-amber-400">{summary ? formatCurrency(summary.metrics.cuentasPorCobrar) : "—"}</strong></span>
             </div>
@@ -362,9 +362,22 @@ export default function DashboardGeneral() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">Pulso del sistema</p>
-                <h3 className="mt-1 text-lg font-bold text-zinc-900 dark:text-white">Módulos de AutoG</h3>
               </div>
               <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">Vista global</span>
+            </div>
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {[
+                { label: "Producto más vendido", item: stats?.bestSellers.product, color: "text-cyan-600 dark:text-cyan-400" },
+                { label: "Servicio más vendido", item: stats?.bestSellers.service, color: "text-violet-600 dark:text-violet-400" },
+              ].map(({ label, item, color }) => (
+                <div key={label} className="min-w-0 rounded-xl border border-zinc-100 bg-zinc-50/80 px-3 py-2.5 dark:border-zinc-800 dark:bg-white/[0.03]">
+                  <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">{label}</p>
+                  <p className={`mt-1 truncate text-sm font-semibold ${color}`}>
+                    {loading && !stats ? "Cargando…" : item ? item.name : "Sin ventas"}
+                  </p>
+                  {item && <p className="mt-0.5 text-[11px] text-zinc-400">{item.quantity} vendidos</p>}
+                </div>
+              ))}
             </div>
             <div className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
               {modules.map((module) => (
@@ -388,7 +401,6 @@ export default function DashboardGeneral() {
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">Actividad del taller</p>
               <h3 className="mt-1 text-lg font-bold text-zinc-900 dark:text-white">Órdenes recientes</h3>
             </div>
-            <Link href="/taller" className="text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400">Abrir taller <span aria-hidden="true">→</span></Link>
           </div>
           {loading && !summary ? (
             <p className="py-5 text-sm text-zinc-500">Cargando actividad del taller…</p>
@@ -399,7 +411,7 @@ export default function DashboardGeneral() {
               {recentOrders.slice(0, 8).map((order) => (
                 <article key={order.id} className="min-w-0 rounded-2xl bg-zinc-50 p-4 dark:bg-white/[0.03]">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm font-bold text-zinc-900 dark:text-white">{order.orderNumber}</p>
+                    <p className="truncate text-sm font-bold text-zinc-900 dark:text-white">{order.orderNumber.replace(/^OT\s*/i, "")}</p>
                     <span className="h-2 w-2 shrink-0 rounded-full bg-cyan-500" title={order.status} />
                   </div>
                   <p className="mt-1 truncate text-xs text-zinc-500">{order.client} · {order.vehicle}</p>
