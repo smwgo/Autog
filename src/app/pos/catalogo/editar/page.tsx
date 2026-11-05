@@ -83,11 +83,7 @@ function EditarProductoContent() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubirFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-
+  const handleSubirFoto = async (file: File) => {
     if (!file.type.startsWith("image/")) {
       setErrorFoto("El archivo seleccionado debe ser una imagen válida (JPG, PNG, WEBP, AVIF).");
       return;
@@ -283,7 +279,7 @@ function EditarProductoContent() {
               <ProductoFotoPicker
                 imageUrl={formData.imageUrl}
                 uploading={subiendoFoto}
-                onChange={handleSubirFoto}
+                onFileSelected={handleSubirFoto}
                 onRemove={() => setFormData((prev) => ({ ...prev, imageUrl: "" }))}
                 error={errorFoto}
               />

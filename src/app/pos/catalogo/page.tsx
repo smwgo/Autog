@@ -143,11 +143,7 @@ export default function CatalogoPage() {
     setErrorFotoModal(null);
   };
 
-  const handleSubirFotoModal = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-
+  const handleSubirFotoModal = async (file: File) => {
     if (!file.type.startsWith("image/")) {
       setErrorFotoModal("El archivo seleccionado debe ser una imagen válida (JPG, PNG, WEBP, AVIF).");
       return;
@@ -859,7 +855,7 @@ export default function CatalogoPage() {
                   <ProductoFotoPicker
                     imageUrl={form.imageUrl}
                     uploading={subiendoFotoModal}
-                    onChange={handleSubirFotoModal}
+                    onFileSelected={handleSubirFotoModal}
                     onRemove={() => setForm((prev) => ({ ...prev, imageUrl: "" }))}
                     error={errorFotoModal}
                     size="compact"
