@@ -1,0 +1,2 @@
+ALTER TABLE "Product"
+ALTER COLUMN "stockNorte" SET DEFAULT 0;

@@ -22,7 +22,7 @@ export default function InventarioGlobal() {
     category: "Lubricantes",
     price: "",
     stock: "15",
-    stockNorte: "10",
+    stockNorte: "0",
     minStock: "5",
   });
 
@@ -57,7 +57,7 @@ export default function InventarioGlobal() {
       category: "Lubricantes",
       price: "",
       stock: "20",
-      stockNorte: "10",
+      stockNorte: "0",
       minStock: "5",
     });
     setModalOpen(true);
@@ -71,7 +71,7 @@ export default function InventarioGlobal() {
       category: row.category || "General",
       price: String(row.price || 0),
       stock: String(row.stock ?? 0),
-      stockNorte: String(row.stockNorte ?? 10),
+      stockNorte: String(row.stockNorte ?? 0),
       minStock: String(row.minStock ?? 5),
     });
     setModalOpen(true);
@@ -124,7 +124,7 @@ export default function InventarioGlobal() {
 
   const filtered = products.filter((p) => {
     const s1 = Number(p.stock ?? 0);
-    const s2 = Number(p.stockNorte ?? 10);
+    const s2 = Number(p.stockNorte ?? 0);
     const min = Number(p.minStock ?? 5);
     if (catFilter === "Stock Bajo" && !(s1 <= min || s2 <= min)) return false;
     if (catFilter !== "Todos" && catFilter !== "Stock Bajo" && p.category !== catFilter) return false;
@@ -133,11 +133,11 @@ export default function InventarioGlobal() {
   });
 
   const totalValue = products.reduce(
-    (acc, p) => acc + Number(p.price || 0) * (Number(p.stock || 0) + Number(p.stockNorte ?? 10)),
+    (acc, p) => acc + Number(p.price || 0) * (Number(p.stock || 0) + Number(p.stockNorte ?? 0)),
     0
   );
   const criticalCount = products.filter(
-    (p) => Number(p.stock ?? 0) <= Number(p.minStock ?? 5) || Number(p.stockNorte ?? 10) <= Number(p.minStock ?? 5)
+    (p) => Number(p.stock ?? 0) <= Number(p.minStock ?? 5) || Number(p.stockNorte ?? 0) <= Number(p.minStock ?? 5)
   ).length;
 
   return (
@@ -265,7 +265,7 @@ export default function InventarioGlobal() {
             ) : (
               filtered.map((row) => {
                 const s1 = Number(row.stock ?? 0);
-                const s2 = Number(row.stockNorte ?? 10);
+                const s2 = Number(row.stockNorte ?? 0);
                 const min = Number(row.minStock ?? 5);
                 const alert = s1 <= min || s2 <= min;
                 return (
@@ -370,7 +370,7 @@ export default function InventarioGlobal() {
                     </tr>
                   ) : filtered.map((row) => {
                     const s1 = Number(row.stock ?? 0);
-                    const s2 = Number(row.stockNorte ?? 10);
+                    const s2 = Number(row.stockNorte ?? 0);
                     const min = Number(row.minStock ?? 5);
                     const alert = s1 <= min || s2 <= min;
                     return (
@@ -557,7 +557,7 @@ export default function InventarioGlobal() {
                 >
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.code} - {p.name} (Prin: {p.stock} | Norte: {p.stockNorte ?? 10})
+                      {p.code} - {p.name} (Prin: {p.stock} | Norte: {p.stockNorte ?? 0})
                     </option>
                   ))}
                 </select>

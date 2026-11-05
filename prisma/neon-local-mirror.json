@@ -37,6 +37,44 @@
           "updatedAt": "2026-11-04T18:37:06.639Z"
         }
       ]
+    },
+    {
+      "id": "cmw2lqaii00001beiooh185cv",
+      "identification": "0923476857",
+      "name": "Andrea Prado",
+      "type": "Personal",
+      "phone": "0987658304",
+      "email": "andreita_pm16@hotmail.com",
+      "address": "Daule",
+      "avatar": null,
+      "imageUrl": null,
+      "vip": false,
+      "notes": null,
+      "branch": "PRINCIPAL",
+      "assignedToSucursal": false,
+      "lastVisit": "2026-11-04T21:01:15.806Z",
+      "createdAt": "2026-11-04T21:01:15.806Z",
+      "updatedAt": "2026-11-04T21:02:44.276Z",
+      "vehicles": [
+        {
+          "id": "cmw2lqawj00021beiub4qqfeu",
+          "customerId": "cmw2lqaii00001beiooh185cv",
+          "plate": "GSL4916",
+          "vehicleType": "Auto",
+          "brand": "Skoda",
+          "model": "Fabia",
+          "year": 2026,
+          "color": null,
+          "mileage": 345783,
+          "nextOilChangeMileage": null,
+          "imageUrl": null,
+          "photosJson": "[]",
+          "vin": null,
+          "fuelType": "Gasolina",
+          "createdAt": "2026-11-04T21:01:16.144Z",
+          "updatedAt": "2026-11-04T21:02:44.408Z"
+        }
+      ]
     }
   ],
   "vehicle": [
@@ -75,6 +113,24 @@
         "createdAt": "2026-11-03T07:28:10.542Z",
         "updatedAt": "2026-11-03T07:28:10.542Z"
       }
+    },
+    {
+      "id": "cmw2lqawj00021beiub4qqfeu",
+      "customerId": "cmw2lqaii00001beiooh185cv",
+      "plate": "GSL4916",
+      "vehicleType": "Auto",
+      "brand": "Skoda",
+      "model": "Fabia",
+      "year": 2026,
+      "color": null,
+      "mileage": 345783,
+      "nextOilChangeMileage": null,
+      "imageUrl": null,
+      "photosJson": "[]",
+      "vin": null,
+      "fuelType": "Gasolina",
+      "createdAt": "2026-11-04T21:01:16.144Z",
+      "updatedAt": "2026-11-04T21:02:44.408Z"
     }
   ],
   "workshopOrder": [
@@ -147,6 +203,22 @@
       "paymentGatewayUrl": null,
       "posRequestId": null,
       "transferredFrom": null
+    },
+    {
+      "id": "ord_6f43gipmw2lqaym",
+      "orderNumber": "OT #00001",
+      "status": "Listo para Entregar",
+      "branch": "PRINCIPAL",
+      "client": "Andrea Prado",
+      "vehicle": "Skoda Fabia 2026",
+      "plate": "IGSL-49",
+      "totalCost": "45",
+      "createdAt": "2026-11-04T21:01:16.809Z",
+      "dateIn": "2026-11-04T21:01:16.809Z",
+      "updatedAt": "2026-11-04T21:54:50.988Z",
+      "completedAt": null,
+      "itemsJson": "[{\"id\":\"tc_tc_bal_dinamico_1793826246883\",\"key\":\"key_tc_bal_dinamico_1793826246883\",\"serviceId\":\"tc_bal_dinamico\",\"type\":\"SERVICE\",\"category\":\"Tecnicentro\",\"subCategory\":\"ALINEACION\",\"cwCategoryId\":\"TODO\",\"code\":\"TC-TC_BAL_DINAMICO\",\"name\":\"Balanceo Dinámico\",\"brand\":\"Tecnicentro\",\"presentation\":\"30 min\",\"unitOfMeasure\":\"Servicio\",\"price\":5,\"total\":20,\"qty\":4,\"estimatedMinutes\":30,\"vehicleType\":\"General\",\"status\":\"Listo\",\"completed\":true,\"empleado_id\":\"emp-carlos-rodriguez\",\"empleado_nombre\":\"Carlos Rodríguez\"},{\"id\":\"tc_tc_ali_completa_1793826293740\",\"key\":\"key_tc_ali_completa_1793826293740\",\"serviceId\":\"tc_ali_completa\",\"type\":\"SERVICE\",\"category\":\"Tecnicentro\",\"subCategory\":\"ALINEACION\",\"cwCategoryId\":\"TODO\",\"code\":\"TC-TC_ALI_COMPLETA\",\"name\":\"Alineación Completa 3D\",\"brand\":\"Tecnicentro\",\"presentation\":\"30 min\",\"unitOfMeasure\":\"Servicio\",\"price\":25,\"total\":25,\"qty\":1,\"estimatedMinutes\":30,\"vehicleType\":\"General\",\"status\":\"Listo\",\"completed\":true,\"empleado_id\":\"emp-carlos-rodriguez\",\"empleado_nombre\":\"Carlos Rodríguez\"}]",
+      "quoteNumber": null
     }
   ],
   "employee": [],
@@ -526,7 +598,7 @@
       "category": "Lubricantes",
       "price": "1",
       "stock": 1,
-      "stockNorte": 10,
+      "stockNorte": 0,
       "minStock": 5,
       "status": "Bajo Stock",
       "code": "AM-75767-36",
@@ -544,7 +616,7 @@
       "category": "Lubricantes",
       "price": "1",
       "stock": 1,
-      "stockNorte": 10,
+      "stockNorte": 0,
       "minStock": 5,
       "status": "Bajo Stock",
       "code": "AM-75697-36",
@@ -562,7 +634,7 @@
       "category": "General",
       "price": "1",
       "stock": 1,
-      "stockNorte": 10,
+      "stockNorte": 0,
       "minStock": 5,
       "status": "Bajo Stock",
       "code": "AM-75696-56",
@@ -580,7 +652,7 @@
       "category": "General",
       "price": "1",
       "stock": 1,
-      "stockNorte": 10,
+      "stockNorte": 0,
       "minStock": 5,
       "status": "Bajo Stock",
       "code": "AM-75677-36",
@@ -598,7 +670,7 @@
       "category": "General",
       "price": "1",
       "stock": 1,
-      "stockNorte": 10,
+      "stockNorte": 0,
       "minStock": 5,
       "status": "Bajo Stock",
       "code": "AM-75676-56",
@@ -616,7 +688,7 @@
       "category": "General",
       "price": "1",
       "stock": 1,
-      "stockNorte": 10,
+      "stockNorte": 0,
       "minStock": 5,
       "status": "Bajo Stock",
       "code": "AM-79107-36",
@@ -634,7 +706,7 @@
       "category": "General",
       "price": "1",
       "stock": 1,
-      "stockNorte": 10,
+      "stockNorte": 0,
       "minStock": 5,
       "status": "Bajo Stock",
       "code": "AM-75766-56",
@@ -652,7 +724,7 @@
       "category": "General",
       "price": "1",
       "stock": 1,
-      "stockNorte": 10,
+      "stockNorte": 0,
       "minStock": 5,
       "status": "Bajo Stock",
       "code": "MFL-8090/5-LITRO",
@@ -670,7 +742,7 @@
       "category": "General",
       "price": "1",
       "stock": 1,
-      "stockNorte": 10,
+      "stockNorte": 0,
       "minStock": 5,
       "status": "Bajo Stock",
       "code": "MFL-85140/5-LITRO",
@@ -688,7 +760,7 @@
       "category": "General",
       "price": "1",
       "stock": 1,
-      "stockNorte": 10,
+      "stockNorte": 0,
       "minStock": 5,
       "status": "Bajo Stock",
       "code": "MFL-7585-LITRO",
@@ -700,6 +772,24 @@
       "createdAt": "2026-11-03T03:22:29.176Z",
       "updatedAt": "2026-11-03T03:22:29.191Z",
       "tipo": "Tienda"
+    },
+    {
+      "id": "cmw2mj6hv0000g9i1s0isetmz",
+      "code": "PRD-423575",
+      "name": "Producto General",
+      "brand": "",
+      "category": "General",
+      "price": 0,
+      "costPrice": null,
+      "stock": 0,
+      "stockNorte": 0,
+      "minStock": 5,
+      "location": "",
+      "imageUrl": null,
+      "status": "Agotado",
+      "createdAt": "2026-11-04T21:23:43.651Z",
+      "updatedAt": "2026-11-05T02:06:16.359Z",
+      "tipo": "Car Wash, Tecnicentro"
     }
   ],
   "systemSetting": [
@@ -924,7 +1014,6 @@
       "email": "tiendaautogdaule@gmail.com",
       "name": "Super Administrador",
       "role": "ROOT",
-      "passwordHash": "$2b$10$R3U8xgXS3eqAu73RfKPNwOmNR6ycMMns9yhcQqhN7MrJGMeZu4bnq",
       "createdAt": "2026-11-03T20:24:33.558Z",
       "updatedAt": "2026-11-03T20:24:33.558Z",
       "avatar": null
@@ -933,6 +1022,24 @@
       "id": "cmw14eae20000bn1y85knubal",
       "name": "Super Administrador",
       "email": "tiendaautodaule@gmail.com",
+      "role": "ROOT"
+    },
+    {
+      "id": "cmw2pjx2g000011wsv7p5rizg",
+      "email": "tiendaautoggerencia@gmail.com",
+      "createdAt": "2026-11-04T22:48:16.934Z",
+      "updatedAt": "2026-11-04T22:48:16.934Z",
+      "name": "Administrador",
+      "avatar": null,
+      "role": "ROOT"
+    },
+    {
+      "id": "cmw2pjxwh000111wsw8va3p3i",
+      "email": "tiendaautogadmin@gmail.com",
+      "createdAt": "2026-11-04T22:48:18.017Z",
+      "updatedAt": "2026-11-04T22:48:18.017Z",
+      "name": "Administrador",
+      "avatar": null,
       "role": "ROOT"
     }
   ],
@@ -1224,7 +1331,7 @@
       "status": "Activo",
       "lastAccess": "Hoy",
       "createdAt": "2026-11-04T03:43:07.257Z",
-      "updatedAt": "2026-11-04T19:59:58.070Z"
+      "updatedAt": "2026-11-04T22:10:55.501Z"
     },
     {
       "id": "cmw2b5g45000112ljisdj08ec",
@@ -1240,9 +1347,9 @@
       "accessPos": false,
       "accessTaller": false,
       "status": "Activo",
-      "lastAccess": "Recién creado",
+      "lastAccess": "Hoy",
       "createdAt": "2026-11-04T16:05:07.156Z",
-      "updatedAt": "2026-11-04T16:46:38.883Z"
+      "updatedAt": "2026-11-04T21:20:42.588Z"
     },
     {
       "id": "cmw2bhty3000312ljd89ujyhe",
@@ -1260,7 +1367,7 @@
       "status": "Activo",
       "lastAccess": "Hoy",
       "createdAt": "2026-11-04T16:14:44.953Z",
-      "updatedAt": "2026-11-04T19:54:43.981Z"
+      "updatedAt": "2026-11-04T21:54:10.876Z"
     },
     {
       "id": "cmw2biqjf000612ljrhw9tbl3",
@@ -1278,7 +1385,7 @@
       "status": "Activo",
       "lastAccess": "Hoy",
       "createdAt": "2026-11-04T16:15:27.195Z",
-      "updatedAt": "2026-11-04T20:16:51.086Z"
+      "updatedAt": "2026-11-04T21:14:01.498Z"
     },
     {
       "id": "cmw2deq74000c12ljjgmsxm1v",

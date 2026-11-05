@@ -69,7 +69,7 @@ function NuevoUsuarioContent() {
         const res = await fetch("/api/gerencia/usuarios", { cache: "no-store" });
         const data = await res.json();
         if (res.ok && Array.isArray(data)) {
-          setTotalUsuariosExistentes(data.length);
+          setTotalUsuariosExistentes(data.filter((item: any) => !item.isProtected).length);
           if (editId) {
             const u = data.find((item: any) => item.id === editId);
             if (u) {

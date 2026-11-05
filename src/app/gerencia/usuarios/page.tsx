@@ -22,10 +22,12 @@ interface AppUserRecord {
   status: string;
   lastAccess: string;
   createdAt: string;
+  isProtected?: boolean;
 }
 
 function obtenerAccesoUnico(row: AppUserRecord): string {
   const roleUpper = (row.role || "").toUpperCase();
+  if (roleUpper === "ROOT" || roleUpper === "ADMIN" || roleUpper === "ADMINISTRADOR" || roleUpper === "GERENCIA" || roleUpper === "GERENTE") return "Administrador";
   if (roleUpper === "PRESUPUESTO" || roleUpper === "PRESUPUESTOS" || roleUpper === "PROPUESTA" || roleUpper === "PROPUESTAS") return "Propuesta";
   if (roleUpper === "OFICINA") return "Oficina";
   if (roleUpper === "TALLER") return "Taller";
@@ -153,13 +155,13 @@ function SeccionUsuariosGrupo({
                           {row.name}
                         </p>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5">
-                          PIN: {row.pinCode}
+                          {row.isProtected ? "Protegido" : `PIN: ${row.pinCode}`}
                         </p>
                       </div>
                     </div>
 
                     {/* Acciones Rápidas */}
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    {!row.isProtected && <div className="flex items-center gap-1.5 shrink-0">
                       <Link
                         href={`/gerencia/usuarios/nuevo?id=${row.id}`}
                         className="w-9 h-9 rounded-xl flex items-center justify-center text-zinc-500 hover:text-blue-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-500/10 active:scale-95 transition-all shadow-xs cursor-pointer"
@@ -189,7 +191,7 @@ function SeccionUsuariosGrupo({
                           />
                         </svg>
                       </button>
-                    </div>
+                    </div>}
                   </div>
 
                   {/* Datos secundarios */}
@@ -256,7 +258,7 @@ function SeccionUsuariosGrupo({
                             <div>
                               <p className="font-bold text-zinc-900 dark:text-zinc-100">{row.name}</p>
                               <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-                                PIN: {row.pinCode}
+                                {row.isProtected ? "Protegido" : `PIN: ${row.pinCode}`}
                               </p>
                             </div>
                           </div>
@@ -280,7 +282,11 @@ function SeccionUsuariosGrupo({
                         </td>
 
                         <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                          {row.isProtected ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+                              <span aria-hidden="true">🔒</span> Protegido
+                            </span>
+                          ) : <div className="flex items-center justify-end gap-1.5">
                             <Link
                               href={`/gerencia/usuarios/nuevo?id=${row.id}`}
                               className="p-2 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors inline-flex items-center justify-center"
@@ -329,7 +335,7 @@ function SeccionUsuariosGrupo({
                                 </svg>
                               )}
                             </button>
-                          </div>
+                          </div>}
                         </td>
                       </tr>
                     );
@@ -356,7 +362,7 @@ export default function GestionUsuarios() {
   const [filtro, setFiltro] = useState("todos");
   const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState("");
-  const [tabSucursal, setTabSucursal] = useState<"todas" | "principal" | "sucursal">("todas");
+  const [tabSucursal, setTabSucursal] = useState<"principal" | "sucursal">("principal");
 
   // Eliminación y Toast idénticos a Clientes en POS
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
@@ -433,7 +439,7 @@ export default function GestionUsuarios() {
 
   const stats = useMemo(() => {
     return {
-      totalUsuarios: todosUsuarios.length,
+      totalUsuarios: todosUsuarios.filter((u) => !u.isProtected).length,
       totalPrincipal: todosUsuarios.filter(
         (u) => !u.branch || !u.branch.toLowerCase().includes("sucursal")
       ).length,
@@ -568,16 +574,10 @@ export default function GestionUsuarios() {
 
         {/* Resumen Cards Desplegable con accesos directos por Sede */}
         <CollapsibleMetrics className="order-3 sm:order-2 mb-2 sm:mb-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-3 sm:mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-3 sm:mb-8">
             {/* Total Usuarios */}
             <div
-              onClick={() => setTabSucursal("todas")}
-              title="Ver todas las sedes"
-              className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all cursor-pointer shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm ${
-                tabSucursal === "todas"
-                  ? "bg-blue-50/50 dark:bg-blue-950/20 border-blue-500/50 ring-2 ring-blue-500/20"
-                  : "bg-white dark:bg-zinc-900/80 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
-              }`}
+              className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border bg-white dark:bg-zinc-900/80 border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm"
             >
               <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/15 border border-blue-500/25 text-blue-500 dark:text-blue-400 flex items-center justify-center text-xl shrink-0">
                 👥
@@ -610,7 +610,7 @@ export default function GestionUsuarios() {
                   {cargando && stats.totalUsuarios === 0 ? "..." : stats.totalPrincipal}
                 </p>
                 <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">
-                  Sede Principal
+                  Principal
                 </h3>
               </div>
             </div>
@@ -637,190 +637,43 @@ export default function GestionUsuarios() {
                 </h3>
               </div>
             </div>
-
-            {/* POS */}
-            <div className="bg-white dark:bg-zinc-900/80 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center gap-3 sm:gap-4 backdrop-blur-sm">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-500 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0">
-                🛒
-              </div>
-              <div>
-                <p className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                  {cargando && stats.totalUsuarios === 0 ? "..." : stats.totalPos}
-                </p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium">
-                  Usuarios POS
-                </h3>
-              </div>
-            </div>
           </div>
         </CollapsibleMetrics>
 
-        {/* Filtros y Buscador */}
-        <div className="order-2 sm:order-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 mb-3 sm:mb-6">
-          <div className="relative w-full flex-1">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 select-none">
-              🔍
-            </span>
-            <input
-              type="text"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar por nombre, correo, PIN..."
-              className="w-full pl-10 pr-10 h-11 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-zinc-400 shadow-sm"
-            />
-            {busqueda && (
-              <button
-                onClick={() => setBusqueda("")}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm cursor-pointer"
-                title="Limpiar búsqueda"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          <div className="relative w-full sm:w-48 shrink-0">
-            <button
-              type="button"
-              onClick={() => setFiltroMenuAbierto(!filtroMenuAbierto)}
-              className="w-full h-11 px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-normal flex items-center justify-between transition-all cursor-pointer shadow-sm active:scale-98"
-            >
-              <span>{labelFiltroActual}</span>
-              <svg
-                className={`w-4 h-4 text-zinc-400 transition-transform ${
-                  filtroMenuAbierto ? "rotate-180" : ""
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {filtroMenuAbierto && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setFiltroMenuAbierto(false)}
-                />
-                <div className="absolute right-0 mt-1.5 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
-                  {[
-                    { id: "todos", label: "Todos" },
-                    { id: "pos", label: "POS" },
-                    { id: "oficina", label: "Oficina" },
-                    { id: "taller", label: "Taller / Garaje" },
-                    { id: "propuesta", label: "Propuesta" },
-                  ].map((opcion) => (
-                    <button
-                      key={opcion.id}
-                      type="button"
-                      onClick={() => {
-                        setFiltro(opcion.id);
-                        setFiltroMenuAbierto(false);
-                      }}
-                      className={`w-full px-4 py-2.5 text-left text-sm font-normal transition-colors flex items-center justify-between cursor-pointer ${
-                        filtro === opcion.id
-                          ? "bg-blue-50 dark:bg-blue-600/15 text-blue-600 dark:text-blue-400 font-normal"
-                          : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 hover:text-zinc-900 dark:hover:text-white"
-                      }`}
-                    >
-                      <span>{opcion.label}</span>
-                      {filtro === opcion.id && (
-                        <svg
-                          className="w-4 h-4 text-blue-500"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2.5"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
 
         {/* Pestañas de Vista por Sede */}
         <div className="order-3 sm:order-4 mb-6 flex items-center gap-1.5 p-1 bg-zinc-200/60 dark:bg-zinc-900 rounded-2xl w-full sm:w-fit border border-zinc-200 dark:border-zinc-800 overflow-x-auto">
           <button
             type="button"
-            onClick={() => setTabSucursal("todas")}
-            className={`flex-1 sm:flex-initial px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap ${
-              tabSucursal === "todas"
-                ? "bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-sm"
-                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-            }`}
-          >
-            <span>Todas</span>
-            <span
-              className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                tabSucursal === "todas"
-                  ? "bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
-                  : "bg-zinc-300/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
-              }`}
-            >
-              {usuarios.length} / 14
-            </span>
-          </button>
-
-          <button
-            type="button"
             onClick={() => setTabSucursal("principal")}
-            className={`flex-1 sm:flex-initial px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap ${
+            className={`flex-1 sm:flex-initial px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center whitespace-nowrap ${
               tabSucursal === "principal"
-                ? "bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
                 : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
             }`}
           >
-            <span>🏢 Sede Principal</span>
-            <span
-              className={`px-1.5 py-0.2 rounded-full text-[11px] font-bold ${
-                tabSucursal === "principal"
-                  ? "bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400"
-                  : "bg-zinc-300/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
-              }`}
-            >
-              {usuariosPrincipal.length}
-            </span>
+            Principal
           </button>
 
           <button
             type="button"
             onClick={() => setTabSucursal("sucursal")}
-            className={`flex-1 sm:flex-initial px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap ${
+            className={`flex-1 sm:flex-initial px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center whitespace-nowrap ${
               tabSucursal === "sucursal"
-                ? "bg-white dark:bg-zinc-800 text-amber-600 dark:text-amber-400 shadow-sm"
+                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
                 : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
             }`}
           >
-            <span>📍 Sucursal</span>
-            <span
-              className={`px-1.5 py-0.2 rounded-full text-[11px] font-bold ${
-                tabSucursal === "sucursal"
-                  ? "bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400"
-                  : "bg-zinc-300/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
-              }`}
-            >
-              {usuariosSucursal.length}
-            </span>
+            Sucursal
           </button>
         </div>
 
         {/* Tablas Separadas de Usuarios con Numeración (#) y 1 Acceso Único por Correo */}
         <div className="order-4 space-y-8">
           {/* Sección Sede Principal */}
-          {(tabSucursal === "todas" || tabSucursal === "principal") && (
+          {tabSucursal === "principal" && (
             <SeccionUsuariosGrupo
-              titulo="Sede Principal"
+              titulo="Sede"
               icono="🏢"
               color="blue"
               lista={usuariosPrincipal}
@@ -831,22 +684,8 @@ export default function GestionUsuarios() {
             />
           )}
 
-          {/* Separador visual elegante si se muestran ambas sedes */}
-          {tabSucursal === "todas" && (
-            <div className="relative py-2">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-zinc-200 dark:border-zinc-800"></div>
-              </div>
-              <div className="relative flex justify-center">
-                <span className="bg-zinc-50 dark:bg-zinc-950 px-3 text-xs font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
-                  Sedes Separadas
-                </span>
-              </div>
-            </div>
-          )}
-
           {/* Sección Sucursal */}
-          {(tabSucursal === "todas" || tabSucursal === "sucursal") && (
+          {tabSucursal === "sucursal" && (
             <SeccionUsuariosGrupo
               titulo="Sucursal"
               icono="📍"

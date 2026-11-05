@@ -16,7 +16,7 @@ interface BranchTabsProps {
 }
 
 const OPTIONS: { value: FiltroSedeType; label: string; icon: string }[] = [
-  { value: "PRINCIPAL", label: "Sede Principal", icon: "🏢" },
+  { value: "PRINCIPAL", label: "Principal", icon: "🏢" },
   { value: "SUCURSAL",  label: "Sucursal",       icon: "📍" },
   { value: "AMBOS",     label: "Ambas",           icon: "🌐" },
 ];
@@ -62,7 +62,7 @@ export function BranchTabs({ onChange, className = "", size = "md" }: BranchTabs
   // Skeleton antes de montar
   if (!mounted) {
     return (
-      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 text-xs text-zinc-400 ${className}`}>
+      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-800/60 text-sm text-zinc-400 ${className}`}>
         <span>🏢 Sede</span>
       </div>
     );
@@ -72,7 +72,7 @@ export function BranchTabs({ onChange, className = "", size = "md" }: BranchTabs
   if (userBranch === "SUCURSAL") {
     return (
       <div
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 text-xs font-bold shadow-xs ${className}`}
+        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 text-sm font-bold shadow-xs ${className}`}
         title="Operando exclusivamente en Sucursal"
       >
         <span>📍</span>
@@ -89,8 +89,8 @@ export function BranchTabs({ onChange, className = "", size = "md" }: BranchTabs
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`inline-flex items-center gap-1.5 rounded-xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-600 transition-all cursor-pointer active:scale-95 font-semibold text-zinc-700 dark:text-zinc-200 ${
-          isSmall ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5 text-xs"
+        className={`inline-flex items-center gap-1.5 rounded-md border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 shadow-xs hover:border-zinc-300 dark:hover:border-zinc-600 transition-all cursor-pointer active:scale-95 font-semibold text-zinc-700 dark:text-zinc-200 ${
+          isSmall ? "px-2.5 py-1 text-[11px]" : "px-4 py-2 text-sm"
         }`}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -110,7 +110,7 @@ export function BranchTabs({ onChange, className = "", size = "md" }: BranchTabs
       {open && (
         <div
           role="listbox"
-          className="absolute left-0 mt-1.5 min-w-[148px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl z-50 py-1 animate-in fade-in zoom-in-95 duration-100 origin-top-left"
+          className="absolute left-0 mt-1.5 min-w-[148px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md shadow-xl z-50 py-1 animate-in fade-in zoom-in-95 duration-100 origin-top-left"
         >
           {OPTIONS.map((opt) => {
             const isActive = activeBranch === opt.value;

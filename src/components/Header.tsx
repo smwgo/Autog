@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
-import { normalizeSede, setClientUserBranch } from "@/lib/branch";
+import { getClientUserBranch, normalizeSede, setClientUserBranch } from "@/lib/branch";
+import { BranchTabs } from "@/components/pos/BranchTabs";
 
 interface CurrentUser {
   id?: string;
@@ -81,7 +82,7 @@ export function Header() {
           const parsed = JSON.parse(local);
           if (parsed && (parsed.name || parsed.email)) {
             setCurrentUser(parsed);
-            if (parsed.branch) {
+            if (parsed.branch && getClientUserBranch() !== normalizeSede(parsed.branch)) {
               setClientUserBranch(normalizeSede(parsed.branch));
             }
           }
@@ -95,7 +96,10 @@ export function Header() {
       .then((data) => {
         if (data?.success && data?.user) {
           setCurrentUser(data.user);
-          if (data.user.branch) {
+          if (
+            data.user.branch &&
+            getClientUserBranch() !== normalizeSede(data.user.branch)
+          ) {
             setClientUserBranch(normalizeSede(data.user.branch));
           }
           if (typeof window !== "undefined") {
@@ -197,8 +201,13 @@ export function Header() {
     if (currentUser?.role === "Cliente") return "/cliente";
     return "/gerencia";
   })();
+  const roleUpper = (currentUser?.role || "").toUpperCase();
+  const isAdministrator =
+    Boolean(currentUser?.isSuperAdmin) ||
+    ["ROOT", "ADMIN", "ADMINISTRADOR", "GERENCIA", "GERENTE"].includes(roleUpper);
 
   return (
+    <>
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md pt-[env(safe-area-inset-top,0px)]">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 md:px-12">
         <Link href="/" className="flex shrink-0 items-center gap-2 min-h-[44px]">
@@ -328,5 +337,11 @@ export function Header() {
         </div>
       </div>
     </header>
+    {mounted && isAdministrator && (
+      <div className="container mx-auto flex justify-end px-4 pt-3 sm:px-6 md:px-12">
+        <BranchTabs />
+      </div>
+    )}
+    </>
   );
 }

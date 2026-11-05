@@ -58,7 +58,7 @@ const MODEL_DEFAULTS: Record<string, () => Record<string, any>> = {
     category: "General",
     price: 0,
     stock: 10,
-    stockNorte: 10,
+    stockNorte: 0,
     minStock: 5,
     status: "En Stock",
   }),
@@ -667,11 +667,18 @@ function syncNeonResultToMirror(modelName: string, method: string, result: any, 
 
     const upsertRow = (row: any) => {
       if (!row || typeof row !== "object" || !row.id) return;
+      const safeRow = { ...row };
+      if (modelName === "user") {
+        delete safeRow.passwordHash;
+      }
       const idx = table.findIndex((r) => r.id === row.id);
       if (idx !== -1) {
-        table[idx] = { ...table[idx], ...row };
+        table[idx] = { ...table[idx], ...safeRow };
+        if (modelName === "user") {
+          delete table[idx].passwordHash;
+        }
       } else {
-        table.push({ ...row });
+        table.push(safeRow);
       }
     };
 
@@ -726,6 +733,10 @@ function getRawPrisma(): PrismaClient {
   }
 
   return globalForPrisma.prisma as PrismaClient;
+}
+
+export function getNeonPrismaClient(): PrismaClient {
+  return getRawPrisma();
 }
 
 function createModelProxy(modelName: string) {

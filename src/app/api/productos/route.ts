@@ -13,6 +13,13 @@ function calcularEstado(stock: number, minStock: number = 5): string {
   return "En Stock";
 }
 
+function normalizarTipo(tipo: unknown): string {
+  if (Array.isArray(tipo)) {
+    return tipo.map((modulo) => String(modulo).trim()).filter(Boolean).join(", ") || "Todos";
+  }
+  return typeof tipo === "string" && tipo.trim() ? tipo.trim() : "Todos";
+}
+
 // GET: Consultar productos de Neon (con caché reguladora)
 export async function GET(request: Request) {
   try {
@@ -21,6 +28,7 @@ export async function GET(request: Request) {
     const busqueda = searchParams.get("busqueda")?.trim().toLowerCase() || "";
     const categoria = searchParams.get("categoria") || "";
     const modulo = (searchParams.get("modulo") || searchParams.get("tipo") || "").trim().toLowerCase();
+    const sede = (searchParams.get("sede") || "PRINCIPAL").trim().toUpperCase();
 
     if (id) {
       const prod = await prisma.product.findUnique({
@@ -32,9 +40,23 @@ export async function GET(request: Request) {
           { status: 404 }
         );
       }
-      const rawTipoRow: any = await prisma.$queryRawUnsafe(`SELECT "tipo" FROM "Product" WHERE "id" = $1 LIMIT 1`, id).catch(() => []);
-      const tipo = rawTipoRow?.[0]?.tipo || "Todos";
-      return NextResponse.json({ success: true, producto: { ...prod, tipo } });
+      const stockPrincipal = Number(prod.stock || 0);
+      const stockSucursal = Number(prod.stockNorte || 0);
+      const stock =
+        sede === "SUCURSAL"
+          ? stockSucursal
+          : sede === "AMBOS" || sede === "AMBAS"
+            ? stockPrincipal + stockSucursal
+            : stockPrincipal;
+      return NextResponse.json({
+        success: true,
+        producto: {
+          ...prod,
+          stock,
+          status: calcularEstado(stock, prod.minStock),
+          tipo: prod.tipo || "Todos",
+        },
+      });
     }
 
     let products = cachedProducts;
@@ -50,19 +72,12 @@ export async function GET(request: Request) {
       lastCacheTime = now;
     }
 
-    // Consultar tipos registrados en BD
-    const rawTipos: any = await prisma.$queryRawUnsafe(`SELECT "id", "tipo" FROM "Product"`).catch(() => []);
-    const tiposMap: Record<string, string> = {};
-    if (Array.isArray(rawTipos)) {
-      rawTipos.forEach((r: any) => {
-        if (r.id) tiposMap[r.id] = r.tipo || "Todos";
-      });
-    }
-
     // Extraer todas las categorías únicas disponibles en Neon
     const categoriesSet = new Set<string>();
     products.forEach((p) => {
-      if (p.category) categoriesSet.add(p.category);
+      if (p.category && (sede !== "SUCURSAL" || Number(p.stockNorte || 0) > 0)) {
+        categoriesSet.add(p.category);
+      }
     });
     const categories = Array.from(categoriesSet);
 
@@ -76,25 +91,39 @@ export async function GET(request: Request) {
 
       const matchCategory = !categoria || p.category === categoria;
 
-      const prodTipo = (tiposMap[p.id] || "Todos").toLowerCase();
+      const prodTipo = (p.tipo || "Todos").toLowerCase();
       const matchModulo =
         !modulo ||
         prodTipo === "todos" ||
         prodTipo.includes("todos") ||
         prodTipo.includes(modulo);
+      const matchSucursalStock = sede !== "SUCURSAL" || Number(p.stockNorte || 0) > 0;
 
-      return matchSearch && matchCategory && matchModulo;
+      return matchSearch && matchCategory && matchModulo && matchSucursalStock;
     });
 
-    const productosConTipo = filtrados.map((p) => ({
-      ...p,
-      tipo: tiposMap[p.id] || "Todos",
-    }));
+    const productosConTipo = filtrados.map((p) => {
+      const stockPrincipal = Number(p.stock || 0);
+      const stockSucursal = Number(p.stockNorte || 0);
+      const stock =
+        sede === "SUCURSAL"
+          ? stockSucursal
+          : sede === "AMBOS" || sede === "AMBAS"
+            ? stockPrincipal + stockSucursal
+            : stockPrincipal;
 
-    const totalProductos = products.length;
-    const totalEnStock = products.filter((p) => p.status === "En Stock").length;
-    const totalBajoStock = products.filter((p) => p.status === "Bajo Stock").length;
-    const totalAgotados = products.filter((p) => p.status === "Agotado").length;
+      return {
+        ...p,
+        stock,
+        status: calcularEstado(stock, p.minStock),
+        tipo: p.tipo || "Todos",
+      };
+    });
+
+    const totalProductos = productosConTipo.length;
+    const totalEnStock = productosConTipo.filter((p) => p.status === "En Stock").length;
+    const totalBajoStock = productosConTipo.filter((p) => p.status === "Bajo Stock").length;
+    const totalAgotados = productosConTipo.filter((p) => p.status === "Agotado").length;
 
     return NextResponse.json(
       {
@@ -128,6 +157,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { code, name, brand, category = "General", tipo = "Todos", price, costPrice, stock = 0, minStock = 5, location, imageUrl } = body;
+    const branch = String(body.branch || "PRINCIPAL").toUpperCase();
     const rawCode = (code || "").toString().trim();
     const codigoLimpio = rawCode
       ? rawCode.toUpperCase()
@@ -158,7 +188,10 @@ export async function POST(request: Request) {
     const numCostPrice = costPrice !== undefined && costPrice !== null && costPrice !== ""
       ? parseFloat(costPrice.toString())
       : null;
-    const status = calcularEstado(numStock, numMinStock);
+    const stockPrincipal = branch === "SUCURSAL" ? 0 : numStock;
+    const stockSucursal = branch === "SUCURSAL" ? numStock : 0;
+    const status = calcularEstado(stockPrincipal, numMinStock);
+    const finalTipo = normalizarTipo(tipo);
 
     const nuevoProducto = await prisma.product.create({
       data: {
@@ -166,22 +199,17 @@ export async function POST(request: Request) {
         name: nombreLimpio,
         brand: brand?.trim() || null,
         category: category?.trim() || "General",
+        tipo: finalTipo,
         price: numPrice,
         costPrice: numCostPrice,
-        stock: numStock,
+        stock: stockPrincipal,
+        stockNorte: stockSucursal,
         minStock: numMinStock,
         location: location?.trim() || null,
         imageUrl: imageUrl ? imageUrl.trim() : null,
         status,
       },
     });
-
-    const finalTipo = Array.isArray(tipo) ? tipo.join(", ") : (tipo ? String(tipo).trim() : "Todos");
-    await prisma.$executeRawUnsafe(
-      `UPDATE "Product" SET "tipo" = $1 WHERE "id" = $2`,
-      finalTipo,
-      nuevoProducto.id
-    ).catch(() => {});
 
     cachedProducts = null;
     lastCacheTime = 0;
@@ -201,6 +229,7 @@ export async function PUT(request: Request) {
   try {
     const body = await request.json();
     const { id, code, name, brand, category, tipo, price, costPrice, stock, minStock = 5, location, imageUrl } = body;
+    const branch = String(body.branch || "PRINCIPAL").toUpperCase();
 
     if (!id) {
       return NextResponse.json({ success: false, error: "ID de producto requerido" }, { status: 400 });
@@ -212,8 +241,20 @@ export async function PUT(request: Request) {
     const numCostPrice = costPrice !== undefined && costPrice !== null && costPrice !== ""
       ? parseFloat(costPrice.toString())
       : undefined;
-    const status = calcularEstado(numStock, numMinStock);
-
+    const stockData = branch === "SUCURSAL"
+      ? { stockNorte: numStock }
+      : { stock: numStock };
+    const currentProduct = await prisma.product.findUnique({
+      where: { id },
+      select: { stock: true },
+    });
+    if (!currentProduct) {
+      return NextResponse.json({ success: false, error: "Producto no encontrado" }, { status: 404 });
+    }
+    const status = calcularEstado(
+      branch === "SUCURSAL" ? Number(currentProduct.stock) : numStock,
+      numMinStock
+    );
     const actualizado = await prisma.product.update({
       where: { id },
       data: {
@@ -221,24 +262,16 @@ export async function PUT(request: Request) {
         name: name ? name.trim() : undefined,
         brand: brand !== undefined ? brand.trim() : undefined,
         category: category ? category.trim() : undefined,
+        tipo: tipo !== undefined ? normalizarTipo(tipo) : undefined,
         price: numPrice,
         costPrice: numCostPrice,
-        stock: numStock,
+        ...stockData,
         minStock: numMinStock,
         location: location !== undefined ? location.trim() : undefined,
         imageUrl: imageUrl !== undefined ? (imageUrl ? imageUrl.trim() : null) : undefined,
         status,
       },
     });
-
-    if (tipo !== undefined) {
-      const finalTipo = Array.isArray(tipo) ? tipo.join(", ") : (tipo ? String(tipo).trim() : "Todos");
-      await prisma.$executeRawUnsafe(
-        `UPDATE "Product" SET "tipo" = $1 WHERE "id" = $2`,
-        finalTipo,
-        id
-      ).catch(() => {});
-    }
 
     cachedProducts = null;
     lastCacheTime = 0;

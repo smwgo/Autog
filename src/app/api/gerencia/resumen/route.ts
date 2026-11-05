@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma, withRetry } from "@/lib/prisma";
+import { getNeonPrismaClient, withRetry } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +13,8 @@ export async function GET(request: Request) {
 
     const rawBranch = (sucursalParam || "").trim().toUpperCase();
     const filterBranch = (rawBranch === "PRINCIPAL" || rawBranch === "SUCURSAL") ? rawBranch : null;
+
+    const database = getNeonPrismaClient();
 
     return await withRetry(async () => {
       // 1. Determinar rango de fechas
@@ -92,25 +94,25 @@ export async function GET(request: Request) {
         clientInvoices,
         financialTransactions,
       ] = await Promise.all([
-        prisma.sale.findMany({
+        database.sale.findMany({
           where: { createdAt: { gte: startDate, lte: endDate } },
           select: {
             id: true,
             total: true,
             paymentMethod: true,
             createdAt: true,
-            customer: { select: { branch: true, assignedToSucursal: true } },
+            branch: true,
           },
-        }).catch(() => []),
-        prisma.sale.findMany({
+        }),
+        database.sale.findMany({
           where: { createdAt: { gte: todayStart, lte: todayEnd } },
           select: {
             id: true,
             total: true,
-            customer: { select: { branch: true, assignedToSucursal: true } },
+            branch: true,
           },
-        }).catch(() => []),
-        prisma.workshopOrder.findMany({
+        }),
+        database.workshopOrder.findMany({
           select: {
             id: true,
             orderNumber: true,
@@ -127,22 +129,28 @@ export async function GET(request: Request) {
             itemsJson: true,
             quoteNumber: true,
           },
-        }).catch(() => []),
-        prisma.posCreditAccount.findMany({
+        }),
+        database.posCreditAccount.findMany({
           select: { id: true, currentBalance: true, status: true },
-        }).catch(() => []),
-        prisma.cashMovement.findMany({
-          select: { id: true, amount: true, type: true, createdAt: true },
-        }).catch(() => []),
-        prisma.clientQuote.findMany({
+        }),
+        database.cashMovement.findMany({
+          select: {
+            id: true,
+            amount: true,
+            type: true,
+            createdAt: true,
+            cashRegister: { select: { branch: true } },
+          },
+        }),
+        database.clientQuote.findMany({
           select: { id: true, quoteNumber: true, total: true, subtotal: true, status: true, createdAt: true, updatedAt: true },
-        }).catch(() => []),
-        prisma.clientInvoice.findMany({
-          select: { id: true, invoiceNumber: true, amount: true, status: true, createdAt: true },
-        }).catch(() => []),
-        prisma.financialTransaction.findMany({
+        }),
+        database.clientInvoice.findMany({
+          select: { id: true, invoiceNumber: true, amount: true, status: true, createdAt: true, orderId: true },
+        }),
+        database.financialTransaction.findMany({
           select: { id: true, amount: true, isIncome: true, createdAt: true },
-        }).catch(() => []),
+        }),
       ]);
 
       // Mapeo de cotizaciones por quoteNumber para valorización precisa de órdenes
@@ -173,11 +181,8 @@ export async function GET(request: Request) {
       // Filtrar por sucursal / sede (PRINCIPAL, SUCURSAL o null/AMBAS)
       const isSaleInBranch = (s: any) => {
         if (!filterBranch) return true;
-        const b = (s.customer?.branch || "PRINCIPAL").toUpperCase();
-        if (filterBranch === "SUCURSAL") {
-          return b === "SUCURSAL" || s.customer?.assignedToSucursal === true;
-        }
-        return b === "PRINCIPAL" && !s.customer?.assignedToSucursal;
+        const b = (s.branch || "PRINCIPAL").toUpperCase();
+        return b === filterBranch;
       };
 
       const branchSalesPeriod = filterBranch ? salesPeriod.filter(isSaleInBranch) : salesPeriod;
@@ -204,24 +209,14 @@ export async function GET(request: Request) {
 
       const branchMovements = filterBranch
         ? cashMovements.filter((m: any) => {
-            const b = (m.branch || "PRINCIPAL").toUpperCase();
+            const b = (m.cashRegister?.branch || "PRINCIPAL").toUpperCase();
             return b === filterBranch;
           })
         : cashMovements;
 
-      const branchTransactions = filterBranch
-        ? financialTransactions.filter((t: any) => {
-            const b = (t.branch || "PRINCIPAL").toUpperCase();
-            return b === filterBranch;
-          })
-        : financialTransactions;
+      const branchTransactions = filterBranch === "SUCURSAL" ? [] : financialTransactions;
 
-      const branchCredits = filterBranch
-        ? posCredits.filter((c: any) => {
-            const b = (c.branch || "PRINCIPAL").toUpperCase();
-            return b === filterBranch;
-          })
-        : posCredits;
+      const branchCredits = filterBranch === "SUCURSAL" ? [] : posCredits;
 
       // 3. Filtrar por fechas
       const ordersInPeriod = branchWorkshopOrders.filter((o) => {

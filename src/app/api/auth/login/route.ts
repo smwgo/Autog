@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { isProtectedAdminEmail } from "@/lib/admin-accounts";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,8 @@ export async function POST(req: Request) {
 
       if (match) {
         const isSuperAdmin = legacyUser.role === "ROOT";
-        redirectTo = isSuperAdmin ? "/gerencia" : "/cliente";
+        const isPanelSelector = isSuperAdmin && isProtectedAdminEmail(legacyUser.email);
+        redirectTo = isPanelSelector ? "/modulos" : isSuperAdmin ? "/gerencia" : "/cliente";
         authenticatedUser = {
           id: legacyUser.id,
           email: legacyUser.email,
@@ -55,6 +57,10 @@ export async function POST(req: Request) {
           role: legacyUser.role,
           branch: "Principal",
           isSuperAdmin,
+          accessOficina: isSuperAdmin,
+          accessPos: isSuperAdmin,
+          accessTaller: isSuperAdmin,
+          isPanelSelector,
         };
       }
     }

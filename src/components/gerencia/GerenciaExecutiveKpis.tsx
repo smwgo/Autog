@@ -2,6 +2,10 @@
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
+import {
+  getClientActiveBranch,
+  FiltroSedeType,
+} from "@/lib/branch";
 
 export interface GerenciaMetricsData {
   ventasTotales?: number;
@@ -31,17 +35,11 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
   const [dateLabel, setDateLabel] = useState<string>("01 NOV 2026 — 30 NOV 2026");
   const [metrics, setMetrics] = useState<GerenciaMetricsData | null>(null);
   const [cargando, setCargando] = useState<boolean>(true);
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
   const [menuFechaAbierto, setMenuFechaAbierto] = useState<boolean>(false);
   const [presetActivo, setPresetActivo] = useState<string | null>("MES");
   const menuFechaRef = useRef<HTMLDivElement>(null);
-  const [sucursalSeleccionada, setSucursalSeleccionada] = useState<string>("Ambas");
-  const [menuSucursalAbierto, setMenuSucursalAbierto] = useState<boolean>(false);
-  const [sucursales, setSucursales] = useState<string[]>([
-    "Principal",
-    "Sucursal",
-    "Ambas",
-  ]);
-  const menuSucursalRef = useRef<HTMLDivElement>(null);
+  const [sucursalSeleccionada, setSucursalSeleccionada] = useState<string>("Principal");
   const [userName, setUserName] = useState<string>("");
 
   useEffect(() => {
@@ -59,17 +57,6 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
       .then((data) => {
         if (data?.success && data?.user?.name) {
           setUserName(data.user.name);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    fetch("/api/gerencia/configuracion")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.branches && Array.isArray(data.branches) && data.branches.length > 0) {
-          setSucursales(["Principal", "Sucursal", "Ambas"]);
         }
       })
       .catch(() => {});
@@ -95,35 +82,54 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
     });
   };
 
+  const mostrarMoneda = (valor?: number) =>
+    cargando ? "..." : metrics ? formatMoneda(valor ?? 0) : "—";
+  const mostrarCantidad = (valor?: number) =>
+    cargando ? "..." : metrics ? (valor ?? 0) : "—";
+
   const cargarMetricas = useCallback(async (p: string, fDesde?: string, fHasta?: string, branch?: string) => {
     setCargando(true);
+    setErrorCarga(null);
     try {
       let url = `/api/gerencia/resumen?periodo=${p}`;
       if (fDesde && fHasta) {
         url += `&desde=${fDesde}&hasta=${fHasta}`;
       }
-      const b = branch !== undefined ? branch : sucursalSeleccionada;
+      const b = branch ?? "Ambas";
       if (b && b !== "Ambas") {
         url += `&sucursal=${encodeURIComponent(b)}`;
       }
       const res = await fetch(url);
       const data = await res.json();
-      if (data?.success && data?.metrics) {
-        setMetrics(data.metrics);
-        if (data.dateLabel) setDateLabel(data.dateLabel);
-        onDataLoaded?.(data);
+      if (!res.ok || !data?.success || !data?.metrics) {
+        throw new Error(data?.error || "No se pudieron cargar las métricas.");
       }
+      setMetrics(data.metrics);
+      if (data.dateLabel) setDateLabel(data.dateLabel);
+      onDataLoaded?.(data);
     } catch (err) {
       console.error("Error al cargar métricas de gerencia:", err);
+      setMetrics(null);
+      setErrorCarga("No se pudieron cargar los datos desde Neon. Verifica la conexión e inténtalo de nuevo.");
     } finally {
       setCargando(false);
     }
-  }, [onDataLoaded, sucursalSeleccionada]);
+  }, [onDataLoaded]);
 
-  // Carga inicial
+  // Mantener el filtro de Gerencia sincronizado con la sede elegida en otros módulos.
   useEffect(() => {
-    cargarMetricas("personalizado", fechaDesde, fechaHasta, "Ambas");
-  }, []);
+    const getBranchLabel = (branch: FiltroSedeType) =>
+      branch === "PRINCIPAL" ? "Principal" : branch === "SUCURSAL" ? "Sucursal" : "Ambas";
+    const cargarSedeActiva = () => {
+      const activeBranch = getBranchLabel(getClientActiveBranch());
+      setSucursalSeleccionada(activeBranch);
+      cargarMetricas("personalizado", fechaDesde, fechaHasta, activeBranch);
+    };
+
+    cargarSedeActiva();
+    window.addEventListener("autog-branch-change", cargarSedeActiva);
+    return () => window.removeEventListener("autog-branch-change", cargarSedeActiva);
+  }, [cargarMetricas, fechaDesde, fechaHasta]);
 
   // Presets rápidos: HOY, SEMANA, QUINCENA, MES
   const seleccionarPreset = (preset: "HOY" | "SEMANA" | "QUINCENA" | "MES") => {
@@ -167,9 +173,6 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
       if (menuFechaRef.current && !menuFechaRef.current.contains(e.target as Node)) {
         setMenuFechaAbierto(false);
       }
-      if (menuSucursalRef.current && !menuSucursalRef.current.contains(e.target as Node)) {
-        setMenuSucursalAbierto(false);
-      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -211,68 +214,13 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
           </div>
         </div>
 
-        {/* Selectores: Sucursal y Fecha */}
+        {/* Selector de fecha */}
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap self-start sm:self-auto">
-          {/* Selector de Sucursal */}
-          <div className="relative" ref={menuSucursalRef}>
-            <button
-              type="button"
-              onClick={() => {
-                setMenuSucursalAbierto(!menuSucursalAbierto);
-                setMenuFechaAbierto(false);
-              }}
-              className="h-10 px-4 rounded-xl bg-white hover:bg-zinc-50 dark:bg-[#0a0f16] dark:hover:bg-[#111722] border border-zinc-200/80 dark:border-zinc-800 text-xs font-normal text-zinc-700 dark:text-zinc-200 flex items-center gap-2 transition-all shadow-sm cursor-pointer active:scale-95"
-            >
-              <span className="text-sm">🏪</span>
-              <span className="font-normal text-xs tracking-normal text-zinc-700 dark:text-zinc-200">
-                {sucursalSeleccionada}
-              </span>
-              <svg
-                className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 shrink-0"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {/* Menú desplegable de Sucursales */}
-            {menuSucursalAbierto && (
-              <div className="absolute right-0 sm:left-0 sm:right-auto mt-2 w-56 rounded-2xl bg-white dark:bg-[#0b0f17] border border-zinc-200 dark:border-zinc-800/90 shadow-2xl p-2 z-50 animate-fade-in space-y-1">
-                {sucursales.map((suc) => (
-                  <button
-                    key={suc}
-                    type="button"
-                    onClick={() => {
-                      setSucursalSeleccionada(suc);
-                      setMenuSucursalAbierto(false);
-                      cargarMetricas("personalizado", fechaDesde, fechaHasta, suc);
-                    }}
-                    className={`w-full px-3 py-2 rounded-xl text-left text-xs font-normal transition-colors flex items-center justify-between ${
-                      sucursalSeleccionada === suc
-                        ? "bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 font-medium"
-                        : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/60"
-                    }`}
-                  >
-                    <span className="truncate">{suc}</span>
-                    {sucursalSeleccionada === suc && (
-                      <span className="text-cyan-500 font-bold">✓</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Selector de Rango de Fecha */}
           <div className="relative" ref={menuFechaRef}>
             <button
               type="button"
               onClick={() => {
                 setMenuFechaAbierto(!menuFechaAbierto);
-                setMenuSucursalAbierto(false);
               }}
               className="h-10 px-4 rounded-xl bg-white hover:bg-zinc-50 dark:bg-[#0a0f16] dark:hover:bg-[#111722] border border-zinc-200/80 dark:border-zinc-800 text-xs font-normal text-zinc-700 dark:text-zinc-200 flex items-center gap-2.5 transition-all shadow-sm cursor-pointer active:scale-95"
             >
@@ -403,6 +351,12 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
         </div>
       </div>
 
+      {errorCarga && (
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+          {errorCarga}
+        </p>
+      )}
+
       {/* =====================================================================
           GRID DE 8 TARJETAS EJECUTIVAS (4 COLUMNAS X 2 FILAS)
           Títulos de una sola palabra, sin textos inferiores, diseño estándar.
@@ -422,7 +376,7 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
           </div>
           <div className="relative z-10 pt-1">
             <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight truncate">
-              {cargando ? "..." : formatMoneda(metrics?.ventasTotales ?? metrics?.capitalActivo ?? 0)}
+              {mostrarMoneda(metrics?.ventasTotales ?? metrics?.capitalActivo)}
             </p>
           </div>
           <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500 opacity-[0.03] dark:opacity-[0.05] rounded-bl-full pointer-events-none" />
@@ -444,7 +398,7 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
           </div>
           <div className="relative z-10 pt-1">
             <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight truncate">
-              {cargando ? "..." : formatMoneda(metrics?.cobradoEnCaja ?? metrics?.cobrado ?? 0)}
+              {mostrarMoneda(metrics?.cobradoEnCaja ?? metrics?.cobrado)}
             </p>
           </div>
           <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500 opacity-[0.03] dark:opacity-[0.05] rounded-bl-full pointer-events-none" />
@@ -462,7 +416,7 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
           </div>
           <div className="relative z-10 pt-1">
             <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-sky-600 dark:text-sky-400 tracking-tight truncate">
-              {cargando ? "..." : formatMoneda(metrics?.montoHoy || 0)}
+              {mostrarMoneda(metrics?.montoHoy)}
             </p>
           </div>
           <div className="absolute top-0 right-0 w-24 h-24 bg-sky-500 opacity-[0.03] dark:opacity-[0.05] rounded-bl-full pointer-events-none" />
@@ -482,7 +436,7 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
           </div>
           <div className="relative z-10 pt-1">
             <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight truncate">
-              {cargando ? "..." : formatMoneda(metrics?.ticketPromedio || 0)}
+              {mostrarMoneda(metrics?.ticketPromedio)}
             </p>
           </div>
           <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500 opacity-[0.03] dark:opacity-[0.05] rounded-bl-full pointer-events-none" />
@@ -504,7 +458,7 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
           </div>
           <div className="relative z-10 pt-1">
             <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight truncate">
-              {cargando ? "..." : (metrics?.autosEnPista ?? metrics?.autosActivos ?? 0)}
+              {mostrarCantidad(metrics?.autosEnPista ?? metrics?.autosActivos)}
             </p>
           </div>
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500 opacity-[0.03] dark:opacity-[0.05] rounded-bl-full pointer-events-none" />
@@ -524,7 +478,7 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
           </div>
           <div className="relative z-10 pt-1">
             <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-zinc-900 dark:text-white tracking-tight truncate">
-              {cargando ? "..." : (metrics?.autosEntregados ?? metrics?.pagadosTotal ?? 0)}
+              {mostrarCantidad(metrics?.autosEntregados ?? metrics?.pagadosTotal)}
             </p>
           </div>
           <div className="absolute top-0 right-0 w-24 h-24 bg-teal-500 opacity-[0.03] dark:opacity-[0.05] rounded-bl-full pointer-events-none" />
@@ -544,7 +498,7 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
           </div>
           <div className="relative z-10 pt-1">
             <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight truncate">
-              {cargando ? "..." : formatMoneda(metrics?.gastosYRepuestos ?? metrics?.egresosTotal ?? 0)}
+              {mostrarMoneda(metrics?.gastosYRepuestos ?? metrics?.egresosTotal)}
             </p>
           </div>
           <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500 opacity-[0.03] dark:opacity-[0.05] rounded-bl-full pointer-events-none" />
@@ -565,7 +519,7 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
           </div>
           <div className="relative z-10 pt-1">
             <p className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-amber-600 dark:text-amber-400 tracking-tight truncate">
-              {cargando ? "..." : formatMoneda(metrics?.cuentasPorCobrar ?? metrics?.moraTotal ?? 0)}
+              {mostrarMoneda(metrics?.cuentasPorCobrar ?? metrics?.moraTotal)}
             </p>
           </div>
           <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500 opacity-[0.03] dark:opacity-[0.05] rounded-bl-full pointer-events-none" />

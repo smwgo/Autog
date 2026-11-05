@@ -6,6 +6,8 @@ import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import SelectorModulos, { parsearModulos } from "@/components/pos/SelectorModulos";
+import { ProductoFotoPicker } from "@/components/pos/ProductoFotoPicker";
+import { getClientActiveBranch } from "@/lib/branch";
 
 interface Product {
   id: string;
@@ -66,6 +68,7 @@ export default function CatalogoPage() {
       const params = new URLSearchParams();
       if (searchTerm) params.set("busqueda", searchTerm);
       if (selectedCategory) params.set("categoria", selectedCategory);
+      params.set("sede", getClientActiveBranch());
 
       const res = await fetch(`/api/productos?${params.toString()}`, {
         cache: "no-store",
@@ -94,11 +97,14 @@ export default function CatalogoPage() {
     }, 250);
 
     const onFocus = () => cargarProductos();
+    const onBranchChange = () => cargarProductos();
     window.addEventListener("focus", onFocus);
+    window.addEventListener("autog-branch-change", onBranchChange);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener("focus", onFocus);
+      window.removeEventListener("autog-branch-change", onBranchChange);
     };
   }, [cargarProductos]);
 
@@ -185,6 +191,7 @@ export default function CatalogoPage() {
       const payload = {
         ...form,
         category: form.category.trim() || "General",
+        branch: getClientActiveBranch(),
       };
       const res = await fetch("/api/productos", {
         method: "POST",
@@ -219,6 +226,7 @@ export default function CatalogoPage() {
         body: JSON.stringify({
           id: productoAEditar.id,
           ...form,
+          branch: getClientActiveBranch(),
         }),
       });
 
@@ -276,19 +284,19 @@ export default function CatalogoPage() {
     }
   };
 
-  const enStockCount = productos.filter((p) => p.status === "En Stock" || p.stock > p.minStock).length;
-  const bajoStockCount = productos.filter((p) => p.status === "Bajo Stock" || (p.stock > 0 && p.stock <= p.minStock)).length;
-  const agotadosCount = productos.filter((p) => p.status === "Agotado" || p.stock <= 0).length;
+  const enStockCount = productos.filter((p) => p.stock > p.minStock).length;
+  const bajoStockCount = productos.filter((p) => p.stock > 0 && p.stock <= p.minStock).length;
+  const agotadosCount = productos.filter((p) => p.stock <= 0).length;
 
   const productosFiltrados = productos.filter((p) => {
     if (selectedEstado === "EN_STOCK") {
-      return p.status === "En Stock" || p.stock > p.minStock;
+      return p.stock > p.minStock;
     }
     if (selectedEstado === "BAJO_STOCK") {
-      return p.status === "Bajo Stock" || (p.stock > 0 && p.stock <= p.minStock);
+      return p.stock > 0 && p.stock <= p.minStock;
     }
     if (selectedEstado === "AGOTADO") {
-      return p.status === "Agotado" || p.stock <= 0;
+      return p.stock <= 0;
     }
     return true;
   });
@@ -574,7 +582,7 @@ export default function CatalogoPage() {
                   📦
                 </div>
                 <h4 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
-                  No hay productos registrados
+                  No hay productos disponibles en esta sede
                 </h4>
                 <Link
                   href="/pos/catalogo/nuevo"
@@ -829,54 +837,14 @@ export default function CatalogoPage() {
                   <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
                     Foto del Producto
                   </label>
-                  <div className="flex items-center gap-3">
-                    <label className={`relative w-20 h-20 rounded-xl bg-white dark:bg-zinc-800 border-2 border-dashed border-zinc-300 dark:border-zinc-700 hover:border-blue-500 dark:hover:border-blue-500 overflow-hidden flex flex-col items-center justify-center shrink-0 cursor-pointer transition-all group ${
-                      subiendoFotoModal ? "opacity-60 pointer-events-none" : ""
-                    }`}>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        disabled={subiendoFotoModal}
-                        onChange={handleSubirFotoModal}
-                        className="hidden"
-                      />
-
-                      {subiendoFotoModal ? (
-                        <div className="flex flex-col items-center justify-center text-blue-600 gap-1 p-1">
-                          <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                          </svg>
-                          <span className="text-[9px] font-bold">Subiendo</span>
-                        </div>
-                      ) : form.imageUrl ? (
-                        <>
-                          <img src={form.imageUrl} alt="Preview" className="w-full h-full object-contain p-1 transition-transform group-hover:scale-105" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
-                            Cambiar
-                          </div>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setForm((prev) => ({ ...prev, imageUrl: "" }));
-                            }}
-                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center justify-center cursor-pointer shadow-sm z-10"
-                            title="Quitar foto"
-                          >
-                            ✕
-                          </button>
-                        </>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center text-zinc-400 group-hover:text-blue-600 transition-colors p-1 text-center">
-                          <span className="text-xl">📷</span>
-                          <span className="text-[10px] font-medium text-zinc-600 dark:text-zinc-400">Toca para subir</span>
-                        </div>
-                      )}
-                    </label>
-                    {errorFotoModal && <p className="text-xs text-rose-500 font-medium">⚠️ {errorFotoModal}</p>}
-                  </div>
+                  <ProductoFotoPicker
+                    imageUrl={form.imageUrl}
+                    uploading={subiendoFotoModal}
+                    onChange={handleSubirFotoModal}
+                    onRemove={() => setForm((prev) => ({ ...prev, imageUrl: "" }))}
+                    error={errorFotoModal}
+                    size="compact"
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -962,7 +930,7 @@ export default function CatalogoPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
-                      Stock Actual
+                      Stock Actual en Sede
                     </label>
                     <input
                       type="number"

@@ -2,20 +2,33 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { normalizeSede, setClientUserBranch, setClientActiveBranch } from "@/lib/branch";
 
-const DEFAULT_EMAIL = "tiendaautogdaule@gmail.com";
-const DEFAULT_PASSWORD = "tienda2026autog";
+const REMEMBER_WARNING_KEY = "autog_remember_warning";
+
+interface PasswordCredentialConstructor {
+  new (data: { id: string; password: string; name?: string }): Credential;
+}
+
+interface SavedPasswordCredential extends Credential {
+  id: string;
+  password: string;
+}
+
+interface PasswordCredentialsContainer extends CredentialsContainer {
+  get(
+    options: CredentialRequestOptions & { password: boolean }
+  ): Promise<Credential | null>;
+}
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState(DEFAULT_EMAIL);
-  const [password, setPassword] = useState(DEFAULT_PASSWORD);
-  const [remember, setRemember] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rememberWarning, setRememberWarning] = useState(false);
   const [isDark, setIsDark] = useState(false);
 
   // Sincronizar tema claro / oscuro con el sistema y localStorage
@@ -50,21 +63,38 @@ export default function LoginPage() {
     }
   };
 
-  // Cargar credenciales guardadas de localStorage al montar el componente
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedRemember = localStorage.getItem("autog_remember_login");
-      const savedEmail = localStorage.getItem("autog_saved_email");
-      const savedPassword = localStorage.getItem("autog_saved_password");
+    const savedRemember = localStorage.getItem("autog_remember_login") === "true";
+    const savedEmail = localStorage.getItem("autog_saved_email");
+    localStorage.removeItem("autog_saved_password");
+    if (!savedRemember) {
+      localStorage.removeItem("autog_saved_email");
+      localStorage.removeItem("autog_remember_login");
+    }
+    setRemember(savedRemember);
+    setEmail(savedRemember ? savedEmail || "" : "");
+    if (sessionStorage.getItem(REMEMBER_WARNING_KEY) === "true") {
+      sessionStorage.removeItem(REMEMBER_WARNING_KEY);
+      setRememberWarning(true);
+    }
 
-      if (savedRemember === "false") {
-        setRemember(false);
-        setEmail("");
-        setPassword("");
-      } else {
-        setRemember(true);
-        if (savedEmail) setEmail(savedEmail);
-        if (savedPassword) setPassword(savedPassword);
+    if (savedRemember) {
+      const credentialManager = navigator.credentials as PasswordCredentialsContainer;
+      if (typeof credentialManager.get === "function") {
+        credentialManager
+          .get({ password: true, mediation: "silent" })
+          .then((credential) => {
+            if (credential && "password" in credential && "id" in credential) {
+              const savedCredential = credential as SavedPasswordCredential;
+              setEmail(savedCredential.id);
+              setPassword(savedCredential.password);
+            }
+          })
+          .catch((credentialError: unknown) => {
+            console.warn("El navegador no pudo recuperar las credenciales guardadas:", credentialError);
+            sessionStorage.setItem(REMEMBER_WARNING_KEY, "true");
+            setRememberWarning(true);
+          });
       }
     }
   }, []);
@@ -89,16 +119,41 @@ export default function LoginPage() {
         return;
       }
 
-      // Guardar o limpiar credenciales en localStorage según la preferencia
+      // Remember the email locally and, where supported, save the password in the browser vault.
       if (typeof window !== "undefined") {
         if (remember) {
           localStorage.setItem("autog_saved_email", email.trim().toLowerCase());
-          localStorage.setItem("autog_saved_password", password);
           localStorage.setItem("autog_remember_login", "true");
+
+          const PasswordCredential = (
+            window as Window & { PasswordCredential?: PasswordCredentialConstructor }
+          ).PasswordCredential;
+          const credentialManager = navigator.credentials as CredentialsContainer & {
+            store?: (credential: Credential) => Promise<Credential>;
+          };
+
+          if (PasswordCredential && credentialManager.store) {
+            try {
+              const credential = new PasswordCredential({
+                id: email.trim().toLowerCase(),
+                password,
+                name: email.trim().toLowerCase(),
+              });
+              void credentialManager.store(credential).catch((credentialError: unknown) => {
+                console.warn("El navegador no pudo guardar las credenciales:", credentialError);
+                sessionStorage.setItem(REMEMBER_WARNING_KEY, "true");
+              });
+            } catch (credentialError) {
+              console.warn("El navegador no pudo guardar las credenciales:", credentialError);
+              sessionStorage.setItem(REMEMBER_WARNING_KEY, "true");
+            }
+          } else {
+            sessionStorage.setItem(REMEMBER_WARNING_KEY, "true");
+          }
         } else {
           localStorage.removeItem("autog_saved_email");
           localStorage.removeItem("autog_saved_password");
-          localStorage.setItem("autog_remember_login", "false");
+          localStorage.removeItem("autog_remember_login");
         }
 
         // Guardar usuario en localStorage para el cliente
@@ -111,7 +166,7 @@ export default function LoginPage() {
 
         window.location.href = data.redirectTo || "/gerencia";
       }
-    } catch (err: any) {
+    } catch {
       setError("Error de conexión al iniciar sesión. Intenta nuevamente.");
       setLoading(false);
     }
@@ -169,6 +224,12 @@ export default function LoginPage() {
           </div>
         )}
 
+        {rememberWarning && (
+          <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-sm text-amber-800 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-200">
+            El navegador no pudo guardar la contraseña. Puedes guardarla en el gestor de contraseñas del navegador.
+          </div>
+        )}
+
         <form className="space-y-5" onSubmit={handleSubmit} autoComplete="on">
           <div>
             <label htmlFor="email" className="block text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
@@ -182,7 +243,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="tiendaautogdaule@gmail.com"
+              placeholder="correo@ejemplo.com"
               className="w-full h-12 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/70 px-4 text-base sm:text-sm text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
             />
           </div>
@@ -231,7 +292,15 @@ export default function LoginPage() {
               <input
                 type="checkbox"
                 checked={remember}
-                onChange={(e) => setRemember(e.target.checked)}
+                onChange={(e) => {
+                  const shouldRemember = e.target.checked;
+                  setRemember(shouldRemember);
+                  if (!shouldRemember) {
+                    localStorage.removeItem("autog_saved_email");
+                    localStorage.removeItem("autog_saved_password");
+                    localStorage.removeItem("autog_remember_login");
+                  }
+                }}
                 className="w-4 h-4 rounded text-blue-600 border-zinc-300 dark:border-zinc-700 focus:ring-blue-500 cursor-pointer accent-blue-600"
               />
               <span className="text-xs sm:text-sm font-medium text-zinc-600 dark:text-zinc-400">

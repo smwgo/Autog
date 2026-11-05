@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
 import SelectorModulos from "@/components/pos/SelectorModulos";
+import { ProductoFotoPicker } from "@/components/pos/ProductoFotoPicker";
+import { getClientActiveBranch } from "@/lib/branch";
 
 function EditarProductoContent() {
   const router = useRouter();
@@ -44,7 +46,8 @@ function EditarProductoContent() {
       try {
         setCargando(true);
         setError(null);
-        const res = await fetch(`/api/productos?id=${id}`, { cache: "no-store" });
+        const branch = getClientActiveBranch();
+        const res = await fetch(`/api/productos?id=${id}&sede=${branch}`, { cache: "no-store" });
         const data = await res.json();
 
         if (!res.ok || !data.success || !data.producto) {
@@ -138,10 +141,12 @@ function EditarProductoContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id,
+          branch: getClientActiveBranch(),
           code: formData.code,
           name: formData.name,
           brand: formData.brand,
           category: formData.category,
+          tipo: formData.tipo,
           price: formData.price,
           stock: formData.stock,
           minStock: formData.minStock,
@@ -274,66 +279,13 @@ function EditarProductoContent() {
                 Foto del Producto
               </label>
 
-              <div className="flex flex-col items-start gap-2">
-                <label
-                  className={`relative w-32 h-32 sm:w-36 sm:h-36 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-dashed border-zinc-300 dark:border-zinc-700 hover:border-blue-500 dark:hover:border-blue-500 overflow-hidden flex flex-col items-center justify-center shrink-0 shadow-sm cursor-pointer transition-all group ${
-                    subiendoFoto ? "opacity-60 pointer-events-none" : ""
-                  }`}
-                >
-                  <input
-                    type="file"
-                    accept="image/*"
-                    disabled={subiendoFoto}
-                    onChange={handleSubirFoto}
-                    className="hidden"
-                  />
-
-                  {subiendoFoto ? (
-                    <div className="flex flex-col items-center justify-center text-blue-600 dark:text-blue-400 gap-1.5 p-2 text-center">
-                      <svg className="animate-spin h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                      </svg>
-                      <span className="text-[10px] font-bold">Subiendo...</span>
-                    </div>
-                  ) : formData.imageUrl ? (
-                    <>
-                      <img
-                        src={formData.imageUrl}
-                        alt="Previsualización de producto"
-                        className="w-full h-full object-contain p-1.5 transition-transform group-hover:scale-105"
-                      />
-                      {/* Overlay hover para cambiar foto */}
-                      <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white p-1 text-center">
-                        <span className="text-xl">📷</span>
-                        <span className="text-[10px] font-bold">Cambiar foto</span>
-                      </div>
-                      {/* Botón quitar foto */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setFormData((prev) => ({ ...prev, imageUrl: "" }));
-                        }}
-                        title="Quitar foto"
-                        className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center text-xs font-bold shadow-md cursor-pointer transition-transform active:scale-90 z-10"
-                      >
-                        ✕
-                      </button>
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors p-2 text-center">
-                      <span className="text-3xl mb-1 group-hover:scale-110 transition-transform">📷</span>
-                      <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Toca para subir</span>
-                    </div>
-                  )}
-                </label>
-
-                {errorFoto && (
-                  <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">⚠️ {errorFoto}</p>
-                )}
-              </div>
+              <ProductoFotoPicker
+                imageUrl={formData.imageUrl}
+                uploading={subiendoFoto}
+                onChange={handleSubirFoto}
+                onRemove={() => setFormData((prev) => ({ ...prev, imageUrl: "" }))}
+                error={errorFoto}
+              />
             </div>
 
             <div>

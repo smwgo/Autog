@@ -1,14 +1,17 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import { isProtectedAdminEmail } from "@/lib/admin-accounts";
 
 export const dynamic = "force-dynamic";
 
 type AuthSession = {
+  email?: string;
   role?: string;
   isSuperAdmin?: boolean;
   accessPos?: boolean;
   accessTaller?: boolean;
   accessOficina?: boolean;
+  isPanelSelector?: boolean;
 };
 
 export default async function AccesoPage() {
@@ -28,6 +31,13 @@ export default async function AccesoPage() {
     }
 
     if (user) {
+      if (
+        isProtectedAdminEmail(user.email) &&
+        (user.role?.toUpperCase() === "ROOT" || user.isSuperAdmin)
+      ) {
+        redirect("/modulos");
+      }
+
       const roleUpper = typeof user.role === "string" ? user.role.toUpperCase() : "";
       const isGerente =
         roleUpper === "GERENCIA" ||

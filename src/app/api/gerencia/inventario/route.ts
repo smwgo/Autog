@@ -48,7 +48,7 @@ export async function POST(req: Request) {
 
       const code = body.code || `SKU-${Math.floor(1000 + Math.random() * 9000)}`;
       const stock = Number(body.stock ?? 10);
-      const stockNorte = Number(body.stockNorte ?? 5);
+      const stockNorte = Number(body.stockNorte ?? 0);
       const minStock = Number(body.minStock ?? 5);
       const status = (stock <= minStock || stockNorte <= minStock) ? "Stock Bajo" : "En Stock";
 

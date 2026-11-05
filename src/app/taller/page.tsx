@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { TallerMobileNav } from "@/components/TallerMobileNav";
+import { isProtectedAdminEmail } from "@/lib/admin-accounts";
 import InspeccionVehiculo from "@/components/taller/InspeccionVehiculo";
 import ModalNuevaOrdenTrabajo from "@/components/taller/ModalNuevaOrdenTrabajo";
 import ModalPresupuestoPdf from "@/components/taller/ModalPresupuestoPdf";
@@ -769,9 +770,25 @@ export default function TallerPanel() {
   const [mecanicos, setMecanicos] = useState<string[]>([]);
   const [cargandoInicial, setCargandoInicial] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [isPanelSelectorAdmin, setIsPanelSelectorAdmin] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    fetch("/api/auth/me")
+      .then((response) => response.json())
+      .then((data) => {
+        const user = data?.user;
+        setIsPanelSelectorAdmin(
+          Boolean(
+            data?.success &&
+              isProtectedAdminEmail(user?.email) &&
+              (user?.role?.toUpperCase() === "ROOT" || user?.isSuperAdmin)
+          )
+        );
+      })
+      .catch((error: unknown) => {
+        console.error("No se pudo verificar el acceso al selector de paneles:", error);
+      });
   }, []);
 
   // SELECTOR SUPERIOR 4 EN 1: TALLER MECÁNICO, LUBRICENTRO, CAR WASH Y TECNICENTRO
@@ -4932,6 +4949,19 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             {ordenActiva ? (
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <div className="flex items-center gap-2.5 min-w-0">
+                  {isPanelSelectorAdmin && (
+                    <Link
+                      href="/modulos"
+                      aria-label="Volver a los paneles"
+                      title="Volver a los paneles"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-blue-700 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
+                    >
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="m15 18-6-6 6-6" />
+                        <path d="M20 12H9" />
+                      </svg>
+                    </Link>
+                  )}
                   <span className="w-10 h-10 sm:w-9 sm:h-9 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-500 flex items-center justify-center shrink-0">
                     <svg
                       className="w-5.5 h-5.5 sm:w-5 sm:h-5"
@@ -4968,9 +4998,24 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
                 </span>
               </div>
             ) : (
-              <span className="text-base sm:text-lg font-bold text-zinc-800 dark:text-zinc-200">
-                Taller Mecánico
-              </span>
+              <div className="flex items-center gap-2">
+                {isPanelSelectorAdmin && (
+                  <Link
+                    href="/modulos"
+                    aria-label="Volver a los paneles"
+                    title="Volver a los paneles"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-blue-700 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
+                  >
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="m15 18-6-6 6-6" />
+                      <path d="M20 12H9" />
+                    </svg>
+                  </Link>
+                )}
+                <span className="text-base sm:text-lg font-bold text-zinc-800 dark:text-zinc-200">
+                  Taller Mecánico
+                </span>
+              </div>
             )}
             <div className="flex items-center gap-2 shrink-0 ml-auto">
               <Link

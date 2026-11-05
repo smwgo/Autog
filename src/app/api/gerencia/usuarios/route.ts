@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
+import { isProtectedAdminEmail, PROTECTED_ADMIN_EMAILS } from "@/lib/admin-accounts";
 
 export const dynamic = "force-dynamic";
 
@@ -31,9 +32,44 @@ async function registrarAuditoria(action: string, details: string, level: string
 export async function GET() {
   try {
     const users = await withRetry(async () => {
-      return await prisma.appUserAccess.findMany({
-        orderBy: { createdAt: "desc" },
-      });
+      const [appUsers, adminUsers] = await Promise.all([
+        prisma.appUserAccess.findMany({
+          orderBy: { createdAt: "desc" },
+        }),
+        prisma.user.findMany({
+          where: {
+            email: { in: [...PROTECTED_ADMIN_EMAILS] },
+            role: "ROOT",
+          },
+          select: { id: true, email: true, createdAt: true },
+        }),
+      ]);
+
+      const regularUsers = appUsers.filter(
+        (user) => !isProtectedAdminEmail(user.email)
+      );
+      const protectedAdmins = adminUsers.map((user) => ({
+        id: `protected-root:${user.id}`,
+        identification: null,
+        name: "Administrador",
+        email: user.email,
+        phone: null,
+        username: null,
+        pinCode: "",
+        role: "Administrador",
+        branch: "Principal",
+        accessOficina: true,
+        accessPos: true,
+        accessTaller: true,
+        status: "Activo",
+        lastAccess: "Cuenta principal",
+        createdAt: user.createdAt,
+        isProtected: true,
+      }));
+
+      return [...regularUsers, ...protectedAdmins].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
     });
 
     return NextResponse.json(users);
@@ -56,6 +92,13 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "El nombre y correo electrónico del usuario son obligatorios." },
         { status: 400 }
+      );
+    }
+
+    if (isProtectedAdminEmail(cleanEmail)) {
+      return NextResponse.json(
+        { error: "Este correo está reservado para una cuenta principal protegida." },
+        { status: 403 }
       );
     }
 
@@ -153,11 +196,20 @@ export async function PUT(req: Request) {
     if (!id) {
       return NextResponse.json({ error: "ID de usuario requerido." }, { status: 400 });
     }
+    if (String(id).startsWith("protected-root:")) {
+      return NextResponse.json(
+        { error: "Las cuentas principales protegidas no se pueden editar." },
+        { status: 403 }
+      );
+    }
 
     const updated = await withRetry(async () => {
       const curr = await prisma.appUserAccess.findUnique({ where: { id } });
       if (!curr) {
         throw new Error("Usuario no encontrado.");
+      }
+      if (isProtectedAdminEmail(curr.email)) {
+        throw new Error("Las cuentas principales protegidas no se pueden editar.");
       }
 
       const nextIdentification =
@@ -165,6 +217,9 @@ export async function PUT(req: Request) {
       const nextName = body.name !== undefined ? String(body.name).trim() : curr.name;
       const rawNextEmail = body.email !== undefined ? String(body.email).trim().toLowerCase() : undefined;
       const nextEmail = rawNextEmail !== undefined ? (rawNextEmail.includes("@") ? rawNextEmail : `${rawNextEmail}@gmail.com`) : curr.email;
+      if (isProtectedAdminEmail(nextEmail)) {
+        throw new Error("Este correo está reservado para una cuenta principal protegida.");
+      }
       const nextPhone =
         body.phone !== undefined ? (String(body.phone).trim() || null) : curr.phone;
       const nextUsername =
@@ -233,9 +288,18 @@ export async function DELETE(req: Request) {
     if (!id) {
       return NextResponse.json({ error: "ID requerido" }, { status: 400 });
     }
+    if (id.startsWith("protected-root:")) {
+      return NextResponse.json(
+        { error: "Las cuentas principales protegidas no se pueden eliminar." },
+        { status: 403 }
+      );
+    }
 
     await withRetry(async () => {
       const existing = await prisma.appUserAccess.findUnique({ where: { id } });
+      if (existing && isProtectedAdminEmail(existing.email)) {
+        throw new Error("Las cuentas principales protegidas no se pueden eliminar.");
+      }
       await prisma.appUserAccess.delete({ where: { id } });
 
       if (existing) {
