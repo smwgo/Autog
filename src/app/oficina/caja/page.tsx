@@ -109,26 +109,36 @@ export default function CajaLiquidaciones() {
       <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full flex flex-col">
         {/* Breadcrumb & Header */}
         <div className="order-1 mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-1.5">
-              <Link href="/oficina" className="hover:text-blue-600 transition-colors">Oficina</Link>
-              <span>/</span>
-              <span className="text-zinc-900 dark:text-zinc-100 font-medium">Caja y Liquidaciones</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 flex flex-wrap items-center gap-2.5">
-              Flujo de Caja Diaria
-              <span className={`text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 ${
-                isOpen
+          <div className="flex items-center gap-3">
+            <Link
+              href="/oficina"
+              title="Volver a Oficina"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
+            >
+              <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <div>
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-1">
+                <Link href="/oficina" className="hover:text-blue-600 transition-colors">Oficina</Link>
+                <span>/</span>
+                <span className="text-zinc-900 dark:text-zinc-100 font-medium">Caja y Liquidaciones</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 flex flex-wrap items-center gap-2.5">
+                Flujo de Caja Diaria
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 ${isOpen
                   ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
                   : "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400"
-              }`}>
-                <span className={`w-2 h-2 rounded-full ${isOpen ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}></span>
-                {isOpen ? "CAJA ABIERTA" : "CAJA CERRADA"}
-              </span>
-            </h1>
-            <p className="text-xs sm:text-sm text-zinc-500 mt-1.5">
-              Sesión: {register?.sessionNumber || "CAJ-ACTUAL"} — {register?.notes || "Turno actual"}
-            </p>
+                  }`}>
+                  <span className={`w-2 h-2 rounded-full ${isOpen ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}></span>
+                  {isOpen ? "CAJA ABIERTA" : "CAJA CERRADA"}
+                </span>
+              </h1>
+              <p className="text-xs sm:text-sm text-zinc-500 mt-1.5">
+                Sesión: {register?.sessionNumber || "CAJ-ACTUAL"} — {register?.notes || "Turno actual"}
+              </p>
+            </div>
           </div>
           <div className="grid grid-cols-2 sm:flex items-center gap-2.5 w-full sm:w-auto">
             <button
@@ -140,9 +150,8 @@ export default function CajaLiquidaciones() {
             </button>
             <button
               onClick={handleToggleRegister}
-              className={`h-11 px-4 sm:px-6 rounded-xl text-white font-bold text-xs sm:text-sm active:scale-[0.99] transition-all shadow-sm flex items-center justify-center ${
-                isOpen ? "bg-teal-600 hover:bg-teal-700" : "bg-emerald-600 hover:bg-emerald-700"
-              }`}
+              className={`h-11 px-4 sm:px-6 rounded-xl text-white font-bold text-xs sm:text-sm active:scale-[0.99] transition-all shadow-sm flex items-center justify-center ${isOpen ? "bg-teal-600 hover:bg-teal-700" : "bg-emerald-600 hover:bg-emerald-700"
+                }`}
             >
               {isOpen ? "Cerrar Caja" : "Abrir Turno"}
             </button>
@@ -165,7 +174,7 @@ export default function CajaLiquidaciones() {
               </div>
               <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500 opacity-5 rounded-bl-full -mr-4 -mt-4"></div>
             </div>
-            
+
             <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex flex-col justify-between">
               <div className="flex justify-between items-start mb-2">
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 text-base sm:text-lg flex-shrink-0">
@@ -236,11 +245,11 @@ export default function CajaLiquidaciones() {
             </button>
           </div>
           <div className="relative w-full lg:w-72">
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar recibo o factura..." 
+              placeholder="Buscar recibo o factura..."
               className="w-full h-11 md:h-10 pl-10 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-teal-500"
             />
             <svg className="w-4 h-4 absolute left-3.5 top-3.5 md:top-3 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -256,11 +265,10 @@ export default function CajaLiquidaciones() {
             ) : filtered.map((row) => (
               <div key={row.id} className="p-4 flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className={`px-2 py-0.5 rounded-lg text-[11px] font-semibold inline-flex items-center gap-1 ${
-                    (row.method || "").includes('Efectivo') ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' :
+                  <span className={`px-2 py-0.5 rounded-lg text-[11px] font-semibold inline-flex items-center gap-1 ${(row.method || "").includes('Efectivo') ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' :
                     (row.method || "").includes('Tarjeta') ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10' :
-                    'bg-purple-50 text-purple-600 dark:bg-purple-500/10'
-                  }`}>
+                      'bg-purple-50 text-purple-600 dark:bg-purple-500/10'
+                    }`}>
                     {(row.method || "").includes('Efectivo') ? '💵' : (row.method || "").includes('Tarjeta') ? '💳' : '🏦'}
                     {row.method}
                   </span>
@@ -272,9 +280,8 @@ export default function CajaLiquidaciones() {
                     <p className="text-xs text-zinc-500">Ref: {row.reference}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`font-bold text-base ${
-                      row.isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
-                    }`}>
+                    <span className={`font-bold text-base ${row.isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                      }`}>
                       {row.isIncome ? "+" : "-"} ${Number(row.amount || 0).toFixed(2)}
                     </span>
                     <button
@@ -317,19 +324,17 @@ export default function CajaLiquidaciones() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 ${
-                        (row.method || "").includes('Efectivo') ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' :
+                      <span className={`px-2 py-1 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 ${(row.method || "").includes('Efectivo') ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' :
                         (row.method || "").includes('Tarjeta') ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10' :
-                        'bg-purple-50 text-purple-600 dark:bg-purple-500/10'
-                      }`}>
+                          'bg-purple-50 text-purple-600 dark:bg-purple-500/10'
+                        }`}>
                         {(row.method || "").includes('Efectivo') ? '💵' : (row.method || "").includes('Tarjeta') ? '💳' : '🏦'}
                         {row.method}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-zinc-500 dark:text-zinc-400">{row.reference}</td>
-                    <td className={`px-6 py-4 text-right font-bold ${
-                      row.isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
-                    }`}>
+                    <td className={`px-6 py-4 text-right font-bold ${row.isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                      }`}>
                       {row.isIncome ? "+" : "-"} ${Number(row.amount || 0).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-right">

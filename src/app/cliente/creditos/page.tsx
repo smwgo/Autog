@@ -100,16 +100,27 @@ export default function ClienteCreditosPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-grow w-full space-y-8">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
-            <span>Mis Créditos y Cuentas</span>
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-bold">
-              {creditos?.status || "Al Día"}
-            </span>
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1">
-            Cupo comercial rotativo para adquisición de repuestos y financiamiento de mano de obra en taller.
-          </p>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/cliente"
+            title="Volver a Portal de Cliente"
+            className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-500 dark:hover:border-purple-500 hover:bg-purple-50/50 dark:hover:bg-purple-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
+          >
+            <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
+              <span>Mis Créditos y Cuentas</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-xs font-bold">
+                {creditos?.status || "Al Día"}
+              </span>
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1">
+              Cupo comercial rotativo para adquisición de repuestos y financiamiento de mano de obra en taller.
+            </p>
+          </div>
         </div>
 
         {cargando ? (

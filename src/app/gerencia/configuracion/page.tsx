@@ -209,15 +209,26 @@ export default function ConfiguracionSistema() {
       <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
         {/* Breadcrumb & Header */}
         <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-1.5 sm:mb-2">
-              <Link href="/gerencia" className="hover:text-blue-600 transition-colors">Gerencia</Link>
-              <span>/</span>
-              <span className="text-zinc-900 dark:text-zinc-100 font-medium">Configuración</span>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/gerencia"
+              title="Volver a Gerencia"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
+            >
+              <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <div>
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-1 sm:mb-1.5">
+                <Link href="/gerencia" className="hover:text-blue-600 transition-colors">Gerencia</Link>
+                <span>/</span>
+                <span className="text-zinc-900 dark:text-zinc-100 font-medium">Configuración</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                Configuración
+              </h1>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Configuración
-            </h1>
           </div>
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
