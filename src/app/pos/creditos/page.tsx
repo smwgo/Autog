@@ -190,10 +190,10 @@ export default function CreditosPage() {
             <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20">
               {creditos.length}
             </span>
-            <BranchTabs onChange={() => fetchCreditos()} size="sm" />
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex flex-col items-end gap-2 w-full sm:w-auto sm:ml-auto">
+            <BranchTabs onChange={() => fetchCreditos()} size="sm" />
             <Link
               href="/pos/creditos/nuevo"
               className="h-11 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-all shadow-sm shadow-blue-500/20 active:scale-95 cursor-pointer flex items-center justify-center gap-2 w-full sm:w-auto"

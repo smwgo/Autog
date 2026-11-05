@@ -7,6 +7,7 @@ import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { parsearModulos } from "@/components/pos/SelectorModulos";
+import { BranchTabs } from "@/components/pos/BranchTabs";
 
 interface WorkshopService {
   id: string;
@@ -152,7 +153,8 @@ export default function ServiciosPosPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col items-end gap-2 ml-auto shrink-0">
+            <BranchTabs size="sm" />
             <Link
               href="/pos/servicios/nuevo"
               className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-medium text-sm transition-all shadow-sm shadow-blue-500/20 flex items-center gap-2 cursor-pointer"

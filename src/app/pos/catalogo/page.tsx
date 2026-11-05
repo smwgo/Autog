@@ -8,6 +8,7 @@ import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import SelectorModulos, { parsearModulos } from "@/components/pos/SelectorModulos";
 import { ProductoFotoPicker } from "@/components/pos/ProductoFotoPicker";
 import { getClientActiveBranch } from "@/lib/branch";
+import { BranchTabs } from "@/components/pos/BranchTabs";
 
 interface Product {
   id: string;
@@ -326,7 +327,8 @@ export default function CatalogoPage() {
             </span>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex flex-col items-end gap-2 w-full sm:w-auto sm:ml-auto">
+            <BranchTabs size="sm" />
             <Link
               href="/pos/catalogo/nuevo"
               className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-all shadow-sm shadow-blue-500/20 active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"

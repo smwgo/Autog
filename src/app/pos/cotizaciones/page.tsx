@@ -272,10 +272,10 @@ export default function CotizacionesPosPage() {
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold bg-purple-600 text-white shadow-sm shadow-purple-500/20 shrink-0">
                 {cotizaciones.length}
               </span>
-              <BranchTabs onChange={() => cargarCotizaciones(searchTerm, true)} size="sm" />
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div className="flex flex-col items-end gap-2 shrink-0 ml-auto">
+              <BranchTabs onChange={() => cargarCotizaciones(searchTerm, true)} size="sm" />
               <Link
                 href="/pos/venta"
                 title="Crear nueva cotización desde la terminal de Venta"

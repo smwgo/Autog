@@ -283,7 +283,7 @@ export default function PosPanel() {
       <Header />
       <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
         {/* Cabecera: Flecha de regreso, Título POS y Botón de Estado de Caja */}
-        <div className="mb-6 sm:mb-8 grid grid-cols-[1fr_auto] items-center gap-3 sm:flex sm:justify-between">
+        <div className="mb-6 sm:mb-8 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3.5">
             <Link 
               href="/acceso" 
@@ -301,41 +301,41 @@ export default function PosPanel() {
             </div>
           </div>
 
-          <div className="order-2 col-span-2 sm:order-none sm:col-span-1">
+          <div className="flex flex-col items-end gap-2 ml-auto shrink-0">
             <BranchTabs onChange={() => verificarCajaApertura()} size="sm" />
-          </div>
 
-          {/* Botón de Caja: Exactamente igual al de POS de Venta */}
-          {cajaActiva ? (
-            <button
-              type="button"
-              data-pos-cash-button
-              onClick={() => {
-                verificarCajaApertura();
-                setMostrarModalCierre(true);
-              }}
-              className="w-10 h-10 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-rose-300 border border-rose-500/30 flex items-center justify-center text-sm transition-all shadow-[0_0_15px_rgba(244,63,94,0.12)] cursor-pointer"
-              title="Cerrar Caja"
-            >
-              <span>🔒</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              data-pos-cash-button
-              onClick={() => {
-                if (typeof window !== "undefined") {
-                  sessionStorage.removeItem("pos_caja_omitida");
-                }
-                setFondoApertura("");
-                setMostrarModalApertura(true);
-              }}
-              className="w-10 h-10 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 flex items-center justify-center text-sm transition-all shadow-[0_0_15px_rgba(16,185,129,0.15)] cursor-pointer"
-              title="Abrir Caja (Apertura)"
-            >
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
-            </button>
-          )}
+            {/* Botón de Caja: Exactamente igual al de POS de Venta */}
+            {cajaActiva ? (
+              <button
+                type="button"
+                data-pos-cash-button
+                onClick={() => {
+                  verificarCajaApertura();
+                  setMostrarModalCierre(true);
+                }}
+                className="w-10 h-10 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-rose-300 border border-rose-500/30 flex items-center justify-center text-sm transition-all shadow-[0_0_15px_rgba(244,63,94,0.12)] cursor-pointer"
+                title="Cerrar Caja"
+              >
+                <span>🔒</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                data-pos-cash-button
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    sessionStorage.removeItem("pos_caja_omitida");
+                  }
+                  setFondoApertura("");
+                  setMostrarModalApertura(true);
+                }}
+                className="w-10 h-10 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/30 flex items-center justify-center text-sm transition-all shadow-[0_0_15px_rgba(16,185,129,0.15)] cursor-pointer"
+                title="Abrir Caja (Apertura)"
+              >
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Módulos POS */}

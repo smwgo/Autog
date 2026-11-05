@@ -255,10 +255,10 @@ export default function FacturasPosPage() {
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-500/20 shrink-0">
                 {ventas.length}
               </span>
-              <BranchTabs onChange={() => cargarVentas(searchTerm, true)} size="sm" />
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div className="flex flex-col items-end gap-2 shrink-0 ml-auto">
+              <BranchTabs onChange={() => cargarVentas(searchTerm, true)} size="sm" />
               <Link
                 href="/pos/facturas/nueva"
                 className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"

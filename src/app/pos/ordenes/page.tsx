@@ -296,44 +296,46 @@ export default function PosOrdenesPage() {
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400">
                   {cargando ? "..." : totalOrdenes}
                 </span>
-                <BranchTabs onChange={() => cargarOrdenes()} size="sm" />
               </div>
             </div>
           </div>
 
-          {/* Selector de Sección: Órdenes Activas vs Historial de Órdenes */}
-          <div className="flex items-center p-1 rounded-2xl bg-zinc-200/70 dark:bg-zinc-900 border border-zinc-300/60 dark:border-zinc-800 self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={() => setSeccionActiva("ACTIVAS")}
-              className={`h-9 px-3.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                seccionActiva === "ACTIVAS"
-                  ? "bg-amber-500/15 border border-amber-500/35 text-amber-600 dark:text-amber-300 shadow-xs"
-                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
-              }`}
-            >
-              <span>🔧</span>
-              <span>Órdenes Activas</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[11px] bg-amber-500/15 text-amber-600 dark:text-amber-300">
-                {cargando ? "..." : ordenesActivasList.length}
-              </span>
-            </button>
+          {/* Selector de Sede arriba + Selector de Sección debajo, alineados a la punta derecha */}
+          <div className="flex flex-col items-end gap-2 self-end sm:self-auto ml-auto">
+            <BranchTabs onChange={() => cargarOrdenes()} size="sm" />
+            <div className="flex items-center p-1 rounded-2xl bg-zinc-200/70 dark:bg-zinc-900 border border-zinc-300/60 dark:border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setSeccionActiva("ACTIVAS")}
+                className={`h-9 px-3.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  seccionActiva === "ACTIVAS"
+                    ? "bg-amber-500/15 border border-amber-500/35 text-amber-600 dark:text-amber-300 shadow-xs"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                }`}
+              >
+                <span>🔧</span>
+                <span>Órdenes Activas</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[11px] bg-amber-500/15 text-amber-600 dark:text-amber-300">
+                  {cargando ? "..." : ordenesActivasList.length}
+                </span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setSeccionActiva("HISTORIAL")}
-              className={`h-9 px-3.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                seccionActiva === "HISTORIAL"
-                  ? "bg-purple-500/15 border border-purple-500/35 text-purple-600 dark:text-purple-300 shadow-xs"
-                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
-              }`}
-            >
-              <span>📋</span>
-              <span>Historial de Órdenes</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[11px] bg-purple-500/15 text-purple-600 dark:text-purple-300">
-                {cargando ? "..." : ordenesHistorialList.length}
-              </span>
-            </button>
+              <button
+                type="button"
+                onClick={() => setSeccionActiva("HISTORIAL")}
+                className={`h-9 px-3.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  seccionActiva === "HISTORIAL"
+                    ? "bg-purple-500/15 border border-purple-500/35 text-purple-600 dark:text-purple-300 shadow-xs"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                }`}
+              >
+                <span>📋</span>
+                <span>Historial de Órdenes</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[11px] bg-purple-500/15 text-purple-600 dark:text-purple-300">
+                  {cargando ? "..." : ordenesHistorialList.length}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
 

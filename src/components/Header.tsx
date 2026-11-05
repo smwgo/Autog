@@ -212,6 +212,9 @@ export function Header() {
   const roleUpper = (currentUser?.role || "").toUpperCase();
   const isAdministrator =
     Boolean(currentUser?.isSuperAdmin) ||
+    isProtectedAdminEmail(currentUser?.email) ||
+    pathname.startsWith("/gerencia") ||
+    pathname.startsWith("/modulos") ||
     ["ROOT", "ADMIN", "ADMINISTRADOR", "GERENCIA", "GERENTE"].includes(roleUpper);
 
   return (
@@ -233,8 +236,11 @@ export function Header() {
           </span>
         </Link>
         <div className="hidden md:flex gap-6"></div>
-        <div className="flex shrink-0 items-center gap-0 sm:gap-5 text-zinc-600 dark:text-zinc-300">
-          
+        <div className="flex shrink-0 items-center gap-0.5 sm:gap-3 text-zinc-600 dark:text-zinc-300">
+          {mounted && isAdministrator && (
+            <BranchTabs iconOnly />
+          )}
+
           <button onClick={toggleTheme} aria-label="Toggle Theme" className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:text-blue-600 transition-colors">
             {isDark ? (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
@@ -307,24 +313,14 @@ export function Header() {
               <Link
                 href={userPanelHref}
                 suppressHydrationWarning
-                aria-label={`${singleWordName} — Sede: ${isSucursalUser ? "Sucursal" : "Principal"}`}
-                className="flex items-center gap-1 sm:gap-2 h-11 px-1.5 sm:px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all cursor-pointer shadow-sm active:scale-95 text-xs font-semibold text-zinc-800 dark:text-zinc-200"
-                title={`${singleWordName} — Sede: ${isSucursalUser ? "Sucursal" : "Principal"}`}
+                aria-label={singleWordName}
+                className="flex items-center gap-1 sm:gap-2 h-11 px-2.5 sm:px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-500 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all cursor-pointer shadow-sm active:scale-95 text-xs font-semibold text-zinc-800 dark:text-zinc-200"
+                title={singleWordName}
               >
                 <svg className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 <span suppressHydrationWarning className="max-[374px]:hidden">{singleWordName}</span>
-                <span
-                  suppressHydrationWarning
-                  className={`hidden sm:inline-flex px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${
-                    isSucursalUser
-                      ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
-                      : "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/25"
-                  }`}
-                >
-                  {isSucursalUser ? "📍 Sucursal" : "🏢 Principal"}
-                </span>
               </Link>
               <button
                 type="button"
@@ -345,11 +341,6 @@ export function Header() {
         </div>
       </div>
     </header>
-    {mounted && isAdministrator && (
-      <div className="container mx-auto flex justify-end px-4 pt-3 sm:px-6 md:px-12">
-        <BranchTabs />
-      </div>
-    )}
     </>
   );
 }

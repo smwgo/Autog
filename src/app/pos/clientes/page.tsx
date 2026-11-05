@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import { getClientActiveBranch, getClientUserBranch, SedeType, FiltroSedeType } from "@/lib/branch";
+import { BranchTabs } from "@/components/pos/BranchTabs";
 
 interface Vehicle {
   id: string;
@@ -247,7 +248,8 @@ export default function GestionClientes() {
             </span>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex flex-col items-end gap-2 shrink-0 ml-auto">
+            <BranchTabs size="sm" />
             <Link 
               href="/pos/clientes/nuevo"
               className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs sm:text-sm shadow-sm shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"

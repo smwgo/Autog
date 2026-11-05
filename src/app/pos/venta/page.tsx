@@ -1511,77 +1511,80 @@ export default function NuevaVentaPage() {
             <span className="inline-flex items-center justify-center px-2 py-0.5 sm:px-2.5 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 shrink-0">
               {productos.length}
             </span>
-            <BranchTabs onChange={() => verificarCajaApertura(false)} size="sm" />
           </div>
 
-          {/* Lado Derecho: 4 botones de acción cuadrados de solo icono (Historial, Notas, Pausar, Anular) */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Historial (Solo icono) */}
-            <Link
-              href="/pos/facturas"
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
-              title="Historial de facturas y ventas"
-            >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <line x1="8" y1="6" x2="21" y2="6" strokeLinecap="round" />
-                <line x1="8" y1="12" x2="21" y2="12" strokeLinecap="round" />
-                <line x1="8" y1="18" x2="21" y2="18" strokeLinecap="round" />
-                <line x1="3" y1="6" x2="3.01" y2="6" strokeLinecap="round" />
-                <line x1="3" y1="12" x2="3.01" y2="12" strokeLinecap="round" />
-                <line x1="3" y1="18" x2="3.01" y2="18" strokeLinecap="round" />
-              </svg>
-            </Link>
+          {/* Lado Derecho: Selector de Sede arriba + 4 botones de acción debajo, alineados a la punta derecha */}
+          <div className="flex flex-col items-end gap-1.5 shrink-0 ml-auto">
+            <BranchTabs onChange={() => verificarCajaApertura(false)} size="sm" />
 
-            {/* Notas (Solo icono) */}
-            <button
-              type="button"
-              onClick={() => setModalNotasVenta(true)}
-              className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
-              title="Agregar notas a la venta"
-            >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              {notasVenta && (
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 absolute -top-1 -right-1 border-2 border-white dark:border-zinc-900 shadow-xs" />
-              )}
-            </button>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              {/* Historial (Solo icono) */}
+              <Link
+                href="/pos/facturas"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
+                title="Historial de facturas y ventas"
+              >
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <line x1="8" y1="6" x2="21" y2="6" strokeLinecap="round" />
+                  <line x1="8" y1="12" x2="21" y2="12" strokeLinecap="round" />
+                  <line x1="8" y1="18" x2="21" y2="18" strokeLinecap="round" />
+                  <line x1="3" y1="6" x2="3.01" y2="6" strokeLinecap="round" />
+                  <line x1="3" y1="12" x2="3.01" y2="12" strokeLinecap="round" />
+                  <line x1="3" y1="18" x2="3.01" y2="18" strokeLinecap="round" />
+                </svg>
+              </Link>
 
-            {/* Pausar (Solo icono) */}
-            <button
-              type="button"
-              onClick={() => {
-                if (cart.length > 0) {
-                  ponerEnEspera();
-                } else {
-                  setMostrarModalEspera(true);
-                }
-              }}
-              className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
-              title={ventasEnEspera.length > 0 ? `${ventasEnEspera.length} venta(s) pausada(s)` : "Pausar venta actual"}
-            >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {ventasEnEspera.length > 0 && (
-                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center absolute -top-1.5 -right-1.5 border-2 border-white dark:border-zinc-900 shadow-xs">
-                  {ventasEnEspera.length}
-                </span>
-              )}
-            </button>
+              {/* Notas (Solo icono) */}
+              <button
+                type="button"
+                onClick={() => setModalNotasVenta(true)}
+                className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
+                title="Agregar notas a la venta"
+              >
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                {notasVenta && (
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500 absolute -top-1 -right-1 border-2 border-white dark:border-zinc-900 shadow-xs" />
+                )}
+              </button>
 
-            {/* Anular (Solo icono) */}
-            <button
-              type="button"
-              onClick={() => setMostrarModalAnular(true)}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-rose-50 dark:hover:bg-rose-950/25 hover:border-rose-300 dark:hover:border-rose-800 hover:text-rose-600 dark:hover:text-rose-400 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
-              title="Anular / Cancelar venta actual"
-            >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <circle cx="12" cy="12" r="9" />
-                <line x1="5.7" y1="5.7" x2="18.3" y2="18.3" strokeLinecap="round" />
-              </svg>
-            </button>
+              {/* Pausar (Solo icono) */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (cart.length > 0) {
+                    ponerEnEspera();
+                  } else {
+                    setMostrarModalEspera(true);
+                  }
+                }}
+                className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
+                title={ventasEnEspera.length > 0 ? `${ventasEnEspera.length} venta(s) pausada(s)` : "Pausar venta actual"}
+              >
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {ventasEnEspera.length > 0 && (
+                  <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center absolute -top-1.5 -right-1.5 border-2 border-white dark:border-zinc-900 shadow-xs">
+                    {ventasEnEspera.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Anular (Solo icono) */}
+              <button
+                type="button"
+                onClick={() => setMostrarModalAnular(true)}
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-rose-50 dark:hover:bg-rose-950/25 hover:border-rose-300 dark:hover:border-rose-800 hover:text-rose-600 dark:hover:text-rose-400 text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
+                title="Anular / Cancelar venta actual"
+              >
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <circle cx="12" cy="12" r="9" />
+                  <line x1="5.7" y1="5.7" x2="18.3" y2="18.3" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </nav>

@@ -6,6 +6,7 @@ import {
   getClientActiveBranch,
   FiltroSedeType,
 } from "@/lib/branch";
+import { BranchTabs } from "@/components/pos/BranchTabs";
 
 export interface GerenciaMetricsData {
   ventasTotales?: number;
@@ -214,8 +215,9 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
           </div>
         </div>
 
-        {/* Selector de fecha */}
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap self-start sm:self-auto">
+        {/* Selector de sede arriba y selector de fecha debajo, alineados a la punta derecha */}
+        <div className="flex flex-col items-end gap-2 self-end sm:self-auto ml-auto">
+          <BranchTabs size="sm" />
           <div className="relative" ref={menuFechaRef}>
             <button
               type="button"
