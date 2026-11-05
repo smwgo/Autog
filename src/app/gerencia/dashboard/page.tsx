@@ -1,213 +1,414 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
-import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
-import { GerenciaExecutiveKpis } from "@/components/gerencia/GerenciaExecutiveKpis";
-import { useEffect, useState } from "react";
+
+type Period = "today" | "week" | "month" | "year";
+
+interface Summary {
+  dateLabel: string;
+  sucursal: string;
+  metrics: {
+    ventasTotales: number;
+    cobradoEnCaja: number;
+    montoHoy: number;
+    ticketPromedio: number;
+    autosEnPista: number;
+    autosEntregados: number;
+    gastosYRepuestos: number;
+    cuentasPorCobrar: number;
+  };
+  weeklyChart: {
+    day: string;
+    income: number;
+    expense: number;
+    heightIncome: number;
+    heightExpense: number;
+  }[];
+  ultimasOrdenes: {
+    id: string;
+    orderNumber: string;
+    client: string;
+    vehicle: string;
+    status: string;
+    amount: number;
+  }[];
+}
+
+interface ApplicationStats {
+  salesCount: number;
+  customers: number;
+  inventory: { products: number; units: number; lowStock: number };
+  workshop: { activeOrders: number; openTasks: number };
+  appointments: number;
+  pendingQuotes: number;
+  teamMembers: number;
+  systemUsers: number;
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+interface SummaryResponse extends Summary {
+  success: boolean;
+  error?: string;
+}
+
+const periodLabels: Record<Period, string> = {
+  today: "Hoy",
+  week: "Esta semana",
+  month: "Este mes",
+  year: "Este año",
+};
+
+function getDateRange(period: Period) {
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+  if (period === "week") {
+    const offset = today.getDay() === 0 ? 6 : today.getDay() - 1;
+    start.setDate(today.getDate() - offset);
+    end.setDate(start.getDate() + 6);
+  } else if (period === "month") {
+    start.setDate(1);
+    end.setMonth(today.getMonth() + 1, 0);
+  } else if (period === "year") {
+    start.setMonth(0, 1);
+    end.setMonth(11, 31);
+  }
+
+  const format = (date: Date) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+  return { desde: format(start), hasta: format(end) };
+}
+
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat("es-EC", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount || 0);
+
+function Icon({ name, className = "h-5 w-5" }: { name: string; className?: string }) {
+  const common = {
+    className,
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    viewBox: "0 0 24 24",
+    "aria-hidden": true as const,
+  };
+
+  switch (name) {
+    case "sales":
+      return <svg {...common}><path d="M3 17 9 11l4 4 8-9" /><path d="M15 6h6v6" /></svg>;
+    case "workshop":
+      return <svg {...common}><path d="M14.7 6.3a5 5 0 0 0-6.4 6.4L3 18l3 3 5.3-5.3a5 5 0 0 0 6.4-6.4L14 13l-3-3 3.7-3.7Z" /></svg>;
+    case "customers":
+      return <svg {...common}><circle cx="9" cy="8" r="3.5" /><path d="M3 20v-1a6 6 0 0 1 12 0v1M16 5.5a3.5 3.5 0 0 1 0 6.8M18 14a5 5 0 0 1 3 4.6V20" /></svg>;
+    case "inventory":
+      return <svg {...common}><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5M3 16l9 5 9-5M12 13v8" /></svg>;
+    case "calendar":
+      return <svg {...common}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" /></svg>;
+    case "quote":
+      return <svg {...common}><path d="M7 3h7l5 5v13H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" /><path d="M14 3v6h6M9 14h6M9 18h6" /></svg>;
+    case "team":
+      return <svg {...common}><circle cx="9" cy="8" r="3" /><path d="M3 20v-1a6 6 0 0 1 12 0v1M16 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4.6V20" /></svg>;
+    case "cash":
+      return <svg {...common}><rect x="3" y="5" width="18" height="14" rx="2" /><circle cx="12" cy="12" r="3" /><path d="M7 9h.01M17 15h.01" /></svg>;
+    default:
+      return <svg {...common}><circle cx="12" cy="12" r="9" /><path d="M12 8v4l3 2" /></svg>;
+  }
+}
 
 export default function DashboardGeneral() {
-  const [period, setPeriod] = useState("Este mes");
-  const [summary, setSummary] = useState<any>(null);
+  const [period, setPeriod] = useState<Period>("month");
+  const [reloadKey, setReloadKey] = useState(0);
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [stats, setStats] = useState<ApplicationStats | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/gerencia/resumen");
-      if (res.ok) {
-        const data = await res.json();
-        setSummary(data);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [error, setError] = useState<string | null>(null);
+  const dateRange = useMemo(() => getDateRange(period), [period]);
 
   useEffect(() => {
-    loadData();
-  }, [period]);
+    const controller = new AbortController();
+    const query = new URLSearchParams(dateRange);
 
-  const handleExport = () => {
-    if (!summary) return;
-    const csv = [
-      "Metrica,Valor",
-      `Ingresos,${summary.ingresosHoy || 0}`,
-      `Egresos,${summary.egresosTotal || 0}`,
-      `Ordenes Activas,${summary.ordenesActivas || 0}`,
-      `Ticket Promedio,${Number(summary.ticketPromedio || 0).toFixed(2)}`,
-      `Clientes Registrados,${summary.clientesTotal || 0}`,
-    ].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "reporte-gerencia.csv";
-    a.click();
+    const loadDashboard = async () => {
+      try {
+        const [summaryResponse, statsResponse] = await Promise.all([
+          fetch(`/api/gerencia/resumen?periodo=personalizado&${query}`, { signal: controller.signal }),
+          fetch(`/api/indicadores?${query}`, { signal: controller.signal }),
+        ]);
+        const [summaryResult, statsResult] = await Promise.all([
+          summaryResponse.json() as Promise<SummaryResponse>,
+          statsResponse.json() as Promise<ApiResponse<ApplicationStats>>,
+        ]);
+
+        if (!summaryResponse.ok || !summaryResult.success || !summaryResult.metrics) {
+          throw new Error(summaryResult.error || "No se pudieron cargar las métricas de ventas y operación.");
+        }
+        if (!statsResponse.ok || !statsResult.success || !statsResult.data) {
+          throw new Error(statsResult.error || "No se pudieron cargar los indicadores de los módulos.");
+        }
+
+        setSummary(summaryResult);
+        setStats(statsResult.data);
+        setError(null);
+      } catch (loadError) {
+        if (controller.signal.aborted) return;
+        console.error("Error al cargar el tablero global de indicadores:", loadError);
+        setSummary(null);
+        setStats(null);
+        setError(loadError instanceof Error ? loadError.message : "Ocurrió un error al cargar los indicadores.");
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    };
+
+    loadDashboard();
+    return () => controller.abort();
+  }, [dateRange, reloadKey]);
+
+  const setSelectedPeriod = (value: Period) => {
+    setLoading(true);
+    setError(null);
+    setSummary(null);
+    setStats(null);
+    setPeriod(value);
   };
 
-  const kpis = [
-    {
-      label: `Ingresos (${period})`,
-      value: summary ? `$${Number(summary.ingresosHoy || 0).toFixed(2)}` : "$0.00",
-      trend: "+12.5%",
-      isUp: true,
-      icon: "💵",
-      color: "text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10",
-    },
-    {
-      label: "Órdenes en Taller",
-      value: summary ? String(summary.ordenesActivas || 0) : "0",
-      trend: "Activas",
-      isUp: true,
-      icon: "🔧",
-      color: "text-blue-500 bg-blue-50 dark:bg-blue-500/10",
-    },
-    {
-      label: "Ticket Promedio",
-      value: summary ? `$${Number(summary.ticketPromedio || 0).toFixed(2)}` : "$0.00",
-      trend: "+3.2%",
-      isUp: true,
-      icon: "🧾",
-      color: "text-amber-500 bg-amber-50 dark:bg-amber-500/10",
-    },
-    {
-      label: "Clientes en Base",
-      value: summary ? String(summary.clientesTotal || 0) : "0",
-      trend: "Activos",
-      isUp: true,
-      icon: "👥",
-      color: "text-purple-500 bg-purple-50 dark:bg-purple-500/10",
-    },
+  const refresh = () => {
+    setLoading(true);
+    setError(null);
+    setSummary(null);
+    setStats(null);
+    setReloadKey((key) => key + 1);
+  };
+
+  const handleExport = () => {
+    if (!summary || !stats) return;
+    const rows: (string | number)[][] = [
+      ["Indicador", "Valor"],
+      ["Periodo", summary.dateLabel],
+      ["Cobertura", "Todas las sedes y módulos"],
+      ["Ventas totales", summary.metrics.ventasTotales],
+      ["Cobrado", summary.metrics.cobradoEnCaja],
+      ["Transacciones POS", stats.salesCount],
+      ["Clientes registrados", stats.customers],
+      ["Órdenes de taller activas", stats.workshop.activeOrders],
+      ["Tareas de taller abiertas", stats.workshop.openTasks],
+      ["Productos en catálogo", stats.inventory.products],
+      ["Unidades en inventario", stats.inventory.units],
+      ["Productos con stock bajo", stats.inventory.lowStock],
+      ["Citas por atender", stats.appointments],
+      ["Cotizaciones pendientes", stats.pendingQuotes],
+      ["Personal activo", stats.teamMembers],
+      ["Usuarios del sistema", stats.systemUsers],
+      ["Gastos del periodo", summary.metrics.gastosYRepuestos],
+      ["Cuentas por cobrar", summary.metrics.cuentasPorCobrar],
+    ];
+    const csv = rows
+      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
+      .join("\r\n");
+    const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "indicadores-autog.csv";
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const primaryCards = [
+    { label: "Ingresos del período", value: summary ? formatCurrency(summary.metrics.ventasTotales) : "—", hint: periodLabels[period], icon: "sales", color: "text-cyan-600 dark:text-cyan-400", iconBg: "bg-cyan-500/10" },
+    { label: "Ventas en POS", value: stats ? String(stats.salesCount) : "—", hint: "transacciones", icon: "cash", color: "text-emerald-600 dark:text-emerald-400", iconBg: "bg-emerald-500/10" },
+    { label: "Clientes registrados", value: stats ? String(stats.customers) : "—", hint: "en toda la aplicación", icon: "customers", color: "text-violet-600 dark:text-violet-400", iconBg: "bg-violet-500/10" },
+    { label: "Órdenes activas", value: stats ? String(stats.workshop.activeOrders) : "—", hint: "en taller", icon: "workshop", color: "text-amber-600 dark:text-amber-400", iconBg: "bg-amber-500/10" },
   ];
 
-  const recentOrders = summary?.ultimasOrdenes || [];
+  const modules = [
+    { title: "Punto de venta", description: "Ventas y cobros", icon: "cash", href: "/pos", color: "text-emerald-500", value: stats ? `${stats.salesCount} ventas` : "—", detail: summary ? `${formatCurrency(summary.metrics.cobradoEnCaja)} cobrados` : "Cargando…" },
+    { title: "Finanzas", description: "Ingresos, egresos y cartera", icon: "sales", href: "/gerencia/reportes", color: "text-blue-500", value: summary ? `${formatCurrency(summary.metrics.ventasTotales)} ingresos` : "—", detail: summary ? `${formatCurrency(summary.metrics.gastosYRepuestos)} gastos · ${formatCurrency(summary.metrics.cuentasPorCobrar)} por cobrar` : "Cargando…" },
+    { title: "Taller", description: "Trabajo en curso", icon: "workshop", href: "/taller", color: "text-amber-500", value: stats ? `${stats.workshop.activeOrders} órdenes activas` : "—", detail: stats ? `${stats.workshop.openTasks} tareas pendientes` : "Cargando…" },
+    { title: "Inventario", description: "Catálogo y existencias", icon: "inventory", href: "/gerencia/inventario", color: "text-cyan-500", value: stats ? `${stats.inventory.products} productos` : "—", detail: stats ? `${stats.inventory.units} unidades · ${stats.inventory.lowStock} con stock bajo` : "Cargando…" },
+    { title: "Clientes y agenda", description: "Relación con clientes", icon: "calendar", href: "/cliente", color: "text-violet-500", value: stats ? `${stats.customers} clientes` : "—", detail: stats ? `${stats.appointments} citas por atender` : "Cargando…" },
+    { title: "Cotizaciones", description: "Seguimiento comercial", icon: "quote", href: "/presupuestos", color: "text-blue-500", value: stats ? `${stats.pendingQuotes} pendientes` : "—", detail: "Por revisar o aprobar" },
+    { title: "Equipo", description: "Accesos y personal", icon: "team", href: "/gerencia/personal", color: "text-rose-500", value: stats ? `${stats.teamMembers} colaboradores` : "—", detail: stats ? `${stats.systemUsers} cuentas de usuario` : "Cargando…" },
+  ];
+
+  const chart = summary?.weeklyChart ?? [];
+  const maxChartValue = Math.max(1, ...chart.flatMap((day) => [day.income, day.expense]));
+  const recentOrders = summary?.ultimasOrdenes ?? [];
 
   return (
-    <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
+    <div className="flex min-h-screen flex-col bg-[#f4f6fa] font-sans dark:bg-[#090d14]">
       <Header />
-      <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full">
-        {/* Breadcrumb & CSV Export */}
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <main className="mx-auto w-full max-w-[1440px] flex-1 space-y-6 px-4 py-5 pb-28 sm:space-y-8 sm:px-6 sm:py-8 md:px-10">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <Link
               href="/gerencia"
-              title="Volver a Gerencia"
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
+              aria-label="Volver a Gerencia"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-blue-300 hover:text-blue-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
             >
-              <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6M9 12h12" /></svg>
             </Link>
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500">
-              <Link href="/gerencia" className="hover:text-blue-600 transition-colors">Gerencia</Link>
-              <span>/</span>
-              <span className="text-zinc-900 dark:text-zinc-100 font-medium">Indicadores</span>
-            </div>
+            <h1 className="text-xl font-bold tracking-tight text-zinc-950 dark:text-white sm:text-2xl">Indicadores</h1>
           </div>
-          <button
-            onClick={handleExport}
-            className="h-9 px-3.5 sm:px-4 rounded-xl bg-blue-600 text-white font-medium text-xs sm:text-sm hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-sm"
-          >
-            <span>📥</span>
-            <span>Reporte CSV</span>
-          </button>
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            <label className="sr-only" htmlFor="indicator-period">Período</label>
+            <select
+              id="indicator-period"
+              value={period}
+              onChange={(event) => setSelectedPeriod(event.target.value as Period)}
+              className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700 shadow-sm outline-none transition focus:border-blue-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200"
+            >
+              {(Object.entries(periodLabels) as [Period, string][]).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            <button
+              type="button"
+              onClick={refresh}
+              disabled={loading}
+              aria-label="Actualizar indicadores"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-blue-300 hover:text-blue-600 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
+            >
+              <svg className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 7v5h-5M4 17v-5h5" /><path d="M5.6 9a7 7 0 0 1 11.6-2L20 12M4 12l2.8 5a7 7 0 0 0 11.6-2" /></svg>
+            </button>
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={!summary || !stats || loading}
+              aria-label="Exportar CSV"
+              title="Exportar CSV"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v4h14v-4" /></svg>
+            </button>
+          </div>
         </div>
 
-        {/* Panel Ejecutivo KPI (Exacto a Dirección) */}
-        <div className="mb-6 sm:mb-8">
-          <GerenciaExecutiveKpis onDataLoaded={(d) => setSummary(d)} />
-        </div>
+        {error && (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-200">
+            <span>{error}</span>
+            <button type="button" onClick={refresh} className="font-semibold underline underline-offset-2">Reintentar</button>
+          </div>
+        )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          {/* Main Chart */}
-          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-5 sm:mb-6">
-              <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white">Ingresos vs Gastos</h3>
-              <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
-                <span className="inline-flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-blue-500"></span>
-                  Ingresos: <strong className="text-blue-600">${Number(summary?.ingresosHoy || 0).toFixed(2)}</strong>
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-zinc-300 dark:bg-zinc-700"></span>
-                  Egresos: <strong className="text-rose-500">${Number(summary?.egresosTotal || 0).toFixed(2)}</strong>
-                </span>
+        <section aria-label="Indicadores principales" className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+          {primaryCards.map((card) => (
+            <article key={card.label} className="min-w-0 rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-[#111722] sm:rounded-3xl sm:p-5">
+              <div className="flex items-start justify-between gap-2">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${card.iconBg} ${card.color}`}><Icon name={card.icon} /></div>
+                {loading && <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500" />}
+              </div>
+              <p className="mt-5 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400 sm:text-sm">{card.label}</p>
+              <p className={`mt-1 truncate text-2xl font-bold tracking-tight sm:text-3xl ${card.color}`}>{loading && !summary && !stats ? "…" : card.value}</p>
+              <p className="mt-1 truncate text-[11px] text-zinc-400 dark:text-zinc-500 sm:text-xs">{card.hint}</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_1fr]">
+          <div className="rounded-3xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-[#111722] sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">Rendimiento</p>
+                <h3 className="mt-1 text-lg font-bold text-zinc-900 dark:text-white">Ingresos y gastos por día de semana</h3>
+              </div>
+              <div className="flex flex-wrap gap-3 text-xs">
+                <span className="inline-flex items-center gap-1.5 text-zinc-500"><i className="h-2.5 w-2.5 rounded-sm bg-blue-500" />Ingresos</span>
+                <span className="inline-flex items-center gap-1.5 text-zinc-500"><i className="h-2.5 w-2.5 rounded-sm bg-zinc-300 dark:bg-zinc-600" />Gastos</span>
               </div>
             </div>
-            <div className="flex-grow flex items-end justify-between gap-1.5 sm:gap-2 h-48 sm:h-64 mt-auto pt-4">
-              {(summary?.weeklyChart || [
-                { day: "Lun", heightIncome: 4, heightExpense: 4, income: 0, expense: 0 },
-                { day: "Mar", heightIncome: 4, heightExpense: 4, income: 0, expense: 0 },
-                { day: "Mié", heightIncome: 4, heightExpense: 4, income: 0, expense: 0 },
-                { day: "Jue", heightIncome: 4, heightExpense: 4, income: 0, expense: 0 },
-                { day: "Vie", heightIncome: 4, heightExpense: 4, income: 0, expense: 0 },
-                { day: "Sáb", heightIncome: 4, heightExpense: 4, income: 0, expense: 0 },
-                { day: "Dom", heightIncome: 4, heightExpense: 4, income: 0, expense: 0 },
-              ]).map((bar: any, i: number) => (
-                <div key={i} className="w-full flex justify-center items-end gap-1 group h-full">
-                  <div
-                    title={`Ingresos ${bar.day}: $${Number(bar.income || 0).toFixed(2)}`}
-                    className="w-1/2 bg-blue-500 rounded-t-md transition-all hover:bg-blue-400 cursor-pointer"
-                    style={{ height: `${bar.heightIncome}%` }}
-                  />
-                  <div
-                    title={`Egresos ${bar.day}: $${Number(bar.expense || 0).toFixed(2)}`}
-                    className="w-1/2 bg-zinc-200 dark:bg-zinc-800 rounded-t-md transition-all hover:bg-zinc-300 dark:hover:bg-zinc-700 cursor-pointer"
-                    style={{ height: `${bar.heightExpense}%` }}
-                  />
+            <div className="mt-7 flex h-48 items-end justify-between gap-2 sm:h-56 sm:gap-4">
+              {chart.map((day) => (
+                <div key={day.day} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
+                  <div className="flex h-full w-full items-end justify-center gap-1.5">
+                    <div
+                      title={`${day.day}: ingresos ${formatCurrency(day.income)}`}
+                      className="w-full max-w-7 rounded-t-md bg-blue-500 transition-all"
+                      style={{ height: `${day.income ? Math.max(5, (day.income / maxChartValue) * 100) : 2}%` }}
+                    />
+                    <div
+                      title={`${day.day}: gastos ${formatCurrency(day.expense)}`}
+                      className="w-full max-w-7 rounded-t-md bg-zinc-200 transition-all dark:bg-zinc-700"
+                      style={{ height: `${day.expense ? Math.max(5, (day.expense / maxChartValue) * 100) : 2}%` }}
+                    />
+                  </div>
+                  <span className="text-[11px] font-medium text-zinc-400">{day.day}</span>
                 </div>
               ))}
+              {!chart.length && <p className="w-full self-center text-center text-sm text-zinc-400">{loading ? "Cargando actividad…" : "No hay actividad para mostrar."}</p>}
             </div>
-            <div className="flex justify-between mt-3 sm:mt-4 text-[11px] sm:text-xs font-medium text-zinc-400">
-              {(summary?.weeklyChart || [
-                { day: "Lun" }, { day: "Mar" }, { day: "Mié" }, { day: "Jue" }, { day: "Vie" }, { day: "Sáb" }, { day: "Dom" }
-              ]).map((item: any, i: number) => (
-                <span key={i}>{item.day}</span>
-              ))}
+            <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 border-t border-zinc-100 pt-4 text-sm dark:border-zinc-800">
+              <span className="text-zinc-500">Ingresos <strong className="ml-1 text-zinc-900 dark:text-white">{summary ? formatCurrency(summary.metrics.ventasTotales) : "—"}</strong></span>
+              <span className="text-zinc-500">Gastos <strong className="ml-1 text-rose-500">{summary ? formatCurrency(summary.metrics.gastosYRepuestos) : "—"}</strong></span>
+              <span className="text-zinc-500">Por cobrar <strong className="ml-1 text-amber-600 dark:text-amber-400">{summary ? formatCurrency(summary.metrics.cuentasPorCobrar) : "—"}</strong></span>
             </div>
           </div>
 
-          {/* Recent Activity List */}
-          <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm flex flex-col">
-            <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white mb-4 sm:mb-6">Últimas Órdenes</h3>
-            <div className="space-y-2.5 sm:space-y-4 flex-grow">
-              {loading ? (
-                <p className="text-sm text-zinc-500">Cargando órdenes...</p>
-              ) : recentOrders.length === 0 ? (
-                <p className="text-sm text-zinc-500">No hay órdenes recientes</p>
-              ) : (
-                recentOrders.map((order: any) => (
-                  <div key={order.id} className="flex items-center justify-between p-3 rounded-2xl bg-zinc-50/70 dark:bg-zinc-800/30 sm:bg-transparent hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors gap-2">
-                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                        order.status === "Terminado" || order.status === "Entregado"
-                          ? "bg-emerald-500"
-                          : order.status.includes("Esperando")
-                          ? "bg-amber-500"
-                          : "bg-blue-500"
-                      }`}></div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">{order.orderNumber}</p>
-                        <p className="text-xs text-zinc-500 truncate">{order.client} — {order.vehicle}</p>
-                      </div>
-                    </div>
-                    <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200 flex-shrink-0">
-                      ${Number(order.amount || 0).toFixed(2)}
-                    </span>
-                  </div>
-                ))
-              )}
+          <div className="rounded-3xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-[#111722] sm:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">Pulso del sistema</p>
+                <h3 className="mt-1 text-lg font-bold text-zinc-900 dark:text-white">Módulos de AutoG</h3>
+              </div>
+              <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">Vista global</span>
             </div>
-            <Link
-              href="/oficina/ordenes"
-              className="w-full mt-4 py-3 text-center rounded-xl border border-zinc-200 dark:border-zinc-800 text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:scale-98 transition-all"
-            >
-              Ver todas las órdenes
-            </Link>
+            <div className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
+              {modules.map((module) => (
+                <Link key={module.title} href={module.href} className="group flex items-center gap-3 py-3 first:pt-1 last:pb-1">
+                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-50 dark:bg-white/5 ${module.color}`}><Icon name={module.icon} /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-zinc-800 transition group-hover:text-blue-600 dark:text-zinc-100 dark:group-hover:text-blue-400">{module.title}</span>
+                    <span className="block truncate text-xs text-zinc-400">{module.detail}</span>
+                  </span>
+                  <span className="max-w-[42%] truncate text-right text-xs font-semibold text-zinc-600 dark:text-zinc-300">{module.value}</span>
+                  <svg className="h-4 w-4 shrink-0 text-zinc-300 transition group-hover:translate-x-0.5 group-hover:text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6" /></svg>
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
+
+        <section className="rounded-3xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-[#111722] sm:p-6">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">Actividad del taller</p>
+              <h3 className="mt-1 text-lg font-bold text-zinc-900 dark:text-white">Órdenes recientes</h3>
+            </div>
+            <Link href="/taller" className="text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400">Abrir taller <span aria-hidden="true">→</span></Link>
+          </div>
+          {loading && !summary ? (
+            <p className="py-5 text-sm text-zinc-500">Cargando actividad del taller…</p>
+          ) : !recentOrders.length ? (
+            <p className="py-5 text-sm text-zinc-500">{error ? "No se pudo cargar la actividad." : "No hay órdenes recientes."}</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {recentOrders.slice(0, 8).map((order) => (
+                <article key={order.id} className="min-w-0 rounded-2xl bg-zinc-50 p-4 dark:bg-white/[0.03]">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate text-sm font-bold text-zinc-900 dark:text-white">{order.orderNumber}</p>
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-cyan-500" title={order.status} />
+                  </div>
+                  <p className="mt-1 truncate text-xs text-zinc-500">{order.client} · {order.vehicle}</p>
+                  <p className="mt-3 text-sm font-bold text-zinc-800 dark:text-zinc-200">{formatCurrency(order.amount)}</p>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       </main>
       <GerenciaMobileNav />
     </div>

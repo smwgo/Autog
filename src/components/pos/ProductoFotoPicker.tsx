@@ -36,10 +36,11 @@ export function ProductoFotoPicker({
             <input
               type="file"
               accept="image/*"
+              capture="environment"
               disabled={uploading}
               onChange={onChange}
               className="sr-only"
-              aria-label="Tomar o elegir foto del producto"
+              aria-label="Tomar foto del producto con la cámara"
             />
 
             {uploading ? (
@@ -59,7 +60,7 @@ export function ProductoFotoPicker({
             ) : (
               <div className="flex flex-col items-center justify-center text-zinc-400 p-2 text-center">
                 <span className={isCompact ? "text-xl" : "text-3xl"}>📷</span>
-                <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Agrega una foto</span>
+                <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Tomar foto</span>
               </div>
             )}
           </label>
@@ -90,9 +91,9 @@ export function ProductoFotoPicker({
           type="button"
           onClick={() => uploadInputRef.current?.click()}
           disabled={uploading}
-          title="Subir imagen"
-          aria-label="Subir imagen"
-          className="mt-1 flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-600 shadow-sm transition-colors hover:border-blue-500 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+          title="Subir imagen desde el móvil o la computadora"
+          aria-label="Subir imagen desde el móvil o la computadora"
+          className="mt-1 flex min-h-10 min-w-10 flex-col items-center justify-center gap-1 rounded-lg border border-zinc-200 bg-white px-2 py-2 text-[10px] font-semibold text-zinc-600 shadow-sm transition-colors hover:border-blue-500 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
         >
           <svg
             aria-hidden="true"
@@ -104,6 +105,7 @@ export function ProductoFotoPicker({
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4a2 2 0 002 2h10a2 2 0 002-2v-4" />
           </svg>
+          <span>Subir</span>
         </button>
       </div>
 

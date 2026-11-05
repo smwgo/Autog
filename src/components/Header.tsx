@@ -267,7 +267,7 @@ export function Header() {
             {showNotifications && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)}></div>
-                <div className="absolute top-full right-0 mt-3 w-[calc(100vw-2rem)] sm:w-80 max-w-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[80dvh]">
+                <div className="fixed left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+4rem)] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-3 sm:w-80 max-w-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[80dvh]">
                   <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
                     <h3 className="font-bold text-zinc-900 dark:text-white">Notificaciones</h3>
                     <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-1 rounded-full font-semibold">{unreadCount} nuevas</span>
