@@ -85,6 +85,14 @@ export async function GET(request: Request) {
           orderBy: [{ category: "asc" }, { name: "asc" }],
         });
 
+        const rawTipos: any = await prisma.$queryRawUnsafe('SELECT "id", "tipo" FROM "WorkshopService"').catch(() => []);
+        const tiposMap: Record<string, string> = {};
+        if (Array.isArray(rawTipos)) {
+          rawTipos.forEach((r: any) => {
+            if (r.id && r.tipo) tiposMap[r.id] = r.tipo;
+          });
+        }
+
         const categoriesRaw = await db.model.findMany({
           select: { category: true },
           distinct: ["category"],
@@ -93,7 +101,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({
           success: true,
-          servicios: servicios.map((s: any) => ({ ...s, tipo: s.tipo || "Taller" })),
+          servicios: servicios.map((s: any) => ({ ...s, tipo: s.tipo || tiposMap[s.id] || "Taller" })),
           categories,
           total: servicios.length,
           connectedToNeon: true,
@@ -186,7 +194,6 @@ export async function POST(request: Request) {
           code: generatedCode,
           name: name.trim(),
           category: category?.trim() || "General",
-          tipo: finalTipo,
           price: parseFloat(price),
           estimatedMinutes: parseInt(estimatedMinutes) || 30,
           description: description?.trim() || null,
@@ -194,6 +201,12 @@ export async function POST(request: Request) {
           active: active !== false,
         },
       });
+      await prisma.$executeRawUnsafe(
+        'UPDATE "WorkshopService" SET "tipo" = $2 WHERE "id" = $1',
+        nuevoServicio.id,
+        finalTipo
+      ).catch(() => {});
+      (nuevoServicio as any).tipo = finalTipo;
 
       return NextResponse.json({
         success: true,
@@ -260,7 +273,6 @@ export async function PUT(request: Request) {
       if (code !== undefined) dataToUpdate.code = code.trim().toUpperCase();
       if (name !== undefined) dataToUpdate.name = name.trim();
       if (category !== undefined) dataToUpdate.category = category.trim();
-      if (finalTipo !== undefined) dataToUpdate.tipo = finalTipo;
       if (price !== undefined) dataToUpdate.price = parseFloat(price);
       if (estimatedMinutes !== undefined) dataToUpdate.estimatedMinutes = parseInt(estimatedMinutes);
       if (description !== undefined) dataToUpdate.description = description?.trim() || null;
@@ -271,6 +283,14 @@ export async function PUT(request: Request) {
         where: { id },
         data: dataToUpdate,
       });
+      if (finalTipo !== undefined) {
+        await prisma.$executeRawUnsafe(
+          'UPDATE "WorkshopService" SET "tipo" = $2 WHERE "id" = $1',
+          id,
+          finalTipo
+        ).catch(() => {});
+        (servicioActualizado as any).tipo = finalTipo;
+      }
 
       return NextResponse.json({
         success: true,

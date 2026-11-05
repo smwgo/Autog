@@ -608,7 +608,7 @@
       "location": "",
       "imageUrl": "/api/storage/download?key=productos%2F4bc83888-ff2e-43ce-9381-d4122eacb5ed.png",
       "createdAt": "2026-11-03T02:14:02.118Z",
-      "updatedAt": "2026-11-03T02:17:13.622Z",
+      "updatedAt": "2026-11-05T04:11:04.533Z",
       "tipo": "Lubricentro"
     },
     {
@@ -626,7 +626,7 @@
       "location": "",
       "imageUrl": "/api/storage/download?key=productos%2F9396d027-07ba-41c3-aa23-f33bee776f66.png",
       "createdAt": "2026-11-03T02:15:13.163Z",
-      "updatedAt": "2026-11-03T02:16:34.439Z",
+      "updatedAt": "2026-11-05T04:11:05.096Z",
       "tipo": "Lubricentro"
     },
     {
@@ -644,7 +644,7 @@
       "location": null,
       "imageUrl": "/api/storage/download?key=productos%2F56e59077-f1e3-4e3e-8311-2849ea5de2d1.png",
       "createdAt": "2026-11-03T03:08:54.386Z",
-      "updatedAt": "2026-11-03T03:08:54.404Z",
+      "updatedAt": "2026-11-05T04:11:05.580Z",
       "tipo": "Lubricentro"
     },
     {
@@ -662,7 +662,7 @@
       "location": null,
       "imageUrl": "/api/storage/download?key=productos%2Fef2fead0-9f87-4015-b998-753f3ecb4006.png",
       "createdAt": "2026-11-03T03:10:14.345Z",
-      "updatedAt": "2026-11-03T03:10:14.366Z",
+      "updatedAt": "2026-11-05T04:11:06.064Z",
       "tipo": "Lubricentro"
     },
     {
@@ -680,7 +680,7 @@
       "location": "",
       "imageUrl": "/api/storage/download?key=productos%2Fe1637c8f-b773-4bf4-a4ff-0c1a414f228c.png",
       "createdAt": "2026-11-03T03:12:07.988Z",
-      "updatedAt": "2026-11-03T03:28:37.809Z",
+      "updatedAt": "2026-11-05T04:11:06.578Z",
       "tipo": "Lubricentro"
     },
     {
@@ -698,7 +698,7 @@
       "location": null,
       "imageUrl": "/api/storage/download?key=productos%2Fd218fc8e-65cd-4507-9383-3de2f3074fca.png",
       "createdAt": "2026-11-03T03:13:06.200Z",
-      "updatedAt": "2026-11-03T03:13:06.217Z",
+      "updatedAt": "2026-11-05T04:11:07.087Z",
       "tipo": "Lubricentro"
     },
     {
@@ -716,7 +716,7 @@
       "location": null,
       "imageUrl": "/api/storage/download?key=productos%2Fbad77eca-dc59-44f4-966e-770bf9630306.png",
       "createdAt": "2026-11-03T03:14:20.397Z",
-      "updatedAt": "2026-11-03T03:14:20.411Z",
+      "updatedAt": "2026-11-05T04:11:07.599Z",
       "tipo": "Lubricentro"
     },
     {
@@ -734,7 +734,7 @@
       "location": null,
       "imageUrl": "/api/storage/download?key=productos%2Fbce0dd0e-c2a3-4c56-806b-48e066f42573.png",
       "createdAt": "2026-11-03T03:20:23.424Z",
-      "updatedAt": "2026-11-03T03:20:23.443Z",
+      "updatedAt": "2026-11-05T04:11:08.118Z",
       "tipo": "Lubricentro"
     },
     {
@@ -752,7 +752,7 @@
       "location": null,
       "imageUrl": "/api/storage/download?key=productos%2F63b45bf4-79fa-4bbc-a598-de5392b5e929.png",
       "createdAt": "2026-11-03T03:21:26.962Z",
-      "updatedAt": "2026-11-03T03:21:26.977Z",
+      "updatedAt": "2026-11-05T04:11:08.623Z",
       "tipo": "Lubricentro"
     },
     {
@@ -770,8 +770,8 @@
       "location": null,
       "imageUrl": "/api/storage/download?key=productos%2F7bfd07b6-36dd-4cff-90f7-549d35375301.png",
       "createdAt": "2026-11-03T03:22:29.176Z",
-      "updatedAt": "2026-11-03T03:22:29.191Z",
-      "tipo": "Tienda"
+      "updatedAt": "2026-11-05T04:11:09.135Z",
+      "tipo": "Lubricentro"
     },
     {
       "id": "cmw2mj6hv0000g9i1s0isetmz",
@@ -779,7 +779,7 @@
       "name": "Producto General",
       "brand": "",
       "category": "General",
-      "price": 0,
+      "price": "0",
       "costPrice": null,
       "stock": 0,
       "stockNorte": 0,
@@ -788,8 +788,8 @@
       "imageUrl": null,
       "status": "Agotado",
       "createdAt": "2026-11-04T21:23:43.651Z",
-      "updatedAt": "2026-11-05T02:06:16.359Z",
-      "tipo": "Car Wash, Tecnicentro"
+      "updatedAt": "2026-11-05T04:11:09.647Z",
+      "tipo": "Taller"
     }
   ],
   "systemSetting": [
@@ -1014,6 +1014,7 @@
       "email": "tiendaautogdaule@gmail.com",
       "name": "Super Administrador",
       "role": "ROOT",
+      "passwordHash": "$2b$10$R3U8xgXS3eqAu73RfKPNwOmNR6ycMMns9yhcQqhN7MrJGMeZu4bnq",
       "createdAt": "2026-11-03T20:24:33.558Z",
       "updatedAt": "2026-11-03T20:24:33.558Z",
       "avatar": null
@@ -1022,7 +1023,8 @@
       "id": "cmw14eae20000bn1y85knubal",
       "name": "Super Administrador",
       "email": "tiendaautodaule@gmail.com",
-      "role": "ROOT"
+      "role": "ROOT",
+      "passwordHash": "$2b$10$nXyeiO2AqQnfThaxQs22gehXZeJp82xkPmc5nzsPoVtcUh7CPFuz2"
     },
     {
       "id": "cmw2pjx2g000011wsv7p5rizg",
@@ -1031,16 +1033,18 @@
       "updatedAt": "2026-11-04T22:48:16.934Z",
       "name": "Administrador",
       "avatar": null,
-      "role": "ROOT"
+      "role": "ROOT",
+      "passwordHash": "$2b$12$Dc2eT3/zOj4vFKi9eKGKeuDEIPg28NVyze4riH5F1qokC9AYjziNe"
     },
     {
       "id": "cmw2pjxwh000111wsw8va3p3i",
       "email": "tiendaautogadmin@gmail.com",
       "createdAt": "2026-11-04T22:48:18.017Z",
-      "updatedAt": "2026-11-04T22:48:18.017Z",
+      "updatedAt": "2026-11-05T02:38:00.042Z",
       "name": "Administrador",
       "avatar": null,
-      "role": "ROOT"
+      "role": "ROOT",
+      "passwordHash": "$2b$12$A0iHiV9gpu2wr8qZqCjaEu4YCiSlx45gSm7nXehGVUdQ9PeialgRi"
     }
   ],
   "cashRegister": [
@@ -1308,6 +1312,39 @@
       "details": "Permisos actualizados para Propuesta: [Oficina] (Activo)",
       "level": "INFO",
       "createdAt": "2026-11-04T20:16:37.182Z"
+    },
+    {
+      "id": "cmw2ztpg40000mtfvuzol9wpq",
+      "dateLabel": "04-nov, 10:35 p. m.",
+      "userName": "Gerencia",
+      "ipAddress": "192.168.1.10",
+      "module": "USUARIOS",
+      "action": "ELIMINAR_USUARIO",
+      "details": "Usuario eliminado: POS (pos@gmail.com)",
+      "level": "ADVERTENCIA",
+      "createdAt": "2026-11-05T03:35:49.778Z"
+    },
+    {
+      "id": "cmw2zttum0001mtfvm8o008k3",
+      "dateLabel": "04-nov, 10:35 p. m.",
+      "userName": "Gerencia",
+      "ipAddress": "192.168.1.10",
+      "module": "USUARIOS",
+      "action": "ELIMINAR_USUARIO",
+      "details": "Usuario eliminado: Oficina (oficina@gmail.com)",
+      "level": "ADVERTENCIA",
+      "createdAt": "2026-11-05T03:35:55.486Z"
+    },
+    {
+      "id": "cmw2ztz1a0002mtfvr25544yx",
+      "dateLabel": "04-nov, 10:36 p. m.",
+      "userName": "Gerencia",
+      "ipAddress": "192.168.1.10",
+      "module": "USUARIOS",
+      "action": "ELIMINAR_USUARIO",
+      "details": "Usuario eliminado: Propuesta (propuesta@gmail.com)",
+      "level": "ADVERTENCIA",
+      "createdAt": "2026-11-05T03:36:02.207Z"
     }
   ],
   "workshopInspection": [],
@@ -1315,42 +1352,6 @@
   "posCreditAccount": [],
   "cashMovement": [],
   "appUserAccess": [
-    {
-      "id": "cmw1kn8ca0007yiztb4h57pjq",
-      "identification": null,
-      "name": "POS",
-      "email": "pos@gmail.com",
-      "phone": null,
-      "username": "pos",
-      "pinCode": "123456",
-      "role": "POS",
-      "branch": "Principal",
-      "accessOficina": false,
-      "accessPos": true,
-      "accessTaller": false,
-      "status": "Activo",
-      "lastAccess": "Hoy",
-      "createdAt": "2026-11-04T03:43:07.257Z",
-      "updatedAt": "2026-11-05T02:16:35.152Z"
-    },
-    {
-      "id": "cmw2b5g45000112ljisdj08ec",
-      "identification": null,
-      "name": "Oficina",
-      "email": "oficina@gmail.com",
-      "phone": null,
-      "username": "oficina",
-      "pinCode": "123456",
-      "role": "Oficina",
-      "branch": "Principal",
-      "accessOficina": true,
-      "accessPos": false,
-      "accessTaller": false,
-      "status": "Activo",
-      "lastAccess": "Hoy",
-      "createdAt": "2026-11-04T16:05:07.156Z",
-      "updatedAt": "2026-11-04T21:20:42.588Z"
-    },
     {
       "id": "cmw2bhty3000312ljd89ujyhe",
       "identification": null,
@@ -1367,25 +1368,7 @@
       "status": "Activo",
       "lastAccess": "Hoy",
       "createdAt": "2026-11-04T16:14:44.953Z",
-      "updatedAt": "2026-11-04T21:54:10.876Z"
-    },
-    {
-      "id": "cmw2biqjf000612ljrhw9tbl3",
-      "identification": null,
-      "name": "Propuesta",
-      "email": "propuesta@gmail.com",
-      "phone": null,
-      "username": "presupuesto",
-      "pinCode": "123456",
-      "role": "Presupuesto",
-      "branch": "Principal",
-      "accessOficina": true,
-      "accessPos": false,
-      "accessTaller": false,
-      "status": "Activo",
-      "lastAccess": "Hoy",
-      "createdAt": "2026-11-04T16:15:27.195Z",
-      "updatedAt": "2026-11-04T21:14:01.498Z"
+      "updatedAt": "2026-11-05T03:38:01.539Z"
     },
     {
       "id": "cmw2deq74000c12ljjgmsxm1v",

@@ -10,7 +10,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 const MIRROR_FILE_PATH = path.join(process.cwd(), "prisma", "neon-local-mirror.json");
-const CIRCUIT_BREAKER_TTL_MS = 300000; // 5 minutos para evitar bloqueos continuos cuando Neon no responde
+const CIRCUIT_BREAKER_TTL_MS = 10000; // 10 segundos para reintentar Neon rápidamente tras micro-cortes
 
 const MODEL_DEFAULTS: Record<string, () => Record<string, any>> = {
   workshopOrder: () => ({
@@ -539,8 +539,13 @@ function executeMirrorRawQuery(queryOrStrings: any, params: any[] = []): any[] {
   // Filter by $1 if WHERE "id" = $1 or UPPER("plate") = $1
   if (params.length > 0 && params[0] !== undefined) {
     const p1 = String(params[0]);
-    if (/WHERE\s+"?id"?\s*=\s*\$1/i.test(sql)) {
-      return rows.filter((r) => String(r.id) === p1);
+    if (/WHERE\s+[\s\S]*?"?id"?\s*=\s*\$1/i.test(sql)) {
+      return rows.filter(
+        (r) =>
+          String(r.id) === p1 ||
+          String(r.orderNumber || "") === p1 ||
+          String(r.quoteToken || "") === p1
+      );
     }
     if (/WHERE\s+UPPER\("?plate"?\)\s*=\s*\$1/i.test(sql)) {
       return rows.filter((r) => String(r.plate || "").toUpperCase() === p1.toUpperCase());
@@ -664,18 +669,28 @@ function syncNeonResultToMirror(modelName: string, method: string, result: any, 
     const db = loadMirrorDb();
     if (!db[modelName]) db[modelName] = [];
     const table = db[modelName];
+    const isReadOp = method === "findMany" || method === "findUnique" || method === "findFirst";
 
     const upsertRow = (row: any) => {
       if (!row || typeof row !== "object" || !row.id) return;
       const safeRow = { ...row };
-      if (modelName === "user") {
-        delete safeRow.passwordHash;
-      }
       const idx = table.findIndex((r) => r.id === row.id);
       if (idx !== -1) {
-        table[idx] = { ...table[idx], ...safeRow };
-        if (modelName === "user") {
-          delete table[idx].passwordHash;
+        const existing = table[idx];
+        const existingHash = existing?.passwordHash;
+
+        if (isReadOp && existing?.updatedAt && safeRow?.updatedAt) {
+          const localTime = new Date(existing.updatedAt).getTime();
+          const remoteTime = new Date(safeRow.updatedAt).getTime();
+          if (!isNaN(localTime) && !isNaN(remoteTime) && localTime > remoteTime + 500) {
+            Object.assign(row, existing);
+            return;
+          }
+        }
+
+        table[idx] = { ...existing, ...safeRow };
+        if (modelName === "user" && !safeRow.passwordHash && existingHash) {
+          table[idx].passwordHash = existingHash;
         }
       } else {
         table.push(safeRow);
@@ -759,7 +774,9 @@ function createModelProxy(modelName: string) {
                 return res;
               }
             } catch (err: any) {
-              globalForPrisma.neonCircuitOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
+              if (isNeonConnectionOrQuotaError(err)) {
+                globalForPrisma.neonCircuitOpenUntil = Date.now() + CIRCUIT_BREAKER_TTL_MS;
+              }
               return executeMirrorOperation(modelName, method, args);
             }
           }

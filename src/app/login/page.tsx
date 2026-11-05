@@ -6,21 +6,6 @@ import { normalizeSede, setClientUserBranch, setClientActiveBranch } from "@/lib
 
 const REMEMBER_WARNING_KEY = "autog_remember_warning";
 
-interface PasswordCredentialConstructor {
-  new (data: { id: string; password: string; name?: string }): Credential;
-}
-
-interface SavedPasswordCredential extends Credential {
-  id: string;
-  password: string;
-}
-
-interface PasswordCredentialsContainer extends CredentialsContainer {
-  get(
-    options: CredentialRequestOptions & { password: boolean }
-  ): Promise<Credential | null>;
-}
-
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,7 +13,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [rememberWarning, setRememberWarning] = useState(false);
   const [isDark, setIsDark] = useState(false);
 
   // Sincronizar tema claro / oscuro con el sistema y localStorage
@@ -64,39 +48,18 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
+    sessionStorage.removeItem(REMEMBER_WARNING_KEY);
     const savedRemember = localStorage.getItem("autog_remember_login") === "true";
     const savedEmail = localStorage.getItem("autog_saved_email");
-    localStorage.removeItem("autog_saved_password");
+    const savedPassword = localStorage.getItem("autog_saved_password");
     if (!savedRemember) {
       localStorage.removeItem("autog_saved_email");
+      localStorage.removeItem("autog_saved_password");
       localStorage.removeItem("autog_remember_login");
     }
     setRemember(savedRemember);
     setEmail(savedRemember ? savedEmail || "" : "");
-    if (sessionStorage.getItem(REMEMBER_WARNING_KEY) === "true") {
-      sessionStorage.removeItem(REMEMBER_WARNING_KEY);
-      setRememberWarning(true);
-    }
-
-    if (savedRemember) {
-      const credentialManager = navigator.credentials as PasswordCredentialsContainer;
-      if (typeof credentialManager.get === "function") {
-        credentialManager
-          .get({ password: true, mediation: "silent" })
-          .then((credential) => {
-            if (credential && "password" in credential && "id" in credential) {
-              const savedCredential = credential as SavedPasswordCredential;
-              setEmail(savedCredential.id);
-              setPassword(savedCredential.password);
-            }
-          })
-          .catch((credentialError: unknown) => {
-            console.warn("El navegador no pudo recuperar las credenciales guardadas:", credentialError);
-            sessionStorage.setItem(REMEMBER_WARNING_KEY, "true");
-            setRememberWarning(true);
-          });
-      }
-    }
+    setPassword(savedRemember ? savedPassword || "" : "");
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,37 +82,12 @@ export default function LoginPage() {
         return;
       }
 
-      // Remember the email locally and, where supported, save the password in the browser vault.
       if (typeof window !== "undefined") {
+        sessionStorage.removeItem(REMEMBER_WARNING_KEY);
         if (remember) {
           localStorage.setItem("autog_saved_email", email.trim().toLowerCase());
+          localStorage.setItem("autog_saved_password", password);
           localStorage.setItem("autog_remember_login", "true");
-
-          const PasswordCredential = (
-            window as Window & { PasswordCredential?: PasswordCredentialConstructor }
-          ).PasswordCredential;
-          const credentialManager = navigator.credentials as CredentialsContainer & {
-            store?: (credential: Credential) => Promise<Credential>;
-          };
-
-          if (PasswordCredential && credentialManager.store) {
-            try {
-              const credential = new PasswordCredential({
-                id: email.trim().toLowerCase(),
-                password,
-                name: email.trim().toLowerCase(),
-              });
-              void credentialManager.store(credential).catch((credentialError: unknown) => {
-                console.warn("El navegador no pudo guardar las credenciales:", credentialError);
-                sessionStorage.setItem(REMEMBER_WARNING_KEY, "true");
-              });
-            } catch (credentialError) {
-              console.warn("El navegador no pudo guardar las credenciales:", credentialError);
-              sessionStorage.setItem(REMEMBER_WARNING_KEY, "true");
-            }
-          } else {
-            sessionStorage.setItem(REMEMBER_WARNING_KEY, "true");
-          }
         } else {
           localStorage.removeItem("autog_saved_email");
           localStorage.removeItem("autog_saved_password");
@@ -158,6 +96,9 @@ export default function LoginPage() {
 
         // Guardar usuario en localStorage para el cliente
         localStorage.setItem("currentUser", JSON.stringify(data.user));
+        try {
+          document.cookie = `auth_session=${encodeURIComponent(JSON.stringify(data.user))}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+        } catch {}
 
         // Configurar la sede del usuario según su correo y asignación de sede
         const userBranch = normalizeSede(data.user?.branch);
@@ -221,12 +162,6 @@ export default function LoginPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span>{error}</span>
-          </div>
-        )}
-
-        {rememberWarning && (
-          <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-sm text-amber-800 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-200">
-            El navegador no pudo guardar la contraseña. Puedes guardarla en el gestor de contraseñas del navegador.
           </div>
         )}
 

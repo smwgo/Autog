@@ -105,7 +105,8 @@ export function DetallePinModerno({
   );
   const bloquesEvidencia = listaMismoPin.length > 0 ? listaMismoPin : [pin];
 
-  const [tipoTexto, setTipoTexto] = useState(pin.tipo || tipoSeleccionado || "");
+  const limpiarTipoInicial = (t?: string) => (!t || t.trim() === "Daño" ? "" : t);
+  const [tipoTexto, setTipoTexto] = useState(() => limpiarTipoInicial(pin.tipo));
   const zonaActual = pin.zona || pin.vistaLabel || pin.vista || "";
   const [zonaPrincipal, ...subcategoriaParts] = zonaActual.split("·").map((parte) => parte.trim());
   const subcategoria = subcategoriaParts.join(" · ");
@@ -120,6 +121,71 @@ export function DetallePinModerno({
   } | null>(null);
   const [audioClipReproduciendoUrl, setAudioClipReproduciendoUrl] = useState<string | null>(null);
   const audioClipPlayerRef = React.useRef<HTMLAudioElement | null>(null);
+  const [camaraPcBloqueId, setCamaraPcBloqueId] = useState<string | null>(null);
+  const videoCamaraPcRef = React.useRef<HTMLVideoElement | null>(null);
+  const streamCamaraPcRef = React.useRef<MediaStream | null>(null);
+  const inputCamaraFallbackRef = React.useRef<HTMLInputElement | null>(null);
+
+  const detenerCamaraPc = () => {
+    if (streamCamaraPcRef.current) {
+      streamCamaraPcRef.current.getTracks().forEach((t) => t.stop());
+      streamCamaraPcRef.current = null;
+    }
+    setCamaraPcBloqueId(null);
+  };
+
+  const abrirCamaraPcOMovil = async (targetBloqueId: string) => {
+    const esMovil =
+      typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (esMovil || typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      inputCamaraFallbackRef.current?.setAttribute("data-bloque-id", targetBloqueId);
+      inputCamaraFallbackRef.current?.click();
+      return;
+    }
+    try {
+      detenerCamaraPc();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      streamCamaraPcRef.current = stream;
+      setCamaraPcBloqueId(targetBloqueId);
+      setTimeout(() => {
+        if (videoCamaraPcRef.current) {
+          videoCamaraPcRef.current.srcObject = stream;
+          videoCamaraPcRef.current.play().catch(() => {});
+        }
+      }, 50);
+    } catch {
+      inputCamaraFallbackRef.current?.setAttribute("data-bloque-id", targetBloqueId);
+      inputCamaraFallbackRef.current?.click();
+    }
+  };
+
+  const capturarFotoDesdeCamaraPc = () => {
+    const video = videoCamaraPcRef.current;
+    const targetBloqueId = camaraPcBloqueId;
+    if (!video || !targetBloqueId) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const file = new File([blob], `camara_${Date.now()}.jpg`, { type: "image/jpeg" });
+        const fakeEvent = {
+          target: { files: [file], value: "" },
+        } as unknown as React.ChangeEvent<HTMLInputElement>;
+        onSubirFotos(fakeEvent, targetBloqueId);
+        detenerCamaraPc();
+      },
+      "image/jpeg",
+      0.9
+    );
+  };
   const [busquedaCatalogo, setBusquedaCatalogo] = useState("");
 
   const catalogoParaPropuesta = React.useMemo<CatalogoItemPropuesta[]>(() => {
@@ -201,8 +267,8 @@ export function DetallePinModerno({
   };
 
   React.useEffect(() => {
-    setTipoTexto(pin.tipo || tipoSeleccionado || "");
-  }, [pin.id, pin.tipo, pin.zona, pin.vistaLabel, pin.vista, tipoSeleccionado]);
+    setTipoTexto(limpiarTipoInicial(pin.tipo));
+  }, [pin.id]);
 
   const handleCambiarTipo = (val: string) => {
     setTipoTexto(val);
@@ -447,7 +513,7 @@ export function DetallePinModerno({
                         ? "⏳ Convirtiendo tu voz a texto..."
                         : "Escribe una descripción..."
                     }
-                    className={`w-full rounded-xl bg-white dark:bg-white/[0.03] border pl-3.5 pr-28 sm:pr-3.5 py-2.5 sm:py-3 text-zinc-900 dark:text-white text-sm sm:text-base placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all ${
+                    className={`w-full rounded-xl bg-white dark:bg-white/[0.03] border pl-3.5 pr-28 py-2.5 sm:py-3 text-zinc-900 dark:text-white text-sm sm:text-base placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all ${
                       escuchandoEsteBloque
                         ? "border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/30 dark:bg-rose-500/10 placeholder:text-rose-600 dark:placeholder:text-rose-400 font-medium"
                         : "border-zinc-200 dark:border-white/10 focus:border-blue-500/50"
@@ -459,7 +525,7 @@ export function DetallePinModerno({
                       e.stopPropagation();
                       onToggleVoz(textoBloque, "dictado", bloque.id);
                     }}
-                    className={`btn-dictar-solo-movil sm:hidden sm:!hidden md:!hidden absolute right-1.5 h-8 px-2.5 rounded-lg border text-xs font-semibold items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-xs touch-manipulation select-none ${
+                    className={`flex absolute right-1.5 h-8 px-2.5 rounded-lg border text-xs font-semibold items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-xs touch-manipulation select-none ${
                       escuchandoEsteBloque
                         ? "bg-rose-600 text-white border-rose-600 animate-pulse shadow-rose-600/30 font-bold"
                         : "bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/15 dark:hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-500/30"
@@ -495,10 +561,16 @@ export function DetallePinModerno({
                 )}
 
                 <div className="flex items-center gap-2">
-                  {/* Botón Tomar foto con la cámara */}
-                  <label
-                    title={`Tomar foto para Evidencia #${numBloque}`}
-                    onClick={(e) => e.stopPropagation()}
+                  {/* Botón Tomar foto con la cámara (PC Webcam en vivo + Móvil Cámara trasera) */}
+                  <button
+                    type="button"
+                    title={`Tomar foto con cámara para Evidencia #${numBloque}`}
+                    disabled={maxFotosBloque || subiendoEsteBloque}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (maxFotosBloque || subiendoEsteBloque) return;
+                      abrirCamaraPcOMovil(bloque.id);
+                    }}
                     className={`relative h-12 w-12 sm:h-14 sm:w-14 rounded-xl border flex items-center justify-center shrink-0 transition-all cursor-pointer overflow-hidden ${
                       maxFotosBloque || subiendoEsteBloque
                         ? "bg-zinc-100 dark:bg-white/[0.02] border-zinc-200 dark:border-white/5 text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
@@ -513,15 +585,7 @@ export function DetallePinModerno({
                       />
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
                     </svg>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      disabled={maxFotosBloque || subiendoEsteBloque}
-                      onChange={(e) => onSubirFotos(e, bloque.id)}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    />
-                  </label>
+                  </button>
 
                   {/* Botón Seleccionar foto de galería */}
                   <label
@@ -852,6 +916,88 @@ export function DetallePinModerno({
           </span>
         </button>
       </div>
+
+      {/* Input oculto para cámara nativa en móvil o fallback en PC */}
+      <input
+        ref={inputCamaraFallbackRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={(e) => {
+          const bId = e.currentTarget.getAttribute("data-bloque-id") || pin.id;
+          onSubirFotos(e, bId);
+        }}
+        className="hidden"
+      />
+
+      {/* Modal de Cámara en Vivo para PC */}
+      {camaraPcBloqueId && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 animate-fade-in"
+          onClick={detenerCamaraPc}
+        >
+          <div
+            className="relative bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden max-w-lg w-full shadow-2xl p-3.5 flex flex-col gap-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-1">
+              <span className="text-sm font-bold text-white flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Cámara en Vivo</span>
+              </span>
+              <button
+                type="button"
+                onClick={detenerCamaraPc}
+                className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center justify-center cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="rounded-xl overflow-hidden bg-black aspect-video flex items-center justify-center border border-white/10">
+              <video
+                ref={videoCamaraPcRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  const bId = camaraPcBloqueId;
+                  detenerCamaraPc();
+                  if (bId) {
+                    inputCamaraFallbackRef.current?.setAttribute("data-bloque-id", bId);
+                    inputCamaraFallbackRef.current?.click();
+                  }
+                }}
+                className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-200 text-xs font-semibold cursor-pointer"
+              >
+                Elegir archivo...
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={detenerCamaraPc}
+                  className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={capturarFotoDesdeCamaraPc}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer flex items-center gap-1.5 shadow-lg shadow-blue-600/30 active:scale-95"
+                >
+                  <span>📸</span>
+                  <span>Capturar Foto</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal para reproducir video de evidencia sin salir */}
       {videoModalUrl && (

@@ -1,6 +1,8 @@
+"use client";
+
+import { useEffect } from "react";
 import Link from "next/link";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { isProtectedAdminEmail } from "@/lib/admin-accounts";
 
@@ -42,30 +44,56 @@ const panels = [
   },
 ];
 
-export const dynamic = "force-dynamic";
-
-export default async function ModulosPage() {
-  const sessionCookie = (await cookies()).get("auth_session")?.value;
-  let user: { email?: string; role?: string; isSuperAdmin?: boolean } | null = null;
-
-  if (sessionCookie) {
-    try {
-      user = JSON.parse(decodeURIComponent(sessionCookie));
-    } catch {
+function readClientSessionUser(): { email?: string; role?: string; isSuperAdmin?: boolean } | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const local = localStorage.getItem("currentUser");
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (parsed && typeof parsed === "object") return parsed;
+    }
+  } catch {}
+  try {
+    const match = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("auth_session="));
+    if (match) {
+      const raw = match.slice("auth_session=".length);
       try {
-        user = JSON.parse(sessionCookie);
+        return JSON.parse(decodeURIComponent(raw));
       } catch {
-        user = null;
+        return JSON.parse(raw);
       }
     }
-  }
+  } catch {}
+  return null;
+}
 
-  if (
-    !isProtectedAdminEmail(user?.email) ||
-    (user?.role?.toUpperCase() !== "ROOT" && !user?.isSuperAdmin)
-  ) {
-    redirect("/acceso");
-  }
+export default function ModulosPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkAccess = async () => {
+      let user = readClientSessionUser();
+      if (!user) {
+        try {
+          const res = await fetch("/api/auth/me");
+          const data = await res.json();
+          if (data?.success && data?.user) {
+            user = data.user;
+          }
+        } catch {}
+      }
+
+      if (
+        !isProtectedAdminEmail(user?.email) ||
+        (user?.role?.toUpperCase() !== "ROOT" && !user?.isSuperAdmin)
+      ) {
+        router.replace("/acceso");
+      }
+    };
+    void checkAccess();
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-zinc-950">

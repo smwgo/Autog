@@ -529,9 +529,22 @@ export async function GET(request: Request) {
           );
         }
 
+        const ordRow = rows[0];
+        const [customer, vehicle] = await Promise.all([
+          ordRow.customerId
+            ? prisma.customer.findUnique({ where: { id: ordRow.customerId }, include: { vehicles: true } }).catch(() => null)
+            : null,
+          ordRow.vehicleId
+            ? prisma.vehicle.findUnique({ where: { id: ordRow.vehicleId } }).catch(() => null)
+            : ordRow.plate
+            ? prisma.vehicle.findUnique({ where: { plate: String(ordRow.plate).toUpperCase() } }).catch(() => null)
+            : null,
+        ]);
         return NextResponse.json({
           success: true,
-          order: mapOrderRow(rows[0]),
+          order: mapOrderRow(ordRow),
+          customer,
+          vehicle,
         });
       }
 
@@ -1261,6 +1274,8 @@ export async function POST(request: Request) {
             .findUnique({ where: { plate: cleanPlateInput } })
             .catch(() => null);
 
+          const yearNum = body.anio ? parseInt(String(body.anio), 10) || new Date().getFullYear() : new Date().getFullYear();
+          const typeClean = (body.tipoVehiculo || "Auto").trim();
           if (!vehicle) {
             vehicle = await prisma.vehicle.create({
               data: {
@@ -1268,11 +1283,24 @@ export async function POST(request: Request) {
                 plate: cleanPlateInput,
                 brand: (marca || "Vehículo").trim(),
                 model: (modelo || "General").trim(),
-                year: new Date().getFullYear(),
+                year: yearNum,
+                vehicleType: typeClean,
                 mileage: kilometraje ? parseInt(String(kilometraje), 10) || 0 : 0,
                 fuelType: "Gasolina",
               },
             });
+          } else {
+            vehicle = await prisma.vehicle.update({
+              where: { id: vehicle.id },
+              data: {
+                customerId: customer.id,
+                brand: marca ? String(marca).trim() : vehicle.brand,
+                model: modelo ? String(modelo).trim() : vehicle.model,
+                year: body.anio ? yearNum : vehicle.year,
+                vehicleType: body.tipoVehiculo ? typeClean : vehicle.vehicleType,
+                mileage: kilometraje ? parseInt(String(kilometraje), 10) || vehicle.mileage : vehicle.mileage,
+              },
+            }).catch(() => vehicle);
           }
         } else if (customer.vehicles && customer.vehicles.length > 0) {
           vehicle = customer.vehicles[0];
@@ -1432,6 +1460,228 @@ export async function POST(request: Request) {
       }
 
       // =========================================================================
+      
+      // =========================================================================
+      // ACCIÓN 0.25: EDITAR ORDEN EXISTENTE DESDE EL FORMULARIO DE ORDEN
+      // =========================================================================
+      if (action === "EDITAR_ORDEN_ETAPA_1") {
+        const {
+          orderId,
+          customerId,
+          vehicleId,
+          tipoCliente = "Persona",
+          nombres,
+          identificacion,
+          telefono,
+          email,
+          direccion,
+          ingresadoPor = "Gonzalo Rojas",
+          mechanic = "Hernan Marquez",
+          motivoIngreso = "",
+          placa,
+          marca,
+          modelo,
+          anio,
+          tipoVehiculo = "Auto",
+          kilometraje,
+          fuelLevel = "1/2",
+          receptionInventory = [],
+          receptionPhotos = [],
+          voiceNotes = [],
+        } = body;
+
+        if (!orderId) {
+          return NextResponse.json(
+            { success: false, error: "ID de orden requerido para editar." },
+            { status: 400 }
+          );
+        }
+
+        const existingRows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopOrder" WHERE "id" = $1 OR "orderNumber" = $1 LIMIT 1`,
+          orderId
+        );
+
+        if (existingRows.length === 0) {
+          return NextResponse.json(
+            { success: false, error: "No se encontró la orden a editar." },
+            { status: 404 }
+          );
+        }
+
+        const existingOrder = existingRows[0];
+        const cleanName = String(nombres || existingOrder.client || "Cliente").trim();
+        const cleanIdent = (identificacion || existingOrder.clientIdDoc || "").trim() || `CLI-${Date.now().toString().slice(-6)}`;
+        const cleanPhone = (telefono || existingOrder.clientPhone || "").trim() || "S/N";
+        const cleanEmail = email?.trim() || existingOrder.clientEmail || null;
+        const cleanAddress = String(direccion || "").trim();
+        const dbType = tipoCliente === "Empresa" ? "Empresa" : "Personal";
+
+        let customer: any = null;
+        const targetCustId = customerId || existingOrder.customerId;
+        if (targetCustId) {
+          customer = await prisma.customer
+            .findUnique({ where: { id: targetCustId }, include: { vehicles: true } })
+            .catch(() => null);
+        }
+        if (!customer && identificacion?.trim()) {
+          customer = await prisma.customer
+            .findUnique({ where: { identification: identificacion.trim() }, include: { vehicles: true } })
+            .catch(() => null);
+        }
+
+        if (!customer) {
+          customer = await prisma.customer.create({
+            data: {
+              identification: cleanIdent,
+              name: cleanName,
+              phone: cleanPhone,
+              email: cleanEmail,
+              address: cleanAddress || null,
+              type: dbType,
+            },
+            include: { vehicles: true },
+          });
+        } else {
+          customer = await prisma.customer.update({
+            where: { id: customer.id },
+            data: {
+              name: cleanName,
+              identification: identificacion?.trim() ? identificacion.trim() : customer.identification,
+              phone: cleanPhone || customer.phone,
+              email: cleanEmail ?? customer.email,
+              address: cleanAddress || customer.address,
+              type: dbType,
+              lastVisit: new Date(),
+            },
+            include: { vehicles: true },
+          }).catch(() => customer);
+        }
+
+        const cleanPlateInput = (placa || existingOrder.plate || "").trim().toUpperCase();
+        const yearNum = anio ? parseInt(String(anio), 10) || new Date().getFullYear() : new Date().getFullYear();
+        const typeClean = (tipoVehiculo || "Auto").trim();
+
+        let vehicle: any = null;
+        const targetVehId = vehicleId || existingOrder.vehicleId;
+        if (targetVehId && targetVehId !== "NUEVO") {
+          vehicle = await prisma.vehicle.findUnique({ where: { id: targetVehId } }).catch(() => null);
+        }
+        if (!vehicle && cleanPlateInput) {
+          vehicle = await prisma.vehicle.findUnique({ where: { plate: cleanPlateInput } }).catch(() => null);
+        }
+
+        if (vehicle) {
+          vehicle = await prisma.vehicle.update({
+            where: { id: vehicle.id },
+            data: {
+              customerId: customer.id,
+              plate: cleanPlateInput || vehicle.plate,
+              brand: (marca || vehicle.brand || "Vehículo").trim(),
+              model: (modelo || vehicle.model || "General").trim(),
+              year: yearNum,
+              vehicleType: typeClean,
+              mileage: kilometraje ? parseInt(String(kilometraje), 10) || 0 : vehicle.mileage,
+            },
+          }).catch(() => vehicle);
+        } else if (cleanPlateInput) {
+          vehicle = await prisma.vehicle.create({
+            data: {
+              customerId: customer.id,
+              plate: cleanPlateInput,
+              brand: (marca || "Vehículo").trim(),
+              model: (modelo || "General").trim(),
+              year: yearNum,
+              vehicleType: typeClean,
+              mileage: kilometraje ? parseInt(String(kilometraje), 10) || 0 : 0,
+              fuelType: "Gasolina",
+            },
+          }).catch(() => null);
+        }
+
+        const finalPlate = vehicle?.plate || cleanPlateInput || existingOrder.plate;
+        const finalVehicleTitle = vehicle
+          ? `${vehicle.brand} ${vehicle.model}${vehicle.year ? " " + vehicle.year : ""}`
+          : marca || modelo
+          ? `${marca || ""} ${modelo || ""}${yearNum ? " " + yearNum : ""}`.trim()
+          : existingOrder.vehicle;
+
+        const kmNum =
+          kilometraje !== undefined && kilometraje !== null && kilometraje !== ""
+            ? parseInt(String(kilometraje), 10) || 0
+            : existingOrder.mileage || vehicle?.mileage || 0;
+        const nextOilKm = kmNum > 0 ? kmNum + 5000 : existingOrder.nextOilChangeKm;
+
+        const notesFormatted = [
+          motivoIngreso?.trim() ? motivoIngreso.trim() : "Ingreso a taller para revisión / servicio.",
+          ingresadoPor?.trim() ? `Ingresado por: ${ingresadoPor.trim()}` : null,
+        ]
+          .filter(Boolean)
+          .join(" | ");
+
+        const jsonInventario = JSON.stringify(
+          Array.isArray(receptionInventory) ? receptionInventory : safeParseJson(existingOrder.receptionInventoryJson, [])
+        );
+        const jsonFotos = JSON.stringify(
+          Array.isArray(receptionPhotos) ? receptionPhotos : safeParseJson(existingOrder.receptionPhotosJson, [])
+        );
+        const jsonVoiceNotes = JSON.stringify(
+          Array.isArray(voiceNotes) ? voiceNotes : safeParseJson(existingOrder.voiceNotesJson, [])
+        );
+
+        await prisma.$executeRawUnsafe(
+          `UPDATE "WorkshopOrder"
+           SET "customerId" = $2,
+               "vehicleId" = $3,
+               "vehicle" = $4,
+               "plate" = $5,
+               "client" = $6,
+               "clientPhone" = $7,
+               "clientIdDoc" = $8,
+               "clientEmail" = $9,
+               "mechanic" = $10,
+               "mileage" = $11,
+               "nextOilChangeKm" = $12,
+               "fuelLevel" = $13,
+               "receptionInventoryJson" = $14,
+               "receptionPhotosJson" = $15,
+               "voiceNotesJson" = $16,
+               "notes" = $17,
+               "updatedAt" = NOW()
+           WHERE "id" = $1`,
+          existingOrder.id,
+          customer.id,
+          vehicle?.id || existingOrder.vehicleId || null,
+          finalVehicleTitle,
+          finalPlate,
+          customer.name,
+          customer.phone || "",
+          customer.identification || "",
+          customer.email || null,
+          mechanic || existingOrder.mechanic || "Hernan Marquez",
+          kmNum || null,
+          nextOilKm,
+          fuelLevel || existingOrder.fuelLevel || "1/2",
+          jsonInventario,
+          jsonFotos,
+          jsonVoiceNotes,
+          notesFormatted
+        );
+
+        const updatedRows: any[] = await prisma.$queryRawUnsafe(
+          `SELECT * FROM "WorkshopOrder" WHERE "id" = $1`,
+          existingOrder.id
+        );
+
+        return NextResponse.json({
+          success: true,
+          customer,
+          vehicle,
+          activeOrder: mapOrderRow(updatedRows[0] || existingOrder),
+          message: `Orden ${existingOrder.orderNumber} actualizada correctamente.`,
+        });
+      }
+
       // ACCIÓN 0.3: ETAPA 2 - RECIBIR VEHÍCULO O EQUIPO (Km, Combustible, Estado General, Inventario)
       // =========================================================================
       if (action === "GUARDAR_ETAPA_2_VEHICULO") {

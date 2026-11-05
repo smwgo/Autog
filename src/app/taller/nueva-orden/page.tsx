@@ -10,6 +10,7 @@ function NuevaOrdenContent() {
   const searchParams = useSearchParams();
   const placa = searchParams.get("placa") || "";
   const cliente = searchParams.get("cliente") || "";
+  const editId = searchParams.get("editId") || "";
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-100/60 dark:bg-[#070709] text-zinc-900 dark:text-white font-sans pb-28 md:pb-12 selection:bg-blue-500/30">
@@ -21,6 +22,7 @@ function NuevaOrdenContent() {
           isPageMode={true}
           placaInicial={placa}
           clienteInicial={cliente}
+          editOrderId={editId}
           onClose={() => {}}
           onOrdenCreada={(orden) => {
             if (typeof window !== "undefined") {
@@ -43,7 +45,7 @@ export default function NuevaOrdenPage() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-zinc-50 dark:bg-[#050505] flex items-center justify-center text-zinc-500 text-sm">
-          Cargando nueva orden de trabajo...
+          Cargando orden de trabajo...
         </div>
       }
     >

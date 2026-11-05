@@ -59,7 +59,7 @@ function EditarProductoContent() {
           code: p.code || "",
           name: p.name || "",
           brand: p.brand || "",
-          category: p.category || "General",
+          category: p.category && p.category !== "General" ? p.category : "",
           tipo: p.tipo || "Tienda",
           price: p.price !== undefined && p.price !== null ? String(p.price) : "",
           stock: p.stock !== undefined && p.stock !== null ? String(p.stock) : "0",
@@ -145,7 +145,7 @@ function EditarProductoContent() {
           code: formData.code,
           name: formData.name,
           brand: formData.brand,
-          category: formData.category,
+          category: formData.category.trim() || "General",
           tipo: formData.tipo,
           price: formData.price,
           stock: formData.stock,
@@ -168,7 +168,8 @@ function EditarProductoContent() {
 
       setTimeout(() => {
         router.push("/pos/catalogo");
-      }, 1000);
+        router.refresh();
+      }, 600);
     } catch (err: any) {
       console.error(err);
       alert("Error de conexión: " + (err.message || ""));

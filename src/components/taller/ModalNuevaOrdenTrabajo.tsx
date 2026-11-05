@@ -28,6 +28,7 @@ export interface ModalNuevaOrdenProps {
   isPageMode?: boolean;
   placaInicial?: string;
   clienteInicial?: string;
+  editOrderId?: string;
 }
 
 // Catálogo de Marcas y Modelos populares en la región
@@ -233,6 +234,7 @@ export default function ModalNuevaOrdenTrabajo({
   isPageMode = false,
   placaInicial = "",
   clienteInicial = "",
+  editOrderId = "",
 }: ModalNuevaOrdenProps) {
   const router = useRouter();
   // Stepper deslizable: 1 = Cliente, 2 = Vehículo, 3 = Ingreso, 4 = Orden
@@ -1655,7 +1657,7 @@ export default function ModalNuevaOrdenTrabajo({
 
   // Sincronizar el usuario logueado, su etiqueta de rol (Asesor o Mecánico) y el código correlativo de OT
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !editOrderId) {
       fetch("/api/taller/operacion?nextCorrelative=true")
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
@@ -1705,6 +1707,151 @@ export default function ModalNuevaOrdenTrabajo({
       } catch {}
     }
   }, [empleadoLogueado, isOpen]);
+
+  // Cargar datos completos de la orden cuando se abre en modo edición (editOrderId)
+  useEffect(() => {
+    if (!editOrderId) return;
+    let active = true;
+
+    const aplicarDatosOrden = (ord: any, cust?: any, veh?: any) => {
+      if (!ord) return;
+      const cleanCorr = String(ord.orderNumber || "")
+        .replace(/^OT\s*#?/i, "")
+        .replace(/^#/, "")
+        .trim();
+      if (cleanCorr) setCorrelativoOrden(cleanCorr);
+
+      const cName = cust?.name || ord.client || "";
+      const cIdent = cust?.identification || ord.clientIdDoc || "";
+      const cPhone = cust?.phone || ord.clientPhone || "";
+      const cEmail = cust?.email || ord.clientEmail || "";
+      const cAddr = cust?.address || "";
+      const cType = cust?.type === "Empresa" ? "Empresa" : "Persona";
+
+      setTipoCliente(cType);
+      setBusquedaCliente(cName);
+      setNuevoClienteNombre(cName);
+      setNuevoClienteIdentificacion(cIdent);
+      setNuevoClienteTelefono(cPhone);
+      setNuevoClienteEmail(cEmail);
+      setNuevoClienteDireccion(cAddr);
+      setEmailContacto(cEmail);
+
+      if (cust) {
+        setClienteSeleccionado(cust);
+      } else if (cName) {
+        setClienteSeleccionado({
+          id: ord.customerId || undefined,
+          name: cName,
+          identification: cIdent,
+          phone: cPhone,
+          email: cEmail,
+          address: cAddr,
+          type: cType === "Empresa" ? "Empresa" : "Personal",
+          vehicles: veh ? [veh] : [],
+        });
+      }
+
+      const anioMatch = String(ord.vehicle || "").match(/\b(?:19|20)\d{2}\b/)?.[0];
+      const anioInicial = String(veh?.year || anioMatch || new Date().getFullYear());
+      const tituloSinAnio = String(ord.vehicle || "")
+        .replace(new RegExp(`\\b${anioInicial}\\b`), "")
+        .trim();
+      const partesVeh = tituloSinAnio.split(/\s+/).filter(Boolean);
+      const marcaInicial = veh?.brand || partesVeh[0] || "";
+      const modeloInicial = veh?.model || partesVeh.slice(1).join(" ") || "";
+      const placaInicialOrd = veh?.plate || ord.plate || "";
+      const tipoInicial = veh?.vehicleType || detectarCarroceria(modeloInicial, marcaInicial) || "Auto";
+
+      setVehiculoSeleccionadoId(veh?.id || ord.vehicleId || "NUEVO");
+      setVehiculoPlaca(placaInicialOrd);
+      setVehiculoMarca(marcaInicial);
+      setVehiculoModelo(modeloInicial);
+      setVehiculoAnio(anioInicial);
+      setVehiculoTipo(tipoInicial);
+      setVehiculoKm(
+        ord.mileage ? String(ord.mileage) : veh?.mileage ? String(veh.mileage) : ""
+      );
+      setMostrarFormNuevoVehiculo(true);
+
+      if (ord.fuelLevel) {
+        handleBotonCombustible(ord.fuelLevel as any);
+      }
+      if (Array.isArray(ord.receptionInventory)) {
+        setInventarioTrae(ord.receptionInventory);
+      }
+      if (Array.isArray(ord.receptionPhotos)) {
+        setFotosIniciales(
+          ord.receptionPhotos.filter(
+            (u: string) => typeof u === "string" && !u.endsWith(".webm") && !u.endsWith(".mp4")
+          )
+        );
+      }
+      if (Array.isArray(ord.voiceNotes)) {
+        setNotasVozIniciales(ord.voiceNotes);
+      }
+
+      const rawNotes = String(ord.notes || "");
+      const sinIngresado = rawNotes.split(" | Ingresado por:")[0].trim();
+      if (/^\[Lubricentro\]/i.test(sinIngresado)) {
+        setTipoIngreso("Lubricentro");
+      } else if (/^\[Lavado\]/i.test(sinIngresado)) {
+        setTipoIngreso("Lavado");
+      } else {
+        setTipoIngreso("Taller");
+      }
+      const limpioMotivo = sinIngresado.replace(/^\[(?:Lubricentro|Lavado)\]\s*/i, "").trim();
+      setMotivoIngreso(
+        limpioMotivo === "Ingreso a taller para revisión / servicio." ||
+          limpioMotivo === "Ingreso a taller"
+          ? ""
+          : limpioMotivo
+      );
+
+      if (ord.mechanic) {
+        const primerMec = String(ord.mechanic).split(",")[0].split("(")[0].trim();
+        if (primerMec) {
+          setAsignacionesTecnicos([
+            {
+              id: "asig-1",
+              nombre: primerMec,
+              tarea: "Diagnóstico y mantenimiento",
+            },
+          ]);
+        }
+      }
+    };
+
+    // Hidratación instantánea (0ms) desde caché de sesión si viene del botón Editar de Taller
+    if (typeof window !== "undefined") {
+      try {
+        const cachedRaw = sessionStorage.getItem("taller_orden_editar_cache");
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          if (
+            cached?.order &&
+            (cached.editId === editOrderId ||
+              cached.order.id === editOrderId ||
+              cached.order.orderNumber === editOrderId)
+          ) {
+            aplicarDatosOrden(cached.order, cached.customer, cached.vehicle);
+          }
+        }
+      } catch {}
+    }
+
+    fetch(`/api/taller/operacion?quoteToken=${encodeURIComponent(editOrderId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!active || !d?.success || !d?.order) return;
+        aplicarDatosOrden(d.order, d.customer, d.vehicle);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [editOrderId]);
+
 
   // Lista única consolidada de todos los técnicos conocidos
   const listaMecanicosUnica = useMemo(() => {
@@ -2000,8 +2147,13 @@ export default function ModalNuevaOrdenTrabajo({
     if (e) e.preventDefault();
 
     // 1. Validar Cliente
+    const usarCamposEditados = Boolean(editOrderId || mostrarFormNuevoCliente);
     const nombreFinal = (
-      clienteSeleccionado ? clienteSeleccionado.name : nuevoClienteNombre
+      usarCamposEditados
+        ? nuevoClienteNombre || clienteSeleccionado?.name || ""
+        : clienteSeleccionado
+        ? clienteSeleccionado.name
+        : nuevoClienteNombre
     ).trim();
 
     if (!nombreFinal) {
@@ -2038,22 +2190,40 @@ export default function ModalNuevaOrdenTrabajo({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "CREAR_ORDEN_ETAPA_1",
+          action: editOrderId ? "EDITAR_ORDEN_ETAPA_1" : "CREAR_ORDEN_ETAPA_1",
+          orderId: editOrderId || undefined,
           customerId: clienteSeleccionado?.id || undefined,
+          vehicleId: vehiculoSeleccionadoId !== "NUEVO" ? vehiculoSeleccionadoId : undefined,
           tipoCliente,
           nombres: nombreFinal,
           identificacion: (
-            clienteSeleccionado?.identification || nuevoClienteIdentificacion
+            usarCamposEditados
+              ? nuevoClienteIdentificacion
+              : clienteSeleccionado?.identification || nuevoClienteIdentificacion
           ).trim(),
-          telefono: (clienteSeleccionado?.phone || nuevoClienteTelefono).trim(),
-          email: (emailContacto || nuevoClienteEmail || clienteSeleccionado?.email || "").trim() || undefined,
-          direccion: nuevoClienteDireccion.trim() || undefined,
+          telefono: (
+            usarCamposEditados
+              ? nuevoClienteTelefono
+              : clienteSeleccionado?.phone || nuevoClienteTelefono
+          ).trim(),
+          email: (
+            usarCamposEditados
+              ? nuevoClienteEmail || emailContacto
+              : emailContacto || nuevoClienteEmail || clienteSeleccionado?.email || ""
+          ).trim() || undefined,
+          direccion: (
+            usarCamposEditados
+              ? nuevoClienteDireccion
+              : nuevoClienteDireccion || clienteSeleccionado?.address || ""
+          ).trim() || undefined,
           ingresadoPor: ingresadoPor.trim() || empleadoLogueado.nombre,
           mechanic: mecanicosTexto,
           motivoIngreso: motivoFinal,
           placa: placaFinal,
           marca: vehiculoMarca.trim() || "Vehículo",
           modelo: vehiculoModelo.trim() || "General",
+          anio: vehiculoAnio.trim() || String(new Date().getFullYear()),
+          tipoVehiculo: vehiculoTipo || "Auto",
           kilometraje: vehiculoKm ? parseInt(vehiculoKm, 10) : undefined,
           fuelLevel: nivelCombustible,
           receptionInventory: inventarioTrae,
@@ -2075,7 +2245,7 @@ export default function ModalNuevaOrdenTrabajo({
         }
         if (mostrarToast) {
           mostrarToast(
-            `Orden #${data.activeOrder.orderNumber} creada para ${nombreFinal} (${placaFinal})`
+            editOrderId ? `Orden #${data.activeOrder.orderNumber} actualizada para ${nombreFinal} (${placaFinal})` : `Orden #${data.activeOrder.orderNumber} creada para ${nombreFinal} (${placaFinal})`
           );
         }
         resetFormularioCompleto();
@@ -2146,6 +2316,38 @@ export default function ModalNuevaOrdenTrabajo({
       },
     };
     const actual = pasoConfig[pasoActivo] || pasoConfig[1];
+
+    if (editOrderId) {
+      return (
+        <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap justify-end">
+          {([1, 2, 3, 4] as const).map((num) => {
+            const cfg = pasoConfig[num];
+            const activo = pasoActivo === num;
+            return (
+              <button
+                key={num}
+                type="button"
+                onClick={() => irAPaso(num)}
+                className={`h-8 px-2.5 sm:px-3 rounded-xl border text-xs flex items-center gap-1.5 select-none transition-all cursor-pointer active:scale-95 ${
+                  activo
+                    ? `${cfg.pill} font-bold ring-1 ring-current/30 shadow-xs`
+                    : "bg-zinc-100/80 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white font-medium"
+                }`}
+              >
+                <span
+                  className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                    activo ? cfg.circle : "bg-zinc-300 dark:bg-white/15 text-zinc-800 dark:text-zinc-200"
+                  }`}
+                >
+                  {num}
+                </span>
+                <span>{cfg.nombre}</span>
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
 
     return (
       <div className="flex items-center gap-1.5 shrink-0">
@@ -2459,7 +2661,184 @@ export default function ModalNuevaOrdenTrabajo({
           {/* =================================================================
               PASO 1: BUSCADOR Y SELECCIÓN DE CLIENTE (O FORMULARIO COMPLETO)
               ================================================================= */}
-          {pasoActivo === 1 && (
+          {pasoActivo === 1 && editOrderId && (
+            <div className="space-y-4 animate-fade-in">
+              {/* Tarjeta 1: Edición Directa de Cliente */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/90 dark:bg-zinc-900/40 border border-zinc-200/80 dark:border-white/10 space-y-4 shadow-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200/80 dark:border-white/10 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
+                      Datos del Cliente
+                    </h4>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-zinc-200/70 dark:bg-white/5 p-1 rounded-xl">
+                    {(["Persona", "Empresa"] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setTipoCliente(t)}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          tipoCliente === t
+                            ? "bg-amber-500 text-black shadow-xs"
+                            : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                        }`}
+                      >
+                        {t === "Persona" ? "👤 Persona" : "🏢 Empresa"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="sm:col-span-2">
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                      {tipoCliente === "Empresa" ? "Razón Social" : "Nombres y Apellidos"} <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={nuevoClienteNombre}
+                      onChange={(e) => setNuevoClienteNombre(e.target.value)}
+                      placeholder={tipoCliente === "Empresa" ? "Ej: Transportes Andinos S.A." : "Ej: Juan Carlos Pérez"}
+                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-semibold focus:outline-none"
+                      autoFocus
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                      {tipoCliente === "Empresa" ? "RUC" : "Cédula / Documento"}
+                    </label>
+                    <input
+                      type="text"
+                      value={nuevoClienteIdentificacion}
+                      onChange={(e) => setNuevoClienteIdentificacion(e.target.value)}
+                      placeholder={tipoCliente === "Empresa" ? "Ej: 1790012345001" : "Ej: 0912345678"}
+                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white font-mono text-sm font-bold focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                      WhatsApp / Teléfono
+                    </label>
+                    <input
+                      type="tel"
+                      value={nuevoClienteTelefono}
+                      onChange={(e) => setNuevoClienteTelefono(e.target.value)}
+                      placeholder="Ej: 0991234567"
+                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white font-mono text-sm font-bold focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                      Correo Electrónico
+                    </label>
+                    <input
+                      type="email"
+                      value={nuevoClienteEmail}
+                      onChange={(e) => {
+                        setNuevoClienteEmail(e.target.value);
+                        setEmailContacto(e.target.value);
+                      }}
+                      placeholder="correo@ejemplo.com"
+                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-medium focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                      Dirección
+                    </label>
+                    <input
+                      type="text"
+                      value={nuevoClienteDireccion}
+                      onChange={(e) => setNuevoClienteDireccion(e.target.value)}
+                      placeholder="Av. Principal y Calle Secundaria"
+                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-medium focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Tarjeta 2: Edición Directa de Vehículo en la misma vista */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/90 dark:bg-zinc-900/40 border border-zinc-200/80 dark:border-white/10 space-y-4 shadow-xs">
+                <div className="flex items-center justify-between border-b border-zinc-200/80 dark:border-white/10 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
+                      Datos del Vehículo
+                    </h4>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => abrirFlotanteVehiculo("marca")}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer"
+                  >
+                    Catálogo de Marcas/Modelos →
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                  <div>
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                      Placa <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={vehiculoPlaca}
+                      onChange={(e) => setVehiculoPlaca(e.target.value.toUpperCase())}
+                      placeholder="ABC-1234"
+                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white font-mono text-sm font-bold uppercase tracking-wider focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                      Marca
+                    </label>
+                    <input
+                      type="text"
+                      value={vehiculoMarca}
+                      onChange={(e) => setVehiculoMarca(e.target.value)}
+                      placeholder="Ej: Skoda, Toyota..."
+                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-semibold focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                      Modelo
+                    </label>
+                    <input
+                      type="text"
+                      value={vehiculoModelo}
+                      onChange={(e) => setVehiculoModelo(e.target.value)}
+                      placeholder="Ej: Fabia, Hilux..."
+                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-semibold focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                      Año
+                    </label>
+                    <input
+                      type="text"
+                      value={vehiculoAnio}
+                      onChange={(e) => setVehiculoAnio(e.target.value)}
+                      placeholder="2026"
+                      maxLength={4}
+                      className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white font-mono text-sm font-bold focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {pasoActivo === 1 && !editOrderId && (
             <div className="space-y-5 animate-fade-in">
 
               {/* Barra de Búsqueda Inteligente con Dropdown + Escáner de Matrícula (Oculta al registrar nuevo cliente o al escanear) */}
@@ -2647,6 +3026,23 @@ export default function ModalNuevaOrdenTrabajo({
                     <button
                       type="button"
                       onClick={() => {
+                        setNuevoClienteNombre(clienteSeleccionado.name || "");
+                        setNuevoClienteIdentificacion(clienteSeleccionado.identification || "");
+                        setNuevoClienteTelefono(clienteSeleccionado.phone || "");
+                        setNuevoClienteEmail(clienteSeleccionado.email || "");
+                        setNuevoClienteDireccion(clienteSeleccionado.address || "");
+                        setTipoCliente(clienteSeleccionado.type === "Empresa" ? "Empresa" : "Persona");
+                        setMostrarFormNuevoCliente(true);
+                        setSubPasoCliente("nombre");
+                      }}
+                      className="h-9 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-300 font-semibold cursor-pointer transition-colors flex items-center gap-1"
+                    >
+                      <span>✎</span>
+                      <span>Editar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
                         setClienteSeleccionado(null);
                         setBusquedaCliente("");
                       }}
@@ -2732,8 +3128,8 @@ export default function ModalNuevaOrdenTrabajo({
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
                       {PASOS_CLIENTE.map((p, idx) => {
                         const esActivo = p.id === subPasoCliente;
-                        const esCompletado = idx < pasoIdx;
                         const valor = getValorCliente(p.id);
+                        const esCompletado = idx < pasoIdx || Boolean(String(valor || "").trim());
 
                         return (
                           <button
@@ -3112,7 +3508,113 @@ export default function ModalNuevaOrdenTrabajo({
           {/* =================================================================
               PASO 2: VEHÍCULO DEL CLIENTE (SELECCIÓN O FORMULARIO NUEVO)
               ================================================================= */}
-          {pasoActivo === 2 && (
+          {pasoActivo === 2 && editOrderId && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/90 dark:bg-zinc-900/40 border border-zinc-200/80 dark:border-white/10 space-y-4 shadow-xs animate-fade-in">
+              <div className="flex items-center justify-between border-b border-zinc-200/80 dark:border-white/10 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                  <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
+                    Editar Vehículo de la Orden
+                  </h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => abrirFlotanteVehiculo("marca")}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer"
+                >
+                  Elegir de catálogo →
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                <div>
+                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                    🔢 Placa del Vehículo <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={vehiculoPlaca}
+                    onChange={(e) => setVehiculoPlaca(e.target.value.toUpperCase())}
+                    placeholder="Ej: ABC-1234"
+                    className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white font-mono text-sm font-bold uppercase tracking-wider focus:outline-none"
+                    autoFocus
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                    🏷️ Marca
+                  </label>
+                  <input
+                    type="text"
+                    value={vehiculoMarca}
+                    onChange={(e) => setVehiculoMarca(e.target.value)}
+                    placeholder="Ej: Skoda, Toyota..."
+                    className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-semibold focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                    🚘 Modelo
+                  </label>
+                  <input
+                    type="text"
+                    value={vehiculoModelo}
+                    onChange={(e) => setVehiculoModelo(e.target.value)}
+                    placeholder="Ej: Fabia, Hilux..."
+                    className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-semibold focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                    📅 Año
+                  </label>
+                  <input
+                    type="text"
+                    value={vehiculoAnio}
+                    onChange={(e) => setVehiculoAnio(e.target.value)}
+                    placeholder="2026"
+                    maxLength={4}
+                    className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white font-mono text-sm font-bold focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                    🛣️ Kilometraje (km)
+                  </label>
+                  <input
+                    type="number"
+                    value={vehiculoKm}
+                    onChange={(e) => setVehiculoKm(e.target.value)}
+                    placeholder="Ej: 45000"
+                    className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white font-mono text-sm font-bold focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+                    🚗 Tipo de Vehículo
+                  </label>
+                  <select
+                    value={vehiculoTipo}
+                    onChange={(e) => setVehiculoTipo(e.target.value)}
+                    className="w-full h-11 px-3.5 rounded-xl bg-white dark:bg-black/50 border border-zinc-300 dark:border-white/15 focus:border-amber-500 text-zinc-900 dark:text-white text-sm font-semibold focus:outline-none"
+                  >
+                    {["Auto", "SUV", "Camioneta", "Moto", "Camión"].map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {pasoActivo === 2 && !editOrderId && (
             <div className="space-y-5 animate-fade-in">
               {/* Si el cliente ya tiene vehículos registrados en Neon */}
               {clienteSeleccionado?.vehicles?.length > 0 && !mostrarFormNuevoVehiculo && (
@@ -3253,8 +3755,8 @@ export default function ModalNuevaOrdenTrabajo({
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
                       {PASOS.map((p, idx) => {
                         const esActivo = p.id === subPasoVehiculo;
-                        const esCompletado = idx < pasoIdx;
                         const valor = getValorResumen(p.id);
+                        const esCompletado = idx < pasoIdx || Boolean(String(valor || "").trim());
 
                         const colorClase = esActivo
                           ? "bg-emerald-500 text-black shadow-sm font-bold scale-[1.02]"
@@ -5492,6 +5994,17 @@ export default function ModalNuevaOrdenTrabajo({
           )}
 
           <div className="flex items-center gap-2 shrink-0">
+            {editOrderId && pasoActivo < 4 && (
+              <button
+                type="button"
+                onClick={handleCrearOrdenFinal}
+                disabled={creando}
+                className="px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-emerald-600/25 active:scale-95 min-h-[44px] disabled:opacity-50"
+              >
+                <span>{creando ? "Guardando..." : "Guardar cambios"}</span>
+                <span>✓</span>
+              </button>
+            )}
             {pasoActivo < 4 ? (
               <button
                 type="button"
@@ -5543,11 +6056,11 @@ export default function ModalNuevaOrdenTrabajo({
                         d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
                       />
                     </svg>
-                    <span>Creando orden...</span>
+                    <span>{editOrderId ? "Guardando cambios..." : "Creando orden..."}</span>
                   </>
                 ) : (
                   <>
-                    <span>Crear orden</span>
+                    <span>{editOrderId ? "Guardar cambios" : "Crear orden"}</span>
                     <span>✓</span>
                   </>
                 )}

@@ -1591,6 +1591,7 @@ export async function POST(req: NextRequest) {
             name: cleanName,
             brand: brand ? String(brand).trim() : null,
             category: String(category || "Lubricantes").trim(),
+            tipo: "Lubricentro",
             price: numPrice,
             costPrice: numCost,
             stock: numStock,

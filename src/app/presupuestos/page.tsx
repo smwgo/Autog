@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
+import { isProtectedAdminEmail } from "@/lib/admin-accounts";
 
 // ============================================================================
 // INTERFACES Y TIPOS
@@ -123,6 +124,24 @@ export default function PanelPresupuestosPage() {
   const [menuTipoAbierto, setMenuTipoAbierto] = useState(false);
   const [menuEstadoAbierto, setMenuEstadoAbierto] = useState(false);
   const menuEstadoRef = useRef<HTMLDivElement>(null);
+  const [isPanelSelectorAdmin, setIsPanelSelectorAdmin] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const local = localStorage.getItem("currentUser");
+        if (local) {
+          const parsed = JSON.parse(local);
+          if (
+            isProtectedAdminEmail(parsed?.email) &&
+            (parsed?.role?.toUpperCase() === "ROOT" || parsed?.isSuperAdmin)
+          ) {
+            setIsPanelSelectorAdmin(true);
+          }
+        }
+      } catch {}
+    }
+  }, []);
 
   const estadoActivo = useMemo(
     () => OPCIONES_ESTADO.find((o) => o.id === filtroEstado) || OPCIONES_ESTADO[0],
@@ -330,8 +349,8 @@ export default function PanelPresupuestosPage() {
           <div className="order-1 mb-4 sm:mb-8 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
               <Link 
-                href="/taller"
-                title="Volver a Taller"
+                href={isPanelSelectorAdmin ? "/modulos" : "/taller"}
+                title={isPanelSelectorAdmin ? "Volver a los paneles" : "Volver a Taller"}
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-300 hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-500 dark:hover:border-purple-500 hover:bg-purple-50/50 dark:hover:bg-purple-500/10 transition-all shadow-sm active:scale-95 group shrink-0"
               >
                 <svg className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

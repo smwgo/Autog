@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { getClientUserBranch, normalizeSede, setClientUserBranch } from "@/lib/branch";
 import { BranchTabs } from "@/components/pos/BranchTabs";
+import { isProtectedAdminEmail } from "@/lib/admin-accounts";
 
 interface CurrentUser {
   id?: string;
@@ -132,6 +133,7 @@ export function Header() {
         localStorage.removeItem("user_profile");
         localStorage.removeItem("autog_user_branch");
         localStorage.removeItem("autog_active_branch");
+        document.cookie = "auth_session=; path=/; max-age=0";
       } catch {}
       window.location.href = "/login";
     }
@@ -192,6 +194,12 @@ export function Header() {
 
   const userPanelHref = (() => {
     const role = (currentUser?.role || "").toUpperCase();
+    if (
+      isProtectedAdminEmail(currentUser?.email) &&
+      (role === "ROOT" || currentUser?.isSuperAdmin)
+    ) {
+      return "/modulos";
+    }
     if (role === "PRESUPUESTO" || role === "PRESUPUESTOS" || role === "PROPUESTA" || role === "PROPUESTAS") {
       return "/presupuestos";
     }
@@ -294,7 +302,7 @@ export function Header() {
             )}
           </div>
           {/* Perfil de Usuario Logeado */}
-          {currentUser || pathname.startsWith("/pos") || pathname.startsWith("/taller") || pathname.startsWith("/oficina") || pathname.startsWith("/gerencia") ? (
+          {currentUser || pathname.startsWith("/pos") || pathname.startsWith("/taller") || pathname.startsWith("/oficina") || pathname.startsWith("/gerencia") || pathname.startsWith("/modulos") ? (
             <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5">
               <Link
                 href={userPanelHref}

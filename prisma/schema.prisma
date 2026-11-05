@@ -842,6 +842,7 @@ model WorkshopService {
   category         String   @default("Mantenimiento Rápido")
   subCategory      String?
   specialty        String?  @default("taller")
+  tipo             String   @default("Taller")
   price            Decimal  @db.Decimal(12, 2)
   estimatedMinutes Int      @default(30)
   description      String?

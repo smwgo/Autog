@@ -537,20 +537,26 @@ export default function ServiciosPosPage() {
                         </td>
                         <td className="py-3.5 px-4">
                           <div className="flex flex-col gap-1 items-start">
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800/40">
-                              {s.category}
-                            </span>
-                            {s.tipo && (
+                            {s.category && s.category !== "General" && (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800/40">
+                                {s.category}
+                              </span>
+                            )}
+                            {s.tipo ? (
                               <div className="flex flex-wrap gap-1 max-w-[170px]">
                                 {parsearModulos(s.tipo).map((t) => (
                                   <span
                                     key={t}
-                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/20"
+                                    className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/20"
                                   >
                                     {t}
                                   </span>
                                 ))}
                               </div>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800/40">
+                                {s.category || "General"}
+                              </span>
                             )}
                           </div>
                         </td>

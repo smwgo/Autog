@@ -63,7 +63,7 @@ function EditarServicioForm() {
 
         setCode(encontrado.code || "");
         setName(encontrado.name || "");
-        setCategory(encontrado.category || "");
+        setCategory(encontrado.category && encontrado.category !== "General" ? encontrado.category : "");
         setTipo(encontrado.tipo || "Taller");
         setPrice(String(encontrado.price ?? ""));
         setEstimatedMinutes(String(encontrado.estimatedMinutes ?? 30));

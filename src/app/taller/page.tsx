@@ -774,17 +774,32 @@ export default function TallerPanel() {
 
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== "undefined") {
+      try {
+        const local = localStorage.getItem("currentUser");
+        if (local) {
+          const parsed = JSON.parse(local);
+          if (
+            isProtectedAdminEmail(parsed?.email) &&
+            (parsed?.role?.toUpperCase() === "ROOT" || parsed?.isSuperAdmin)
+          ) {
+            setIsPanelSelectorAdmin(true);
+          }
+        }
+      } catch {}
+    }
     fetch("/api/auth/me")
       .then((response) => response.json())
       .then((data) => {
-        const user = data?.user;
-        setIsPanelSelectorAdmin(
-          Boolean(
-            data?.success &&
+        if (data?.success && data?.user) {
+          const user = data.user;
+          setIsPanelSelectorAdmin(
+            Boolean(
               isProtectedAdminEmail(user?.email) &&
-              (user?.role?.toUpperCase() === "ROOT" || user?.isSuperAdmin)
-          )
-        );
+                (user?.role?.toUpperCase() === "ROOT" || user?.isSuperAdmin)
+            )
+          );
+        }
       })
       .catch((error: unknown) => {
         console.error("No se pudo verificar el acceso al selector de paneles:", error);
@@ -4946,22 +4961,20 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
             =================================================================== */}
         <div className="flex flex-col items-stretch gap-2.5 sm:gap-3 py-1 bg-cyan-50 dark:bg-blue-900/10">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <Link
+              href={isPanelSelectorAdmin ? "/modulos" : "/acceso"}
+              aria-label="Volver a los paneles"
+              title="Volver a los paneles"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-blue-700 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="m15 18-6-6 6-6" />
+                <path d="M20 12H9" />
+              </svg>
+            </Link>
             {ordenActiva ? (
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  {isPanelSelectorAdmin && (
-                    <Link
-                      href="/modulos"
-                      aria-label="Volver a los paneles"
-                      title="Volver a los paneles"
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-blue-700 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
-                    >
-                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="m15 18-6-6 6-6" />
-                        <path d="M20 12H9" />
-                      </svg>
-                    </Link>
-                  )}
                   <span className="w-10 h-10 sm:w-9 sm:h-9 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-500 flex items-center justify-center shrink-0">
                     <svg
                       className="w-5.5 h-5.5 sm:w-5 sm:h-5"
@@ -4999,25 +5012,46 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                {isPanelSelectorAdmin && (
-                  <Link
-                    href="/modulos"
-                    aria-label="Volver a los paneles"
-                    title="Volver a los paneles"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-blue-700 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
-                  >
-                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="m15 18-6-6 6-6" />
-                      <path d="M20 12H9" />
-                    </svg>
-                  </Link>
-                )}
                 <span className="text-base sm:text-lg font-bold text-zinc-800 dark:text-zinc-200">
                   Taller Mecánico
                 </span>
               </div>
             )}
             <div className="flex items-center gap-2 shrink-0 ml-auto">
+              {ordenActiva && (
+                <Link
+                  href={`/taller/nueva-orden?editId=${encodeURIComponent(ordenActiva.id)}`}
+                  onClick={() => {
+                    try {
+                      const cliMatch = clientesCatalogo.find(
+                        (c) =>
+                          c.id === (ordenActiva as any).customerId ||
+                          (c.name && ordenActiva.client && c.name.toLowerCase() === ordenActiva.client.toLowerCase()) ||
+                          (Array.isArray(c.vehicles) && c.vehicles.some((v: any) => v.plate === ordenActiva.plate || v.id === ordenActiva.vehicleId))
+                      );
+                      const vehMatch = clientesCatalogo
+                        .flatMap((c) => (Array.isArray(c.vehicles) ? c.vehicles : []))
+                        .find((v: any) => v.id === ordenActiva.vehicleId || v.plate === ordenActiva.plate);
+                      sessionStorage.setItem(
+                        "taller_orden_editar_cache",
+                        JSON.stringify({
+                          editId: ordenActiva.id,
+                          order: ordenActiva,
+                          customer: cliMatch || null,
+                          vehicle: vehMatch || null,
+                        })
+                      );
+                    } catch {}
+                  }}
+                  aria-label="Editar Orden"
+                  title="Editar datos de la Orden (Cliente, Vehículo, Placa, Ingreso)"
+                  className="w-11 h-11 sm:w-9 sm:h-9 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-600 dark:text-amber-400 flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
+                >
+                  <svg className="w-4.5 h-4.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </Link>
+              )}
               <Link
                 href="/taller/nueva-orden"
                 aria-label="Nueva Orden"

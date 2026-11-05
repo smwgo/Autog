@@ -498,7 +498,7 @@ export default function InspeccionVehiculo({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuVistasAbierto]);
 
-  const [tipoSeleccionado, setTipoSeleccionado] = useState("Rayón");
+  const [tipoSeleccionado, setTipoSeleccionado] = useState("");
   const [observacionTexto, setObservacionTexto] = useState("");
   const [subiendoFotoPin, setSubiendoFotoPin] = useState(false);
   const [escuchandoVoz, setEscuchandoVoz] = useState(false);
@@ -931,7 +931,7 @@ export default function InspeccionVehiculo({
       }
     }
 
-    const tipoDefault = esCarroceria ? "Rayón" : (seccionActiva === "motor" ? "Fuga" : "Desgaste");
+    const tipoDefault = "";
 
     const nuevoHallazgo: InspectionFinding = {
       id: `pin-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -948,7 +948,7 @@ export default function InspeccionVehiculo({
     const actualizados = [...hallazgos, nuevoHallazgo];
     setHallazgos(actualizados);
     setPinSeleccionadoId(nuevoHallazgo.id);
-    setTipoSeleccionado(tipoDefault);
+    setTipoSeleccionado("");
     setObservacionTexto("");
     setPopoverAbierto(true);
     setModoColocandoPin(false);
@@ -968,7 +968,7 @@ export default function InspeccionVehiculo({
       if (h.id === idTarget) {
         return {
           ...h,
-          tipo: tipo || h.tipo,
+          tipo: tipo !== undefined ? tipo : h.tipo,
           descripcion: obs !== undefined ? obs : h.descripcion,
         };
       }
@@ -1413,6 +1413,13 @@ export default function InspeccionVehiculo({
   };
 
   const [transcribiendoVoz, setTranscribiendoVoz] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      obtenerPipelineWhisper().catch(() => {});
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, []);
   const [segundosGrabandoAudio, setSegundosGrabandoAudio] = useState(0);
   const [pinAccionActivaId, setPinAccionActivaId] = useState<string | null>(null);
   const grabacionTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -1441,11 +1448,14 @@ export default function InspeccionVehiculo({
           env.allowLocalModels = false;
           env.useBrowserCache = true;
           if (env.backends?.onnx?.wasm) {
-            env.backends.onnx.wasm.numThreads = 1;
+            const cores = typeof navigator !== "undefined" ? navigator.hardwareConcurrency || 2 : 2;
+            env.backends.onnx.wasm.numThreads = Math.min(4, Math.max(1, cores));
             env.backends.onnx.wasm.proxy = false;
           }
         }
-        const pipe = await pipeline("automatic-speech-recognition", "Xenova/whisper-tiny");
+        const pipe = await pipeline("automatic-speech-recognition", "Xenova/whisper-tiny", {
+          quantized: true,
+        });
         win.__autogWhisperInstance = pipe;
         return pipe;
       })().catch((err: any) => {
@@ -1471,6 +1481,19 @@ export default function InspeccionVehiculo({
       result[i] = s0 + frac * (s1 - s0);
     }
     return result;
+  };
+
+  const recortarSilencioPcm = (samples: Float32Array, threshold = 0.008): Float32Array => {
+    const len = samples.length;
+    if (len < 3200) return samples;
+    let start = 0;
+    let end = len - 1;
+    while (start < len && Math.abs(samples[start]) < threshold) start++;
+    while (end > start && Math.abs(samples[end]) < threshold) end--;
+    const pad = 1600; // 100ms padding at 16kHz
+    start = Math.max(0, start - pad);
+    end = Math.min(len - 1, end + pad);
+    return samples.subarray(start, end + 1);
   };
 
   const normalizarAudioPcm = (samples: Float32Array): Float32Array => {
@@ -1532,7 +1555,6 @@ export default function InspeccionVehiculo({
     try {
       let float32Data: Float32Array | null = null;
 
-      // 1. Preferir muestras PCM crudas capturadas directamente del micrófono (100% compatible en PC sin errores de códec)
       if (pcmChunksRef.current.length > 0) {
         const totalLength = pcmChunksRef.current.reduce((acc, c) => acc + c.length, 0);
         if (totalLength > 1600) {
@@ -1546,7 +1568,6 @@ export default function InspeccionVehiculo({
         }
       }
 
-      // 2. Respaldo decodificando el Blob si no hubo muestras PCM directas
       if ((!float32Data || float32Data.length === 0) && audioBlob && audioBlob.size > 400) {
         const arrayBuffer = await audioBlob.arrayBuffer();
         const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -1561,13 +1582,13 @@ export default function InspeccionVehiculo({
         return "";
       }
 
-      const audioNormalizado = normalizarAudioPcm(float32Data);
+      const audioRecortado = recortarSilencioPcm(normalizarAudioPcm(float32Data));
       const pipe = await obtenerPipelineWhisper();
-      const output = await pipe(audioNormalizado, {
+      const output = await pipe(audioRecortado, {
         language: "spanish",
         task: "transcribe",
-        chunk_length_s: 30,
-        stride_length_s: 5,
+        chunk_length_s: 15,
+        stride_length_s: 3,
       });
 
       const rawText = String(output?.text || "")
@@ -1726,11 +1747,150 @@ export default function InspeccionVehiculo({
     }
   };
 
+  const iniciarReconocimientoEnVivo = (
+    tipoPin: string,
+    targetPinId: string,
+    autoStopOnSilence: boolean,
+    onFatalError?: () => void
+  ): boolean => {
+    const SpeechRecognition =
+      typeof window !== "undefined" &&
+      ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+    if (!SpeechRecognition) return false;
+
+    try {
+      const recognition = new SpeechRecognition();
+      const navLang = typeof navigator !== "undefined" ? navigator.language : "es-EC";
+      recognition.lang = navLang && navLang.startsWith("es") ? navLang : "es-EC";
+      const esAndroid = typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
+      recognition.continuous = !esAndroid;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      let falloRed = false;
+
+      const resetSilenceAutoStop = () => {
+        if (!autoStopOnSilence) return;
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = setTimeout(() => {
+          if (dictandoActivoRef.current && speechReconocioTextoRef.current) {
+            dictandoActivoRef.current = false;
+            setEscuchandoVoz(false);
+            if (grabacionTimerRef.current) {
+              clearInterval(grabacionTimerRef.current);
+              grabacionTimerRef.current = null;
+            }
+            setSegundosGrabandoAudio(0);
+            try {
+              recognition.stop();
+            } catch {}
+            recognitionRef.current = null;
+            handleGuardarDetallePin(tipoPin, observacionTextoRef.current, targetPinId);
+          }
+        }, 1100);
+      };
+
+      recognition.onresult = (event: any) => {
+        let finalStr = "";
+        let interimStr = "";
+        let hasFinalNow = false;
+
+        for (let i = 0; i < event.results.length; ++i) {
+          const item = event.results[i];
+          const chunk = String(item[0]?.transcript || "").trim();
+          if (!chunk) continue;
+          if (item.isFinal) {
+            hasFinalNow = true;
+            if (!finalStr.toLowerCase().endsWith(chunk.toLowerCase())) {
+              finalStr = finalStr ? `${finalStr} ${chunk}` : chunk;
+            }
+          } else {
+            if (!interimStr.toLowerCase().endsWith(chunk.toLowerCase())) {
+              interimStr = interimStr ? `${interimStr} ${chunk}` : chunk;
+            }
+          }
+        }
+
+        const dictadoLimpio = [finalStr, interimStr].filter(Boolean).join(" ").trim();
+        if (dictadoLimpio) {
+          speechReconocioTextoRef.current = true;
+          const base = textoBaseRef.current.trim();
+          const nuevoTexto = base ? `${base} ${dictadoLimpio}` : dictadoLimpio;
+          observacionTextoRef.current = nuevoTexto;
+          setObservacionTexto(nuevoTexto);
+          if (hasFinalNow) {
+            handleGuardarDetallePin(tipoPin, nuevoTexto, targetPinId);
+          }
+          resetSilenceAutoStop();
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        const errCode = event?.error || "";
+        if (errCode === "no-speech" || errCode === "aborted") return;
+        if (
+          errCode === "network" ||
+          errCode === "service-not-allowed" ||
+          errCode === "audio-capture" ||
+          errCode === "language-not-supported"
+        ) {
+          falloRed = true;
+          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+          try {
+            recognition.stop();
+          } catch {}
+          recognitionRef.current = null;
+          if (onFatalError) onFatalError();
+        }
+      };
+
+      recognition.onend = () => {
+        textoBaseRef.current = observacionTextoRef.current;
+        if (speechReconocioTextoRef.current) {
+          handleGuardarDetallePin(tipoPin, observacionTextoRef.current, targetPinId);
+        }
+        if (dictandoActivoRef.current && !falloRed) {
+          try {
+            recognition.start();
+          } catch {
+            if (autoStopOnSilence) {
+              dictandoActivoRef.current = false;
+              setEscuchandoVoz(false);
+              if (grabacionTimerRef.current) {
+                clearInterval(grabacionTimerRef.current);
+                grabacionTimerRef.current = null;
+              }
+              setSegundosGrabandoAudio(0);
+            }
+          }
+        } else if (autoStopOnSilence && !falloRed) {
+          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+          setEscuchandoVoz(false);
+          if (grabacionTimerRef.current) {
+            clearInterval(grabacionTimerRef.current);
+            grabacionTimerRef.current = null;
+          }
+          setSegundosGrabandoAudio(0);
+        }
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const handleToggleVozPin = async (
     targetPinId: string,
     textoActualDirecto?: string,
     modo: "dictado" | "audio" = "dictado"
   ) => {
+    const pinObjetivo = hallazgos.find((h) => h.id === targetPinId);
+    const tipoPin = pinObjetivo?.tipo || tipoSeleccionado;
+
     if (escuchandoVoz) {
       dictandoActivoRef.current = false;
       if (grabacionTimerRef.current) {
@@ -1738,7 +1898,7 @@ export default function InspeccionVehiculo({
         grabacionTimerRef.current = null;
       }
       if (silenceTimerRef.current) {
-        clearInterval(silenceTimerRef.current);
+        clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = null;
       }
       if (recognitionRef.current) {
@@ -1765,7 +1925,7 @@ export default function InspeccionVehiculo({
       setEscuchandoVoz(false);
       setSegundosGrabandoAudio(0);
 
-      // Si estaba grabando con el micrófono nativo de Windows PC, obtener el WAV y asociarlo al bloque
+      // Si estaba grabando con el micrófono nativo de Windows PC, obtener el WAV, asociarlo y transcribir si falta texto
       if (activePcSession) {
         try {
           const res = await fetch("/api/taller/pc-mic", {
@@ -1785,6 +1945,21 @@ export default function InspeccionVehiculo({
             }
             const wavBlob = new Blob([bytes], { type: "audio/wav" });
             const dataUri = `data:audio/wav;base64,${data.audioBase64}`;
+
+            if (!speechReconocioTextoRef.current && wavBlob.size > 400) {
+              setTranscribiendoVoz(true);
+              const textoTranscrito = await transcribirAudioATexto(wavBlob);
+              setTranscribiendoVoz(false);
+              if (textoTranscrito) {
+                const base = textoBaseRef.current.trim();
+                const nuevoTexto = base ? `${base} ${textoTranscrito}` : textoTranscrito;
+                textoBaseRef.current = nuevoTexto;
+                observacionTextoRef.current = nuevoTexto;
+                setObservacionTexto(nuevoTexto);
+                handleGuardarDetallePin(tipoPin, nuevoTexto, activePcSession.targetPinId);
+              }
+            }
+
             await guardarAudioBlobEnPin(
               activePcSession.targetPinId,
               wavBlob,
@@ -1797,8 +1972,6 @@ export default function InspeccionVehiculo({
       return;
     }
 
-    const pinObjetivo = hallazgos.find((h) => h.id === targetPinId);
-    const tipoPin = pinObjetivo?.tipo || tipoSeleccionado;
     const textoPrevio = (
       typeof textoActualDirecto === "string"
         ? textoActualDirecto
@@ -1811,58 +1984,18 @@ export default function InspeccionVehiculo({
     pcmChunksRef.current = [];
     setPinAccionActivaId(targetPinId);
 
-    // En modo "audio", activar visualmente de inmediato y en PC usar grabación directa del micrófono de Windows
-    if (modo === "audio") {
-      setEscuchandoVoz(true);
-      setSegundosGrabandoAudio(0);
-      if (grabacionTimerRef.current) clearInterval(grabacionTimerRef.current);
-      grabacionTimerRef.current = setInterval(() => {
-        setSegundosGrabandoAudio((s) => s + 1);
-      }, 1000);
-
-      const esMovil =
-        typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-      if (!esMovil) {
-        const sessionId = `pc_${targetPinId}_${Date.now()}`;
-        pcMicSessionRef.current = { sessionId, targetPinId };
-        try {
-          const res = await fetch("/api/taller/pc-mic", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "start", sessionId }),
-          });
-          const data = await res.json();
-          if (res.ok && data?.success) {
-            mostrarToast("🎙️ Grabando nota de audio en PC... habla y pulsa Parar al terminar.");
-            return;
-          }
-          pcMicSessionRef.current = null;
-        } catch {
-          pcMicSessionRef.current = null;
-        }
-      }
-    }
-
-    // Pre-calentar Whisper solo si es modo dictado
-    if (modo === "dictado") {
-      obtenerPipelineWhisper().catch(() => {});
-    }
-
-    let falloRedSpeech = false;
+    const esMovil =
+      typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     const iniciarGrabadoraRespaldo = async (): Promise<boolean> => {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
         return true;
       }
       if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-        mostrarToast(
-          "Tu navegador bloqueó el micrófono (requiere localhost o HTTPS). Usa el botón de subir audio.",
-          "err"
-        );
         return false;
       }
       try {
+        obtenerPipelineWhisper().catch(() => {});
         let stream: MediaStream;
         try {
           stream = await navigator.mediaDevices.getUserMedia({
@@ -1895,7 +2028,7 @@ export default function InspeccionVehiculo({
             grabacionTimerRef.current = null;
           }
           if (silenceTimerRef.current) {
-            clearInterval(silenceTimerRef.current);
+            clearTimeout(silenceTimerRef.current);
             silenceTimerRef.current = null;
           }
           if (audioMonitorCtxRef.current) {
@@ -1916,94 +2049,12 @@ export default function InspeccionVehiculo({
           const audioBlob = rawBlob.size > 200 ? rawBlob : wavRespaldo || rawBlob;
           const mimeFinal = audioBlob === wavRespaldo ? "audio/wav" : mime;
 
-          // 1. Si es GRABACIÓN DE NOTA DE AUDIO (botón naranja de micrófono en PC o móvil):
-          if (modo === "audio") {
-            if (audioBlob.size < 50) {
-              mostrarToast("La grabación fue demasiado corta. Habla al micrófono y pulsa Parar.", "err");
-              return;
-            }
-            const localPreviewUrl = URL.createObjectURL(audioBlob);
-            const prevInit = hallazgosRef.current;
-            const actualizadosInit = prevInit.map((h) => {
-              if (h.id === targetPinId) {
-                const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
-                const nuevosAudios = [...prevAudios, localPreviewUrl];
-                return {
-                  ...h,
-                  descripcion: observacionTextoRef.current || h.descripcion,
-                  audioUrl: nuevosAudios[0],
-                  audioUrls: nuevosAudios,
-                };
-              }
-              return h;
-            });
-            hallazgosRef.current = actualizadosInit;
-            setHallazgos(actualizadosInit);
-            if (ordenActiva?.id) {
-              try {
-                localStorage.setItem(`taller_findings_${ordenActiva.id}`, JSON.stringify(actualizadosInit));
-              } catch {}
-            }
-            mostrarToast("✓ Nota de audio grabada y asociada.");
-
-            try {
-              const formData = new FormData();
-              const ext = mimeFinal.includes("wav")
-                ? "wav"
-                : mimeFinal.includes("mp4")
-                ? "mp4"
-                : mimeFinal.includes("aac")
-                ? "aac"
-                : "webm";
-              formData.append("file", audioBlob, `audio_${targetPinId}_${Date.now()}.${ext}`);
-              formData.append("folder", "taller_notas_voz");
-              formData.append("tipo", "audio");
-              if (ordenActiva?.id) formData.append("orderId", ordenActiva.id);
-              if (ordenActiva?.orderNumber) formData.append("orderNumber", ordenActiva.orderNumber);
-              if (ordenActiva?.plate) formData.append("plate", ordenActiva.plate);
-              formData.append("uploadedBy", ordenActiva?.mechanic || "Taller Mecánico");
-
-              const res = await fetch("/api/storage/upload", {
-                method: "POST",
-                body: formData,
-              });
-              const data = await res.json();
-              if (data.success && data.url) {
-                const prev = hallazgosRef.current;
-                const actualizados = prev.map((h) => {
-                  if (h.id === targetPinId) {
-                    const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
-                    const nuevosAudios = prevAudios.map((u) => (u === localPreviewUrl ? data.url : u));
-                    if (!nuevosAudios.includes(data.url)) {
-                      nuevosAudios.push(data.url);
-                    }
-                    return {
-                      ...h,
-                      descripcion: observacionTextoRef.current || h.descripcion,
-                      audioUrl: nuevosAudios[0],
-                      audioUrls: nuevosAudios,
-                    };
-                  }
-                  return h;
-                });
-                hallazgosRef.current = actualizados;
-                setHallazgos(actualizados);
-                sincronizarHallazgosNeon(actualizados);
-              }
-            } catch {
-              // Mantener vista previa local si falla la red
-            }
-            return;
-          }
-
-          // 2. Si es modo DICTADO A TEXTO y Web Speech API no transcribió, convertir con Whisper
+          // Transcribir a texto en Descripción tanto en modo "dictado" como en modo "audio" si SpeechRecognition no escribió ya el texto
           if (
-            modo === "dictado" &&
             !speechReconocioTextoRef.current &&
             (pcmChunksRef.current.length > 0 || audioBlob.size > 400)
           ) {
             setTranscribiendoVoz(true);
-            mostrarToast("⏳ Convirtiendo tu voz a texto...");
             const textoTranscrito = await transcribirAudioATexto(audioBlob);
             setTranscribiendoVoz(false);
             if (textoTranscrito) {
@@ -2013,10 +2064,23 @@ export default function InspeccionVehiculo({
               observacionTextoRef.current = nuevoTexto;
               setObservacionTexto(nuevoTexto);
               handleGuardarDetallePin(tipoPin, nuevoTexto, targetPinId);
-              mostrarToast("✓ Dictado escrito en Descripción.");
-            } else {
-              mostrarToast("No se detectó voz clara. Intenta hablar más cerca del micrófono.", "err");
             }
+          }
+
+          // Si es GRABACIÓN DE NOTA DE AUDIO (botón naranja de micrófono en PC o móvil), guardar además el clip de audio:
+          if (modo === "audio") {
+            if (audioBlob.size < 50) {
+              mostrarToast("La grabación fue demasiado corta.", "err");
+              return;
+            }
+            await guardarAudioBlobEnPin(targetPinId, audioBlob, mimeFinal);
+            return;
+          }
+
+          if (observacionTextoRef.current.trim()) {
+            mostrarToast("✓ Dictado listo.");
+          } else {
+            mostrarToast("No se detectó voz clara. Intenta hablar más cerca del micrófono.", "err");
           }
         };
 
@@ -2030,30 +2094,30 @@ export default function InspeccionVehiculo({
           setSegundosGrabandoAudio((s) => s + 1);
         }, 1000);
 
-        // Solo conectar el monitor de silencio en modo "dictado" (evita interferir con la grabación de audio pura en PC)
-        if (modo === "dictado") {
-          try {
-            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-            const actx = new AudioCtx();
-            if (actx.state === "suspended") {
-              await actx.resume().catch(() => {});
-            }
-            audioMonitorCtxRef.current = actx;
-            pcmSampleRateRef.current = actx.sampleRate || 48000;
+        // Capturar muestras PCM para que la transcripción sea inmediata y sin errores de códec en PC y móvil
+        try {
+          const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+          const actx = new AudioCtx();
+          if (actx.state === "suspended") {
+            await actx.resume().catch(() => {});
+          }
+          audioMonitorCtxRef.current = actx;
+          pcmSampleRateRef.current = actx.sampleRate || 48000;
 
-            const source = actx.createMediaStreamSource(stream);
-            const processor = actx.createScriptProcessor(4096, 1, 1);
-            source.connect(processor);
-            processor.connect(actx.destination);
+          const source = actx.createMediaStreamSource(stream);
+          const processor = actx.createScriptProcessor(4096, 1, 1);
+          source.connect(processor);
+          processor.connect(actx.destination);
 
-            let hablo = false;
-            let ultimoSonidoMs = Date.now();
+          let hablo = false;
+          let ultimoSonidoMs = Date.now();
 
-            processor.onaudioprocess = (e) => {
-              if (!dictandoActivoRef.current) return;
-              const input = e.inputBuffer.getChannelData(0);
-              pcmChunksRef.current.push(new Float32Array(input));
+          processor.onaudioprocess = (e) => {
+            if (!dictandoActivoRef.current) return;
+            const input = e.inputBuffer.getChannelData(0);
+            pcmChunksRef.current.push(new Float32Array(input));
 
+            if (modo === "dictado") {
               let sumSq = 0;
               for (let i = 0; i < input.length; i++) {
                 sumSq += input[i] * input[i];
@@ -2065,7 +2129,7 @@ export default function InspeccionVehiculo({
               } else if (
                 hablo &&
                 !speechReconocioTextoRef.current &&
-                Date.now() - ultimoSonidoMs > 1500
+                Date.now() - ultimoSonidoMs > 850
               ) {
                 dictandoActivoRef.current = false;
                 setEscuchandoVoz(false);
@@ -2081,101 +2145,97 @@ export default function InspeccionVehiculo({
                   } catch {}
                 }
               }
-            };
-          } catch {}
-        }
+            }
+          };
+        } catch {}
 
         return true;
-      } catch (err: any) {
-        const msg =
-          err?.name === "NotAllowedError"
-            ? "Permiso de micrófono denegado en el navegador o en Windows. Habilítalo o sube un archivo de audio."
-            : err?.name === "NotFoundError"
-            ? "No se detectó un micrófono activo en esta PC."
-            : "No se pudo abrir el micrófono en esta PC. Verifica permisos de Windows o adjunta un audio.";
-        mostrarToast(msg, "err");
-        dictandoActivoRef.current = false;
-        setEscuchandoVoz(false);
+      } catch {
         return false;
       }
     };
 
-    // Iniciar la captura de micrófono y verificar que realmente abrió antes de continuar
-    const inicioOk = await iniciarGrabadoraRespaldo();
-    if (!inicioOk) {
-      return;
-    }
-
+    // =========================================================================
+    // MODO 1: BOTÓN DE AUDIO (NARANJA) — Graba nota de audio Y convierte a texto en Descripción (PC y Móvil)
+    // =========================================================================
     if (modo === "audio") {
-      mostrarToast("🎙️ Grabando nota de audio... habla al micrófono y pulsa Parar al terminar.");
-      // IMPORTANTE: En modo "audio" NO iniciar SpeechRecognition para evitar conflicto con el micrófono en Windows PC
-      return;
-    }
+      // En PC: iniciar también reconocimiento en vivo para que escriba en Descripción mientras graba el audio
+      if (!esMovil) {
+        dictandoActivoRef.current = true;
+        iniciarReconocimientoEnVivo(tipoPin, targetPinId, false);
+      }
 
-    mostrarToast("🎙 Habla ahora... tu voz se escribirá en Descripción.");
+      const okBrowserMic = await iniciarGrabadoraRespaldo();
+      if (okBrowserMic) {
+        mostrarToast("🎙️ Grabando audio y convirtiendo a texto... pulsa Parar al terminar.");
+        return;
+      }
 
-    const SpeechRecognition =
-      typeof window !== "undefined" &&
-      ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
-
-    if (!SpeechRecognition) {
-      return;
-    }
-
-    try {
-      const recognition = new SpeechRecognition();
-      const navLang = typeof navigator !== "undefined" ? navigator.language : "es-ES";
-      recognition.lang = navLang && navLang.startsWith("es") ? navLang : "es-ES";
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.maxAlternatives = 1;
-
-      recognition.onresult = (event: any) => {
-        let finalStr = "";
-        let interimStr = "";
-        for (let i = 0; i < event.results.length; ++i) {
-          const item = event.results[i];
-          if (item.isFinal) {
-            finalStr += item[0].transcript + " ";
-          } else {
-            interimStr += item[0].transcript;
+      // Respaldo nativo Windows PC si el navegador no permitió getUserMedia
+      if (!esMovil) {
+        const sessionId = `pc_${targetPinId}_${Date.now()}`;
+        pcMicSessionRef.current = { sessionId, targetPinId };
+        try {
+          const res = await fetch("/api/taller/pc-mic", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "start", sessionId }),
+          });
+          const data = await res.json();
+          if (res.ok && data?.success) {
+            setEscuchandoVoz(true);
+            setSegundosGrabandoAudio(0);
+            if (grabacionTimerRef.current) clearInterval(grabacionTimerRef.current);
+            grabacionTimerRef.current = setInterval(() => {
+              setSegundosGrabandoAudio((s) => s + 1);
+            }, 1000);
+            mostrarToast("🎙️ Grabando nota de audio en PC... habla y pulsa Parar al terminar.");
+            return;
           }
+          pcMicSessionRef.current = null;
+        } catch {
+          pcMicSessionRef.current = null;
         }
-        const dictadoLimpio = (finalStr + interimStr).trim();
-        if (dictadoLimpio) {
-          speechReconocioTextoRef.current = true;
-          const base = textoBaseRef.current.trim();
-          const nuevoTexto = base ? `${base} ${dictadoLimpio}` : dictadoLimpio;
-          observacionTextoRef.current = nuevoTexto;
-          setObservacionTexto(nuevoTexto);
-          handleGuardarDetallePin(tipoPin, nuevoTexto, targetPinId);
-        }
-      };
+      }
 
-      recognition.onerror = (event: any) => {
-        const errCode = event?.error || "";
-        if (errCode === "no-speech" || errCode === "aborted") {
-          return;
-        }
-        if (errCode === "network" || errCode === "service-not-allowed" || errCode === "audio-capture" || errCode === "language-not-supported") {
-          falloRedSpeech = true;
-          return;
-        }
-      };
+      dictandoActivoRef.current = false;
+      setEscuchandoVoz(false);
+      mostrarToast("Permiso de micrófono no disponible. Habilítalo en tu navegador.", "err");
+      return;
+    }
 
-      recognition.onend = () => {
-        textoBaseRef.current = observacionTextoRef.current;
-        if (dictandoActivoRef.current && !falloRedSpeech) {
-          try {
-            recognition.start();
-          } catch {}
-        }
-      };
+    // =========================================================================
+    // MODO 2: DICTADO RÁPIDO A DESCRIPCIÓN (PC y Móvil)
+    // =========================================================================
+    dictandoActivoRef.current = true;
+    const inicioSpeechOk = iniciarReconocimientoEnVivo(tipoPin, targetPinId, true, () => {
+      if (!speechReconocioTextoRef.current && dictandoActivoRef.current) {
+        iniciarGrabadoraRespaldo();
+      }
+    });
 
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch {
-      falloRedSpeech = true;
+    if (inicioSpeechOk) {
+      setEscuchandoVoz(true);
+      setSegundosGrabandoAudio(0);
+      if (grabacionTimerRef.current) clearInterval(grabacionTimerRef.current);
+      grabacionTimerRef.current = setInterval(() => {
+        setSegundosGrabandoAudio((s) => s + 1);
+      }, 1000);
+      // En PC podemos capturar audio de respaldo simultáneamente sin bloquear el micrófono;
+      // en móvil dejamos el micrófono 100% libre para SpeechRecognition (0ms latencia).
+      if (!esMovil) {
+        iniciarGrabadoraRespaldo().catch(() => {});
+      }
+      mostrarToast("🎙️ Habla ahora... escribiendo al instante.");
+      return;
+    }
+
+    // Si el navegador no soporta Web Speech API, usar grabadora + Whisper optimizado
+    const okRespaldo = await iniciarGrabadoraRespaldo();
+    if (!okRespaldo) {
+      dictandoActivoRef.current = false;
+      setEscuchandoVoz(false);
+      mostrarToast("No se pudo iniciar el micrófono.", "err");
     }
   };
 
@@ -2238,6 +2298,7 @@ export default function InspeccionVehiculo({
       pinNumber: mismoPinNumero,
       x: pinOriginal.x,
       y: pinOriginal.y,
+      tipo: "",
       descripcion: "",
       photoUrl: undefined,
       photoUrls: [],
@@ -2678,7 +2739,7 @@ ${urlSeguimiento}`;
                     e.stopPropagation();
                     const itemSeleccionar = items.find((it) => it.id === pinSeleccionadoId) || primerItem;
                     setPinSeleccionadoId(itemSeleccionar.id);
-                    setTipoSeleccionado(itemSeleccionar.tipo || "Rayón");
+                    setTipoSeleccionado(itemSeleccionar.tipo || "");
                     setObservacionTexto(itemSeleccionar.descripcion || "");
                     setPopoverAbierto(true);
                   }}
@@ -2714,7 +2775,7 @@ ${urlSeguimiento}`;
                   onClick={() => {
                     const item = p.items.find((it) => it.id === pinSeleccionadoId) || p.items[0];
                     setPinSeleccionadoId(item.id);
-                    setTipoSeleccionado(item.tipo || "Rayón");
+                    setTipoSeleccionado(item.tipo || "");
                     setObservacionTexto(item.descripcion || "");
                     setPopoverAbierto(true);
                     setModoColocandoPin(false);
@@ -3131,7 +3192,7 @@ ${urlSeguimiento}`;
                         e.stopPropagation();
                         const itemSeleccionar = items.find((it) => it.id === pinSeleccionadoId) || primerItem;
                         setPinSeleccionadoId(itemSeleccionar.id);
-                        setTipoSeleccionado(itemSeleccionar.tipo || "Fuga");
+                        setTipoSeleccionado(itemSeleccionar.tipo || "");
                         setObservacionTexto(itemSeleccionar.descripcion || "");
                         setPopoverAbierto(true);
                       }}
@@ -3167,7 +3228,7 @@ ${urlSeguimiento}`;
                       onClick={() => {
                         const item = p.items.find((it) => it.id === pinSeleccionadoId) || p.items[0];
                         setPinSeleccionadoId(item.id);
-                        setTipoSeleccionado(item.tipo || "Fuga");
+                        setTipoSeleccionado(item.tipo || "");
                         setObservacionTexto(item.descripcion || "");
                         setPopoverAbierto(true);
                         setModoColocandoPin(false);

@@ -64,8 +64,18 @@ export default function SelectorModulos({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const seleccionarModuloUnico = (modId: ModuloId, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    onChange(modId);
+    setAbierto(false);
+  };
+
   const toggleModulo = (modId: ModuloId, e?: React.MouseEvent) => {
     e?.stopPropagation();
+    if (todosSeleccionados) {
+      onChange(modId);
+      return;
+    }
     let nuevos: ModuloId[];
     if (seleccionados.includes(modId)) {
       nuevos = seleccionados.filter((id) => id !== modId);
@@ -168,7 +178,7 @@ export default function SelectorModulos({
               return (
                 <div
                   key={mod.id}
-                  onClick={() => toggleModulo(mod.id)}
+                  onClick={(e) => seleccionarModuloUnico(mod.id, e)}
                   className={`flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors select-none ${
                     estaMarcado
                       ? "bg-zinc-100/80 dark:bg-zinc-800/80 text-zinc-900 dark:text-white"
@@ -177,6 +187,8 @@ export default function SelectorModulos({
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div
+                      onClick={(e) => toggleModulo(mod.id, e)}
+                      title={estaMarcado ? `Quitar ${mod.label}` : `Agregar ${mod.label}`}
                       className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
                         estaMarcado
                           ? "bg-blue-600 border-blue-600 text-white"

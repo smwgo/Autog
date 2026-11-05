@@ -131,7 +131,7 @@ export default function CatalogoPage() {
       code: prod.code,
       name: prod.name,
       brand: prod.brand || "",
-      category: prod.category || "General",
+      category: prod.category && prod.category !== "General" ? prod.category : "",
       tipo: prod.tipo || "Tienda",
       price: prod.price.toString(),
       stock: prod.stock.toString(),
@@ -667,9 +667,20 @@ export default function CatalogoPage() {
                         💰 ${Number(item.price).toFixed(2)}
                       </span>
 
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 text-xs font-medium">
-                        {item.category}
-                      </span>
+                      {item.category && item.category !== "General" && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 text-xs font-medium">
+                          {item.category}
+                        </span>
+                      )}
+                      {item.tipo &&
+                        parsearModulos(item.tipo).map((t) => (
+                          <span
+                            key={t}
+                            className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/20"
+                          >
+                            {t}
+                          </span>
+                        ))}
 
                       {item.location && (
                         <span className="text-zinc-400 ml-auto text-[11px] whitespace-nowrap flex items-center gap-1">
@@ -731,20 +742,26 @@ export default function CatalogoPage() {
                           </td>
                           <td className="py-3.5 px-4">
                             <div className="flex flex-col gap-1 items-start">
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
-                                {item.category}
-                              </span>
-                              {item.tipo && (
+                              {item.category && item.category !== "General" && (
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                                  {item.category}
+                                </span>
+                              )}
+                              {item.tipo ? (
                                 <div className="flex flex-wrap gap-1 max-w-[180px]">
                                   {parsearModulos(item.tipo).map((t) => (
                                     <span
                                       key={t}
-                                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/20"
+                                      className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/20"
                                     >
                                       {t}
                                     </span>
                                   ))}
                                 </div>
+                              ) : (
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                                  {item.category || "General"}
+                                </span>
                               )}
                             </div>
                           </td>

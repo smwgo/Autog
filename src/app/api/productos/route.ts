@@ -59,18 +59,13 @@ export async function GET(request: Request) {
       });
     }
 
-    let products = cachedProducts;
-    const now = Date.now();
-
-    if (!products || now - lastCacheTime > CACHE_TTL_MS) {
-      products = await prisma.product.findMany({
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
-      cachedProducts = products;
-      lastCacheTime = now;
-    }
+    const products = await prisma.product.findMany({
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+    cachedProducts = products;
+    lastCacheTime = Date.now();
 
     // Extraer todas las categorías únicas disponibles en Neon
     const categoriesSet = new Set<string>();
@@ -255,14 +250,16 @@ export async function PUT(request: Request) {
       branch === "SUCURSAL" ? Number(currentProduct.stock) : numStock,
       numMinStock
     );
+    const finalTipo = tipo !== undefined ? normalizarTipo(tipo) : undefined;
+    const finalCategory = category !== undefined ? (String(category).trim() || "General") : undefined;
     const actualizado = await prisma.product.update({
       where: { id },
       data: {
         code: code ? code.trim().toUpperCase() : undefined,
         name: name ? name.trim() : undefined,
         brand: brand !== undefined ? brand.trim() : undefined,
-        category: category ? category.trim() : undefined,
-        tipo: tipo !== undefined ? normalizarTipo(tipo) : undefined,
+        category: finalCategory,
+        tipo: finalTipo,
         price: numPrice,
         costPrice: numCostPrice,
         ...stockData,
@@ -276,7 +273,14 @@ export async function PUT(request: Request) {
     cachedProducts = null;
     lastCacheTime = 0;
 
-    return NextResponse.json({ success: true, producto: { ...actualizado, tipo } });
+    return NextResponse.json({
+      success: true,
+      producto: {
+        ...actualizado,
+        category: finalCategory ?? actualizado.category,
+        tipo: finalTipo ?? actualizado.tipo,
+      },
+    });
   } catch (error: any) {
     console.error("Error al actualizar producto en Neon:", error);
     return NextResponse.json(
