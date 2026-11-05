@@ -43,6 +43,8 @@ interface Customer {
   identification: string;
   name: string;
   phone: string;
+  email?: string;
+  address?: string;
   type: string;
   vehicles?: VehicleItem[];
 }
@@ -834,10 +836,12 @@ export default function NuevaVentaPage() {
 
     if (item.customerName) {
       setClienteSeleccionado({
-        id: "web-" + item.id,
-        identification: item.customerPhone || "N/A",
+        id: item.customerId || "",
+        identification: item.customerIdentification || "",
         name: item.customerName,
         phone: item.customerPhone || "",
+        email: item.customerEmail || "",
+        address: item.customerAddress || "",
         type: obtenerOrigenPedido(item.type),
       });
     }
@@ -921,10 +925,12 @@ export default function NuevaVentaPage() {
 
         if (item.customerName) {
           setClienteSeleccionado({
-            id: "web-" + item.id,
-            identification: item.customerPhone || "N/A",
+            id: item.customerId || "",
+            identification: item.customerIdentification || "",
             name: item.customerName,
             phone: item.customerPhone || "",
+            email: item.customerEmail || "",
+            address: item.customerAddress || "",
             type: "Web / " + item.type,
           });
         }
@@ -1245,12 +1251,22 @@ export default function NuevaVentaPage() {
         ? `Crédito ${diasCredito} días (Vence: ${formatFechaVencimientoLarga(fechaVencimientoCredito)})${notasVenta ? ` • ${notasVenta}` : ""}`
         : (notasVenta || undefined);
 
+      const solicitudVehiculoInfo = String(solicitudActiva?.vehicleInfo || "");
+      const solicitudPlaca = solicitudVehiculoInfo.match(/\[([^\]]+)\]\s*$/)?.[1] || null;
+      const solicitudVehiculo = solicitudVehiculoInfo.replace(/\s*\[[^\]]+\]\s*$/, "").trim();
+
       const payload = {
         customerId: clienteSeleccionado?.id || null,
         customerIdentification: clienteSeleccionado?.identification || null,
         customerName: custName,
-        vehiclePlate: vehiculoSeleccionado?.plate || null,
-        vehicleModel: vehiculoSeleccionado ? `${vehiculoSeleccionado.brand} ${vehiculoSeleccionado.model}` : null,
+        customerPhone: solicitudActiva?.customerPhone || custPhone || null,
+        customerEmail: solicitudActiva?.customerEmail || clienteSeleccionado?.email || null,
+        customerAddress: solicitudActiva?.customerAddress || clienteSeleccionado?.address || null,
+        vehiclePlate: vehiculoSeleccionado?.plate || solicitudPlaca,
+        vehicleModel: vehiculoSeleccionado
+          ? `${vehiculoSeleccionado.brand} ${vehiculoSeleccionado.model}`
+          : solicitudVehiculo || null,
+        serviceOrderNumber: solicitudActiva?.requestNumber || null,
         paymentMethod: metodoPago,
         paymentBreakdown: metodoPago === "Mixto" ? {
           cash: mixtoEfectivoNum,

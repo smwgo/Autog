@@ -91,20 +91,49 @@ export async function POST(request: Request) {
         : `OT-${order.orderNumber}`;
 
       // 3. Crear o actualizar la solicitud en OrderRequest para que POS la reciba
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE "OrderRequest"
+          ADD COLUMN IF NOT EXISTS "customerId" TEXT,
+          ADD COLUMN IF NOT EXISTS "customerIdentification" TEXT,
+          ADD COLUMN IF NOT EXISTS "customerAddress" TEXT,
+          ADD COLUMN IF NOT EXISTS "vehiclePlate" TEXT,
+          ADD COLUMN IF NOT EXISTS "vehicleModel" TEXT
+      `);
       const posNotes = `[PRESUPUESTO AUTORIZADO] Orden #${order.orderNumber} | Placa: ${order.plate} | Vehículo: ${order.vehicle} | Mecánico: ${order.mechanic} | Tel: ${order.clientPhone || "N/A"}${notes ? ` | Nota: ${notes}` : ""}`;
 
       const existingReq = await (prisma as any).orderRequest
         .findUnique({ where: { requestNumber } })
         .catch(() => null);
 
+      let linkedCustomer = order.customerId
+        ? await prisma.customer.findUnique({
+            where: { id: order.customerId },
+            select: { id: true, identification: true, address: true },
+          })
+        : null;
+      if (!linkedCustomer && order.clientIdDoc) {
+        linkedCustomer = await prisma.customer.findUnique({
+          where: { identification: order.clientIdDoc },
+          select: { id: true, identification: true, address: true },
+        });
+      }
+      const requestCustomerData = {
+        customerId: order.customerId || linkedCustomer?.id || null,
+        customerIdentification: order.clientIdDoc || linkedCustomer?.identification || null,
+        customerPhone: order.clientPhone || null,
+        customerEmail: order.clientEmail || null,
+        customerAddress: linkedCustomer?.address || null,
+        vehicleInfo: `${order.vehicle} [${order.plate}]`,
+        vehicleModel: order.vehicle || null,
+        vehiclePlate: order.plate || null,
+      };
       let posRequest: any;
       if (existingReq) {
         posRequest = await (prisma as any).orderRequest.update({
           where: { id: existingReq.id },
           data: {
             customerName: order.client,
-            customerPhone: order.clientPhone || null,
-            vehicleInfo: `${order.vehicle} [${order.plate}]`,
+            ...requestCustomerData,
             itemsSummary,
             itemsJson: JSON.stringify(posItemsPayload),
             totalEstimated: totalCalculado,
@@ -118,8 +147,7 @@ export async function POST(request: Request) {
             requestNumber,
             type: "TALLER",
             customerName: order.client,
-            customerPhone: order.clientPhone || null,
-            vehicleInfo: `${order.vehicle} [${order.plate}]`,
+            ...requestCustomerData,
             itemsSummary,
             itemsJson: JSON.stringify(posItemsPayload),
             totalEstimated: totalCalculado,

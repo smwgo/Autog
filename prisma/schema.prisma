@@ -741,6 +741,13 @@ model Sale {
   saleNumber    String     @unique
   customerId    String?
   customerName  String     @default("Consumidor Final")
+  sourceOrderNumber String?
+  customerIdentification String?
+  customerPhone String?
+  customerEmail String?
+  customerAddress String?
+  vehiclePlate String?
+  vehicleModel String?
   subtotal      Decimal    @db.Decimal(12, 2)
   tax           Decimal    @db.Decimal(12, 2)
   discount      Decimal    @default(0) @db.Decimal(12, 2)
@@ -779,9 +786,14 @@ model OrderRequest {
   requestNumber  String    @unique
   type           String    @default("TIENDA") // "TIENDA", "REPUESTO", "SERVICIO", "TALLER"
   customerName   String
+  customerId     String?
+  customerIdentification String?
   customerPhone  String?
   customerEmail  String?
+  customerAddress String?
   vehicleInfo    String?
+  vehiclePlate   String?
+  vehicleModel   String?
   itemsSummary   String
   itemsJson      String?
   totalEstimated Decimal?  @db.Decimal(12, 2)

@@ -40,8 +40,8 @@ interface Summary {
 interface ApplicationStats {
   salesCount: number;
   bestSellers: {
-    product: { name: string; quantity: number } | null;
-    service: { name: string; quantity: number } | null;
+    products: { name: string; quantity: number }[];
+    services: { name: string; quantity: number }[];
   };
   customers: number;
   inventory: { products: number; units: number; lowStock: number };
@@ -133,6 +133,81 @@ function Icon({ name, className = "h-5 w-5" }: { name: string; className?: strin
     default:
       return <svg {...common}><circle cx="12" cy="12" r="9" /><path d="M12 8v4l3 2" /></svg>;
   }
+}
+
+const sellerChartColors = [
+  "#06b6d4",
+  "#8b5cf6",
+  "#f59e0b",
+  "#ec4899",
+  "#22c55e",
+];
+
+function BestSellerDonut({
+  title,
+  items,
+  loading,
+}: {
+  title: string;
+  items: { name: string; quantity: number }[];
+  loading: boolean;
+}) {
+  const radius = 27;
+  const circumference = 2 * Math.PI * radius;
+  const total = items.reduce((sum, item) => sum + item.quantity, 0);
+  const segments = items.map((item, index) => ({
+    item,
+    index,
+    length: total ? (item.quantity / total) * circumference : 0,
+    offset: items
+      .slice(0, index)
+      .reduce((sum, previous) => sum + (total ? (previous.quantity / total) * circumference : 0), 0),
+  }));
+
+  return (
+    <div className="min-w-0 rounded-xl border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-white/[0.03]">
+      <p className="truncate text-xs font-semibold text-zinc-700 dark:text-zinc-200">{title}</p>
+      <div className="mt-3 flex items-center gap-3">
+        <div role="img" className="relative h-[76px] w-[76px] shrink-0" aria-label={`${title}: ${total} unidades vendidas`}>
+          <svg className="h-full w-full -rotate-90" viewBox="0 0 64 64" role="img" aria-hidden="true">
+            <circle cx="32" cy="32" r={radius} fill="none" stroke="currentColor" strokeWidth="8" className="text-zinc-200 dark:text-zinc-700" />
+            {segments.map(({ item, index, length, offset }) => (
+                <circle
+                  key={`${item.name}-${index}`}
+                  cx="32"
+                  cy="32"
+                  r={radius}
+                  fill="none"
+                  stroke={sellerChartColors[index % sellerChartColors.length]}
+                  strokeWidth="8"
+                  strokeDasharray={`${length} ${circumference - length}`}
+                  strokeDashoffset={-offset}
+                />
+            ))}
+          </svg>
+          <span className="absolute inset-0 flex flex-col items-center justify-center">
+            <strong className="text-sm leading-none text-zinc-800 dark:text-white">{loading ? "…" : total}</strong>
+            <span className="mt-1 text-[9px] text-zinc-400">vendidos</span>
+          </span>
+        </div>
+        <div className="min-w-0 flex-1 space-y-1.5">
+          {loading ? (
+            <p className="text-[11px] text-zinc-400">Cargando…</p>
+          ) : items.length ? (
+            items.map((item, index) => (
+              <div key={`${item.name}-${index}`} className="flex min-w-0 items-center gap-1.5 text-[11px]">
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: sellerChartColors[index % sellerChartColors.length] }} />
+                <span className="min-w-0 flex-1 truncate text-zinc-600 dark:text-zinc-300" title={item.name}>{item.name}</span>
+                <span className="shrink-0 font-semibold tabular-nums text-zinc-500 dark:text-zinc-400">{item.quantity}</span>
+              </div>
+            ))
+          ) : (
+            <p className="text-[11px] text-zinc-400">Sin ventas</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function DashboardGeneral() {
@@ -366,18 +441,8 @@ export default function DashboardGeneral() {
               <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">Vista global</span>
             </div>
             <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {[
-                { label: "Producto más vendido", item: stats?.bestSellers.product, color: "text-cyan-600 dark:text-cyan-400" },
-                { label: "Servicio más vendido", item: stats?.bestSellers.service, color: "text-violet-600 dark:text-violet-400" },
-              ].map(({ label, item, color }) => (
-                <div key={label} className="min-w-0 rounded-xl border border-zinc-100 bg-zinc-50/80 px-3 py-2.5 dark:border-zinc-800 dark:bg-white/[0.03]">
-                  <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">{label}</p>
-                  <p className={`mt-1 truncate text-sm font-semibold ${color}`}>
-                    {loading && !stats ? "Cargando…" : item ? item.name : "Sin ventas"}
-                  </p>
-                  {item && <p className="mt-0.5 text-[11px] text-zinc-400">{item.quantity} vendidos</p>}
-                </div>
-              ))}
+              <BestSellerDonut title="Productos más vendidos" items={stats?.bestSellers.products ?? []} loading={loading && !stats} />
+              <BestSellerDonut title="Servicios más vendidos" items={stats?.bestSellers.services ?? []} loading={loading && !stats} />
             </div>
             <div className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
               {modules.map((module) => (

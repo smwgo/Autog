@@ -69,7 +69,7 @@ export async function GET(request: Request) {
       const closedQuoteStatuses = ["aprob", "acept", "rechaz", "cancel", "vencid"];
       const inactiveEmployeeStatuses = ["inactiv", "suspend", "baja", "desactiv"];
 
-      const bestSellerByType = (isProduct: boolean) => {
+      const bestSellersByType = (isProduct: boolean) => {
         const totals = new Map<string, { name: string; quantity: number }>();
         for (const item of soldItems) {
           const itemIsService =
@@ -86,14 +86,16 @@ export async function GET(request: Request) {
           });
         }
 
-        return [...totals.values()].sort((a, b) => b.quantity - a.quantity)[0] ?? null;
+        return [...totals.values()]
+          .sort((a, b) => b.quantity - a.quantity || a.name.localeCompare(b.name))
+          .slice(0, 5);
       };
 
       return {
         salesCount,
         bestSellers: {
-          product: bestSellerByType(true),
-          service: bestSellerByType(false),
+          products: bestSellersByType(true),
+          services: bestSellersByType(false),
         },
         customers: customerCount,
         inventory: {

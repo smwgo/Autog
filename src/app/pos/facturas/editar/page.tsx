@@ -415,6 +415,8 @@ function EditarFacturaForm() {
   const [status, setStatus] = useState("Completada");
   const [observaciones, setObservaciones] = useState("");
   const [placaVehiculo, setPlacaVehiculo] = useState("");
+  const [modeloVehiculo, setModeloVehiculo] = useState("");
+  const [detallesVehiculo, setDetallesVehiculo] = useState("");
 
   // Cliente
   const [clienteSeleccionadoId, setClienteSeleccionadoId] = useState("");
@@ -592,12 +594,24 @@ function EditarFacturaForm() {
           // Cliente
           setClienteSeleccionadoId(v.customerId || "");
           setClienteNombre(v.customerName || (v.customer ? v.customer.name : "Consumidor Final"));
+          setClienteIdentificacion(v.customerIdentification || v.customer?.identification || "");
+          setClienteTelefono(v.customerPhone || v.customer?.phone || "");
+          setClienteEmail(v.customerEmail || v.customer?.email || "");
+          setClienteDireccion(v.customerAddress || v.customer?.address || "");
+          setPlacaVehiculo(v.serviceVehicle?.plate || "");
+          setModeloVehiculo(v.serviceVehicle?.model || "");
+          setDetallesVehiculo(
+            [
+              v.serviceVehicle?.type,
+              v.serviceVehicle?.year,
+              v.serviceVehicle?.color,
+              v.serviceVehicle?.mileage ? `${v.serviceVehicle.mileage} km` : null,
+            ]
+              .filter(Boolean)
+              .join(" • ")
+          );
           if (v.customer) {
-            setClienteIdentificacion(v.customer.identification || "9999999999999");
-            setClienteTelefono(v.customer.phone || "");
-            setClienteEmail(v.customer.email || "");
-            setClienteDireccion(v.customer.address || "Quito");
-            if (v.customer.vehicles && v.customer.vehicles.length > 0) {
+            if (!v.serviceVehicle && v.customer.vehicles && v.customer.vehicles.length > 0) {
               setPlacaVehiculo(v.customer.vehicles[0].plate || "");
             }
           }
@@ -652,6 +666,8 @@ function EditarFacturaForm() {
     setClienteEmail("");
     setClienteDireccion("Quito");
     setPlacaVehiculo("");
+    setModeloVehiculo("");
+    setDetallesVehiculo("");
     setMostrarBuscadorCliente(false);
   };
 
@@ -662,8 +678,12 @@ function EditarFacturaForm() {
     setClienteTelefono(c.phone || "");
     setClienteEmail(c.email || "");
     setClienteDireccion(c.address || "Quito");
+    setModeloVehiculo("");
+    setDetallesVehiculo("");
     if (c.vehicles && c.vehicles.length > 0) {
       setPlacaVehiculo(c.vehicles[0].plate || "");
+    } else {
+      setPlacaVehiculo("");
     }
     setMostrarBuscadorCliente(false);
   };
@@ -829,9 +849,12 @@ function EditarFacturaForm() {
         status,
         customerName: clienteNombre.trim(),
         customerId: clienteSeleccionadoId || null,
+        customerIdentification: clienteIdentificacion.trim(),
         customerPhone: clienteTelefono.trim(),
         customerEmail: clienteEmail.trim(),
         customerAddress: clienteDireccion.trim(),
+        vehiclePlate: placaVehiculo.trim(),
+        vehicleModel: modeloVehiculo.trim(),
         paymentMethod: formaPago,
         discount: Number(totales.totalDescuento.toFixed(2)),
         subtotal: Number(totales.subtotal.toFixed(2)),
@@ -1245,6 +1268,22 @@ function EditarFacturaForm() {
                     placeholder="PBX-1234"
                     className="w-full h-11 sm:h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white text-base sm:text-xs font-normal focus:outline-none focus:border-blue-500 uppercase"
                   />
+                </div>
+
+                <div>
+                  <label className="text-xs text-zinc-600 dark:text-zinc-400 block mb-1">
+                    Vehículo
+                  </label>
+                  <input
+                    type="text"
+                    value={modeloVehiculo}
+                    onChange={(e) => setModeloVehiculo(e.target.value)}
+                    placeholder="Marca y modelo"
+                    className="w-full h-11 sm:h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white text-base sm:text-xs font-normal focus:outline-none focus:border-blue-500"
+                  />
+                  {detallesVehiculo && (
+                    <p className="mt-1 text-[11px] text-zinc-500">{detallesVehiculo}</p>
+                  )}
                 </div>
 
                 <div>
@@ -1973,6 +2012,8 @@ function EditarFacturaForm() {
               <div><span className="font-bold">RUC/CI:</span> {clienteIdentificacion}</div>
               {clienteDireccion && <div><span className="font-bold">DIR:</span> {clienteDireccion}</div>}
               {clienteTelefono && <div><span className="font-bold">TEL:</span> {clienteTelefono}</div>}
+              {modeloVehiculo && <div><span className="font-bold">VEHÍCULO:</span> {modeloVehiculo}</div>}
+              {detallesVehiculo && <div><span className="font-bold">DETALLE:</span> {detallesVehiculo}</div>}
               {placaVehiculo && <div><span className="font-bold">PLACA:</span> {placaVehiculo}</div>}
             </div>
 
@@ -2121,6 +2162,18 @@ function EditarFacturaForm() {
                   <span className="font-mono font-bold text-blue-700 uppercase bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
                     {placaVehiculo}
                   </span>
+                </div>
+              )}
+              {modeloVehiculo && (
+                <div className="col-span-4">
+                  <span className="font-bold text-zinc-800">Vehículo:</span>{" "}
+                  <span className="text-zinc-700">{modeloVehiculo}</span>
+                </div>
+              )}
+              {detallesVehiculo && (
+                <div className="col-span-8">
+                  <span className="font-bold text-zinc-800">Detalle del vehículo:</span>{" "}
+                  <span className="text-zinc-700">{detallesVehiculo}</span>
                 </div>
               )}
               <div className="col-span-8">

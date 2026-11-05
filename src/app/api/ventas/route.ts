@@ -1,6 +1,31 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+let saleInvoiceDetailsSchemaEnsured = false;
+
+async function ensureSaleInvoiceDetailsSchema() {
+  if (saleInvoiceDetailsSchemaEnsured) return;
+  await prisma.$executeRawUnsafe(`
+    ALTER TABLE "Sale"
+      ADD COLUMN IF NOT EXISTS "customerIdentification" TEXT,
+      ADD COLUMN IF NOT EXISTS "customerPhone" TEXT,
+      ADD COLUMN IF NOT EXISTS "customerEmail" TEXT,
+      ADD COLUMN IF NOT EXISTS "customerAddress" TEXT,
+      ADD COLUMN IF NOT EXISTS "sourceOrderNumber" TEXT,
+      ADD COLUMN IF NOT EXISTS "vehiclePlate" TEXT,
+      ADD COLUMN IF NOT EXISTS "vehicleModel" TEXT
+  `);
+  await prisma.$executeRawUnsafe(`
+    ALTER TABLE "OrderRequest"
+      ADD COLUMN IF NOT EXISTS "customerId" TEXT,
+      ADD COLUMN IF NOT EXISTS "customerIdentification" TEXT,
+      ADD COLUMN IF NOT EXISTS "customerAddress" TEXT,
+      ADD COLUMN IF NOT EXISTS "vehiclePlate" TEXT,
+      ADD COLUMN IF NOT EXISTS "vehicleModel" TEXT
+  `);
+  saleInvoiceDetailsSchemaEnsured = true;
+}
+
 function calcularEstado(stock: number, minStock: number = 5): string {
   if (stock <= 0) return "Agotado";
   if (stock <= minStock) return "Bajo Stock";
@@ -10,6 +35,7 @@ function calcularEstado(stock: number, minStock: number = 5): string {
 // GET: Consultar ventas registradas en Neon
 export async function GET(request: Request) {
   try {
+    await ensureSaleInvoiceDetailsSchema();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     if (id) {
@@ -27,7 +53,86 @@ export async function GET(request: Request) {
       if (!sale) {
         return NextResponse.json({ success: false, error: "Venta no encontrada." }, { status: 404 });
       }
-      return NextResponse.json({ success: true, venta: sale });
+      const workshopHistory = await prisma.workshopHistory.findFirst({
+        where: { orderNumber: sale.saleNumber },
+        select: { vehicle: true, plate: true },
+      });
+      const sourceOrderNumber = sale.sourceOrderNumber?.trim().replace(/^OT-/i, "") || "";
+      let sourceRequest = sourceOrderNumber
+        ? await (prisma as any).orderRequest.findFirst({
+            where: { requestNumber: { in: [sourceOrderNumber, `OT-${sourceOrderNumber}`] } },
+          })
+        : null;
+      if (!sourceRequest && !sale.customerId && sale.customerName) {
+        const from = new Date(sale.createdAt);
+        from.setDate(from.getDate() - 7);
+        const matchingRequests = await (prisma as any).orderRequest.findMany({
+          where: {
+            type: "TALLER",
+            customerName: sale.customerName,
+            createdAt: { gte: from, lte: sale.createdAt },
+            ...(sale.customerPhone ? { customerPhone: sale.customerPhone } : {}),
+          },
+          orderBy: { createdAt: "desc" },
+          take: 2,
+        });
+        if (matchingRequests.length === 1) sourceRequest = matchingRequests[0];
+      }
+      const sourceOrderKey = sourceRequest?.requestNumber || sourceOrderNumber;
+      const normalizedSourceOrderKey = sourceOrderKey.trim().replace(/^OT-/i, "");
+      const sourceOrder = normalizedSourceOrderKey
+        ? await prisma.workshopOrder.findFirst({
+            where: { orderNumber: { in: [normalizedSourceOrderKey, `OT-${normalizedSourceOrderKey}`] } },
+            select: {
+              orderNumber: true,
+              clientIdDoc: true,
+              clientPhone: true,
+              clientEmail: true,
+              client: true,
+              vehicle: true,
+              plate: true,
+              vehicleRef: { select: { year: true, color: true, mileage: true, vehicleType: true } },
+              customer: { select: { identification: true, name: true, phone: true, email: true, address: true } },
+            },
+          })
+        : null;
+      return NextResponse.json({
+        success: true,
+        venta: {
+          ...sale,
+          sourceOrderNumber: sourceOrderKey || sale.sourceOrderNumber,
+          customerName: sale.customerName || sourceOrder?.client || sourceRequest?.customerName,
+          customerIdentification:
+            (sale.customerIdentification === "9999999999999" && (sourceOrder || sourceRequest)
+              ? null
+              : sale.customerIdentification) ||
+            sourceOrder?.clientIdDoc || sourceRequest?.customerIdentification || sourceOrder?.customer?.identification,
+          customerPhone:
+            sale.customerPhone || sourceOrder?.clientPhone || sourceRequest?.customerPhone || sourceOrder?.customer?.phone,
+          customerEmail:
+            sale.customerEmail || sourceOrder?.clientEmail || sourceRequest?.customerEmail || sourceOrder?.customer?.email,
+          customerAddress: sale.customerAddress || sourceRequest?.customerAddress || sourceOrder?.customer?.address,
+          serviceVehicle: sourceOrder
+            ? {
+                model: sale.vehicleModel || sourceOrder.vehicle || sourceRequest?.vehicleModel,
+                plate: sale.vehiclePlate || sourceOrder.plate || sourceRequest?.vehiclePlate,
+                year: sourceOrder.vehicleRef?.year,
+                color: sourceOrder.vehicleRef?.color,
+                mileage: sourceOrder.vehicleRef?.mileage,
+                type: sourceOrder.vehicleRef?.vehicleType,
+              }
+            : sourceRequest
+              ? { model: sale.vehicleModel || sourceRequest.vehicleModel || "", plate: sale.vehiclePlate || sourceRequest.vehiclePlate || "" }
+              : workshopHistory
+            ? {
+                model: sale.vehicleModel || workshopHistory.vehicle,
+                plate: sale.vehiclePlate || workshopHistory.plate,
+              }
+            : sale.vehicleModel || sale.vehiclePlate
+              ? { model: sale.vehicleModel || "", plate: sale.vehiclePlate || "" }
+              : null,
+        },
+      });
     }
 
     const busqueda = searchParams.get("busqueda")?.trim().toLowerCase() || "";
@@ -104,11 +209,16 @@ export async function GET(request: Request) {
 // POST: Registrar nueva venta en Neon y descontar inventario
 export async function POST(request: Request) {
   try {
+    await ensureSaleInvoiceDetailsSchema();
     const body = await request.json();
     const {
       customerId = null,
       customerIdentification = null,
       customerName = "Consumidor Final",
+      customerPhone = null,
+      customerEmail = null,
+      customerAddress = null,
+      serviceOrderNumber = null,
       items = [],
       paymentMethod = "Efectivo",
       discount = 0,
@@ -132,23 +242,78 @@ export async function POST(request: Request) {
 
     // 1. Ejecutar verificación de precios, creación de venta, descuento de stock y actualización de caja en una sola transacción atómica
     const sale = await prisma.$transaction(async (tx) => {
+      const sourceOrderNumber =
+        typeof serviceOrderNumber === "string"
+          ? serviceOrderNumber.trim().replace(/^OT-/i, "")
+          : "";
+      const sourceRequest = sourceOrderNumber
+        ? await (tx as any).orderRequest.findFirst({
+            where: { requestNumber: { in: [sourceOrderNumber, `OT-${sourceOrderNumber}`] } },
+          })
+        : null;
+      const serviceOrder = sourceOrderNumber
+        ? await tx.workshopOrder.findFirst({
+            where: {
+              orderNumber: {
+                in: [sourceOrderNumber, `OT-${sourceOrderNumber}`],
+              },
+            },
+            select: {
+              orderNumber: true,
+              customerId: true,
+              clientIdDoc: true,
+              client: true,
+              clientPhone: true,
+              clientEmail: true,
+              vehicle: true,
+              plate: true,
+              vehicleRef: { select: { year: true, color: true, mileage: true, vehicleType: true } },
+            },
+          })
+        : null;
+
       let linkedCustomer = null;
-      if (typeof customerId === "string" && customerId.trim()) {
+      const sourceCustomerId = serviceOrder?.customerId || sourceRequest?.customerId || null;
+      const sourceCustomerIdentification =
+        serviceOrder?.clientIdDoc || sourceRequest?.customerIdentification || null;
+      if (sourceCustomerId) {
         linkedCustomer = await tx.customer.findUnique({
-          where: { id: customerId.trim() },
-          select: { id: true, name: true },
+          where: { id: sourceCustomerId },
+          select: { id: true, name: true, identification: true, phone: true, email: true, address: true },
         });
       }
       if (
         !linkedCustomer &&
+        sourceCustomerIdentification &&
+        sourceCustomerIdentification.trim()
+      ) {
+        linkedCustomer = await tx.customer.findUnique({
+          where: { identification: sourceCustomerIdentification.trim() },
+          select: { id: true, name: true, identification: true, phone: true, email: true, address: true },
+        });
+      }
+      if (typeof customerId === "string" && customerId.trim()) {
+        linkedCustomer ??= await tx.customer.findUnique({
+          where: { id: customerId.trim() },
+          select: { id: true, name: true, identification: true, phone: true, email: true, address: true },
+        });
+      }
+      if (
+        !linkedCustomer &&
+        !serviceOrder &&
+        !(typeof customerId === "string" && customerId.startsWith("web-")) &&
         typeof customerIdentification === "string" &&
         customerIdentification.trim()
       ) {
-        linkedCustomer = await tx.customer.findUnique({
+        linkedCustomer ??= await tx.customer.findUnique({
           where: { identification: customerIdentification.trim() },
-          select: { id: true, name: true },
+          select: { id: true, name: true, identification: true, phone: true, email: true, address: true },
         });
       }
+      const saleCustomerName =
+        serviceOrder?.client || sourceRequest?.customerName || linkedCustomer?.name || customerName || "Consumidor Final";
+      const saleVehiclePlate = serviceOrder?.plate || sourceRequest?.vehiclePlate || vehiclePlate;
+      const saleVehicleModel = serviceOrder?.vehicle || sourceRequest?.vehicleModel || vehicleModel;
 
       let subtotalCalc = 0;
       const saleItemsData = [];
@@ -231,7 +396,19 @@ export async function POST(request: Request) {
         data: {
           saleNumber,
           customerId: linkedCustomer?.id ?? null,
-          customerName: linkedCustomer?.name || customerName || "Consumidor Final",
+          customerName: saleCustomerName,
+          sourceOrderNumber: serviceOrder?.orderNumber || sourceRequest?.requestNumber || serviceOrderNumber,
+          customerIdentification:
+            sourceCustomerIdentification || linkedCustomer?.identification ||
+            (!serviceOrder && !sourceRequest &&
+              !(typeof customerId === "string" && customerId.startsWith("web-"))
+              ? customerIdentification
+              : null),
+          customerPhone: serviceOrder?.clientPhone || sourceRequest?.customerPhone || linkedCustomer?.phone || customerPhone,
+          customerEmail: serviceOrder?.clientEmail || sourceRequest?.customerEmail || linkedCustomer?.email || customerEmail,
+          customerAddress: linkedCustomer?.address || sourceRequest?.customerAddress || customerAddress,
+          vehiclePlate: saleVehiclePlate?.toString().trim().toUpperCase() || null,
+          vehicleModel: saleVehicleModel || null,
           subtotal: subtotalCalc,
           tax: taxCalc,
           discount: numDiscount,
@@ -265,7 +442,7 @@ export async function POST(request: Request) {
         console.warn("Aviso al asignar branch a Sale:", brErr);
       }
 
-      if (vehiclePlate) {
+      if (saleVehiclePlate) {
         try {
           const histId = "hst_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
           const serviceNames = items.map((it: any) => `${it.quantity || it.qty || 1}x ${it.name || "Ítem"}`);
@@ -275,9 +452,9 @@ export async function POST(request: Request) {
             histId,
             `POS-${createdSale.saleNumber}`,
             new Date().toISOString().split("T")[0],
-            vehicleModel || "Vehículo",
-            vehiclePlate.toString().trim().toUpperCase(),
-            customerName || "Consumidor Final",
+            saleVehicleModel || "Vehículo",
+            saleVehiclePlate.toString().trim().toUpperCase(),
+            saleCustomerName,
             JSON.stringify(serviceNames),
             totalCalc,
             "Caja Mostrador",
@@ -349,6 +526,7 @@ export async function POST(request: Request) {
 // PATCH: Actualizar venta (ej: editar cliente/método, items, o anular venta y restituir stock en Neon)
 export async function PATCH(request: Request) {
   try {
+    await ensureSaleInvoiceDetailsSchema();
     const body = await request.json();
     const {
       id,
@@ -356,9 +534,12 @@ export async function PATCH(request: Request) {
       status,
       customerName,
       customerId,
+      customerIdentification,
       customerPhone,
       customerEmail,
       customerAddress,
+      vehiclePlate,
+      vehicleModel,
       paymentMethod,
       subtotal,
       tax,
@@ -474,6 +655,12 @@ export async function PATCH(request: Request) {
     if (status) updateData.status = status;
     if (customerName) updateData.customerName = customerName.trim();
     if (customerId !== undefined) updateData.customerId = customerId || null;
+    if (customerIdentification !== undefined) updateData.customerIdentification = customerIdentification || null;
+    if (customerPhone !== undefined) updateData.customerPhone = customerPhone || null;
+    if (customerEmail !== undefined) updateData.customerEmail = customerEmail || null;
+    if (customerAddress !== undefined) updateData.customerAddress = customerAddress || null;
+    if (vehiclePlate !== undefined) updateData.vehiclePlate = vehiclePlate || null;
+    if (vehicleModel !== undefined) updateData.vehicleModel = vehicleModel || null;
     if (paymentMethod) updateData.paymentMethod = paymentMethod.trim();
     if (subtotal !== undefined) updateData.subtotal = Number(subtotal);
     if (tax !== undefined) updateData.tax = Number(tax);
