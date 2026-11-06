@@ -178,6 +178,7 @@ export default function CatalogoCategoriasTaller({
   const [categoriaSeleccionadaId, setCategoriaSeleccionadaId] = useState<string>("suspension");
   const [subcategoriaSeleccionadaId, setSubcategoriaSeleccionadaId] = useState<string>("TODOS");
   const [busqueda, setBusqueda] = useState<string>("");
+  const [filtrosFlotantesAbiertos, setFiltrosFlotantesAbiertos] = useState(false);
 
   const categoriaActiva = useMemo(() => {
     return (
@@ -402,7 +403,7 @@ export default function CatalogoCategoriasTaller({
       {/* =====================================================================
           CABECERA DE LA CATEGORÍA ACTIVA + BUSCADOR
           ===================================================================== */}
-      <div className="pt-2 pb-1 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 dark:border-white/5">
+      <div className="relative pt-2 pb-1 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 dark:border-white/5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex items-center justify-center text-xl shrink-0 shadow-xs">
             {categoriaActiva.icon}
@@ -417,22 +418,82 @@ export default function CatalogoCategoriasTaller({
           </div>
         </div>
 
-        <div className="w-full sm:w-72 relative">
-          <input
-            type="text"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="🔍 Buscar servicio o código..."
-            className="w-full h-9 pl-3.5 pr-8 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-black/40 text-xs text-zinc-900 dark:text-white shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
-          {busqueda && (
-            <button
-              type="button"
-              onClick={() => setBusqueda("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
-            >
-              ✕
-            </button>
+        <div className="w-full sm:w-72 flex items-center gap-2">
+          <div className="relative flex-1 min-w-0">
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="🔍 Buscar servicio o código..."
+              className="w-full h-9 pl-3.5 pr-8 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-black/40 text-xs text-zinc-900 dark:text-white shadow-2xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            {busqueda && (
+              <button
+                type="button"
+                onClick={() => setBusqueda("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setFiltrosFlotantesAbiertos((prev) => !prev)}
+            className={`h-9 w-10 shrink-0 rounded-xl border flex items-center justify-center transition-colors cursor-pointer ${
+              filtrosFlotantesAbiertos
+                ? "border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-400/50 dark:bg-blue-500/20 dark:text-blue-300"
+                : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
+            }`}
+            aria-label="Abrir filtros"
+            aria-expanded={filtrosFlotantesAbiertos}
+            title="Filtrar servicios"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="M4 7h16M7 12h10m-7 5h4" />
+              <circle cx="8" cy="7" r="1" fill="currentColor" />
+              <circle cx="15" cy="12" r="1" fill="currentColor" />
+              <circle cx="11" cy="17" r="1" fill="currentColor" />
+            </svg>
+          </button>
+          {filtrosFlotantesAbiertos && (
+            <div className="absolute top-full right-0 z-50 mt-2 w-full sm:w-80 rounded-2xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-3 shadow-xl animate-fade-in">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100">Filtrar servicios</span>
+                <button
+                  type="button"
+                  onClick={() => setFiltrosFlotantesAbiertos(false)}
+                  className="w-7 h-7 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 cursor-pointer"
+                  aria-label="Cerrar filtros"
+                >
+                  ✕
+                </button>
+              </div>
+              <label className="block mb-2 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                1. Categoría
+                <select
+                  value={categoriaSeleccionadaId}
+                  onChange={(e) => handleCambiarCategoria(e.target.value)}
+                  className="mt-1 w-full h-9 px-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-800 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 text-xs font-bold normal-case tracking-normal"
+                >
+                  {CATEGORIAS_TALLER_MAESTRAS.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.icon} {cat.shortName}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                2. Subcategoría
+                <select
+                  value={subcategoriaSeleccionadaId}
+                  onChange={(e) => setSubcategoriaSeleccionadaId(e.target.value)}
+                  className="mt-1 w-full h-9 px-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-800 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 text-xs font-bold normal-case tracking-normal"
+                >
+                  {categoriaActiva.subcategorias.map((sub) => (
+                    <option key={sub.id} value={sub.id}>{sub.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
           )}
         </div>
       </div>

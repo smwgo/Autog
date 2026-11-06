@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
 import { PosMobileNav } from "@/components/PosMobileNav";
 import SelectorModulos from "@/components/pos/SelectorModulos";
 import { ProductoFotoPicker } from "@/components/pos/ProductoFotoPicker";
+import CamposTaxonomiaProducto from "@/components/pos/CamposTaxonomiaProducto";
 import { getClientActiveBranch } from "@/lib/branch";
 
 function EditarProductoContent() {
@@ -27,6 +28,8 @@ function EditarProductoContent() {
     name: "",
     brand: "",
     category: "",
+    subCategory: "",
+    presentation: "",
     tipo: "Tienda",
     price: "",
     stock: "0",
@@ -34,6 +37,13 @@ function EditarProductoContent() {
     location: "",
     imageUrl: "",
   });
+
+  const handleTaxonomiaProductoChange = useCallback(
+    (field: "category" | "subCategory" | "presentation", value: string) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
 
   useEffect(() => {
     if (!id) {
@@ -60,6 +70,8 @@ function EditarProductoContent() {
           name: p.name || "",
           brand: p.brand || "",
           category: p.category && p.category !== "General" ? p.category : "",
+          subCategory: p.subCategory || "",
+          presentation: p.presentation || "",
           tipo: p.tipo || "Tienda",
           price: p.price !== undefined && p.price !== null ? String(p.price) : "",
           stock: p.stock !== undefined && p.stock !== null ? String(p.stock) : "0",
@@ -142,6 +154,8 @@ function EditarProductoContent() {
           name: formData.name,
           brand: formData.brand,
           category: formData.category.trim() || "General",
+          subCategory: formData.subCategory.trim(),
+          presentation: formData.presentation.trim(),
           tipo: formData.tipo,
           price: formData.price,
           stock: formData.stock,
@@ -337,17 +351,13 @@ function EditarProductoContent() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
-                Categoría
-              </label>
-              <input
-                type="text"
-                name="category"
-                placeholder="Lubricantes, filtros..."
-                value={formData.category}
-                onChange={handleChange}
-                className="w-full h-12 px-4 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-base outline-none focus:border-blue-500"
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <CamposTaxonomiaProducto
+                tipo={formData.tipo}
+                category={formData.category}
+                subCategory={formData.subCategory}
+                presentation={formData.presentation}
+                onChange={handleTaxonomiaProductoChange}
               />
             </div>
 

@@ -7,6 +7,7 @@ import { PosMobileNav } from "@/components/PosMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
 import SelectorModulos, { parsearModulos } from "@/components/pos/SelectorModulos";
 import { ProductoFotoPicker } from "@/components/pos/ProductoFotoPicker";
+import CamposTaxonomiaProducto from "@/components/pos/CamposTaxonomiaProducto";
 import { getClientActiveBranch } from "@/lib/branch";
 import { BranchTabs } from "@/components/pos/BranchTabs";
 
@@ -16,6 +17,8 @@ interface Product {
   name: string;
   brand?: string | null;
   category: string;
+  subCategory?: string | null;
+  presentation?: string | null;
   tipo?: string | null;
   price: number | string;
   stock: number;
@@ -54,6 +57,8 @@ export default function CatalogoPage() {
     name: "",
     brand: "",
     category: "",
+    subCategory: "",
+    presentation: "",
     tipo: "Tienda",
     price: "",
     stock: "0",
@@ -61,6 +66,13 @@ export default function CatalogoPage() {
     location: "",
     imageUrl: "",
   });
+
+  const handleTaxonomiaProductoChange = useCallback(
+    (field: "category" | "subCategory" | "presentation", value: string) => {
+      setForm((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
 
   const cargarProductos = useCallback(async () => {
     try {
@@ -115,6 +127,8 @@ export default function CatalogoPage() {
       name: "",
       brand: "",
       category: "",
+      subCategory: "",
+      presentation: "",
       tipo: "Tienda",
       price: "",
       stock: "0",
@@ -133,6 +147,8 @@ export default function CatalogoPage() {
       name: prod.name,
       brand: prod.brand || "",
       category: prod.category && prod.category !== "General" ? prod.category : "",
+      subCategory: prod.subCategory || "",
+      presentation: prod.presentation || "",
       tipo: prod.tipo || "Tienda",
       price: prod.price.toString(),
       stock: prod.stock.toString(),
@@ -203,6 +219,7 @@ export default function CatalogoPage() {
       }
 
       setMostrarModalNuevo(false);
+      window.dispatchEvent(new Event("taller-catalogo-actualizado"));
       await cargarProductos();
     } catch (err: any) {
       alert("Error al conectar: " + err.message);
@@ -234,6 +251,7 @@ export default function CatalogoPage() {
       }
 
       setProductoAEditar(null);
+      window.dispatchEvent(new Event("taller-catalogo-actualizado"));
       await cargarProductos();
     } catch (err: any) {
       alert("Error al conectar: " + err.message);
@@ -670,6 +688,16 @@ export default function CatalogoPage() {
                           {item.category}
                         </span>
                       )}
+                      {item.subCategory && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 text-xs font-medium">
+                          {item.subCategory}
+                        </span>
+                      )}
+                      {item.presentation && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/20 text-xs font-medium">
+                          {item.presentation}
+                        </span>
+                      )}
                       {item.tipo &&
                         parsearModulos(item.tipo).map((t) => (
                           <span
@@ -759,6 +787,16 @@ export default function CatalogoPage() {
                               ) : (
                                 <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
                                   {item.category || "General"}
+                                </span>
+                              )}
+                              {item.subCategory && (
+                                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                                  Subcategoría: {item.subCategory}
+                                </span>
+                              )}
+                              {item.presentation && (
+                                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                                  Envase: {item.presentation}
                                 </span>
                               )}
                             </div>
@@ -912,18 +950,14 @@ export default function CatalogoPage() {
                       onChange={(nuevoTipo) => setForm({ ...form, tipo: nuevoTipo })}
                     />
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-1.5">
-                      Categoría
-                    </label>
-                    <input
-                      type="text"
-                      name="category"
-                      placeholder="Lubricantes, filtros..."
-                      value={form.category}
-                      onChange={(e) => setForm({ ...form, category: e.target.value })}
-                      className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs outline-none focus:border-blue-500"
+                  <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <CamposTaxonomiaProducto
+                      compact
+                      tipo={form.tipo}
+                      category={form.category}
+                      subCategory={form.subCategory}
+                      presentation={form.presentation}
+                      onChange={handleTaxonomiaProductoChange}
                     />
                   </div>
                 </div>

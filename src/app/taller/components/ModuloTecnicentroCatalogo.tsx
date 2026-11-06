@@ -278,9 +278,9 @@ function classifyItemCategoryTec(
 
 function classifyItemSubcategoryTec(
   category: "LLANTAS" | "ALINEACION" | "ENLLANTAJE" | "FRENOS" | "SUSPENSION" | "BATERIAS",
-  item: { name: string; code?: string }
+  item: { name: string; code?: string; subCategory?: string }
 ): string {
-  const text = `${item.name} ${item.code || ""}`.toLowerCase();
+  const text = `${item.name} ${item.code || ""} ${item.subCategory || ""}`.toLowerCase();
   if (category === "LLANTAS") {
     if (text.includes("aro") || text.includes("rin")) return "AROS";
     if (text.includes("carga") || text.includes("van") || text.includes("comercial") || text.includes("8pr")) return "CARGA";
@@ -503,6 +503,7 @@ export default function ModuloTecnicentroCatalogo({
       keyword: string;
       tireSize?: string;
       rimDiameter?: string;
+      presentation?: string;
       itemIcon: string;
     }> = [];
 
@@ -511,14 +512,14 @@ export default function ModuloTecnicentroCatalogo({
     // 1. Neumáticos / Llantas de la base de datos
     tires.forEach((tire) => {
       if (!tire.active) return;
-      const cat = "LLANTAS" as const;
+      const cat = classifyItemCategoryTec(tire);
       const sub = classifyItemSubcategoryTec(cat, tire);
       const kw = extractKeywordTecnicentro(tire.name, tire.tireSize);
       existingKeywords.add(kw);
 
       list.push({
         id: tire.id,
-        kind: "TIRE",
+        kind: cat === "LLANTAS" ? "TIRE" : "PRODUCT",
         name: tire.name,
         code: tire.code,
         brand: tire.brand || "Llanta",
@@ -530,6 +531,7 @@ export default function ModuloTecnicentroCatalogo({
         keyword: kw,
         tireSize: tire.tireSize,
         rimDiameter: tire.rimDiameter,
+        presentation: tire.presentation,
         itemIcon: "🛞",
       });
     });
@@ -729,14 +731,17 @@ export default function ModuloTecnicentroCatalogo({
       price: number;
       durationMinutes?: number;
       categoryMapped: string;
+      subcategoryMapped: string;
       keyword: string;
       brand?: string;
       tireSize?: string;
+      presentation?: string;
     },
     delta: number
   ) => {
     try {
       const isTire = item.kind === "TIRE";
+      const isService = item.kind === "SERVICE";
       const code = item.code || `TC-${item.id}`;
       const listaActual = [...(itemsOrden || [])];
       const idx = listaActual.findIndex(
@@ -776,17 +781,21 @@ export default function ModuloTecnicentroCatalogo({
         const nuevoItem = {
           id: isTire ? `neu_${item.id}_${Date.now()}` : `tc_${item.id}_${Date.now()}`,
           key: `key_${item.id}_${Date.now()}`,
-          serviceId: isTire ? undefined : item.id,
-          productId: isTire ? item.id : undefined,
-          type: isTire ? ("PART" as const) : ("SERVICE" as const),
-          category: "Tecnicentro",
-          subCategory: item.categoryMapped,
+          serviceId: isService ? item.id : undefined,
+          productId: isService ? undefined : item.id,
+          type: isService ? ("SERVICE" as const) : ("PART" as const),
+          category: isService ? "Tecnicentro" : `Tecnicentro - ${item.categoryMapped}`,
+          subCategory: isService ? item.categoryMapped : item.subcategoryMapped,
           cwCategoryId: categoriaActivaId,
           code,
           name: item.name,
           brand: item.brand || "Tecnicentro",
-          presentation: isTire ? (item.tireSize || "Unidad") : `${item.durationMinutes || 30} min`,
-          unitOfMeasure: isTire ? "Unidad" : "Servicio",
+          presentation: isTire
+            ? item.tireSize || "Unidad"
+            : item.kind === "PRODUCT"
+              ? item.presentation || "Unidad"
+              : `${item.durationMinutes || 30} min`,
+          unitOfMeasure: isService ? "Servicio" : "Unidad",
           price: priceUnit,
           total: Number((priceUnit * delta).toFixed(2)),
           qty: delta,
@@ -1215,6 +1224,7 @@ export default function ModuloTecnicentroCatalogo({
   const [menuCatAbierto, setMenuCatAbierto] = React.useState(false);
   const [menuSubcatAbierto, setMenuSubcatAbierto] = React.useState(false);
   const [menuRinAbierto, setMenuRinAbierto] = React.useState(false);
+  const [filtrosFlotantesAbiertos, setFiltrosFlotantesAbiertos] = React.useState(false);
   const [busquedaTec, setBusquedaTec] = React.useState('');
 
   // Semaforo Bento de tren delantero (6 circulos)
@@ -1373,12 +1383,13 @@ export default function ModuloTecnicentroCatalogo({
         const matchPOS = todosLosItemsPOS.find((p) => p.id === it.id || p.id === it.serviceId || p.code === it.code);
         const unitPrice = matchPOS ? matchPOS.price : Number(it.price || 0);
         const qty = Number(it.qty) || 1;
+        const esServicio = it.kind === "SERVICE" || it.type === "SERVICE";
         return {
           ...it,
           id: `tc_rep_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-          serviceId: it.serviceId || it.id,
-          productId: it.kind === "TIRE" ? (it.productId || it.id) : undefined,
-          type: it.kind === "TIRE" ? "PRODUCT" : "SERVICE",
+          serviceId: esServicio ? it.serviceId || it.id : undefined,
+          productId: esServicio ? undefined : it.productId || it.id,
+          type: esServicio ? "SERVICE" : "PRODUCT",
           category: it.categoryMapped || it.category || "Tecnicentro",
           subCategory: it.subcategoryMapped || it.subCategory || "Alineación",
           code: it.code || `TC-${it.id}`,
@@ -1488,6 +1499,13 @@ export default function ModuloTecnicentroCatalogo({
             <div className="px-4 pt-4 pb-3 border-b border-zinc-100 dark:border-white/[0.08]">
               <p className="text-sm font-bold text-zinc-900 dark:text-white">Semáforo</p>
             </div>
+            <div className="px-3 pt-2.5">
+              <div className="grid grid-cols-3 gap-1.5 px-1 py-1 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-100 dark:border-white/5 text-center text-[13px] sm:text-sm font-semibold">
+                <span className="text-emerald-700 dark:text-emerald-400">Normal</span>
+                <span className="text-amber-700 dark:text-amber-400">Revisar</span>
+                <span className="text-rose-700 dark:text-rose-400">Cambiar</span>
+              </div>
+            </div>
             <div className="p-3 grid grid-cols-3 gap-2.5">
               {SEMAFORO_TREN_DEF.map((defItem) => {
                 const estado = semaforoBentoEstados[defItem.id] || 'ok';
@@ -1541,11 +1559,24 @@ export default function ModuloTecnicentroCatalogo({
         </div>
 
         {/* ===== CONTENEDOR DE FILTROS, BÚSQUEDA Y CATÁLOGO DEBAJO DE SEMÁFORO (CUBRE TODA LA PÁGINA) ===== */}
-        <div className="w-full rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 shadow-2xs p-3.5 sm:p-4 mt-3 space-y-3">
-          {/* Fila 1: Píldoras de Filtro estilo Bento */}
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative w-full rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 shadow-2xs p-3.5 sm:p-4 mt-3">
+          {filtrosFlotantesAbiertos && (
+            <div className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-2xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-3 shadow-xl animate-fade-in">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100">Filtrar productos</span>
+                <button
+                  type="button"
+                  onClick={() => setFiltrosFlotantesAbiertos(false)}
+                  className="w-7 h-7 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 cursor-pointer"
+                  aria-label="Cerrar filtros"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex flex-col gap-2">
             {/* Píldora 1: Categoría */}
-            <div className="relative flex-1 min-w-[110px]">
+            <div className="relative w-full">
+              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">1. Categoría</span>
               <button
                 type="button"
                 onClick={() => { setMenuCatAbierto(p => !p); setMenuSubcatAbierto(false); setMenuRinAbierto(false); }}
@@ -1571,7 +1602,8 @@ export default function ModuloTecnicentroCatalogo({
             </div>
 
             {/* Píldora 2: Subcategoría */}
-            <div className="relative flex-1 min-w-[110px]">
+            <div className="relative w-full">
+              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">2. Subcategoría</span>
               <button
                 type="button"
                 onClick={() => { setMenuSubcatAbierto(p => !p); setMenuCatAbierto(false); setMenuRinAbierto(false); }}
@@ -1597,7 +1629,8 @@ export default function ModuloTecnicentroCatalogo({
             </div>
 
             {/* Píldora 3: Rin / Aro */}
-            <div className="relative flex-1 min-w-[95px]">
+            <div className="relative w-full">
+              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">3. Rin / Aro</span>
               <button
                 type="button"
                 onClick={() => { setMenuRinAbierto(p => !p); setMenuCatAbierto(false); setMenuSubcatAbierto(false); }}
@@ -1622,9 +1655,12 @@ export default function ModuloTecnicentroCatalogo({
               )}
             </div>
           </div>
+            </div>
+          )}
 
           {/* Fila 2: Buscador ancho completo */}
-          <div className="relative">
+          <div className="mb-3 flex items-center gap-2">
+          <div className="relative flex-1 min-w-0">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
             <input
               type="text"
@@ -1642,6 +1678,31 @@ export default function ModuloTecnicentroCatalogo({
                 ✕
               </button>
             )}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setFiltrosFlotantesAbiertos((prev) => !prev);
+              setMenuCatAbierto(false);
+              setMenuSubcatAbierto(false);
+              setMenuRinAbierto(false);
+            }}
+            className={`h-9 w-10 shrink-0 rounded-xl border flex items-center justify-center transition-colors cursor-pointer ${
+              filtrosFlotantesAbiertos
+                ? "border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-400/50 dark:bg-blue-500/20 dark:text-blue-300"
+                : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
+            }`}
+            aria-label="Abrir filtros"
+            aria-expanded={filtrosFlotantesAbiertos}
+            title="Filtrar productos"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="M4 7h16M7 12h10m-7 5h4" />
+              <circle cx="8" cy="7" r="1" fill="currentColor" />
+              <circle cx="15" cy="12" r="1" fill="currentColor" />
+              <circle cx="11" cy="17" r="1" fill="currentColor" />
+            </svg>
+          </button>
           </div>
 
           {/* Grid de productos a ancho completo cubriendo toda la pantalla */}

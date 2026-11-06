@@ -771,6 +771,7 @@ async function getOrInitTecnicentroData() {
     const enrichedTires = allProducts
       .filter((p) => {
         if (tiresMetaMap[p.id]) return true;
+        if (String(p.tipo || "").toLowerCase().includes("tecnicentro")) return true;
         const catLow = (p.category || "").toLowerCase();
         const codeLow = (p.code || "").toLowerCase();
         return (
@@ -796,6 +797,7 @@ async function getOrInitTecnicentroData() {
           name: p.name,
           brand: p.brand || "Genérica",
           category: p.category,
+          subCategory: p.subCategory || "",
           price: Number(p.price),
           costPrice: p.costPrice !== null ? Number(p.costPrice) : null,
           stock: Number(p.stock),

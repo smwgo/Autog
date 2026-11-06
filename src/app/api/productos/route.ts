@@ -82,7 +82,10 @@ export async function GET(request: Request) {
         !busqueda ||
         p.name.toLowerCase().includes(busqueda) ||
         p.code.toLowerCase().includes(busqueda) ||
-        (p.brand && p.brand.toLowerCase().includes(busqueda));
+        (p.brand && p.brand.toLowerCase().includes(busqueda)) ||
+        p.category.toLowerCase().includes(busqueda) ||
+        (p.subCategory && p.subCategory.toLowerCase().includes(busqueda)) ||
+        (p.presentation && p.presentation.toLowerCase().includes(busqueda));
 
       const matchCategory = !categoria || p.category === categoria;
 
@@ -151,7 +154,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { code, name, brand, category = "General", tipo = "Todos", price, costPrice, stock = 0, minStock = 5, location, imageUrl } = body;
+    const { code, name, brand, category = "General", subCategory, presentation, tipo = "Todos", price, costPrice, stock = 0, minStock = 5, location, imageUrl } = body;
     const branch = String(body.branch || "PRINCIPAL").toUpperCase();
     const rawCode = (code || "").toString().trim();
     const codigoLimpio = rawCode
@@ -194,6 +197,8 @@ export async function POST(request: Request) {
         name: nombreLimpio,
         brand: brand?.trim() || null,
         category: category?.trim() || "General",
+        subCategory: subCategory?.trim() || null,
+        presentation: presentation?.trim() || null,
         tipo: finalTipo,
         price: numPrice,
         costPrice: numCostPrice,
@@ -223,7 +228,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, code, name, brand, category, tipo, price, costPrice, stock, minStock = 5, location, imageUrl } = body;
+    const { id, code, name, brand, category, subCategory, presentation, tipo, price, costPrice, stock, minStock = 5, location, imageUrl } = body;
     const branch = String(body.branch || "PRINCIPAL").toUpperCase();
 
     if (!id) {
@@ -259,6 +264,8 @@ export async function PUT(request: Request) {
         name: name ? name.trim() : undefined,
         brand: brand !== undefined ? brand.trim() : undefined,
         category: finalCategory,
+        subCategory: subCategory !== undefined ? (String(subCategory).trim() || null) : undefined,
+        presentation: presentation !== undefined ? (String(presentation).trim() || null) : undefined,
         tipo: finalTipo,
         price: numPrice,
         costPrice: numCostPrice,

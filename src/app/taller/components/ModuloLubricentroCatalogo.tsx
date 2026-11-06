@@ -275,6 +275,8 @@ export interface ItemBentoCatalogo {
   viscosity?: string;
   lubCategoryId: string;
   lubSubcategoryId: string;
+  categoryLabel?: string;
+  subcategoryLabel?: string;
   presentation: string;
   unitOfMeasure: string;
   type: string;
@@ -3528,33 +3530,38 @@ export default function ModuloLubricentroCatalogo({
     }
   };
 
-  const handleMarcarTodosOk = () => {
-    const nuevos: Record<string, SemaforoEstado> = {};
-    SEMAFORO_CIRCULOS.forEach((c) => {
-      nuevos[c.id] = 'ok';
-      if (semaforoEstados[c.id] === 'critico' && c.posItem && estaPreCargadoEnOrden(c.posItem.id)) {
-        handleAjustarItemBento(c.posItem, -99);
-      }
-    });
-    setSemaforoEstados(nuevos);
-    mostrarToast?.('🟢 Todos los puntos marcados como OK (Buen estado)', 'ok');
-  };
-
   const [menuCatAbierto, setMenuCatAbierto] = useState(false);
   const [menuSubcatAbierto, setMenuSubcatAbierto] = useState(false);
   const [menuEnvaseDropdownAbierto, setMenuEnvaseDropdownAbierto] = useState(false);
+  const [filtrosFlotantesAbiertos, setFiltrosFlotantesAbiertos] = useState(false);
   const [envaseActivo, setEnvaseActivo] = useState<string>('Galón');
   const [busquedaBento, setBusquedaBento] = useState<string>('');
 
   const OPCIONES_CATEGORIAS = useMemo(
-    () => [
+    () => {
+      const standard = [
       { id: 'lub_aceite', label: 'Aceites', icon: '🛢️' },
       { id: 'lub_filtros', label: 'Filtros', icon: '💨' },
       { id: 'lub_fluidos', label: 'Fluidos', icon: '🧪' },
       { id: 'lub_transmision', label: 'Transmisión', icon: '⚙️' },
       { id: 'lub_baterias', label: 'Baterías', icon: '🔋' },
-    ],
-    []
+      ];
+      const personalizadas = new Map<string, { id: string; label: string; icon: string }>();
+      productos.forEach((product) => {
+        if (
+          product.lubCategoryId?.startsWith("custom:") &&
+          product.categoryLabel?.trim()
+        ) {
+          personalizadas.set(product.lubCategoryId, {
+            id: product.lubCategoryId,
+            label: product.categoryLabel.trim(),
+            icon: "📁",
+          });
+        }
+      });
+      return [...standard, ...personalizadas.values()];
+    },
+    [productos]
   );
 
   const labelCategoriaActiva = useMemo(() => {
@@ -3563,6 +3570,23 @@ export default function ModuloLubricentroCatalogo({
   }, [categoriaActivaId, OPCIONES_CATEGORIAS]);
 
   const opcionesSubcategoriasActuales = useMemo(() => {
+    const subcategoriasPersonalizadas = productos
+      .filter(
+        (product) =>
+          product.lubCategoryId === categoriaActivaId &&
+          product.lubSubcategoryId?.startsWith("custom:") &&
+          product.subcategoryLabel?.trim()
+      )
+      .map((product) => ({
+        id: product.lubSubcategoryId,
+        label: product.subcategoryLabel!.trim(),
+      }));
+    const subcategoriasUnicas = Array.from(
+      new Map(subcategoriasPersonalizadas.map((subcategory) => [subcategory.id, subcategory])).values()
+    );
+    if (subcategoriasUnicas.length > 0) {
+      return [{ id: "ALL", label: "Todas" }, ...subcategoriasUnicas];
+    }
     if (subcategoriasActivas && subcategoriasActivas.length > 0) {
       return subcategoriasActivas;
     }
@@ -3574,13 +3598,39 @@ export default function ModuloLubricentroCatalogo({
       ];
     }
     return [{ id: 'ALL', label: 'Todas' }];
-  }, [subcategoriasActivas, categoriaActivaId]);
+  }, [subcategoriasActivas, categoriaActivaId, productos]);
 
   const labelSubcategoriaActiva = useMemo(() => {
     if (subcategoriaActivaId === 'ALL') return 'Todas';
     const sub = opcionesSubcategoriasActuales.find((s) => s.id === subcategoriaActivaId);
     return sub?.label || 'Motor';
   }, [subcategoriaActivaId, opcionesSubcategoriasActuales]);
+
+  const OPCIONES_ENVASES = useMemo(() => {
+    const standard = [
+      { id: "Galón", label: "Galón", icon: "🧴" },
+      { id: "Litro", label: "Litro", icon: "🍶" },
+      { id: "Cuarto", label: "Cuarto (Qt)", icon: "🥫" },
+      { id: "Caneca", label: "Caneca", icon: "🪣" },
+      { id: "Unidad", label: "Unidad", icon: "📦" },
+      { id: "Todos", label: "Todos", icon: "📋" },
+    ];
+    const presentacionesPersonalizadas = new Map<string, { id: string; label: string; icon: string }>();
+    productos.forEach((product) => {
+      const presentation = String(product.presentation || "").trim();
+      if (
+        presentation &&
+        !standard.some((option) => option.label.toLocaleLowerCase() === presentation.toLocaleLowerCase())
+      ) {
+        presentacionesPersonalizadas.set(presentation.toLocaleLowerCase(), {
+          id: presentation,
+          label: presentation,
+          icon: "🧴",
+        });
+      }
+    });
+    return [...standard, ...presentacionesPersonalizadas.values()];
+  }, [productos]);
 
   const setSubcategoriaActivaId = (subId: string) => {
     setSubcategoriaPorCat((prev) => ({
@@ -3605,6 +3655,8 @@ export default function ModuloLubricentroCatalogo({
             viscosity: p.viscosity || p.name,
             lubCategoryId: p.lubCategoryId || 'lub_aceite',
             lubSubcategoryId: p.lubSubcategoryId || 'lub_aceite_motor',
+            categoryLabel: p.categoryLabel || p.category,
+            subcategoryLabel: p.subcategoryLabel || p.subCategory || "",
             presentation: p.presentation || 'Galón',
             unitOfMeasure: p.unitOfMeasure || 'Galón',
             type: p.type || 'PART',
@@ -3643,6 +3695,9 @@ export default function ModuloLubricentroCatalogo({
         (p) =>
           (p.name && p.name.toLowerCase().includes(q)) ||
           (p.fullName && p.fullName.toLowerCase().includes(q)) ||
+          (p.categoryLabel && p.categoryLabel.toLowerCase().includes(q)) ||
+          (p.subcategoryLabel && p.subcategoryLabel.toLowerCase().includes(q)) ||
+          (p.presentation && p.presentation.toLowerCase().includes(q)) ||
           (p.viscosity && p.viscosity.toLowerCase().includes(q)) ||
           (p.code && p.code.toLowerCase().includes(q)) ||
           (p.brand && p.brand.toLowerCase().includes(q))
@@ -3743,7 +3798,7 @@ export default function ModuloLubricentroCatalogo({
             TARJETA 2: SEMÁFORO INTELIGENTE DE INSPECCIÓN RÁPIDA
             =================================================================== */}
         <div className="lg:col-span-7 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs">
-          {/* Cabecera con título y botón rápido "Marcar todo OK" */}
+          {/* Cabecera del semáforo */}
           <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-zinc-100 dark:border-white/5">
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="text-base sm:text-lg">🚦</span>
@@ -3753,29 +3808,18 @@ export default function ModuloLubricentroCatalogo({
                 </h2>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={handleMarcarTodosOk}
-              className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 text-[11px] font-bold transition-all cursor-pointer active:scale-95 shrink-0"
-              title="Marcar todos los puntos en estado Verde (OK)"
-            >
-              Todo OK 🟢
-            </button>
           </div>
 
           {/* Guía semafórica de 3 colores funcionales */}
-          <div className="grid grid-cols-3 gap-1.5 mb-2.5 px-1 py-1 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-100 dark:border-white/5 text-center text-[10px] font-semibold">
-            <span className="text-emerald-700 dark:text-emerald-400 flex items-center justify-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>🟢 OK</span>
+          <div className="grid grid-cols-3 gap-1.5 mb-2.5 px-1 py-1 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-100 dark:border-white/5 text-center text-xs sm:text-sm font-semibold">
+            <span className="text-emerald-700 dark:text-emerald-400">
+              OK
             </span>
-            <span className="text-amber-700 dark:text-amber-400 flex items-center justify-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-amber-400" />
-              <span>🟡 Revisar</span>
+            <span className="text-amber-700 dark:text-amber-400">
+              Revisar
             </span>
-            <span className="text-rose-700 dark:text-rose-400 flex items-center justify-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-rose-500" />
-              <span>🔴 Cambiar</span>
+            <span className="text-rose-700 dark:text-rose-400">
+              Cambiar
             </span>
           </div>
 
@@ -3854,11 +3898,25 @@ export default function ModuloLubricentroCatalogo({
       {/* =====================================================================
           BUSCADOR Y FILTROS: ANCHO COMPLETO (CUBRE TODO EL ESPACIO EN PC Y MÓVIL)
           ===================================================================== */}
-      <div className="w-full rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3 sm:p-3.5 shadow-2xs space-y-3">
-          {/* Fila de 3 píldoras desplegables contraíbles + Buscador */}
-          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+      <div className="relative w-full rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3 sm:p-3.5 shadow-2xs">
+          {filtrosFlotantesAbiertos && (
+          <div className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-2xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-3 shadow-xl animate-fade-in">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100">Filtrar productos</span>
+            <button
+              type="button"
+              onClick={() => setFiltrosFlotantesAbiertos(false)}
+              className="w-7 h-7 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 cursor-pointer"
+              aria-label="Cerrar filtros"
+            >
+              ✕
+            </button>
+          </div>
+          {/* Los filtros se aplican en orden: categoría, subcategoría y envase. */}
+          <div className="flex flex-col gap-2">
             {/* Píldora 1: Categoría */}
-            <div className="relative flex-1 min-w-[90px]">
+            <div className="relative w-full">
+              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">1. Categoría</span>
               <button
                 type="button"
                 onClick={() => {
@@ -3892,7 +3950,8 @@ export default function ModuloLubricentroCatalogo({
             </div>
 
             {/* Píldora 2: Subcategoría */}
-            <div className="relative flex-1 min-w-[90px]">
+            <div className="relative w-full">
+              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">2. Subcategoría</span>
               <button
                 type="button"
                 onClick={() => {
@@ -3958,7 +4017,8 @@ export default function ModuloLubricentroCatalogo({
             </div>
 
             {/* Píldora 3: Envase con íconos */}
-            <div className="relative flex-1 min-w-[85px]">
+            <div className="relative w-full">
+              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">3. Envase</span>
               <button
                 type="button"
                 onClick={() => {
@@ -3986,13 +4046,7 @@ export default function ModuloLubricentroCatalogo({
               </button>
               {menuEnvaseDropdownAbierto && (
                 <div className="absolute top-11 right-0 z-40 w-36 rounded-xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1 shadow-xl animate-fade-in space-y-0.5">
-                  {[
-                    { id: "Galón", label: "Galón", icon: "🧴" },
-                    { id: "Litro", label: "Litro", icon: "🍶" },
-                    { id: "Cuarto", label: "Cuarto", icon: "🥫" },
-                    { id: "Caneca", label: "Caneca", icon: "🪣" },
-                    { id: "Todos", label: "Todos", icon: "📦" },
-                  ].map((env) => (
+                  {OPCIONES_ENVASES.map((env) => (
                     <button
                       key={env.id}
                       type="button"
@@ -4013,9 +4067,12 @@ export default function ModuloLubricentroCatalogo({
               )}
             </div>
           </div>
+          </div>
+          )}
 
           {/* Buscador */}
-          <div className="relative">
+          <div className="flex items-center gap-2">
+          <div className="relative flex-1 min-w-0">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
             <input
               type="text"
@@ -4033,6 +4090,31 @@ export default function ModuloLubricentroCatalogo({
                 ✕
               </button>
             )}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setFiltrosFlotantesAbiertos((prev) => !prev);
+              setMenuCatAbierto(false);
+              setMenuSubcatAbierto(false);
+              setMenuEnvaseDropdownAbierto(false);
+            }}
+            className={`h-9 w-10 shrink-0 rounded-xl border flex items-center justify-center transition-colors cursor-pointer ${
+              filtrosFlotantesAbiertos
+                ? "border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-400/50 dark:bg-blue-500/20 dark:text-blue-300"
+                : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
+            }`}
+            aria-label="Abrir filtros"
+            aria-expanded={filtrosFlotantesAbiertos}
+            title="Filtrar productos"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="M4 7h16M7 12h10m-7 5h4" />
+              <circle cx="8" cy="7" r="1" fill="currentColor" />
+              <circle cx="15" cy="12" r="1" fill="currentColor" />
+              <circle cx="11" cy="17" r="1" fill="currentColor" />
+            </svg>
+          </button>
           </div>
         </div>
 

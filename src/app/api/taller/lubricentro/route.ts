@@ -1234,10 +1234,44 @@ async function getOrInitConfigAndMeta() {
       .map((p) => {
         const existingMeta = metaMap[p.id];
         const inferred = existingMeta || inferirSubcategoriaParaProductoExistente(p);
+        const categoryByLabel = config.categories.find(
+          (category) =>
+            category.label.trim().toLocaleLowerCase() === p.category.trim().toLocaleLowerCase() ||
+            category.id === p.category
+        );
+        const subcategoryByLabel = config.subcategories.find(
+          (subcategory) =>
+            Boolean(categoryByLabel) &&
+            subcategory.categoryId === categoryByLabel?.id &&
+            (subcategory.label.trim().toLocaleLowerCase() === String(p.subCategory || "").trim().toLocaleLowerCase() ||
+              subcategory.id === p.subCategory)
+        );
+        const typeLow = String(tiposMap[p.id] || (p as any).tipo || "").toLocaleLowerCase();
+        const esProductoLubricentro = typeLow.includes("lubricentro");
+        const customCategoryId =
+          esProductoLubricentro &&
+          p.category &&
+          p.category !== "General" &&
+          !categoryByLabel
+            ? `custom:${p.category.trim().toLocaleLowerCase()}`
+            : "";
+        const customSubcategoryId =
+          esProductoLubricentro && p.subCategory && !subcategoryByLabel
+            ? `custom:${p.subCategory.trim().toLocaleLowerCase()}`
+            : "";
         const active =
           existingMeta?.active !== undefined
             ? existingMeta.active
             : p.status !== "Inactivo";
+        const presentation =
+          existingMeta?.presentation || p.presentation || inferred.presentation || "Galón";
+        const presentationConfig = config.presentations.find(
+          (item) =>
+            (item.value || "").trim().toLocaleLowerCase() === presentation.trim().toLocaleLowerCase() ||
+            item.label.trim().toLocaleLowerCase() === presentation.trim().toLocaleLowerCase() ||
+            (item.value || "").trim().toLocaleLowerCase().includes(presentation.trim().toLocaleLowerCase()) ||
+            item.label.trim().toLocaleLowerCase().includes(presentation.trim().toLocaleLowerCase())
+        );
 
         return {
           id: p.id,
@@ -1255,15 +1289,17 @@ async function getOrInitConfigAndMeta() {
           createdAt: p.createdAt,
           updatedAt: p.updatedAt,
           // Metadatos enriquecidos de Lubricentro
-          lubCategoryId: existingMeta?.lubCategoryId || inferred.lubCategoryId || "lub_aceite",
-          lubSubcategoryId: existingMeta?.lubSubcategoryId || inferred.lubSubcategoryId || "lub_aceite_motor",
+          lubCategoryId: existingMeta?.lubCategoryId || categoryByLabel?.id || subcategoryByLabel?.categoryId || customCategoryId || inferred.lubCategoryId || "lub_aceite",
+          lubSubcategoryId: existingMeta?.lubSubcategoryId || subcategoryByLabel?.id || customSubcategoryId || inferred.lubSubcategoryId || "lub_aceite_motor",
+          categoryLabel: p.category,
+          subcategoryLabel: p.subCategory || "",
           manufacturerCode: existingMeta?.manufacturerCode || "",
           description: existingMeta?.description || "",
           lubricantBase: existingMeta?.lubricantBase || inferred.lubricantBase || "",
           viscosity: existingMeta?.viscosity || inferred.viscosity || "",
           specifications: existingMeta?.specifications || [],
-          presentation: existingMeta?.presentation || inferred.presentation || "Galón",
-          unitOfMeasure: existingMeta?.unitOfMeasure || "Galón",
+          presentation,
+          unitOfMeasure: existingMeta?.unitOfMeasure || presentationConfig?.unit || "Unidad",
           presentationsAvailable: existingMeta?.presentationsAvailable || [],
           galleryUrls: existingMeta?.galleryUrls || (p.imageUrl ? [p.imageUrl] : []),
           active,

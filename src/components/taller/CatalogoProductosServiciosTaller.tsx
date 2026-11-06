@@ -273,6 +273,7 @@ export default function CatalogoProductosServiciosTaller({
   const [menuCatAbierto, setMenuCatAbierto] = useState(false);
   const [menuSubcatAbierto, setMenuSubcatAbierto] = useState(false);
   const [menuPresAbierto, setMenuPresAbierto] = useState(false);
+  const [filtrosFlotantesAbiertos, setFiltrosFlotantesAbiertos] = useState(false);
 
   // Buscador de texto
   const [busqueda, setBusqueda] = useState<string>("");
@@ -303,7 +304,24 @@ export default function CatalogoProductosServiciosTaller({
         const key = (p.code || p.name || `P-${p.id}`).toLowerCase();
         if (!codigosExistentes.has(key) && p.name) {
           codigosExistentes.add(key);
-          const esAceite = (p.category || "").toLowerCase().includes("aceit") || (p.viscosity);
+          const categoriaProducto = String(p.category || "").trim();
+          const categoriaNormalizada = categoriaProducto.toLowerCase();
+          const categoriaId =
+            p.lubCategoryId ||
+            (categoriaNormalizada.includes("aceit") || categoriaNormalizada.includes("lubric")
+              ? "aceite"
+              : categoriaNormalizada.includes("transmi")
+                ? "transmision"
+                : categoriaNormalizada.includes("filtro")
+                  ? "filtros"
+                  : categoriaNormalizada.includes("fluido")
+                    ? "fluidos"
+                    : categoriaNormalizada.includes("bater")
+                      ? "baterias"
+                      : categoriaProducto && categoriaNormalizada !== "general"
+                        ? `custom:${categoriaNormalizada}`
+                        : "filtros");
+          const esAceite = categoriaId === "aceite" || Boolean(p.viscosity);
           base.push({
             id: String(p.id || key),
             code: p.code || `PROD-${p.id}`,
@@ -312,10 +330,16 @@ export default function CatalogoProductosServiciosTaller({
             brand: p.brand || "Genérico",
             price: Number(p.price) || 0,
             viscosity: p.viscosity || (esAceite ? p.name : undefined),
-            category: p.category || "Productos",
+            category: categoriaProducto || "Productos",
             subCategory: p.subCategory || "General",
-            lubCategoryId: esAceite ? "aceite" : "filtros",
-            lubSubcategoryId: esAceite ? "motor" : "todos",
+            lubCategoryId: categoriaId,
+            lubSubcategoryId:
+              p.lubSubcategoryId ||
+              (p.subCategory && p.subCategory !== "General"
+                ? p.subCategory.toLowerCase()
+                : esAceite
+                  ? "motor"
+                  : "todos"),
             presentation: p.presentation || "Unidad",
             unitOfMeasure: p.unitOfMeasure || "Unidad",
             type: "PART",
@@ -356,10 +380,66 @@ export default function CatalogoProductosServiciosTaller({
     return base;
   }, [productosCatalogo, serviciosCatalogo]);
 
+  const opcionesCategoriasDinamicas = useMemo(() => {
+    const categorias = new Map(
+      OPCIONES_CATEGORIAS.map((category) => [category.id, category])
+    );
+    todosLosItems.forEach((item) => {
+      if (
+        item.lubCategoryId?.startsWith("custom:") &&
+        item.category &&
+        item.category !== "General" &&
+        item.category !== "Productos"
+      ) {
+        categorias.set(item.lubCategoryId, {
+          id: item.lubCategoryId,
+          label: item.category,
+          icon: "📁",
+        });
+      }
+    });
+    return [...categorias.values()];
+  }, [todosLosItems]);
+
   // Subcategorías dinámicas según la categoría activa
   const opcionesSubcategorias = useMemo(() => {
-    return SUBCATEGORIAS_MAP[categoriaActivaId] || SUBCATEGORIAS_MAP.todos;
-  }, [categoriaActivaId]);
+    const opciones = [...(SUBCATEGORIAS_MAP[categoriaActivaId] || SUBCATEGORIAS_MAP.todos)];
+    todosLosItems
+      .filter(
+        (item) =>
+          item.lubCategoryId === categoriaActivaId &&
+          item.subCategory &&
+          item.subCategory !== "General" &&
+          item.lubSubcategoryId
+      )
+      .forEach((item) => {
+        if (!opciones.some((option) => option.id === item.lubSubcategoryId)) {
+          opciones.push({
+            id: item.lubSubcategoryId!,
+            label: item.subCategory!,
+            icon: "🔧",
+          });
+        }
+      });
+    return opciones;
+  }, [categoriaActivaId, todosLosItems]);
+
+  const opcionesPresentacionesDinamicas = useMemo(() => {
+    const opciones = [...OPCIONES_PRESENTACIONES];
+    todosLosItems.forEach((item) => {
+      const presentation = String(item.presentation || "").trim();
+      if (
+        presentation &&
+        presentation !== "Servicio" &&
+        !opciones.some(
+          (option) => option.id.toLocaleLowerCase() === presentation.toLocaleLowerCase()
+        )
+      ) {
+        opciones.push({ id: presentation, label: presentation, icon: "🧴" });
+      }
+    });
+    return opciones;
+  }, [todosLosItems]);
 
   // Filtrado de productos para la cuadrícula
   const itemsFiltrados = useMemo(() => {
@@ -403,7 +483,9 @@ export default function CatalogoProductosServiciosTaller({
           (item.code && item.code.toLowerCase().includes(q)) ||
           (item.viscosity && item.viscosity.toLowerCase().includes(q)) ||
           (item.brand && item.brand.toLowerCase().includes(q)) ||
-          (item.category && item.category.toLowerCase().includes(q));
+          (item.category && item.category.toLowerCase().includes(q)) ||
+          (item.subCategory && item.subCategory.toLowerCase().includes(q)) ||
+          (item.presentation && item.presentation.toLowerCase().includes(q));
         if (!matchText) return false;
       }
 
@@ -430,9 +512,9 @@ export default function CatalogoProductosServiciosTaller({
   );
 
   const labelCatActiva =
-    OPCIONES_CATEGORIAS.find((c) => c.id === categoriaActivaId)?.label || "Categoría";
+    opcionesCategoriasDinamicas.find((c) => c.id === categoriaActivaId)?.label || "Categoría";
   const iconCatActiva =
-    OPCIONES_CATEGORIAS.find((c) => c.id === categoriaActivaId)?.icon || "🛢️";
+    opcionesCategoriasDinamicas.find((c) => c.id === categoriaActivaId)?.icon || "🛢️";
 
   const labelSubcatActiva =
     opcionesSubcategorias.find((s) => s.id === subcategoriaActivaId)?.label || "Subcategoría";
@@ -440,19 +522,19 @@ export default function CatalogoProductosServiciosTaller({
     opcionesSubcategorias.find((s) => s.id === subcategoriaActivaId)?.icon || "🚗";
 
   const iconPresActiva =
-    OPCIONES_PRESENTACIONES.find((p) => p.id === presentacionActiva)?.icon || "🧴";
+    opcionesPresentacionesDinamicas.find((p) => p.id === presentacionActiva)?.icon || "🧴";
 
   return (
     <div
       ref={containerRef}
-      className={`w-full rounded-2xl border border-zinc-200/90 dark:border-white/10 bg-white dark:bg-white/[0.02] shadow-2xs transition-all overflow-hidden ${className}`}
+      className={`w-full rounded-2xl border border-zinc-200/90 dark:border-white/10 bg-white dark:bg-white/[0.02] shadow-2xs transition-all overflow-visible ${className}`}
     >
       {/* =====================================================================
           BOTÓN / BARRA DE CABECERA: SE EXPANDE O SE RECOJE AL MARCARLO
           ===================================================================== */}
       <div
         onClick={() => setExpandido((prev) => !prev)}
-        className="px-4 py-2 sm:py-2.5 flex items-center justify-between gap-3 cursor-pointer select-none bg-zinc-50/60 hover:bg-zinc-100/60 dark:bg-white/[0.02] dark:hover:bg-white/[0.04] transition-colors"
+        className="px-4 py-2 sm:py-2.5 flex items-center justify-between gap-3 cursor-pointer select-none rounded-t-2xl bg-zinc-50/60 hover:bg-zinc-100/60 dark:bg-white/[0.02] dark:hover:bg-white/[0.04] transition-colors"
       >
         <div className="flex items-center gap-2">
           <button
@@ -485,14 +567,29 @@ export default function CatalogoProductosServiciosTaller({
           CONTENIDO EXPANDIBLE (SE MUESTRA AL MARCAR EL BOTÓN)
           ===================================================================== */}
       {expandido && (
-        <div className="p-3 sm:p-4 border-t border-zinc-200/80 dark:border-white/10 space-y-3.5 animate-fade-in bg-zinc-50/40 dark:bg-black/20">
+        <div className="p-3 sm:p-4 border-t border-zinc-200/80 dark:border-white/10 rounded-b-2xl space-y-3.5 animate-fade-in bg-zinc-50/40 dark:bg-black/20">
           {/* ===================================================================
               FILA 1: 3 DROPDOWNS DESPLEGABLES (IDÉNTICO A LA CAPTURA)
               Píldora 1: Aceites | Píldora 2: Motor | Píldora 3: Galón
               =================================================================== */}
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <div className="relative">
+          {filtrosFlotantesAbiertos && (
+            <div className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-2xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-3 shadow-xl animate-fade-in">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100">Filtrar productos</span>
+                <button
+                  type="button"
+                  onClick={() => setFiltrosFlotantesAbiertos(false)}
+                  className="w-7 h-7 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 cursor-pointer"
+                  aria-label="Cerrar filtros"
+                >
+                  ✕
+                </button>
+              </div>
+          <div className="flex flex-col gap-2">
             {/* Píldora 1: Categoría */}
-            <div className="relative flex-1 min-w-[110px]">
+            <div className="relative w-full">
+              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">1. Categoría</span>
               <button
                 type="button"
                 onClick={(e) => {
@@ -516,7 +613,7 @@ export default function CatalogoProductosServiciosTaller({
 
               {menuCatAbierto && (
                 <div className="absolute top-12 left-0 z-40 w-44 rounded-2xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1.5 shadow-2xl animate-fade-in space-y-0.5">
-                  {OPCIONES_CATEGORIAS.map((cat) => (
+                  {opcionesCategoriasDinamicas.map((cat) => (
                     <button
                       key={cat.id}
                       type="button"
@@ -540,7 +637,8 @@ export default function CatalogoProductosServiciosTaller({
             </div>
 
             {/* Píldora 2: Subcategoría */}
-            <div className="relative flex-1 min-w-[110px]">
+            <div className="relative w-full">
+              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">2. Subcategoría</span>
               <button
                 type="button"
                 onClick={(e) => {
@@ -583,7 +681,8 @@ export default function CatalogoProductosServiciosTaller({
             </div>
 
             {/* Píldora 3: Envase / Presentación */}
-            <div className="relative flex-1 min-w-[100px]">
+            <div className="relative w-full">
+              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">3. Presentación</span>
               <button
                 type="button"
                 onClick={(e) => {
@@ -603,7 +702,7 @@ export default function CatalogoProductosServiciosTaller({
 
               {menuPresAbierto && (
                 <div className="absolute top-12 right-0 z-40 w-40 rounded-2xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-1.5 shadow-2xl animate-fade-in space-y-0.5">
-                  {OPCIONES_PRESENTACIONES.map((pres) => (
+                  {opcionesPresentacionesDinamicas.map((pres) => (
                     <button
                       key={pres.id}
                       type="button"
@@ -625,11 +724,14 @@ export default function CatalogoProductosServiciosTaller({
               )}
             </div>
           </div>
+            </div>
+          )}
 
           {/* ===================================================================
               FILA 2: BARRA DE BÚSQUEDA (IDÉNTICA A LA CAPTURA)
               =================================================================== */}
-          <div className="relative">
+          <div className="mb-3 flex items-center gap-2">
+          <div className="relative flex-1 min-w-0">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 text-xs pointer-events-none">
               🔍
             </span>
@@ -650,6 +752,32 @@ export default function CatalogoProductosServiciosTaller({
               </button>
             )}
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              setFiltrosFlotantesAbiertos((prev) => !prev);
+              setMenuCatAbierto(false);
+              setMenuSubcatAbierto(false);
+              setMenuPresAbierto(false);
+            }}
+            className={`h-10 w-11 shrink-0 rounded-2xl border flex items-center justify-center transition-colors cursor-pointer ${
+              filtrosFlotantesAbiertos
+                ? "border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-400/50 dark:bg-blue-500/20 dark:text-blue-300"
+                : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
+            }`}
+            aria-label="Abrir filtros"
+            aria-expanded={filtrosFlotantesAbiertos}
+            title="Filtrar productos"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="M4 7h16M7 12h10m-7 5h4" />
+              <circle cx="8" cy="7" r="1" fill="currentColor" />
+              <circle cx="15" cy="12" r="1" fill="currentColor" />
+              <circle cx="11" cy="17" r="1" fill="currentColor" />
+            </svg>
+          </button>
+          </div>
+          </div>
 
           {/* ===================================================================
               CUADRÍCULA DE TARJETAS (ESTILO IDÉNTICO A LA CAPTURA)
@@ -659,7 +787,7 @@ export default function CatalogoProductosServiciosTaller({
               <div className="py-10 text-center text-zinc-400 space-y-1.5">
                 <span className="text-3xl block">🔍</span>
                 <p className="text-xs sm:text-sm font-semibold">
-                  No se encontraron productos o servicios con los filtros actuales.
+                  No hay resultados para esta búsqueda.
                 </p>
               </div>
             ) : (

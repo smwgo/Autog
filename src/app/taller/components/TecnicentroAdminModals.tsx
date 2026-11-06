@@ -59,6 +59,8 @@ export interface TecnicentroEnrichedTire {
   name: string;
   brand: string;
   category: string;
+  subCategory?: string;
+  presentation?: string;
   price: number;
   costPrice: number | null;
   stock: number;

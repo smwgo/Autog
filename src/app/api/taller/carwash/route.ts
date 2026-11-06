@@ -708,6 +708,7 @@ async function getOrInitCarWashData() {
         name: p.name,
         brand: p.brand || "Insumo",
         category: p.category || "Insumo",
+        subCategory: p.subCategory || "",
         price: Number(p.price || 0),
         stock: Number(p.stock || 0),
         minStock: Number(p.minStock || 0),

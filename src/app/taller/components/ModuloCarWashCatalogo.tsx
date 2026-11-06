@@ -244,6 +244,15 @@ const FALLBACK_KEYWORD_ICONS: Record<string, string> = {
 function classifyItemCategory(
   item: { name: string; code?: string; brand?: string; category?: string; categoryId?: string; description?: string }
 ): "LAVADO" | "CHASIS" | "INTERIOR" | "DETAILING" | "EXTRAS" {
+  const explicitCategory = CARWASH_CATEGORIES.find(
+    (category) =>
+      category.id !== "TODO" &&
+      category.label.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() ===
+        (item.category || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+  );
+  if (explicitCategory) {
+    return explicitCategory.id as "LAVADO" | "CHASIS" | "INTERIOR" | "DETAILING" | "EXTRAS";
+  }
   const text = `${item.name} ${item.code || ""} ${item.category || ""} ${item.categoryId || ""} ${item.description || ""}`.toLowerCase();
   if (
     text.includes("detailing") ||
@@ -303,8 +312,16 @@ function classifyItemCategory(
 
 function classifyItemSubcategory(
   category: "LAVADO" | "CHASIS" | "INTERIOR" | "DETAILING" | "EXTRAS",
-  item: { name: string; code?: string; description?: string }
+  item: { name: string; code?: string; description?: string; subCategory?: string }
 ): string {
+  const explicitSubcategory = CARWASH_CATEGORIES.find((candidate) => candidate.id === category)
+    ?.subcategories.find(
+      (subcategory) =>
+        subcategory.id !== "TODOS" &&
+        subcategory.label.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() ===
+          (item.subCategory || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    );
+  if (explicitSubcategory) return explicitSubcategory.id;
   const text = `${item.name} ${item.code || ""} ${item.description || ""}`.toLowerCase();
   if (category === "LAVADO") {
     if (text.includes("moto") || text.includes("scooter")) return "MOTOS";
@@ -567,6 +584,7 @@ export default function ModuloCarWashCatalogo({
   const [menuCatAbierto, setMenuCatAbierto] = useState<boolean>(false);
   const [menuSubcatAbierto, setMenuSubcatAbierto] = useState<boolean>(false);
   const [menuPorteAbierto, setMenuPorteAbierto] = useState<boolean>(false);
+  const [filtrosFlotantesAbiertos, setFiltrosFlotantesAbiertos] = useState<boolean>(false);
   const [fotosEstado, setFotosEstado] = useState<string[]>([]);
   const [subiendoFoto, setSubiendoFoto] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1218,17 +1236,6 @@ export default function ModuloCarWashCatalogo({
     });
   };
 
-  const handleMarcarTodoOkCarWash = () => {
-    setEstadoAfecciones({
-      Lodo: "NORMAL",
-      Pelos: "NORMAL",
-      Manchas: "NORMAL",
-      Gotaseca: "NORMAL",
-    });
-    setObjetosVerificados(true);
-    mostrarToast("🟢 Todas las inspecciones marcadas como OK (Normal)", "ok");
-  };
-
   // Función 3: Subida rápida de foto del estado (R2)
   const handleSubirFotoEstado = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1371,7 +1378,7 @@ export default function ModuloCarWashCatalogo({
       label: "Lodo",
       sublabel: estadoAfecciones.Lodo === "EXTREMO" ? "Extremo (+ $5.00)" : estadoAfecciones.Lodo === "MODERADO" ? "Moderado" : "Normal",
       color: estadoAfecciones.Lodo === "EXTREMO" ? "bg-rose-500 text-white shadow-md shadow-rose-500/30 ring-2 ring-rose-400/60" : estadoAfecciones.Lodo === "MODERADO" ? "bg-amber-400 text-white ring-2 ring-amber-300" : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10",
-      sublabelColor: estadoAfecciones.Lodo === "EXTREMO" ? "text-rose-600 dark:text-rose-400 font-bold" : estadoAfecciones.Lodo === "MODERADO" ? "text-amber-600 dark:text-amber-400 font-bold" : "text-zinc-500 dark:text-zinc-400 font-medium",
+      sublabelColor: estadoAfecciones.Lodo === "EXTREMO" ? "text-rose-600 dark:text-rose-400 font-bold" : estadoAfecciones.Lodo === "MODERADO" ? "text-amber-600 dark:text-amber-400 font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold",
       badge: estadoAfecciones.Lodo === "EXTREMO" ? "⚠️" : null,
       icon: (
         <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
@@ -1384,7 +1391,7 @@ export default function ModuloCarWashCatalogo({
       label: "Pelos",
       sublabel: estadoAfecciones.Pelos === "EXTREMO" ? "Extremo (+ $5.00)" : estadoAfecciones.Pelos === "MODERADO" ? "Moderado" : "Normal",
       color: estadoAfecciones.Pelos === "EXTREMO" ? "bg-rose-500 text-white shadow-md shadow-rose-500/30 ring-2 ring-rose-400/60" : estadoAfecciones.Pelos === "MODERADO" ? "bg-amber-400 text-white shadow-md shadow-amber-400/30 ring-2 ring-amber-300" : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10",
-      sublabelColor: estadoAfecciones.Pelos === "EXTREMO" ? "text-rose-600 dark:text-rose-400 font-bold" : estadoAfecciones.Pelos === "MODERADO" ? "text-amber-600 dark:text-amber-400 font-bold" : "text-zinc-500 dark:text-zinc-400 font-medium",
+      sublabelColor: estadoAfecciones.Pelos === "EXTREMO" ? "text-rose-600 dark:text-rose-400 font-bold" : estadoAfecciones.Pelos === "MODERADO" ? "text-amber-600 dark:text-amber-400 font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold",
       badge: estadoAfecciones.Pelos === "EXTREMO" ? "⚠️" : null,
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
@@ -1397,7 +1404,7 @@ export default function ModuloCarWashCatalogo({
       label: "Manchas",
       sublabel: estadoAfecciones.Manchas === "EXTREMO" ? "Recargo" : estadoAfecciones.Manchas === "MODERADO" ? "Moderado" : "Normal",
       color: estadoAfecciones.Manchas === "EXTREMO" ? "bg-rose-500 text-white shadow-md shadow-rose-500/30 ring-2 ring-rose-400/60" : estadoAfecciones.Manchas === "MODERADO" ? "bg-amber-400 text-white ring-2 ring-amber-300" : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10",
-      sublabelColor: estadoAfecciones.Manchas === "EXTREMO" ? "text-rose-600 dark:text-rose-400 font-bold" : estadoAfecciones.Manchas === "MODERADO" ? "text-amber-600 dark:text-amber-400 font-bold" : "text-zinc-500 dark:text-zinc-400 font-medium",
+      sublabelColor: estadoAfecciones.Manchas === "EXTREMO" ? "text-rose-600 dark:text-rose-400 font-bold" : estadoAfecciones.Manchas === "MODERADO" ? "text-amber-600 dark:text-amber-400 font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold",
       badge: null,
       icon: (
         <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
@@ -1410,7 +1417,7 @@ export default function ModuloCarWashCatalogo({
       label: "Gotaseca",
       sublabel: estadoAfecciones.Gotaseca === "EXTREMO" ? "Recargo" : estadoAfecciones.Gotaseca === "MODERADO" ? "Moderado" : "Normal",
       color: estadoAfecciones.Gotaseca === "EXTREMO" ? "bg-rose-500 text-white shadow-md shadow-rose-500/30 ring-2 ring-rose-400/60" : estadoAfecciones.Gotaseca === "MODERADO" ? "bg-amber-400 text-white ring-2 ring-amber-300" : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10",
-      sublabelColor: estadoAfecciones.Gotaseca === "EXTREMO" ? "text-rose-600 dark:text-rose-400 font-bold" : estadoAfecciones.Gotaseca === "MODERADO" ? "text-amber-600 dark:text-amber-400 font-bold" : "text-zinc-500 dark:text-zinc-400 font-medium",
+      sublabelColor: estadoAfecciones.Gotaseca === "EXTREMO" ? "text-rose-600 dark:text-rose-400 font-bold" : estadoAfecciones.Gotaseca === "MODERADO" ? "text-amber-600 dark:text-amber-400 font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold",
       badge: null,
       icon: (
         <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
@@ -1544,118 +1551,118 @@ export default function ModuloCarWashCatalogo({
             =================================================================== */}
         <div className="lg:col-span-7 rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3.5 sm:p-4 shadow-2xs">
           <div>
-            {/* Cabecera con título Semáforo y botón Todo OK */}
-            <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-zinc-100 dark:border-white/5">
+            {/* Cabecera del semáforo */}
+            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-zinc-100 dark:border-white/5">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-base sm:text-lg">🚦</span>
                 <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white leading-tight">
                   Semáforo
                 </h2>
               </div>
-              <button
-                type="button"
-                onClick={handleMarcarTodoOkCarWash}
-                className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 text-[11px] font-bold transition-all cursor-pointer active:scale-95 shrink-0"
-                title="Marcar todas las inspecciones en estado Normal (OK)"
-              >
-                Todo OK 🟢
-              </button>
             </div>
 
             {/* Guía semafórica de 3 niveles */}
-            <div className="grid grid-cols-3 gap-1.5 mb-2.5 px-1 py-1 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-100 dark:border-white/5 text-center text-[10px] font-semibold">
-              <span className="text-emerald-700 dark:text-emerald-400 flex items-center justify-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span>🟢 Normal</span>
+            <div className="grid grid-cols-3 gap-1.5 mb-2.5 px-1 py-1 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-100 dark:border-white/5 text-[13px] sm:text-sm font-semibold">
+              <span className="text-emerald-700 dark:text-emerald-400">
+                Normal
               </span>
-              <span className="text-amber-700 dark:text-amber-400 flex items-center justify-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-amber-400" />
-                <span>🟡 Moderado</span>
+              <span className="text-amber-700 dark:text-amber-400">
+                Moderado
               </span>
-              <span className="text-rose-700 dark:text-rose-400 flex items-center justify-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-rose-500" />
-                <span>🔴 Extremo</span>
+              <span className="text-rose-700 dark:text-rose-400">
+                Extremo
               </span>
             </div>
 
             {/* Tablero de los 6 íconos semafóricos de CarWash */}
-            <div className="grid grid-cols-3 gap-y-3 gap-x-2 place-items-center py-1">
-              {ESTADO_CIRCULOS_RECEPCION.map((btn) => (
-                <div key={btn.id} className="flex flex-col items-center gap-1 text-center w-full">
-                  <button
-                    type="button"
-                    onClick={() => handleCiclarEstadoAfeccion(btn.id)}
-                    className={`relative w-12 h-12 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-xs ${btn.color}`}
-                    title={`${btn.label}: Toca para cambiar nivel (Normal, Moderado, Extremo)`}
-                  >
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 py-1">
+              {ESTADO_CIRCULOS_RECEPCION.map((btn) => {
+                const nivel = estadoAfecciones[btn.id];
+                const cardColor = nivel === "EXTREMO"
+                  ? "bg-rose-50 border-rose-300 dark:bg-rose-500/10 dark:border-rose-400/60"
+                  : nivel === "MODERADO"
+                    ? "bg-amber-50 border-amber-300 dark:bg-amber-500/10 dark:border-amber-400/60"
+                    : "bg-zinc-50 border-zinc-200 dark:bg-white/[0.03] dark:border-white/10";
+                const iconColor = nivel === "EXTREMO"
+                  ? "bg-rose-100 border-rose-400 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300"
+                  : nivel === "MODERADO"
+                    ? "bg-amber-100 border-amber-400 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
+                    : "bg-zinc-100 border-zinc-300 text-zinc-600 dark:bg-white/10 dark:border-white/20 dark:text-zinc-300";
+
+                return (
+                <button
+                  key={btn.id}
+                  type="button"
+                  onClick={() => handleCiclarEstadoAfeccion(btn.id)}
+                  className={`relative flex flex-col items-center justify-center gap-1 rounded-xl border py-3 px-1 transition-all active:scale-95 cursor-pointer ${cardColor}`}
+                  title={`${btn.label}: Toca para cambiar nivel (Normal, Moderado, Extremo)`}
+                >
+                  {btn.badge && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 flex items-center justify-center text-[9px] text-white font-bold z-10">
+                      !
+                    </span>
+                  )}
+                  <span className={`w-10 h-10 rounded-full border-2 flex items-center justify-center ${iconColor}`}>
                     {btn.icon}
-                    {btn.badge && (
-                      <span className="absolute -top-1 -right-1 text-xs">{btn.badge}</span>
-                    )}
-                  </button>
-                  <div className="flex flex-col items-center leading-tight mt-1">
-                    <span className="text-xs sm:text-[13px] font-bold text-zinc-800 dark:text-zinc-200 block">
-                      {btn.label}
-                    </span>
-                    <span className={`text-[10px] sm:text-[11px] block ${btn.sublabelColor}`}>
-                      {btn.sublabel}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                  </span>
+                  <span className="text-xs sm:text-sm font-black text-zinc-800 dark:text-zinc-200">
+                    {btn.label}
+                  </span>
+                  <span className={`text-xs font-bold ${btn.sublabelColor}`}>
+                    {btn.sublabel}
+                  </span>
+                </button>
+                );
+              })}
 
               {/* Botón 5: Objetos */}
-              <div className="flex flex-col items-center gap-1 text-center w-full">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nuevo = !objetosVerificados;
-                    setObjetosVerificados(nuevo);
-                    if (nuevo) mostrarToast("✓ Pertenencias verificadas en cabina y baúl", "ok");
-                  }}
-                  className={`w-12 h-12 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-xs ${
-                    objetosVerificados
-                      ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/30 ring-2 ring-emerald-400"
-                      : "bg-zinc-100 hover:bg-zinc-200/80 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10"
-                  }`}
-                  title="Verificación de objetos personales en cabina"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5.5 h-5.5 sm:w-6 sm:h-6">
+              <button
+                type="button"
+                onClick={() => {
+                  const nuevo = !objetosVerificados;
+                  setObjetosVerificados(nuevo);
+                  if (nuevo) mostrarToast("✓ Pertenencias verificadas en cabina y baúl", "ok");
+                }}
+                className={`relative flex flex-col items-center justify-center gap-1 rounded-xl border py-3 px-1 transition-all active:scale-95 cursor-pointer ${
+                  objetosVerificados
+                    ? "bg-emerald-50 border-emerald-300 dark:bg-emerald-500/10 dark:border-emerald-400/60"
+                    : "bg-zinc-50 border-zinc-200 dark:bg-white/[0.03] dark:border-white/10"
+                }`}
+                title="Verificación de objetos personales en cabina"
+              >
+                <span className={`w-10 h-10 rounded-full border-2 flex items-center justify-center ${
+                  objetosVerificados
+                    ? "bg-emerald-100 border-emerald-400 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300"
+                    : "bg-zinc-100 border-zinc-300 text-zinc-600 dark:bg-white/10 dark:border-white/20 dark:text-zinc-300"
+                }`}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                </button>
-                <div className="flex flex-col items-center leading-tight mt-1">
-                  <span className="text-xs sm:text-[13px] font-bold text-zinc-800 dark:text-zinc-200 block">
-                    Objetos
-                  </span>
-                  <span className={`text-[10px] sm:text-[11px] font-bold block ${objetosVerificados ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-400"}`}>
-                    {objetosVerificados ? "Verificado" : "Pendiente"}
-                  </span>
-                </div>
-              </div>
+                </span>
+                <span className="text-xs sm:text-sm font-black text-zinc-800 dark:text-zinc-200">Objetos</span>
+                <span className={`text-xs font-bold ${objetosVerificados ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"}`}>
+                  {objetosVerificados ? "Verificado" : "Pendiente"}
+                </span>
+              </button>
 
               {/* Botón 6: Foto */}
-              <div className="flex flex-col items-center gap-1 text-center w-full">
-                <button
-                  type="button"
-                  disabled={subiendoFoto}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-12 h-12 sm:w-13 sm:h-13 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-xs bg-blue-100 hover:bg-blue-200/80 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-400/40"
-                  title="Tomar o subir foto de recepción del vehículo"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5.5 h-5.5 sm:w-6 sm:h-6">
+              <button
+                type="button"
+                disabled={subiendoFoto}
+                onClick={() => fileInputRef.current?.click()}
+                className="relative flex flex-col items-center justify-center gap-1 rounded-xl border border-blue-200 bg-blue-50 py-3 px-1 transition-all active:scale-95 cursor-pointer dark:border-blue-400/40 dark:bg-blue-500/10"
+                title="Tomar o subir foto de recepción del vehículo"
+              >
+                <span className="w-10 h-10 rounded-full border-2 border-blue-300 bg-blue-100 text-blue-600 dark:border-blue-400/40 dark:bg-blue-500/20 dark:text-blue-300 flex items-center justify-center">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                     <circle cx="12" cy="13" r="4" />
                   </svg>
-                </button>
-                <div className="flex flex-col items-center leading-tight mt-1">
-                  <span className="text-xs sm:text-[13px] font-bold text-zinc-800 dark:text-zinc-200 block">
-                    Foto
-                  </span>
-                  <span className="text-[10px] sm:text-[11px] text-zinc-500 dark:text-zinc-400 block">
-                    {subiendoFoto ? "..." : fotosEstado.length > 0 ? `(${fotosEstado.length})` : "R2"}
-                  </span>
-                </div>
+                </span>
+                <span className="text-xs sm:text-sm font-black text-zinc-800 dark:text-zinc-200">Foto</span>
+                <span className="text-xs font-bold text-blue-600 dark:text-blue-300">
+                  {subiendoFoto ? "..." : fotosEstado.length > 0 ? `(${fotosEstado.length})` : "R2"}
+                </span>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -1664,7 +1671,7 @@ export default function ModuloCarWashCatalogo({
                   className="hidden"
                   onChange={handleSubirFotoEstado}
                 />
-              </div>
+              </button>
             </div>
           </div>
 
@@ -1682,11 +1689,24 @@ export default function ModuloCarWashCatalogo({
       {/* =====================================================================
           BUSCADOR Y FILTROS: ANCHO COMPLETO (CUBRE TODO EL ESPACIO EN PC Y MÓVIL)
           ===================================================================== */}
-      <div className="w-full rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3 sm:p-3.5 shadow-2xs space-y-3">
-          {/* Fila de 3 píldoras desplegables contraíbles */}
-          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+      <div className="relative w-full rounded-2xl bg-white dark:bg-white/[0.03] border border-zinc-200/90 dark:border-white/10 p-3 sm:p-3.5 shadow-2xs">
+          {filtrosFlotantesAbiertos && (
+            <div className="absolute bottom-full left-0 right-0 z-50 mb-2 rounded-2xl border border-zinc-200 dark:border-white/15 bg-white dark:bg-[#1a1a1e] p-3 shadow-xl animate-fade-in">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100">Filtrar servicios</span>
+                <button
+                  type="button"
+                  onClick={() => setFiltrosFlotantesAbiertos(false)}
+                  className="w-7 h-7 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 cursor-pointer"
+                  aria-label="Cerrar filtros"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex flex-col gap-2">
             {/* Píldora 1: Categoría */}
-            <div className="relative flex-1 min-w-[90px]">
+            <div className="relative w-full">
+              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">1. Categoría</span>
               <button
                 type="button"
                 onClick={() => {
@@ -1721,7 +1741,8 @@ export default function ModuloCarWashCatalogo({
             </div>
 
             {/* Píldora 2: Subcategoría */}
-            <div className="relative flex-1 min-w-[90px]">
+            <div className="relative w-full">
+              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">2. Subcategoría</span>
               <button
                 type="button"
                 onClick={() => {
@@ -1766,7 +1787,8 @@ export default function ModuloCarWashCatalogo({
             </div>
 
             {/* Píldora 3: Porte / Chasis */}
-            <div className="relative flex-1 min-w-[85px]">
+            <div className="relative w-full">
+              <span className="block mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">3. Vehículo</span>
               <button
                 type="button"
                 onClick={() => {
@@ -1800,9 +1822,12 @@ export default function ModuloCarWashCatalogo({
               )}
             </div>
           </div>
+            </div>
+          )}
 
           {/* Buscador */}
-          <div className="relative">
+          <div className="flex items-center gap-2">
+          <div className="relative flex-1 min-w-0">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs">🔍</span>
             <input
               type="text"
@@ -1820,6 +1845,31 @@ export default function ModuloCarWashCatalogo({
                 ✕
               </button>
             )}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setFiltrosFlotantesAbiertos((prev) => !prev);
+              setMenuCatAbierto(false);
+              setMenuSubcatAbierto(false);
+              setMenuPorteAbierto(false);
+            }}
+            className={`h-9 w-10 shrink-0 rounded-xl border flex items-center justify-center transition-colors cursor-pointer ${
+              filtrosFlotantesAbiertos
+                ? "border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-400/50 dark:bg-blue-500/20 dark:text-blue-300"
+                : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10"
+            }`}
+            aria-label="Abrir filtros"
+            aria-expanded={filtrosFlotantesAbiertos}
+            title="Filtrar servicios"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="M4 7h16M7 12h10m-7 5h4" />
+              <circle cx="8" cy="7" r="1" fill="currentColor" />
+              <circle cx="15" cy="12" r="1" fill="currentColor" />
+              <circle cx="11" cy="17" r="1" fill="currentColor" />
+            </svg>
+          </button>
           </div>
         </div>
 
