@@ -152,7 +152,7 @@ function BestSellerDonut({
   items: { name: string; quantity: number }[];
   loading: boolean;
 }) {
-  const radius = 27;
+  const radius = 46;
   const circumference = 2 * Math.PI * radius;
   const total = items.reduce((sum, item) => sum + item.quantity, 0);
   const segments = items.map((item, index) => ({
@@ -165,44 +165,46 @@ function BestSellerDonut({
   }));
 
   return (
-    <div className="min-w-0 rounded-xl border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-white/[0.03]">
-      <p className="truncate text-xs font-semibold text-zinc-700 dark:text-zinc-200">{title}</p>
-      <div className="mt-3 flex items-center gap-3">
-        <div role="img" className="relative h-[76px] w-[76px] shrink-0" aria-label={`${title}: ${total} unidades vendidas`}>
-          <svg className="h-full w-full -rotate-90" viewBox="0 0 64 64" role="img" aria-hidden="true">
-            <circle cx="32" cy="32" r={radius} fill="none" stroke="currentColor" strokeWidth="8" className="text-zinc-200 dark:text-zinc-700" />
+    <div className="min-w-0 rounded-2xl border border-zinc-100 bg-zinc-50/80 p-5 sm:p-7 dark:border-zinc-800 dark:bg-white/[0.03] flex flex-col justify-between">
+      <p className="truncate text-base font-bold text-zinc-900 dark:text-zinc-50">{title}</p>
+      <div className="mt-5 flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
+        <div role="img" className="relative h-40 w-40 sm:h-44 sm:w-44 shrink-0" aria-label={`${title}: ${total} unidades vendidas`}>
+          <svg className="h-full w-full -rotate-90" viewBox="0 0 110 110" role="img" aria-hidden="true">
+            <circle cx="55" cy="55" r={radius} fill="none" stroke="currentColor" strokeWidth="13" className="text-zinc-200 dark:text-zinc-700/60" />
             {segments.map(({ item, index, length, offset }) => (
                 <circle
                   key={`${item.name}-${index}`}
-                  cx="32"
-                  cy="32"
+                  cx="55"
+                  cy="55"
                   r={radius}
                   fill="none"
                   stroke={sellerChartColors[index % sellerChartColors.length]}
-                  strokeWidth="8"
+                  strokeWidth="13"
                   strokeDasharray={`${length} ${circumference - length}`}
                   strokeDashoffset={-offset}
                 />
             ))}
           </svg>
           <span className="absolute inset-0 flex flex-col items-center justify-center">
-            <strong className="text-sm leading-none text-zinc-800 dark:text-white">{loading ? "…" : total}</strong>
-            <span className="mt-1 text-[9px] text-zinc-400">vendidos</span>
+            <strong className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-none text-zinc-900 dark:text-white">{loading ? "…" : total}</strong>
+            <span className="mt-1.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">vendidos</span>
           </span>
         </div>
-        <div className="min-w-0 flex-1 space-y-1.5">
+        <div className="w-full min-w-0 flex-1 space-y-3">
           {loading ? (
-            <p className="text-[11px] text-zinc-400">Cargando…</p>
+            <p className="text-sm text-zinc-400">Cargando…</p>
           ) : items.length ? (
             items.map((item, index) => (
-              <div key={`${item.name}-${index}`} className="flex min-w-0 items-center gap-1.5 text-[11px]">
-                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: sellerChartColors[index % sellerChartColors.length] }} />
-                <span className="min-w-0 flex-1 truncate text-zinc-600 dark:text-zinc-300" title={item.name}>{item.name}</span>
-                <span className="shrink-0 font-semibold tabular-nums text-zinc-500 dark:text-zinc-400">{item.quantity}</span>
+              <div key={`${item.name}-${index}`} className="flex min-w-0 items-center justify-between gap-3 text-sm">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: sellerChartColors[index % sellerChartColors.length] }} />
+                  <span className="min-w-0 truncate font-medium text-zinc-700 dark:text-zinc-200" title={item.name}>{item.name}</span>
+                </div>
+                <span className="shrink-0 font-bold tabular-nums text-base text-zinc-900 dark:text-white bg-zinc-200/50 dark:bg-white/5 px-2 py-0.5 rounded-lg">{item.quantity}</span>
               </div>
             ))
           ) : (
-            <p className="text-[11px] text-zinc-400">Sin ventas</p>
+            <p className="text-sm text-zinc-400">Sin ventas registradas</p>
           )}
         </div>
       </div>
@@ -444,31 +446,17 @@ export default function DashboardGeneral() {
               <BestSellerDonut title="Productos más vendidos" items={stats?.bestSellers.products ?? []} loading={loading && !stats} />
               <BestSellerDonut title="Servicios más vendidos" items={stats?.bestSellers.services ?? []} loading={loading && !stats} />
             </div>
-            <div className="mt-4 divide-y divide-zinc-100 dark:divide-zinc-800">
-              {modules.map((module) => (
-                <Link key={module.title} href={module.href} className="group flex items-center gap-3 py-3 first:pt-1 last:pb-1">
-                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-50 dark:bg-white/5 ${module.color}`}><Icon name={module.icon} /></span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-zinc-800 transition group-hover:text-blue-600 dark:text-zinc-100 dark:group-hover:text-blue-400">{module.title}</span>
-                    <span className="block truncate text-xs text-zinc-400">{module.detail}</span>
-                  </span>
-                  <span className="max-w-[42%] truncate text-right text-xs font-semibold text-zinc-600 dark:text-zinc-300">{module.value}</span>
-                  <svg className="h-4 w-4 shrink-0 text-zinc-300 transition group-hover:translate-x-0.5 group-hover:text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6" /></svg>
-                </Link>
-              ))}
-            </div>
           </div>
         </section>
 
         <section className="rounded-3xl border border-zinc-200/80 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-[#111722] sm:p-6">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">Actividad del taller</p>
-              <h3 className="mt-1 text-lg font-bold text-zinc-900 dark:text-white">Órdenes recientes</h3>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">Órdenes</p>
             </div>
           </div>
           {loading && !summary ? (
-            <p className="py-5 text-sm text-zinc-500">Cargando actividad del taller…</p>
+            <p className="py-5 text-sm text-zinc-500">Cargando órdenes…</p>
           ) : !recentOrders.length ? (
             <p className="py-5 text-sm text-zinc-500">{error ? "No se pudo cargar la actividad." : "No hay órdenes recientes."}</p>
           ) : (

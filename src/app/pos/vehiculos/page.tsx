@@ -281,10 +281,6 @@ export default function PosVehiculosPage() {
               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 shrink-0">
                 {vehicles.length}
               </span>
-              <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                Neon DB Conectado
-              </span>
             </div>
 
             <div className="flex flex-col items-end gap-2 shrink-0 ml-auto">
@@ -1070,19 +1066,15 @@ export default function PosVehiculosPage() {
                 🗑️
               </div>
               <div>
-                <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
-                  ¿Eliminar Vehículo?
+                <h3 className="text-base font-semibold text-zinc-900 dark:text-white">
+                  ¿Eliminar {vehiculoAEliminar.plate}?
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                  Se eliminará definitivamente de la base de datos <strong className="text-zinc-800 dark:text-zinc-200">Neon</strong> el vehículo con placa{" "}
-                  <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                    {vehiculoAEliminar.plate}
-                  </span>{" "}
-                  ({vehiculoAEliminar.brand} {vehiculoAEliminar.model}).
+                  {vehiculoAEliminar.brand} {vehiculoAEliminar.model}
                 </p>
                 {vehiculoAEliminar.tallerVisits > 0 && (
-                  <p className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 p-2 rounded-xl border border-amber-500/20 mt-2 text-left">
-                    ⚠️ Incluye {vehiculoAEliminar.tallerVisits} {vehiculoAEliminar.tallerVisits === 1 ? 'visita/orden registrada' : 'visitas/órdenes registradas'} en taller que también se limpiarán de Neon.
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 p-2 rounded-xl border border-amber-500/20 mt-2 text-center">
+                    ⚠️ {vehiculoAEliminar.tallerVisits} {vehiculoAEliminar.tallerVisits === 1 ? 'orden asociada' : 'órdenes asociadas'}
                   </p>
                 )}
               </div>
@@ -1105,7 +1097,7 @@ export default function PosVehiculosPage() {
                   {eliminando ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <span>Eliminar Definitivamente</span>
+                    <span>Eliminar</span>
                   )}
                 </button>
               </div>

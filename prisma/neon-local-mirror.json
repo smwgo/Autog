@@ -39,44 +39,6 @@
       ]
     },
     {
-      "id": "cmw2lqaii00001beiooh185cv",
-      "identification": "0923476857",
-      "name": "Andrea Prado",
-      "type": "Personal",
-      "phone": "0987658304",
-      "email": "andreita_pm16@hotmail.com",
-      "address": "Daule",
-      "avatar": null,
-      "imageUrl": null,
-      "vip": false,
-      "notes": null,
-      "branch": "PRINCIPAL",
-      "assignedToSucursal": false,
-      "lastVisit": "2026-11-05T04:55:18.349Z",
-      "createdAt": "2026-11-04T21:01:15.806Z",
-      "updatedAt": "2026-11-05T19:12:11.254Z",
-      "vehicles": [
-        {
-          "id": "cmw2lqawj00021beiub4qqfeu",
-          "customerId": "cmw2lqaii00001beiooh185cv",
-          "plate": "GSL4916",
-          "vehicleType": "Auto",
-          "brand": "Skoda",
-          "model": "Fabia",
-          "year": 2026,
-          "color": null,
-          "mileage": 345783,
-          "nextOilChangeMileage": 350783,
-          "imageUrl": null,
-          "photosJson": "[]",
-          "vin": null,
-          "fuelType": "Gasolina",
-          "createdAt": "2026-11-04T21:01:16.144Z",
-          "updatedAt": "2026-11-05T19:15:24.452Z"
-        }
-      ]
-    },
-    {
       "id": "cmw4228c40000z3ayo5qpl37d",
       "identification": "99998888888",
       "name": "Sonia",
@@ -115,44 +77,6 @@
       ]
     },
     {
-      "id": "cmw3xjklx0000piuk6fv90c1e",
-      "identification": "0901898980",
-      "name": "José Ruiz",
-      "type": "Personal",
-      "phone": "0989733299",
-      "email": "jose@gmail.com",
-      "address": "Sucre y Gral. Vernaza",
-      "avatar": null,
-      "imageUrl": null,
-      "vip": false,
-      "notes": null,
-      "branch": "PRINCIPAL",
-      "assignedToSucursal": false,
-      "lastVisit": "2026-11-05T19:19:43.894Z",
-      "createdAt": "2026-11-05T19:19:43.894Z",
-      "updatedAt": "2026-11-05T19:22:02.298Z",
-      "vehicles": [
-        {
-          "id": "cmw3xjkrp0002piuk7zep51su",
-          "customerId": "cmw3xjklx0000piuk6fv90c1e",
-          "plate": "ABC1W34",
-          "vehicleType": "Auto",
-          "brand": "Toyota",
-          "model": "Hilux",
-          "year": 2026,
-          "color": null,
-          "mileage": 85400,
-          "nextOilChangeMileage": 90400,
-          "imageUrl": null,
-          "photosJson": "[]",
-          "vin": null,
-          "fuelType": "Gasolina",
-          "createdAt": "2026-11-05T19:19:44.102Z",
-          "updatedAt": "2026-11-05T19:26:14.791Z"
-        }
-      ]
-    },
-    {
       "id": "cmw42vvnd0000eegr3c5p8exe",
       "identification": "0925341851",
       "name": "Diego",
@@ -169,26 +93,7 @@
       "lastVisit": "2026-11-05T21:53:06.190Z",
       "createdAt": "2026-11-05T21:49:16.154Z",
       "updatedAt": "2026-11-05T21:53:06.192Z",
-      "vehicles": [
-        {
-          "id": "cmw42vvnd0001eegr5jatrlhu",
-          "customerId": "cmw42vvnd0000eegr3c5p8exe",
-          "plate": "GST3981",
-          "vehicleType": "Auto",
-          "brand": "Chevrolet",
-          "model": "Aveo",
-          "year": 2026,
-          "color": null,
-          "mileage": 250000,
-          "nextOilChangeMileage": 255000,
-          "imageUrl": null,
-          "photosJson": "[]",
-          "vin": null,
-          "fuelType": "Gasolina",
-          "createdAt": "2026-11-05T21:49:16.154Z",
-          "updatedAt": "2026-11-06T03:33:36.716Z"
-        }
-      ]
+      "vehicles": []
     }
   ],
   "vehicle": [
@@ -298,7 +203,25 @@
       "vin": null,
       "fuelType": "Gasolina",
       "createdAt": "2026-11-05T21:49:16.154Z",
-      "updatedAt": "2026-11-06T03:33:36.716Z"
+      "updatedAt": "2026-11-06T03:33:36.716Z",
+      "customer": {
+        "id": "cmw42vvnd0000eegr3c5p8exe",
+        "identification": "0925341851",
+        "name": "Diego",
+        "type": "Personal",
+        "phone": "0980083659",
+        "email": "armandi_pm@hotmail.com",
+        "address": "Daule",
+        "avatar": null,
+        "imageUrl": null,
+        "vip": false,
+        "notes": null,
+        "branch": "SUCURSAL",
+        "assignedToSucursal": true,
+        "lastVisit": "2026-11-05T21:53:06.190Z",
+        "createdAt": "2026-11-05T21:49:16.154Z",
+        "updatedAt": "2026-11-05T21:53:06.192Z"
+      }
     }
   ],
   "workshopOrder": [
@@ -387,8 +310,8 @@
       "completedAt": null,
       "itemsJson": "[{\"key\":\"lub_bento_cmw0413d5zrcr3qhe_1793854337324\",\"productId\":\"cmw0413d5zrcr3qhe\",\"id\":\"cmw0413d5zrcr3qhe\",\"code\":\"AM-75677-36\",\"name\":\"AMALIE PRO 10W30\",\"fullName\":\"AMALIE PRO 10W30\",\"brand\":\"AMALIE\",\"presentation\":\"Galón\",\"unitOfMeasure\":\"Galón\",\"price\":1,\"qty\":1,\"maxStock\":999,\"subtotal\":1,\"type\":\"PART\",\"lubCategoryId\":\"lub_aceite\",\"lubSubcategoryId\":\"lub_aceite_motor\"},{\"key\":\"lub_bento_cmw022c5n14xwluzg_1793854338269\",\"productId\":\"cmw022c5n14xwluzg\",\"id\":\"cmw022c5n14xwluzg\",\"code\":\"AM-75697-36\",\"name\":\"AMALIE PRO 20W50\",\"fullName\":\"AMALIE PRO 20W50\",\"brand\":\"Genérico\",\"presentation\":\"Galón\",\"unitOfMeasure\":\"Galón\",\"price\":1,\"qty\":3,\"maxStock\":999,\"subtotal\":3,\"type\":\"PART\",\"lubCategoryId\":\"lub_aceite\",\"lubSubcategoryId\":\"lub_aceite_motor\"},{\"key\":\"lub_bento_cmw044rywqtmziav2_1793854425607\",\"productId\":\"cmw044rywqtmziav2\",\"id\":\"cmw044rywqtmziav2\",\"code\":\"AM-79107-36\",\"name\":\"AMALIE XLO ULTIMATE 15W40\",\"fullName\":\"AMALIE XLO ULTIMATE 15W40\",\"brand\":\"Genérico\",\"presentation\":\"Galón\",\"unitOfMeasure\":\"Galón\",\"price\":1,\"qty\":1,\"maxStock\":999,\"subtotal\":1,\"type\":\"PART\",\"lubCategoryId\":\"lub_aceite\",\"lubSubcategoryId\":\"lub_aceite_motor\"},{\"key\":\"lub_bento_cmw046d7x6qfvyt5t_1793854426071\",\"productId\":\"cmw046d7x6qfvyt5t\",\"id\":\"cmw046d7x6qfvyt5t\",\"code\":\"AM-75766-56\",\"name\":\"AMALIE ELIXIR 5W30\",\"fullName\":\"AMALIE ELIXIR 5W30\",\"brand\":\"AMALIE\",\"presentation\":\"Galón\",\"unitOfMeasure\":\"Galón\",\"price\":1,\"qty\":1,\"maxStock\":999,\"subtotal\":1,\"type\":\"PART\",\"lubCategoryId\":\"lub_aceite\",\"lubSubcategoryId\":\"lub_aceite_motor\"},{\"key\":\"lub_bento_cmw020tc60256dxtk_1793905792360\",\"productId\":\"cmw020tc60256dxtk\",\"id\":\"cmw020tc60256dxtk\",\"code\":\"AM-75767-36\",\"name\":\"AMALIE ELIXIR 5W30\",\"fullName\":\"AMALIE ELIXIR 5W30\",\"brand\":\"AMALIE\",\"presentation\":\"Galón\",\"unitOfMeasure\":\"Galón\",\"price\":1,\"qty\":3,\"maxStock\":999,\"subtotal\":3,\"type\":\"PART\",\"lubCategoryId\":\"lub_aceite\",\"lubSubcategoryId\":\"lub_aceite_motor\"},{\"key\":\"lub_bento_cmw043j1w3lysggsd_1793905808184\",\"productId\":\"cmw043j1w3lysggsd\",\"id\":\"cmw043j1w3lysggsd\",\"code\":\"AM-75676-56\",\"name\":\"AMALIE ELIXIR 5W30\",\"fullName\":\"AMALIE ELIXIR 5W30\",\"brand\":\"Genérico\",\"presentation\":\"Galón\",\"unitOfMeasure\":\"Galón\",\"price\":1,\"qty\":1,\"maxStock\":999,\"subtotal\":1,\"type\":\"PART\",\"lubCategoryId\":\"lub_aceite\",\"lubSubcategoryId\":\"lub_aceite_motor\"},{\"key\":\"lub_bento_cmw03zdo3utjmwek2_1793905810275\",\"productId\":\"cmw03zdo3utjmwek2\",\"id\":\"cmw03zdo3utjmwek2\",\"code\":\"AM-75696-56\",\"name\":\"AMALIE PRO 20W50\",\"fullName\":\"AMALIE PRO 20W50\",\"brand\":\"AMALIE\",\"presentation\":\"Galón\",\"unitOfMeasure\":\"Galón\",\"price\":1,\"qty\":1,\"maxStock\":999,\"subtotal\":1,\"type\":\"PART\",\"lubCategoryId\":\"lub_aceite\",\"lubSubcategoryId\":\"lub_aceite_motor\"},{\"id\":\"tc_tc_bal_dinamico_1793906123923\",\"key\":\"key_tc_bal_dinamico_1793906123923\",\"serviceId\":\"tc_bal_dinamico\",\"type\":\"SERVICE\",\"category\":\"Tecnicentro\",\"subCategory\":\"ALINEACION\",\"cwCategoryId\":\"TODO\",\"code\":\"TC-TC_BAL_DINAMICO\",\"name\":\"Balanceo Dinámico\",\"brand\":\"Tecnicentro\",\"presentation\":\"30 min\",\"unitOfMeasure\":\"Servicio\",\"price\":5,\"total\":20,\"qty\":4,\"estimatedMinutes\":30,\"vehicleType\":\"General\",\"status\":\"Listo\",\"completed\":true,\"empleado_id\":\"emp-carlos-rodriguez\",\"empleado_nombre\":\"Carlos Rodríguez\"}]",
       "quoteNumber": "COT-OT #00001",
-      "customerId": "cmw2lqaii00001beiooh185cv",
-      "vehicleId": "cmw2lqawj00021beiub4qqfeu",
+      "customerId": null,
+      "vehicleId": null,
       "clientPhone": "0987658304",
       "clientIdDoc": "0923476857",
       "mechanic": "Carlos Rodríguez (Diagnóstico y mantenimiento)",

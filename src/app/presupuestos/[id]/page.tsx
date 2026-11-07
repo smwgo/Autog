@@ -1047,7 +1047,11 @@ export default function PaginaDetallePropuesta() {
 
   const limpiarNumeroOrden = (val?: string | number | null) => {
     if (!val) return "";
-    return String(val).replace(/\bOT\b/gi, "").replace(/#+/g, "").trim();
+    return String(val)
+      .replace(/\b(COT|COTIZACION|COTIZACIÓN|OT|ORD)\b[-\s#]*/gi, "")
+      .replace(/#+/g, "")
+      .replace(/^[-_\s]+|[-_\s]+$/g, "")
+      .trim();
   };
 
   const handleToggleEstado = async () => {
@@ -1302,24 +1306,11 @@ export default function PaginaDetallePropuesta() {
               </div>
             </div>
 
-            <div className="sm:text-right w-full sm:w-auto p-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 space-y-1.5 shrink-0">
-              <div className="flex items-center gap-2 sm:justify-end flex-wrap">
-                <span className="text-xs font-normal px-2.5 py-0.5 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/25">
-                  Propuesta
-                </span>
-                <span
-                  className={`text-xs font-normal px-2.5 py-0.5 rounded-md border ${esAprobado
-                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                    : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
-                    }`}
-                >
-                  {esAprobado ? "✓ Aprobado" : "⏳ En Espera"}
-                </span>
-              </div>
-              <h3 className="text-base sm:text-lg font-normal text-zinc-900 dark:text-white pt-1">
-                {orden.quoteNumber ? orden.quoteNumber.replace(/\bOT\s*#?/gi, "").replace(/-\s+/, "-").trim() : `COT-${limpiarNumeroOrden(orden.orderNumber)}`}
+            <div className="sm:text-right w-full sm:w-auto p-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border border-zinc-200 dark:border-white/10 space-y-1 shrink-0">
+              <h3 className="text-sm font-normal text-zinc-900 dark:text-white">
+                Orden #{limpiarNumeroOrden(orden.orderNumber || orden.quoteNumber)}
               </h3>
-              <p className="text-sm sm:text-base font-normal text-zinc-600 dark:text-zinc-400 pt-0.5">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 Fecha: {orden.dateIn ? new Date(orden.dateIn).toLocaleDateString("es-EC", { year: "numeric", month: "long", day: "numeric" }) : new Date().toLocaleDateString("es-EC", { year: "numeric", month: "long", day: "numeric" })}
               </p>
             </div>
@@ -1337,15 +1328,7 @@ export default function PaginaDetallePropuesta() {
                       👤
                     </span>
                     <span className="text-sm font-normal text-zinc-700 dark:text-zinc-300">
-                      Datos del Cliente
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-normal px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                      Titular
-                    </span>
-                    <span className="text-xs font-normal px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400">
-                      {orden.customerType || "Personal"}
+                      Cliente
                     </span>
                   </div>
                 </div>
@@ -1421,7 +1404,7 @@ export default function PaginaDetallePropuesta() {
                       </span>
 
                       {/* Enlace rápido a WhatsApp si tiene teléfono */}
-                      {orden.clientPhone && orden.clientPhone !== "S/N" ? (
+                      {orden.clientPhone && orden.clientPhone !== "S/N" && (
                         <a
                           href={`https://wa.me/${orden.clientPhone.replace(/\D/g, "")}`}
                           target="_blank"
@@ -1432,8 +1415,6 @@ export default function PaginaDetallePropuesta() {
                           <span>💬</span>
                           <span className="font-mono">{orden.clientPhone}</span>
                         </a>
-                      ) : (
-                        <span className="text-zinc-400 font-mono text-[11px]">Tel: S/N</span>
                       )}
                     </div>
 
@@ -1459,7 +1440,7 @@ export default function PaginaDetallePropuesta() {
 
                   <div className="p-2.5 rounded-xl bg-zinc-50/80 dark:bg-white/[0.03] border border-zinc-200/70 dark:border-white/5 flex flex-col justify-between">
                     <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">
-                      Teléfono / WhatsApp
+                      WhatsApp
                     </span>
                     <span className="text-xs sm:text-sm font-normal text-zinc-800 dark:text-zinc-200 mt-0.5 truncate">
                       {orden.clientPhone || "S/N"}
@@ -1479,7 +1460,7 @@ export default function PaginaDetallePropuesta() {
                       🚗
                     </span>
                     <span className="text-sm font-normal text-zinc-700 dark:text-zinc-300">
-                      Datos del Vehículo
+                      Vehículo
                     </span>
                   </div>
 
@@ -1601,16 +1582,13 @@ export default function PaginaDetallePropuesta() {
           </div>
 
           {/* Pie de navegación Tarjeta 1 */}
-          <div className="print:hidden flex items-center justify-between pt-4 border-t border-zinc-200 dark:border-white/10">
-            <span className="text-xs text-zinc-400">
-              Tarjeta 1 de 6 · Desliza o pulsa Siguiente para ir a Taller y Diagnóstico
-            </span>
+          <div className="print:hidden flex items-center justify-end pt-4 border-t border-zinc-200 dark:border-white/10">
             <button
               type="button"
               onClick={() => setTarjetaActiva(1)}
               className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
             >
-              <span>Siguiente: Taller y Diagnóstico</span>
+              <span>Siguiente</span>
               <span>→</span>
             </button>
           </div>
@@ -2011,16 +1989,17 @@ export default function PaginaDetallePropuesta() {
             <button
               type="button"
               onClick={() => setTarjetaActiva(0)}
-              className="h-9 px-4 rounded-xl bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-normal cursor-pointer"
+              className="h-9 px-4 rounded-xl bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-normal cursor-pointer flex items-center gap-1.5"
             >
-              ← Anterior: Cliente y Vehículo
+              <span>←</span>
+              <span>Anterior</span>
             </button>
             <button
               type="button"
               onClick={() => setTarjetaActiva(2)}
               className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer flex items-center gap-1.5"
             >
-              <span>Siguiente: Lubricentro</span>
+              <span>Siguiente</span>
               <span>→</span>
             </button>
           </div>
@@ -2262,16 +2241,17 @@ export default function PaginaDetallePropuesta() {
                   <button
                     type="button"
                     onClick={() => setTarjetaActiva(area.idx - 1)}
-                    className="h-9 px-4 rounded-xl bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-normal cursor-pointer"
+                    className="h-9 px-4 rounded-xl bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-normal cursor-pointer flex items-center gap-1.5"
                   >
-                    ← Anterior: {area.prevLabel}
+                    <span>←</span>
+                    <span>Anterior</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setTarjetaActiva(area.idx + 1)}
                     className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer flex items-center gap-1.5"
                   >
-                    <span>Siguiente: {area.nextLabel}</span>
+                    <span>Siguiente</span>
                     <span>→</span>
                   </button>
                 </div>
@@ -2519,9 +2499,10 @@ export default function PaginaDetallePropuesta() {
               <button
                 type="button"
                 onClick={() => setTarjetaActiva(4)}
-                className="h-10 px-4 rounded-xl bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-normal cursor-pointer self-start md:self-auto"
+                className="h-10 px-4 rounded-xl bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-normal cursor-pointer self-start md:self-auto flex items-center gap-1.5"
               >
-                ← Anterior: Car Wash
+                <span>←</span>
+                <span>Anterior</span>
               </button>
 
               <div className="flex items-center gap-2.5 flex-wrap justify-end">
