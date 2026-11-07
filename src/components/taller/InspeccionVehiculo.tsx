@@ -1416,7 +1416,9 @@ export default function InspeccionVehiculo({
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      obtenerPipelineWhisper().catch(() => {});
+      obtenerPipelineWhisper().catch((error) => {
+        console.warn("No se pudo precargar el motor de transcripción:", error);
+      });
     }, 1200);
     return () => clearTimeout(timer);
   }, []);
@@ -1424,6 +1426,7 @@ export default function InspeccionVehiculo({
   const [pinAccionActivaId, setPinAccionActivaId] = useState<string | null>(null);
   const grabacionTimerRef = useRef<NodeJS.Timeout | null>(null);
   const speechReconocioTextoRef = useRef(false);
+  const textoNotaInicialAudioRef = useRef("");
   const whisperPipelineRef = useRef<any>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const audioMonitorCtxRef = useRef<AudioContext | null>(null);
@@ -1449,8 +1452,14 @@ export default function InspeccionVehiculo({
           env.useBrowserCache = true;
           if (env.backends?.onnx?.wasm) {
             const cores = typeof navigator !== "undefined" ? navigator.hardwareConcurrency || 2 : 2;
-            env.backends.onnx.wasm.numThreads = Math.min(4, Math.max(1, cores));
+            const supportsWasmThreads =
+              typeof SharedArrayBuffer !== "undefined" && window.crossOriginIsolated;
+            env.backends.onnx.wasm.numThreads = supportsWasmThreads
+              ? Math.min(4, Math.max(1, cores))
+              : 1;
             env.backends.onnx.wasm.proxy = false;
+            env.backends.onnx.wasm.wasmPaths =
+              "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/";
           }
         }
         const pipe = await pipeline("automatic-speech-recognition", "Xenova/whisper-tiny", {
@@ -1551,11 +1560,14 @@ export default function InspeccionVehiculo({
     return new Blob([buffer], { type: "audio/wav" });
   };
 
-  const transcribirAudioATexto = async (audioBlob?: Blob | null): Promise<string> => {
+  const transcribirAudioATexto = async (
+    audioBlob?: Blob | null,
+    usarCapturaPcm = true
+  ): Promise<string> => {
     try {
       let float32Data: Float32Array | null = null;
 
-      if (pcmChunksRef.current.length > 0) {
+      if (usarCapturaPcm && pcmChunksRef.current.length > 0) {
         const totalLength = pcmChunksRef.current.reduce((acc, c) => acc + c.length, 0);
         if (totalLength > 1600) {
           const merged = new Float32Array(totalLength);
@@ -1568,7 +1580,7 @@ export default function InspeccionVehiculo({
         }
       }
 
-      if ((!float32Data || float32Data.length === 0) && audioBlob && audioBlob.size > 400) {
+      if ((!float32Data || float32Data.length < 1600) && audioBlob && audioBlob.size > 400) {
         const arrayBuffer = await audioBlob.arrayBuffer();
         const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
         const audioCtx = new AudioCtx();
@@ -1595,9 +1607,10 @@ export default function InspeccionVehiculo({
         .replace(/\[.*?\]|\(.*?\)/g, "")
         .trim();
       return rawText;
-    } catch (err) {
-      console.warn("Aviso en transcripción de voz a texto:", err);
-      return "";
+    } catch (error) {
+      console.error("Error en transcripción de voz a texto:", error);
+      const detail = error instanceof Error ? error.message : "Error desconocido";
+      throw new Error(`No se pudo transcribir el audio: ${detail}`);
     }
   };
 
@@ -1611,21 +1624,20 @@ export default function InspeccionVehiculo({
     e.target.value = "";
 
     const localPreviewUrl = URL.createObjectURL(file);
-    setHallazgos((prev) => {
-      const actualizados = prev.map((h) => {
-        if (h.id === targetPinId) {
-          const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
-          const nuevosAudios = [...prevAudios, localPreviewUrl];
-          return {
-            ...h,
-            audioUrl: nuevosAudios[0],
-            audioUrls: nuevosAudios,
-          };
-        }
-        return h;
-      });
-      return actualizados;
+    const hallazgosActualizados = hallazgosRef.current.map((h) => {
+      if (h.id === targetPinId) {
+        const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
+        const nuevosAudios = [...prevAudios, localPreviewUrl];
+        return {
+          ...h,
+          audioUrl: nuevosAudios[0],
+          audioUrls: nuevosAudios,
+        };
+      }
+      return h;
     });
+    hallazgosRef.current = hallazgosActualizados;
+    setHallazgos(hallazgosActualizados);
     mostrarToast("✓ Audio adjuntado. Guardando en la nube...");
 
     try {
@@ -1663,10 +1675,87 @@ export default function InspeccionVehiculo({
         hallazgosRef.current = actualizados;
         setHallazgos(actualizados);
         sincronizarHallazgosNeon(actualizados);
-        mostrarToast("✓ Audio guardado en la nube.");
+        setTranscribiendoVoz(true);
+        const textoTranscrito = await transcribirAudioATexto(file, false);
+        setTranscribiendoVoz(false);
+
+        if (textoTranscrito) {
+          const hallazgoActual = hallazgosRef.current.find((h) => h.id === targetPinId);
+          const textoExistente = hallazgoActual?.descripcion?.trim() || "";
+          const nuevaDescripcion = textoExistente
+            ? `${textoExistente} ${textoTranscrito}`
+            : textoTranscrito;
+          const tipo = hallazgoActual?.tipo || tipoSeleccionado;
+
+          observacionTextoRef.current = nuevaDescripcion;
+          if (pinSeleccionadoId === targetPinId) {
+            setObservacionTexto(nuevaDescripcion);
+          }
+          handleGuardarDetallePin(tipo, nuevaDescripcion, targetPinId);
+          mostrarToast("✓ Audio guardado y transcripción agregada a la nota.");
+        } else {
+          mostrarToast("Audio guardado, pero no se pudo convertir a texto.", "err");
+        }
+      } else {
+        mostrarToast("No se pudo guardar el audio en la nube.", "err");
       }
-    } catch {
-      // Conservar vista previa local
+    } catch (error) {
+      setTranscribiendoVoz(false);
+      console.error("Error al guardar o transcribir el audio:", error);
+      mostrarToast(
+        error instanceof Error ? error.message : "No se pudo guardar o transcribir el audio.",
+        "err"
+      );
+    }
+  };
+
+  const handleTranscribirAudioExistente = async (audioUrl: string, targetPinId: string) => {
+    setPinAccionActivaId(targetPinId);
+    setTranscribiendoVoz(true);
+
+    try {
+      const audioLocation = new URL(audioUrl, window.location.origin);
+      if (audioLocation.pathname === "/api/storage/download" && audioLocation.searchParams.has("key")) {
+        audioLocation.searchParams.set("inline", "1");
+      }
+
+      const response = await fetch(audioLocation.toString());
+      if (!response.ok) {
+        throw new Error(`No se pudo descargar el audio (${response.status}).`);
+      }
+
+      const audioBlob = await response.blob();
+      const textoTranscrito = await transcribirAudioATexto(audioBlob, false);
+      if (!textoTranscrito) {
+        mostrarToast("No se pudo convertir este audio a texto.", "err");
+        return;
+      }
+
+      const hallazgoActual = hallazgosRef.current.find((h) => h.id === targetPinId);
+      if (!hallazgoActual) {
+        throw new Error("No se encontró el hallazgo asociado al audio.");
+      }
+
+      const textoExistente = hallazgoActual.descripcion?.trim() || "";
+      const nuevaDescripcion = textoExistente
+        ? `${textoExistente} ${textoTranscrito}`
+        : textoTranscrito;
+
+      observacionTextoRef.current = nuevaDescripcion;
+      if (pinSeleccionadoId === targetPinId) {
+        setObservacionTexto(nuevaDescripcion);
+      }
+      handleGuardarDetallePin(hallazgoActual.tipo, nuevaDescripcion, targetPinId);
+      mostrarToast("✓ Transcripción agregada a la nota.");
+    } catch (error) {
+      console.error("Error al transcribir audio guardado:", error);
+      mostrarToast(
+        error instanceof Error ? error.message : "No se pudo leer el audio para transcribirlo.",
+        "err"
+      );
+    } finally {
+      setTranscribiendoVoz(false);
+      setPinAccionActivaId(null);
     }
   };
 
@@ -1946,17 +2035,28 @@ export default function InspeccionVehiculo({
             const wavBlob = new Blob([bytes], { type: "audio/wav" });
             const dataUri = `data:audio/wav;base64,${data.audioBase64}`;
 
-            if (!speechReconocioTextoRef.current && wavBlob.size > 400) {
+            let textoTranscritoFinal = "";
+            if (wavBlob.size > 400) {
               setTranscribiendoVoz(true);
-              const textoTranscrito = await transcribirAudioATexto(wavBlob);
-              setTranscribiendoVoz(false);
-              if (textoTranscrito) {
-                const base = textoBaseRef.current.trim();
-                const nuevoTexto = base ? `${base} ${textoTranscrito}` : textoTranscrito;
-                textoBaseRef.current = nuevoTexto;
-                observacionTextoRef.current = nuevoTexto;
-                setObservacionTexto(nuevoTexto);
-                handleGuardarDetallePin(tipoPin, nuevoTexto, activePcSession.targetPinId);
+              try {
+                const textoTranscrito = await transcribirAudioATexto(wavBlob);
+                if (textoTranscrito) {
+                  textoTranscritoFinal = textoTranscrito;
+                  const base = textoNotaInicialAudioRef.current.trim();
+                  const nuevoTexto = base ? `${base} ${textoTranscrito}` : textoTranscrito;
+                  textoBaseRef.current = nuevoTexto;
+                  observacionTextoRef.current = nuevoTexto;
+                  setObservacionTexto(nuevoTexto);
+                  handleGuardarDetallePin(tipoPin, nuevoTexto, activePcSession.targetPinId);
+                }
+              } catch (error) {
+                console.error("No se pudo transcribir la grabación del micrófono PC:", error);
+                mostrarToast(
+                  error instanceof Error ? error.message : "No se pudo transcribir el audio.",
+                  "err"
+                );
+              } finally {
+                setTranscribiendoVoz(false);
               }
             }
 
@@ -1966,8 +2066,17 @@ export default function InspeccionVehiculo({
               "audio/wav",
               dataUri
             );
+            if (!textoTranscritoFinal && !observacionTextoRef.current.trim()) {
+              mostrarToast("Audio guardado, pero no se pudo convertir a texto.", "err");
+            }
+          } else {
+            mostrarToast(data?.error || "No se pudo recuperar el audio grabado.", "err");
           }
-        } catch {}
+        } catch (error) {
+          setTranscribiendoVoz(false);
+          console.error("Error al recuperar o transcribir el audio grabado:", error);
+          mostrarToast("No se pudo recuperar o transcribir el audio grabado.", "err");
+        }
       }
       return;
     }
@@ -1979,6 +2088,7 @@ export default function InspeccionVehiculo({
     ).trim();
 
     textoBaseRef.current = textoPrevio;
+    textoNotaInicialAudioRef.current = modo === "audio" ? textoPrevio : "";
     observacionTextoRef.current = textoPrevio;
     speechReconocioTextoRef.current = false;
     pcmChunksRef.current = [];
@@ -2048,22 +2158,33 @@ export default function InspeccionVehiculo({
               : null;
           const audioBlob = rawBlob.size > 200 ? rawBlob : wavRespaldo || rawBlob;
           const mimeFinal = audioBlob === wavRespaldo ? "audio/wav" : mime;
+          let textoTranscritoFinal = "";
 
           // Transcribir a texto en Descripción tanto en modo "dictado" como en modo "audio" si SpeechRecognition no escribió ya el texto
           if (
-            !speechReconocioTextoRef.current &&
+            (modo === "audio" || !speechReconocioTextoRef.current) &&
             (pcmChunksRef.current.length > 0 || audioBlob.size > 400)
           ) {
             setTranscribiendoVoz(true);
-            const textoTranscrito = await transcribirAudioATexto(audioBlob);
-            setTranscribiendoVoz(false);
-            if (textoTranscrito) {
-              const base = textoBaseRef.current.trim();
-              const nuevoTexto = base ? `${base} ${textoTranscrito}` : textoTranscrito;
-              textoBaseRef.current = nuevoTexto;
-              observacionTextoRef.current = nuevoTexto;
-              setObservacionTexto(nuevoTexto);
-              handleGuardarDetallePin(tipoPin, nuevoTexto, targetPinId);
+            try {
+              const textoTranscrito = await transcribirAudioATexto(audioBlob);
+              if (textoTranscrito) {
+                textoTranscritoFinal = textoTranscrito;
+                const base = textoPrevio;
+                const nuevoTexto = base ? `${base} ${textoTranscrito}` : textoTranscrito;
+                textoBaseRef.current = nuevoTexto;
+                observacionTextoRef.current = nuevoTexto;
+                setObservacionTexto(nuevoTexto);
+                handleGuardarDetallePin(tipoPin, nuevoTexto, targetPinId);
+              }
+            } catch (error) {
+              console.error("No se pudo transcribir la grabación de voz:", error);
+              mostrarToast(
+                error instanceof Error ? error.message : "No se pudo transcribir el audio.",
+                "err"
+              );
+            } finally {
+              setTranscribiendoVoz(false);
             }
           }
 
@@ -2074,6 +2195,13 @@ export default function InspeccionVehiculo({
               return;
             }
             await guardarAudioBlobEnPin(targetPinId, audioBlob, mimeFinal);
+            if (
+              !textoTranscritoFinal &&
+              !speechReconocioTextoRef.current
+              && !observacionTextoRef.current.trim()
+            ) {
+              mostrarToast("Audio guardado, pero no se pudo convertir a texto.", "err");
+            }
             return;
           }
 
@@ -2839,6 +2967,7 @@ ${urlSeguimiento}`;
             pinAccionActivaId={pinAccionActivaId}
             onToggleVoz={(textoActualDirecto, modo, targetId) => handleToggleVozPin(targetId || pinActual.id, textoActualDirecto, modo)}
             onSubirAudio={(e, targetId) => handleSubirArchivoAudioPinR2(e, targetId || pinActual.id)}
+            onTranscribirAudio={handleTranscribirAudioExistente}
             reproduciendoAudio={reproduciendoAudio}
             onReproducirAudio={handleReproducirAudioTexto}
             onEliminarAudio={(index, targetId) => handleEliminarAudioPin(targetId || pinActual.id, index)}
@@ -3292,6 +3421,7 @@ ${urlSeguimiento}`;
                 pinAccionActivaId={pinAccionActivaId}
                 onToggleVoz={(textoActualDirecto, modo, targetId) => handleToggleVozPin(targetId || pinActual.id, textoActualDirecto, modo)}
                 onSubirAudio={(e, targetId) => handleSubirArchivoAudioPinR2(e, targetId || pinActual.id)}
+                onTranscribirAudio={handleTranscribirAudioExistente}
                 reproduciendoAudio={reproduciendoAudio}
                 onReproducirAudio={handleReproducirAudioTexto}
                 onEliminarAudio={(index, targetId) => handleEliminarAudioPin(targetId || pinActual.id, index)}

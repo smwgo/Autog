@@ -18,6 +18,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const key = searchParams.get("key");
+    const inline = searchParams.get("inline") === "1";
 
     if (!key) {
       return NextResponse.json(
@@ -28,6 +29,13 @@ export async function GET(req: Request) {
 
     // Sanitización contra path traversal
     const safeKey = key.replace(/\.\./g, "").trim();
+
+    if (inline && !safeKey.startsWith("taller_notas_voz/")) {
+      return NextResponse.json(
+        { success: false, error: "Solo se permite obtener audio de notas de voz." },
+        { status: 400 }
+      );
+    }
 
     if (safeKey.startsWith("data:")) {
       return NextResponse.redirect(safeKey);
@@ -60,6 +68,25 @@ export async function GET(req: Request) {
 
     // Generar URL firmada temporal con expiración de 1 hora
     const signedUrl = await getSignedDownloadUrl(safeKey, 3600);
+    if (inline) {
+      const fileResponse = await fetch(signedUrl);
+      if (!fileResponse.ok || !fileResponse.body) {
+        console.error("Error al obtener audio de R2 para transcripción:", fileResponse.status);
+        return NextResponse.json(
+          { success: false, error: "No se pudo obtener el audio para transcribirlo." },
+          { status: 502 }
+        );
+      }
+
+      return new NextResponse(fileResponse.body, {
+        headers: {
+          "Content-Type": fileResponse.headers.get("content-type") || "application/octet-stream",
+          "Cache-Control": "private, no-store",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    }
+
     return NextResponse.redirect(new URL(signedUrl), 307);
   } catch (error: any) {
     console.error("Error al generar enlace seguro de Cloudflare R2:", error);

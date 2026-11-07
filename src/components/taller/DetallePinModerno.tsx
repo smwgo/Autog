@@ -44,6 +44,7 @@ export interface DetallePinModernoProps {
   pinAccionActivaId?: string | null;
   onToggleVoz: (textoActual?: string, modo?: "dictado" | "audio", targetPinId?: string) => void;
   onSubirAudio?: (e: React.ChangeEvent<HTMLInputElement>, targetPinId?: string) => void;
+  onTranscribirAudio?: (audioUrl: string, targetPinId: string) => void;
   reproduciendoAudio: boolean;
   onReproducirAudio?: (text: string) => void;
   onEliminarAudio?: (idx?: number, targetPinId?: string) => void;
@@ -81,6 +82,7 @@ export function DetallePinModerno({
   pinAccionActivaId = null,
   onToggleVoz,
   onSubirAudio,
+  onTranscribirAudio,
   reproduciendoAudio: _reproduciendoAudio,
   onReproducirAudio: _onReproducirAudio,
   onEliminarAudio,
@@ -513,39 +515,12 @@ export function DetallePinModerno({
                         ? "⏳ Convirtiendo tu voz a texto..."
                         : "Escribe una descripción..."
                     }
-                    className={`w-full rounded-xl bg-white dark:bg-white/[0.03] border pl-3.5 pr-28 py-2.5 sm:py-3 text-zinc-900 dark:text-white text-sm sm:text-base placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all ${
+                    className={`w-full rounded-xl bg-white dark:bg-white/[0.03] border pl-3.5 pr-3 py-2.5 sm:py-3 text-zinc-900 dark:text-white text-sm sm:text-base placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all ${
                       escuchandoEsteBloque
                         ? "border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/30 dark:bg-rose-500/10 placeholder:text-rose-600 dark:placeholder:text-rose-400 font-medium"
                         : "border-zinc-200 dark:border-white/10 focus:border-blue-500/50"
                     }`}
                   />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleVoz(textoBloque, "dictado", bloque.id);
-                    }}
-                    className={`flex absolute right-1.5 h-8 px-2.5 rounded-lg border text-xs font-semibold items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-xs touch-manipulation select-none ${
-                      escuchandoEsteBloque
-                        ? "bg-rose-600 text-white border-rose-600 animate-pulse shadow-rose-600/30 font-bold"
-                        : "bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/15 dark:hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-500/30"
-                    }`}
-                    title={escuchandoEsteBloque ? "Detener dictado" : "Dictar voz"}
-                  >
-                    {escuchandoEsteBloque ? (
-                      <>
-                        <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                        <span className="text-[11px] font-bold">Detener</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-sm">🎙️</span>
-                        <span className="text-[11px] font-bold">
-                          {transcribiendoEsteBloque ? "Procesando..." : "Dictar voz"}
-                        </span>
-                      </>
-                    )}
-                  </button>
                 </div>
               </div>
 
@@ -826,13 +801,32 @@ export function DetallePinModerno({
                                       ✓ Asociado
                                     </span>
                                   </div>
-                                  <span className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
-                                    {textoBloque
-                                      ? `Nota: "${textoBloque}"`
-                                      : soloFotosBloque.length > 0
-                                      ? `Vinculado a ${soloFotosBloque.length} ${soloFotosBloque.length === 1 ? "foto" : "fotos"} de Evidencia #${numBloque}`
-                                      : `Grabación de voz de Evidencia #${numBloque}`}
-                                  </span>
+                                  {textoBloque ? (
+                                    <span className="text-xs text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-words">
+                                      <span className="font-semibold">Nota:</span> {textoBloque}
+                                    </span>
+                                  ) : (
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                                        {soloFotosBloque.length > 0
+                                          ? `Vinculado a ${soloFotosBloque.length} ${soloFotosBloque.length === 1 ? "foto" : "fotos"} de Evidencia #${numBloque}`
+                                          : `Grabación de voz de Evidencia #${numBloque}`}
+                                      </span>
+                                      {onTranscribirAudio && (
+                                        <button
+                                          type="button"
+                                          disabled={transcribiendoEsteBloque}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onTranscribirAudio(audioUrl, bloque.id);
+                                          }}
+                                          className="px-2 py-1 rounded-md bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-[10px] font-bold transition-colors"
+                                        >
+                                          {transcribiendoEsteBloque ? "Transcribiendo..." : "Transcribir a texto"}
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
 
