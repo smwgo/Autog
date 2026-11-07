@@ -118,6 +118,8 @@ export async function GET(request: Request) {
           query += ` AND (o."quoteStatus" = 'Aprobado' OR o."quoteStatus" = 'AUTORIZADO')`;
         } else if (estado === "EN_CAJA") {
           query += ` AND (o."status" = 'EN_CAJA' OR o."posRequestId" IS NOT NULL)`;
+        } else if (estado === "PAGADO") {
+          query += ` AND (o."status" IN ('Pagado', 'PAGADO', 'Facturado', 'FACTURADO') OR o."quoteStatus" IN ('Pagado', 'PAGADO'))`;
         } else {
           query += ` AND (o."status" ILIKE $${pIdx} OR o."quoteStatus" ILIKE $${pIdx})`;
           params.push(`%${estado}%`);
@@ -200,7 +202,10 @@ export async function GET(request: Request) {
           createdAt: r.createdAt,
           tipoNegocio,
           quoteNumber: r.quoteNumber || `COT-${r.orderNumber}`,
-          quoteStatus: r.quoteStatus || (r.status === "EN_CAJA" ? "Aprobado" : "Pendiente"),
+          quoteStatus:
+            r.status === "Pagado" || r.status === "PAGADO" || r.quoteStatus === "Pagado" || r.quoteStatus === "PAGADO"
+              ? "Pagado"
+              : r.quoteStatus || (r.status === "EN_CAJA" ? "Aprobado" : "Pendiente"),
           quoteApprovedAt: r.quoteApprovedAt,
           posRequestId: r.posRequestId,
           itemsCount: items.length,

@@ -1465,19 +1465,26 @@ export default function TallerPanel() {
         if (Array.isArray(data.mecanicos) && data.mecanicos.length > 0) {
           setMecanicos(data.mecanicos);
         }
-        if (selectFirstIfNone && pista.length > 0) {
-          setOrdenActiva((prev) => {
-            const targetOrder = prev
-              ? pista.find((o) => o.id === prev.id || o.orderNumber === prev.orderNumber) || null
-              : null;
-            const finalOrder = targetOrder || pista[0];
+        setOrdenActiva((prev) => {
+          if (pista.length === 0) return null;
+          const targetOrder = prev
+            ? pista.find((o) => o.id === prev.id || o.orderNumber === prev.orderNumber) || null
+            : null;
+          if (targetOrder) {
+            if (selectFirstIfNone) {
+              setFotosRecepcion(targetOrder.receptionPhotos || []);
+              setKmActualInput(targetOrder.mileage ? String(targetOrder.mileage) : "");
+            }
+            return targetOrder;
+          }
+          if (selectFirstIfNone || prev) {
+            const finalOrder = pista[0];
             setFotosRecepcion(finalOrder.receptionPhotos || []);
             setKmActualInput(finalOrder.mileage ? String(finalOrder.mileage) : "");
             return finalOrder;
-          });
-        } else if (selectFirstIfNone && pista.length === 0) {
-          setOrdenActiva(null);
-        }
+          }
+          return prev;
+        });
         return true;
       }
       return false;
@@ -3901,14 +3908,17 @@ Hola *${clienteNom}*, actualización de su vehículo *${vehiculoDesc}* (Placa: *
         if (!res.ok) return;
         const data = await res.json();
         if (data.success && Array.isArray(data.autosEnPista)) {
-          const fresh = data.autosEnPista.find((o: UnifiedOrder) => o.id === ordenActiva.id);
-          if (
-            fresh &&
-            (fresh.quoteSignatureUrl !== ordenActiva.quoteSignatureUrl ||
-              fresh.deliverySignatureUrl !== ordenActiva.deliverySignatureUrl ||
-              fresh.deliveryStatus !== ordenActiva.deliveryStatus ||
-              fresh.quoteStatus !== ordenActiva.quoteStatus ||
-              fresh.status !== ordenActiva.status)
+          const fresh = data.autosEnPista.find((o: UnifiedOrder) => o.id === ordenActiva.id || o.orderNumber === ordenActiva.orderNumber);
+          if (!fresh) {
+            setAutosEnPista(data.autosEnPista);
+            setOrdenActiva(data.autosEnPista[0] || null);
+          } else if (
+            fresh.quoteSignatureUrl !== ordenActiva.quoteSignatureUrl ||
+            fresh.deliverySignatureUrl !== ordenActiva.deliverySignatureUrl ||
+            fresh.deliveryStatus !== ordenActiva.deliveryStatus ||
+            fresh.quoteStatus !== ordenActiva.quoteStatus ||
+            fresh.status !== ordenActiva.status ||
+            data.autosEnPista.length !== autosEnPista.length
           ) {
             setOrdenActiva(fresh);
             setAutosEnPista(data.autosEnPista);

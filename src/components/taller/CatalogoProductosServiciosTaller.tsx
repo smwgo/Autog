@@ -250,6 +250,7 @@ export interface CatalogoProductosServiciosTallerProps {
   inicialmenteExpandido?: boolean;
   mostrarChipsSeleccionados?: boolean;
   className?: string;
+  siempreAbierto?: boolean;
 }
 
 export default function CatalogoProductosServiciosTaller({
@@ -262,8 +263,9 @@ export default function CatalogoProductosServiciosTaller({
   inicialmenteExpandido = false,
   mostrarChipsSeleccionados = true,
   className = "",
+  siempreAbierto = false,
 }: CatalogoProductosServiciosTallerProps) {
-  const [expandido, setExpandido] = useState<boolean>(inicialmenteExpandido);
+  const [expandido, setExpandido] = useState<boolean>(siempreAbierto || inicialmenteExpandido);
 
   // Estados de los 3 Dropdowns superiores
   const [categoriaActivaId, setCategoriaActivaId] = useState<string>("aceite");
@@ -532,42 +534,55 @@ export default function CatalogoProductosServiciosTaller({
       {/* =====================================================================
           BOTÓN / BARRA DE CABECERA: SE EXPANDE O SE RECOJE AL MARCARLO
           ===================================================================== */}
-      <div
-        onClick={() => setExpandido((prev) => !prev)}
-        className="px-4 py-2 sm:py-2.5 flex items-center justify-between gap-3 cursor-pointer select-none rounded-t-2xl bg-zinc-50/60 hover:bg-zinc-100/60 dark:bg-white/[0.02] dark:hover:bg-white/[0.04] transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="px-3 py-1.5 rounded-lg border border-zinc-300/50 dark:border-white/10 bg-zinc-500/10 hover:bg-zinc-500/15 dark:bg-white/5 dark:hover:bg-white/10 backdrop-blur-sm text-xs font-medium text-zinc-700 dark:text-zinc-200 flex items-center gap-1.5 transition-all pointer-events-none"
-          >
-            <span>Catálogo</span>
-            <svg
-              className={`w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 transition-transform duration-200 ${
-                expandido ? "rotate-180" : ""
-              }`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
+      {!siempreAbierto ? (
+        <div
+          onClick={() => setExpandido((prev) => !prev)}
+          className="px-4 py-2 sm:py-2.5 flex items-center justify-between gap-3 cursor-pointer select-none rounded-t-2xl bg-zinc-50/60 hover:bg-zinc-100/60 dark:bg-white/[0.02] dark:hover:bg-white/[0.04] transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="px-3 py-1.5 rounded-lg border border-zinc-300/50 dark:border-white/10 bg-zinc-500/10 hover:bg-zinc-500/15 dark:bg-white/5 dark:hover:bg-white/10 backdrop-blur-sm text-xs font-medium text-zinc-700 dark:text-zinc-200 flex items-center gap-1.5 transition-all pointer-events-none"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-        </div>
+              <span>{titulo || "Catálogo"}</span>
+              <svg
+                className={`w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400 transition-transform duration-200 ${
+                  expandido ? "rotate-180" : ""
+                }`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
 
-        {totalSeleccionados > 0 && (
-          <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
-            {totalSeleccionados} {totalSeleccionados === 1 ? "ítem" : "ítems"}
+          {totalSeleccionados > 0 && (
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
+              {totalSeleccionados} {totalSeleccionados === 1 ? "ítem" : "ítems"}
+            </span>
+          )}
+        </div>
+      ) : (
+        <div className="px-4 py-2.5 flex items-center justify-between gap-3 border-b border-zinc-200/70 dark:border-white/10">
+          <span className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-zinc-100 tracking-tight">
+            {titulo || "Catálogo"}
           </span>
-        )}
-      </div>
+          {totalSeleccionados > 0 && (
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
+              {totalSeleccionados} {totalSeleccionados === 1 ? "ítem" : "ítems"}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* =====================================================================
-          CONTENIDO EXPANDIBLE (SE MUESTRA AL MARCAR EL BOTÓN)
+          CONTENIDO DEL CATÁLOGO
           ===================================================================== */}
-      {expandido && (
-        <div className="p-3 sm:p-4 border-t border-zinc-200/80 dark:border-white/10 rounded-b-2xl space-y-3.5 animate-fade-in bg-zinc-50/40 dark:bg-black/20">
+      {(siempreAbierto || expandido) && (
+        <div className={`p-3 sm:p-4 rounded-b-2xl space-y-3.5 animate-fade-in bg-zinc-50/40 dark:bg-black/20 ${!siempreAbierto ? "border-t border-zinc-200/80 dark:border-white/10" : ""}`}>
           {/* ===================================================================
               FILA 1: 3 DROPDOWNS DESPLEGABLES (IDÉNTICO A LA CAPTURA)
               Píldora 1: Aceites | Píldora 2: Motor | Píldora 3: Galón

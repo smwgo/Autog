@@ -110,6 +110,7 @@ const OPCIONES_ESTADO = [
   { id: "PENDIENTE", label: "Pendientes", short: "Pendientes", icon: "⏳", dot: "bg-amber-400" },
   { id: "APROBADO", label: "Aprobadas", short: "Aprobadas", icon: "✅", dot: "bg-emerald-400" },
   { id: "EN_CAJA", label: "Caja", short: "Caja", icon: "💳", dot: "bg-sky-400" },
+  { id: "PAGADO", label: "Pagadas", short: "Pagadas", icon: "✓", dot: "bg-blue-400" },
 ];
 
 export default function PanelPresupuestosPage() {
@@ -194,7 +195,7 @@ export default function PanelPresupuestosPage() {
   // Cambiar estado directo de propuesta (Aprobar / Esperar) para que impacte en Taller
   const [cambiandoEstadoId, setCambiandoEstadoId] = useState<string | null>(null);
 
-  const handleCambiarEstadoPropuesta = async (orderId: string, nuevoEstado: "Aprobado" | "Pendiente") => {
+  const handleCambiarEstadoPropuesta = async (orderId: string, nuevoEstado: "Aprobado" | "Pendiente" | "Pagado") => {
     try {
       setCambiandoEstadoId(orderId);
       const res = await fetch("/api/presupuestos/estado", {
@@ -225,12 +226,19 @@ export default function PanelPresupuestosPage() {
       }
       if (data.success) {
         mostrarToast(data.message, "ok");
+        if (nuevoEstado === "Pagado" && ordenTrabajandoId === orderId) {
+          setOrdenTrabajandoId(null);
+          try {
+            localStorage.removeItem("taller_orden_activa_id");
+          } catch {}
+        }
         // Actualizar estado local inmediatamente
         setOrdenes((prev) =>
           prev.map((o) =>
             o.id === orderId || o.orderNumber === orderId
               ? {
                   ...o,
+                  status: nuevoEstado === "Pagado" ? "Pagado" : o.status,
                   quoteStatus: nuevoEstado,
                   quoteApprovedAt: nuevoEstado === "Aprobado" ? new Date().toISOString() : null,
                 }
@@ -467,6 +475,8 @@ export default function PanelPresupuestosPage() {
                     ? "Aprobadas"
                     : filtroEstado === "EN_CAJA"
                     ? "Caja"
+                    : filtroEstado === "PAGADO"
+                    ? "Pagadas"
                     : "Filtro"}
                 </span>
                 <svg className={`w-4 h-4 text-zinc-400 transition-transform ${menuEstadoAbierto ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -528,7 +538,8 @@ export default function PanelPresupuestosPage() {
                 {/* Vista Móvil (Tarjetas táctiles estilo POS con casillero de verificación) */}
                 <div className="md:hidden space-y-3.5">
                   {ordenes.map((orden) => {
-                    const esAprobado = orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA";
+                    const esPagado = orden.quoteStatus === "Pagado" || orden.status === "Pagado";
+                    const esAprobado = !esPagado && (orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA");
                     const estaTrabajando = ordenTrabajandoId === orden.id || ordenTrabajandoId === orden.orderNumber;
                     return (
                       <div
@@ -587,12 +598,14 @@ export default function PanelPresupuestosPage() {
 
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
-                              esAprobado
+                              esPagado
+                                ? "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-500/20 dark:text-sky-400 dark:border-sky-500/30"
+                                : esAprobado
                                 ? "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30"
                                 : "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30"
                             }`}
                           >
-                            {esAprobado ? "✓ Aprobado" : "En Espera"}
+                            {esPagado ? "✓ Pagado" : esAprobado ? "✓ Aprobado" : "En Espera"}
                           </span>
                         </div>
 
@@ -613,21 +626,7 @@ export default function PanelPresupuestosPage() {
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
-                            {esAprobado ? (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCambiarEstadoPropuesta(orden.id, "Pendiente");
-                                }}
-                                disabled={cambiandoEstadoId === orden.id}
-                                className="h-9 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer shadow-xs disabled:opacity-50"
-                                title="Propuesta Aprobada (clic para poner En Espera)"
-                              >
-                                <span>✓</span>
-                                <span>{cambiandoEstadoId === orden.id ? "..." : "Aprobado"}</span>
-                              </button>
-                            ) : (
+                            {esPagado ? (
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -635,12 +634,57 @@ export default function PanelPresupuestosPage() {
                                   handleCambiarEstadoPropuesta(orden.id, "Aprobado");
                                 }}
                                 disabled={cambiandoEstadoId === orden.id}
-                                className="h-9 px-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-700 dark:text-amber-400 font-semibold text-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                                title="Propuesta En Espera (clic para Aprobar)"
+                                className="h-9 px-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-700 dark:text-sky-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer shadow-xs disabled:opacity-50"
+                                title="Propuesta Pagada (clic para revertir a Aprobado)"
                               >
-                                <span>⏸</span>
-                                <span>{cambiandoEstadoId === orden.id ? "..." : "En Espera"}</span>
+                                <span>✓</span>
+                                <span>{cambiandoEstadoId === orden.id ? "..." : "Pagado"}</span>
                               </button>
+                            ) : (
+                              <>
+                                {esAprobado ? (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCambiarEstadoPropuesta(orden.id, "Pendiente");
+                                    }}
+                                    disabled={cambiandoEstadoId === orden.id}
+                                    className="h-9 px-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer shadow-xs disabled:opacity-50"
+                                    title="Propuesta Aprobada (clic para poner En Espera)"
+                                  >
+                                    <span>✓</span>
+                                    <span>{cambiandoEstadoId === orden.id ? "..." : "Aprobado"}</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCambiarEstadoPropuesta(orden.id, "Aprobado");
+                                    }}
+                                    disabled={cambiandoEstadoId === orden.id}
+                                    className="h-9 px-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-700 dark:text-amber-400 font-semibold text-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                    title="Propuesta En Espera (clic para Aprobar)"
+                                  >
+                                    <span>⏸</span>
+                                    <span>{cambiandoEstadoId === orden.id ? "..." : "En Espera"}</span>
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCambiarEstadoPropuesta(orden.id, "Pagado");
+                                  }}
+                                  disabled={cambiandoEstadoId === orden.id}
+                                  className="h-9 px-2.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-700 dark:text-sky-300 font-semibold text-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                  title="Marcar trabajo como Pagado (se retira de Pista de Taller)"
+                                >
+                                  <span>💳</span>
+                                  <span>Pagar</span>
+                                </button>
+                              </>
                             )}
                             <button
                               type="button"
@@ -683,7 +727,8 @@ export default function PanelPresupuestosPage() {
                       </thead>
                       <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                         {ordenes.map((orden) => {
-                          const esAprobado = orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA";
+                          const esPagado = orden.quoteStatus === "Pagado" || orden.status === "Pagado";
+                          const esAprobado = !esPagado && (orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA");
                           const estaTrabajando = ordenTrabajandoId === orden.id || ordenTrabajandoId === orden.orderNumber;
                           return (
                             <tr
@@ -769,12 +814,14 @@ export default function PanelPresupuestosPage() {
                               <td className="py-3.5 px-4 text-center whitespace-nowrap">
                                 <span
                                   className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border inline-block ${
-                                    esAprobado
+                                    esPagado
+                                      ? "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-500/20 dark:text-sky-400 dark:border-sky-500/30"
+                                      : esAprobado
                                       ? "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30"
                                       : "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30"
                                   }`}
                                 >
-                                  {esAprobado ? "✓ Aprobado" : "En Espera"}
+                                  {esPagado ? "✓ Pagado" : esAprobado ? "✓ Aprobado" : "En Espera"}
                                 </span>
                               </td>
                               <td className="py-3.5 px-4 text-right font-black text-zinc-900 dark:text-white font-mono whitespace-nowrap">
@@ -782,21 +829,7 @@ export default function PanelPresupuestosPage() {
                               </td>
                               <td className="py-3.5 px-4 text-center whitespace-nowrap">
                                 <div className="flex items-center justify-center gap-2">
-                                  {esAprobado ? (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleCambiarEstadoPropuesta(orden.id, "Pendiente");
-                                      }}
-                                      disabled={cambiandoEstadoId === orden.id}
-                                      className="px-2.5 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-xs disabled:opacity-50"
-                                      title="Propuesta Aprobada (clic para poner En Espera)"
-                                    >
-                                      <span>✓</span>
-                                      <span>{cambiandoEstadoId === orden.id ? "..." : "Aprobado"}</span>
-                                    </button>
-                                  ) : (
+                                  {esPagado ? (
                                     <button
                                       type="button"
                                       onClick={(e) => {
@@ -804,12 +837,57 @@ export default function PanelPresupuestosPage() {
                                         handleCambiarEstadoPropuesta(orden.id, "Aprobado");
                                       }}
                                       disabled={cambiandoEstadoId === orden.id}
-                                      className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-700 dark:text-amber-400 text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                                      title="Propuesta En Espera (clic para Aprobar)"
+                                      className="px-2.5 py-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-700 dark:text-sky-300 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-xs disabled:opacity-50"
+                                      title="Propuesta Pagada (clic para revertir a Aprobado)"
                                     >
-                                      <span>⏸</span>
-                                      <span>{cambiandoEstadoId === orden.id ? "..." : "En Espera"}</span>
+                                      <span>✓</span>
+                                      <span>{cambiandoEstadoId === orden.id ? "..." : "Pagado"}</span>
                                     </button>
+                                  ) : (
+                                    <>
+                                      {esAprobado ? (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleCambiarEstadoPropuesta(orden.id, "Pendiente");
+                                          }}
+                                          disabled={cambiandoEstadoId === orden.id}
+                                          className="px-2.5 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-xs disabled:opacity-50"
+                                          title="Propuesta Aprobada (clic para poner En Espera)"
+                                        >
+                                          <span>✓</span>
+                                          <span>{cambiandoEstadoId === orden.id ? "..." : "Aprobado"}</span>
+                                        </button>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleCambiarEstadoPropuesta(orden.id, "Aprobado");
+                                          }}
+                                          disabled={cambiandoEstadoId === orden.id}
+                                          className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-700 dark:text-amber-400 text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                                          title="Propuesta En Espera (clic para Aprobar)"
+                                        >
+                                          <span>⏸</span>
+                                          <span>{cambiandoEstadoId === orden.id ? "..." : "En Espera"}</span>
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCambiarEstadoPropuesta(orden.id, "Pagado");
+                                        }}
+                                        disabled={cambiandoEstadoId === orden.id}
+                                        className="px-2.5 py-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-700 dark:text-sky-300 text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                                        title="Marcar trabajo como Pagado (se retira de Pista de Taller)"
+                                      >
+                                        <span>💳</span>
+                                        <span>Pagar</span>
+                                      </button>
+                                    </>
                                   )}
 
                                   <button

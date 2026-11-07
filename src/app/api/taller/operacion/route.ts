@@ -690,7 +690,9 @@ export async function GET(request: Request) {
             const activeOrdersRows: any[] = await prisma.$queryRawUnsafe(
               `SELECT * FROM "WorkshopOrder"
                WHERE UPPER("plate") = $1
-                 AND "status" NOT IN ('Entregado', 'ENTREGADO', '05 Entregada', 'Entregada', 'Finalizado', 'FINALIZADO', 'Terminado', 'TERMINADO', 'Historial', 'HISTORIAL', 'Cancelado', 'CANCELADO')
+                 AND "status" NOT IN ('Entregado', 'ENTREGADO', '05 Entregada', 'Entregada', 'Finalizado', 'FINALIZADO', 'Terminado', 'TERMINADO', 'Historial', 'HISTORIAL', 'Cancelado', 'CANCELADO', 'Pagado', 'PAGADO', 'Facturado', 'FACTURADO', 'Facturada', 'FACTURADA', 'Cobrado', 'COBRADO')
+                 AND COALESCE("quoteStatus", '') NOT IN ('Pagado', 'PAGADO', 'Facturado', 'FACTURADO', 'Facturada', 'FACTURADA')
+                 AND COALESCE("deliveryStatus", '') NOT IN ('Facturado', 'FACTURADO', 'Pagado', 'PAGADO')
                ORDER BY "updatedAt" DESC LIMIT 1`,
               targetPlate
             );
@@ -794,7 +796,9 @@ export async function GET(request: Request) {
       const [ordersRows, products, services, employeesRows, customersRows, custBranchRows] = (await Promise.all([
         prisma.$queryRawUnsafe(
           `SELECT * FROM "WorkshopOrder"
-           WHERE "status" NOT IN ('Entregado', 'ENTREGADO', '05 Entregada', 'Entregada', 'Finalizado', 'FINALIZADO', 'Terminado', 'TERMINADO', 'Historial', 'HISTORIAL', 'Cancelado', 'CANCELADO')
+           WHERE "status" NOT IN ('Entregado', 'ENTREGADO', '05 Entregada', 'Entregada', 'Finalizado', 'FINALIZADO', 'Terminado', 'TERMINADO', 'Historial', 'HISTORIAL', 'Cancelado', 'CANCELADO', 'Pagado', 'PAGADO', 'Facturado', 'FACTURADO', 'Facturada', 'FACTURADA', 'Cobrado', 'COBRADO')
+             AND COALESCE("quoteStatus", '') NOT IN ('Pagado', 'PAGADO', 'Facturado', 'FACTURADO', 'Facturada', 'FACTURADA')
+             AND COALESCE("deliveryStatus", '') NOT IN ('Facturado', 'FACTURADO', 'Pagado', 'PAGADO')
            ORDER BY "updatedAt" DESC LIMIT 50`
         ),
         prisma.product.findMany({
@@ -812,7 +816,88 @@ export async function GET(request: Request) {
         prisma.$queryRawUnsafe(`SELECT "id", COALESCE("branch", 'PRINCIPAL') AS "branch", COALESCE("assignedToSucursal", false) AS "assignedToSucursal" FROM "Customer"`).catch(() => []),
       ])) as [any[], any[], any[], any[], any[], any[]];
 
-      const allAutosEnPista = ordersRows.map(mapOrderRow);
+      const [dispatchedReqs, paidInvoices, recentSales] = (await Promise.all([
+        prisma.$queryRawUnsafe(`SELECT "id", "requestNumber", "vehiclePlate", "updatedAt" FROM "OrderRequest" WHERE "status" = 'DESPACHADO'`).catch(() => []),
+        prisma.$queryRawUnsafe(`SELECT "orderId", "status" FROM "ClientInvoice"`).catch(() => []),
+        prisma.$queryRawUnsafe(`SELECT "sourceOrderNumber", "vehiclePlate", "createdAt", "status" FROM "Sale" WHERE COALESCE("status", '') != 'Anulada' ORDER BY "createdAt" DESC LIMIT 200`).catch(() => []),
+      ])) as [any[], any[], any[]];
+
+      const dispatchedReqIds = new Set(dispatchedReqs.map((r: any) => String(r.id || "").trim()).filter(Boolean));
+      const dispatchedOrderNums = new Set(
+        dispatchedReqs
+          .map((r: any) => String(r.requestNumber || "").trim().replace(/^OT-/i, "").toUpperCase())
+          .filter(Boolean)
+      );
+      const invoicedOrderKeys = new Set(
+        paidInvoices
+          .filter((inv: any) => !String(inv.status || "").toLowerCase().includes("anulad"))
+          .map((inv: any) => String(inv.orderId || "").trim().replace(/^OT-/i, "").toUpperCase())
+          .filter(Boolean)
+      );
+      const soldOrderNums = new Set(
+        recentSales
+          .map((s: any) => String(s.sourceOrderNumber || "").trim().replace(/^OT-/i, "").toUpperCase())
+          .filter(Boolean)
+      );
+
+      const rawAutosEnPista = ordersRows.map(mapOrderRow);
+      const idsParaMarcarPagado: string[] = [];
+      const allAutosEnPista = rawAutosEnPista.filter((o: any) => {
+        const stLower = String(o.status || "").toLowerCase();
+        const qtLower = String(o.quoteStatus || "").toLowerCase();
+        const dlLower = String(o.deliveryStatus || "").toLowerCase();
+        const normNum = String(o.orderNumber || "").trim().replace(/^OT-/i, "").toUpperCase();
+        const normId = String(o.id || "").trim().toUpperCase();
+        const normPlate = String(o.plate || "").trim().toUpperCase();
+        const orderCreatedMs = o.createdAt ? new Date(o.createdAt).getTime() : 0;
+
+        const paidBySalePlate =
+          Boolean(normPlate) &&
+          recentSales.some((s: any) => {
+            const sPlate = String(s.vehiclePlate || "").trim().toUpperCase();
+            if (!sPlate || sPlate !== normPlate) return false;
+            const saleMs = s.createdAt ? new Date(s.createdAt).getTime() : 0;
+            return saleMs >= orderCreatedMs - 60000;
+          });
+
+        const yaEstaPagado =
+          stLower.includes("pagad") ||
+          stLower.includes("factur") ||
+          stLower.includes("cobrad") ||
+          stLower.includes("entregad") ||
+          stLower.includes("finaliz") ||
+          stLower.includes("terminad") ||
+          stLower.includes("historial") ||
+          qtLower.includes("pagad") ||
+          qtLower.includes("factur") ||
+          dlLower.includes("factur") ||
+          dlLower.includes("pagad") ||
+          (o.posRequestId && dispatchedReqIds.has(String(o.posRequestId).trim())) ||
+          (normNum && (dispatchedOrderNums.has(normNum) || invoicedOrderKeys.has(normNum) || soldOrderNums.has(normNum))) ||
+          (normId && invoicedOrderKeys.has(normId)) ||
+          paidBySalePlate ||
+          (Number(o.totalCost || 0) > 0 && Number(o.totalPaid || 0) >= Number(o.totalCost || 0));
+
+        if (yaEstaPagado) {
+          idsParaMarcarPagado.push(o.id);
+          return false;
+        }
+        return true;
+      });
+
+      if (idsParaMarcarPagado.length > 0) {
+        prisma
+          .$executeRawUnsafe(
+            `UPDATE "WorkshopOrder"
+             SET "status" = 'Pagado',
+                 "quoteStatus" = 'Pagado',
+                 "deliveryStatus" = 'Facturado',
+                 "updatedAt" = NOW()
+             WHERE "id" = ANY($1::text[])`,
+            idsParaMarcarPagado
+          )
+          .catch(() => {});
+      }
       const autosEnPista = allAutosEnPista.filter((o: any) => {
         const orderBranch = (o.branch || "PRINCIPAL").toUpperCase();
         if (userBranchParam === "SUCURSAL") return orderBranch === "SUCURSAL";
@@ -3322,7 +3407,9 @@ export async function POST(request: Request) {
         const existingOrders: any[] = await prisma.$queryRawUnsafe(
           `SELECT * FROM "WorkshopOrder"
            WHERE UPPER("plate") = $1
-             AND "status" NOT IN ('Entregado', 'ENTREGADO', '05 Entregada', 'Entregada', 'Finalizado', 'FINALIZADO', 'Terminado', 'TERMINADO', 'Historial', 'HISTORIAL', 'Cancelado', 'CANCELADO')
+             AND "status" NOT IN ('Entregado', 'ENTREGADO', '05 Entregada', 'Entregada', 'Finalizado', 'FINALIZADO', 'Terminado', 'TERMINADO', 'Historial', 'HISTORIAL', 'Cancelado', 'CANCELADO', 'Pagado', 'PAGADO', 'Facturado', 'FACTURADO', 'Facturada', 'FACTURADA', 'Cobrado', 'COBRADO')
+             AND COALESCE("quoteStatus", '') NOT IN ('Pagado', 'PAGADO', 'Facturado', 'FACTURADO', 'Facturada', 'FACTURADA')
+             AND COALESCE("deliveryStatus", '') NOT IN ('Facturado', 'FACTURADO', 'Pagado', 'PAGADO')
            ORDER BY "updatedAt" DESC LIMIT 1`,
           vehicle.plate.toUpperCase()
         );

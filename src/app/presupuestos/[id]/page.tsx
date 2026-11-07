@@ -250,6 +250,7 @@ export default function PaginaDetallePropuesta() {
   const [modalNuevoServicio, setModalNuevoServicio] = useState(false);
   const [fotoZoom, setFotoZoom] = useState<string | null>(null);
   const [esAprobadoLocal, setEsAprobadoLocal] = useState<boolean | null>(null);
+  const [esPagadoLocal, setEsPagadoLocal] = useState<boolean | null>(null);
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
   const [subiendoFotoCliente, setSubiendoFotoCliente] = useState(false);
@@ -1027,6 +1028,7 @@ export default function PaginaDetallePropuesta() {
     );
   }
 
+  const esPagado = esPagadoLocal !== null ? esPagadoLocal : (orden.quoteStatus === "Pagado" || orden.status === "Pagado");
   const esAprobado = esAprobadoLocal !== null ? esAprobadoLocal : (orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA");
 
   const limpiarNumeroOrden = (val?: string | number | null) => {
@@ -1049,6 +1051,37 @@ export default function PaginaDetallePropuesta() {
         mostrarToast(`Estado: ${nuevoEstado === "Aprobado" ? "Aprobado" : "En Espera"}`);
       } else {
         mostrarToast("No se pudo cambiar el estado", "err");
+      }
+    } catch {
+      mostrarToast("Error de conexión al cambiar estado", "err");
+    } finally {
+      setCambiandoEstado(false);
+    }
+  };
+
+  const handleTogglePagado = async () => {
+    if (cambiandoEstado) return;
+    const nuevoEstado = esPagado ? "Aprobado" : "Pagado";
+    try {
+      setCambiandoEstado(true);
+      const res = await fetch("/api/presupuestos/estado", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: orden.id, quoteStatus: nuevoEstado }),
+      });
+      if (res.ok) {
+        setEsPagadoLocal(nuevoEstado === "Pagado");
+        if (nuevoEstado === "Pagado") {
+          try {
+            const activaId = localStorage.getItem("taller_orden_activa_id");
+            if (activaId === orden.id || activaId === orden.orderNumber) {
+              localStorage.removeItem("taller_orden_activa_id");
+            }
+          } catch {}
+        }
+        mostrarToast(nuevoEstado === "Pagado" ? "Trabajo marcado como Pagado (retirado de Pista de Taller)" : "Estado: Aprobado");
+      } else {
+        mostrarToast("No se pudo cambiar el estado de pago", "err");
       }
     } catch {
       mostrarToast("Error de conexión al cambiar estado", "err");
@@ -1132,6 +1165,21 @@ export default function PaginaDetallePropuesta() {
               >
                 <span>{cambiandoEstado ? "..." : (esAprobado ? "✓" : "⏳")}</span>
                 <span>{esAprobado ? "Aprobado" : "En Espera"}</span>
+              </button>
+
+              {/* Botón Pagar / Pagado */}
+              <button
+                type="button"
+                disabled={cambiandoEstado}
+                onClick={handleTogglePagado}
+                className={`h-10 px-3.5 sm:px-4 rounded-xl border flex items-center justify-center gap-1.5 text-xs sm:text-sm font-normal shadow-xs shrink-0 transition-all active:scale-95 cursor-pointer disabled:opacity-50 ${esPagado
+                  ? "bg-sky-500/20 hover:bg-sky-500/30 border-sky-500/40 text-sky-600 dark:text-sky-300"
+                  : "bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/30 text-sky-600 dark:text-sky-300"
+                  }`}
+                title={esPagado ? "Propuesta Pagada (clic para revertir a Aprobado)" : "Marcar como Pagado (se retira de Pista de Taller)"}
+              >
+                <span>{cambiandoEstado ? "..." : (esPagado ? "✓" : "💳")}</span>
+                <span>{esPagado ? "Pagado" : "Pagar"}</span>
               </button>
             </div>
           </div>
@@ -2191,6 +2239,18 @@ export default function PaginaDetallePropuesta() {
               className="h-10 px-5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-xs font-semibold transition-all active:scale-95 cursor-pointer disabled:opacity-50"
             >
               {guardando ? "Guardando..." : "Guardar"}
+            </button>
+
+            <button
+              type="button"
+              disabled={cambiandoEstado}
+              onClick={handleTogglePagado}
+              className={`h-10 px-5 rounded-xl border text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 ${esPagado
+                ? "bg-sky-600 hover:bg-sky-500 border-sky-500 text-white"
+                : "bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/35 text-sky-600 dark:text-sky-300"
+                }`}
+            >
+              <span>{esPagado ? "✓ Pagado" : "💳 Pagar"}</span>
             </button>
 
             <button

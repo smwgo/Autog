@@ -291,12 +291,12 @@ export function DetallePinModerno({
     <div className="mt-3 rounded-2xl bg-white dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-white/10 p-4 sm:p-5 shadow-xl space-y-4 animate-fade-in font-sans">
       {/* Título de la tarjeta y botón cerrar / acciones rápidas */}
       <div className="flex items-center justify-between">
-        <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white tracking-tight flex items-center gap-2">
+        <h3 className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
           <span>Registrar</span>
           <span
             suppressHydrationWarning
             translate="no"
-            className="w-5 h-5 rounded-full bg-blue-500/15 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/25 font-mono text-[11px] font-bold flex items-center justify-center shrink-0"
+            className="w-4 h-4 rounded-full bg-blue-500/15 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/25 font-mono text-[10px] font-normal flex items-center justify-center shrink-0"
           >
             {`#${mismoNumero}`}
           </span>
@@ -369,7 +369,7 @@ export function DetallePinModerno({
 
       {/* 2. SECCIÓN DAÑO (ENTRADA MANUAL PURA) */}
       <div className="space-y-1.5">
-        <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">Daño</label>
+        <label className="block text-xs sm:text-sm font-normal text-zinc-900 dark:text-zinc-100 tracking-tight">Daño</label>
         <input
           type="text"
           value={tipoTexto}
@@ -411,20 +411,38 @@ export function DetallePinModerno({
           const notasAudioBloque: string[] = Array.isArray((bloque as any).audioNotes)
             ? (bloque as any).audioNotes
             : [];
+          const rawKanbanBloque: {
+            id: string;
+            text: string;
+            createdAt?: string;
+            source?: "audio" | "manual";
+            audioIndex?: number;
+          }[] = Array.isArray((bloque as any).kanbanNotes) ? (bloque as any).kanbanNotes : [];
+
           const notasKanbanBloque: {
             id: string;
             text: string;
             createdAt?: string;
             source?: "audio" | "manual";
             audioIndex?: number;
-          }[] = Array.isArray((bloque as any).kanbanNotes)
-            ? (bloque as any).kanbanNotes
-            : notasAudioBloque.map((t, idx) => ({
-                id: `kn-${bloque.id}-${idx}`,
-                text: t,
-                source: "audio" as const,
-                audioIndex: idx,
-              }));
+          }[] = (() => {
+            const list = [...rawKanbanBloque];
+            soloAudiosBloque.forEach((_audioUrl, aIdx) => {
+              const yaExiste = list.some((n) => n.audioIndex === aIdx);
+              if (!yaExiste) {
+                const textoAudio = (notasAudioBloque[aIdx] || "").trim();
+                if (textoAudio) {
+                  list.push({
+                    id: `kn-${bloque.id}-${aIdx}`,
+                    text: textoAudio,
+                    source: "audio",
+                    audioIndex: aIdx,
+                  });
+                }
+              }
+            });
+            return list;
+          })();
 
           const totalEvidenciasBloque =
             soloFotosBloque.length +
@@ -500,7 +518,7 @@ export function DetallePinModerno({
               {/* Campo Descripción asociado a las fotos de este bloque */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="block text-sm sm:text-base font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                  <label className="block text-xs sm:text-sm font-normal text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
                     <span>Descripción</span>
                   </label>
                   {textoBloque.length > 0 && (
@@ -518,13 +536,19 @@ export function DetallePinModerno({
                   )}
                 </div>
 
-                <div className="relative flex items-center">
-                  <input
-                    type="text"
+                <div className="grid w-full">
+                  <div
+                    aria-hidden="true"
+                    className="invisible [grid-area:1/1/2/2] w-full rounded-xl border border-transparent pl-3.5 pr-3 py-2.5 sm:py-3 text-sm sm:text-base leading-relaxed whitespace-pre-wrap break-words min-h-[2.75rem]"
+                  >
+                    {(textoBloque || "Escribe una descripción...") + "\n"}
+                  </div>
+                  <textarea
+                    rows={1}
                     value={textoBloque}
                     onChange={(e) => onChangeObservacion(e.target.value, bloque.id)}
                     placeholder="Escribe una descripción..."
-                    className="w-full rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 focus:border-blue-500/50 pl-3.5 pr-3 py-2.5 sm:py-3 text-zinc-900 dark:text-white text-sm sm:text-base placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all"
+                    className="[grid-area:1/1/2/2] w-full h-full overflow-hidden resize-none rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 focus:border-blue-500/50 pl-3.5 pr-3 py-2.5 sm:py-3 text-zinc-900 dark:text-white text-sm sm:text-base placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all leading-relaxed whitespace-pre-wrap break-words"
                   />
                 </div>
               </div>
@@ -649,7 +673,7 @@ export function DetallePinModerno({
                             {formatearSegundos(segundosGrabandoAudio)}
                           </span>
                           <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate">
-                            Grabando nota de voz...
+                            Grabando...
                           </span>
                         </div>
                         <div className="mt-1.5 flex items-center gap-1 h-3">
@@ -663,9 +687,6 @@ export function DetallePinModerno({
                               className="w-1 rounded-full bg-gradient-to-t from-rose-500 to-amber-400 animate-pulse"
                             />
                           ))}
-                          <span className="ml-1.5 text-[10px] font-medium text-zinc-600 dark:text-zinc-300 truncate">
-                            Convirtiendo tu voz a nota Kanban automáticamente
-                          </span>
                         </div>
                       </div>
                     </div>
@@ -679,7 +700,7 @@ export function DetallePinModerno({
                       className="h-9 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold cursor-pointer shrink-0 shadow-md shadow-rose-600/25 flex items-center justify-center gap-1.5 transition-all active:scale-95"
                     >
                       <span className="w-2.5 h-2.5 rounded-xs bg-white inline-block" />
-                      <span>Detener y Crear Nota</span>
+                      <span>Detener</span>
                     </button>
                   </div>
                 )}
@@ -688,10 +709,10 @@ export function DetallePinModerno({
                   <div className="p-3 rounded-xl border border-amber-400/40 bg-amber-50/70 dark:bg-amber-500/10 text-amber-800 dark:text-amber-200 flex items-center justify-between gap-2.5 text-xs font-semibold animate-pulse">
                     <div className="flex items-center gap-2">
                       <span className="w-4 h-4 rounded-full border-2 border-amber-500 border-t-transparent animate-spin shrink-0" />
-                      <span>Transformando audio en nota tarjeta Kanban...</span>
+                      <span>Transcribiendo...</span>
                     </div>
                     <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/20">
-                      IA Voz → Nota
+                      IA Voz
                     </span>
                   </div>
                 )}
@@ -699,13 +720,9 @@ export function DetallePinModerno({
                 {/* TARJETA DE CONTENIDO ASOCIADO DE ESTE BLOQUE (FOTOS + DESCRIPCIÓN + AUDIOS JUNTOS) */}
                 {(totalEvidenciasBloque > 0 || subiendoEsteBloque) && (
                   <div className="mt-2 pt-2.5 border-t border-zinc-200 dark:border-white/10 space-y-2.5">
-                    <div className="flex items-center justify-between flex-wrap gap-2 text-xs px-0.5">
-                      <span className="font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                    <div className="flex items-center justify-between flex-wrap gap-2 px-0.5">
+                      <span className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center gap-1.5">
                         <span>🔗 Asociado a Evidencia #{numBloque}:</span>
-                      </span>
-                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 px-2 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        ✓ Vinculado en la nube
                       </span>
                     </div>
 
@@ -821,10 +838,10 @@ export function DetallePinModerno({
                       </div>
                     )}
 
-                    {/* Audios asociados a este bloque (Rediseño moderno + Notas tipo Kanban) */}
+                    {/* Audios asociados a este bloque (Rediseño moderno + minimalista) */}
                     {soloAudiosBloque.length > 0 && (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {soloAudiosBloque.map((audioUrl, aIdx) => {
                             const notaAsociadaAudio =
                               notasKanbanBloque.find((n) => n.audioIndex === aIdx)?.text ||
@@ -835,97 +852,82 @@ export function DetallePinModerno({
                             return (
                               <div
                                 key={aIdx}
-                                className="relative flex flex-col justify-between gap-2.5 p-3 rounded-2xl border border-amber-400/40 dark:border-amber-500/30 bg-gradient-to-br from-amber-50/90 via-white to-orange-50/60 dark:from-amber-500/10 dark:via-zinc-900/90 dark:to-orange-500/5 text-zinc-900 dark:text-zinc-100 shadow-sm hover:shadow-md transition-all"
+                                className="relative flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border border-zinc-200/80 dark:border-white/10 bg-white/70 dark:bg-zinc-900/60 hover:border-amber-400/50 dark:hover:border-amber-500/30 text-zinc-900 dark:text-zinc-100 shadow-xs transition-all backdrop-blur-xs"
                               >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleTogglePlayAudioClip(audioUrl);
+                                    }}
+                                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold cursor-pointer transition-all active:scale-95 shadow-xs ${
+                                      reproduciendoEste
+                                        ? "bg-amber-500 text-white shadow-amber-500/20 animate-pulse"
+                                        : "bg-zinc-100 dark:bg-white/10 hover:bg-amber-500 hover:text-white text-zinc-700 dark:text-zinc-300"
+                                    }`}
+                                    title={reproduciendoEste ? "Pausar" : "Escuchar"}
+                                  >
+                                    {reproduciendoEste ? "⏸" : "▶"}
+                                  </button>
+
+                                  <div className="min-w-0 flex-1 flex items-center gap-2">
+                                    <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                                      Audio #{aIdx + 1}
+                                    </span>
+                                    <div className="flex items-center gap-0.5 h-2.5">
+                                      {[0.4, 0.8, 0.5, 0.9, 0.6, 0.45, 0.7].map((bar, bIdx) => (
+                                        <span
+                                          key={bIdx}
+                                          style={{ height: `${Math.round(bar * 100)}%` }}
+                                          className={`w-0.5 rounded-full transition-all ${
+                                            reproduciendoEste
+                                              ? "bg-amber-500 animate-pulse"
+                                              : "bg-zinc-300 dark:bg-zinc-600"
+                                          }`}
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {onTranscribirAudio && (
+                                    <button
+                                      type="button"
+                                      disabled={transcribiendoEsteBloque}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onTranscribirAudio(audioUrl, bloque.id);
+                                      }}
+                                      className={`h-6 px-2 rounded-md text-[10px] font-semibold cursor-pointer transition-colors ${
+                                        notaAsociadaAudio
+                                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                          : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300"
+                                      }`}
+                                      title={notaAsociadaAudio ? "Nota guardada" : "Crear nota"}
+                                    >
+                                      {transcribiendoEsteBloque
+                                        ? "..."
+                                        : notaAsociadaAudio
+                                          ? "✓ Guardada"
+                                          : "+ Nota"}
+                                    </button>
+                                  )}
+                                  {onEliminarAudio && (
                                     <button
                                       type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        handleTogglePlayAudioClip(audioUrl);
+                                        onEliminarAudio(aIdx, bloque.id);
                                       }}
-                                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold cursor-pointer transition-all active:scale-95 shadow-sm ${
-                                        reproduciendoEste
-                                          ? "bg-amber-600 text-white ring-2 ring-amber-400/60 animate-pulse"
-                                          : "bg-amber-500 hover:bg-amber-600 text-white"
-                                      }`}
-                                      title={reproduciendoEste ? "Pausar audio" : "Escuchar audio"}
+                                      className="w-6 h-6 rounded-md hover:bg-rose-500/15 text-zinc-400 hover:text-rose-600 flex items-center justify-center text-xs font-bold cursor-pointer transition-colors"
+                                      title={`Eliminar`}
                                     >
-                                      {reproduciendoEste ? "⏸" : "▶"}
+                                      ✕
                                     </button>
-
-                                    <div className="min-w-0">
-                                      <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="text-xs font-extrabold tracking-tight text-zinc-900 dark:text-white">
-                                          Nota de Voz #{aIdx + 1}
-                                        </span>
-                                        <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[9px] font-bold">
-                                          Evid. #{numBloque}
-                                        </span>
-                                      </div>
-                                      <div className="mt-1 flex items-center gap-0.5 h-2.5">
-                                        {[0.4, 0.75, 0.5, 0.95, 0.6, 0.85, 0.45, 0.9, 0.55, 0.7, 0.5, 0.8].map((bar, bIdx) => (
-                                          <span
-                                            key={bIdx}
-                                            style={{ height: `${Math.round(bar * 100)}%` }}
-                                            className={`w-1 rounded-full transition-all ${
-                                              reproduciendoEste
-                                                ? "bg-amber-500 animate-pulse"
-                                                : "bg-amber-400/60 dark:bg-amber-400/40"
-                                            }`}
-                                          />
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center gap-1 shrink-0">
-                                    {onTranscribirAudio && (
-                                      <button
-                                        type="button"
-                                        disabled={transcribiendoEsteBloque}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          onTranscribirAudio(audioUrl, bloque.id);
-                                        }}
-                                        className={`h-7 px-2.5 rounded-lg border text-[10px] font-bold cursor-pointer transition-colors ${
-                                          notaAsociadaAudio
-                                            ? "bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
-                                            : "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/30 text-amber-700 dark:text-amber-300"
-                                        }`}
-                                        title="Transformar audio en tarjeta de nota Kanban y guardar enseguida"
-                                      >
-                                        {transcribiendoEsteBloque
-                                          ? "⏳ Procesando..."
-                                          : notaAsociadaAudio
-                                            ? "✓ Nota Guardada"
-                                            : "✨ Crear Nota"}
-                                      </button>
-                                    )}
-                                    {onEliminarAudio && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          onEliminarAudio(aIdx, bloque.id);
-                                        }}
-                                        className="w-7 h-7 rounded-lg bg-zinc-200/70 dark:bg-white/10 hover:bg-rose-500/20 text-zinc-500 hover:text-rose-600 dark:text-zinc-400 dark:hover:text-rose-400 flex items-center justify-center text-xs font-bold cursor-pointer transition-colors"
-                                        title={`Eliminar Audio #${aIdx + 1}`}
-                                      >
-                                        ✕
-                                      </button>
-                                    )}
-                                  </div>
+                                  )}
                                 </div>
-
-                                <audio
-                                  src={audioUrl}
-                                  controls
-                                  preload="metadata"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="w-full h-8 rounded-lg opacity-90"
-                                />
                               </div>
                             );
                           })}
@@ -937,34 +939,22 @@ export function DetallePinModerno({
                     {notasKanbanBloque.length > 0 && (
                       <div className="space-y-2 pt-1">
                         <div className="flex items-center justify-between px-0.5">
-                          <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-amber-500" />
-                            <span>Notas Tipo Kanban ({notasKanbanBloque.length})</span>
-                          </span>
-                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                            <span>✓ Guardado automático</span>
+                          <span className="text-xs sm:text-sm font-normal text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
+                            <span>Notas</span>
                           </span>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 items-start">
                           {notasKanbanBloque.map((notaItem, nIdx) => (
                             <div
                               key={notaItem.id || nIdx}
                               onClick={(e) => e.stopPropagation()}
-                              className="group relative rounded-2xl border-l-4 border-l-amber-500 border border-amber-300/70 dark:border-amber-500/30 bg-amber-50/70 dark:bg-zinc-900/90 p-3 shadow-sm hover:shadow-md transition-all flex flex-col gap-2"
+                              className="group relative rounded-2xl border-l-4 border-l-amber-500 border border-amber-300/70 dark:border-amber-500/30 bg-amber-50/70 dark:bg-zinc-900/90 p-3 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 h-auto"
                             >
                               <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                                  <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[10px] font-extrabold tracking-tight">
-                                    📌 Nota #{nIdx + 1}
-                                  </span>
-                                  <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-300 text-[9px] font-bold">
-                                    🎙️ Audio #{typeof notaItem.audioIndex === "number" ? notaItem.audioIndex + 1 : nIdx + 1}
-                                  </span>
-                                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[9px] font-bold">
-                                    ✓ Guardada
-                                  </span>
-                                </div>
+                                <span className="text-xs sm:text-sm font-normal text-zinc-700 dark:text-zinc-300">
+                                  Nota #{nIdx + 1}
+                                </span>
                                 {onEliminarNotaKanban && (
                                   <button
                                     type="button"
@@ -980,15 +970,23 @@ export function DetallePinModerno({
                                 )}
                               </div>
 
-                              <textarea
-                                rows={2}
-                                value={notaItem.text}
-                                onChange={(e) =>
-                                  onEditarNotaKanban?.(nIdx, e.target.value, bloque.id)
-                                }
-                                placeholder="Escribe o edita el texto de la nota aquí..."
-                                className="w-full rounded-xl bg-white/80 dark:bg-black/40 border border-amber-200/80 dark:border-white/10 px-2.5 py-1.5 text-xs font-medium text-zinc-800 dark:text-zinc-100 focus:outline-none focus:border-amber-500 resize-none leading-relaxed"
-                              />
+                              <div className="grid w-full">
+                                <div
+                                  aria-hidden="true"
+                                  className="invisible [grid-area:1/1/2/2] w-full rounded-xl border border-transparent px-2.5 py-2 text-xs font-normal leading-relaxed whitespace-pre-wrap break-words min-h-[2.5rem]"
+                                >
+                                  {((notaItem.text || "").replace(/\s*\(escribe o edita aquí el detalle\)/gi, "") || "Escribe una nota...") + "\n"}
+                                </div>
+                                <textarea
+                                  rows={1}
+                                  value={(notaItem.text || "").replace(/\s*\(escribe o edita aquí el detalle\)/gi, "")}
+                                  onChange={(e) =>
+                                    onEditarNotaKanban?.(nIdx, e.target.value, bloque.id)
+                                  }
+                                  placeholder="Escribe una nota..."
+                                  className="[grid-area:1/1/2/2] w-full h-full overflow-hidden rounded-xl bg-white/80 dark:bg-black/40 border border-amber-200/80 dark:border-white/10 px-2.5 py-2 text-xs font-normal text-zinc-800 dark:text-zinc-100 focus:outline-none focus:border-amber-500 resize-none leading-relaxed whitespace-pre-wrap break-words"
+                                />
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -1007,8 +1005,8 @@ export function DetallePinModerno({
                     onEliminarItem={(itemId) => onEliminarItemPin?.(itemId, bloque.id)}
                     serviciosCatalogo={serviciosCatalogo}
                     productosCatalogo={productosCatalogo}
-                    titulo="Productos/Servicios"
-                    inicialmenteExpandido={false}
+                    titulo="Catálogo"
+                    siempreAbierto={true}
                     mostrarChipsSeleccionados={true}
                   />
                 </div>

@@ -14,8 +14,16 @@ interface ActiveRecording {
   savedPromise: Promise<boolean>;
 }
 
+interface WarmTranscriberDaemon {
+  proc: ChildProcessWithoutNullStreams;
+  ready: boolean;
+  readyPromise: Promise<boolean>;
+  queue: Promise<string>;
+}
+
 const globalForMic = globalThis as unknown as {
   __autogActivePcMic?: Map<string, ActiveRecording>;
+  __autogWarmTranscriber?: WarmTranscriberDaemon | null;
 };
 
 if (!globalForMic.__autogActivePcMic) {
@@ -108,12 +116,12 @@ function ensureNativeTranscriberExe(): string | null {
   if (process.platform !== "win32") return null;
 
   const tmpDir = os.tmpdir();
-  const exePath = path.join(tmpDir, "autog_pc_wav_transcribe_v1.exe");
+  const exePath = path.join(tmpDir, "autog_pc_wav_transcribe_v2.exe");
   if (fs.existsSync(exePath)) {
     return exePath;
   }
 
-  const csPath = path.join(tmpDir, "autog_pc_wav_transcribe_v1.cs");
+  const csPath = path.join(tmpDir, "autog_pc_wav_transcribe_v2.cs");
   const csSource = `
 using System;
 using System.IO;
@@ -124,12 +132,15 @@ using System.Text;
 public class Program {
     public static int Main(string[] args) {
         Console.OutputEncoding = Encoding.UTF8;
-        if (args.Length < 1 || !File.Exists(args[0])) return 1;
-        string wavPath = args[0];
+        Console.InputEncoding = Encoding.UTF8;
         try {
             RecognizerInfo targetInfo = null;
             foreach (RecognizerInfo ri in SpeechRecognitionEngine.InstalledRecognizers()) {
-                if (ri.Culture.Name.StartsWith("es", StringComparison.OrdinalIgnoreCase)) {
+                if (ri.Id != null && ri.Id.IndexOf("3082", StringComparison.OrdinalIgnoreCase) >= 0) {
+                    targetInfo = ri;
+                    break;
+                }
+                if (ri.Culture != null && ri.Culture.Name != null && ri.Culture.Name.StartsWith("es", StringComparison.OrdinalIgnoreCase)) {
                     targetInfo = ri;
                     break;
                 }
@@ -140,25 +151,91 @@ public class Program {
                     break;
                 }
             }
-            if (targetInfo == null) return 2;
+            if (targetInfo == null) {
+                Console.WriteLine("ERR_NO_REC");
+                Console.Out.Flush();
+                return 2;
+            }
 
             using (SpeechRecognitionEngine sre = new SpeechRecognitionEngine(targetInfo)) {
-                sre.LoadGrammar(new DictationGrammar());
-                sre.SetInputToWaveFile(wavPath);
-                StringBuilder sb = new StringBuilder();
-                while (true) {
-                    RecognitionResult res = sre.Recognize();
-                    if (res == null) break;
-                    if (!string.IsNullOrWhiteSpace(res.Text)) {
-                        if (sb.Length > 0) sb.Append(" ");
-                        sb.Append(res.Text.Trim());
+                sre.EndSilenceTimeout = TimeSpan.FromMilliseconds(300);
+                sre.EndSilenceTimeoutAmbiguous = TimeSpan.FromMilliseconds(400);
+                sre.InitialSilenceTimeout = TimeSpan.FromSeconds(3);
+                DictationGrammar dg = new DictationGrammar();
+                sre.LoadGrammar(dg);
+
+                string lastHyp = "";
+                sre.SpeechHypothesized += (s, e) => {
+                    if (e.Result != null && !string.IsNullOrWhiteSpace(e.Result.Text)) {
+                        lastHyp = e.Result.Text.Trim();
+                    }
+                };
+                sre.SpeechRecognitionRejected += (s, e) => {
+                    if (e.Result != null) {
+                        if (!string.IsNullOrWhiteSpace(e.Result.Text)) {
+                            lastHyp = e.Result.Text.Trim();
+                        } else if (e.Result.Alternates != null && e.Result.Alternates.Count > 0) {
+                            lastHyp = e.Result.Alternates[0].Text.Trim();
+                        }
+                    }
+                };
+
+                if (args.Length >= 1 && File.Exists(args[0])) {
+                    lastHyp = "";
+                    sre.SetInputToWaveFile(args[0]);
+                    StringBuilder sb = new StringBuilder();
+                    while (true) {
+                        RecognitionResult res = sre.Recognize();
+                        if (res == null) break;
+                        if (!string.IsNullOrWhiteSpace(res.Text)) {
+                            if (sb.Length > 0) sb.Append(" ");
+                            sb.Append(res.Text.Trim());
+                        }
+                    }
+                    string finalOut = sb.Length > 0 ? sb.ToString() : lastHyp;
+                    Console.WriteLine("TEXT:" + finalOut);
+                    Console.Out.Flush();
+                    return 0;
+                }
+
+                Console.WriteLine("DAEMON_READY");
+                Console.Out.Flush();
+                string line;
+                while ((line = Console.In.ReadLine()) != null) {
+                    string wavPath = line.Trim();
+                    if (wavPath == "EXIT") break;
+                    if (string.IsNullOrEmpty(wavPath) || !File.Exists(wavPath)) {
+                        Console.WriteLine("TEXT:");
+                        Console.Out.Flush();
+                        continue;
+                    }
+                    try {
+                        lastHyp = "";
+                        sre.SetInputToWaveFile(wavPath);
+                        StringBuilder sb = new StringBuilder();
+                        while (true) {
+                            RecognitionResult res = sre.Recognize();
+                            if (res == null) break;
+                            if (!string.IsNullOrWhiteSpace(res.Text)) {
+                                if (sb.Length > 0) sb.Append(" ");
+                                sb.Append(res.Text.Trim());
+                            }
+                        }
+                        sre.SetInputToNull();
+                        string finalOut = sb.Length > 0 ? sb.ToString() : lastHyp;
+                        Console.WriteLine("TEXT:" + finalOut);
+                        Console.Out.Flush();
+                    } catch {
+                        try { sre.SetInputToNull(); } catch {}
+                        Console.WriteLine("TEXT:" + lastHyp);
+                        Console.Out.Flush();
                     }
                 }
-                Console.WriteLine("TEXT:" + sb.ToString());
                 return 0;
             }
         } catch (Exception ex) {
             Console.WriteLine("ERR:" + ex.Message);
+            Console.Out.Flush();
             return 3;
         }
     }
@@ -195,6 +272,123 @@ public class Program {
   }
 }
 
+let pendingLineResolver: ((line: string) => void) | null = null;
+
+function ensureWarmTranscriberDaemon(): WarmTranscriberDaemon | null {
+  if (process.platform !== "win32") return null;
+  const existing = globalForMic.__autogWarmTranscriber;
+  if (existing && !existing.proc.killed && existing.proc.exitCode === null) {
+    return existing;
+  }
+
+  const exePath = ensureNativeTranscriberExe();
+  if (!exePath) return null;
+
+  const proc = spawn(/*turbopackIgnore: true*/ exePath, [], {
+    windowsHide: true,
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+
+  let resolveReady: (ok: boolean) => void;
+  const readyPromise = new Promise<boolean>((res) => {
+    resolveReady = res;
+  });
+
+  const daemon: WarmTranscriberDaemon = {
+    proc,
+    ready: false,
+    readyPromise,
+    queue: Promise.resolve(""),
+  };
+
+  let lineBuf = "";
+  proc.stdout.setEncoding("utf8");
+  proc.stdout.on("data", (chunk: string) => {
+    lineBuf += chunk;
+    let nlIdx: number;
+    while ((nlIdx = lineBuf.indexOf("\n")) >= 0) {
+      const line = lineBuf.slice(0, nlIdx).trim();
+      lineBuf = lineBuf.slice(nlIdx + 1);
+      if (line === "DAEMON_READY") {
+        daemon.ready = true;
+        resolveReady(true);
+      } else if (line.startsWith("ERR")) {
+        resolveReady(false);
+      } else if (line.startsWith("TEXT:") && pendingLineResolver) {
+        const cb = pendingLineResolver;
+        pendingLineResolver = null;
+        cb(line.slice(5).trim());
+      }
+    }
+  });
+
+  proc.on("exit", () => {
+    resolveReady(false);
+    if (pendingLineResolver) {
+      const cb = pendingLineResolver;
+      pendingLineResolver = null;
+      cb("");
+    }
+    if (globalForMic.__autogWarmTranscriber === daemon) {
+      globalForMic.__autogWarmTranscriber = null;
+    }
+  });
+
+  globalForMic.__autogWarmTranscriber = daemon;
+  return daemon;
+}
+
+async function transcribeWavFast(wavPath: string): Promise<string> {
+  const daemon = ensureWarmTranscriberDaemon();
+  if (!daemon) return "";
+
+  const isReady =
+    daemon.ready ||
+    (await Promise.race([
+      daemon.readyPromise,
+      new Promise<boolean>((res) => setTimeout(() => res(false), 3500)),
+    ]));
+
+  if (!isReady) return "";
+
+  const runJob = async (): Promise<string> => {
+    return new Promise<string>((resolve) => {
+      const timer = setTimeout(() => {
+        if (pendingLineResolver) {
+          pendingLineResolver = null;
+        }
+        resolve("");
+      }, 4500);
+
+      pendingLineResolver = (text: string) => {
+        clearTimeout(timer);
+        resolve(text);
+      };
+
+      try {
+        daemon.proc.stdin.write(wavPath + "\n");
+      } catch {
+        clearTimeout(timer);
+        pendingLineResolver = null;
+        resolve("");
+      }
+    });
+  };
+
+  const next = daemon.queue.then(runJob, runJob);
+  daemon.queue = next.catch(() => "");
+  return next;
+}
+
+// Pre-calentar el daemon en segundo plano al cargar el módulo
+if (process.platform === "win32") {
+  setTimeout(() => {
+    try {
+      ensureWarmTranscriberDaemon();
+    } catch {}
+  }, 50);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -208,7 +402,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (action === "warmup") {
+      ensureWarmTranscriberDaemon();
+      return NextResponse.json({ success: true, status: "warming" });
+    }
+
     if (action === "start") {
+      // Pre-calentar daemon de transcripción mientras el usuario graba
+      ensureWarmTranscriberDaemon();
+
       // Detener cualquier grabación previa huérfana
       for (const [oldId, oldRec] of activeMap.entries()) {
         try {
@@ -320,21 +522,7 @@ export async function POST(req: NextRequest) {
       }
 
       const wavBuffer = fs.readFileSync(rec.wavPath);
-      let transcribedText = "";
-      try {
-        const trExe = ensureNativeTranscriberExe();
-        if (trExe) {
-          const out = execFileSync(/*turbopackIgnore: true*/ trExe, [rec.wavPath], {
-            windowsHide: true,
-            timeout: 6000,
-            encoding: "utf8",
-          });
-          const match = String(out || "").match(/TEXT:(.*)/);
-          if (match && match[1]) {
-            transcribedText = match[1].trim();
-          }
-        }
-      } catch {}
+      const transcribedText = await transcribeWavFast(rec.wavPath);
 
       try {
         fs.unlinkSync(rec.wavPath);
@@ -354,22 +542,15 @@ export async function POST(req: NextRequest) {
       if (!audioBase64) {
         return NextResponse.json({ success: false, error: "Falta audioBase64" }, { status: 400 });
       }
-      const trExe = ensureNativeTranscriberExe();
-      if (!trExe) {
-        return NextResponse.json({ success: false, text: "" });
-      }
-      const tmpWav = path.join(os.tmpdir(), `autog_tr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.wav`);
+      const tmpWav = path.join(
+        os.tmpdir(),
+        `autog_tr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.wav`
+      );
       try {
         const buf = Buffer.from(audioBase64, "base64");
         fs.writeFileSync(tmpWav, buf);
-        const out = execFileSync(/*turbopackIgnore: true*/ trExe, [tmpWav], {
-          windowsHide: true,
-          timeout: 8000,
-          encoding: "utf8",
-        });
-        const match = String(out || "").match(/TEXT:(.*)/);
-        const text = match && match[1] ? match[1].trim() : "";
-        return NextResponse.json({ success: true, text });
+        const text = await transcribeWavFast(tmpWav);
+        return NextResponse.json({ success: true, text, engine: "native_daemon" });
       } catch {
         return NextResponse.json({ success: false, text: "" });
       } finally {

@@ -444,12 +444,16 @@ export async function PUT(request: Request) {
         });
       }
 
-      let deliveryStatusVal: string | null = null;
+      let statusOverride: string | null = status || null;
+      let quoteStatusOverride: string | null = null;
       if (billingStatus === "Facturada" || isBilled === true) {
-        deliveryStatusVal = "Facturado";
+        statusOverride = status || "Pagado";
+        quoteStatusOverride = "Pagado";
       } else if (billingStatus === "En Proceso" || isBilled === false) {
-        deliveryStatusVal = "Pendiente";
+        statusOverride = status || "En Proceso";
+        quoteStatusOverride = "Aprobado";
       }
+      const deliveryStatusVal = billingStatus === "Facturada" || isBilled === true ? "Facturado" : billingStatus === "En Proceso" || isBilled === false ? "Pendiente" : null;
 
       await prisma.$executeRawUnsafe(
         `UPDATE "WorkshopOrder"
@@ -458,18 +462,20 @@ export async function PUT(request: Request) {
              "mechanic" = COALESCE($4, "mechanic"),
              "notes" = COALESCE($5, "notes"),
              "deliveryStatus" = COALESCE($6, "deliveryStatus"),
+             "quoteStatus" = COALESCE($7, "quoteStatus"),
              "updatedAt" = NOW()
          WHERE id = $1 OR "orderNumber" = $1`,
         id,
-        status || null,
+        statusOverride,
         progress !== undefined ? parseInt(progress) : null,
         mechanic || null,
         notes || null,
-        deliveryStatusVal
+        deliveryStatusVal,
+        quoteStatusOverride
       );
 
       // Si pasa a Listo para Entregar, registrar automáticamente en WorkshopHistory si no existe
-      if (status && status.toLowerCase().includes("listo")) {
+      if ((status && status.toLowerCase().includes("listo")) || deliveryStatusVal === "Facturado") {
         try {
           const ordRows: any = await prisma.$queryRawUnsafe(
             'SELECT * FROM "WorkshopOrder" WHERE id = $1 OR "orderNumber" = $1 LIMIT 1',

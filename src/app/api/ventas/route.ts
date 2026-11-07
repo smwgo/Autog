@@ -442,6 +442,40 @@ export async function POST(request: Request) {
         console.warn("Aviso al asignar branch a Sale:", brErr);
       }
 
+      // Marcar orden de trabajo de taller como Pagada para que pase al historial y no siga en pista
+      const orderNumKey = (serviceOrder?.orderNumber || sourceRequest?.requestNumber || sourceOrderNumber || "").toString().trim().replace(/^OT-/i, "");
+      if (orderNumKey) {
+        try {
+          await tx.$executeRawUnsafe(
+            `UPDATE "WorkshopOrder"
+             SET "status" = 'Pagado',
+                 "quoteStatus" = 'Pagado',
+                 "deliveryStatus" = 'Facturado',
+                 "updatedAt" = NOW()
+             WHERE "orderNumber" = $1 OR "orderNumber" = $2`,
+            orderNumKey,
+            `OT-${orderNumKey}`
+          );
+        } catch (ordErr) {
+          console.warn("Aviso al actualizar WorkshopOrder como Pagado:", ordErr);
+        }
+      } else if (saleVehiclePlate) {
+        try {
+          await tx.$executeRawUnsafe(
+            `UPDATE "WorkshopOrder"
+             SET "status" = 'Pagado',
+                 "quoteStatus" = 'Pagado',
+                 "deliveryStatus" = 'Facturado',
+                 "updatedAt" = NOW()
+             WHERE UPPER("plate") = UPPER($1)
+               AND "status" NOT IN ('Entregado', 'ENTREGADO', '05 Entregada', 'Entregada', 'Finalizado', 'FINALIZADO', 'Terminado', 'TERMINADO', 'Historial', 'HISTORIAL', 'Cancelado', 'CANCELADO', 'Pagado', 'PAGADO', 'Facturado', 'FACTURADO')`,
+            saleVehiclePlate.toString().trim()
+          );
+        } catch (ordErr) {
+          console.warn("Aviso al actualizar WorkshopOrder por placa como Pagado:", ordErr);
+        }
+      }
+
       if (saleVehiclePlate) {
         try {
           const histId = "hst_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
