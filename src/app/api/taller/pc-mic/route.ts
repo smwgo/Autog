@@ -104,6 +104,97 @@ public class Program {
   }
 }
 
+function ensureNativeTranscriberExe(): string | null {
+  if (process.platform !== "win32") return null;
+
+  const tmpDir = os.tmpdir();
+  const exePath = path.join(tmpDir, "autog_pc_wav_transcribe_v1.exe");
+  if (fs.existsSync(exePath)) {
+    return exePath;
+  }
+
+  const csPath = path.join(tmpDir, "autog_pc_wav_transcribe_v1.cs");
+  const csSource = `
+using System;
+using System.IO;
+using System.Globalization;
+using System.Speech.Recognition;
+using System.Text;
+
+public class Program {
+    public static int Main(string[] args) {
+        Console.OutputEncoding = Encoding.UTF8;
+        if (args.Length < 1 || !File.Exists(args[0])) return 1;
+        string wavPath = args[0];
+        try {
+            RecognizerInfo targetInfo = null;
+            foreach (RecognizerInfo ri in SpeechRecognitionEngine.InstalledRecognizers()) {
+                if (ri.Culture.Name.StartsWith("es", StringComparison.OrdinalIgnoreCase)) {
+                    targetInfo = ri;
+                    break;
+                }
+            }
+            if (targetInfo == null) {
+                foreach (RecognizerInfo ri in SpeechRecognitionEngine.InstalledRecognizers()) {
+                    targetInfo = ri;
+                    break;
+                }
+            }
+            if (targetInfo == null) return 2;
+
+            using (SpeechRecognitionEngine sre = new SpeechRecognitionEngine(targetInfo)) {
+                sre.LoadGrammar(new DictationGrammar());
+                sre.SetInputToWaveFile(wavPath);
+                StringBuilder sb = new StringBuilder();
+                while (true) {
+                    RecognitionResult res = sre.Recognize();
+                    if (res == null) break;
+                    if (!string.IsNullOrWhiteSpace(res.Text)) {
+                        if (sb.Length > 0) sb.Append(" ");
+                        sb.Append(res.Text.Trim());
+                    }
+                }
+                Console.WriteLine("TEXT:" + sb.ToString());
+                return 0;
+            }
+        } catch (Exception ex) {
+            Console.WriteLine("ERR:" + ex.Message);
+            return 3;
+        }
+    }
+}
+`;
+
+  try {
+    fs.writeFileSync(csPath, csSource, "utf8");
+    const cscCandidates = [
+      "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe",
+      "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\csc.exe",
+    ];
+    const csc = cscCandidates.find((p) => fs.existsSync(p));
+    if (!csc) return null;
+
+    const speechDllCandidates = [
+      "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\WPF\\System.Speech.dll",
+      "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\WPF\\System.Speech.dll",
+      "C:\\Program Files (x86)\\Reference Assemblies\\Microsoft\\Framework\\.NETFramework\\v4.0\\System.Speech.dll",
+    ];
+    const speechDll = speechDllCandidates.find((p) => fs.existsSync(p)) || "System.Speech.dll";
+
+    execFileSync(
+      csc,
+      ["/nologo", "/optimize+", `/r:${speechDll}`, `/out:${exePath}`, csPath],
+      {
+        windowsHide: true,
+        timeout: 10000,
+      }
+    );
+    return fs.existsSync(exePath) ? exePath : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -229,6 +320,22 @@ export async function POST(req: NextRequest) {
       }
 
       const wavBuffer = fs.readFileSync(rec.wavPath);
+      let transcribedText = "";
+      try {
+        const trExe = ensureNativeTranscriberExe();
+        if (trExe) {
+          const out = execFileSync(/*turbopackIgnore: true*/ trExe, [rec.wavPath], {
+            windowsHide: true,
+            timeout: 6000,
+            encoding: "utf8",
+          });
+          const match = String(out || "").match(/TEXT:(.*)/);
+          if (match && match[1]) {
+            transcribedText = match[1].trim();
+          }
+        }
+      } catch {}
+
       try {
         fs.unlinkSync(rec.wavPath);
       } catch {}
@@ -238,7 +345,38 @@ export async function POST(req: NextRequest) {
         mimeType: "audio/wav",
         size: wavBuffer.length,
         audioBase64: wavBuffer.toString("base64"),
+        text: transcribedText,
       });
+    }
+
+    if (action === "transcribe") {
+      const audioBase64 = String(body?.audioBase64 || "").trim();
+      if (!audioBase64) {
+        return NextResponse.json({ success: false, error: "Falta audioBase64" }, { status: 400 });
+      }
+      const trExe = ensureNativeTranscriberExe();
+      if (!trExe) {
+        return NextResponse.json({ success: false, text: "" });
+      }
+      const tmpWav = path.join(os.tmpdir(), `autog_tr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.wav`);
+      try {
+        const buf = Buffer.from(audioBase64, "base64");
+        fs.writeFileSync(tmpWav, buf);
+        const out = execFileSync(/*turbopackIgnore: true*/ trExe, [tmpWav], {
+          windowsHide: true,
+          timeout: 8000,
+          encoding: "utf8",
+        });
+        const match = String(out || "").match(/TEXT:(.*)/);
+        const text = match && match[1] ? match[1].trim() : "";
+        return NextResponse.json({ success: true, text });
+      } catch {
+        return NextResponse.json({ success: false, text: "" });
+      } finally {
+        try {
+          if (fs.existsSync(tmpWav)) fs.unlinkSync(tmpWav);
+        } catch {}
+      }
     }
 
     return NextResponse.json({ success: false, error: "Acción inválida" }, { status: 400 });

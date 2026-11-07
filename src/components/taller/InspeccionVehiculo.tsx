@@ -691,6 +691,7 @@ export default function InspeccionVehiculo({
   const prevOrderIdRef = useRef<string | undefined>(ordenActiva?.id);
   const prevFindingsJsonRef = useRef<string>(JSON.stringify(ordenActiva?.inspectionFindings || []));
   const syncRequestIdRef = useRef<number>(0);
+  const lastLocalMutationRef = useRef<number>(0);
 
   // Sincronizar hallazgos locales cuando cambie la orden seleccionada o cuando lleguen datos del backend
   useEffect(() => {
@@ -707,22 +708,39 @@ export default function InspeccionVehiculo({
       prevFindingsJsonRef.current = incomingJson;
       // Cambio de orden: cargar hallazgos de la nueva orden desde Neon PostgreSQL
       if (Array.isArray(incomingFindings) && incomingFindings.length > 0) {
+        hallazgosRef.current = incomingFindings;
         setHallazgos(incomingFindings);
       } else {
+        hallazgosRef.current = [];
         setHallazgos([]);
       }
     } else if (findingsChanged) {
-      // Si el usuario está dictando en vivo, no sobreescribir con respuestas intermedias del servidor
-      if (dictandoActivoRef.current) return;
-      // Mismo vehículo: llegaron hallazgos actualizados del backend
+      // Si el usuario está dictando en vivo o acaba de hacer un cambio local, no sobreescribir con respuestas intermedias
+      if (dictandoActivoRef.current || Date.now() - lastLocalMutationRef.current < 4500) {
+        return;
+      }
       prevFindingsJsonRef.current = incomingJson;
       if (Array.isArray(incomingFindings)) {
         setHallazgos((prevLocal) => {
-          // Si tenemos pines locales y el incoming es un array vacío temporal, proteger los pines locales
           if (incomingFindings.length === 0 && prevLocal.length > 0) {
             return prevLocal;
           }
-          return incomingFindings;
+          // Preservar notas Kanban y audios locales si una respuesta anterior del servidor llega desfasada
+          const merged = incomingFindings.map((inc) => {
+            const loc = prevLocal.find((p) => p.id === inc.id);
+            if (!loc) return inc;
+            const incKanban = Array.isArray((inc as any).kanbanNotes) ? (inc as any).kanbanNotes : [];
+            const locKanban = Array.isArray((loc as any).kanbanNotes) ? (loc as any).kanbanNotes : [];
+            const incAudioNotes = Array.isArray((inc as any).audioNotes) ? (inc as any).audioNotes : [];
+            const locAudioNotes = Array.isArray((loc as any).audioNotes) ? (loc as any).audioNotes : [];
+            return {
+              ...inc,
+              kanbanNotes: incKanban.length >= locKanban.length ? incKanban : locKanban,
+              audioNotes: incAudioNotes.length >= locAudioNotes.length ? incAudioNotes : locAudioNotes,
+            } as InspectionFinding;
+          });
+          hallazgosRef.current = merged;
+          return merged;
         });
       }
     }
@@ -745,6 +763,7 @@ export default function InspeccionVehiculo({
     ) => {
       if (!ordenActiva) return;
 
+      lastLocalMutationRef.current = Date.now();
       const currentReqId = ++syncRequestIdRef.current;
 
       // 1. Inmediato y Optimista: actualizar la orden en memoria y persistir en Neon PostgreSQL
@@ -963,6 +982,7 @@ export default function InspeccionVehiculo({
   const handleGuardarDetallePin = (tipo: string, obs?: string, explicitPinId?: string) => {
     const idTarget = explicitPinId || pinSeleccionadoId;
     if (!idTarget) return;
+    lastLocalMutationRef.current = Date.now();
     const prev = hallazgosRef.current;
     const actualizados = prev.map((h) => {
       if (h.id === idTarget) {
@@ -975,10 +995,11 @@ export default function InspeccionVehiculo({
       return h;
     });
     hallazgosRef.current = actualizados;
+    prevFindingsJsonRef.current = JSON.stringify(actualizados);
     setHallazgos(actualizados);
     if (debounceSyncPinRef.current) clearTimeout(debounceSyncPinRef.current);
     debounceSyncPinRef.current = setTimeout(() => {
-      sincronizarHallazgosNeon(actualizados);
+      sincronizarHallazgosNeon(hallazgosRef.current);
     }, 300);
   };
 
@@ -1560,6 +1581,18 @@ export default function InspeccionVehiculo({
     return new Blob([buffer], { type: "audio/wav" });
   };
 
+  const blobABase64 = (blob: Blob): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const res = String(reader.result || "");
+        const idx = res.indexOf(",");
+        resolve(idx >= 0 ? res.slice(idx + 1) : res);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+
   const transcribirAudioATexto = async (
     audioBlob?: Blob | null,
     usarCapturaPcm = true
@@ -1581,19 +1614,44 @@ export default function InspeccionVehiculo({
       }
 
       if ((!float32Data || float32Data.length < 1600) && audioBlob && audioBlob.size > 400) {
-        const arrayBuffer = await audioBlob.arrayBuffer();
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        const audioCtx = new AudioCtx();
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-        const raw = audioBuffer.getChannelData(0);
-        float32Data = resamplearPcmA16kHz(raw, audioBuffer.sampleRate);
-        await audioCtx.close().catch(() => {});
+        try {
+          const arrayBuffer = await audioBlob.arrayBuffer();
+          const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+          const audioCtx = new AudioCtx();
+          const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+          const raw = audioBuffer.getChannelData(0);
+          float32Data = resamplearPcmA16kHz(raw, audioBuffer.sampleRate);
+          await audioCtx.close().catch(() => {});
+        } catch {}
+      }
+
+      // 1. Intento ultra-rápido con motor nativo Windows System.Speech en servidor (< 300ms)
+      if (float32Data && float32Data.length >= 1600) {
+        try {
+          const wav16k = crearWavBlobDesdePcm([float32Data], 16000);
+          if (wav16k) {
+            const base64Wav = await blobABase64(wav16k);
+            const resSrv = await fetch("/api/taller/pc-mic", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "transcribe", audioBase64: base64Wav }),
+            });
+            if (resSrv.ok) {
+              const dataSrv = await resSrv.json();
+              const srvText = String(dataSrv?.text || "").trim();
+              if (srvText) {
+                return srvText;
+              }
+            }
+          }
+        } catch {}
       }
 
       if (!float32Data || float32Data.length < 1600) {
         return "";
       }
 
+      // 2. Respaldo con Whisper en navegador
       const audioRecortado = recortarSilencioPcm(normalizarAudioPcm(float32Data));
       const pipe = await obtenerPipelineWhisper();
       const output = await pipe(audioRecortado, {
@@ -1609,8 +1667,7 @@ export default function InspeccionVehiculo({
       return rawText;
     } catch (error) {
       console.error("Error en transcripción de voz a texto:", error);
-      const detail = error instanceof Error ? error.message : "Error desconocido";
-      throw new Error(`No se pudo transcribir el audio: ${detail}`);
+      return "";
     }
   };
 
@@ -1624,23 +1681,47 @@ export default function InspeccionVehiculo({
     e.target.value = "";
 
     const localPreviewUrl = URL.createObjectURL(file);
+    let idxNuevoAudio = 0;
+    lastLocalMutationRef.current = Date.now();
     const hallazgosActualizados = hallazgosRef.current.map((h) => {
       if (h.id === targetPinId) {
         const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
+        idxNuevoAudio = prevAudios.length;
         const nuevosAudios = [...prevAudios, localPreviewUrl];
+        const prevKanban = Array.isArray((h as any).kanbanNotes)
+          ? [...(h as any).kanbanNotes]
+          : [];
+        prevKanban.push({
+          id: `kn_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          text: "⏳ Transcribiendo audio a nota...",
+          createdAt: new Date().toISOString(),
+          source: "audio",
+          audioIndex: idxNuevoAudio,
+        });
         return {
           ...h,
           audioUrl: nuevosAudios[0],
           audioUrls: nuevosAudios,
-        };
+          kanbanNotes: prevKanban,
+        } as InspectionFinding;
       }
       return h;
     });
     hallazgosRef.current = hallazgosActualizados;
+    prevFindingsJsonRef.current = JSON.stringify(hallazgosActualizados);
     setHallazgos(hallazgosActualizados);
-    mostrarToast("✓ Audio adjuntado. Guardando en la nube...");
+    sincronizarHallazgosNeon(hallazgosActualizados);
 
     try {
+      setTranscribiendoVoz(true);
+      const textoTranscrito = await transcribirAudioATexto(file, false);
+      setTranscribiendoVoz(false);
+      agregarNotaKanbanEnPin(
+        targetPinId,
+        textoTranscrito || `Nota de voz #${idxNuevoAudio + 1} (edita el detalle aquí)`,
+        idxNuevoAudio
+      );
+
       const formData = new FormData();
       formData.append("file", file, file.name || `audio_${targetPinId}_${Date.now()}.webm`);
       formData.append("folder", "taller_notas_voz");
@@ -1656,6 +1737,7 @@ export default function InspeccionVehiculo({
       });
       const data = await res.json();
       if (data.success && data.url) {
+        lastLocalMutationRef.current = Date.now();
         const prev = hallazgosRef.current;
         const actualizados = prev.map((h) => {
           if (h.id === targetPinId) {
@@ -1673,39 +1755,26 @@ export default function InspeccionVehiculo({
           return h;
         });
         hallazgosRef.current = actualizados;
+        prevFindingsJsonRef.current = JSON.stringify(actualizados);
         setHallazgos(actualizados);
         sincronizarHallazgosNeon(actualizados);
-        setTranscribiendoVoz(true);
-        const textoTranscrito = await transcribirAudioATexto(file, false);
-        setTranscribiendoVoz(false);
-
-        if (textoTranscrito) {
-          agregarNotaKanbanEnPin(targetPinId, textoTranscrito);
-          mostrarToast("✓ Audio guardado y convertido en nota tarjeta Kanban.");
-        } else {
-          mostrarToast("Audio guardado, pero no se pudo convertir a texto.", "err");
-        }
-      } else {
-        mostrarToast("No se pudo guardar el audio en la nube.", "err");
       }
     } catch (error) {
       setTranscribiendoVoz(false);
       console.error("Error al guardar o transcribir el audio:", error);
-      mostrarToast(
-        error instanceof Error ? error.message : "No se pudo guardar o transcribir el audio.",
-        "err"
-      );
     }
   };
 
   const agregarNotaKanbanEnPin = (
     targetPinId: string,
     textoNota: string,
-    audioIndex?: number
+    audioIndex?: number,
+    persistirInmediato: boolean = true
   ) => {
     const limpio = textoNota.trim();
     if (!limpio) return;
 
+    lastLocalMutationRef.current = Date.now();
     const prev = hallazgosRef.current;
     const actualizados = prev.map((h) => {
       if (h.id === targetPinId) {
@@ -1750,8 +1819,16 @@ export default function InspeccionVehiculo({
     });
 
     hallazgosRef.current = actualizados;
+    prevFindingsJsonRef.current = JSON.stringify(actualizados);
     setHallazgos(actualizados);
-    sincronizarHallazgosNeon(actualizados);
+    if (persistirInmediato) {
+      sincronizarHallazgosNeon(actualizados);
+    } else {
+      if (debounceSyncPinRef.current) clearTimeout(debounceSyncPinRef.current);
+      debounceSyncPinRef.current = setTimeout(() => {
+        sincronizarHallazgosNeon(hallazgosRef.current);
+      }, 250);
+    }
   };
 
   const handleEditarNotaKanbanPin = (
@@ -1759,46 +1836,66 @@ export default function InspeccionVehiculo({
     noteIndex: number,
     nuevoTexto: string
   ) => {
+    lastLocalMutationRef.current = Date.now();
     const prev = hallazgosRef.current;
     const actualizados = prev.map((h) => {
       if (h.id === targetPinId) {
         const prevKanban = Array.isArray((h as any).kanbanNotes)
           ? [...(h as any).kanbanNotes]
           : [];
+        const prevAudioNotes = Array.isArray((h as any).audioNotes)
+          ? [...(h as any).audioNotes]
+          : [];
         if (prevKanban[noteIndex]) {
           prevKanban[noteIndex] = { ...prevKanban[noteIndex], text: nuevoTexto };
+          const aIdx = prevKanban[noteIndex].audioIndex;
+          if (typeof aIdx === "number") {
+            prevAudioNotes[aIdx] = nuevoTexto;
+          }
         }
         return {
           ...h,
+          audioNotes: prevAudioNotes,
           kanbanNotes: prevKanban,
         } as InspectionFinding;
       }
       return h;
     });
     hallazgosRef.current = actualizados;
+    prevFindingsJsonRef.current = JSON.stringify(actualizados);
     setHallazgos(actualizados);
     if (debounceSyncPinRef.current) clearTimeout(debounceSyncPinRef.current);
     debounceSyncPinRef.current = setTimeout(() => {
-      sincronizarHallazgosNeon(actualizados);
-    }, 350);
+      sincronizarHallazgosNeon(hallazgosRef.current);
+    }, 250);
   };
 
   const handleEliminarNotaKanbanPin = (targetPinId: string, noteIndex: number) => {
+    lastLocalMutationRef.current = Date.now();
     const prev = hallazgosRef.current;
     const actualizados = prev.map((h) => {
       if (h.id === targetPinId) {
         const prevKanban = Array.isArray((h as any).kanbanNotes)
           ? [...(h as any).kanbanNotes]
           : [];
+        const prevAudioNotes = Array.isArray((h as any).audioNotes)
+          ? [...(h as any).audioNotes]
+          : [];
+        const eliminada = prevKanban[noteIndex];
+        if (eliminada && typeof eliminada.audioIndex === "number") {
+          prevAudioNotes[eliminada.audioIndex] = "";
+        }
         const filtradas = prevKanban.filter((_: any, idx: number) => idx !== noteIndex);
         return {
           ...h,
+          audioNotes: prevAudioNotes,
           kanbanNotes: filtradas,
         } as InspectionFinding;
       }
       return h;
     });
     hallazgosRef.current = actualizados;
+    prevFindingsJsonRef.current = JSON.stringify(actualizados);
     setHallazgos(actualizados);
     sincronizarHallazgosNeon(actualizados);
     mostrarToast("Nota Kanban eliminada.");
@@ -1807,6 +1904,14 @@ export default function InspeccionVehiculo({
   const handleTranscribirAudioExistente = async (audioUrl: string, targetPinId: string) => {
     setPinAccionActivaId(targetPinId);
     setTranscribiendoVoz(true);
+
+    const hallazgoInicial = hallazgosRef.current.find((h) => h.id === targetPinId);
+    const listaAudiosInicial =
+      hallazgoInicial?.audioUrls || (hallazgoInicial?.audioUrl ? [hallazgoInicial.audioUrl] : []);
+    const audioIdx = Math.max(0, listaAudiosInicial.indexOf(audioUrl));
+
+    // 1. Crear la tarjeta Kanban ENSEGUIDA (0ms) para que quede visible y guardada al instante
+    agregarNotaKanbanEnPin(targetPinId, "⏳ Convirtiendo audio en nota...", audioIdx, true);
 
     try {
       const audioLocation = new URL(audioUrl, window.location.origin);
@@ -1821,25 +1926,18 @@ export default function InspeccionVehiculo({
 
       const audioBlob = await response.blob();
       const textoTranscrito = await transcribirAudioATexto(audioBlob, false);
-      if (!textoTranscrito) {
-        mostrarToast("No se pudo convertir este audio a texto.", "err");
-        return;
-      }
+      const textoFinal =
+        textoTranscrito.trim() || `Nota de Voz #${audioIdx + 1} (escribe o edita aquí el detalle)`;
 
-      const hallazgoActual = hallazgosRef.current.find((h) => h.id === targetPinId);
-      if (!hallazgoActual) {
-        throw new Error("No se encontró el hallazgo asociado al audio.");
-      }
-
-      const listaAudios = hallazgoActual.audioUrls || (hallazgoActual.audioUrl ? [hallazgoActual.audioUrl] : []);
-      const audioIdx = listaAudios.indexOf(audioUrl);
-      agregarNotaKanbanEnPin(targetPinId, textoTranscrito, audioIdx >= 0 ? audioIdx : undefined);
+      agregarNotaKanbanEnPin(targetPinId, textoFinal, audioIdx, true);
       mostrarToast("✓ Audio transformado en tarjeta de nota Kanban.");
     } catch (error) {
       console.error("Error al transcribir audio guardado:", error);
-      mostrarToast(
-        error instanceof Error ? error.message : "No se pudo leer el audio para transcribirlo.",
-        "err"
+      agregarNotaKanbanEnPin(
+        targetPinId,
+        `Nota de Voz #${audioIdx + 1} (escribe o edita aquí el detalle)`,
+        audioIdx,
+        true
       );
     } finally {
       setTranscribiendoVoz(false);
@@ -1850,22 +1948,35 @@ export default function InspeccionVehiculo({
   // DICTADO POR VOZ (AUDIO A TEXTO) Y GRABACIÓN DE AUDIO REAL EN CLOUDFLARE R2 + MICRÓFONO NATIVO PC
   const pcMicSessionRef = useRef<{ sessionId: string; targetPinId: string } | null>(null);
   const textoReconocidoAudioRef = useRef<string>("");
+  const activeAudioNoteIndexRef = useRef<number>(0);
 
   const guardarAudioBlobEnPin = async (
     targetPinId: string,
     audioBlob: Blob,
     mimeFinal: string,
     fallbackDataUri?: string,
-    textoNotaKanban?: string
-  ) => {
+    textoNotaKanban?: string,
+    explicitAudioIdx?: number
+  ): Promise<number> => {
     const localPreviewUrl = fallbackDataUri || URL.createObjectURL(audioBlob);
     const limpioNota = (textoNotaKanban || "").trim();
+    let idxAudioAsignado = typeof explicitAudioIdx === "number" ? explicitAudioIdx : 0;
+
+    lastLocalMutationRef.current = Date.now();
     const prevInit = hallazgosRef.current;
     const actualizadosInit = prevInit.map((h) => {
       if (h.id === targetPinId) {
         const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
-        const idxAudio = prevAudios.length;
-        const nuevosAudios = [...prevAudios, localPreviewUrl];
+        const idxAudio =
+          typeof explicitAudioIdx === "number" ? explicitAudioIdx : prevAudios.length;
+        idxAudioAsignado = idxAudio;
+        const nuevosAudios = [...prevAudios];
+        if (idxAudio < nuevosAudios.length) {
+          nuevosAudios[idxAudio] = localPreviewUrl;
+        } else {
+          nuevosAudios.push(localPreviewUrl);
+        }
+
         const prevKanban = Array.isArray((h as any).kanbanNotes)
           ? [...(h as any).kanbanNotes]
           : [];
@@ -1874,13 +1985,21 @@ export default function InspeccionVehiculo({
           : [];
 
         if (limpioNota) {
-          prevKanban.push({
-            id: `kn_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-            text: limpioNota,
-            createdAt: new Date().toISOString(),
-            source: "audio",
-            audioIndex: idxAudio,
-          });
+          const existingKanbanIdx = prevKanban.findIndex((n: any) => n.audioIndex === idxAudio);
+          if (existingKanbanIdx >= 0) {
+            prevKanban[existingKanbanIdx] = {
+              ...prevKanban[existingKanbanIdx],
+              text: limpioNota,
+            };
+          } else {
+            prevKanban.push({
+              id: `kn_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              text: limpioNota,
+              createdAt: new Date().toISOString(),
+              source: "audio",
+              audioIndex: idxAudio,
+            });
+          }
           prevAudioNotes[idxAudio] = limpioNota;
         }
 
@@ -1895,60 +2014,63 @@ export default function InspeccionVehiculo({
       return h;
     });
     hallazgosRef.current = actualizadosInit;
+    prevFindingsJsonRef.current = JSON.stringify(actualizadosInit);
     setHallazgos(actualizadosInit);
     sincronizarHallazgosNeon(actualizadosInit);
-    mostrarToast(
-      limpioNota
-        ? "✓ Audio grabado y transformado en tarjeta de nota Kanban."
-        : "✓ Nota de audio grabada y asociada."
-    );
 
-    try {
-      const formData = new FormData();
-      const ext = mimeFinal.includes("wav")
-        ? "wav"
-        : mimeFinal.includes("mp4")
-        ? "mp4"
-        : mimeFinal.includes("aac")
-        ? "aac"
-        : "webm";
-      formData.append("file", audioBlob, `audio_${targetPinId}_${Date.now()}.${ext}`);
-      formData.append("folder", "taller_notas_voz");
-      formData.append("tipo", "audio");
-      if (ordenActiva?.id) formData.append("orderId", ordenActiva.id);
-      if (ordenActiva?.orderNumber) formData.append("orderNumber", ordenActiva.orderNumber);
-      if (ordenActiva?.plate) formData.append("plate", ordenActiva.plate);
-      formData.append("uploadedBy", ordenActiva?.mechanic || "Taller Mecánico");
+    // Subir archivo de audio a Cloudflare R2 en segundo plano sin bloquear la nota Kanban
+    void (async () => {
+      try {
+        const formData = new FormData();
+        const ext = mimeFinal.includes("wav")
+          ? "wav"
+          : mimeFinal.includes("mp4")
+          ? "mp4"
+          : mimeFinal.includes("aac")
+          ? "aac"
+          : "webm";
+        formData.append("file", audioBlob, `audio_${targetPinId}_${Date.now()}.${ext}`);
+        formData.append("folder", "taller_notas_voz");
+        formData.append("tipo", "audio");
+        if (ordenActiva?.id) formData.append("orderId", ordenActiva.id);
+        if (ordenActiva?.orderNumber) formData.append("orderNumber", ordenActiva.orderNumber);
+        if (ordenActiva?.plate) formData.append("plate", ordenActiva.plate);
+        formData.append("uploadedBy", ordenActiva?.mechanic || "Taller Mecánico");
 
-      const res = await fetch("/api/storage/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (data.success && data.url) {
-        const prev = hallazgosRef.current;
-        const actualizados = prev.map((h) => {
-          if (h.id === targetPinId) {
-            const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
-            const nuevosAudios = prevAudios.map((u) => (u === localPreviewUrl ? data.url : u));
-            if (!nuevosAudios.includes(data.url)) {
-              nuevosAudios.push(data.url);
-            }
-            return {
-              ...h,
-              audioUrl: nuevosAudios[0],
-              audioUrls: nuevosAudios,
-            };
-          }
-          return h;
+        const res = await fetch("/api/storage/upload", {
+          method: "POST",
+          body: formData,
         });
-        hallazgosRef.current = actualizados;
-        setHallazgos(actualizados);
-        sincronizarHallazgosNeon(actualizados);
+        const data = await res.json();
+        if (data.success && data.url) {
+          lastLocalMutationRef.current = Date.now();
+          const prev = hallazgosRef.current;
+          const actualizados = prev.map((h) => {
+            if (h.id === targetPinId) {
+              const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
+              const nuevosAudios = prevAudios.map((u) => (u === localPreviewUrl ? data.url : u));
+              if (!nuevosAudios.includes(data.url)) {
+                nuevosAudios.push(data.url);
+              }
+              return {
+                ...h,
+                audioUrl: nuevosAudios[0],
+                audioUrls: nuevosAudios,
+              };
+            }
+            return h;
+          });
+          hallazgosRef.current = actualizados;
+          prevFindingsJsonRef.current = JSON.stringify(actualizados);
+          setHallazgos(actualizados);
+          sincronizarHallazgosNeon(actualizados);
+        }
+      } catch {
+        // Conservar vista previa local
       }
-    } catch {
-      // Conservar vista previa local
-    }
+    })();
+
+    return idxAudioAsignado;
   };
 
   const iniciarReconocimientoEnVivo = (
@@ -2024,9 +2146,17 @@ export default function InspeccionVehiculo({
           speechReconocioTextoRef.current = true;
           if (soloCapturarParaNotaKanban) {
             const baseKanban = textoNotaInicialAudioRef.current.trim();
-            textoReconocidoAudioRef.current = baseKanban
+            const textoActualizado = baseKanban
               ? `${baseKanban} ${dictadoLimpio}`
               : dictadoLimpio;
+            textoReconocidoAudioRef.current = textoActualizado;
+            // Actualizar la tarjeta Kanban EN VIVO y guardarla enseguida
+            agregarNotaKanbanEnPin(
+              targetPinId,
+              textoActualizado,
+              activeAudioNoteIndexRef.current,
+              hasFinalNow
+            );
           } else {
             const base = textoBaseRef.current.trim();
             const nuevoTexto = base ? `${base} ${dictadoLimpio}` : dictadoLimpio;
@@ -2062,6 +2192,14 @@ export default function InspeccionVehiculo({
       recognition.onend = () => {
         if (soloCapturarParaNotaKanban) {
           textoNotaInicialAudioRef.current = textoReconocidoAudioRef.current;
+          if (textoReconocidoAudioRef.current.trim()) {
+            agregarNotaKanbanEnPin(
+              targetPinId,
+              textoReconocidoAudioRef.current.trim(),
+              activeAudioNoteIndexRef.current,
+              true
+            );
+          }
         } else {
           textoBaseRef.current = observacionTextoRef.current;
           if (speechReconocioTextoRef.current) {
@@ -2143,7 +2281,7 @@ export default function InspeccionVehiculo({
       setEscuchandoVoz(false);
       setSegundosGrabandoAudio(0);
 
-      // Si estaba grabando con el micrófono nativo de Windows PC, obtener el WAV, asociarlo y crear nota Kanban
+      // Si estaba grabando con el micrófono nativo de Windows PC, obtener el WAV, asociarlo y crear nota Kanban enseguida
       if (activePcSession) {
         try {
           const res = await fetch("/api/taller/pc-mic", {
@@ -2164,43 +2302,36 @@ export default function InspeccionVehiculo({
             const wavBlob = new Blob([bytes], { type: "audio/wav" });
             const dataUri = `data:audio/wav;base64,${data.audioBase64}`;
 
-            let textoTranscritoFinal = "";
-            if (wavBlob.size > 400) {
-              setTranscribiendoVoz(true);
-              try {
-                const textoTranscrito = await transcribirAudioATexto(wavBlob);
-                if (textoTranscrito) {
-                  textoTranscritoFinal = textoTranscrito;
-                }
-              } catch (error) {
-                console.error("No se pudo transcribir la grabación del micrófono PC:", error);
-              } finally {
-                setTranscribiendoVoz(false);
-              }
-            }
+            const textoInmediato =
+              String(data?.text || "").trim() || textoReconocidoAudioRef.current.trim();
 
-            const notaKanbanTexto =
-              textoTranscritoFinal || textoReconocidoAudioRef.current.trim();
-            await guardarAudioBlobEnPin(
+            // Guardar audio y crear la tarjeta Kanban ENSEGUIDA (0ms)
+            const idxAudio = await guardarAudioBlobEnPin(
               activePcSession.targetPinId,
               wavBlob,
               "audio/wav",
               dataUri,
-              notaKanbanTexto
+              textoInmediato || "⏳ Convirtiendo audio en nota...",
+              activeAudioNoteIndexRef.current
             );
-            if (!notaKanbanTexto) {
-              mostrarToast(
-                "Audio guardado. Pulsa '✨ Crear Nota' si deseas reintentar la conversión a texto.",
-                "err"
-              );
+
+            if (!textoInmediato && wavBlob.size > 400) {
+              setTranscribiendoVoz(true);
+              try {
+                const textoTranscrito = await transcribirAudioATexto(wavBlob, false);
+                const finalTxt =
+                  textoTranscrito.trim() ||
+                  textoReconocidoAudioRef.current.trim() ||
+                  `Nota de Voz #${idxAudio + 1} (escribe o edita aquí el detalle)`;
+                agregarNotaKanbanEnPin(activePcSession.targetPinId, finalTxt, idxAudio, true);
+              } finally {
+                setTranscribiendoVoz(false);
+              }
             }
-          } else {
-            mostrarToast(data?.error || "No se pudo recuperar el audio grabado.", "err");
           }
         } catch (error) {
           setTranscribiendoVoz(false);
           console.error("Error al recuperar o transcribir el audio grabado:", error);
-          mostrarToast("No se pudo recuperar o transcribir el audio grabado.", "err");
         }
       }
       return;
@@ -2211,6 +2342,10 @@ export default function InspeccionVehiculo({
         ? textoActualDirecto
         : observacionTextoRef.current || observacionTexto || pinObjetivo?.descripcion || ""
     ).trim();
+
+    const audiosExistentesPin =
+      pinObjetivo?.audioUrls || (pinObjetivo?.audioUrl ? [pinObjetivo.audioUrl] : []);
+    activeAudioNoteIndexRef.current = audiosExistentesPin.length;
 
     textoBaseRef.current = textoPrevio;
     textoNotaInicialAudioRef.current = "";
@@ -2284,67 +2419,66 @@ export default function InspeccionVehiculo({
               : null;
           const audioBlob = rawBlob.size > 200 ? rawBlob : wavRespaldo || rawBlob;
           const mimeFinal = audioBlob === wavRespaldo ? "audio/wav" : mime;
-          let textoTranscritoFinal = "";
 
-          if (
-            (modo === "audio" || !speechReconocioTextoRef.current) &&
-            (pcmChunksRef.current.length > 0 || audioBlob.size > 400)
-          ) {
-            setTranscribiendoVoz(true);
-            try {
-              const textoTranscrito = await transcribirAudioATexto(audioBlob);
-              if (textoTranscrito) {
-                textoTranscritoFinal = textoTranscrito;
-                if (modo !== "audio") {
-                  const base = textoPrevio;
-                  const nuevoTexto = base ? `${base} ${textoTranscrito}` : textoTranscrito;
-                  textoBaseRef.current = nuevoTexto;
-                  observacionTextoRef.current = nuevoTexto;
-                  setObservacionTexto(nuevoTexto);
-                  handleGuardarDetallePin(tipoPin, nuevoTexto, targetPinId);
-                }
-              }
-            } catch (error) {
-              console.error("No se pudo transcribir la grabación de voz:", error);
-              if (modo !== "audio") {
-                mostrarToast(
-                  error instanceof Error ? error.message : "No se pudo transcribir el audio.",
-                  "err"
-                );
-              }
-            } finally {
-              setTranscribiendoVoz(false);
-            }
-          }
-
-          // Si es GRABACIÓN DE NOTA DE AUDIO (botón de micrófono en evidencia), guardar el clip de audio Y crear tarjeta Kanban (sin tocar Descripción):
+          // Si es GRABACIÓN DE NOTA DE AUDIO (botón de micrófono en evidencia):
+          // 1. Guardar el audio y crear la tarjeta Kanban ENSEGUIDA (0ms, sin esperar a Whisper)
           if (modo === "audio") {
-            if (audioBlob.size < 50) {
-              mostrarToast("La grabación fue demasiado corta.", "err");
+            if (audioBlob.size < 50 && !wavRespaldo) {
               return;
             }
-            const notaKanbanTexto =
-              textoTranscritoFinal || textoReconocidoAudioRef.current.trim();
-            await guardarAudioBlobEnPin(
+            const textoEnVivo = textoReconocidoAudioRef.current.trim();
+            const idxAudio = await guardarAudioBlobEnPin(
               targetPinId,
               audioBlob,
               mimeFinal,
               undefined,
-              notaKanbanTexto
+              textoEnVivo || "⏳ Convirtiendo audio en nota...",
+              activeAudioNoteIndexRef.current
             );
-            if (!notaKanbanTexto) {
-              mostrarToast(
-                "Audio guardado. Pulsa '✨ Crear Nota' si deseas convertirlo a nota Kanban.",
-                "err"
-              );
+
+            // 2. Si el reconocimiento en vivo aún no entregó texto, transcribir con servidor Windows / Whisper y actualizar la tarjeta
+            if (!textoEnVivo && (pcmChunksRef.current.length > 0 || audioBlob.size > 400)) {
+              setTranscribiendoVoz(true);
+              try {
+                const textoTranscrito = await transcribirAudioATexto(audioBlob, true);
+                const textoFinal =
+                  textoTranscrito.trim() ||
+                  textoReconocidoAudioRef.current.trim() ||
+                  `Nota de Voz #${idxAudio + 1} (escribe o edita aquí el detalle)`;
+                agregarNotaKanbanEnPin(targetPinId, textoFinal, idxAudio, true);
+              } catch {
+                const fallbackTxt =
+                  textoReconocidoAudioRef.current.trim() ||
+                  `Nota de Voz #${idxAudio + 1} (escribe o edita aquí el detalle)`;
+                agregarNotaKanbanEnPin(targetPinId, fallbackTxt, idxAudio, true);
+              } finally {
+                setTranscribiendoVoz(false);
+              }
             }
             return;
           }
 
-          if (observacionTextoRef.current.trim()) {
-            mostrarToast("✓ Dictado listo.");
-          } else {
-            mostrarToast("No se detectó voz clara. Intenta hablar más cerca del micrófono.", "err");
+          // Modo dictado directo a Descripción
+          if (
+            !speechReconocioTextoRef.current &&
+            (pcmChunksRef.current.length > 0 || audioBlob.size > 400)
+          ) {
+            setTranscribiendoVoz(true);
+            try {
+              const textoTranscrito = await transcribirAudioATexto(audioBlob, true);
+              if (textoTranscrito) {
+                const base = textoPrevio;
+                const nuevoTexto = base ? `${base} ${textoTranscrito}` : textoTranscrito;
+                textoBaseRef.current = nuevoTexto;
+                observacionTextoRef.current = nuevoTexto;
+                setObservacionTexto(nuevoTexto);
+                handleGuardarDetallePin(tipoPin, nuevoTexto, targetPinId);
+              }
+            } catch (error) {
+              console.error("No se pudo transcribir la grabación de voz:", error);
+            } finally {
+              setTranscribiendoVoz(false);
+            }
           }
         };
 

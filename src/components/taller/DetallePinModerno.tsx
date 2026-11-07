@@ -881,7 +881,7 @@ export function DetallePinModerno({
                                   </div>
 
                                   <div className="flex items-center gap-1 shrink-0">
-                                    {onTranscribirAudio && !notaAsociadaAudio && (
+                                    {onTranscribirAudio && (
                                       <button
                                         type="button"
                                         disabled={transcribiendoEsteBloque}
@@ -889,10 +889,18 @@ export function DetallePinModerno({
                                           e.stopPropagation();
                                           onTranscribirAudio(audioUrl, bloque.id);
                                         }}
-                                        className="h-7 px-2.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[10px] font-bold cursor-pointer transition-colors"
-                                        title="Transformar audio en tarjeta de nota Kanban"
+                                        className={`h-7 px-2.5 rounded-lg border text-[10px] font-bold cursor-pointer transition-colors ${
+                                          notaAsociadaAudio
+                                            ? "bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+                                            : "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/30 text-amber-700 dark:text-amber-300"
+                                        }`}
+                                        title="Transformar audio en tarjeta de nota Kanban y guardar enseguida"
                                       >
-                                        {transcribiendoEsteBloque ? "..." : "✨ Crear Nota"}
+                                        {transcribiendoEsteBloque
+                                          ? "⏳ Procesando..."
+                                          : notaAsociadaAudio
+                                            ? "✓ Nota Guardada"
+                                            : "✨ Crear Nota"}
                                       </button>
                                     )}
                                     {onEliminarAudio && (
@@ -925,16 +933,16 @@ export function DetallePinModerno({
                       </div>
                     )}
 
-                    {/* TABLERO DE NOTAS TIPO KANBAN (TEXTO TRANSFORMADO DEL AUDIO) */}
+                    {/* TABLERO DE NOTAS TIPO KANBAN (TEXTO TRANSFORMADO DEL AUDIO - GUARDADO AUTOMÁTICO) */}
                     {notasKanbanBloque.length > 0 && (
                       <div className="space-y-2 pt-1">
                         <div className="flex items-center justify-between px-0.5">
                           <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full bg-amber-500" />
-                            <span>Notas de Voz Tipo Kanban ({notasKanbanBloque.length})</span>
+                            <span>Notas Tipo Kanban ({notasKanbanBloque.length})</span>
                           </span>
-                          <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400">
-                            Editable en tarjeta
+                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            <span>✓ Guardado automático</span>
                           </span>
                         </div>
 
@@ -946,12 +954,15 @@ export function DetallePinModerno({
                               className="group relative rounded-2xl border-l-4 border-l-amber-500 border border-amber-300/70 dark:border-amber-500/30 bg-amber-50/70 dark:bg-zinc-900/90 p-3 shadow-sm hover:shadow-md transition-all flex flex-col gap-2"
                             >
                               <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-1.5 min-w-0">
+                                <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                                   <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[10px] font-extrabold tracking-tight">
                                     📌 Nota #{nIdx + 1}
                                   </span>
                                   <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-300 text-[9px] font-bold">
-                                    🎙️ De Audio
+                                    🎙️ Audio #{typeof notaItem.audioIndex === "number" ? notaItem.audioIndex + 1 : nIdx + 1}
+                                  </span>
+                                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 text-[9px] font-bold">
+                                    ✓ Guardada
                                   </span>
                                 </div>
                                 {onEliminarNotaKanban && (
@@ -975,7 +986,7 @@ export function DetallePinModerno({
                                 onChange={(e) =>
                                   onEditarNotaKanban?.(nIdx, e.target.value, bloque.id)
                                 }
-                                placeholder="Texto de la nota..."
+                                placeholder="Escribe o edita el texto de la nota aquí..."
                                 className="w-full rounded-xl bg-white/80 dark:bg-black/40 border border-amber-200/80 dark:border-white/10 px-2.5 py-1.5 text-xs font-medium text-zinc-800 dark:text-zinc-100 focus:outline-none focus:border-amber-500 resize-none leading-relaxed"
                               />
                             </div>
