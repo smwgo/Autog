@@ -1680,19 +1680,8 @@ export default function InspeccionVehiculo({
         setTranscribiendoVoz(false);
 
         if (textoTranscrito) {
-          const hallazgoActual = hallazgosRef.current.find((h) => h.id === targetPinId);
-          const textoExistente = hallazgoActual?.descripcion?.trim() || "";
-          const nuevaDescripcion = textoExistente
-            ? `${textoExistente} ${textoTranscrito}`
-            : textoTranscrito;
-          const tipo = hallazgoActual?.tipo || tipoSeleccionado;
-
-          observacionTextoRef.current = nuevaDescripcion;
-          if (pinSeleccionadoId === targetPinId) {
-            setObservacionTexto(nuevaDescripcion);
-          }
-          handleGuardarDetallePin(tipo, nuevaDescripcion, targetPinId);
-          mostrarToast("✓ Audio guardado y transcripción agregada a la nota.");
+          agregarNotaKanbanEnPin(targetPinId, textoTranscrito);
+          mostrarToast("✓ Audio guardado y convertido en nota tarjeta Kanban.");
         } else {
           mostrarToast("Audio guardado, pero no se pudo convertir a texto.", "err");
         }
@@ -1707,6 +1696,112 @@ export default function InspeccionVehiculo({
         "err"
       );
     }
+  };
+
+  const agregarNotaKanbanEnPin = (
+    targetPinId: string,
+    textoNota: string,
+    audioIndex?: number
+  ) => {
+    const limpio = textoNota.trim();
+    if (!limpio) return;
+
+    const prev = hallazgosRef.current;
+    const actualizados = prev.map((h) => {
+      if (h.id === targetPinId) {
+        const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
+        const idxAudio =
+          typeof audioIndex === "number" ? audioIndex : Math.max(0, prevAudios.length - 1);
+        const prevKanban = Array.isArray((h as any).kanbanNotes)
+          ? [...(h as any).kanbanNotes]
+          : [];
+        const prevAudioNotes = Array.isArray((h as any).audioNotes)
+          ? [...(h as any).audioNotes]
+          : [];
+
+        const existingIdx =
+          typeof audioIndex === "number"
+            ? prevKanban.findIndex((n: any) => n.audioIndex === audioIndex)
+            : -1;
+
+        if (existingIdx >= 0) {
+          prevKanban[existingIdx] = {
+            ...prevKanban[existingIdx],
+            text: limpio,
+          };
+        } else {
+          prevKanban.push({
+            id: `kn_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            text: limpio,
+            createdAt: new Date().toISOString(),
+            source: "audio",
+            audioIndex: idxAudio,
+          });
+        }
+        prevAudioNotes[idxAudio] = limpio;
+
+        return {
+          ...h,
+          audioNotes: prevAudioNotes,
+          kanbanNotes: prevKanban,
+        } as InspectionFinding;
+      }
+      return h;
+    });
+
+    hallazgosRef.current = actualizados;
+    setHallazgos(actualizados);
+    sincronizarHallazgosNeon(actualizados);
+  };
+
+  const handleEditarNotaKanbanPin = (
+    targetPinId: string,
+    noteIndex: number,
+    nuevoTexto: string
+  ) => {
+    const prev = hallazgosRef.current;
+    const actualizados = prev.map((h) => {
+      if (h.id === targetPinId) {
+        const prevKanban = Array.isArray((h as any).kanbanNotes)
+          ? [...(h as any).kanbanNotes]
+          : [];
+        if (prevKanban[noteIndex]) {
+          prevKanban[noteIndex] = { ...prevKanban[noteIndex], text: nuevoTexto };
+        }
+        return {
+          ...h,
+          kanbanNotes: prevKanban,
+        } as InspectionFinding;
+      }
+      return h;
+    });
+    hallazgosRef.current = actualizados;
+    setHallazgos(actualizados);
+    if (debounceSyncPinRef.current) clearTimeout(debounceSyncPinRef.current);
+    debounceSyncPinRef.current = setTimeout(() => {
+      sincronizarHallazgosNeon(actualizados);
+    }, 350);
+  };
+
+  const handleEliminarNotaKanbanPin = (targetPinId: string, noteIndex: number) => {
+    const prev = hallazgosRef.current;
+    const actualizados = prev.map((h) => {
+      if (h.id === targetPinId) {
+        const prevKanban = Array.isArray((h as any).kanbanNotes)
+          ? [...(h as any).kanbanNotes]
+          : [];
+        const filtradas = prevKanban.filter((_: any, idx: number) => idx !== noteIndex);
+        return {
+          ...h,
+          kanbanNotes: filtradas,
+        } as InspectionFinding;
+      }
+      return h;
+    });
+    hallazgosRef.current = actualizados;
+    setHallazgos(actualizados);
+    sincronizarHallazgosNeon(actualizados);
+    mostrarToast("Nota Kanban eliminada.");
   };
 
   const handleTranscribirAudioExistente = async (audioUrl: string, targetPinId: string) => {
@@ -1736,17 +1831,10 @@ export default function InspeccionVehiculo({
         throw new Error("No se encontró el hallazgo asociado al audio.");
       }
 
-      const textoExistente = hallazgoActual.descripcion?.trim() || "";
-      const nuevaDescripcion = textoExistente
-        ? `${textoExistente} ${textoTranscrito}`
-        : textoTranscrito;
-
-      observacionTextoRef.current = nuevaDescripcion;
-      if (pinSeleccionadoId === targetPinId) {
-        setObservacionTexto(nuevaDescripcion);
-      }
-      handleGuardarDetallePin(hallazgoActual.tipo, nuevaDescripcion, targetPinId);
-      mostrarToast("✓ Transcripción agregada a la nota.");
+      const listaAudios = hallazgoActual.audioUrls || (hallazgoActual.audioUrl ? [hallazgoActual.audioUrl] : []);
+      const audioIdx = listaAudios.indexOf(audioUrl);
+      agregarNotaKanbanEnPin(targetPinId, textoTranscrito, audioIdx >= 0 ? audioIdx : undefined);
+      mostrarToast("✓ Audio transformado en tarjeta de nota Kanban.");
     } catch (error) {
       console.error("Error al transcribir audio guardado:", error);
       mostrarToast(
@@ -1761,31 +1849,59 @@ export default function InspeccionVehiculo({
 
   // DICTADO POR VOZ (AUDIO A TEXTO) Y GRABACIÓN DE AUDIO REAL EN CLOUDFLARE R2 + MICRÓFONO NATIVO PC
   const pcMicSessionRef = useRef<{ sessionId: string; targetPinId: string } | null>(null);
+  const textoReconocidoAudioRef = useRef<string>("");
 
   const guardarAudioBlobEnPin = async (
     targetPinId: string,
     audioBlob: Blob,
     mimeFinal: string,
-    fallbackDataUri?: string
+    fallbackDataUri?: string,
+    textoNotaKanban?: string
   ) => {
     const localPreviewUrl = fallbackDataUri || URL.createObjectURL(audioBlob);
+    const limpioNota = (textoNotaKanban || "").trim();
     const prevInit = hallazgosRef.current;
     const actualizadosInit = prevInit.map((h) => {
       if (h.id === targetPinId) {
         const prevAudios = h.audioUrls || (h.audioUrl ? [h.audioUrl] : []);
+        const idxAudio = prevAudios.length;
         const nuevosAudios = [...prevAudios, localPreviewUrl];
+        const prevKanban = Array.isArray((h as any).kanbanNotes)
+          ? [...(h as any).kanbanNotes]
+          : [];
+        const prevAudioNotes = Array.isArray((h as any).audioNotes)
+          ? [...(h as any).audioNotes]
+          : [];
+
+        if (limpioNota) {
+          prevKanban.push({
+            id: `kn_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            text: limpioNota,
+            createdAt: new Date().toISOString(),
+            source: "audio",
+            audioIndex: idxAudio,
+          });
+          prevAudioNotes[idxAudio] = limpioNota;
+        }
+
         return {
           ...h,
-          descripcion: observacionTextoRef.current || h.descripcion,
           audioUrl: nuevosAudios[0],
           audioUrls: nuevosAudios,
-        };
+          audioNotes: prevAudioNotes,
+          kanbanNotes: prevKanban,
+        } as InspectionFinding;
       }
       return h;
     });
     hallazgosRef.current = actualizadosInit;
     setHallazgos(actualizadosInit);
-    mostrarToast("✓ Nota de audio grabada y asociada.");
+    sincronizarHallazgosNeon(actualizadosInit);
+    mostrarToast(
+      limpioNota
+        ? "✓ Audio grabado y transformado en tarjeta de nota Kanban."
+        : "✓ Nota de audio grabada y asociada."
+    );
 
     try {
       const formData = new FormData();
@@ -1820,7 +1936,6 @@ export default function InspeccionVehiculo({
             }
             return {
               ...h,
-              descripcion: observacionTextoRef.current || h.descripcion,
               audioUrl: nuevosAudios[0],
               audioUrls: nuevosAudios,
             };
@@ -1840,7 +1955,8 @@ export default function InspeccionVehiculo({
     tipoPin: string,
     targetPinId: string,
     autoStopOnSilence: boolean,
-    onFatalError?: () => void
+    onFatalError?: () => void,
+    soloCapturarParaNotaKanban: boolean = false
   ): boolean => {
     const SpeechRecognition =
       typeof window !== "undefined" &&
@@ -1875,7 +1991,9 @@ export default function InspeccionVehiculo({
               recognition.stop();
             } catch {}
             recognitionRef.current = null;
-            handleGuardarDetallePin(tipoPin, observacionTextoRef.current, targetPinId);
+            if (!soloCapturarParaNotaKanban) {
+              handleGuardarDetallePin(tipoPin, observacionTextoRef.current, targetPinId);
+            }
           }
         }, 1100);
       };
@@ -1904,12 +2022,19 @@ export default function InspeccionVehiculo({
         const dictadoLimpio = [finalStr, interimStr].filter(Boolean).join(" ").trim();
         if (dictadoLimpio) {
           speechReconocioTextoRef.current = true;
-          const base = textoBaseRef.current.trim();
-          const nuevoTexto = base ? `${base} ${dictadoLimpio}` : dictadoLimpio;
-          observacionTextoRef.current = nuevoTexto;
-          setObservacionTexto(nuevoTexto);
-          if (hasFinalNow) {
-            handleGuardarDetallePin(tipoPin, nuevoTexto, targetPinId);
+          if (soloCapturarParaNotaKanban) {
+            const baseKanban = textoNotaInicialAudioRef.current.trim();
+            textoReconocidoAudioRef.current = baseKanban
+              ? `${baseKanban} ${dictadoLimpio}`
+              : dictadoLimpio;
+          } else {
+            const base = textoBaseRef.current.trim();
+            const nuevoTexto = base ? `${base} ${dictadoLimpio}` : dictadoLimpio;
+            observacionTextoRef.current = nuevoTexto;
+            setObservacionTexto(nuevoTexto);
+            if (hasFinalNow) {
+              handleGuardarDetallePin(tipoPin, nuevoTexto, targetPinId);
+            }
           }
           resetSilenceAutoStop();
         }
@@ -1935,9 +2060,13 @@ export default function InspeccionVehiculo({
       };
 
       recognition.onend = () => {
-        textoBaseRef.current = observacionTextoRef.current;
-        if (speechReconocioTextoRef.current) {
-          handleGuardarDetallePin(tipoPin, observacionTextoRef.current, targetPinId);
+        if (soloCapturarParaNotaKanban) {
+          textoNotaInicialAudioRef.current = textoReconocidoAudioRef.current;
+        } else {
+          textoBaseRef.current = observacionTextoRef.current;
+          if (speechReconocioTextoRef.current) {
+            handleGuardarDetallePin(tipoPin, observacionTextoRef.current, targetPinId);
+          }
         }
         if (dictandoActivoRef.current && !falloRed) {
           try {
@@ -2014,7 +2143,7 @@ export default function InspeccionVehiculo({
       setEscuchandoVoz(false);
       setSegundosGrabandoAudio(0);
 
-      // Si estaba grabando con el micrófono nativo de Windows PC, obtener el WAV, asociarlo y transcribir si falta texto
+      // Si estaba grabando con el micrófono nativo de Windows PC, obtener el WAV, asociarlo y crear nota Kanban
       if (activePcSession) {
         try {
           const res = await fetch("/api/taller/pc-mic", {
@@ -2042,32 +2171,28 @@ export default function InspeccionVehiculo({
                 const textoTranscrito = await transcribirAudioATexto(wavBlob);
                 if (textoTranscrito) {
                   textoTranscritoFinal = textoTranscrito;
-                  const base = textoNotaInicialAudioRef.current.trim();
-                  const nuevoTexto = base ? `${base} ${textoTranscrito}` : textoTranscrito;
-                  textoBaseRef.current = nuevoTexto;
-                  observacionTextoRef.current = nuevoTexto;
-                  setObservacionTexto(nuevoTexto);
-                  handleGuardarDetallePin(tipoPin, nuevoTexto, activePcSession.targetPinId);
                 }
               } catch (error) {
                 console.error("No se pudo transcribir la grabación del micrófono PC:", error);
-                mostrarToast(
-                  error instanceof Error ? error.message : "No se pudo transcribir el audio.",
-                  "err"
-                );
               } finally {
                 setTranscribiendoVoz(false);
               }
             }
 
+            const notaKanbanTexto =
+              textoTranscritoFinal || textoReconocidoAudioRef.current.trim();
             await guardarAudioBlobEnPin(
               activePcSession.targetPinId,
               wavBlob,
               "audio/wav",
-              dataUri
+              dataUri,
+              notaKanbanTexto
             );
-            if (!textoTranscritoFinal && !observacionTextoRef.current.trim()) {
-              mostrarToast("Audio guardado, pero no se pudo convertir a texto.", "err");
+            if (!notaKanbanTexto) {
+              mostrarToast(
+                "Audio guardado. Pulsa '✨ Crear Nota' si deseas reintentar la conversión a texto.",
+                "err"
+              );
             }
           } else {
             mostrarToast(data?.error || "No se pudo recuperar el audio grabado.", "err");
@@ -2088,7 +2213,8 @@ export default function InspeccionVehiculo({
     ).trim();
 
     textoBaseRef.current = textoPrevio;
-    textoNotaInicialAudioRef.current = modo === "audio" ? textoPrevio : "";
+    textoNotaInicialAudioRef.current = "";
+    textoReconocidoAudioRef.current = "";
     observacionTextoRef.current = textoPrevio;
     speechReconocioTextoRef.current = false;
     pcmChunksRef.current = [];
@@ -2160,7 +2286,6 @@ export default function InspeccionVehiculo({
           const mimeFinal = audioBlob === wavRespaldo ? "audio/wav" : mime;
           let textoTranscritoFinal = "";
 
-          // Transcribir a texto en Descripción tanto en modo "dictado" como en modo "audio" si SpeechRecognition no escribió ya el texto
           if (
             (modo === "audio" || !speechReconocioTextoRef.current) &&
             (pcmChunksRef.current.length > 0 || audioBlob.size > 400)
@@ -2170,37 +2295,48 @@ export default function InspeccionVehiculo({
               const textoTranscrito = await transcribirAudioATexto(audioBlob);
               if (textoTranscrito) {
                 textoTranscritoFinal = textoTranscrito;
-                const base = textoPrevio;
-                const nuevoTexto = base ? `${base} ${textoTranscrito}` : textoTranscrito;
-                textoBaseRef.current = nuevoTexto;
-                observacionTextoRef.current = nuevoTexto;
-                setObservacionTexto(nuevoTexto);
-                handleGuardarDetallePin(tipoPin, nuevoTexto, targetPinId);
+                if (modo !== "audio") {
+                  const base = textoPrevio;
+                  const nuevoTexto = base ? `${base} ${textoTranscrito}` : textoTranscrito;
+                  textoBaseRef.current = nuevoTexto;
+                  observacionTextoRef.current = nuevoTexto;
+                  setObservacionTexto(nuevoTexto);
+                  handleGuardarDetallePin(tipoPin, nuevoTexto, targetPinId);
+                }
               }
             } catch (error) {
               console.error("No se pudo transcribir la grabación de voz:", error);
-              mostrarToast(
-                error instanceof Error ? error.message : "No se pudo transcribir el audio.",
-                "err"
-              );
+              if (modo !== "audio") {
+                mostrarToast(
+                  error instanceof Error ? error.message : "No se pudo transcribir el audio.",
+                  "err"
+                );
+              }
             } finally {
               setTranscribiendoVoz(false);
             }
           }
 
-          // Si es GRABACIÓN DE NOTA DE AUDIO (botón naranja de micrófono en PC o móvil), guardar además el clip de audio:
+          // Si es GRABACIÓN DE NOTA DE AUDIO (botón de micrófono en evidencia), guardar el clip de audio Y crear tarjeta Kanban (sin tocar Descripción):
           if (modo === "audio") {
             if (audioBlob.size < 50) {
               mostrarToast("La grabación fue demasiado corta.", "err");
               return;
             }
-            await guardarAudioBlobEnPin(targetPinId, audioBlob, mimeFinal);
-            if (
-              !textoTranscritoFinal &&
-              !speechReconocioTextoRef.current
-              && !observacionTextoRef.current.trim()
-            ) {
-              mostrarToast("Audio guardado, pero no se pudo convertir a texto.", "err");
+            const notaKanbanTexto =
+              textoTranscritoFinal || textoReconocidoAudioRef.current.trim();
+            await guardarAudioBlobEnPin(
+              targetPinId,
+              audioBlob,
+              mimeFinal,
+              undefined,
+              notaKanbanTexto
+            );
+            if (!notaKanbanTexto) {
+              mostrarToast(
+                "Audio guardado. Pulsa '✨ Crear Nota' si deseas convertirlo a nota Kanban.",
+                "err"
+              );
             }
             return;
           }
@@ -2284,18 +2420,18 @@ export default function InspeccionVehiculo({
     };
 
     // =========================================================================
-    // MODO 1: BOTÓN DE AUDIO (NARANJA) — Graba nota de audio Y convierte a texto en Descripción (PC y Móvil)
+    // MODO 1: BOTÓN DE AUDIO (NARANJA) — Graba nota de audio Y la transforma en tarjeta de nota Kanban (sin tocar Descripción)
     // =========================================================================
     if (modo === "audio") {
-      // En PC: iniciar también reconocimiento en vivo para que escriba en Descripción mientras graba el audio
+      // En PC: iniciar también reconocimiento en vivo en segundo plano para respaldo de la nota Kanban (sin escribir en Descripción)
       if (!esMovil) {
         dictandoActivoRef.current = true;
-        iniciarReconocimientoEnVivo(tipoPin, targetPinId, false);
+        iniciarReconocimientoEnVivo(tipoPin, targetPinId, false, undefined, true);
       }
 
       const okBrowserMic = await iniciarGrabadoraRespaldo();
       if (okBrowserMic) {
-        mostrarToast("🎙️ Grabando audio y convirtiendo a texto... pulsa Parar al terminar.");
+        mostrarToast("🎙️ Grabando audio para nota Kanban... pulsa Detener al terminar.");
         return;
       }
 
@@ -2317,7 +2453,7 @@ export default function InspeccionVehiculo({
             grabacionTimerRef.current = setInterval(() => {
               setSegundosGrabandoAudio((s) => s + 1);
             }, 1000);
-            mostrarToast("🎙️ Grabando nota de audio en PC... habla y pulsa Parar al terminar.");
+            mostrarToast("🎙️ Grabando nota de audio en PC... habla y pulsa Detener al terminar.");
             return;
           }
           pcMicSessionRef.current = null;
@@ -2968,6 +3104,9 @@ ${urlSeguimiento}`;
             onToggleVoz={(textoActualDirecto, modo, targetId) => handleToggleVozPin(targetId || pinActual.id, textoActualDirecto, modo)}
             onSubirAudio={(e, targetId) => handleSubirArchivoAudioPinR2(e, targetId || pinActual.id)}
             onTranscribirAudio={handleTranscribirAudioExistente}
+            onEditarNotaKanban={(noteIdx, texto, targetId) => handleEditarNotaKanbanPin(targetId || pinActual.id, noteIdx, texto)}
+            onEliminarNotaKanban={(noteIdx, targetId) => handleEliminarNotaKanbanPin(targetId || pinActual.id, noteIdx)}
+            onAgregarNotaKanban={(texto, targetId) => agregarNotaKanbanEnPin(targetId || pinActual.id, texto)}
             reproduciendoAudio={reproduciendoAudio}
             onReproducirAudio={handleReproducirAudioTexto}
             onEliminarAudio={(index, targetId) => handleEliminarAudioPin(targetId || pinActual.id, index)}
@@ -3422,6 +3561,9 @@ ${urlSeguimiento}`;
                 onToggleVoz={(textoActualDirecto, modo, targetId) => handleToggleVozPin(targetId || pinActual.id, textoActualDirecto, modo)}
                 onSubirAudio={(e, targetId) => handleSubirArchivoAudioPinR2(e, targetId || pinActual.id)}
                 onTranscribirAudio={handleTranscribirAudioExistente}
+                onEditarNotaKanban={(noteIdx, texto, targetId) => handleEditarNotaKanbanPin(targetId || pinActual.id, noteIdx, texto)}
+                onEliminarNotaKanban={(noteIdx, targetId) => handleEliminarNotaKanbanPin(targetId || pinActual.id, noteIdx)}
+                onAgregarNotaKanban={(texto, targetId) => agregarNotaKanbanEnPin(targetId || pinActual.id, texto)}
                 reproduciendoAudio={reproduciendoAudio}
                 onReproducirAudio={handleReproducirAudioTexto}
                 onEliminarAudio={(index, targetId) => handleEliminarAudioPin(targetId || pinActual.id, index)}

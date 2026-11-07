@@ -48,6 +48,9 @@ export interface DetallePinModernoProps {
   reproduciendoAudio: boolean;
   onReproducirAudio?: (text: string) => void;
   onEliminarAudio?: (idx?: number, targetPinId?: string) => void;
+  onEditarNotaKanban?: (noteIndex: number, nuevoTexto: string, targetPinId?: string) => void;
+  onEliminarNotaKanban?: (noteIndex: number, targetPinId?: string) => void;
+  onAgregarNotaKanban?: (texto: string, targetPinId?: string) => void;
   // Fotos (hasta 5 por bloque)
   subiendoFotos: boolean;
   onSubirFotos: (e: React.ChangeEvent<HTMLInputElement>, targetPinId?: string) => void;
@@ -86,6 +89,9 @@ export function DetallePinModerno({
   reproduciendoAudio: _reproduciendoAudio,
   onReproducirAudio: _onReproducirAudio,
   onEliminarAudio,
+  onEditarNotaKanban,
+  onEliminarNotaKanban,
+  onAgregarNotaKanban,
   subiendoFotos,
   onSubirFotos,
   onEliminarFoto,
@@ -402,8 +408,29 @@ export function DetallePinModerno({
               ? [bloque.audioUrl]
               : [];
 
+          const notasAudioBloque: string[] = Array.isArray((bloque as any).audioNotes)
+            ? (bloque as any).audioNotes
+            : [];
+          const notasKanbanBloque: {
+            id: string;
+            text: string;
+            createdAt?: string;
+            source?: "audio" | "manual";
+            audioIndex?: number;
+          }[] = Array.isArray((bloque as any).kanbanNotes)
+            ? (bloque as any).kanbanNotes
+            : notasAudioBloque.map((t, idx) => ({
+                id: `kn-${bloque.id}-${idx}`,
+                text: t,
+                source: "audio" as const,
+                audioIndex: idx,
+              }));
+
           const totalEvidenciasBloque =
-            soloFotosBloque.length + soloVideosBloque.length + soloAudiosBloque.length;
+            soloFotosBloque.length +
+            soloVideosBloque.length +
+            soloAudiosBloque.length +
+            notasKanbanBloque.length;
 
           const esteBloqueActivo =
             pinAccionActivaId === bloque.id || (!pinAccionActivaId && esPinPrincipal);
@@ -470,23 +497,11 @@ export function DetallePinModerno({
                 )}
               </div>
 
-              {/* Campo Descripción asociado a las fotos y audios de este bloque */}
+              {/* Campo Descripción asociado a las fotos de este bloque */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="block text-sm sm:text-base font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
                     <span>Descripción</span>
-                    {escuchandoEsteBloque && (
-                      <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 animate-pulse">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
-                        Grabando ({formatearSegundos(segundosGrabandoAudio)})...
-                      </span>
-                    )}
-                    {!escuchandoEsteBloque && transcribiendoEsteBloque && (
-                      <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 animate-pulse">
-                        <span className="w-2 h-2 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
-                        Convirtiendo tu voz a texto...
-                      </span>
-                    )}
                   </label>
                   {textoBloque.length > 0 && (
                     <button
@@ -508,18 +523,8 @@ export function DetallePinModerno({
                     type="text"
                     value={textoBloque}
                     onChange={(e) => onChangeObservacion(e.target.value, bloque.id)}
-                    placeholder={
-                      escuchandoEsteBloque
-                        ? "🎙️ Habla ahora al micrófono..."
-                        : transcribiendoEsteBloque
-                        ? "⏳ Convirtiendo tu voz a texto..."
-                        : "Escribe una descripción..."
-                    }
-                    className={`w-full rounded-xl bg-white dark:bg-white/[0.03] border pl-3.5 pr-3 py-2.5 sm:py-3 text-zinc-900 dark:text-white text-sm sm:text-base placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all ${
-                      escuchandoEsteBloque
-                        ? "border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/30 dark:bg-rose-500/10 placeholder:text-rose-600 dark:placeholder:text-rose-400 font-medium"
-                        : "border-zinc-200 dark:border-white/10 focus:border-blue-500/50"
-                    }`}
+                    placeholder="Escribe una descripción..."
+                    className="w-full rounded-xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/10 focus:border-blue-500/50 pl-3.5 pr-3 py-2.5 sm:py-3 text-zinc-900 dark:text-white text-sm sm:text-base placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all"
                   />
                 </div>
               </div>
@@ -626,31 +631,68 @@ export function DetallePinModerno({
                   </button>
                 </div>
 
-                {/* Indicador activo con cronómetro en tiempo real si está grabando voz en este bloque */}
+                {/* Indicador activo con diseño moderno de ondas al grabar audio en este bloque */}
                 {escuchandoEsteBloque && (
-                  <div className="h-11 px-3 rounded-xl border border-rose-400/50 bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-between shadow-sm">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="relative flex h-2.5 w-2.5 shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-600"></span>
-                      </span>
-                      <span className="text-xs font-mono font-black px-1.5 py-0.5 rounded bg-rose-600/15 text-rose-700 dark:text-rose-300 shrink-0">
-                        {formatearSegundos(segundosGrabandoAudio)}
-                      </span>
-                      <span className="text-xs font-bold truncate">
-                        Grabando audio para Evidencia #{numBloque}...
-                      </span>
+                  <div className="relative overflow-hidden p-3.5 rounded-2xl border border-rose-500/40 bg-gradient-to-r from-rose-500/15 via-rose-500/5 to-amber-500/10 dark:from-rose-500/20 dark:via-zinc-900/90 dark:to-amber-500/15 text-rose-700 dark:text-rose-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg shadow-rose-500/10 animate-fade-in">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-rose-600 text-white shadow-md shadow-rose-600/30 shrink-0">
+                        <span className="animate-ping absolute inset-0 rounded-xl bg-rose-500 opacity-30"></span>
+                        <svg className="w-5 h-5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                        </svg>
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-rose-600 text-white text-[11px] font-mono font-black tracking-wider shadow-xs">
+                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                            {formatearSegundos(segundosGrabandoAudio)}
+                          </span>
+                          <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate">
+                            Grabando nota de voz...
+                          </span>
+                        </div>
+                        <div className="mt-1.5 flex items-center gap-1 h-3">
+                          {[0.35, 0.85, 0.55, 1, 0.45, 0.9, 0.6, 0.95, 0.4, 0.75, 0.5, 0.8, 0.65, 0.35].map((h, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                height: `${Math.max(25, Math.round(h * 100))}%`,
+                                animationDelay: `${idx * 90}ms`,
+                              }}
+                              className="w-1 rounded-full bg-gradient-to-t from-rose-500 to-amber-400 animate-pulse"
+                            />
+                          ))}
+                          <span className="ml-1.5 text-[10px] font-medium text-zinc-600 dark:text-zinc-300 truncate">
+                            Convirtiendo tu voz a nota Kanban automáticamente
+                          </span>
+                        </div>
+                      </div>
                     </div>
+
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         onToggleVoz(textoBloque, "audio", bloque.id);
                       }}
-                      className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer shrink-0 shadow-xs"
+                      className="h-9 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold cursor-pointer shrink-0 shadow-md shadow-rose-600/25 flex items-center justify-center gap-1.5 transition-all active:scale-95"
                     >
-                      ⏹ Guardar Audio
+                      <span className="w-2.5 h-2.5 rounded-xs bg-white inline-block" />
+                      <span>Detener y Crear Nota</span>
                     </button>
+                  </div>
+                )}
+
+                {!escuchandoEsteBloque && transcribiendoEsteBloque && (
+                  <div className="p-3 rounded-xl border border-amber-400/40 bg-amber-50/70 dark:bg-amber-500/10 text-amber-800 dark:text-amber-200 flex items-center justify-between gap-2.5 text-xs font-semibold animate-pulse">
+                    <div className="flex items-center gap-2">
+                      <span className="w-4 h-4 rounded-full border-2 border-amber-500 border-t-transparent animate-spin shrink-0" />
+                      <span>Transformando audio en nota tarjeta Kanban...</span>
+                    </div>
+                    <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/20">
+                      IA Voz → Nota
+                    </span>
                   </div>
                 )}
 
@@ -779,100 +821,166 @@ export function DetallePinModerno({
                       </div>
                     )}
 
-                    {/* Audios asociados a las fotos y descripción de este bloque (con reproductor nativo para PC) */}
+                    {/* Audios asociados a este bloque (Rediseño moderno + Notas tipo Kanban) */}
                     {soloAudiosBloque.length > 0 && (
-                      <div className="space-y-2">
-                        {soloAudiosBloque.map((audioUrl, aIdx) => (
-                          <div
-                            key={aIdx}
-                            className="flex flex-col gap-2 p-2.5 rounded-xl border border-amber-300/80 dark:border-amber-500/30 bg-amber-50/70 dark:bg-amber-500/10 text-amber-900 dark:text-amber-100 shadow-xs"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 text-base font-bold">
-                                  🎙️
-                                </div>
-                                <div className="flex flex-col text-left min-w-0">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="text-xs font-bold text-zinc-900 dark:text-white">
-                                      Audio #{aIdx + 1} (de Evidencia #{numBloque})
-                                    </span>
-                                    <span className="px-1.5 py-0.2 rounded bg-emerald-600 text-white text-[9px] font-bold">
-                                      ✓ Asociado
-                                    </span>
-                                  </div>
-                                  {textoBloque ? (
-                                    <span className="text-xs text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-words">
-                                      <span className="font-semibold">Nota:</span> {textoBloque}
-                                    </span>
-                                  ) : (
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
-                                        {soloFotosBloque.length > 0
-                                          ? `Vinculado a ${soloFotosBloque.length} ${soloFotosBloque.length === 1 ? "foto" : "fotos"} de Evidencia #${numBloque}`
-                                          : `Grabación de voz de Evidencia #${numBloque}`}
-                                      </span>
-                                      {onTranscribirAudio && (
-                                        <button
-                                          type="button"
-                                          disabled={transcribiendoEsteBloque}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            onTranscribirAudio(audioUrl, bloque.id);
-                                          }}
-                                          className="px-2 py-1 rounded-md bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-[10px] font-bold transition-colors"
-                                        >
-                                          {transcribiendoEsteBloque ? "Transcribiendo..." : "Transcribir a texto"}
-                                        </button>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {soloAudiosBloque.map((audioUrl, aIdx) => {
+                            const notaAsociadaAudio =
+                              notasKanbanBloque.find((n) => n.audioIndex === aIdx)?.text ||
+                              notasAudioBloque[aIdx] ||
+                              "";
+                            const reproduciendoEste = audioClipReproduciendoUrl === audioUrl;
 
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleTogglePlayAudioClip(audioUrl);
-                                  }}
-                                  className={`h-7 px-3 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-xs ${
-                                    audioClipReproduciendoUrl === audioUrl
-                                      ? "bg-amber-600 text-white ring-2 ring-amber-400/50 animate-pulse"
-                                      : "bg-amber-500 hover:bg-amber-600 text-white"
-                                  }`}
-                                >
-                                  <span>
-                                    {audioClipReproduciendoUrl === audioUrl ? "⏸ Pausar" : "▶ Escuchar"}
+                            return (
+                              <div
+                                key={aIdx}
+                                className="relative flex flex-col justify-between gap-2.5 p-3 rounded-2xl border border-amber-400/40 dark:border-amber-500/30 bg-gradient-to-br from-amber-50/90 via-white to-orange-50/60 dark:from-amber-500/10 dark:via-zinc-900/90 dark:to-orange-500/5 text-zinc-900 dark:text-zinc-100 shadow-sm hover:shadow-md transition-all"
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleTogglePlayAudioClip(audioUrl);
+                                      }}
+                                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold cursor-pointer transition-all active:scale-95 shadow-sm ${
+                                        reproduciendoEste
+                                          ? "bg-amber-600 text-white ring-2 ring-amber-400/60 animate-pulse"
+                                          : "bg-amber-500 hover:bg-amber-600 text-white"
+                                      }`}
+                                      title={reproduciendoEste ? "Pausar audio" : "Escuchar audio"}
+                                    >
+                                      {reproduciendoEste ? "⏸" : "▶"}
+                                    </button>
+
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-xs font-extrabold tracking-tight text-zinc-900 dark:text-white">
+                                          Nota de Voz #{aIdx + 1}
+                                        </span>
+                                        <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[9px] font-bold">
+                                          Evid. #{numBloque}
+                                        </span>
+                                      </div>
+                                      <div className="mt-1 flex items-center gap-0.5 h-2.5">
+                                        {[0.4, 0.75, 0.5, 0.95, 0.6, 0.85, 0.45, 0.9, 0.55, 0.7, 0.5, 0.8].map((bar, bIdx) => (
+                                          <span
+                                            key={bIdx}
+                                            style={{ height: `${Math.round(bar * 100)}%` }}
+                                            className={`w-1 rounded-full transition-all ${
+                                              reproduciendoEste
+                                                ? "bg-amber-500 animate-pulse"
+                                                : "bg-amber-400/60 dark:bg-amber-400/40"
+                                            }`}
+                                          />
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    {onTranscribirAudio && !notaAsociadaAudio && (
+                                      <button
+                                        type="button"
+                                        disabled={transcribiendoEsteBloque}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onTranscribirAudio(audioUrl, bloque.id);
+                                        }}
+                                        className="h-7 px-2.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[10px] font-bold cursor-pointer transition-colors"
+                                        title="Transformar audio en tarjeta de nota Kanban"
+                                      >
+                                        {transcribiendoEsteBloque ? "..." : "✨ Crear Nota"}
+                                      </button>
+                                    )}
+                                    {onEliminarAudio && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onEliminarAudio(aIdx, bloque.id);
+                                        }}
+                                        className="w-7 h-7 rounded-lg bg-zinc-200/70 dark:bg-white/10 hover:bg-rose-500/20 text-zinc-500 hover:text-rose-600 dark:text-zinc-400 dark:hover:text-rose-400 flex items-center justify-center text-xs font-bold cursor-pointer transition-colors"
+                                        title={`Eliminar Audio #${aIdx + 1}`}
+                                      >
+                                        ✕
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <audio
+                                  src={audioUrl}
+                                  controls
+                                  preload="metadata"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-full h-8 rounded-lg opacity-90"
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* TABLERO DE NOTAS TIPO KANBAN (TEXTO TRANSFORMADO DEL AUDIO) */}
+                    {notasKanbanBloque.length > 0 && (
+                      <div className="space-y-2 pt-1">
+                        <div className="flex items-center justify-between px-0.5">
+                          <span className="text-[11px] font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-amber-500" />
+                            <span>Notas de Voz Tipo Kanban ({notasKanbanBloque.length})</span>
+                          </span>
+                          <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400">
+                            Editable en tarjeta
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {notasKanbanBloque.map((notaItem, nIdx) => (
+                            <div
+                              key={notaItem.id || nIdx}
+                              onClick={(e) => e.stopPropagation()}
+                              className="group relative rounded-2xl border-l-4 border-l-amber-500 border border-amber-300/70 dark:border-amber-500/30 bg-amber-50/70 dark:bg-zinc-900/90 p-3 shadow-sm hover:shadow-md transition-all flex flex-col gap-2"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-300 text-[10px] font-extrabold tracking-tight">
+                                    📌 Nota #{nIdx + 1}
                                   </span>
-                                </button>
-                                {onEliminarAudio && (
+                                  <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-300 text-[9px] font-bold">
+                                    🎙️ De Audio
+                                  </span>
+                                </div>
+                                {onEliminarNotaKanban && (
                                   <button
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      onEliminarAudio(aIdx, bloque.id);
+                                      onEliminarNotaKanban(nIdx, bloque.id);
                                     }}
-                                    className="w-7 h-7 rounded-lg bg-black/10 hover:bg-rose-500/20 text-zinc-500 hover:text-rose-600 dark:text-zinc-400 dark:hover:text-rose-400 flex items-center justify-center text-xs font-bold cursor-pointer transition-colors"
-                                    title={`Eliminar Audio #${aIdx + 1}`}
+                                    className="w-6 h-6 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-rose-500/20 text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 flex items-center justify-center text-[10px] font-bold cursor-pointer transition-colors"
+                                    title="Eliminar tarjeta de nota"
                                   >
                                     ✕
                                   </button>
                                 )}
                               </div>
-                            </div>
 
-                            {/* Barra de reproducción nativa en PC y móvil */}
-                            <audio
-                              src={audioUrl}
-                              controls
-                              preload="metadata"
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-full h-8 rounded-lg"
-                            />
-                          </div>
-                        ))}
+                              <textarea
+                                rows={2}
+                                value={notaItem.text}
+                                onChange={(e) =>
+                                  onEditarNotaKanban?.(nIdx, e.target.value, bloque.id)
+                                }
+                                placeholder="Texto de la nota..."
+                                className="w-full rounded-xl bg-white/80 dark:bg-black/40 border border-amber-200/80 dark:border-white/10 px-2.5 py-1.5 text-xs font-medium text-zinc-800 dark:text-zinc-100 focus:outline-none focus:border-amber-500 resize-none leading-relaxed"
+                              />
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
