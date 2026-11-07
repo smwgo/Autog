@@ -4,7 +4,107 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import * as XLSX from "xlsx";
+
+const departmentOptions = [
+  { value: "Todos", label: "Todos" },
+  { value: "Taller", label: "Taller" },
+  { value: "Ventas / POS", label: "Ventas" },
+  { value: "Administración", label: "Administración" },
+];
+
+function MinimalSelect<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label?: string;
+  value: T;
+  options: { value: T; label: string; customLabel?: React.ReactNode }[];
+  onChange: (val: T) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  const selected = options.find((o) => o.value === value) || options[0];
+
+  return (
+    <div className="relative" ref={containerRef}>
+      {label && <label className="block text-xs font-semibold text-zinc-500 mb-1">{label}</label>}
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((prev) => !prev)}
+        className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50/60 dark:bg-zinc-800/60 text-xs sm:text-sm font-medium text-zinc-800 dark:text-zinc-200 hover:border-zinc-300 dark:hover:border-zinc-600 transition flex items-center justify-between gap-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+      >
+        <span className="truncate">{selected?.customLabel || selected?.label}</span>
+        <svg
+          className={`w-4 h-4 shrink-0 text-zinc-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute left-0 top-full z-50 mt-1.5 w-full rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white/95 dark:bg-[#121824]/95 p-1.5 shadow-2xl shadow-zinc-900/15 dark:shadow-black/70 backdrop-blur-md ring-1 ring-black/5 dark:ring-white/5 animate-in fade-in zoom-in-95 duration-150"
+        >
+          {options.map((opt) => {
+            const active = opt.value === value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+                className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs sm:text-sm transition ${
+                  active
+                    ? "bg-zinc-100 text-zinc-950 dark:bg-zinc-800 dark:text-white font-semibold"
+                    : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 hover:text-zinc-900 dark:hover:text-zinc-100 font-medium"
+                }`}
+              >
+                <span>{opt.customLabel || opt.label}</span>
+                {active && (
+                  <svg className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.2 7.26a1 1 0 0 1-1.42.003L3.294 9.17a1 1 0 1 1 1.412-1.416l4.086 4.078 6.498-6.548a1 1 0 0 1 1.414.006Z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function GestionPersonal() {
   const [employees, setEmployees] = useState<any[]>([]);
@@ -14,13 +114,53 @@ export default function GestionPersonal() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [saving, setSaving] = useState(false);
+  const [deptMenuOpen, setDeptMenuOpen] = useState(false);
+  const deptMenuRef = useRef<HTMLDivElement>(null);
+  const deptButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!deptMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (deptMenuRef.current && !deptMenuRef.current.contains(e.target as Node)) {
+        setDeptMenuOpen(false);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setDeptMenuOpen(false);
+        deptButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [deptMenuOpen]);
+
+  const handleExport = () => {
+    const data = employees.map((e) => ({
+      Nombre: e.name || "",
+      Email: e.email || "",
+      Cargo: e.role || "",
+      Departamento: e.department || "",
+      Ubicación: e.location || "",
+      Estado: e.status || "",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Empleados");
+    XLSX.writeFile(workbook, `directorio-empleados-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
 
   const [form, setForm] = useState({
     name: "",
     email: "",
-    role: "Mecánico Senior",
-    department: "TALLER",
-    location: "Sede Principal",
+    role: "Mecánico",
+    department: "Taller",
+    location: "Principal",
     status: "Activo",
   });
 
@@ -46,9 +186,9 @@ export default function GestionPersonal() {
     setForm({
       name: "",
       email: "",
-      role: "Mecánico Automotriz",
-      department: "TALLER",
-      location: "Sede Principal",
+      role: "Mecánico",
+      department: "Taller",
+      location: "Principal",
       status: "Activo",
     });
     setModalOpen(true);
@@ -60,8 +200,8 @@ export default function GestionPersonal() {
       name: row.name || "",
       email: row.email || "",
       role: row.role || "",
-      department: row.department || "TALLER",
-      location: row.location || "Sede Principal",
+      department: row.department || "Taller",
+      location: row.location?.includes("Principal") ? "Principal" : (row.location?.includes("Sucursal") || row.location?.includes("Norte")) ? "Sucursal" : (row.location || "Principal"),
       status: row.status || "Activo",
     });
     setModalOpen(true);
@@ -72,7 +212,8 @@ export default function GestionPersonal() {
     setSaving(true);
     try {
       const method = editingItem ? "PUT" : "POST";
-      const payload = editingItem ? { id: editingItem.id, ...form } : form;
+      const payload: any = editingItem ? { id: editingItem.id, ...form } : { ...form };
+      if (!payload.email) delete payload.email;
       const res = await fetch("/api/gerencia/personal", {
         method,
         headers: { "Content-Type": "application/json" },
@@ -94,10 +235,11 @@ export default function GestionPersonal() {
   };
 
   const filtered = employees.filter((emp) => {
-    if (deptFilter === "Taller" && emp.department !== "TALLER") return false;
-    if (deptFilter === "Ventas / POS" && emp.department !== "POS") return false;
-    if (deptFilter === "Administración" && emp.department !== "OFICINA" && emp.department !== "GERENCIA") return false;
-    if (search && !`${emp.name} ${emp.email} ${emp.role} ${emp.location}`.toLowerCase().includes(search.toLowerCase())) return false;
+    const d = (emp.department || "").toUpperCase();
+    if (deptFilter === "Taller" && !d.includes("TALLER")) return false;
+    if (deptFilter === "Ventas / POS" && !d.includes("POS") && !d.includes("VENTAS")) return false;
+    if (deptFilter === "Administración" && !d.includes("OFICINA") && !d.includes("GERENCIA") && !d.includes("ADMIN")) return false;
+    if (search && !`${emp.name} ${emp.email} ${emp.role} ${emp.department} ${emp.location}`.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
@@ -108,7 +250,7 @@ export default function GestionPersonal() {
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
       <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full flex flex-col">
-        {/* Breadcrumb & Header */}
+        {/* Header sin breadcrumbs */}
         <div className="order-1 mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link
@@ -121,23 +263,25 @@ export default function GestionPersonal() {
               </svg>
             </Link>
             <div>
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-1 sm:mb-1.5">
-                <Link href="/gerencia" className="hover:text-blue-600 transition-colors">Gerencia</Link>
-                <span>/</span>
-                <span className="text-zinc-900 dark:text-zinc-100 font-medium">Nómina y Personal</span>
-              </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                Directorio de Empleados
+                Empleados
               </h1>
             </div>
           </div>
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="grid grid-cols-2 sm:flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={openNew}
-              className="w-full sm:w-auto h-11 sm:h-10 px-4 rounded-xl bg-purple-600 text-white font-semibold text-sm hover:bg-purple-700 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-sm"
+              className="h-11 sm:h-10 px-3 sm:px-4 rounded-xl bg-purple-600 text-white font-semibold text-xs sm:text-sm hover:bg-purple-700 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-sm"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
-              Nuevo Empleado
+              <span>+</span>
+              <span>Nuevo Empleado</span>
+            </button>
+            <button
+              onClick={handleExport}
+              className="h-11 sm:h-10 px-3 sm:px-4 rounded-xl bg-emerald-600 text-white font-semibold text-xs sm:text-sm hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-sm"
+            >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+              <span>Exportar a Excel</span>
             </button>
           </div>
         </div>
@@ -188,31 +332,74 @@ export default function GestionPersonal() {
         </CollapsibleMetrics>
 
         {/* Filtros de Tabla */}
-        <div className="order-2 sm:order-3 bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-3.5 sm:p-4 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 mb-4 sm:mb-0 shadow-sm">
-          <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
-            {["Todos", "Taller", "Ventas / POS", "Administración"].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setDeptFilter(tab)}
-                className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
-                  deptFilter === tab
-                    ? "bg-purple-600 text-white"
-                    : "bg-zinc-100/70 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-          <div className="relative w-full md:w-64">
+        <div className="order-2 sm:order-3 bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-3.5 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4 sm:mb-0 shadow-sm">
+          {/* Buscador primero */}
+          <div className="relative flex-1">
             <input 
               type="text" 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar empleado..." 
-              className="w-full h-11 sm:h-10 pl-10 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-purple-500"
+              className="w-full h-11 sm:h-10 pl-10 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50 text-base sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 outline-none focus:border-purple-500 focus:bg-white dark:focus:bg-zinc-900 transition"
             />
             <svg className="w-4 h-4 absolute left-3.5 top-3.5 sm:top-3 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          </div>
+
+          {/* Filtro desplegable personalizado minimalista */}
+          <div className="relative w-full sm:w-44 shrink-0" ref={deptMenuRef}>
+            <button
+              ref={deptButtonRef}
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={deptMenuOpen}
+              onClick={() => setDeptMenuOpen((prev) => !prev)}
+              className="w-full h-11 sm:h-10 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50 text-xs sm:text-sm font-medium text-zinc-800 dark:text-zinc-200 hover:border-zinc-300 dark:hover:border-zinc-700 transition flex items-center justify-between gap-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+            >
+              <span className="truncate">{deptFilter === "Todos" ? "Departamentos" : departmentOptions.find((o) => o.value === deptFilter)?.label || deptFilter}</span>
+              <svg
+                className={`w-4 h-4 shrink-0 text-zinc-400 transition-transform duration-200 ${deptMenuOpen ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {deptMenuOpen && (
+              <div
+                role="menu"
+                aria-label="Seleccionar departamento"
+                className="absolute right-0 z-30 mt-2 w-full sm:w-44 origin-top-right rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white/95 dark:bg-[#121824]/95 p-1.5 shadow-xl shadow-zinc-900/10 dark:shadow-black/60 backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 ring-1 ring-black/5 dark:ring-white/5"
+              >
+                {departmentOptions.map((opt) => {
+                  const active = deptFilter === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setDeptFilter(opt.value);
+                        setDeptMenuOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs sm:text-sm transition ${
+                        active
+                          ? "bg-zinc-100 text-zinc-950 dark:bg-zinc-800 dark:text-white font-semibold"
+                          : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 hover:text-zinc-900 dark:hover:text-zinc-100 font-medium"
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                      {active && (
+                        <svg className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.2 7.26a1 1 0 0 1-1.42.003L3.294 9.17a1 1 0 1 1 1.412-1.416l4.086 4.078 6.498-6.548a1 1 0 0 1 1.414.006Z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -254,7 +441,7 @@ export default function GestionPersonal() {
                         </span>
                       </div>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate">
-                        {row.email}
+                        {row.department}
                       </p>
                     </div>
                   </div>
@@ -329,7 +516,7 @@ export default function GestionPersonal() {
                           </div>
                           <div>
                             <p className="font-semibold text-zinc-900 dark:text-zinc-100">{row.name}</p>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">{row.email}</p>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400">{row.department}</p>
                           </div>
                         </div>
                       </td>
@@ -381,14 +568,14 @@ export default function GestionPersonal() {
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 border-t sm:border border-zinc-200 dark:border-zinc-800 shadow-2xl max-h-[90vh] overflow-y-auto pb-8 sm:pb-6">
+          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 border-t sm:border border-zinc-200 dark:border-zinc-800 shadow-2xl pb-8 sm:pb-6">
             <div className="w-12 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto mb-4 sm:hidden" />
             <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white mb-4">
-              {editingItem ? "Editar Empleado" : "Registrar Nuevo Empleado"}
+              {editingItem ? "Editar Empleado" : "Nuevo Empleado"}
             </h2>
             <form onSubmit={handleSave} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-zinc-500 mb-1">Nombre Completo</label>
+                <label className="block text-xs font-semibold text-zinc-500 mb-1">Nombre</label>
                 <input
                   required
                   type="text"
@@ -398,68 +585,85 @@ export default function GestionPersonal() {
                   className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-zinc-500 mb-1">Correo Corporativo</label>
-                <input
-                  required
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="carlos@autopro.com"
-                  className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
-                />
-              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Cargo / Rol</label>
+                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Rol</label>
                   <input
                     required
                     type="text"
                     value={form.role}
                     onChange={(e) => setForm({ ...form, role: e.target.value })}
-                    placeholder="Mecánico Senior"
+                    placeholder="Mecánico"
                     className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-zinc-500 mb-1">Departamento</label>
-                  <select
+                  <input
+                    required
+                    type="text"
+                    list="dept-options"
                     value={form.department}
                     onChange={(e) => setForm({ ...form, department: e.target.value })}
-                    className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-base sm:text-sm"
-                  >
-                    <option value="TALLER">Taller</option>
-                    <option value="POS">Ventas / POS</option>
-                    <option value="OFICINA">Oficina</option>
-                    <option value="GERENCIA">Gerencia</option>
-                  </select>
+                    placeholder="Taller, Ventas..."
+                    className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
+                  />
+                  <datalist id="dept-options">
+                    <option value="Taller" />
+                    <option value="Ventas" />
+                    <option value="Oficina" />
+                    <option value="Gerencia" />
+                  </datalist>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Ubicación</label>
-                  <select
-                    value={form.location}
-                    onChange={(e) => setForm({ ...form, location: e.target.value })}
-                    className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-base sm:text-sm"
-                  >
-                    <option>Sede Principal</option>
-                    <option>Sucursal Norte</option>
-                    <option>Ambas</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Estado</label>
-                  <select
-                    value={form.status}
-                    onChange={(e) => setForm({ ...form, status: e.target.value })}
-                    className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-base sm:text-sm"
-                  >
-                    <option>Activo</option>
-                    <option>Vacaciones</option>
-                    <option>Inactivo</option>
-                  </select>
-                </div>
+                <MinimalSelect
+                  label="Ubicación"
+                  value={form.location?.includes("Principal") ? "Principal" : (form.location?.includes("Sucursal") || form.location?.includes("Norte")) ? "Sucursal" : (form.location || "Principal")}
+                  onChange={(val) => setForm({ ...form, location: val })}
+                  options={[
+                    { value: "Principal", label: "Principal" },
+                    { value: "Sucursal", label: "Sucursal" },
+                    { value: "Ambas", label: "Ambas" },
+                  ]}
+                />
+                <MinimalSelect
+                  label="Estado"
+                  value={form.status}
+                  onChange={(val) => setForm({ ...form, status: val })}
+                  options={[
+                    {
+                      value: "Activo",
+                      label: "Activo",
+                      customLabel: (
+                        <span className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                          <span>Activo</span>
+                        </span>
+                      ),
+                    },
+                    {
+                      value: "Vacaciones",
+                      label: "Vacaciones",
+                      customLabel: (
+                        <span className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-amber-500" />
+                          <span>Vacaciones</span>
+                        </span>
+                      ),
+                    },
+                    {
+                      value: "Inactivo",
+                      label: "Inactivo",
+                      customLabel: (
+                        <span className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-zinc-400" />
+                          <span>Inactivo</span>
+                        </span>
+                      ),
+                    },
+                  ]}
+                />
               </div>
               <div className="grid grid-cols-2 gap-2.5 pt-2">
                 <button

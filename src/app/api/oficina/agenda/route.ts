@@ -30,26 +30,6 @@ export async function GET() {
     const appointments = await withRetry(async () => {
       await ensureAgendaTable();
 
-      const countRes: any[] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int as cnt FROM "ClientAppointment"`);
-      if (!countRes[0] || countRes[0].cnt === 0) {
-        const seeds = [
-          { id: "ag_1", appointmentNumber: "CIT-1001", timeSlot: "08:00 AM", clientName: "Fernando López", vehicle: "PCE-1234 (Toyota)", plate: "PCE-1234", serviceName: "Mantenimiento 50k KM", tech: "Carlos Ruiz", bay: "Bahía 1", status: "En Curso", date: "Hoy" },
-          { id: "ag_2", appointmentNumber: "CIT-1002", timeSlot: "09:30 AM", clientName: "Andrea Suárez", vehicle: "UBT-1122 (Ford)", plate: "UBT-1122", serviceName: "Cambio de Pastillas de Freno", tech: "José Mendoza", bay: "Bahía 2", status: "Esperando", date: "Hoy" },
-          { id: "ag_3", appointmentNumber: "CIT-1003", timeSlot: "10:00 AM", clientName: "Logística Express", vehicle: "GBA-5678 (Hino)", plate: "GBA-5678", serviceName: "Revisión Preventiva Flota", tech: "Mario Cedeño", bay: "Elevador Principal", status: "Confirmada", date: "Hoy" },
-          { id: "ag_4", appointmentNumber: "CIT-1004", timeSlot: "11:30 AM", clientName: "Daniela Alvarado", vehicle: "GSD-9012 (Chevrolet)", plate: "GSD-9012", serviceName: "Diagnóstico Computarizado", tech: "Carlos Ruiz", bay: "Bahía 1", status: "Confirmada", date: "Hoy" },
-          { id: "ag_5", appointmentNumber: "CIT-1005", timeSlot: "02:00 PM", clientName: "Roberto Gómez", vehicle: "PBZ-8899 (Kia)", plate: "PBZ-8899", serviceName: "Cambio de Aceite y Filtros", tech: "Sin Asignar", bay: "Por definir", status: "Solicitada", date: "Hoy" },
-          { id: "ag_6", appointmentNumber: "CIT-1006", timeSlot: "04:00 PM", clientName: "María Torres", vehicle: "GTC-5544 (Nissan)", plate: "GTC-5544", serviceName: "Alineación y Balanceo", tech: "Sin Asignar", bay: "Por definir", status: "Reprogramada", date: "Hoy" },
-        ];
-        for (const s of seeds) {
-          await prisma.$executeRawUnsafe(
-            `INSERT INTO "ClientAppointment" ("id", "appointmentNumber", "vehicle", "plate", "clientName", "serviceName", "date", "timeSlot", "status", "tech", "bay", "updatedAt")
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP)
-             ON CONFLICT ("appointmentNumber") DO NOTHING`,
-            s.id, s.appointmentNumber, s.vehicle, s.plate, s.clientName, s.serviceName, s.date, s.timeSlot, s.status, s.tech, s.bay
-          );
-        }
-      }
-
       await prisma.$executeRawUnsafe(`UPDATE "ClientAppointment" SET "tech" = 'Carlos Ruiz' WHERE "tech" IS NULL`);
       await prisma.$executeRawUnsafe(`UPDATE "ClientAppointment" SET "bay" = 'Bahía 1' WHERE "bay" IS NULL`);
 

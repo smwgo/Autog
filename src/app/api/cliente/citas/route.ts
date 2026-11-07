@@ -79,30 +79,6 @@ export async function GET(request: Request) {
     return await withRetry(async () => {
       await ensureTableExists();
 
-      const countResult: any = await prisma.$queryRawUnsafe('SELECT COUNT(*)::int as count FROM "ClientAppointment"');
-      const count = countResult?.[0]?.count || 0;
-
-      if (count === 0) {
-        for (const a of SEED_APPOINTMENTS) {
-          const id = generateId();
-          await prisma.$executeRawUnsafe(
-            `INSERT INTO "ClientAppointment" ("id", "appointmentNumber", "vehicle", "plate", "clientName", "clientPhone", "serviceName", "date", "timeSlot", "status", "notes", "createdAt", "updatedAt")
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())`,
-            id,
-            a.appointmentNumber,
-            a.vehicle,
-            a.plate,
-            a.clientName,
-            a.clientPhone,
-            a.serviceName,
-            a.date,
-            a.timeSlot,
-            a.status,
-            a.notes
-          );
-        }
-      }
-
       let query = 'SELECT * FROM "ClientAppointment" WHERE 1=1';
       const params: any[] = [];
       let pIdx = 1;

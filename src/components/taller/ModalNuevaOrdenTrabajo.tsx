@@ -226,7 +226,7 @@ const detectarCarroceria = (modelo: string, marca: string): string => {
 export default function ModalNuevaOrdenTrabajo({
   isOpen = true,
   onClose,
-  empleadoLogueado = { id: "emp-admin", nombre: "Carlos Rodríguez", rol: "Mecánico" },
+  empleadoLogueado = { id: "emp-admin", nombre: "", rol: "Mecánico" },
   mecanicos = [],
   clientesCatalogo = [],
   onOrdenCreada,
@@ -1222,16 +1222,29 @@ export default function ModalNuevaOrdenTrabajo({
     setPanelMultimedia(null);
   };
 
-  const [ingresadoPor, setIngresadoPor] = useState(empleadoLogueado.nombre || "Hernan Marquez");
+  const [ingresadoPor, setIngresadoPor] = useState(empleadoLogueado.nombre || "");
   const [asignacionesTecnicos, setAsignacionesTecnicos] = useState<
     { id: string; nombre: string; tarea: string }[]
-  >([
-    {
-      id: "asig-1",
-      nombre: empleadoLogueado.nombre || mecanicos[0] || "Carlos Rodríguez",
-      tarea: "Diagnóstico y mantenimiento",
-    },
-  ]);
+  >([]);
+  const [empleadosDb, setEmpleadosDb] = useState<
+    { id: string; name: string; role?: string; department?: string }[]
+  >([]);
+
+  useEffect(() => {
+    let cancel = false;
+    fetch("/api/gerencia/personal")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (!cancel && Array.isArray(data)) {
+          const activos = data.filter((e) => e.status !== "Inactivo");
+          setEmpleadosDb(activos);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancel = true;
+    };
+  }, []);
   const [mostrarFlotanteAsignar, setMostrarFlotanteAsignar] = useState(false);
   const [flotanteTecnicoSeleccionado, setFlotanteTecnicoSeleccionado] = useState("");
   const [busquedaTecnico, setBusquedaTecnico] = useState("");
@@ -1856,14 +1869,20 @@ export default function ModalNuevaOrdenTrabajo({
   // Lista única consolidada de todos los técnicos conocidos
   const listaMecanicosUnica = useMemo(() => {
     const asignadosNombres = asignacionesTecnicos.map((a) => a.nombre);
+    const dbNombres = empleadosDb.map((e) => e.name).filter(Boolean);
+    const propsNombres = (mecanicos || []).filter((m) => m && m !== "Carlos Rodríguez");
+    const adminNombre =
+      empleadoLogueado?.nombre && empleadoLogueado.nombre !== "Carlos Rodríguez"
+        ? [empleadoLogueado.nombre]
+        : [];
     return Array.from(
       new Set(
-        [empleadoLogueado?.nombre, ...mecanicos, ...asignadosNombres].filter(
-          (m): m is string => Boolean(m && String(m).trim().length > 0)
+        [...dbNombres, ...propsNombres, ...adminNombre, ...asignadosNombres].filter(
+          (m): m is string => Boolean(m && String(m).trim().length > 0 && m !== "Carlos Rodríguez")
         )
       )
     );
-  }, [empleadoLogueado?.nombre, mecanicos, asignacionesTecnicos]);
+  }, [empleadosDb, empleadoLogueado?.nombre, mecanicos, asignacionesTecnicos]);
 
   // Técnicos filtrados por término de búsqueda
   const mecanicosFiltrados = useMemo(() => {
@@ -5428,7 +5447,8 @@ export default function ModalNuevaOrdenTrabajo({
                     <button
                       type="button"
                       onClick={() => {
-                        setFlotanteTecnicoSeleccionado(listaMecanicosUnica[0] || empleadoLogueado.nombre || "");
+                        setFlotanteTecnicoSeleccionado(listaMecanicosUnica[0] || "");
+                        setBusquedaTecnico(listaMecanicosUnica[0] || "");
                         setFlotanteTarea(
                           tipoIngreso === "Lubricentro"
                             ? "Cambio de aceite y filtros"
@@ -5591,6 +5611,14 @@ export default function ModalNuevaOrdenTrabajo({
                                 <div className="flex items-center gap-2 truncate">
                                   <span className={`w-2 h-2 rounded-full shrink-0 ${seleccionado ? "bg-white" : "bg-emerald-400"}`} />
                                   <span className="truncate">{m}</span>
+                                  {(() => {
+                                    const emp = empleadosDb.find((e) => e.name.trim().toLowerCase() === m.trim().toLowerCase());
+                                    return emp?.role ? (
+                                      <span className={`text-[10px] px-1.5 py-0.5 rounded ml-1 ${seleccionado ? "bg-blue-700 text-blue-100" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400"}`}>
+                                        {emp.role}
+                                      </span>
+                                    ) : null;
+                                  })()}
                                 </div>
                                 {seleccionado && <span className="text-xs">✓</span>}
                               </div>

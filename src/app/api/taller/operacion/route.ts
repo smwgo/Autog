@@ -805,7 +805,7 @@ export async function GET(request: Request) {
           orderBy: { name: "asc" },
         }),
         prisma.$queryRawUnsafe(`SELECT * FROM "WorkshopService" WHERE "active" = true ORDER BY "name" ASC`).catch(() => []),
-        prisma.$queryRawUnsafe(`SELECT * FROM "Employee" WHERE "status" = 'Activo' ORDER BY "name" ASC`).catch(() => []),
+        prisma.employee.findMany({ where: { status: { not: "Inactivo" } }, orderBy: { name: "asc" } }).catch(() => []),
         prisma.customer
           .findMany({
             include: { vehicles: true },

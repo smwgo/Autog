@@ -340,17 +340,26 @@ export async function GET(request: Request) {
         const dayOrders = ordersInPeriod
           .filter((order) => matchesPeriod(getRecordDate(order)))
           .reduce((acc, order) => acc + getOrderValue(order), 0);
-        const income = Number((daySales + dayOrders).toFixed(2));
+        const dayInvoices = invoicesInPeriod
+          .filter((inv) => (inv.status === "Autorizado" || inv.status === "Pagada") && matchesPeriod(getRecordDate(inv)))
+          .reduce((acc, inv) => acc + Number(inv.amount || 0), 0);
+        const dayTxIncome = transactionsInPeriod
+          .filter((t) => t.isIncome && matchesPeriod(getRecordDate(t)))
+          .reduce((acc, t) => acc + Number(t.amount || 0), 0);
 
-        const expense = Number(
-          movementsInPeriod
-            .filter((movement) =>
-              (movement.type === "GASTO" || movement.type === "RETIRO") &&
-              matchesPeriod(new Date(movement.createdAt))
-            )
-            .reduce((acc, movement) => acc + Number(movement.amount || 0), 0)
-            .toFixed(2)
-        );
+        const income = Number((daySales + dayOrders + dayInvoices + dayTxIncome).toFixed(2));
+
+        const dayMovements = movementsInPeriod
+          .filter((movement) =>
+            (movement.type === "GASTO" || movement.type === "RETIRO") &&
+            matchesPeriod(new Date(movement.createdAt))
+          )
+          .reduce((acc, movement) => acc + Number(movement.amount || 0), 0);
+        const dayTxExpense = transactionsInPeriod
+          .filter((t) => !t.isIncome && matchesPeriod(getRecordDate(t)))
+          .reduce((acc, t) => acc + Number(t.amount || 0), 0);
+
+        const expense = Number((dayMovements + dayTxExpense).toFixed(2));
 
         return { day: label, income, expense };
       });
@@ -358,8 +367,8 @@ export async function GET(request: Request) {
       const maxChartVal = Math.max(...dayData.map((d) => Math.max(d.income, d.expense)), 1);
       const weeklyChart = dayData.map((d) => ({
         ...d,
-        heightIncome: d.income > 0 ? Math.max(8, Math.min(100, Math.round((d.income / maxChartVal) * 100))) : 4,
-        heightExpense: d.expense > 0 ? Math.max(8, Math.min(100, Math.round((d.expense / maxChartVal) * 100))) : 4,
+        heightIncome: d.income > 0 ? Math.max(8, Math.min(100, Math.round((d.income / maxChartVal) * 100))) : 0,
+        heightExpense: d.expense > 0 ? Math.max(8, Math.min(100, Math.round((d.expense / maxChartVal) * 100))) : 0,
       }));
 
       return NextResponse.json({

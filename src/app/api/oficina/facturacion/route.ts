@@ -45,41 +45,6 @@ export async function GET() {
     const data = await withRetry(async () => {
       await ensureFacturacionTables();
 
-      const invCount: any[] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int as cnt FROM "ClientInvoice"`);
-      if (!invCount[0] || invCount[0].cnt === 0) {
-        const seedInvoices = [
-          { id: "inv_of_1", invoiceNumber: "001-001-00001042", uuid: "...89012", date: "Hoy, 10:45 AM", concept: "Mantenimiento y Frenos", clientName: "Ricardo Montero", clientRfc: "0923456789", amount: 350.00, status: "Autorizado", paymentMethod: "Tarjeta" },
-          { id: "inv_of_2", invoiceNumber: "001-001-00001041", uuid: "...89011", date: "Hoy, 09:30 AM", concept: "Servicio Flota Pesada", clientName: "Logística Express S.A.", clientRfc: "1792345678001", amount: 1250.00, status: "Autorizado", paymentMethod: "Transferencia" },
-          { id: "inv_of_3", invoiceNumber: "001-001-00001040", uuid: "N/A", date: "Hoy, 08:15 AM", concept: "Diagnóstico Computarizado", clientName: "Daniela Alvarado", clientRfc: "0956781234", amount: 85.50, status: "Rechazado", paymentMethod: "Efectivo" },
-          { id: "inv_of_4", invoiceNumber: "001-001-00001039", uuid: "Procesando...", date: "Ayer", concept: "Venta de Filtros", clientName: "Consumidor Final", clientRfc: "9999999999", amount: 15.00, status: "Pendiente", paymentMethod: "Efectivo" },
-          { id: "inv_of_5", invoiceNumber: "001-001-00001038", uuid: "...89008", date: "Ayer", concept: "Kit de Embrague", clientName: "Carlos Villagómez", clientRfc: "0912345678", amount: 420.00, status: "Autorizado", paymentMethod: "Tarjeta" },
-        ];
-        for (const inv of seedInvoices) {
-          await prisma.$executeRawUnsafe(
-            `INSERT INTO "ClientInvoice" ("id", "invoiceNumber", "uuid", "date", "concept", "clientName", "clientRfc", "amount", "status", "paymentMethod", "updatedAt")
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
-             ON CONFLICT ("invoiceNumber") DO NOTHING`,
-            inv.id, inv.invoiceNumber, inv.uuid, inv.date, inv.concept, inv.clientName, inv.clientRfc, inv.amount, inv.status, inv.paymentMethod
-          );
-        }
-      }
-
-      const ncCount: any[] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int as cnt FROM "CreditNote"`);
-      if (!ncCount[0] || ncCount[0].cnt === 0) {
-        const seedNotes = [
-          { id: "nc_1", noteNumber: "001-001-00000015", date: "24 Oct 2026", clientName: "Ricardo Montero", clientRuc: "0923456789", invoiceRef: "Aplica a F-1042", total: 50.00, status: "Autorizado", accessKey: "...NC015", reason: "Descuento comercial posterior" },
-          { id: "nc_2", noteNumber: "001-001-00000014", date: "20 Oct 2026", clientName: "Andrea Suárez", clientRuc: "0911223344", invoiceRef: "Aplica a F-1020", total: 310.00, status: "Autorizado", accessKey: "...NC014", reason: "Devolución de repuesto" },
-        ];
-        for (const nc of seedNotes) {
-          await prisma.$executeRawUnsafe(
-            `INSERT INTO "CreditNote" ("id", "noteNumber", "date", "clientName", "clientRuc", "invoiceRef", "total", "status", "accessKey", "reason", "updatedAt")
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
-             ON CONFLICT ("noteNumber") DO NOTHING`,
-            nc.id, nc.noteNumber, nc.date, nc.clientName, nc.clientRuc, nc.invoiceRef, nc.total, nc.status, nc.accessKey, nc.reason
-          );
-        }
-      }
-
       const facturas: any[] = await prisma.$queryRawUnsafe(`SELECT * FROM "ClientInvoice" ORDER BY "createdAt" DESC`);
       const notas: any[] = await prisma.$queryRawUnsafe(`SELECT * FROM "CreditNote" ORDER BY "createdAt" DESC`);
 

@@ -24,11 +24,11 @@ export async function POST(req: Request) {
       return await prisma.employee.create({
         data: {
           name: body.name || "Nuevo Empleado",
-          email: body.email || `empleado${Math.floor(100 + Math.random() * 900)}@autog.com`,
+          email: body.email || `emp_${Date.now()}_${Math.floor(Math.random() * 1000)}@autog.local`,
           phone: body.phone || null,
           role: body.role || "Especialista",
-          department: body.department || "TALLER",
-          location: body.location || "Sede Principal",
+          department: body.department || "Taller",
+          location: body.location || "Principal",
           lastLogin: "Recién registrado",
           status: body.status || "Activo",
           salary: body.salary ? Number(body.salary) : null,

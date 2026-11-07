@@ -40,42 +40,6 @@ export async function GET() {
     const data = await withRetry(async () => {
       await ensureProveedoresTables();
 
-      const supCount: any[] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int as cnt FROM "Supplier"`);
-      if (!supCount[0] || supCount[0].cnt === 0) {
-        const seedSuppliers = [
-          { id: "sup_1", name: "Importadora AutoParts Cía. Ltda.", ruc: "0991234567001", contact: "Mario Valdés", email: "ventas@autoparts.com", phone: "042345678", categories: JSON.stringify(["Lubricantes", "Filtros"]), balance: 1250.00 },
-          { id: "sup_2", name: "Frenos del Pacífico S.A.", ruc: "1792345678001", contact: "Lucía Paredes", email: "pedidos@frenospac.com", phone: "022987654", categories: JSON.stringify(["Frenos"]), balance: 0.00 },
-          { id: "sup_3", name: "Distribuidora Eléctrica Motors", ruc: "0998765432001", contact: "Carlos Ruiz", email: "carlos@emotors.com", phone: "0991122334", categories: JSON.stringify(["Eléctrico", "Baterías"]), balance: 3000.00 },
-          { id: "sup_4", name: "Herramientas y Equipos Industriales", ruc: "1798887776001", contact: "Ana Torres", email: "info@herramientasec.com", phone: "042111222", categories: JSON.stringify(["Equipos Taller"]), balance: 0.00 },
-        ];
-        for (const s of seedSuppliers) {
-          await prisma.$executeRawUnsafe(
-            `INSERT INTO "Supplier" ("id", "ruc", "name", "contact", "email", "phone", "categories", "balance", "updatedAt")
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)
-             ON CONFLICT ("ruc") DO NOTHING`,
-            s.id, s.ruc, s.name, s.contact, s.email, s.phone, s.categories, s.balance
-          );
-        }
-      }
-
-      const poCount: any[] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int as cnt FROM "PurchaseOrder"`);
-      if (!poCount[0] || poCount[0].cnt === 0) {
-        const seedOrders = [
-          { id: "po_1", orderNumber: "OC-00105", supplierName: "Importadora AutoParts Cía. Ltda.", expectedDate: "Hoy", total: 450.00, status: "En Tránsito", notes: "Cajas de aceite 10W-40" },
-          { id: "po_2", orderNumber: "OC-00104", supplierName: "Distribuidora Eléctrica Motors", expectedDate: "Mañana", total: 1200.00, status: "Solicitado", notes: "Baterías 12V 60Ah" },
-          { id: "po_3", orderNumber: "OC-00103", supplierName: "Frenos del Pacífico S.A.", expectedDate: "24 Oct 2026", total: 280.00, status: "Recibido", notes: "Pastillas cerámicas" },
-          { id: "po_4", orderNumber: "OC-00102", supplierName: "Importadora AutoParts Cía. Ltda.", expectedDate: "22 Oct 2026", total: 800.00, status: "Borrador", notes: "Reposición mensual filtros" },
-        ];
-        for (const po of seedOrders) {
-          await prisma.$executeRawUnsafe(
-            `INSERT INTO "PurchaseOrder" ("id", "orderNumber", "supplierName", "expectedDate", "total", "status", "notes", "updatedAt")
-             VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
-             ON CONFLICT ("orderNumber") DO NOTHING`,
-            po.id, po.orderNumber, po.supplierName, po.expectedDate, po.total, po.status, po.notes
-          );
-        }
-      }
-
       const proveedores: any[] = await prisma.$queryRawUnsafe(`SELECT * FROM "Supplier" ORDER BY "createdAt" DESC`);
       const ordenes: any[] = await prisma.$queryRawUnsafe(`SELECT * FROM "PurchaseOrder" ORDER BY "createdAt" DESC`);
 

@@ -4,7 +4,108 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { GerenciaMobileNav } from "@/components/GerenciaMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import * as XLSX from "xlsx";
+
+const categoryOptions = [
+  { value: "Todos", label: "Todas" },
+  { value: "Ventas", label: "Ventas" },
+  { value: "Compras", label: "Compras" },
+  { value: "Operativos", label: "Operativos" },
+  { value: "Impuestos SRI", label: "Impuestos" },
+];
+
+function MinimalSelect<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label?: string;
+  value: T;
+  options: { value: T; label: string; customLabel?: React.ReactNode }[];
+  onChange: (val: T) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  const selected = options.find((o) => o.value === value) || options[0];
+
+  return (
+    <div className="relative" ref={containerRef}>
+      {label && <label className="block text-xs font-semibold text-zinc-500 mb-1">{label}</label>}
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((prev) => !prev)}
+        className="w-full h-11 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-700/80 bg-zinc-50/60 dark:bg-zinc-800/60 text-xs sm:text-sm font-medium text-zinc-800 dark:text-zinc-200 hover:border-zinc-300 dark:hover:border-zinc-600 transition flex items-center justify-between gap-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+      >
+        <span className="truncate">{selected?.customLabel || selected?.label}</span>
+        <svg
+          className={`w-4 h-4 shrink-0 text-zinc-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute left-0 top-full z-50 mt-1.5 w-full rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white/95 dark:bg-[#121824]/95 p-1.5 shadow-2xl shadow-zinc-900/15 dark:shadow-black/70 backdrop-blur-md ring-1 ring-black/5 dark:ring-white/5 animate-in fade-in zoom-in-95 duration-150"
+        >
+          {options.map((opt) => {
+            const active = opt.value === value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+                className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs sm:text-sm transition ${
+                  active
+                    ? "bg-zinc-100 text-zinc-950 dark:bg-zinc-800 dark:text-white font-semibold"
+                    : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 hover:text-zinc-900 dark:hover:text-zinc-100 font-medium"
+                }`}
+              >
+                <span>{opt.customLabel || opt.label}</span>
+                {active && (
+                  <svg className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.2 7.26a1 1 0 0 1-1.42.003L3.294 9.17a1 1 0 1 1 1.412-1.416l4.086 4.078 6.498-6.548a1 1 0 0 1 1.414.006Z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ReportesFinancieros() {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -14,6 +115,30 @@ export default function ReportesFinancieros() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [saving, setSaving] = useState(false);
+  const [catMenuOpen, setCatMenuOpen] = useState(false);
+  const catMenuRef = useRef<HTMLDivElement>(null);
+  const catButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!catMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (catMenuRef.current && !catMenuRef.current.contains(e.target as Node)) {
+        setCatMenuOpen(false);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setCatMenuOpen(false);
+        catButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [catMenuOpen]);
 
   const [form, setForm] = useState({
     dateLabel: "Hoy",
@@ -48,7 +173,7 @@ export default function ReportesFinancieros() {
       dateLabel: new Date().toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" }),
       description: "",
       category: "Ventas",
-      reference: `F-001-${Math.floor(100 + Math.random() * 900)}`,
+      reference: "",
       amount: "",
       isIncome: true,
       method: "Transferencia",
@@ -97,18 +222,20 @@ export default function ReportesFinancieros() {
   };
 
   const handleExport = () => {
-    const csv = [
-      "Fecha,Descripcion,Categoria,Referencia,Tipo,Monto",
-      ...transactions.map((t) =>
-        `"${t.dateLabel}","${t.description}","${t.category}","${t.reference}","${t.isIncome ? "INGRESO" : "EGRESO"}",${t.amount}`
-      ),
-    ].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "estados-financieros.csv";
-    a.click();
+    const data = transactions.map((t) => ({
+      Fecha: t.dateLabel || "",
+      Descripción: t.description || "",
+      Categoría: t.category || "",
+      Referencia: t.reference || "",
+      Tipo: t.isIncome ? "Ingreso" : "Egreso",
+      Método: t.method || "—",
+      Monto: Number(t.amount || 0),
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Finanzas");
+    XLSX.writeFile(workbook, `estados-financieros-${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   const totalIncome = transactions.filter((t) => t.isIncome).reduce((acc, t) => acc + Number(t.amount || 0), 0);
@@ -138,11 +265,6 @@ export default function ReportesFinancieros() {
               </svg>
             </Link>
             <div>
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-1 sm:mb-1.5">
-                <Link href="/gerencia" className="hover:text-blue-600 transition-colors">Gerencia</Link>
-                <span>/</span>
-                <span className="text-zinc-900 dark:text-zinc-100 font-medium">Reportes Financieros</span>
-              </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                 Estados Financieros
               </h1>
@@ -161,7 +283,7 @@ export default function ReportesFinancieros() {
               className="h-11 sm:h-10 px-3 sm:px-4 rounded-xl bg-emerald-600 text-white font-semibold text-xs sm:text-sm hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-sm"
             >
               <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
-              <span>Exportar CSV</span>
+              <span>Exportar a Excel</span>
             </button>
           </div>
         </div>
@@ -171,7 +293,7 @@ export default function ReportesFinancieros() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-6">
             <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex sm:block items-center justify-between">
               <div>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">Total Ingresos</h3>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">Ingresos</h3>
                 <p className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400">${totalIncome.toFixed(2)}</p>
               </div>
               <div className="sm:mt-4 text-[11px] sm:text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 inline-block px-2.5 py-1 rounded-lg">
@@ -181,7 +303,7 @@ export default function ReportesFinancieros() {
             
             <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex sm:block items-center justify-between">
               <div>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">Total Egresos</h3>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">Egresos</h3>
                 <p className="text-2xl sm:text-3xl font-bold text-rose-600 dark:text-rose-400">${totalExpense.toFixed(2)}</p>
               </div>
               <div className="sm:mt-4 text-[11px] sm:text-xs font-medium text-zinc-500 bg-zinc-100 dark:bg-zinc-800 inline-block px-2.5 py-1 rounded-lg">
@@ -191,7 +313,7 @@ export default function ReportesFinancieros() {
 
             <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-zinc-100 dark:border-zinc-800 shadow-sm relative overflow-hidden flex sm:block items-center justify-between">
               <div>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">Flujo Neto</h3>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">Neto</h3>
                 <p className="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">${netFlow.toFixed(2)}</p>
               </div>
               <div className="sm:mt-4 text-[11px] sm:text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-500/10 inline-block px-2.5 py-1 rounded-lg">
@@ -202,31 +324,74 @@ export default function ReportesFinancieros() {
         </CollapsibleMetrics>
 
         {/* Filtros de Tabla */}
-        <div className="order-2 sm:order-3 bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-3.5 sm:p-4 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 mb-4 sm:mb-0 shadow-sm">
-          <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
-            {["Todos", "Ventas", "Compras", "Operativos", "Impuestos SRI"].map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setCatFilter(cat)}
-                className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
-                  catFilter === cat
-                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                    : "bg-zinc-100/70 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-          <div className="relative w-full md:w-64">
+        <div className="order-2 sm:order-3 bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-3.5 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4 sm:mb-0 shadow-sm">
+          {/* Buscador primero */}
+          <div className="relative flex-1">
             <input 
               type="text" 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar transacción..." 
-              className="w-full h-11 sm:h-10 pl-10 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-blue-500"
+              className="w-full h-11 sm:h-10 pl-10 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50 text-base sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-zinc-900 transition"
             />
             <svg className="w-4 h-4 absolute left-3.5 top-3.5 sm:top-3 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          </div>
+
+          {/* Filtro desplegable personalizado minimalista */}
+          <div className="relative w-full sm:w-44 shrink-0" ref={catMenuRef}>
+            <button
+              ref={catButtonRef}
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={catMenuOpen}
+              onClick={() => setCatMenuOpen((prev) => !prev)}
+              className="w-full h-11 sm:h-10 px-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50 text-xs sm:text-sm font-medium text-zinc-800 dark:text-zinc-200 hover:border-zinc-300 dark:hover:border-zinc-700 transition flex items-center justify-between gap-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            >
+              <span className="truncate">{catFilter === "Todos" ? "Categorías" : categoryOptions.find((o) => o.value === catFilter)?.label || catFilter}</span>
+              <svg
+                className={`w-4 h-4 shrink-0 text-zinc-400 transition-transform duration-200 ${catMenuOpen ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {catMenuOpen && (
+              <div
+                role="menu"
+                aria-label="Seleccionar categoría"
+                className="absolute right-0 z-30 mt-2 w-full sm:w-44 origin-top-right rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white/95 dark:bg-[#121824]/95 p-1.5 shadow-xl shadow-zinc-900/10 dark:shadow-black/60 backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 ring-1 ring-black/5 dark:ring-white/5"
+              >
+                {categoryOptions.map((opt) => {
+                  const active = catFilter === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setCatFilter(opt.value);
+                        setCatMenuOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs sm:text-sm transition ${
+                        active
+                          ? "bg-zinc-100 text-zinc-950 dark:bg-zinc-800 dark:text-white font-semibold"
+                          : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 hover:text-zinc-900 dark:hover:text-zinc-100 font-medium"
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                      {active && (
+                        <svg className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.2 7.26a1 1 0 0 1-1.42.003L3.294 9.17a1 1 0 1 1 1.412-1.416l4.086 4.078 6.498-6.548a1 1 0 0 1 1.414.006Z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -338,37 +503,51 @@ export default function ReportesFinancieros() {
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 border-t sm:border border-zinc-200 dark:border-zinc-800 shadow-2xl max-h-[90vh] overflow-y-auto pb-8 sm:pb-6">
+          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 border-t sm:border border-zinc-200 dark:border-zinc-800 shadow-2xl pb-8 sm:pb-6">
             <div className="w-12 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto mb-4 sm:hidden" />
             <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white mb-4">
               {editingItem ? "Editar Movimiento Financiero" : "Nueva Transacción Financiera"}
             </h2>
             <form onSubmit={handleSave} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Tipo</label>
-                  <select
-                    value={form.isIncome ? "INGRESO" : "EGRESO"}
-                    onChange={(e) => setForm({ ...form, isIncome: e.target.value === "INGRESO" })}
-                    className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-base sm:text-sm"
-                  >
-                    <option value="INGRESO">Ingreso (+)</option>
-                    <option value="EGRESO">Egreso (-)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Categoría</label>
-                  <select
-                    value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-base sm:text-sm"
-                  >
-                    <option>Ventas</option>
-                    <option>Compras</option>
-                    <option>Operativos</option>
-                    <option>Impuestos SRI</option>
-                  </select>
-                </div>
+                <MinimalSelect
+                  label="Tipo"
+                  value={form.isIncome ? "INGRESO" : "EGRESO"}
+                  onChange={(val) => setForm({ ...form, isIncome: val === "INGRESO" })}
+                  options={[
+                    {
+                      value: "INGRESO",
+                      label: "Ingreso (+)",
+                      customLabel: (
+                        <span className="flex items-center gap-1.5">
+                          <span>Ingreso</span>
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400">(+)</span>
+                        </span>
+                      ),
+                    },
+                    {
+                      value: "EGRESO",
+                      label: "Egreso (-)",
+                      customLabel: (
+                        <span className="flex items-center gap-1.5">
+                          <span>Egreso</span>
+                          <span className="font-bold text-rose-600 dark:text-rose-400">(-)</span>
+                        </span>
+                      ),
+                    },
+                  ]}
+                />
+                <MinimalSelect
+                  label="Categoría"
+                  value={form.category}
+                  onChange={(val) => setForm({ ...form, category: val })}
+                  options={[
+                    { value: "Ventas", label: "Ventas" },
+                    { value: "Compras", label: "Compras" },
+                    { value: "Operativos", label: "Operativos" },
+                    { value: "Impuestos SRI", label: "Impuestos SRI" },
+                  ]}
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-zinc-500 mb-1">Descripción</label>
@@ -385,11 +564,10 @@ export default function ReportesFinancieros() {
                 <div>
                   <label className="block text-xs font-semibold text-zinc-500 mb-1">Referencia</label>
                   <input
-                    required
                     type="text"
                     value={form.reference}
                     onChange={(e) => setForm({ ...form, reference: e.target.value })}
-                    placeholder="F-001-045"
+                    placeholder="Opcional"
                     className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                   />
                 </div>

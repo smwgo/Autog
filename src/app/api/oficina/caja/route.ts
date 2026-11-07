@@ -45,25 +45,6 @@ export async function GET() {
         });
       }
 
-      const txCount: any[] = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int as cnt FROM "FinancialTransaction"`);
-      if (!txCount[0] || txCount[0].cnt === 0) {
-        const seeds = [
-          { id: "ft_1", dateLabel: "10:45 AM", description: "Cobro Factura F-001-1042", category: "Ventas", reference: "Voucher #4592", amount: 350.00, isIncome: true, method: "Tarjeta Crédito (POS)" },
-          { id: "ft_2", dateLabel: "09:30 AM", description: "Cobro Factura F-001-1041", category: "Ventas", reference: "Comprobante #990123", amount: 1250.00, isIncome: true, method: "Transferencia Banco Pichincha" },
-          { id: "ft_3", dateLabel: "09:15 AM", description: "Pago proveedor de agua (Botellones)", category: "Operativos", reference: "Vale de Caja #12", amount: 15.00, isIncome: false, method: "Efectivo" },
-          { id: "ft_4", dateLabel: "08:30 AM", description: "Venta Mostrador (Filtros)", category: "Ventas", reference: "F-001-1040", amount: 45.50, isIncome: true, method: "Efectivo" },
-          { id: "ft_5", dateLabel: "08:00 AM", description: "Fondo de Apertura (Caja Chica)", category: "Apertura", reference: "Apertura Turno", amount: 100.00, isIncome: true, method: "Efectivo" },
-        ];
-        for (const s of seeds) {
-          await prisma.$executeRawUnsafe(
-            `INSERT INTO "FinancialTransaction" ("id", "dateLabel", "description", "category", "reference", "amount", "isIncome", "method", "updatedAt")
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)
-             ON CONFLICT ("id") DO NOTHING`,
-            s.id, s.dateLabel, s.description, s.category, s.reference, s.amount, s.isIncome, s.method
-          );
-        }
-      }
-
       const transactions: any[] = await prisma.$queryRawUnsafe(`SELECT * FROM "FinancialTransaction" ORDER BY "createdAt" DESC`);
       return { register: activeRegister, transactions };
     });
