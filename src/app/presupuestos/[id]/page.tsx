@@ -256,6 +256,20 @@ export default function PaginaDetallePropuesta() {
   const [subiendoFotoCliente, setSubiendoFotoCliente] = useState(false);
   const [subiendoFotoVehiculoPrincipal, setSubiendoFotoVehiculoPrincipal] = useState(false);
 
+  // Navegación por tarjetas deslizables e indicadores de verificación inteligente
+  const [tarjetaActiva, setTarjetaActiva] = useState<number>(0);
+  const [verificadosIds, setVerificadosIds] = useState<Record<string, boolean>>({});
+  const [areasVerificadas, setAreasVerificadas] = useState<Record<string, boolean>>({});
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  const toggleVerificadoItem = (itemId: string) => {
+    setVerificadosIds((prev) => ({ ...prev, [itemId]: !prev[itemId] }));
+  };
+
+  const toggleAreaVerificada = (areaKey: string) => {
+    setAreasVerificadas((prev) => ({ ...prev, [areaKey]: !prev[areaKey] }));
+  };
+
   // Formulario rápido para nuevo repuesto
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [nuevoCosto, setNuevoCosto] = useState("0");
@@ -1132,64 +1146,134 @@ export default function PaginaDetallePropuesta() {
               <button
                 type="button"
                 onClick={handleImprimir}
-                className="h-10 px-3.5 sm:px-4 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-200 active:scale-95 font-normal text-xs sm:text-sm shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-700 dark:text-zinc-200 active:scale-95 text-base shadow-xs transition-all flex items-center justify-center cursor-pointer shrink-0"
                 title="Imprimir Proforma"
                 aria-label="Imprimir Proforma"
               >
                 <span>🖨️</span>
-                <span className="hidden sm:inline">Imprimir</span>
               </button>
 
               {/* Botón WhatsApp Catálogo */}
               <button
                 type="button"
                 onClick={() => setModalWhatsApp(true)}
-                className="h-10 px-3.5 sm:px-4 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 font-normal text-xs sm:text-sm transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                className="w-10 h-10 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-base transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs shrink-0"
                 title="Catálogo Proveedores WhatsApp"
                 aria-label="Catálogo Proveedores WhatsApp"
               >
                 <span>📲</span>
-                <span className="hidden sm:inline">WhatsApp</span>
-              </button>
-
-              {/* Botón Estado Aprobado / Pendiente */}
-              <button
-                type="button"
-                disabled={cambiandoEstado}
-                onClick={handleToggleEstado}
-                className={`h-10 px-3.5 sm:px-4 rounded-xl border flex items-center justify-center gap-1.5 text-xs sm:text-sm font-normal shadow-xs shrink-0 transition-all active:scale-95 cursor-pointer disabled:opacity-50 ${esAprobado
-                  ? "bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
-                  : "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/30 text-amber-600 dark:text-amber-400"
-                  }`}
-                title={esAprobado ? "Propuesta Aprobada (clic para poner En Espera)" : "Propuesta En Espera (clic para Aprobar)"}
-              >
-                <span>{cambiandoEstado ? "..." : (esAprobado ? "✓" : "⏳")}</span>
-                <span>{esAprobado ? "Aprobado" : "En Espera"}</span>
-              </button>
-
-              {/* Botón Pagar / Pagado */}
-              <button
-                type="button"
-                disabled={cambiandoEstado}
-                onClick={handleTogglePagado}
-                className={`h-10 px-3.5 sm:px-4 rounded-xl border flex items-center justify-center gap-1.5 text-xs sm:text-sm font-normal shadow-xs shrink-0 transition-all active:scale-95 cursor-pointer disabled:opacity-50 ${esPagado
-                  ? "bg-sky-500/20 hover:bg-sky-500/30 border-sky-500/40 text-sky-600 dark:text-sky-300"
-                  : "bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/30 text-sky-600 dark:text-sky-300"
-                  }`}
-                title={esPagado ? "Propuesta Pagada (clic para revertir a Aprobado)" : "Marcar como Pagado (se retira de Pista de Taller)"}
-              >
-                <span>{cambiandoEstado ? "..." : (esPagado ? "✓" : "💳")}</span>
-                <span>{esPagado ? "Pagado" : "Pagar"}</span>
               </button>
             </div>
           </div>
         </section>
       </div>
 
-      {/* DOCUMENTO PRINCIPAL FORMATO FACTURA / PROFORMA */}
-      <main className="max-w-6xl mx-auto p-3 sm:p-6 md:p-8 mt-4 sm:mt-6 print:m-0 print:p-0 print:max-w-none">
-        <div className="bg-white dark:bg-[#0f0f13] border border-zinc-200 dark:border-white/10 rounded-3xl p-5 sm:p-8 md:p-10 shadow-2xl space-y-8 print:border-none print:shadow-none print:p-4 print:rounded-none">
+      {/* DOCUMENTO PRINCIPAL POR TARJETAS DESLIZABLES INTELIGENTES */}
+      <main className="max-w-6xl mx-auto p-3 sm:p-6 md:p-8 mt-2 sm:mt-4 print:m-0 print:p-0 print:max-w-none space-y-4">
+        {/* BARRA DE TARJETAS DESLIZABLES (STEPPER INTELIGENTE) */}
+        {(() => {
+          const countArea = (orig: EspecialidadTipo) =>
+            repuestos.filter((r) => (r.origin || "TALLER") === orig).length +
+            servicios.filter((s) => (s.origin || "TALLER") === orig).length;
+          const isAreaDone = (orig: EspecialidadTipo) => {
+            if (areasVerificadas[orig]) return true;
+            const rIds = repuestos.filter((r) => (r.origin || "TALLER") === orig).map((r) => r.id);
+            const sIds = servicios.filter((s) => (s.origin || "TALLER") === orig).map((s) => s.id);
+            const allIds = [...rIds, ...sIds];
+            return allIds.length > 0 && allIds.every((i) => verificadosIds[i]);
+          };
+          const tarjetasMeta = [
+            { idx: 0, titulo: "Vehículo", icon: "👤", badge: orden.plate, done: true },
+            {
+              idx: 1,
+              titulo: "Taller",
+              icon: "🔧",
+              badge: `${hallazgos.length} diag · ${countArea("TALLER")} ítems`,
+              done: isAreaDone("TALLER"),
+            },
+            {
+              idx: 2,
+              titulo: "Lubricentro",
+              icon: "🛢️",
+              badge: `${countArea("LUBRICENTRO")} ítems`,
+              done: isAreaDone("LUBRICENTRO"),
+            },
+            {
+              idx: 3,
+              titulo: "Tecnicentro",
+              icon: "⚙️",
+              badge: `${countArea("TECNICENTRO")} ítems`,
+              done: isAreaDone("TECNICENTRO"),
+            },
+            {
+              idx: 4,
+              titulo: "Carwash",
+              icon: "🚿",
+              badge: `${countArea("CARWASH")} ítems`,
+              done: isAreaDone("CARWASH"),
+            },
+            {
+              idx: 5,
+              titulo: "Pago",
+              icon: "📦",
+              badge: `${calculos.itemsPorComprar.length} pedir · $${calculos.totalFacturaCliente.toFixed(2)}`,
+              done: esPagado || esAprobado,
+            },
+          ];
 
+          return (
+            <div className="print:hidden bg-white dark:bg-[#0f0f13] border border-zinc-200 dark:border-white/10 rounded-2xl p-2.5 sm:p-3 shadow-sm">
+              <div className="flex items-center justify-between gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                {tarjetasMeta.map((t) => {
+                  const activa = tarjetaActiva === t.idx;
+                  return (
+                    <button
+                      key={t.idx}
+                      type="button"
+                      onClick={() => setTarjetaActiva(t.idx)}
+                      className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-center transition-all cursor-pointer shrink-0 ${
+                        activa
+                          ? "bg-blue-600/15 border-blue-500/50 text-blue-600 dark:text-blue-300 shadow-xs"
+                          : t.done
+                          ? "bg-emerald-500/5 border-emerald-500/25 text-zinc-700 dark:text-zinc-300 hover:bg-emerald-500/10"
+                          : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200/80 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5"
+                      }`}
+                    >
+                      <span className="text-base">{t.icon}</span>
+                      <span className="text-xs font-normal whitespace-nowrap">
+                        {t.titulo}
+                      </span>
+                      {t.done && t.idx > 0 && (
+                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                          ✓
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
+        <div
+          onTouchStart={(e) => setTouchStartX(e.touches[0]?.clientX ?? null)}
+          onTouchEnd={(e) => {
+            if (touchStartX === null) return;
+            const endX = e.changedTouches[0]?.clientX ?? touchStartX;
+            const diff = touchStartX - endX;
+            if (Math.abs(diff) > 60) {
+              if (diff > 0 && tarjetaActiva < 5) setTarjetaActiva((p) => Math.min(5, p + 1));
+              if (diff < 0 && tarjetaActiva > 0) setTarjetaActiva((p) => Math.max(0, p - 1));
+            }
+            setTouchStartX(null);
+          }}
+          className="bg-white dark:bg-[#0f0f13] border border-zinc-200 dark:border-white/10 rounded-3xl p-5 sm:p-8 md:p-10 shadow-2xl space-y-6 print:border-none print:shadow-none print:p-4 print:rounded-none transition-all"
+        >
+          {/* ===================================================================
+              TARJETA 1 (idx 0): CABECERA + DATOS DEL CLIENTE Y VEHÍCULO
+              =================================================================== */}
+          <div className={tarjetaActiva === 0 ? "space-y-6" : "hidden print:block print:space-y-6"}>
           {/* CABECERA DE LA FACTURA */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pb-6 border-b border-zinc-200 dark:border-white/10">
             <div>
@@ -1211,18 +1295,8 @@ export default function PaginaDetallePropuesta() {
                   <p className="text-xs sm:text-sm font-normal text-zinc-500 dark:text-zinc-400 mt-1">
                     Centro Automotriz
                   </p>
-                  <p className="text-xs text-zinc-600 dark:text-zinc-400 font-normal mt-1">
-                    {(() => {
-                      const mecanicoLimpio = orden?.mechanic ? orden.mechanic.split("(")[0].trim() : "Carlos Rodríguez";
-                      const notes = orden?.notes?.trim();
-                      if (!notes) {
-                        return `Ingreso a taller | Ingresado por: ${mecanicoLimpio}`;
-                      }
-                      if (notes.toLowerCase().includes("ingresado por:")) {
-                        return notes;
-                      }
-                      return `${notes} | Ingresado por: ${mecanicoLimpio}`;
-                    })()}
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 font-normal mt-0.5">
+                    Ingresado por: {orden?.mechanic ? orden.mechanic.split("(")[0].trim() : "Carlos Rodríguez"}
                   </p>
                 </div>
               </div>
@@ -1526,30 +1600,88 @@ export default function PaginaDetallePropuesta() {
             </div>
           </div>
 
-          {/* ===================================================================
-              SECCIÓN 1: HALLAZGOS DE INSPECCIÓN (DIAGNÓSTICO)
-              =================================================================== */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-1">
-              <h2 className="text-sm font-normal text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
-                <span>🔍</span>
-                <span>Diagnóstico ({hallazgos.length})</span>
-              </h2>
+          {/* Pie de navegación Tarjeta 1 */}
+          <div className="print:hidden flex items-center justify-between pt-4 border-t border-zinc-200 dark:border-white/10">
+            <span className="text-xs text-zinc-400">
+              Tarjeta 1 de 6 · Desliza o pulsa Siguiente para ir a Taller y Diagnóstico
+            </span>
+            <button
+              type="button"
+              onClick={() => setTarjetaActiva(1)}
+              className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+            >
+              <span>Siguiente: Taller y Diagnóstico</span>
+              <span>→</span>
+            </button>
+          </div>
+          </div>
 
-              {/* Botón discreto para subir fotos si se desea */}
-              <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-normal transition-all cursor-pointer print:hidden">
-                <span>📷</span>
-                <span>{subiendoFoto ? "Subiendo..." : "Subir Foto"}</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  disabled={subiendoFoto}
-                  onChange={handleSubirFoto}
-                  className="hidden"
-                />
-              </label>
+          {/* ===================================================================
+              TARJETA 2 (idx 1): TALLER (DIAGNÓSTICO + IMÁGENES + AUDIOS JUNTOS + PRODUCTOS/SERVICIOS)
+              =================================================================== */}
+          <div className={tarjetaActiva === 1 ? "space-y-6" : "hidden print:block print:space-y-6"}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-200 dark:border-white/10">
+              <div className="flex items-center gap-2.5">
+                <span className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-500 flex items-center justify-center text-base">
+                  🔧
+                </span>
+                <div>
+                  <h2 className="text-base font-normal text-zinc-900 dark:text-white">
+                    Taller · Diagnóstico, Imágenes, Audios y Trabajos
+                  </h2>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Revisa diagnóstico con imágenes y audios juntos, verifica o asigna productos y servicios de Taller
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 print:hidden flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => toggleAreaVerificada("TALLER")}
+                  className={`h-9 px-3 rounded-xl border text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 ${
+                    areasVerificadas["TALLER"]
+                      ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300"
+                      : "bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200/70"
+                  }`}
+                >
+                  <span>{areasVerificadas["TALLER"] ? "✓ Taller Verificado" : "○ Marcar Taller Verificado"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNuevoOrigen("TALLER");
+                    setModalNuevoRepuesto(true);
+                  }}
+                  className="h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>+ Asignar Producto</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNuevoServicioOrigen("TALLER");
+                    setModalNuevoServicio(true);
+                  }}
+                  className="h-9 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-normal transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>+ Asignar Servicio</span>
+                </button>
+              </div>
             </div>
+
+            {/* SECCIÓN 1: HALLAZGOS DE INSPECCIÓN (DIAGNÓSTICO) + IMÁGENES Y AUDIOS JUNTOS */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/70 dark:bg-[#121216] border border-zinc-200 dark:border-white/10 space-y-4">
+              <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-2">
+                <h2 className="text-sm font-normal text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                  <span>🔍</span>
+                  <span>Diagnóstico ({hallazgos.length})</span>
+                </h2>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                  📷 {fotosVehiculo.length} imágenes · 🎙️{" "}
+                  {(orden.evidencias || []).filter((e) => e.type === "audio" || e.url?.includes(".mp3")).length} audios
+                </span>
+              </div>
 
             {secciones.length === 0 ? (
               <div className="py-4 text-center text-sm font-normal text-zinc-400 italic bg-zinc-50/50 dark:bg-white/[0.01] rounded-xl border border-dashed border-zinc-200 dark:border-white/10">
@@ -1627,438 +1759,664 @@ export default function PaginaDetallePropuesta() {
               </div>
             )}
 
-            {/* Galería colapsable opcional de fotos generales del vehículo */}
-            {fotosVehiculo.length > 0 && (
-              <details className="pt-1 group">
-                <summary className="text-xs font-normal text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 cursor-pointer list-none flex items-center gap-1.5 select-none">
-                  <span className="group-open:rotate-90 transition-transform text-[10px]">▶</span>
-                  <span>Ver fotos del vehículo ({fotosVehiculo.length})</span>
-                </summary>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 pt-2">
-                  {fotosVehiculo.map((fotoUrl, idx) => (
-                    <div
-                      key={`foto-galeria-${idx}`}
-                      onClick={() => setFotoZoom(fotoUrl)}
-                      className="group/img relative aspect-4/3 rounded-lg overflow-hidden border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-black/40 cursor-pointer hover:border-blue-500/50 transition-all"
-                    >
-                      <img
-                        src={fotoUrl}
-                        alt={`Foto ${idx + 1}`}
-                        className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-200"
-                        loading="lazy"
-                      />
-                      <div className="absolute bottom-1 right-1 px-1 py-0.2 rounded bg-black/60 text-[9px] font-mono text-white/90">
-                        #{idx + 1}
+            {/* Imágenes y Audios de Taller juntos dentro del Diagnóstico */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-3 border-t border-zinc-200/80 dark:border-white/10">
+              {/* Imágenes de Taller */}
+              <div className="space-y-2">
+                <span className="text-xs font-normal text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
+                  <span>📷</span>
+                  <span>Imágenes de Taller ({fotosVehiculo.length})</span>
+                </span>
+                {fotosVehiculo.length === 0 ? (
+                  <div className="p-3 rounded-xl border border-dashed border-zinc-200 dark:border-white/10 text-xs text-zinc-400">
+                    Sin imágenes registradas en taller.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                    {fotosVehiculo.map((fotoUrl, idx) => (
+                      <div
+                        key={`foto-galeria-${idx}`}
+                        onClick={() => setFotoZoom(fotoUrl)}
+                        className="group/img relative aspect-4/3 rounded-lg overflow-hidden border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-black/40 cursor-pointer hover:border-blue-500/50 transition-all"
+                      >
+                        <img
+                          src={fotoUrl}
+                          alt={`Foto ${idx + 1}`}
+                          className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-200"
+                          loading="lazy"
+                        />
+                        <div className="absolute bottom-1 right-1 px-1 py-0.2 rounded bg-black/60 text-[9px] font-mono text-white/90">
+                          #{idx + 1}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Audios de Taller */}
+              <div className="space-y-2">
+                <span className="text-xs font-normal text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
+                  <span>🎙️</span>
+                  <span>
+                    Audios de Taller (
+                    {(orden.evidencias || []).filter((e) => e.type === "audio" || e.url?.includes(".mp3")).length})
+                  </span>
+                </span>
+                {!(orden.evidencias || []).some((e) => e.type === "audio" || e.url?.includes(".mp3")) ? (
+                  <div className="p-3 rounded-xl border border-dashed border-zinc-200 dark:border-white/10 text-xs text-zinc-400">
+                    Sin audios registrados en taller.
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
+                    {(orden.evidencias || [])
+                      .filter((e) => e.type === "audio" || e.url?.includes(".mp3"))
+                      .map((ev) => (
+                        <div
+                          key={ev.id}
+                          className="p-2.5 rounded-xl bg-white dark:bg-[#16161a] border border-zinc-200 dark:border-white/10 space-y-1.5"
+                        >
+                          <audio controls src={ev.url} className="w-full h-8" />
+                          {ev.transcriptionText && (
+                            <p className="text-xs text-zinc-600 dark:text-zinc-400 italic">
+                              &quot;{ev.transcriptionText}&quot;
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* PRODUCTOS Y SERVICIOS DE TALLER (DENTRO DE TARJETA 2) */}
+          {(() => {
+            const repArea = repuestos.filter((r) => (r.origin || "TALLER") === "TALLER");
+            const srvArea = servicios.filter((s) => (s.origin || "TALLER") === "TALLER");
+            return (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-normal text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                    <span>🔧</span>
+                    <span>Productos y Servicios de Taller ({repArea.length + srvArea.length})</span>
+                  </h3>
                 </div>
-              </details>
-            )}
+
+                {repArea.length === 0 && srvArea.length === 0 ? (
+                  <div className="p-6 rounded-2xl border border-dashed border-zinc-200 dark:border-white/10 bg-zinc-50/50 dark:bg-white/[0.01] text-center space-y-3">
+                    <p className="text-xs text-zinc-400">
+                      No hay productos ni servicios asignados en Taller. Puedes asignarlos aquí o marcar el área como verificada.
+                    </p>
+                    <div className="flex items-center justify-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNuevoOrigen("TALLER");
+                          setModalNuevoRepuesto(true);
+                        }}
+                        className="h-9 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer"
+                      >
+                        + Asignar Producto a Taller
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNuevoServicioOrigen("TALLER");
+                          setModalNuevoServicio(true);
+                        }}
+                        className="h-9 px-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-normal cursor-pointer"
+                      >
+                        + Asignar Servicio a Taller
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAreasVerificadas((p) => ({ ...p, TALLER: true }));
+                          setTarjetaActiva(2);
+                        }}
+                        className="h-9 px-3.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-normal cursor-pointer"
+                      >
+                        ✓ Sin productos en Taller · Ir a Lubricentro →
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden bg-white dark:bg-[#121216]">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse table-auto text-xs font-normal">
+                        <thead>
+                          <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400">
+                            <th className="py-2.5 px-3 w-10 text-center font-normal">✓</th>
+                            <th className="py-2.5 px-3 min-w-[180px] font-normal">Producto / Servicio</th>
+                            <th className="py-2.5 px-3 w-40 font-normal">Origen Stock</th>
+                            <th className="py-2.5 px-2 w-20 text-center font-normal">Cant.</th>
+                            <th className="py-2.5 px-3 w-24 text-right font-normal">Costo</th>
+                            <th className="py-2.5 px-3 w-24 text-right font-normal">PVP</th>
+                            <th className="py-2.5 px-3 w-24 text-right font-normal">Subtotal</th>
+                            <th className="py-2.5 px-2 w-8 text-center"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-200 dark:divide-white/5">
+                          {repArea.map((item) => (
+                            <tr key={item.id} className="hover:bg-zinc-50/80 dark:hover:bg-white/[0.02]">
+                              <td className="py-2.5 px-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={!!verificadosIds[item.id]}
+                                  onChange={() => toggleVerificadoItem(item.id)}
+                                  className="w-4 h-4 rounded accent-emerald-500 cursor-pointer"
+                                />
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className="text-zinc-900 dark:text-white block">{item.name}</span>
+                                <span className="text-[11px] text-zinc-400">Repuesto / Insumo</span>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleStock(item.id)}
+                                  className={`px-2.5 py-1 rounded-lg border text-[11px] cursor-pointer transition-all ${
+                                    item.inStock
+                                      ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
+                                      : "bg-amber-500/15 border-amber-500/35 text-amber-600 dark:text-amber-300"
+                                  }`}
+                                >
+                                  {item.inStock ? "📦 En Bodega" : "🚚 Pedir Proveedor"}
+                                </button>
+                              </td>
+                              <td className="py-2.5 px-2 text-center">
+                                <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-black">
+                                  <button type="button" onClick={() => handleUpdateQty(item.id, -1)} className="w-6 h-7 text-zinc-500 hover:text-white">-</button>
+                                  <span className="w-7 text-center font-mono text-zinc-900 dark:text-white">{item.qty}</span>
+                                  <button type="button" onClick={() => handleUpdateQty(item.id, 1)} className="w-6 h-7 text-zinc-500 hover:text-white">+</button>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-right">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={item.costPrice}
+                                  onChange={(e) => handleUpdatePrice(item.id, "costPrice", e.target.value)}
+                                  className="w-20 h-7 px-1.5 text-right rounded-lg bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-white/10 font-mono text-zinc-700 dark:text-zinc-300 text-xs"
+                                />
+                              </td>
+                              <td className="py-2.5 px-3 text-right">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={item.price}
+                                  onChange={(e) => handleUpdatePrice(item.id, "price", e.target.value)}
+                                  className="w-20 h-7 px-1.5 text-right rounded-lg bg-zinc-50 dark:bg-black border border-emerald-500/30 font-mono text-emerald-600 dark:text-emerald-400 text-xs"
+                                />
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-mono text-zinc-900 dark:text-white">
+                                ${item.subtotalVenta.toFixed(2)}
+                              </td>
+                              <td className="py-2.5 px-2 text-center">
+                                <button type="button" onClick={() => handleDeleteItem(item.id)} className="text-zinc-400 hover:text-rose-500 cursor-pointer">✕</button>
+                              </td>
+                            </tr>
+                          ))}
+                          {srvArea.map((sv) => (
+                            <tr key={sv.id} className="hover:bg-zinc-50/80 dark:hover:bg-white/[0.02] bg-purple-500/[0.02]">
+                              <td className="py-2.5 px-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={!!verificadosIds[sv.id]}
+                                  onChange={() => toggleVerificadoItem(sv.id)}
+                                  className="w-4 h-4 rounded accent-emerald-500 cursor-pointer"
+                                />
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className="text-zinc-900 dark:text-white block">{sv.name}</span>
+                                <span className="text-[11px] text-zinc-400">Mano de Obra / Servicio</span>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 text-[11px]">Servicio Interno</span>
+                              </td>
+                              <td className="py-2.5 px-2 text-center font-mono">1</td>
+                              <td className="py-2.5 px-3 text-right font-mono text-zinc-400">$0.00</td>
+                              <td className="py-2.5 px-3 text-right">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={sv.price}
+                                  onChange={(e) => handleUpdateServicePrice(sv.id, e.target.value)}
+                                  className="w-20 h-7 px-1.5 text-right rounded-lg bg-zinc-50 dark:bg-black border border-purple-500/30 font-mono text-purple-600 dark:text-purple-400 text-xs"
+                                />
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-mono text-zinc-900 dark:text-white">
+                                ${Number(sv.price).toFixed(2)}
+                              </td>
+                              <td className="py-2.5 px-2 text-center">
+                                <button type="button" onClick={() => handleDeleteService(sv.id)} className="text-zinc-400 hover:text-rose-500 cursor-pointer">✕</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Pie de navegación Tarjeta 2 (Taller) */}
+          <div className="print:hidden flex items-center justify-between pt-4 border-t border-zinc-200 dark:border-white/10">
+            <button
+              type="button"
+              onClick={() => setTarjetaActiva(0)}
+              className="h-9 px-4 rounded-xl bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-normal cursor-pointer"
+            >
+              ← Anterior: Cliente y Vehículo
+            </button>
+            <button
+              type="button"
+              onClick={() => setTarjetaActiva(2)}
+              className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer flex items-center gap-1.5"
+            >
+              <span>Siguiente: Lubricentro</span>
+              <span>→</span>
+            </button>
+          </div>
           </div>
 
           {/* ===================================================================
-              SECCIÓN 2: TRABAJOS AGRUPADOS POR MÓDULO (SIN VALORES)
+              TARJETAS 3, 4 Y 5 (idx 2, 3, 4): LUBRICENTRO, TECNICENTRO, CAR WASH
               =================================================================== */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-1">
-              <h2 className="text-sm font-normal text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
-                <span>💼</span>
-                <span>Trabajos ({itemsPropuestaParaTrabajos.length})</span>
-              </h2>
-            </div>
-
-            {gruposModulos.length === 0 ? (
-              <div className="py-4 text-center text-sm font-normal text-zinc-400 italic bg-zinc-50/50 dark:bg-white/[0.01] rounded-xl border border-dashed border-zinc-200 dark:border-white/10">
-                No se han agregado trabajos a la propuesta todavía.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {gruposModulos.map((mod) => (
-                  <div
-                    key={mod.id}
-                    className="rounded-xl border border-zinc-200 dark:border-white/10 overflow-hidden bg-white dark:bg-[#141418] text-sm"
-                  >
-                    {/* Cabecera del Módulo (Taller, Lubricentro, Car Wash, Tecnicentro) */}
-                    <div className="bg-zinc-100 dark:bg-white/[0.04] px-3.5 py-1.5 font-normal text-zinc-900 dark:text-zinc-100 flex items-center gap-2 border-b border-zinc-200 dark:border-white/10 text-sm">
-                      <span>{mod.icon}</span>
-                      <span>{mod.nombre}</span>
-                      <span className="text-sm bg-zinc-200 dark:bg-white/10 px-2 py-0.5 rounded font-normal text-zinc-700 dark:text-zinc-300 ml-auto">
-                        {mod.totalItems} {mod.totalItems === 1 ? "trabajo" : "trabajos"}
-                      </span>
-                    </div>
-
-                    {/* Subcategorías y Lista de Trabajos */}
-                    <div className="divide-y divide-zinc-200 dark:divide-white/10">
-                      {mod.subcategorias.map((sub, sIdx) => (
-                        <div key={sIdx} className="bg-white dark:bg-[#141418]">
-                          {/* Subcategoría directamente debajo del módulo */}
-                          <div className="bg-zinc-50/70 dark:bg-white/[0.02] px-3.5 py-1.5 flex items-center justify-between border-b border-zinc-100 dark:border-white/5">
-                            <span className="font-normal text-zinc-700 dark:text-zinc-300 text-sm flex items-center gap-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500"></span>
-                              {formatoPrimeraMayuscula(sub.nombre)}
-                            </span>
-                            <span className="text-sm font-normal text-zinc-500 dark:text-zinc-400">
-                              {sub.items.length} {sub.items.length === 1 ? "ítem" : "ítems"}
-                            </span>
-                          </div>
-
-                          {/* Lista de trabajos */}
-                          <div className="divide-y divide-zinc-100 dark:divide-white/5 px-3.5 py-1">
-                            {sub.items.map((it: any, itIdx: number) => {
-                              const cant = Number(it.qty) || 1;
-                              return (
-                                <div
-                                  key={it.id || itIdx}
-                                  className="py-2 flex items-center justify-between gap-3 text-sm"
-                                >
-                                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                    <span className="w-5 h-5 rounded-full bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-400 font-normal text-xs flex items-center justify-center shrink-0 border border-zinc-200 dark:border-white/10">
-                                      #{itIdx + 1}
-                                    </span>
-                                    <span className="font-normal text-zinc-900 dark:text-white truncate text-sm">
-                                      {formatoPrimeraMayuscula(it.name)}
-                                    </span>
-                                  </div>
-                                  {cant > 1 && (
-                                    <span className="text-sm font-normal text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-white/5 px-2 py-0.5 rounded-md shrink-0">
-                                      Cant: {cant}
-                                    </span>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
+          {(
+            [
+              { idx: 2, key: "LUBRICENTRO" as EspecialidadTipo, nombre: "Lubricentro", icon: "🛢️", prevLabel: "Taller y Diagnóstico", nextLabel: "Tecnicentro" },
+              { idx: 3, key: "TECNICENTRO" as EspecialidadTipo, nombre: "Tecnicentro", icon: "⚙️", prevLabel: "Lubricentro", nextLabel: "Car Wash" },
+              { idx: 4, key: "CARWASH" as EspecialidadTipo, nombre: "Car Wash", icon: "🚿", prevLabel: "Tecnicentro", nextLabel: "Proveedor y Pago" },
+            ] as const
+          ).map((area) => {
+            const repArea = repuestos.filter((r) => (r.origin || "TALLER") === area.key);
+            const srvArea = servicios.filter((s) => (s.origin || "TALLER") === area.key);
+            return (
+              <div
+                key={area.key}
+                className={tarjetaActiva === area.idx ? "space-y-6" : "hidden print:block print:space-y-6"}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-200 dark:border-white/10">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-500 flex items-center justify-center text-base">
+                      {area.icon}
+                    </span>
+                    <div>
+                      <h2 className="text-base font-normal text-zinc-900 dark:text-white">
+                        {area.nombre} · Verificación y Asignación
+                      </h2>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        Verifica los productos y servicios de {area.nombre}, o asígnalos aquí si hacen falta
+                      </p>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
 
-          {/* TABLA PRINCIPAL DE FACTURA: TODO LO QUE SE PIDIÓ (REPUESTOS, INSUMOS, SERVICIOS) */}
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white flex items-center gap-2">
-                  <span>📋</span>
-                  <span>Detalle</span>
-                </h3>
-              </div>
+                  <div className="flex items-center gap-2 print:hidden flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => toggleAreaVerificada(area.key)}
+                      className={`h-9 px-3 rounded-xl border text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 ${
+                        areasVerificadas[area.key]
+                          ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-600 dark:text-emerald-300"
+                          : "bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200/70"
+                      }`}
+                    >
+                      <span>{areasVerificadas[area.key] ? `✓ ${area.nombre} Verificado` : `○ Marcar ${area.nombre} Verificado`}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNuevoOrigen(area.key);
+                        setModalNuevoRepuesto(true);
+                      }}
+                      className="h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer"
+                    >
+                      + Asignar Producto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNuevoServicioOrigen(area.key);
+                        setModalNuevoServicio(true);
+                      }}
+                      className="h-9 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-normal cursor-pointer"
+                    >
+                      + Asignar Servicio
+                    </button>
+                  </div>
+                </div>
 
-              {/* Botones para agregar líneas directamente a la factura */}
-              <div className="flex items-center gap-2 print:hidden flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setModalNuevoRepuesto(true)}
-                  className="h-9 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <span>+</span>
-                  <span>Repuesto</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setModalNuevoServicio(true)}
-                  className="h-9 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <span>+</span>
-                  <span>Servicio</span>
-                </button>
-              </div>
-            </div>
-
-            {/* TABLA ESTILO FACTURA PROFORMA */}
-            <div className="border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden bg-white dark:bg-[#121216] shadow-sm">
-              <div className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                <table className="w-full text-left border-collapse table-auto">
-                  <thead>
-                    <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] text-xs font-normal text-zinc-600 dark:text-zinc-400">
-                      <th className="py-2.5 px-2 w-8 text-center font-normal">#</th>
-                      <th className="py-2.5 px-2 w-24 font-normal">Área</th>
-                      <th className="py-2.5 px-2 min-w-[170px] font-normal">Descripción</th>
-                      <th className="py-2.5 px-2 w-44 text-center font-normal">
-                        Disponibilidad
-                      </th>
-                      <th className="py-2.5 px-1.5 w-14 text-center font-normal">Cant.</th>
-                      <th className="py-2.5 px-2 w-20 text-right font-normal">Costo</th>
-                      <th className="py-2.5 px-2 w-20 text-right font-normal">PVP</th>
-                      <th className="py-2.5 px-2 w-20 text-right font-normal">Subtotal</th>
-                      <th className="py-2.5 px-2 w-20 text-right print:hidden font-normal">Margen</th>
-                      <th className="py-2.5 px-1.5 w-8 text-center print:hidden"></th>
-                    </tr>
-                  </thead>
-
-                  <tbody className="divide-y divide-zinc-200 dark:divide-white/5 text-xs">
-                    {repuestos.length === 0 && servicios.length === 0 ? (
-                      <tr>
-                        <td colSpan={10} className="py-12 text-center text-zinc-400 text-sm">
-                          No hay repuestos ni servicios agregados en esta orden.
-                        </td>
-                      </tr>
-                    ) : null}
-
-                    {/* LÍNEAS DE REPUESTOS E INSUMOS */}
-                    {repuestos.map((item, idx) => {
-                      const itemNum = idx + 1;
-                      return (
-                        <tr
-                          key={item.id}
-                          className="hover:bg-zinc-50/80 dark:hover:bg-white/[0.02] transition-colors group"
-                        >
-                          {/* 1. Número */}
-                          <td className="py-3 px-3 text-center font-mono font-bold text-zinc-400">
-                            {itemNum}
-                          </td>
-
-                          {/* 2. Área / Especialidad (Taller, Lubricentro, Car Wash, Tecnicentro) */}
-                          <td className="py-3 px-3">
-                            {renderBadgeEspecialidad(item.origin)}
-                          </td>
-
-                          {/* 3. Descripción */}
-                          <td className="py-3 px-3">
-                            <div className="space-y-0.5">
-                              <span className="font-bold text-zinc-900 dark:text-white block">
-                                {item.name}
-                              </span>
-                              <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-mono">
-                                <span>{item.code || `REP-${itemNum}`}</span>
-                                {item.notes && <span>• {item.notes}</span>}
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* 4. CASILLERO DE DISPONIBILIDAD (SÍ HAY EN BODEGA VS PEDIR A PROVEEDOR EXTERNO) */}
-                          <td className="py-3 px-3">
-                            <div className="flex flex-col gap-1.5 items-center justify-center">
-                              {/* Casillero / Switch interactivo */}
-                              <label
-                                className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition-all ${item.inStock
-                                  ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
-                                  : "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300"
+                {repArea.length === 0 && srvArea.length === 0 ? (
+                  <div className="p-8 rounded-2xl border border-dashed border-zinc-200 dark:border-white/10 bg-zinc-50/50 dark:bg-white/[0.01] text-center space-y-3">
+                    <div className="text-2xl">{area.icon}</div>
+                    <p className="text-sm font-normal text-zinc-700 dark:text-zinc-300">
+                      No hay productos ni servicios registrados en {area.nombre}
+                    </p>
+                    <p className="text-xs text-zinc-400">
+                      Puedes asignar productos o servicios de {area.nombre} aquí mismo, o confirmar y pasar a la siguiente tarjeta.
+                    </p>
+                    <div className="pt-2 flex items-center justify-center gap-2.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNuevoOrigen(area.key);
+                          setModalNuevoRepuesto(true);
+                        }}
+                        className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer"
+                      >
+                        + Asignar Producto ({area.nombre})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNuevoServicioOrigen(area.key);
+                          setModalNuevoServicio(true);
+                        }}
+                        className="h-9 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-normal cursor-pointer"
+                      >
+                        + Asignar Servicio ({area.nombre})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAreasVerificadas((p) => ({ ...p, [area.key]: true }));
+                          setTarjetaActiva(area.idx + 1);
+                        }}
+                        className="h-9 px-4 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-normal cursor-pointer"
+                      >
+                        ✓ Verificado sin ítems · Ir a {area.nextLabel} →
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden bg-white dark:bg-[#121216]">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse table-auto text-xs font-normal">
+                        <thead>
+                          <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.04] text-zinc-500 dark:text-zinc-400">
+                            <th className="py-2.5 px-3 w-10 text-center font-normal">✓</th>
+                            <th className="py-2.5 px-3 min-w-[180px] font-normal">Producto / Servicio</th>
+                            <th className="py-2.5 px-3 w-40 font-normal">Origen Stock</th>
+                            <th className="py-2.5 px-2 w-20 text-center font-normal">Cant.</th>
+                            <th className="py-2.5 px-3 w-24 text-right font-normal">Costo</th>
+                            <th className="py-2.5 px-3 w-24 text-right font-normal">PVP</th>
+                            <th className="py-2.5 px-3 w-24 text-right font-normal">Subtotal</th>
+                            <th className="py-2.5 px-2 w-8 text-center"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-200 dark:divide-white/5">
+                          {repArea.map((item) => (
+                            <tr key={item.id} className="hover:bg-zinc-50/80 dark:hover:bg-white/[0.02]">
+                              <td className="py-2.5 px-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={!!verificadosIds[item.id]}
+                                  onChange={() => toggleVerificadoItem(item.id)}
+                                  className="w-4 h-4 rounded accent-emerald-500 cursor-pointer"
+                                />
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className="text-zinc-900 dark:text-white block">{item.name}</span>
+                                <span className="text-[11px] text-zinc-400">Producto / Insumo ({area.nombre})</span>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleStock(item.id)}
+                                  className={`px-2.5 py-1 rounded-lg border text-[11px] cursor-pointer transition-all ${
+                                    item.inStock
+                                      ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300"
+                                      : "bg-amber-500/15 border-amber-500/35 text-amber-600 dark:text-amber-300"
                                   }`}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    type="checkbox"
-                                    checked={item.inStock}
-                                    onChange={() => handleToggleStock(item.id)}
-                                    className="w-4 h-4 rounded-md accent-emerald-600 cursor-pointer"
-                                  />
-                                  <span>{item.inStock ? "Sí hay en Bodega" : "Pedir a Proveedor"}</span>
-                                </div>
-                                <span className="text-[11px] font-normal opacity-80">
-                                  {item.inStock ? "Bodega" : "Externo"}
-                                </span>
-                              </label>
-
-                              {/* Si es externo, selector del proveedor asignado */}
-                              {!item.inStock && (
-                                <select
-                                  value={item.supplierName || "Proveedor General"}
-                                  onChange={(e) => handleUpdateSupplier(item.id, e.target.value)}
-                                  className="w-full h-7 px-2 rounded-lg bg-zinc-50 dark:bg-black border border-amber-500/30 text-[11px] text-zinc-700 dark:text-zinc-200 font-medium focus:outline-none focus:ring-1 focus:ring-amber-500"
-                                  title="Proveedor asignado"
                                 >
-                                  <option value="Proveedor General">📦 Proveedor General</option>
-                                  <option value="Bosch Store">Bosch Store</option>
-                                  <option value="Repuestos Pichincha">Repuestos Pichincha</option>
-                                  <option value="Llantera Express">Llantera Express</option>
-                                  <option value="Distribuidora de Lubricantes">Distribuidora Lubricantes</option>
-                                  {proveedores.map((p) => (
-                                    <option key={p.id} value={p.name}>
-                                      {p.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              )}
-                            </div>
-                          </td>
+                                  {item.inStock ? "📦 En Bodega" : "🚚 Pedir Proveedor"}
+                                </button>
+                              </td>
+                              <td className="py-2.5 px-2 text-center">
+                                <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-black">
+                                  <button type="button" onClick={() => handleUpdateQty(item.id, -1)} className="w-6 h-7 text-zinc-500 hover:text-white">-</button>
+                                  <span className="w-7 text-center font-mono text-zinc-900 dark:text-white">{item.qty}</span>
+                                  <button type="button" onClick={() => handleUpdateQty(item.id, 1)} className="w-6 h-7 text-zinc-500 hover:text-white">+</button>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-right">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={item.costPrice}
+                                  onChange={(e) => handleUpdatePrice(item.id, "costPrice", e.target.value)}
+                                  className="w-20 h-7 px-1.5 text-right rounded-lg bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-white/10 font-mono text-zinc-700 dark:text-zinc-300 text-xs"
+                                />
+                              </td>
+                              <td className="py-2.5 px-3 text-right">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={item.price}
+                                  onChange={(e) => handleUpdatePrice(item.id, "price", e.target.value)}
+                                  className="w-20 h-7 px-1.5 text-right rounded-lg bg-zinc-50 dark:bg-black border border-emerald-500/30 font-mono text-emerald-600 dark:text-emerald-400 text-xs"
+                                />
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-mono text-zinc-900 dark:text-white">
+                                ${item.subtotalVenta.toFixed(2)}
+                              </td>
+                              <td className="py-2.5 px-2 text-center">
+                                <button type="button" onClick={() => handleDeleteItem(item.id)} className="text-zinc-400 hover:text-rose-500 cursor-pointer">✕</button>
+                              </td>
+                            </tr>
+                          ))}
+                          {srvArea.map((sv) => (
+                            <tr key={sv.id} className="hover:bg-zinc-50/80 dark:hover:bg-white/[0.02] bg-purple-500/[0.02]">
+                              <td className="py-2.5 px-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={!!verificadosIds[sv.id]}
+                                  onChange={() => toggleVerificadoItem(sv.id)}
+                                  className="w-4 h-4 rounded accent-emerald-500 cursor-pointer"
+                                />
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className="text-zinc-900 dark:text-white block">{sv.name}</span>
+                                <span className="text-[11px] text-zinc-400">Servicio ({area.nombre})</span>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 text-[11px]">Servicio Interno</span>
+                              </td>
+                              <td className="py-2.5 px-2 text-center font-mono">1</td>
+                              <td className="py-2.5 px-3 text-right font-mono text-zinc-400">$0.00</td>
+                              <td className="py-2.5 px-3 text-right">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={sv.price}
+                                  onChange={(e) => handleUpdateServicePrice(sv.id, e.target.value)}
+                                  className="w-20 h-7 px-1.5 text-right rounded-lg bg-zinc-50 dark:bg-black border border-purple-500/30 font-mono text-purple-600 dark:text-purple-400 text-xs"
+                                />
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-mono text-zinc-900 dark:text-white">
+                                ${Number(sv.price).toFixed(2)}
+                              </td>
+                              <td className="py-2.5 px-2 text-center">
+                                <button type="button" onClick={() => handleDeleteService(sv.id)} className="text-zinc-400 hover:text-rose-500 cursor-pointer">✕</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
 
-                          {/* 5. Cantidad */}
-                          <td className="py-3 px-2 text-center">
-                            <div className="inline-flex items-center border border-zinc-200 dark:border-white/10 rounded-lg overflow-hidden bg-zinc-50 dark:bg-black print:border-none print:bg-transparent">
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateQty(item.id, -1)}
-                                className="w-6 h-7 flex items-center justify-center text-zinc-500 hover:text-black dark:hover:text-white font-bold text-xs print:hidden"
-                              >
-                                -
-                              </button>
-                              <span className="w-7 text-center font-mono font-bold text-zinc-900 dark:text-white">
-                                {item.qty}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateQty(item.id, 1)}
-                                className="w-6 h-7 flex items-center justify-center text-zinc-500 hover:text-black dark:hover:text-white font-bold text-xs print:hidden"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </td>
+                {/* Pie de navegación Tarjeta de Área */}
+                <div className="print:hidden flex items-center justify-between pt-4 border-t border-zinc-200 dark:border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setTarjetaActiva(area.idx - 1)}
+                    className="h-9 px-4 rounded-xl bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-normal cursor-pointer"
+                  >
+                    ← Anterior: {area.prevLabel}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTarjetaActiva(area.idx + 1)}
+                    className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-normal cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>Siguiente: {area.nextLabel}</span>
+                    <span>→</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })}
 
-                          {/* 6. Costo Unitario */}
-                          <td className="py-3 px-3 text-right">
-                            <div className="print:hidden">
-                              <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={item.costPrice}
-                                onChange={(e) => handleUpdatePrice(item.id, "costPrice", e.target.value)}
-                                className="w-20 h-7 px-1.5 text-right rounded-lg bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-white/10 font-mono font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
-                              />
-                            </div>
-                            <span className="hidden print:inline font-mono">
-                              ${Number(item.costPrice).toFixed(2)}
-                            </span>
-                          </td>
+          {/* ===================================================================
+              TARJETA 6 (idx 5): PEDIR A PROVEEDOR CON LINK + LIQUIDACIÓN + PAGAR O PASAR A POS
+              =================================================================== */}
+          <div className={tarjetaActiva === 5 ? "space-y-6" : "hidden print:block print:space-y-6"}>
+            {/* Cabecera Última Tarjeta */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-200 dark:border-white/10">
+              <div className="flex items-center gap-2.5">
+                <span className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-500 flex items-center justify-center text-base">
+                  📦
+                </span>
+                <div>
+                  <h2 className="text-base font-normal text-zinc-900 dark:text-white">
+                    Proveedor y Cierre · Pedidos con Link y Pago / POS
+                  </h2>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Pide a proveedor con link individual o de toda esta orden, y finaliza pagando o enviando a POS
+                  </p>
+                </div>
+              </div>
 
-                          {/* 7. PVP Unitario */}
-                          <td className="py-3 px-3 text-right">
-                            <div className="print:hidden">
-                              <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={item.price}
-                                onChange={(e) => handleUpdatePrice(item.id, "price", e.target.value)}
-                                className="w-20 h-7 px-1.5 text-right rounded-lg bg-zinc-50 dark:bg-black border border-emerald-500/30 font-mono font-bold text-emerald-600 dark:text-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-xs"
-                              />
-                            </div>
-                            <span className="hidden print:inline font-mono font-bold">
-                              ${Number(item.price).toFixed(2)}
-                            </span>
-                          </td>
-
-                          {/* 8. Subtotal */}
-                          <td className="py-3 px-3 text-right font-mono font-black text-zinc-900 dark:text-white">
-                            ${item.subtotalVenta.toFixed(2)}
-                          </td>
-
-                          {/* 9. Margen */}
-                          <td className="py-3 px-3 text-right font-mono text-[11px] font-bold print:hidden">
-                            <span className={item.margin >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500"}>
-                              ${item.margin.toFixed(2)} ({item.marginPercent}%)
-                            </span>
-                          </td>
-
-                          {/* 10. Eliminar */}
-                          <td className="py-3 px-2 text-center print:hidden">
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteItem(item.id)}
-                              className="w-7 h-7 rounded-lg text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 inline-flex items-center justify-center transition-colors cursor-pointer text-xs"
-                              title="Eliminar repuesto"
-                            >
-                              ✕
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-
-                    {/* LÍNEAS DE SERVICIOS / MANO DE OBRA */}
-                    {servicios.map((sv, idx) => {
-                      const itemNum = repuestos.length + idx + 1;
-                      return (
-                        <tr
-                          key={sv.id}
-                          className="hover:bg-zinc-50/80 dark:hover:bg-white/[0.02] transition-colors group bg-purple-500/[0.02]"
-                        >
-                          {/* 1. Número */}
-                          <td className="py-3 px-3 text-center font-mono font-bold text-zinc-400">
-                            {itemNum}
-                          </td>
-
-                          {/* 2. Área / Especialidad */}
-                          <td className="py-3 px-3">
-                            {renderBadgeEspecialidad(sv.origin)}
-                          </td>
-
-                          {/* 3. Descripción del Servicio */}
-                          <td className="py-3 px-3">
-                            <div className="space-y-0.5">
-                              <span className="font-bold text-zinc-900 dark:text-white block">
-                                {sv.name}
-                              </span>
-                              <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-mono">
-                                <span>{sv.code || `SRV-${idx + 1}`}</span>
-                                <span>• Mano de Obra Técnica</span>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* 4. Casillero para Mano de Obra */}
-                          <td className="py-3 px-3 text-center">
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/25 text-purple-700 dark:text-purple-300 font-normal text-xs">
-                              <span>👨‍🔧 Servicio</span>
-                              <span className="text-[10px] text-zinc-400 font-normal">
-                                ({sv.mechanic || orden.mechanic})
-                              </span>
-                            </div>
-                          </td>
-
-                          {/* 5. Cantidad */}
-                          <td className="py-3 px-2 text-center font-mono font-bold text-zinc-900 dark:text-white">
-                            1
-                          </td>
-
-                          {/* 6. Costo Unitario */}
-                          <td className="py-3 px-3 text-right font-mono text-zinc-400 text-xs">
-                            $0.00
-                          </td>
-
-                          {/* 7. PVP Unitario */}
-                          <td className="py-3 px-3 text-right">
-                            <div className="print:hidden">
-                              <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={sv.price}
-                                onChange={(e) => handleUpdateServicePrice(sv.id, e.target.value)}
-                                className="w-20 h-7 px-1.5 text-right rounded-lg bg-zinc-50 dark:bg-black border border-purple-500/30 font-mono font-bold text-purple-600 dark:text-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-500 text-xs"
-                              />
-                            </div>
-                            <span className="hidden print:inline font-mono font-bold">
-                              ${Number(sv.price).toFixed(2)}
-                            </span>
-                          </td>
-
-                          {/* 8. Subtotal */}
-                          <td className="py-3 px-3 text-right font-mono font-black text-zinc-900 dark:text-white">
-                            ${Number(sv.price).toFixed(2)}
-                          </td>
-
-                          {/* 9. Margen */}
-                          <td className="py-3 px-3 text-right font-mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400 print:hidden">
-                            ${Number(sv.price).toFixed(2)} (100%)
-                          </td>
-
-                          {/* 10. Eliminar */}
-                          <td className="py-3 px-2 text-center print:hidden">
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteService(sv.id)}
-                              className="w-7 h-7 rounded-lg text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 inline-flex items-center justify-center transition-colors cursor-pointer text-xs"
-                              title="Eliminar servicio"
-                            >
-                              ✕
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              {/* Botones rápidos para pedir TODA LA ORDEN o CONSOLIDADO */}
+              <div className="flex items-center gap-2 print:hidden flex-wrap">
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(
+                    `Hola, te comparto el pedido de repuestos de toda la orden para ${orden.vehicle} (Placa: ${orden.plate}). Revisa fotos y especificaciones aquí: ${typeof window !== "undefined" ? window.location.origin : ""}/pedidos-proveedor/${orden.id}`
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="h-9 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-normal flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <span>💬 Pedir Toda esta Orden</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() =>
+                    copiarAlPortapapeles(
+                      `${window.location.origin}/pedidos-proveedor/${orden.id}`,
+                      "Link de toda la orden copiado al portapapeles."
+                    )
+                  }
+                  className="h-9 px-3 rounded-xl bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-200 text-xs font-normal cursor-pointer"
+                >
+                  🔗 Link Toda la Orden
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalWhatsApp(true)}
+                  className="h-9 px-3 rounded-xl bg-purple-600/15 hover:bg-purple-600/25 border border-purple-500/35 text-purple-600 dark:text-purple-300 text-xs font-normal cursor-pointer"
+                >
+                  📲 Catálogo / Consolidado
+                </button>
               </div>
             </div>
-          </div>
+
+            {/* SECCIÓN PEDIR A PROVEEDOR (INDIVIDUAL O TODA LA ORDEN) */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-zinc-50/70 dark:bg-[#121216] border border-zinc-200 dark:border-white/10 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <h3 className="text-sm font-normal text-zinc-900 dark:text-white flex items-center gap-2">
+                    <span>🚚</span>
+                    <span>Productos para Pedir a Proveedor ({calculos.itemsPorComprar.length})</span>
+                  </h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Envía link individual por repuesto o pide toda esta orden junta
+                  </p>
+                </div>
+                <span className="text-xs font-mono text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2.5 py-1 rounded-lg">
+                  Costo Compras Externas: ${calculos.totalCostoComprasExternas.toFixed(2)}
+                </span>
+              </div>
+
+              {calculos.itemsPorComprar.length === 0 ? (
+                <div className="p-4 rounded-xl border border-dashed border-zinc-200 dark:border-white/10 text-center text-xs text-zinc-400">
+                  Todos los productos están marcados en Bodega o no hay repuestos externos por pedir.
+                </div>
+              ) : (
+                <div className="divide-y divide-zinc-200 dark:divide-white/10 border border-zinc-200 dark:border-white/10 rounded-xl bg-white dark:bg-[#141418] overflow-hidden">
+                  {calculos.itemsPorComprar.map((item) => {
+                    const itemLink = `${typeof window !== "undefined" ? window.location.origin : ""}/pedidos-proveedor/${orden.id}?item=${encodeURIComponent(item.name)}`;
+                    const waText = `Hola, necesito cotizar/pedir este repuesto para ${orden.vehicle} (${orden.plate}):\n• ${item.qty}x ${item.name}\nVer detalle y fotos aquí: ${itemLink}`;
+                    return (
+                      <div
+                        key={item.id}
+                        className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs hover:bg-zinc-50/70 dark:hover:bg-white/[0.02]"
+                      >
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {renderBadgeEspecialidad(item.origin)}
+                            <span className="text-zinc-900 dark:text-white font-normal">
+                              {item.qty}x {item.name}
+                            </span>
+                            <span className="text-zinc-400 font-mono">
+                              Costo: ${Number(item.costPrice).toFixed(2)} c/u
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 pt-0.5">
+                            <span className="text-[11px] text-zinc-400">Proveedor:</span>
+                            <input
+                              type="text"
+                              value={item.supplierName || "Proveedor General"}
+                              onChange={(e) => handleUpdateSupplier(item.id, e.target.value)}
+                              className="h-6 px-2 rounded bg-zinc-50 dark:bg-black border border-zinc-200 dark:border-white/10 text-[11px] text-zinc-700 dark:text-zinc-300"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStock(item.id)}
+                              className="text-[11px] text-emerald-500 hover:underline cursor-pointer"
+                            >
+                              Cambiar a Bodega
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Acciones de pedido individual con link */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <a
+                            href={`https://wa.me/?text=${encodeURIComponent(waText)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="h-8 px-3 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-600 dark:text-emerald-300 text-xs font-normal flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <span>💬 Pedir Individual</span>
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => copiarAlPortapapeles(itemLink, `Link individual de "${item.name}" copiado.`)}
+                            className="h-8 px-2.5 rounded-lg bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-300 text-xs font-normal cursor-pointer"
+                            title="Copiar link individual de este repuesto"
+                          >
+                            🔗 Link
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
           {/* LIQUIDACIÓN DE LA FACTURA & TOTALES */}
           <div className="flex justify-end pt-4 border-t border-zinc-200 dark:border-white/10">
@@ -2156,32 +2514,50 @@ export default function PaginaDetallePropuesta() {
             </div>
           </div>
 
-          {/* AUDIOS Y NOTAS DE VOZ (SI EXISTEN) */}
-          {orden.evidencias && orden.evidencias.some((e) => e.type === "audio" || e.url?.includes(".mp3")) && (
-            <div className="space-y-3 pt-6 border-t border-zinc-200 dark:border-white/10 print:hidden">
-              <h4 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                <span>🎙️</span>
-                <span>Notas de Voz y Audios de Inspección</span>
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {orden.evidencias
-                  .filter((e) => e.type === "audio" || e.url?.includes(".mp3"))
-                  .map((ev) => (
-                    <div
-                      key={ev.id}
-                      className="p-3 rounded-2xl bg-zinc-100 dark:bg-[#111113] border border-zinc-200 dark:border-white/10 space-y-2 shadow-xs"
-                    >
-                      <audio controls src={ev.url} className="w-full h-8" />
-                      {ev.transcriptionText && (
-                        <p className="text-xs text-zinc-600 dark:text-zinc-400 italic">
-                          "{ev.transcriptionText}"
-                        </p>
-                      )}
-                    </div>
-                  ))}
+            {/* BARRA DE CIERRE FINAL EN LA ÚLTIMA TARJETA: PAGAR O PASAR A POS PARA QUE COBREN */}
+            <div className="print:hidden pt-5 border-t border-zinc-200 dark:border-white/10 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+              <button
+                type="button"
+                onClick={() => setTarjetaActiva(4)}
+                className="h-10 px-4 rounded-xl bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300 text-xs font-normal cursor-pointer self-start md:self-auto"
+              >
+                ← Anterior: Car Wash
+              </button>
+
+              <div className="flex items-center gap-2.5 flex-wrap justify-end">
+                <button
+                  type="button"
+                  disabled={guardando}
+                  onClick={handleGuardarBorrador}
+                  className="h-10 px-5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-xs font-normal transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                >
+                  {guardando ? "Guardando..." : "Guardar"}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={cambiandoEstado}
+                  onClick={handleTogglePagado}
+                  className={`h-10 px-5 rounded-xl border text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 ${
+                    esPagado
+                      ? "bg-sky-600 hover:bg-sky-500 border-sky-500 text-white"
+                      : "bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/35 text-sky-600 dark:text-sky-300"
+                  }`}
+                >
+                  <span>{esPagado ? "✓ Pagado" : "💳 Pagar"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={autorizando}
+                  onClick={handleAutorizarYEnviarAPos}
+                  className="h-10 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-normal shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  <span>{autorizando ? "Enviando a POS..." : "🛒 Pasar a POS para Cobrar"}</span>
+                </button>
               </div>
             </div>
-          )}
+          </div>
 
           {/* FIRMAS EN FACTURA (Visible en impresión o PDF) */}
           <div className="hidden print:grid grid-cols-2 gap-12 pt-16 mt-8 border-t border-zinc-300 text-center text-xs">
@@ -2198,72 +2574,6 @@ export default function PaginaDetallePropuesta() {
           </div>
         </div>
       </main>
-
-      {/* BARRA FINAL CON ACCIONES (FLUJO NORMAL AL FINAL DEL DOCUMENTO) */}
-      <footer className="print:hidden max-w-6xl mx-auto px-3 sm:px-6 md:px-8 mt-6 mb-12">
-        <div className="bg-white dark:bg-[#0f0f13] border border-zinc-200 dark:border-white/10 rounded-3xl p-4 sm:p-6 shadow-xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-          {/* Métricas Rápidas */}
-          <div className="flex items-center justify-between md:justify-start gap-4 sm:gap-6 text-xs font-mono">
-            <div>
-              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-sans">Compras</span>
-              <span className="text-base sm:text-lg font-normal text-zinc-900 dark:text-white">
-                ${calculos.totalCostoComprasExternas.toFixed(2)}
-              </span>
-            </div>
-
-            <div className="h-8 w-px bg-zinc-200 dark:bg-white/10" />
-
-            <div>
-              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-sans">Total</span>
-              <span className="text-base sm:text-lg font-normal text-blue-600 dark:text-blue-400">
-                ${calculos.totalFacturaCliente.toFixed(2)}
-              </span>
-            </div>
-
-            <div className="h-8 w-px bg-zinc-200 dark:bg-white/10" />
-
-            <div>
-              <span className="text-[10px] text-zinc-400 uppercase tracking-wider block font-sans">Margen</span>
-              <span className="text-base sm:text-lg font-normal text-emerald-600 dark:text-emerald-400">
-                ${calculos.margenNetoTaller.toFixed(2)} ({calculos.margenPorcentaje}%)
-              </span>
-            </div>
-          </div>
-
-          {/* Botones de Acción */}
-          <div className="flex items-center gap-2.5 shrink-0 flex-wrap justify-end">
-            <button
-              type="button"
-              disabled={guardando}
-              onClick={handleGuardarBorrador}
-              className="h-10 px-5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-xs font-semibold transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-            >
-              {guardando ? "Guardando..." : "Guardar"}
-            </button>
-
-            <button
-              type="button"
-              disabled={cambiandoEstado}
-              onClick={handleTogglePagado}
-              className={`h-10 px-5 rounded-xl border text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 ${esPagado
-                ? "bg-sky-600 hover:bg-sky-500 border-sky-500 text-white"
-                : "bg-sky-500/15 hover:bg-sky-500/25 border-sky-500/35 text-sky-600 dark:text-sky-300"
-                }`}
-            >
-              <span>{esPagado ? "✓ Pagado" : "💳 Pagar"}</span>
-            </button>
-
-            <button
-              type="button"
-              disabled={autorizando}
-              onClick={handleAutorizarYEnviarAPos}
-              className="h-10 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center disabled:opacity-50"
-            >
-              <span>{autorizando ? "Transfiriendo..." : "Autorizar"}</span>
-            </button>
-          </div>
-        </div>
-      </footer>
 
       {/* MODAL CATÁLOGO WHATSAPP PARA PROVEEDORES */}
       {modalWhatsApp && (

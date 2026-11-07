@@ -113,6 +113,38 @@ const OPCIONES_ESTADO = [
   { id: "PAGADO", label: "Pagadas", short: "Pagadas", icon: "✓", dot: "bg-blue-400" },
 ];
 
+function limpiarNumeroOrden(val?: string | number | null): string {
+  if (!val) return "";
+  const limpio = String(val)
+    .replace(/\b(OT|ORD)\b[-\s#]*/gi, "")
+    .replace(/#+/g, "")
+    .trim();
+  return limpio || String(val).replace(/#+/g, "").trim();
+}
+
+const DIAS_SEMANA = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const MESES_CORTOS = ["Ene.", "Feb.", "Mar.", "Abr.", "May.", "Jun.", "Jul.", "Ago.", "Sep.", "Oct.", "Nov.", "Dic."];
+
+function formatearFechaHora(createdAt?: string | null, dateIn?: string | null): { fecha: string; hora: string } {
+  const raw = createdAt || dateIn;
+  if (!raw) return { fecha: "-", hora: "" };
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) {
+    return { fecha: String(raw), hora: "" };
+  }
+  const diaSemana = DIAS_SEMANA[d.getDay()];
+  const dia = String(d.getDate()).padStart(2, "0");
+  const mes = MESES_CORTOS[d.getMonth()];
+  const anio = String(d.getFullYear()).slice(-2);
+  const fecha = `${diaSemana} ${dia} ${mes} ${anio}`;
+  const hora = d.toLocaleTimeString("es-EC", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  return { fecha, hora };
+}
+
 export default function PanelPresupuestosPage() {
   const router = useRouter();
 
@@ -535,372 +567,160 @@ export default function PanelPresupuestosPage() {
               </div>
             ) : (
               <>
-                {/* Vista Móvil (Tarjetas táctiles estilo POS con casillero de verificación) */}
-                <div className="md:hidden space-y-3.5">
+                {/* Vista Móvil Compacta */}
+                <div className="md:hidden space-y-2.5">
                   {ordenes.map((orden) => {
                     const esPagado = orden.quoteStatus === "Pagado" || orden.status === "Pagado";
                     const esAprobado = !esPagado && (orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA");
                     const estaTrabajando = ordenTrabajandoId === orden.id || ordenTrabajandoId === orden.orderNumber;
+                    const { fecha, hora } = formatearFechaHora(orden.createdAt, orden.dateIn);
                     return (
                       <div
                         key={orden.id}
                         onClick={() => irAPropuesta(orden.id)}
-                        className={`rounded-2xl border p-4 space-y-3 shadow-xs transition-all cursor-pointer ${
+                        className={`rounded-2xl border p-3.5 space-y-2.5 shadow-xs transition-all cursor-pointer ${
                           estaTrabajando
                             ? "bg-purple-50/40 dark:bg-purple-950/20 border-purple-500/50 ring-1 ring-purple-500/30"
                             : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
                         }`}
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-3 min-w-0">
-                            {/* Casillero de verificación móvil */}
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5 min-w-0">
                             <button
                               type="button"
                               onClick={(e) => toggleOrdenTrabajando(orden.id, e)}
-                              title={estaTrabajando ? "Orden en trabajo (clic para desmarcar)" : "Marcar como orden con la que estoy trabajando"}
-                              className={`w-6 h-6 rounded-md border flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+                              title={estaTrabajando ? "Orden en trabajo (clic para desmarcar)" : "Marcar como orden en trabajo"}
+                              className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer shrink-0 ${
                                 estaTrabajando
-                                  ? "bg-purple-600 border-purple-500 text-white shadow-sm shadow-purple-500/40 ring-2 ring-purple-500/30 scale-105"
-                                  : "border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:border-purple-400 text-transparent"
+                                  ? "bg-purple-600 border-purple-500 text-white"
+                                  : "border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 text-transparent"
                               }`}
                             >
-                              <svg className="w-4 h-4 stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className="w-3.5 h-3.5 stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                               </svg>
                             </button>
-
-                            <div
-                              className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-base shrink-0 border ${
-                                esAprobado
-                                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30"
-                                  : "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400 border-purple-200 dark:border-purple-500/30"
-                              }`}
-                            >
-                              📋
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
-                                {orden.vehicle}
-                              </p>
-                              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono mt-0.5 truncate flex items-center gap-1.5">
-                                <span className="font-semibold text-purple-600 dark:text-purple-400">
-                                  #{orden.orderNumber}
-                                </span>
-                                {estaTrabajando && (
-                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/30">
-                                    En trabajo
-                                  </span>
-                                )}
-                                <span>• {orden.plate}</span>
-                              </p>
-                            </div>
+                            <span className="font-normal text-xs text-purple-600 dark:text-purple-400 shrink-0">
+                              #{limpiarNumeroOrden(orden.orderNumber)}
+                            </span>
+                            <span className="font-normal text-xs text-zinc-900 dark:text-zinc-100 truncate">
+                              {orden.client}
+                            </span>
+                            <span className="font-normal text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                              · {orden.vehicle}
+                            </span>
                           </div>
+                          <span className="font-normal text-xs text-zinc-900 dark:text-white shrink-0">
+                            ${orden.totalVentaEstimada.toFixed(2)}
+                          </span>
+                        </div>
 
+                        <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800/80 text-xs gap-2">
+                          <span className="font-normal text-xs text-zinc-500 dark:text-zinc-400">
+                            {fecha}{hora ? ` · ${hora}` : ""}
+                          </span>
                           <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                            className={`px-2.5 py-0.5 rounded-lg border text-xs font-normal shrink-0 ${
                               esPagado
-                                ? "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-500/20 dark:text-sky-400 dark:border-sky-500/30"
+                                ? "bg-sky-500/15 border-sky-500/30 text-sky-700 dark:text-sky-300"
                                 : esAprobado
-                                ? "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30"
-                                : "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30"
+                                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+                                : "bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-400"
                             }`}
                           >
                             {esPagado ? "✓ Pagado" : esAprobado ? "✓ Aprobado" : "En Espera"}
                           </span>
-                        </div>
-
-                        <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-                          <span className="truncate">{orden.client} {orden.tipoNegocio ? `· ${orden.tipoNegocio}` : ""}</span>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {orden.evidencias.fotos > 0 && <span>📸 {orden.evidencias.fotos}</span>}
-                            {orden.evidencias.audios > 0 && <span>🎙️ {orden.evidencias.audios}</span>}
-                            {orden.evidencias.videos > 0 && <span>🎥 {orden.evidencias.videos}</span>}
-                            {orden.findingsCount > 0 && <span>📝 {orden.findingsCount}</span>}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between pt-1 border-t border-zinc-100 dark:border-zinc-800 text-xs gap-2">
-                          <div>
-                            <span className="font-bold font-mono text-base text-zinc-900 dark:text-white">
-                              ${orden.totalVentaEstimada.toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {esPagado ? (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCambiarEstadoPropuesta(orden.id, "Aprobado");
-                                }}
-                                disabled={cambiandoEstadoId === orden.id}
-                                className="h-9 px-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-700 dark:text-sky-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer shadow-xs disabled:opacity-50"
-                                title="Propuesta Pagada (clic para revertir a Aprobado)"
-                              >
-                                <span>✓</span>
-                                <span>{cambiandoEstadoId === orden.id ? "..." : "Pagado"}</span>
-                              </button>
-                            ) : (
-                              <>
-                                {esAprobado ? (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleCambiarEstadoPropuesta(orden.id, "Pendiente");
-                                    }}
-                                    disabled={cambiandoEstadoId === orden.id}
-                                    className="h-9 px-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 font-bold text-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer shadow-xs disabled:opacity-50"
-                                    title="Propuesta Aprobada (clic para poner En Espera)"
-                                  >
-                                    <span>✓</span>
-                                    <span>{cambiandoEstadoId === orden.id ? "..." : "Aprobado"}</span>
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleCambiarEstadoPropuesta(orden.id, "Aprobado");
-                                    }}
-                                    disabled={cambiandoEstadoId === orden.id}
-                                    className="h-9 px-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-700 dark:text-amber-400 font-semibold text-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                                    title="Propuesta En Espera (clic para Aprobar)"
-                                  >
-                                    <span>⏸</span>
-                                    <span>{cambiandoEstadoId === orden.id ? "..." : "En Espera"}</span>
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCambiarEstadoPropuesta(orden.id, "Pagado");
-                                  }}
-                                  disabled={cambiandoEstadoId === orden.id}
-                                  className="h-9 px-2.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-700 dark:text-sky-300 font-semibold text-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                                  title="Marcar trabajo como Pagado (se retira de Pista de Taller)"
-                                >
-                                  <span>💳</span>
-                                  <span>Pagar</span>
-                                </button>
-                              </>
-                            )}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                irAPropuesta(orden.id);
-                              }}
-                              className="h-9 px-3 rounded-xl bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 font-semibold text-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer"
-                            >
-                              <span>Abrir</span>
-                              <span>→</span>
-                            </button>
-                          </div>
                         </div>
                       </div>
                     );
                   })}
                 </div>
 
-                {/* Vista Escritorio (Tabla completa idéntica a POS Cotizaciones con casillero de verificación) */}
+                {/* Vista Escritorio Minimalista */}
                 <div className="hidden md:block bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs uppercase tracking-wider font-semibold">
+                    <table className="w-full text-left text-xs font-normal">
+                      <thead className="bg-zinc-50 dark:bg-zinc-900/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs font-normal">
                         <tr>
-                          <th className="py-3.5 px-3 w-12 text-center" title="Casillero de verificación: Orden en trabajo">
-                            <span className="sr-only">Seleccionar</span>
-                            <div className="w-4 h-4 rounded border border-zinc-400 dark:border-zinc-600 flex items-center justify-center text-[10px] text-zinc-400 mx-auto">
-                              ✓
-                            </div>
-                          </th>
-                          <th className="py-3.5 px-4">Folio</th>
-                          <th className="py-3.5 px-4">Vehículo / Placa</th>
-                          <th className="py-3.5 px-4">Cliente</th>
-                          <th className="py-3.5 px-4 text-center">Evidencias</th>
-                          <th className="py-3.5 px-4 text-center">Estado</th>
-                          <th className="py-3.5 px-4 text-right">Total Est.</th>
-                          <th className="py-3.5 px-4 text-center">Acciones</th>
+                          <th className="py-3 px-3 w-10 text-center font-normal">✓</th>
+                          <th className="py-3 px-4 font-normal">Orden</th>
+                          <th className="py-3 px-4 font-normal">Fecha / Hora</th>
+                          <th className="py-3 px-4 font-normal">Cliente</th>
+                          <th className="py-3 px-4 font-normal">Vehículo</th>
+                          <th className="py-3 px-4 text-right font-normal">Total</th>
+                          <th className="py-3 px-4 text-center font-normal">Estado</th>
+                          <th className="py-3 px-4 text-right font-normal">Acción</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                      <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800 text-xs font-normal">
                         {ordenes.map((orden) => {
                           const esPagado = orden.quoteStatus === "Pagado" || orden.status === "Pagado";
                           const esAprobado = !esPagado && (orden.quoteStatus === "Aprobado" || orden.status === "EN_CAJA");
                           const estaTrabajando = ordenTrabajandoId === orden.id || ordenTrabajandoId === orden.orderNumber;
+                          const { fecha, hora } = formatearFechaHora(orden.createdAt, orden.dateIn);
                           return (
                             <tr
                               key={orden.id}
                               onClick={() => irAPropuesta(orden.id)}
                               className={`transition-colors cursor-pointer ${
                                 estaTrabajando
-                                  ? "bg-purple-500/10 dark:bg-purple-500/15 hover:bg-purple-500/20 dark:hover:bg-purple-500/25 border-l-4 border-l-purple-500"
+                                  ? "bg-purple-500/10 dark:bg-purple-500/15 hover:bg-purple-500/20 border-l-4 border-l-purple-500"
                                   : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40"
                               }`}
                             >
-                              <td className="py-3.5 px-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                              <td className="py-3 px-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                                 <button
                                   type="button"
                                   onClick={(e) => toggleOrdenTrabajando(orden.id, e)}
-                                  title={estaTrabajando ? "Orden en trabajo actual (clic para desmarcar)" : "Marcar como orden con la que estoy trabajando"}
+                                  title={estaTrabajando ? "Orden en trabajo actual (clic para desmarcar)" : "Marcar como orden en trabajo"}
                                   className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer mx-auto ${
                                     estaTrabajando
-                                      ? "bg-purple-600 border-purple-500 text-white shadow-sm shadow-purple-500/40 ring-2 ring-purple-500/30 scale-105"
-                                      : "border-zinc-300 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/60 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-500/10 text-transparent"
+                                      ? "bg-purple-600 border-purple-500 text-white shadow-xs"
+                                      : "border-zinc-300 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/60 hover:border-purple-400 text-transparent"
                                   }`}
                                 >
-                                  <svg className="w-3.5 h-3.5 stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <svg className="w-3.5 h-3.5 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                   </svg>
                                 </button>
                               </td>
-                              <td className="py-3.5 px-4 font-mono font-bold text-purple-600 dark:text-purple-400 whitespace-nowrap">
-                                <div className="flex items-center gap-2">
-                                  <span>#{orden.orderNumber}</span>
-                                  {estaTrabajando && (
-                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/30 animate-pulse">
-                                      En trabajo
-                                    </span>
-                                  )}
-                                </div>
+                              <td className="py-3 px-4 text-xs font-normal text-purple-600 dark:text-purple-400 whitespace-nowrap">
+                                #{limpiarNumeroOrden(orden.orderNumber)}
                               </td>
-                              <td className="py-3.5 px-4">
-                                <div className="flex items-center gap-2">
-                                  <span className="px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 font-mono text-xs font-bold text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700">
-                                    {orden.plate}
-                                  </span>
-                                  <span className="font-semibold text-zinc-900 dark:text-white truncate">
-                                    {orden.vehicle}
-                                  </span>
-                                </div>
+                              <td className="py-3 px-4 whitespace-nowrap text-xs font-normal text-zinc-700 dark:text-zinc-300">
+                                {fecha}{hora ? ` · ${hora}` : ""}
                               </td>
-                              <td className="py-3.5 px-4">
-                                <span className="font-semibold text-zinc-900 dark:text-white block">
-                                  {orden.client}
-                                </span>
-                                <span className="text-xs text-zinc-400 block">
-                                  {orden.clientPhone || orden.tipoNegocio || `Mecánico: ${orden.mechanic}`}
-                                </span>
+                              <td className="py-3 px-4 text-xs font-normal text-zinc-900 dark:text-zinc-100 whitespace-nowrap">
+                                {orden.client}
                               </td>
-                              <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                                <div className="flex items-center justify-center gap-1.5">
-                                  {orden.evidencias.fotos > 0 && (
-                                    <span className="px-1.5 py-0.5 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-300 border border-sky-500/20 text-[11px] font-medium flex items-center gap-0.5">
-                                      📸 {orden.evidencias.fotos}
-                                    </span>
-                                  )}
-                                  {orden.evidencias.audios > 0 && (
-                                    <span className="px-1.5 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/20 text-[11px] font-medium flex items-center gap-0.5">
-                                      🎙️ {orden.evidencias.audios}
-                                    </span>
-                                  )}
-                                  {orden.evidencias.videos > 0 && (
-                                    <span className="px-1.5 py-0.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20 text-[11px] font-medium flex items-center gap-0.5">
-                                      🎥 {orden.evidencias.videos}
-                                    </span>
-                                  )}
-                                  {orden.findingsCount > 0 && (
-                                    <span className="px-1.5 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-300 border border-amber-500/20 text-[11px] font-medium flex items-center gap-0.5">
-                                      📝 {orden.findingsCount}
-                                    </span>
-                                  )}
-                                  {orden.evidencias.fotos === 0 && orden.evidencias.audios === 0 && orden.evidencias.videos === 0 && orden.findingsCount === 0 && (
-                                    <span className="text-zinc-400 text-xs">-</span>
-                                  )}
-                                </div>
+                              <td className="py-3 px-4 text-xs font-normal text-zinc-900 dark:text-zinc-100 whitespace-nowrap">
+                                {orden.vehicle}
                               </td>
-                              <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                              <td className="py-3 px-4 text-right text-xs font-normal text-zinc-900 dark:text-zinc-100 whitespace-nowrap">
+                                ${orden.totalVentaEstimada.toFixed(2)}
+                              </td>
+                              <td className="py-3 px-4 text-center whitespace-nowrap">
                                 <span
-                                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border inline-block ${
+                                  className={`text-xs font-normal px-2.5 py-1 rounded-lg border inline-block ${
                                     esPagado
-                                      ? "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-500/20 dark:text-sky-400 dark:border-sky-500/30"
+                                      ? "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30"
                                       : esAprobado
-                                      ? "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30"
-                                      : "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30"
+                                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                                      : "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
                                   }`}
                                 >
                                   {esPagado ? "✓ Pagado" : esAprobado ? "✓ Aprobado" : "En Espera"}
                                 </span>
                               </td>
-                              <td className="py-3.5 px-4 text-right font-black text-zinc-900 dark:text-white font-mono whitespace-nowrap">
-                                ${orden.totalVentaEstimada.toFixed(2)}
-                              </td>
-                              <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                                <div className="flex items-center justify-center gap-2">
-                                  {esPagado ? (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleCambiarEstadoPropuesta(orden.id, "Aprobado");
-                                      }}
-                                      disabled={cambiandoEstadoId === orden.id}
-                                      className="px-2.5 py-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-700 dark:text-sky-300 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-xs disabled:opacity-50"
-                                      title="Propuesta Pagada (clic para revertir a Aprobado)"
-                                    >
-                                      <span>✓</span>
-                                      <span>{cambiandoEstadoId === orden.id ? "..." : "Pagado"}</span>
-                                    </button>
-                                  ) : (
-                                    <>
-                                      {esAprobado ? (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleCambiarEstadoPropuesta(orden.id, "Pendiente");
-                                          }}
-                                          disabled={cambiandoEstadoId === orden.id}
-                                          className="px-2.5 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-xs disabled:opacity-50"
-                                          title="Propuesta Aprobada (clic para poner En Espera)"
-                                        >
-                                          <span>✓</span>
-                                          <span>{cambiandoEstadoId === orden.id ? "..." : "Aprobado"}</span>
-                                        </button>
-                                      ) : (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleCambiarEstadoPropuesta(orden.id, "Aprobado");
-                                          }}
-                                          disabled={cambiandoEstadoId === orden.id}
-                                          className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-700 dark:text-amber-400 text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                                          title="Propuesta En Espera (clic para Aprobar)"
-                                        >
-                                          <span>⏸</span>
-                                          <span>{cambiandoEstadoId === orden.id ? "..." : "En Espera"}</span>
-                                        </button>
-                                      )}
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleCambiarEstadoPropuesta(orden.id, "Pagado");
-                                        }}
-                                        disabled={cambiandoEstadoId === orden.id}
-                                        className="px-2.5 py-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-700 dark:text-sky-300 text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                                        title="Marcar trabajo como Pagado (se retira de Pista de Taller)"
-                                      >
-                                        <span>💳</span>
-                                        <span>Pagar</span>
-                                      </button>
-                                    </>
-                                  )}
-
+                              <td className="py-3 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center justify-end">
                                   <button
                                     type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      irAPropuesta(orden.id);
-                                    }}
-                                    className="px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 transition-all active:scale-95 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                                    onClick={() => irAPropuesta(orden.id)}
+                                    className="w-7 h-7 rounded-lg bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 text-xs font-normal flex items-center justify-center transition-all cursor-pointer"
                                     title="Abrir propuesta"
                                   >
-                                    <span>Abrir</span>
-                                    <span>→</span>
+                                    →
                                   </button>
                                 </div>
                               </td>
