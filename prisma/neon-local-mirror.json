@@ -1529,24 +1529,7 @@
       "updatedAt": "2026-11-07T03:46:03.225Z"
     }
   ],
-  "orderRequest": [
-    {
-      "id": "cmw43dsro0003eegrlf97sil6",
-      "requestNumber": "OT-OT #00004",
-      "type": "TALLER",
-      "customerName": "Diego",
-      "customerPhone": "0980083659",
-      "customerEmail": null,
-      "vehicleInfo": "Chevrolet Aveo 2026 [GST3981]",
-      "itemsSummary": "1x Alineación Completa 3D, 1x Balanceo Dinámico, 1x Servicio Técnico, 1x Servicio Técnico",
-      "itemsJson": "[{\"id\":\"tc_tc_ali_completa_1793915865533\",\"code\":\"TC-TC_ALI_COMPLETA\",\"name\":\"Alineación Completa 3D\",\"brand\":\"⚙️ Repuesto • Proveedor General • GST3981\",\"category\":\"Repuestos\",\"price\":25,\"costPrice\":0,\"qty\":1,\"isService\":false,\"empleado_nombre\":\"Carlos Rodríguez (Diagnóstico y mantenimiento)\"},{\"id\":\"tc_tc_bal_dinamico_1793915866233\",\"code\":\"TC-TC_BAL_DINAMICO\",\"name\":\"Balanceo Dinámico\",\"brand\":\"⚙️ Repuesto • Proveedor General • GST3981\",\"category\":\"Repuestos\",\"price\":5,\"costPrice\":0,\"qty\":1,\"isService\":false,\"empleado_nombre\":\"Carlos Rodríguez (Diagnóstico y mantenimiento)\"},{\"id\":\"srv_0_1793916138899\",\"code\":\"SRV-1\",\"name\":\"Servicio Técnico\",\"brand\":\"👤 Carlos Rodríguez (Diagnóstico y mantenimiento) • GST3981\",\"category\":\"Mano de Obra\",\"price\":0,\"qty\":1,\"isService\":true,\"empleado_nombre\":\"Carlos Rodríguez (Diagnóstico y mantenimiento)\"},{\"id\":\"srv_1_1793916138899\",\"code\":\"SRV-2\",\"name\":\"Servicio Técnico\",\"brand\":\"👤 Carlos Rodríguez (Diagnóstico y mantenimiento) • GST3981\",\"category\":\"Mano de Obra\",\"price\":0,\"qty\":1,\"isService\":true,\"empleado_nombre\":\"Carlos Rodríguez (Diagnóstico y mantenimiento)\"}]",
-      "totalEstimated": "30",
-      "notes": "[PRESUPUESTO AUTORIZADO] Orden #OT #00004 | Placa: GST3981 | Vehículo: Chevrolet Aveo 2026 | Mecánico: Carlos Rodríguez (Diagnóstico y mantenimiento) | Tel: 0980083659 | Nota: Ingreso a taller | Ingresado por: Carlos Rodríguez",
-      "status": "DESPACHADO",
-      "createdAt": "2026-11-05T22:03:12.229Z",
-      "updatedAt": "2026-11-05T22:24:54.689Z"
-    }
-  ],
+  "orderRequest": [],
   "user": [
     {
       "id": "cmw14z8k60000r1ba7n9bcqh1",
@@ -1632,73 +1615,7 @@
       "movements": []
     }
   ],
-  "sale": [
-    {
-      "id": "cmw445ojl000iu0chpnrd23fe",
-      "saleNumber": "VENTA-001",
-      "customerId": null,
-      "customerName": "Diego",
-      "subtotal": "60",
-      "tax": "9.6",
-      "discount": "0",
-      "total": "69.6",
-      "paymentMethod": "Efectivo",
-      "status": "Completada",
-      "branch": "PRINCIPAL",
-      "createdAt": "2026-11-05T22:24:53.122Z",
-      "updatedAt": "2026-11-05T22:24:53.122Z",
-      "items": [
-        {
-          "id": "cmw445ojl000ku0chhvhotq00",
-          "saleId": "cmw445ojl000iu0chpnrd23fe",
-          "productId": null,
-          "code": "TC-TC_ALI_COMPLETA",
-          "name": "Alineación Completa 3D",
-          "price": "25",
-          "quantity": 1,
-          "total": "25"
-        },
-        {
-          "id": "cmw445ojl000lu0ch3nucb4df",
-          "saleId": "cmw445ojl000iu0chpnrd23fe",
-          "productId": null,
-          "code": "TC-TC_BAL_DINAMICO",
-          "name": "Balanceo Dinámico",
-          "price": "5",
-          "quantity": 1,
-          "total": "5"
-        },
-        {
-          "id": "cmw445ojl000mu0ch292c4fzi",
-          "saleId": "cmw445ojl000iu0chpnrd23fe",
-          "productId": null,
-          "code": "SRV-1",
-          "name": "Servicio Técnico",
-          "price": "15",
-          "quantity": 1,
-          "total": "15"
-        },
-        {
-          "id": "cmw445ojl000nu0chgtx1xvkd",
-          "saleId": "cmw445ojl000iu0chpnrd23fe",
-          "productId": null,
-          "code": "SRV-2",
-          "name": "Servicio Técnico",
-          "price": "15",
-          "quantity": 1,
-          "total": "15"
-        }
-      ],
-      "customer": null,
-      "sourceOrderNumber": null,
-      "customerIdentification": null,
-      "customerPhone": null,
-      "customerEmail": null,
-      "customerAddress": null,
-      "vehiclePlate": null,
-      "vehicleModel": null
-    }
-  ],
+  "sale": [],
   "clientInvoice": [
     {
       "id": "inv_5nkkjw8mw2ix55c",
@@ -2221,5 +2138,6 @@
       "createdAt": "2026-11-08T02:02:23.229Z",
       "updatedAt": "2026-11-08T02:26:40.200Z"
     }
-  ]
+  ],
+  "saleItem": []
 }

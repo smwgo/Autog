@@ -527,7 +527,7 @@ export async function PUT(request: Request) {
   }
 }
 
-// DELETE: Eliminar una orden de taller
+// DELETE: Eliminar una orden de taller y sus registros asociados (solicitud, historial, factura/venta vinculada)
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -541,6 +541,51 @@ export async function DELETE(request: Request) {
     }
 
     return await withRetry(async () => {
+      const ordRows: any[] = await prisma.$queryRawUnsafe(
+        'SELECT "id", "orderNumber", "client", "plate" FROM "WorkshopOrder" WHERE id = $1 OR "orderNumber" = $1 LIMIT 1',
+        id
+      );
+      const ord = ordRows?.[0];
+      const orderNum = (ord?.orderNumber || id).toString().trim();
+      const rawNum = orderNum.replace(/^OT-/i, "").trim();
+      const candidateNums = Array.from(new Set([orderNum, rawNum, `OT-${rawNum}`, `OT-OT ${rawNum}`])).filter(Boolean);
+
+      // 1. Eliminar solicitudes POS/Taller vinculadas
+      for (const num of candidateNums) {
+        await prisma.$executeRawUnsafe(
+          'DELETE FROM "OrderRequest" WHERE "requestNumber" = $1',
+          num
+        ).catch(() => {});
+      }
+
+      // 2. Eliminar historial de taller vinculado
+      for (const num of candidateNums) {
+        await prisma.$executeRawUnsafe(
+          'DELETE FROM "WorkshopHistory" WHERE "orderNumber" = $1',
+          num
+        ).catch(() => {});
+      }
+
+      // 3. Eliminar facturas electrónicas vinculadas
+      await prisma.$executeRawUnsafe(
+        'DELETE FROM "ClientInvoice" WHERE "orderId" = $1 OR "orderId" = $2',
+        ord?.id || id,
+        orderNum
+      ).catch(() => {});
+
+      // 4. Eliminar ventas POS vinculadas por sourceOrderNumber
+      for (const num of candidateNums) {
+        const linkedSales = await prisma.sale.findMany({
+          where: { sourceOrderNumber: num },
+          select: { id: true },
+        }).catch(() => []);
+        for (const s of linkedSales) {
+          await prisma.saleItem.deleteMany({ where: { saleId: s.id } }).catch(() => {});
+          await prisma.sale.delete({ where: { id: s.id } }).catch(() => {});
+        }
+      }
+
+      // 5. Eliminar la orden de taller
       await prisma.$executeRawUnsafe(
         'DELETE FROM "WorkshopOrder" WHERE id = $1 OR "orderNumber" = $1',
         id

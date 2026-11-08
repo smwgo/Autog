@@ -759,7 +759,7 @@ export async function PATCH(request: Request) {
   }
 }
 
-// DELETE: Eliminar venta de la base de datos
+// DELETE: Eliminar venta de la base de datos y limpiar referencias asociadas
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -770,6 +770,55 @@ export async function DELETE(request: Request) {
         { success: false, error: "ID de venta requerido." },
         { status: 400 }
       );
+    }
+
+    const saleActual = await prisma.sale.findUnique({
+      where: { id },
+    });
+
+    // Ajustar sesión de caja abierta si la venta no estaba anulada
+    if (saleActual && saleActual.status !== "Anulada") {
+      const amount = Number(saleActual.total || 0);
+      if (amount > 0) {
+        try {
+          const activeSession = await prisma.cashRegister.findFirst({
+            where: {
+              status: "ABIERTA",
+              branch: (saleActual as any).branch || "PRINCIPAL",
+            },
+            orderBy: { openedAt: "desc" },
+          });
+          if (activeSession) {
+            const updateData: any = {};
+            if (saleActual.paymentMethod === "Efectivo") {
+              updateData.totalSalesCash = Math.max(0, Number(activeSession.totalSalesCash || 0) - amount);
+            } else if (saleActual.paymentMethod === "Tarjeta") {
+              updateData.totalSalesCard = Math.max(0, Number(activeSession.totalSalesCard || 0) - amount);
+            } else if (saleActual.paymentMethod === "Transferencia") {
+              updateData.totalSalesTransfer = Math.max(0, Number(activeSession.totalSalesTransfer || 0) - amount);
+            }
+            if (Object.keys(updateData).length > 0) {
+              await prisma.cashRegister.update({
+                where: { id: activeSession.id },
+                data: updateData,
+              });
+            }
+          }
+        } catch {}
+      }
+    }
+
+    // Limpiar historial POS o solicitud despachada vinculada
+    if (saleActual?.saleNumber) {
+      await prisma.workshopHistory.deleteMany({
+        where: { orderNumber: saleActual.saleNumber },
+      }).catch(() => {});
+    }
+    if (saleActual?.sourceOrderNumber) {
+      const rawNum = saleActual.sourceOrderNumber.trim().replace(/^OT-/i, "");
+      await (prisma as any).orderRequest.deleteMany({
+        where: { requestNumber: { in: [saleActual.sourceOrderNumber, rawNum, `OT-${rawNum}`] } },
+      }).catch(() => {});
     }
 
     // Eliminar primero sus items asociados
