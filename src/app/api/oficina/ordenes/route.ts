@@ -9,7 +9,7 @@ async function ensureTables() {
       "date" TEXT NOT NULL,
       "vehicle" TEXT NOT NULL,
       "plate" TEXT,
-      "clientName" TEXT NOT NULL DEFAULT 'Juan Pérez',
+      "clientName" TEXT NOT NULL DEFAULT 'Cliente',
       "status" TEXT NOT NULL DEFAULT 'Pendiente',
       "itemsJson" TEXT NOT NULL DEFAULT '[]',
       "subtotal" DECIMAL(12,2) NOT NULL DEFAULT 0,
@@ -26,24 +26,81 @@ export async function GET() {
     const data = await withRetry(async () => {
       await ensureTables();
 
-      const quotes: any[] = await prisma.$queryRawUnsafe(`SELECT * FROM "ClientQuote" ORDER BY "createdAt" DESC`);
-      const orders = await prisma.workshopOrder.findMany({
-        orderBy: { createdAt: "desc" }
+      // 1. Obtener todas las órdenes de taller registradas (mismas de POS y Taller)
+      const rawOrders = await prisma.workshopOrder.findMany({
+        orderBy: { createdAt: "desc" },
       });
 
-      return { quotes, orders };
+      // 2. Obtener cotizaciones tanto de OrderRequest (POS) como de ClientQuote
+      const [posQuotes, clientQuotes]: [any[], any[]] = await Promise.all([
+        (prisma as any).orderRequest.findMany({
+          where: { type: "COTIZACION" },
+          orderBy: { createdAt: "desc" },
+        }).catch(() => []),
+        prisma.$queryRawUnsafe(`SELECT * FROM "ClientQuote" ORDER BY "createdAt" DESC`).catch(() => []),
+      ]);
+
+      const formattedQuotes = [
+        ...clientQuotes.map((q: any) => ({
+          id: q.id,
+          quoteNumber: q.quoteNumber,
+          clientName: q.clientName,
+          vehicle: q.vehicle,
+          plate: q.plate || "",
+          date: q.date,
+          status: q.status,
+          total: Number(q.total || 0),
+          notes: q.notes || "",
+          createdAt: q.createdAt,
+        })),
+        ...posQuotes.map((q: any) => ({
+          id: q.id,
+          quoteNumber: q.requestNumber,
+          clientName: q.customerName,
+          vehicle: q.vehicleInfo || q.vehicleModel || "Vehículo",
+          plate: q.vehiclePlate || "",
+          date: new Date(q.createdAt).toLocaleDateString("es-EC"),
+          status: q.status || "Pendiente",
+          total: Number(q.totalEstimated || 0),
+          notes: q.notes || q.itemsSummary || "",
+          createdAt: q.createdAt,
+        })),
+      ];
+
+      return {
+        quotes: formattedQuotes,
+        orders: rawOrders.map((o: any) => ({
+          id: o.id,
+          orderNumber: o.orderNumber,
+          client: o.client,
+          clientPhone: o.clientPhone || "",
+          vehicle: o.vehicle,
+          plate: o.plate || "",
+          mechanic: o.mechanic,
+          status: o.status,
+          progress: o.progress,
+          totalCost: Number(o.totalCost || 0),
+          isBilled: o.isBilled,
+          billingStatus: o.billingStatus,
+          createdAt: o.createdAt,
+          notes: o.notes || "",
+        })),
+      };
     });
 
     return NextResponse.json(data);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Error al obtener órdenes y cotizaciones" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Error al obtener órdenes y cotizaciones" },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { docType } = body; // "cotizacion" | "orden"
+    const { docType } = body;
 
     const result = await withRetry(async () => {
       await ensureTables();
@@ -53,17 +110,17 @@ export async function POST(req: Request) {
         const created = await prisma.workshopOrder.create({
           data: {
             orderNumber,
-            client: body.clientName || "Cliente Oficina",
+            client: body.clientName || "Cliente",
             clientPhone: body.clientPhone || "",
             vehicle: body.vehicle || "Vehículo",
-            plate: body.plate || "S/P",
-            mechanic: body.mechanic || "Carlos Rodríguez",
+            plate: body.plate || "",
+            mechanic: body.mechanic || "Técnico Asignado",
             status: body.status || "En Taller",
             progress: body.status === "Terminado" || body.status === "Entregado" ? 100 : 35,
             totalCost: Number(body.total || 0),
             notes: body.notes || "Creada desde Oficina",
             servicesJson: JSON.stringify([{ name: body.notes || "Servicio General", price: Number(body.total || 0) }]),
-          }
+          },
         });
         return { type: "orden", item: created };
       } else {
@@ -71,7 +128,7 @@ export async function POST(req: Request) {
         const quoteNumber = body.quoteNumber || `COT-${Math.floor(10000 + Math.random() * 90000)}`;
         const total = Number(body.total || 0);
         const subtotal = +(total / 1.15).toFixed(2);
-        const date = body.date || "Hoy";
+        const date = body.date || new Date().toISOString().slice(0, 10);
 
         await prisma.$executeRawUnsafe(
           `INSERT INTO "ClientQuote" ("id", "quoteNumber", "date", "vehicle", "plate", "clientName", "status", "itemsJson", "subtotal", "total", "notes", "updatedAt")
@@ -79,10 +136,10 @@ export async function POST(req: Request) {
           id,
           quoteNumber,
           date,
-          body.vehicle || "Vehículo General",
+          body.vehicle || "Vehículo",
           body.plate || "",
           body.clientName || "Cliente",
-          body.status || "Pendiente Aprobación",
+          body.status || "Pendiente",
           body.itemsJson || JSON.stringify([{ description: body.notes || "Servicio Cotizado", qty: 1, price: total }]),
           subtotal,
           total,
@@ -120,7 +177,7 @@ export async function PUT(req: Request) {
             totalCost: body.total !== undefined ? Number(body.total) : undefined,
             notes: body.notes,
             progress: body.status === "Terminado" || body.status === "Entregado" ? 100 : 50,
-          }
+          },
         });
         return { type: "orden", item: updated };
       } else {
@@ -147,7 +204,6 @@ export async function PUT(req: Request) {
           body.notes ?? null
         );
 
-        // If approved and convertToOrder flag is set, also create a WorkshopOrder in Neon
         if (body.convertToOrder && body.status === "Aprobada") {
           const orderNum = `ORD-${Math.floor(10000 + Math.random() * 90000)}`;
           await prisma.workshopOrder.create({
@@ -155,12 +211,13 @@ export async function PUT(req: Request) {
               orderNumber: orderNum,
               client: body.clientName || "Cliente",
               vehicle: body.vehicle || "Vehículo",
-              plate: body.plate || "S/P",
+              plate: body.plate || "",
               status: "En Taller",
               progress: 25,
-              totalCost: total,
-              notes: `Generada desde cotización ${body.quoteNumber || ""}`,
-            }
+              totalCost: Number(body.total || 0),
+              notes: `Derivado de cotización ${body.quoteNumber || ""}`,
+              servicesJson: JSON.stringify([{ name: "Servicio de Cotización", price: Number(body.total || 0) }]),
+            },
           });
         }
 
@@ -171,7 +228,7 @@ export async function PUT(req: Request) {
 
     return NextResponse.json(result);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Error al actualizar registro" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Error al actualizar" }, { status: 500 });
   }
 }
 
@@ -179,13 +236,12 @@ export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
-    const docType = searchParams.get("docType") || "cotizacion";
+    const docType = searchParams.get("docType");
 
-    if (!id) {
-      return NextResponse.json({ error: "ID requerido" }, { status: 400 });
-    }
+    if (!id) return NextResponse.json({ error: "ID requerido" }, { status: 400 });
 
     await withRetry(async () => {
+      await ensureTables();
       if (docType === "orden") {
         await prisma.workshopOrder.delete({ where: { id } });
       } else {
@@ -193,8 +249,8 @@ export async function DELETE(req: Request) {
       }
     });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Error al eliminar registro" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Error al eliminar" }, { status: 500 });
   }
 }
