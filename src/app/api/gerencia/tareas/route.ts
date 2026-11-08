@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export interface CeoTask {
   id: string;
   title: string;
-  category: "TALLER" | "FINANZAS" | "PROVEEDORES" | "NOMINA" | "VENTAS" | "GENERAL";
+  category: string;
   priority: "URGENTE" | "ALTA" | "MEDIA" | "NORMAL";
   status: "PENDIENTE" | "EN_PROCESO" | "COMPLETADA";
   dueDate: string;
@@ -17,138 +17,40 @@ export interface CeoTask {
   updatedAt: string;
 }
 
-const DEFAULT_CEO_TASKS: CeoTask[] = [
-  {
-    id: "ceo-task-1",
-    title: "Arqueo y conciliación de caja del día",
-    category: "FINANZAS",
-    priority: "URGENTE",
-    status: "PENDIENTE",
-    dueDate: new Date().toISOString().slice(0, 10),
-    assignedTo: "CEO - Dirección",
-    notes: "Verificar cuadre de cobros en efectivo, transferencias bancarias y cobros con tarjeta POS antes del cierre.",
-    completedAt: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "ceo-task-2",
-    title: "Supervisión de autos en bahías de taller",
-    category: "TALLER",
-    priority: "ALTA",
-    status: "EN_PROCESO",
-    dueDate: new Date().toISOString().slice(0, 10),
-    assignedTo: "Jefe de Taller",
-    notes: "Revisar tiempos de entrega en órdenes de mantenimiento preventivo y vehículos listos para entrega al cliente.",
-    completedAt: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "ceo-task-3",
-    title: "Autorizar orden de compra de lubricantes y repuestos",
-    category: "PROVEEDORES",
-    priority: "ALTA",
-    status: "PENDIENTE",
-    dueDate: new Date().toISOString().slice(0, 10),
-    assignedTo: "CEO - Dirección",
-    notes: "Aprobar reposición de tambores de aceite 10W-30, 20W-50 y kits de filtros de alta rotación para la semana.",
-    completedAt: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "ceo-task-4",
-    title: "Aprobación de liquidación y comisiones de mecánicos",
-    category: "NOMINA",
-    priority: "MEDIA",
-    status: "PENDIENTE",
-    dueDate: new Date().toISOString().slice(0, 10),
-    assignedTo: "CEO - Dirección",
-    notes: "Validar horas facturadas de mano de obra y porcentaje de bonificación de los técnicos de taller.",
-    completedAt: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "ceo-task-5",
-    title: "Seguimiento a cotizaciones corporativas pendientes",
-    category: "VENTAS",
-    priority: "MEDIA",
-    status: "EN_PROCESO",
-    dueDate: new Date().toISOString().slice(0, 10),
-    assignedTo: "Asesor de Servicio",
-    notes: "Llamar al cliente de flota de camionetas por presupuesto de cambio de suspensión y frenos ($850).",
-    completedAt: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "ceo-task-6",
-    title: "Auditoría preventiva de elevadores y scanner OBD2",
-    category: "TALLER",
-    priority: "NORMAL",
-    status: "COMPLETADA",
-    dueDate: new Date().toISOString().slice(0, 10),
-    assignedTo: "Mantenimiento Interno",
-    notes: "Chequeo de niveles hidráulicos de bahías 1, 2 y 3, y actualización de software de diagnóstico.",
-    completedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
-
-async function getStoredTasks(): Promise<CeoTask[]> {
-  try {
-    const setting = await prisma.systemSetting.findUnique({
-      where: { id: "ceo_tasks" },
-    });
-    if (setting?.configJson) {
-      const parsed = JSON.parse(setting.configJson);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-    }
-  } catch (err) {
-    console.error("Error reading ceo_tasks from prisma:", err);
-  }
-
-  // Seed default if empty
-  try {
-    await prisma.systemSetting.upsert({
-      where: { id: "ceo_tasks" },
-      update: { configJson: JSON.stringify(DEFAULT_CEO_TASKS) },
-      create: { id: "ceo_tasks", configJson: JSON.stringify(DEFAULT_CEO_TASKS) },
-    });
-  } catch (err) {
-    console.error("Error seeding ceo_tasks:", err);
-  }
-
-  return DEFAULT_CEO_TASKS;
+function mapTask(t: any): CeoTask {
+  return {
+    id: t.id,
+    title: t.title,
+    category: t.category || "General",
+    priority: (t.priority as any) || "NORMAL",
+    status: (t.status as any) || "PENDIENTE",
+    dueDate: t.dueDate || "",
+    assignedTo: t.assignedTo || "",
+    notes: t.notes || "",
+    completedAt: t.completedAt ? new Date(t.completedAt).toISOString() : null,
+    createdAt: t.createdAt ? new Date(t.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: t.updatedAt ? new Date(t.updatedAt).toISOString() : new Date().toISOString(),
+  };
 }
 
-async function saveTasks(tasks: CeoTask[]): Promise<void> {
-  await prisma.systemSetting.upsert({
-    where: { id: "ceo_tasks" },
-    update: { configJson: JSON.stringify(tasks) },
-    create: { id: "ceo_tasks", configJson: JSON.stringify(tasks) },
-  });
-}
-
-// GET: Fetch all CEO tasks
+// GET: Cargar tareas reales desde Neon
 export async function GET() {
   try {
-    const tasks = await withRetry(async () => {
-      return await getStoredTasks();
+    const rawTasks = await withRetry(async () => {
+      return await (prisma as any).managementTask.findMany({
+        orderBy: { createdAt: "desc" },
+      });
     });
+
+    const tasks: CeoTask[] = rawTasks.map(mapTask);
     return NextResponse.json(tasks);
   } catch (error: any) {
     console.error("GET /api/gerencia/tareas error:", error);
-    return NextResponse.json(DEFAULT_CEO_TASKS);
+    return NextResponse.json({ error: error.message || "Error al obtener tareas" }, { status: 500 });
   }
 }
 
-// POST: Create a new CEO task
+// POST: Crear una tarea real en Neon
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -156,35 +58,37 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "El título de la tarea es obligatorio" }, { status: 400 });
     }
 
-    const newTask: CeoTask = {
-      id: `ceo-task-${Date.now()}`,
-      title: body.title.trim(),
-      category: body.category || "GENERAL",
-      priority: body.priority || "MEDIA",
-      status: body.status || "PENDIENTE",
-      dueDate: body.dueDate || new Date().toISOString().slice(0, 10),
-      assignedTo: body.assignedTo?.trim() || "CEO - Dirección",
-      notes: body.notes?.trim() || "",
-      completedAt: body.status === "COMPLETADA" ? new Date().toISOString() : null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const isCompleted = body.status === "COMPLETADA";
 
-    const updatedTasks = await withRetry(async () => {
-      const current = await getStoredTasks();
-      const nextList = [newTask, ...current];
-      await saveTasks(nextList);
-      return nextList;
+    const created = await withRetry(async () => {
+      return await (prisma as any).managementTask.create({
+        data: {
+          title: body.title.trim(),
+          category: body.category?.trim() || "General",
+          priority: body.priority || "MEDIA",
+          status: body.status || "PENDIENTE",
+          dueDate: body.dueDate || null,
+          assignedTo: body.assignedTo !== undefined ? body.assignedTo.trim() : null,
+          notes: body.notes?.trim() || null,
+          completedAt: isCompleted ? new Date() : null,
+        },
+      });
     });
 
-    return NextResponse.json({ success: true, task: newTask, tasks: updatedTasks });
+    const allTasks = await withRetry(async () => {
+      return await (prisma as any).managementTask.findMany({
+        orderBy: { createdAt: "desc" },
+      });
+    });
+
+    return NextResponse.json({ success: true, task: mapTask(created), tasks: allTasks.map(mapTask) });
   } catch (error: any) {
     console.error("POST /api/gerencia/tareas error:", error);
     return NextResponse.json({ error: error.message || "Error al crear tarea" }, { status: 500 });
   }
 }
 
-// PUT: Update an existing CEO task (toggle status, edit details)
+// PUT: Actualizar una tarea real en Neon (estado, fecha, notas, etc.)
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
@@ -192,43 +96,38 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "ID de tarea requerido" }, { status: 400 });
     }
 
-    const updatedTasks = await withRetry(async () => {
-      const current = await getStoredTasks();
-      const index = current.findIndex((t) => t.id === body.id);
-      if (index === -1) {
-        throw new Error("Tarea no encontrada");
-      }
+    const isCompleted = body.status === "COMPLETADA";
 
-      const existing = current[index];
-      const isNowCompleted = body.status === "COMPLETADA";
-      const wasCompleted = existing.status === "COMPLETADA";
-
-      const updated: CeoTask = {
-        ...existing,
-        title: body.title !== undefined ? body.title.trim() : existing.title,
-        category: body.category !== undefined ? body.category : existing.category,
-        priority: body.priority !== undefined ? body.priority : existing.priority,
-        status: body.status !== undefined ? body.status : existing.status,
-        dueDate: body.dueDate !== undefined ? body.dueDate : existing.dueDate,
-        assignedTo: body.assignedTo !== undefined ? body.assignedTo.trim() : existing.assignedTo,
-        notes: body.notes !== undefined ? body.notes.trim() : existing.notes,
-        completedAt: isNowCompleted ? (existing.completedAt || new Date().toISOString()) : (wasCompleted ? null : existing.completedAt),
-        updatedAt: new Date().toISOString(),
-      };
-
-      current[index] = updated;
-      await saveTasks(current);
-      return current;
+    const updated = await withRetry(async () => {
+      return await (prisma as any).managementTask.update({
+        where: { id: body.id },
+        data: {
+          title: body.title !== undefined ? body.title.trim() : undefined,
+          category: body.category !== undefined ? body.category.trim() : undefined,
+          priority: body.priority !== undefined ? body.priority : undefined,
+          status: body.status !== undefined ? body.status : undefined,
+          dueDate: body.dueDate !== undefined ? body.dueDate : undefined,
+          assignedTo: body.assignedTo !== undefined ? body.assignedTo.trim() : undefined,
+          notes: body.notes !== undefined ? body.notes.trim() : undefined,
+          completedAt: body.status !== undefined ? (isCompleted ? new Date() : null) : undefined,
+        },
+      });
     });
 
-    return NextResponse.json({ success: true, tasks: updatedTasks });
+    const allTasks = await withRetry(async () => {
+      return await (prisma as any).managementTask.findMany({
+        orderBy: { createdAt: "desc" },
+      });
+    });
+
+    return NextResponse.json({ success: true, task: mapTask(updated), tasks: allTasks.map(mapTask) });
   } catch (error: any) {
     console.error("PUT /api/gerencia/tareas error:", error);
     return NextResponse.json({ error: error.message || "Error al actualizar tarea" }, { status: 500 });
   }
 }
 
-// DELETE: Delete a task
+// DELETE: Eliminar una tarea real de Neon
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -237,14 +136,19 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "ID de tarea requerido" }, { status: 400 });
     }
 
-    const updatedTasks = await withRetry(async () => {
-      const current = await getStoredTasks();
-      const filtered = current.filter((t) => t.id !== id);
-      await saveTasks(filtered);
-      return filtered;
+    await withRetry(async () => {
+      await (prisma as any).managementTask.delete({
+        where: { id },
+      });
     });
 
-    return NextResponse.json({ success: true, tasks: updatedTasks });
+    const allTasks = await withRetry(async () => {
+      return await (prisma as any).managementTask.findMany({
+        orderBy: { createdAt: "desc" },
+      });
+    });
+
+    return NextResponse.json({ success: true, tasks: allTasks.map(mapTask) });
   } catch (error: any) {
     console.error("DELETE /api/gerencia/tareas error:", error);
     return NextResponse.json({ error: error.message || "Error al eliminar tarea" }, { status: 500 });

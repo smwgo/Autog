@@ -6,14 +6,22 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     return await withRetry(async () => {
+      const companyConfig = await (prisma as any).companyConfig
+        ?.findUnique({ where: { id: "default" } })
+        .catch(() => null);
+      const alertasStockActivas = companyConfig ? companyConfig.alertasStockBajo !== false : true;
+      const umbralStock = Number(companyConfig?.umbralStockBajo ?? 5);
+
       // 1. Obtener productos con stock bajo o agotados en Neon
-      const lowStockProducts = await prisma.product.findMany({
-        where: {
-          OR: [{ status: "Bajo Stock" }, { status: "Agotado" }, { stock: { lte: 5 } }],
-        },
-        take: 3,
-        orderBy: { stock: "asc" },
-      });
+      const lowStockProducts = alertasStockActivas
+        ? await prisma.product.findMany({
+            where: {
+              OR: [{ status: "Bajo Stock" }, { status: "Agotado" }, { stock: { lte: umbralStock } }],
+            },
+            take: 3,
+            orderBy: { stock: "asc" },
+          })
+        : [];
 
       // 2. Obtener solicitudes web pendientes en Neon
       const pendingRequests = await (prisma as any).orderRequest.findMany({
@@ -28,8 +36,30 @@ export async function GET() {
         orderBy: { updatedAt: "desc" },
       });
 
+      // 4. Obtener tareas gerenciales urgentes pendientes en Neon
+      const urgentTasks = await (prisma as any).managementTask
+        ?.findMany({
+          where: { status: "PENDIENTE" },
+          take: 3,
+          orderBy: { createdAt: "desc" },
+        })
+        .catch(() => []);
+
       // Construir notificaciones en tiempo real basadas en la base de datos
       const items: any[] = [];
+
+      (urgentTasks || []).forEach((t: any) => {
+        items.push({
+          id: `task-${t.id}`,
+          type: t.priority === "URGENTE" ? "WARNING" : "INFO",
+          icon: t.priority === "URGENTE" ? "⚡" : "📋",
+          title: `Tarea Pendiente (${t.area || "Gerencia"})`,
+          text: `${t.title}${t.assignee ? ` — ${t.assignee}` : ""}`,
+          date: t.dueDateLabel || "Pendiente",
+          read: false,
+          link: "/gerencia/tareas",
+        });
+      });
 
       lowStockProducts.forEach((p) => {
         items.push({

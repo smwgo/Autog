@@ -1038,7 +1038,9 @@
       "imageUrl": "/api/storage/download?key=productos%2F63b45bf4-79fa-4bbc-a598-de5392b5e929.png",
       "createdAt": "2026-11-03T03:21:26.962Z",
       "updatedAt": "2026-11-05T04:11:08.623Z",
-      "tipo": "Lubricentro"
+      "tipo": "Lubricentro",
+      "subCategory": null,
+      "presentation": null
     },
     {
       "id": "cmw04gud4qza8c310",
@@ -1056,7 +1058,9 @@
       "imageUrl": "/api/storage/download?key=productos%2F7bfd07b6-36dd-4cff-90f7-549d35375301.png",
       "createdAt": "2026-11-03T03:22:29.176Z",
       "updatedAt": "2026-11-05T04:11:09.135Z",
-      "tipo": "Lubricentro"
+      "tipo": "Lubricentro",
+      "subCategory": null,
+      "presentation": null
     },
     {
       "id": "cmw2mj6hv0000g9i1s0isetmz",
@@ -1074,7 +1078,9 @@
       "status": "Agotado",
       "createdAt": "2026-11-04T21:23:43.651Z",
       "updatedAt": "2026-11-05T04:11:09.647Z",
-      "tipo": "Taller"
+      "tipo": "Taller",
+      "subCategory": null,
+      "presentation": null
     }
   ],
   "systemSetting": [
@@ -1127,16 +1133,15 @@
       "updatedAt": "2026-10-26T02:03:55.104Z"
     },
     {
-      "id": "default",
-      "configJson": "{\"razonSocial\":\"AutoG Servicios Automotrices S.A.\",\"nombreComercial\":\"AutoG\",\"ruc\":\"0992345678001\",\"telefono\":\"04-234-5678\",\"direccion\":\"Av. de las Américas y Plaza Dañín, Guayaquil, Ecuador\",\"iva\":15,\"moneda\":\"Dólares (USD)\",\"firmaDiasRestantes\":45,\"alertasStockBajo\":true,\"recordatoriosClientes\":true,\"resumenDiarioCaja\":true}",
-      "createdAt": "2026-10-28T00:29:08.198Z",
-      "updatedAt": "2026-10-28T00:29:08.198Z"
-    },
-    {
       "id": "ceo_tasks",
       "configJson": "[{\"id\":\"ceo-task-1\",\"title\":\"Arqueo y conciliación de caja del día\",\"category\":\"FINANZAS\",\"priority\":\"URGENTE\",\"status\":\"PENDIENTE\",\"dueDate\":\"2026-11-05\",\"assignedTo\":\"CEO - Dirección\",\"notes\":\"Verificar cuadre de cobros en efectivo, transferencias bancarias y cobros con tarjeta POS antes del cierre.\",\"completedAt\":null,\"createdAt\":\"2026-11-05T04:56:55.043Z\",\"updatedAt\":\"2026-11-05T04:56:55.043Z\"},{\"id\":\"ceo-task-2\",\"title\":\"Supervisión de autos en bahías de taller\",\"category\":\"TALLER\",\"priority\":\"ALTA\",\"status\":\"EN_PROCESO\",\"dueDate\":\"2026-11-05\",\"assignedTo\":\"Jefe de Taller\",\"notes\":\"Revisar tiempos de entrega en órdenes de mantenimiento preventivo y vehículos listos para entrega al cliente.\",\"completedAt\":null,\"createdAt\":\"2026-11-05T04:56:55.043Z\",\"updatedAt\":\"2026-11-05T04:56:55.043Z\"},{\"id\":\"ceo-task-3\",\"title\":\"Autorizar orden de compra de lubricantes y repuestos\",\"category\":\"PROVEEDORES\",\"priority\":\"ALTA\",\"status\":\"PENDIENTE\",\"dueDate\":\"2026-11-05\",\"assignedTo\":\"CEO - Dirección\",\"notes\":\"Aprobar reposición de tambores de aceite 10W-30, 20W-50 y kits de filtros de alta rotación para la semana.\",\"completedAt\":null,\"createdAt\":\"2026-11-05T04:56:55.043Z\",\"updatedAt\":\"2026-11-05T04:56:55.043Z\"},{\"id\":\"ceo-task-4\",\"title\":\"Aprobación de liquidación y comisiones de mecánicos\",\"category\":\"NOMINA\",\"priority\":\"MEDIA\",\"status\":\"PENDIENTE\",\"dueDate\":\"2026-11-05\",\"assignedTo\":\"CEO - Dirección\",\"notes\":\"Validar horas facturadas de mano de obra y porcentaje de bonificación de los técnicos de taller.\",\"completedAt\":null,\"createdAt\":\"2026-11-05T04:56:55.043Z\",\"updatedAt\":\"2026-11-05T04:56:55.043Z\"},{\"id\":\"ceo-task-5\",\"title\":\"Seguimiento a cotizaciones corporativas pendientes\",\"category\":\"VENTAS\",\"priority\":\"MEDIA\",\"status\":\"EN_PROCESO\",\"dueDate\":\"2026-11-05\",\"assignedTo\":\"Asesor de Servicio\",\"notes\":\"Llamar al cliente de flota de camionetas por presupuesto de cambio de suspensión y frenos ($850).\",\"completedAt\":null,\"createdAt\":\"2026-11-05T04:56:55.043Z\",\"updatedAt\":\"2026-11-05T04:56:55.043Z\"},{\"id\":\"ceo-task-6\",\"title\":\"Auditoría preventiva de elevadores y scanner OBD2\",\"category\":\"TALLER\",\"priority\":\"NORMAL\",\"status\":\"COMPLETADA\",\"dueDate\":\"2026-11-05\",\"assignedTo\":\"Mantenimiento Interno\",\"notes\":\"Chequeo de niveles hidráulicos de bahías 1, 2 y 3, y actualización de software de diagnóstico.\",\"completedAt\":\"2026-11-05T04:56:55.043Z\",\"createdAt\":\"2026-11-05T04:56:55.043Z\",\"updatedAt\":\"2026-11-05T04:56:55.043Z\"}]",
       "createdAt": "2026-11-03T22:28:38.107Z",
       "updatedAt": "2026-11-05T04:56:55.118Z"
+    },
+    {
+      "id": "default",
+      "configJson": "{\"razonSocial\":\"\",\"nombreComercial\":\"\",\"ruc\":\"\",\"telefono\":\"\",\"direccion\":\"\",\"firmaElectronica\":{\"entidadEmisora\":\"\",\"archivoNombre\":\"\",\"claveFirma\":\"\"}}",
+      "updatedAt": "2026-11-08T02:26:41.375Z"
     }
   ],
   "clientQuote": [
@@ -1967,6 +1972,39 @@
       "details": "Usuario eliminado: Propuesta (propuesta@gmail.com)",
       "level": "ADVERTENCIA",
       "createdAt": "2026-11-05T03:36:02.207Z"
+    },
+    {
+      "id": "cmw2lhdr200001yjjz2zpswz6",
+      "dateLabel": "04-nov, 08:54 p. m.",
+      "userName": "Gerencia",
+      "ipAddress": "192.168.1.10",
+      "module": "USUARIOS",
+      "action": "ACTUALIZAR_ACCESO_USUARIO",
+      "details": "Permisos actualizados para Taller: [Taller/Garaje] (Activo)",
+      "level": "INFO",
+      "createdAt": "2026-11-04T20:54:20.126Z"
+    },
+    {
+      "id": "cmw2j8rgo0000qk2wkdn632md",
+      "dateLabel": "04-nov, 07:51 p. m.",
+      "userName": "Gerencia",
+      "ipAddress": "192.168.1.10",
+      "module": "USUARIOS",
+      "action": "ELIMINAR_USUARIO",
+      "details": "Usuario eliminado: Laura (laura@gmail.com)",
+      "level": "ADVERTENCIA",
+      "createdAt": "2026-11-04T19:51:38.761Z"
+    },
+    {
+      "id": "cmw2j7wh20001weksphn3ymnd",
+      "dateLabel": "04-nov, 07:50 p. m.",
+      "userName": "Gerencia",
+      "ipAddress": "192.168.1.10",
+      "module": "USUARIOS",
+      "action": "CREAR_USUARIO",
+      "details": "Usuario Laura (laura@gmail.com) creado con acceso a: POS",
+      "level": "INFO",
+      "createdAt": "2026-11-04T19:50:58.599Z"
     }
   ],
   "workshopInspection": [],
@@ -2031,14 +2069,14 @@
   ],
   "branch": [
     {
-      "id": "branch_sucursal_1",
-      "name": "Sucursal Samborondón",
-      "address": "Av. Samborondón Km 1.5, Samborondón, Ecuador",
-      "phone": "0991234567",
-      "isMain": false,
+      "id": "cmw77ngp80000wggsaaqe2l22",
+      "name": "",
+      "address": "",
+      "phone": "",
+      "isMain": true,
       "status": "Activa",
-      "createdAt": "2026-11-04T02:32:52.570Z",
-      "updatedAt": "2026-11-04T02:32:52.570Z"
+      "createdAt": "2026-11-08T02:26:00.128Z",
+      "updatedAt": "2026-11-08T02:26:38.879Z"
     }
   ],
   "supplier": [
@@ -2155,6 +2193,33 @@
       "reference": "Apertura Turno",
       "method": "Efectivo",
       "updatedAt": "2026-11-04T19:42:42.965Z"
+    }
+  ],
+  "managementTask": [],
+  "companyConfig": [
+    {
+      "id": "default",
+      "razonSocial": "",
+      "nombreComercial": "",
+      "ruc": "",
+      "telefono": "",
+      "direccion": "",
+      "iva": 15,
+      "moneda": "Dólares (USD)",
+      "ambienteSri": "2",
+      "tipoEmision": "1",
+      "entidadEmisora": "",
+      "firmaArchivoNombre": "",
+      "firmaArchivoTamano": null,
+      "firmaFechaCarga": null,
+      "firmaFechaExpiracion": null,
+      "firmaClave": "",
+      "firmaEstado": "Pendiente",
+      "alertasStockBajo": true,
+      "recordatoriosClientes": true,
+      "resumenDiarioCaja": true,
+      "createdAt": "2026-11-08T02:02:23.229Z",
+      "updatedAt": "2026-11-08T02:26:40.200Z"
     }
   ]
 }

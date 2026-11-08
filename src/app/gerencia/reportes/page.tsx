@@ -556,7 +556,7 @@ export default function ReportesFinancieros() {
                   type="text"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="Ej. Pago Orden de Reparación #1045"
+                  placeholder="Descripción del movimiento"
                   className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                 />
               </div>
@@ -579,7 +579,7 @@ export default function ReportesFinancieros() {
                     step="0.01"
                     value={form.amount}
                     onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                    placeholder="450.00"
+                    placeholder="0.00"
                     className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                   />
                 </div>

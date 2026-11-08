@@ -15,6 +15,7 @@ export default function InventarioGlobal() {
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [saving, setSaving] = useState(false);
+  const [globalThreshold, setGlobalThreshold] = useState(5);
 
   const [form, setForm] = useState({
     code: "",
@@ -35,10 +36,19 @@ export default function InventarioGlobal() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/gerencia/inventario");
+      const [res, confRes] = await Promise.all([
+        fetch("/api/gerencia/inventario"),
+        fetch("/api/gerencia/configuracion").catch(() => null),
+      ]);
       if (res.ok) {
         const data = await res.json();
         setProducts(Array.isArray(data) ? data : []);
+      }
+      if (confRes && confRes.ok) {
+        const confData = await confRes.json();
+        if (confData?.config?.umbralStockBajo !== undefined) {
+          setGlobalThreshold(Number(confData.config.umbralStockBajo) || 5);
+        }
       }
     } finally {
       setLoading(false);
@@ -125,7 +135,7 @@ export default function InventarioGlobal() {
   const filtered = products.filter((p) => {
     const s1 = Number(p.stock ?? 0);
     const s2 = Number(p.stockNorte ?? 0);
-    const min = Number(p.minStock ?? 5);
+    const min = Math.max(Number(p.minStock ?? 0), globalThreshold);
     if (catFilter === "Stock Bajo" && !(s1 <= min || s2 <= min)) return false;
     if (catFilter !== "Todos" && catFilter !== "Stock Bajo" && p.category !== catFilter) return false;
     if (search && !`${p.code} ${p.name} ${p.category}`.toLowerCase().includes(search.toLowerCase())) return false;
@@ -136,15 +146,16 @@ export default function InventarioGlobal() {
     (acc, p) => acc + Number(p.price || 0) * (Number(p.stock || 0) + Number(p.stockNorte ?? 0)),
     0
   );
-  const criticalCount = products.filter(
-    (p) => Number(p.stock ?? 0) <= Number(p.minStock ?? 5) || Number(p.stockNorte ?? 0) <= Number(p.minStock ?? 5)
-  ).length;
+  const criticalCount = products.filter((p) => {
+    const min = Math.max(Number(p.minStock ?? 0), globalThreshold);
+    return Number(p.stock ?? 0) <= min || Number(p.stockNorte ?? 0) <= min;
+  }).length;
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans">
       <Header />
       <main className="flex-grow p-4 sm:p-6 md:p-12 max-w-7xl mx-auto w-full flex flex-col">
-        {/* Breadcrumb & Header */}
+        {/* Header */}
         <div className="order-1 mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link
@@ -157,11 +168,6 @@ export default function InventarioGlobal() {
               </svg>
             </Link>
             <div>
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-1 sm:mb-1.5">
-                <Link href="/gerencia" className="hover:text-blue-600 transition-colors">Gerencia</Link>
-                <span>/</span>
-                <span className="text-zinc-900 dark:text-zinc-100 font-medium">Inventario Global</span>
-              </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                 Control de Inventario
               </h1>

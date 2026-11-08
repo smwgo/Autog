@@ -14,7 +14,7 @@ const CIRCUIT_BREAKER_TTL_MS = 10000; // 10 segundos para reintentar Neon rápid
 
 const MODEL_DEFAULTS: Record<string, () => Record<string, any>> = {
   workshopOrder: () => ({
-    mechanic: "Carlos Rodríguez",
+    mechanic: "Por asignar",
     status: "En Diagnóstico",
     progress: 25,
     fuelLevel: "1/2",
@@ -81,16 +81,16 @@ const MODEL_DEFAULTS: Record<string, () => Record<string, any>> = {
     status: "Activo",
   }),
   clientQuote: () => ({
-    clientName: "Juan Pérez",
+    clientName: "Consumidor Final",
     status: "Pendiente",
     itemsJson: "[]",
     subtotal: 0,
     total: 0,
   }),
   clientAppointment: () => ({
-    clientName: "Juan Pérez",
+    clientName: "Cliente",
     status: "Programada",
-    tech: "Carlos Ruiz",
+    tech: "Por asignar",
     bay: "Bahía 1",
   }),
   posPromotion: () => ({
@@ -119,6 +119,11 @@ function getInitialSeedMirror(): Record<string, any[]> {
     workshopService: [],
     product: [],
     systemSetting: [],
+    companyConfig: [],
+    branch: [],
+    managementTask: [],
+    financialTransaction: [],
+    appUserAccess: [],
     clientQuote: [],
     clientAppointment: [],
     posPromotion: [],
@@ -679,15 +684,6 @@ function syncNeonResultToMirror(modelName: string, method: string, result: any, 
         const existing = table[idx];
         const existingHash = existing?.passwordHash;
 
-        if (isReadOp && existing?.updatedAt && safeRow?.updatedAt) {
-          const localTime = new Date(existing.updatedAt).getTime();
-          const remoteTime = new Date(safeRow.updatedAt).getTime();
-          if (!isNaN(localTime) && !isNaN(remoteTime) && localTime > remoteTime + 500) {
-            Object.assign(row, existing);
-            return;
-          }
-        }
-
         table[idx] = { ...existing, ...safeRow };
         if (modelName === "user" && !safeRow.passwordHash && existingHash) {
           table[idx].passwordHash = existingHash;
@@ -724,7 +720,9 @@ function getRawPrisma(): PrismaClient {
     globalForPrisma.prisma &&
     (!(globalForPrisma.prisma as any).product ||
       !(globalForPrisma.prisma as any).workshopService ||
-      !(globalForPrisma.prisma as any).vehicle)
+      !(globalForPrisma.prisma as any).vehicle ||
+      !(globalForPrisma.prisma as any).companyConfig ||
+      !(globalForPrisma.prisma as any).managementTask)
   ) {
     try {
       globalForPrisma.prisma.$disconnect();

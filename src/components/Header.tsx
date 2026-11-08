@@ -27,20 +27,30 @@ export function Header() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
-  const [notifications, setNotifications] = useState([
-    { id: 1, text: "Bienvenido a AutoG. Completa tu perfil para más beneficios.", date: "Justo ahora", read: false },
-    { id: 2, text: "Tienes un 10% de descuento en tu primer servicio.", date: "Hace 2h", read: false }
-  ]);
+  const [notifications, setNotifications] = useState<
+    { id: string | number; text: string; date: string; read: boolean }[]
+  >([]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAsRead = (id: number) => {
+  const markAsRead = (id: string | number) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   };
   
-  const deleteNotification = (id: number) => {
+  const deleteNotification = (id: string | number) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
+
+  useEffect(() => {
+    fetch("/api/notificaciones")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && Array.isArray(data.notificaciones)) {
+          setNotifications(data.notificaciones);
+        }
+      })
+      .catch(() => {});
+  }, [pathname]);
 
   useEffect(() => {
     setMounted(true);

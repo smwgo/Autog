@@ -13,9 +13,10 @@ export default function AuditoriaSistema() {
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const [defaultUser, setDefaultUser] = useState("Administrador");
   const [form, setForm] = useState({
-    userName: "Juan Pérez (Gerente)",
-    ipAddress: "192.168.1.10",
+    userName: "Administrador",
+    ipAddress: "",
     module: "Facturación",
     action: "",
     details: "",
@@ -37,6 +38,15 @@ export default function AuditoriaSistema() {
 
   useEffect(() => {
     loadData();
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.success && d?.user?.name) {
+          setDefaultUser(d.user.name);
+          setForm((prev) => ({ ...prev, userName: d.user.name }));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -51,8 +61,8 @@ export default function AuditoriaSistema() {
       if (res.ok) {
         setModalOpen(false);
         setForm({
-          userName: "Juan Pérez (Gerente)",
-          ipAddress: "192.168.1.10",
+          userName: defaultUser,
+          ipAddress: "",
           module: "Facturación",
           action: "",
           details: "",
@@ -113,11 +123,6 @@ export default function AuditoriaSistema() {
               </svg>
             </Link>
             <div>
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-1 sm:mb-1.5">
-                <Link href="/gerencia" className="hover:text-blue-600 transition-colors">Gerencia</Link>
-                <span>/</span>
-                <span className="text-zinc-900 dark:text-zinc-100 font-medium">Auditoría de Sistema</span>
-              </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                 Registro de Actividades
               </h1>

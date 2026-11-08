@@ -801,6 +801,7 @@ model OrderRequest {
   totalEstimated Decimal?  @db.Decimal(12, 2)
   notes          String?
   status         String    @default("PENDIENTE") // "PENDIENTE", "EN_DESPACHO", "DESPACHADO", "CANCELADO"
+  branch         String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -1324,4 +1325,58 @@ model AppUserAccess {
 
   @@index([email])
   @@index([status])
+}
+
+model ManagementTask {
+  id          String    @id @default(cuid())
+  title       String
+  category    String    @default("GENERAL")
+  priority    String    @default("NORMAL")
+  status      String    @default("PENDIENTE")
+  dueDate     String?
+  assignedTo  String?
+  notes       String?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status])
+  @@index([category])
+  @@index([priority])
+}
+
+model CompanyConfig {
+  id                    String   @id @default("default")
+  razonSocial           String   @default("")
+  nombreComercial       String   @default("")
+  ruc                   String   @default("")
+  telefono              String   @default("")
+  correo                String   @default("")
+  direccion             String   @default("")
+  logoUrl               String?  @db.Text
+  iva                   Float    @default(15)
+  moneda                String   @default("Dólares (USD)")
+  obligadoContabilidad  Boolean  @default(false)
+  regimenTributario     String   @default("General") // General, RIMPE Emprendedor, RIMPE Negocio Popular
+  estabSecuencial       String   @default("001")
+  ptoEmiSecuencial      String   @default("001")
+  secuencialFactura     Int      @default(1)
+  ambienteSri           String   @default("2")
+  tipoEmision           String   @default("1")
+  entidadEmisora        String?  @default("")
+  firmaArchivoNombre    String?
+  firmaArchivoTamano    String?
+  firmaArchivoBase64    String?  @db.Text
+  firmaFechaCarga       String?
+  firmaFechaExpiracion  String?
+  firmaClave            String?
+  firmaEstado           String?  @default("Pendiente")
+  alertasStockBajo      Boolean  @default(true)
+  umbralStockBajo       Int      @default(5)
+  alertaDestinoWhatsapp String   @default("")
+  alertaDestinoCorreo   String   @default("")
+  recordatoriosClientes Boolean  @default(true)
+  resumenDiarioCaja     Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }

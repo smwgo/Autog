@@ -581,7 +581,7 @@ export default function GestionPersonal() {
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Carlos Ruiz"
+                  placeholder="Nombre completo"
                   className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                 />
               </div>
@@ -602,18 +602,11 @@ export default function GestionPersonal() {
                   <input
                     required
                     type="text"
-                    list="dept-options"
                     value={form.department}
                     onChange={(e) => setForm({ ...form, department: e.target.value })}
-                    placeholder="Taller, Ventas..."
+                    placeholder="Taller"
                     className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                   />
-                  <datalist id="dept-options">
-                    <option value="Taller" />
-                    <option value="Ventas" />
-                    <option value="Oficina" />
-                    <option value="Gerencia" />
-                  </datalist>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">

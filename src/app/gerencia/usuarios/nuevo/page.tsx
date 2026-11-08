@@ -250,7 +250,7 @@ function NuevoUsuarioContent() {
                   <input
                     required
                     type="text"
-                    placeholder="Carlos Rodríguez"
+                    placeholder="Nombre completo"
                     value={nombre}
                     onChange={(e) => setNombre(e.target.value)}
                     className="w-full h-11 sm:h-12 px-3.5 sm:px-4 rounded-xl border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/60 text-base sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500 transition-colors"

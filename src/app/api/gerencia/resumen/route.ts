@@ -96,9 +96,15 @@ export async function GET(request: Request) {
         financialTransactions,
       ] = await Promise.all([
         database.sale.findMany({
-          where: { createdAt: { gte: startDate, lte: endDate } },
+          where: { createdAt: { gte: startDate, lte: endDate }, status: { not: "Anulada" } },
           select: {
             id: true,
+            saleNumber: true,
+            customerName: true,
+            vehicleModel: true,
+            vehiclePlate: true,
+            status: true,
+            sourceOrderNumber: true,
             total: true,
             paymentMethod: true,
             createdAt: true,
@@ -106,7 +112,7 @@ export async function GET(request: Request) {
           },
         }),
         database.sale.findMany({
-          where: { createdAt: { gte: todayStart, lte: todayEnd } },
+          where: { createdAt: { gte: todayStart, lte: todayEnd }, status: { not: "Anulada" } },
           select: {
             id: true,
             total: true,
@@ -240,9 +246,19 @@ export async function GET(request: Request) {
         return d >= startDate && d <= endDate;
       });
 
+      // Evitar doble conteo de órdenes de taller que ya tienen una venta POS asociada
+      const billedOrderNumbers = new Set(
+        branchSalesPeriod
+          .map((s: any) => (s.sourceOrderNumber || "").trim().toUpperCase())
+          .filter(Boolean)
+      );
+
       // 1. VENTAS TOTALES (Taller + Tienda POS + Facturación Electrónica SRI)
       const ventasPosPeriodo = branchSalesPeriod.reduce((acc, s) => acc + Number(s.total || 0), 0);
-      const tallerFacturadoPeriodo = ordersInPeriod.reduce((acc, o) => acc + getOrderValue(o), 0);
+      const tallerFacturadoPeriodo = ordersInPeriod.reduce((acc, o) => {
+        if (o.orderNumber && billedOrderNumbers.has(o.orderNumber.trim().toUpperCase())) return acc;
+        return acc + getOrderValue(o);
+      }, 0);
       const facturasMontoPeriodo = invoicesInPeriod
         .filter((i) => i.status === "Autorizado" || i.status === "Pagada")
         .reduce((acc, i) => acc + Number(i.amount || 0), 0);
@@ -260,6 +276,7 @@ export async function GET(request: Request) {
         return acc + Number(s.total || 0);
       }, 0);
       const cobradoTaller = ordersInPeriod.reduce((acc, o) => {
+        if (o.orderNumber && billedOrderNumbers.has(o.orderNumber.trim().toUpperCase())) return acc;
         const st = (o.status || "").toLowerCase();
         if (st.includes("finaliz") || st.includes("entregad") || st.includes("caja") || st.includes("cobrad")) {
           return acc + getOrderValue(o);
@@ -270,16 +287,22 @@ export async function GET(request: Request) {
         .filter((m) => m.type === "INGRESO" || m.type === "VENTA")
         .reduce((acc, m) => acc + Number(m.amount || 0), 0);
 
-      const cobradoEnCaja = Number((cobradoPos + cobradoTaller + facturasMontoPeriodo + ingresosCaja).toFixed(2));
+      const cobradoEnCaja = Number(
+        (cobradoPos + cobradoTaller + facturasMontoPeriodo + ingresosCaja + ingresosFinancieros).toFixed(2)
+      );
 
       // 3. VENTAS HOY (Órdenes de hoy + Ventas POS de hoy + Transacciones de hoy)
       const ordersToday = branchWorkshopOrders.filter((o) => {
+        if (o.orderNumber && billedOrderNumbers.has(o.orderNumber.trim().toUpperCase())) return false;
         const d = getRecordDate(o);
         return d >= todayStart && d <= todayEnd;
       });
       const tallerHoy = ordersToday.reduce((acc, o) => acc + getOrderValue(o), 0);
       const ventasPosHoy = branchSalesToday.reduce((acc, s) => acc + Number(s.total || 0), 0);
-      const montoHoy = Number((ventasPosHoy + tallerHoy).toFixed(2));
+      const txHoy = branchTransactions
+        .filter((t) => t.isIncome && getRecordDate(t) >= todayStart && getRecordDate(t) <= todayEnd)
+        .reduce((acc, t) => acc + Number(t.amount || 0), 0);
+      const montoHoy = Number((ventasPosHoy + tallerHoy + txHoy).toFixed(2));
 
       // 4. TICKET PROMEDIO POR AUTO / TRANSACCIÓN
       const totalTransacciones = branchSalesPeriod.length + ordersInPeriod.length + invoicesInPeriod.length;
@@ -401,15 +424,30 @@ export async function GET(request: Request) {
         },
         weeklyChart,
         sucursal: filterBranch || "AMBAS",
-        ultimasOrdenes: branchWorkshopOrders.slice(0, 8).map((o) => ({
-          id: o.id,
-          orderNumber: o.orderNumber,
-          client: o.client,
-          vehicle: o.vehicle,
-          status: o.status,
-          amount: getOrderValue(o),
-          createdAt: getRecordDate(o).toISOString(),
-        })),
+        ultimasOrdenes: [
+          ...branchWorkshopOrders.map((o) => ({
+            id: o.id,
+            orderNumber: o.orderNumber,
+            client: o.client || "Cliente",
+            vehicle: o.vehicle || o.plate || "Taller",
+            status: o.status || "En proceso",
+            amount: getOrderValue(o),
+            createdAt: getRecordDate(o).toISOString(),
+          })),
+          ...branchSalesPeriod
+            .filter((s: any) => !s.sourceOrderNumber)
+            .map((s: any) => ({
+              id: s.id,
+              orderNumber: s.saleNumber || `VENTA-${s.id.slice(-4)}`,
+              client: s.customerName || "Consumidor Final",
+              vehicle: s.vehicleModel || s.vehiclePlate || "Punto de Venta",
+              status: s.status || "Completada",
+              amount: Number(s.total || 0),
+              createdAt: new Date(s.createdAt).toISOString(),
+            })),
+        ]
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(0, 8),
       });
     });
   } catch (error: any) {

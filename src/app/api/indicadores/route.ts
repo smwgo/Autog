@@ -37,10 +37,12 @@ export async function GET(request: Request) {
         products,
         orders,
         tasks,
+        managementTasks,
         appointments,
         quotes,
         employees,
         users,
+        companyConfig,
       ] = await Promise.all([
         database.sale.count({ where: salesWhere }),
         database.saleItem.findMany({
@@ -58,16 +60,19 @@ export async function GET(request: Request) {
         }),
         database.workshopOrder.findMany({ select: { status: true } }),
         database.workshopTask.findMany({ select: { status: true } }),
+        database.managementTask.findMany({ select: { status: true } }).catch(() => []),
         database.clientAppointment.findMany({ select: { status: true } }),
         database.clientQuote.findMany({ select: { status: true } }),
         database.employee.findMany({ select: { status: true } }),
         database.appUserAccess.count(),
+        database.companyConfig.findUnique({ where: { id: "default" } }).catch(() => null),
       ]);
 
       const closedOrderStatuses = ["entreg", "finaliz", "termin", "historial", "cancel"];
       const completedStatuses = ["complet", "finaliz", "termin", "cancel", "entreg"];
       const closedQuoteStatuses = ["aprob", "acept", "rechaz", "cancel", "vencid"];
       const inactiveEmployeeStatuses = ["inactiv", "suspend", "baja", "desactiv"];
+      const globalLowStockThreshold = Number((companyConfig as any)?.umbralStockBajo ?? 5);
 
       const bestSellersByType = (isProduct: boolean) => {
         const totals = new Map<string, { name: string; quantity: number }>();
@@ -101,14 +106,16 @@ export async function GET(request: Request) {
         inventory: {
           products: products.length,
           units: products.reduce((sum, product) => sum + product.stock + product.stockNorte, 0),
-          lowStock: products.filter(
-            (product) =>
-              product.stock <= product.minStock || product.stockNorte <= product.minStock
-          ).length,
+          lowStock: products.filter((product) => {
+            const min = Math.max(Number(product.minStock ?? 0), globalLowStockThreshold);
+            return product.stock <= min || product.stockNorte <= min;
+          }).length,
         },
         workshop: {
           activeOrders: orders.filter((order) => isOpenStatus(order.status, closedOrderStatuses)).length,
-          openTasks: tasks.filter((task) => isOpenStatus(task.status, completedStatuses)).length,
+          openTasks:
+            tasks.filter((task) => isOpenStatus(task.status, completedStatuses)).length +
+            managementTasks.filter((task: any) => isOpenStatus(task.status || "", completedStatuses)).length,
         },
         appointments: appointments.filter(
           (appointment) => isOpenStatus(appointment.status, completedStatuses)
@@ -119,7 +126,7 @@ export async function GET(request: Request) {
         teamMembers: employees.filter(
           (employee) => isOpenStatus(employee.status, inactiveEmployeeStatuses)
         ).length,
-        systemUsers: users,
+        systemUsers: users + 2,
       };
     });
 
