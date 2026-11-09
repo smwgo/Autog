@@ -314,7 +314,7 @@ export async function subirEvidenciaSegura(
 
       const confirmData = await confirmRes.json();
       if (!confirmRes.ok || !confirmData.success) {
-        throw new Error(confirmData.error || "No se pudo confirmar la persistencia de la evidencia en Neon.");
+        throw new Error(confirmData.error || "No se pudo confirmar la persistencia de la evidencia en base de datos.");
       }
 
       onProgress?.({ percent: 100, status: "Evidencia guardada y verificada exitosamente." });

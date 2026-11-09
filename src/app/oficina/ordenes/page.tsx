@@ -612,7 +612,7 @@ export default function OrdenesCotizaciones() {
                   {loading ? (
                     <tr>
                       <td colSpan={6} className="px-6 py-12 text-center text-zinc-500">
-                        Cargando registros desde Neon...
+                        Cargando registros...
                       </td>
                     </tr>
                   ) : view === "cotizaciones" ? (

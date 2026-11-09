@@ -463,7 +463,7 @@ export async function GET(request: Request) {
             `SELECT * FROM "WorkshopOrder" ORDER BY "updatedAt" DESC LIMIT 1`
           );
           if (rows.length === 0) {
-            return NextResponse.json({ success: false, error: "No hay órdenes en Neon." }, { status: 404 });
+            return NextResponse.json({ success: false, error: "No hay órdenes en base de datos." }, { status: 404 });
           }
           return NextResponse.json({ success: true, order: mapOrderRow(rows[0]) });
         }
@@ -3377,7 +3377,7 @@ export async function POST(request: Request) {
 
         if (!vehicle) {
           return NextResponse.json(
-            { success: false, error: "Vehículo no encontrado en Neon." },
+            { success: false, error: "Vehículo no encontrado en base de datos." },
             { status: 404 }
           );
         }
@@ -4206,7 +4206,7 @@ export async function POST(request: Request) {
           success: true,
           deletedId: existing[0].id,
           orderNumber: existing[0].orderNumber,
-          message: `Orden ${existing[0].orderNumber} eliminada de Neon PostgreSQL.`,
+          message: `Orden ${existing[0].orderNumber} eliminada de base de datos.`,
         });
       }
 

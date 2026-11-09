@@ -79,7 +79,7 @@ function HistorialServiciosContent() {
         setHistoryList(data.historial);
       }
     } catch (err) {
-      console.error('Error cargando historial desde Neon DB:', err);
+      console.error('Error cargando historial desde base de datos:', err);
     } finally {
       setLoading(false);
     }
@@ -144,13 +144,13 @@ function HistorialServiciosContent() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Error guardando historial en Neon DB');
+        throw new Error(data.error || 'Error al guardar el historial');
       }
       setIsFormOpen(false);
       showToast(
         editingRecord
-          ? `Registro ${editingRecord.id} actualizado en Neon DB.`
-          : 'Nuevo servicio registrado en el historial de Neon DB.'
+          ? `Registro ${editingRecord.id} actualizado correctamente.`
+          : 'Nuevo servicio registrado en el historial.'
       );
       await fetchHistory();
     } catch (err: any) {
@@ -171,7 +171,7 @@ function HistorialServiciosContent() {
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Error al eliminar registro');
       }
-      showToast(`Registro ${rec.id} eliminado de Neon DB.`);
+      showToast(`Registro ${rec.id} eliminado correctamente.`);
       await fetchHistory();
     } catch (err: any) {
       showToast(`Error: ${err.message}`);
@@ -217,7 +217,7 @@ function HistorialServiciosContent() {
           </Link>
           <div className="flex items-center gap-2 text-xs font-mono bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-3 py-1 rounded-full border border-amber-200 dark:border-amber-800">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Historial Neon DB ({historyList.length})</span>
+            <span>Historial ({historyList.length})</span>
           </div>
         </div>
 

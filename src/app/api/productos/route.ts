@@ -142,7 +142,7 @@ export async function GET(request: Request) {
       }
     );
   } catch (error: any) {
-    console.error("Error al obtener productos de Neon:", error);
+    console.error("Error al obtener productos de base de datos:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Error al conectar con la base de datos" },
       { status: 500 }
@@ -216,9 +216,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, producto: { ...nuevoProducto, tipo: finalTipo } }, { status: 201 });
   } catch (error: any) {
-    console.error("Error al crear producto en Neon:", error);
+    console.error("Error al crear producto en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al registrar producto en Neon" },
+      { success: false, error: error.message || "Error al registrar producto en base de datos" },
       { status: 500 }
     );
   }
@@ -289,9 +289,9 @@ export async function PUT(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error("Error al actualizar producto en Neon:", error);
+    console.error("Error al actualizar producto en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al actualizar producto en Neon" },
+      { success: false, error: error.message || "Error al actualizar producto en base de datos" },
       { status: 500 }
     );
   }
@@ -341,9 +341,9 @@ export async function DELETE(request: Request) {
       }
     );
   } catch (error: any) {
-    console.error("Error al eliminar producto de Neon:", error);
+    console.error("Error al eliminar producto de base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al eliminar producto de Neon" },
+      { success: false, error: error.message || "Error al eliminar producto de base de datos" },
       { status: 500 }
     );
   }

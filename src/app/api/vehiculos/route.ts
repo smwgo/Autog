@@ -91,9 +91,9 @@ export async function GET() {
       count: vehicles.length,
     });
   } catch (error: any) {
-    console.error("Error al obtener vehículos de Neon:", error);
+    console.error("Error al obtener vehículos de base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al conectar con Neon" },
+      { success: false, error: error.message || "Error al conectar con base de datos" },
       { status: 500 }
     );
   }
@@ -163,10 +163,10 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       vehicle: newVehicle,
-      message: "Vehículo registrado en Neon con éxito.",
+      message: "Vehículo registrado en base de datos con éxito.",
     }, { status: 201 });
   } catch (error: any) {
-    console.error("Error al crear vehículo en Neon:", error);
+    console.error("Error al crear vehículo en base de datos:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Error al registrar vehículo" },
       { status: 500 }
@@ -208,10 +208,10 @@ export async function PUT(request: Request) {
     return NextResponse.json({
       success: true,
       vehicle: updatedVehicle,
-      message: "Vehículo actualizado en Neon correctamente.",
+      message: "Vehículo actualizado en base de datos correctamente.",
     });
   } catch (error: any) {
-    console.error("Error al actualizar vehículo en Neon:", error);
+    console.error("Error al actualizar vehículo en base de datos:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Error al actualizar vehículo" },
       { status: 500 }
@@ -239,10 +239,10 @@ export async function DELETE(request: Request) {
     return NextResponse.json({
       success: true,
       vehicle: deletedVehicle,
-      message: `Vehículo con placa ${deletedVehicle.plate} eliminado exitosamente de Neon.`,
+      message: `Vehículo con placa ${deletedVehicle.plate} eliminado exitosamente de base de datos.`,
     });
   } catch (error: any) {
-    console.error("Error al eliminar vehículo en Neon:", error);
+    console.error("Error al eliminar vehículo en base de datos:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Error al eliminar vehículo" },
       { status: 500 }

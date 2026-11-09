@@ -53,7 +53,7 @@ export default function HistorialServiciosPage() {
         setRecords(data.history);
       }
     } catch (err) {
-      console.error("Error al cargar historial desde Neon:", err);
+      console.error("Error al cargar historial desde base de datos:", err);
     } finally {
       setCargando(false);
     }

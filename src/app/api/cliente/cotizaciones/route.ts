@@ -130,7 +130,7 @@ export async function GET(request: Request) {
   } catch (error: any) {
     console.error("Error al obtener cotizaciones de cliente:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al consultar cotizaciones en Neon." },
+      { success: false, error: error.message || "Error al consultar cotizaciones en base de datos." },
       { status: 500 }
     );
   }
@@ -181,13 +181,13 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         quoteNumber,
-        message: "Cotización creada en Neon DB.",
+        message: "Cotización creada en base de datos.",
       });
     });
   } catch (error: any) {
     console.error("Error al crear cotización:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al crear cotización en Neon." },
+      { success: false, error: error.message || "Error al crear cotización en base de datos." },
       { status: 500 }
     );
   }
@@ -284,13 +284,13 @@ export async function PUT(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Cotización actualizada en Neon DB.",
+        message: "Cotización actualizada en base de datos.",
       });
     });
   } catch (error: any) {
     console.error("Error al actualizar cotización:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al actualizar cotización en Neon." },
+      { success: false, error: error.message || "Error al actualizar cotización en base de datos." },
       { status: 500 }
     );
   }
@@ -317,13 +317,13 @@ export async function DELETE(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Cotización eliminada de Neon DB.",
+        message: "Cotización eliminada de base de datos.",
       });
     });
   } catch (error: any) {
     console.error("Error al eliminar cotización:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al eliminar cotización en Neon." },
+      { success: false, error: error.message || "Error al eliminar cotización en base de datos." },
       { status: 500 }
     );
   }

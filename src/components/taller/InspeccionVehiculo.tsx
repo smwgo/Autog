@@ -4108,7 +4108,7 @@ ${urlSeguimiento}`;
 
                 <div className="text-center sm:text-right text-[10px] text-zinc-500 font-mono">
                   <p>Documento generado por Sistema AutoG Taller</p>
-                  <p>Trazabilidad en Cloudflare R2 y Neon PostgreSQL</p>
+                  <p>Trazabilidad de archivos en Cloudflare R2</p>
                 </div>
               </div>
             </div>

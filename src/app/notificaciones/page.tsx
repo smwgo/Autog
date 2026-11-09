@@ -32,7 +32,7 @@ export default function NotificacionesPage() {
         setNotifications(data.notificaciones);
       }
     } catch (e) {
-      console.error("Error al cargar notificaciones desde Neon:", e);
+      console.error("Error al cargar notificaciones desde base de datos:", e);
     } finally {
       setLoading(false);
     }

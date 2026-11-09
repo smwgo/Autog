@@ -80,7 +80,7 @@ export default function MiPerfilPage() {
         applyProfileToForm(target);
       }
     } catch (err) {
-      console.error('Error cargando perfil desde Neon DB:', err);
+      console.error('Error cargando perfil desde base de datos:', err);
     } finally {
       setLoading(false);
     }
@@ -123,7 +123,7 @@ export default function MiPerfilPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Error al guardar en Neon DB');
+        throw new Error(data.error || 'Error al guardar en base de datos');
       }
       setCurrentPass('');
       setNewPass('');
@@ -156,7 +156,7 @@ export default function MiPerfilPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Error al crear perfil en Neon DB');
+        throw new Error(data.error || 'Error al crear perfil en base de datos');
       }
       setIsNewModalOpen(false);
       setNewName('');

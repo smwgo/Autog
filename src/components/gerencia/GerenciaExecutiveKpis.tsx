@@ -111,7 +111,7 @@ export function GerenciaExecutiveKpis({ onDataLoaded, className = "", backHref =
     } catch (err) {
       console.error("Error al cargar métricas de gerencia:", err);
       setMetrics(null);
-      setErrorCarga("No se pudieron cargar los datos desde Neon. Verifica la conexión e inténtalo de nuevo.");
+      setErrorCarga("No se pudieron cargar los datos. Verifica la conexión e inténtalo de nuevo.");
     } finally {
       setCargando(false);
     }

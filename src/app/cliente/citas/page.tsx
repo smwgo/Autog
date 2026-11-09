@@ -87,7 +87,7 @@ export default function AgendarCitaPage() {
         setAppointments(data.citas);
       }
     } catch (err) {
-      console.error('Error cargando citas de Neon:', err);
+      console.error('Error cargando citas de base de datos:', err);
     } finally {
       setLoadingAppointments(false);
     }
@@ -166,11 +166,11 @@ export default function AgendarCitaPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Error al registrar cita en Neon');
+        throw new Error(data.error || 'Error al registrar cita en base de datos');
       }
       await fetchAppointments();
       setIsSubmitted(true);
-      showToast(`Cita ${data.cita?.code || ''} guardada en Neon DB.`);
+      showToast(`Cita ${data.cita?.code || ''} guardada correctamente.`);
     } catch (err: any) {
       showToast(`Error: ${err.message}`);
     } finally {
@@ -210,7 +210,7 @@ export default function AgendarCitaPage() {
         throw new Error(data.error || 'Error al actualizar cita');
       }
       setEditingCita(null);
-      showToast(`Cita ${editingCita.code} actualizada en Neon DB.`);
+      showToast(`Cita ${editingCita.code} actualizada correctamente.`);
       fetchAppointments();
     } catch (err: any) {
       showToast(`Error: ${err.message}`);
@@ -231,7 +231,7 @@ export default function AgendarCitaPage() {
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Error al eliminar cita');
       }
-      showToast(`Cita ${citaToDelete.code} eliminada de Neon DB.`);
+      showToast(`Cita ${citaToDelete.code} eliminada correctamente.`);
       setCitaToDelete(null);
       fetchAppointments();
     } catch (err: any) {
@@ -260,9 +260,9 @@ export default function AgendarCitaPage() {
             <div className="w-20 h-20 sm:w-24 sm:h-24 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center text-4xl sm:text-5xl mx-auto mb-6">
               ✓
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white mb-4">Cita Guardada en Neon DB</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white mb-4">Cita guardada</h2>
             <p className="text-zinc-600 dark:text-zinc-400 text-sm sm:text-base mb-8">
-              Tu solicitud ha sido registrada con éxito en la base de datos del taller. Nos contactaremos pronto para confirmar tu asistencia.
+              Tu solicitud ha sido registrada con éxito. Nos contactaremos pronto para confirmar tu asistencia.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
               <button 
@@ -308,7 +308,7 @@ export default function AgendarCitaPage() {
           </Link>
           <div className="flex items-center gap-2 text-xs font-mono bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Citas en Neon DB ({appointments.length})</span>
+            <span>Citas registradas ({appointments.length})</span>
           </div>
         </div>
 
@@ -704,7 +704,7 @@ export default function AgendarCitaPage() {
                 disabled={isSubmitting || !selectedVehicle || !selectedService || !selectedDate || !selectedTime}
                 className="cursor-pointer w-full md:w-auto ml-auto block bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-white text-base sm:text-lg font-bold px-10 py-4 min-h-[48px] rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
               >
-                {isSubmitting ? 'Guardando en Neon DB...' : 'Solicitar Cita'}
+                {isSubmitting ? 'Guardando...' : 'Solicitar Cita'}
               </button>
             </div>
 

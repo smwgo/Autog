@@ -49,9 +49,9 @@ export async function GET(request: Request) {
       stats: { total, pendientes, despachados },
     });
   } catch (error: any) {
-    console.error("Error al obtener solicitudes de Neon:", error);
+    console.error("Error al obtener solicitudes de base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al consultar solicitudes en Neon" },
+      { success: false, error: error.message || "Error al consultar solicitudes en base de datos" },
       { status: 500 }
     );
   }
@@ -95,9 +95,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, solicitud: nuevaSolicitud }, { status: 201 });
   } catch (error: any) {
-    console.error("Error al crear solicitud en Neon:", error);
+    console.error("Error al crear solicitud en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al registrar solicitud en Neon" },
+      { success: false, error: error.message || "Error al registrar solicitud en base de datos" },
       { status: 500 }
     );
   }
@@ -120,9 +120,9 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ success: true, solicitud: actualizada });
   } catch (error: any) {
-    console.error("Error al actualizar solicitud en Neon:", error);
+    console.error("Error al actualizar solicitud en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al actualizar estado en Neon" },
+      { success: false, error: error.message || "Error al actualizar estado en base de datos" },
       { status: 500 }
     );
   }
@@ -144,9 +144,9 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true, message: "Solicitud eliminada." });
   } catch (error: any) {
-    console.error("Error al eliminar solicitud de Neon:", error);
+    console.error("Error al eliminar solicitud de base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al eliminar solicitud en Neon" },
+      { success: false, error: error.message || "Error al eliminar solicitud en base de datos" },
       { status: 500 }
     );
   }

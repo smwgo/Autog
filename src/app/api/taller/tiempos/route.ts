@@ -121,7 +121,7 @@ export async function GET(request: Request) {
   } catch (error: any) {
     console.error("Error al obtener tiempos de taller:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al consultar tiempos en Neon." },
+      { success: false, error: error.message || "Error al consultar tiempos en base de datos." },
       { status: 500 }
     );
   }
@@ -170,13 +170,13 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         logNumber,
-        message: "Registro de tiempo guardado en Neon.",
+        message: "Registro de tiempo guardado en base de datos.",
       });
     });
   } catch (error: any) {
-    console.error("Error al guardar tiempo en Neon:", error);
+    console.error("Error al guardar tiempo en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al guardar tiempo en Neon." },
+      { success: false, error: error.message || "Error al guardar tiempo en base de datos." },
       { status: 500 }
     );
   }
@@ -242,13 +242,13 @@ export async function PUT(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Registro de tiempo actualizado en Neon.",
+        message: "Registro de tiempo actualizado en base de datos.",
       });
     });
   } catch (error: any) {
-    console.error("Error al actualizar tiempo en Neon:", error);
+    console.error("Error al actualizar tiempo en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al actualizar tiempo en Neon." },
+      { success: false, error: error.message || "Error al actualizar tiempo en base de datos." },
       { status: 500 }
     );
   }
@@ -275,13 +275,13 @@ export async function DELETE(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Registro de tiempo eliminado de Neon.",
+        message: "Registro de tiempo eliminado de base de datos.",
       });
     });
   } catch (error: any) {
     console.error("Error al eliminar tiempo:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al eliminar registro en Neon." },
+      { success: false, error: error.message || "Error al eliminar registro en base de datos." },
       { status: 500 }
     );
   }

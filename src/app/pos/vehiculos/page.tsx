@@ -225,7 +225,7 @@ export default function PosVehiculosPage() {
       );
       const data = await res.json();
       if (res.ok && data.success) {
-        setMensajeExito(`Vehículo ${vehiculoAEliminar.plate} eliminado exitosamente de Neon.`);
+        setMensajeExito(`Vehículo ${vehiculoAEliminar.plate} eliminado exitosamente.`);
         setTimeout(() => setMensajeExito(null), 3500);
         setVehiculoAEliminar(null);
         if (vehiculoDetalle?.id === vehiculoAEliminar.id) {
@@ -807,7 +807,7 @@ export default function PosVehiculosPage() {
                     setVehiculoAEliminar(toDelete);
                   }}
                   className="px-3 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs border border-rose-500/20 active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
-                  title="Eliminar este vehículo de Neon"
+                  title="Eliminar este vehículo"
                 >
                   <span>🗑️</span>
                   <span>Eliminar</span>

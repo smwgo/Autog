@@ -220,7 +220,7 @@ export async function GET(request: Request) {
       stats,
     });
   } catch (error: any) {
-    console.error("Error al obtener clientes de Neon:", error);
+    console.error("Error al obtener clientes de base de datos:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Error al conectar con la base de datos" },
       { status: 500 }
@@ -366,7 +366,7 @@ export async function POST(request: Request) {
       },
     }, { status: 201 });
   } catch (error: any) {
-    console.error("Error al registrar cliente en Neon:", error);
+    console.error("Error al registrar cliente en base de datos:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Error al registrar cliente." },
       { status: 500 }
@@ -418,7 +418,7 @@ export async function DELETE(request: Request) {
       message: `Cliente ${clienteExistente.name} eliminado correctamente.` 
     });
   } catch (error: any) {
-    console.error("Error al eliminar cliente de Neon:", error);
+    console.error("Error al eliminar cliente de base de datos:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Error al eliminar cliente" },
       { status: 500 }
@@ -592,7 +592,7 @@ export async function PUT(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error("Error al actualizar cliente en Neon:", error);
+    console.error("Error al actualizar cliente en base de datos:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Error al actualizar cliente" },
       { status: 500 }

@@ -108,7 +108,7 @@ export async function GET(request: Request) {
   } catch (error: any) {
     console.error("Error al consultar historial de taller:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al consultar historial en Neon." },
+      { success: false, error: error.message || "Error al consultar historial en base de datos." },
       { status: 500 }
     );
   }
@@ -159,13 +159,13 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         serviceCode,
-        message: "Servicio registrado en el historial de Neon.",
+        message: "Servicio registrado en el historial de base de datos.",
       });
     });
   } catch (error: any) {
-    console.error("Error al registrar historial en Neon:", error);
+    console.error("Error al registrar historial en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al guardar historial en Neon." },
+      { success: false, error: error.message || "Error al guardar historial en base de datos." },
       { status: 500 }
     );
   }
@@ -236,13 +236,13 @@ export async function PUT(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Registro de historial actualizado en Neon.",
+        message: "Registro de historial actualizado en base de datos.",
       });
     });
   } catch (error: any) {
-    console.error("Error al actualizar historial en Neon:", error);
+    console.error("Error al actualizar historial en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al actualizar historial en Neon." },
+      { success: false, error: error.message || "Error al actualizar historial en base de datos." },
       { status: 500 }
     );
   }
@@ -269,13 +269,13 @@ export async function DELETE(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Registro eliminado del historial de Neon.",
+        message: "Registro eliminado del historial de base de datos.",
       });
     });
   } catch (error: any) {
     console.error("Error al eliminar historial:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al eliminar historial en Neon." },
+      { success: false, error: error.message || "Error al eliminar historial en base de datos." },
       { status: 500 }
     );
   }

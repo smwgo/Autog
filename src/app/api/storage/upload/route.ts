@@ -140,7 +140,7 @@ export async function GET(req: Request) {
         JSON.stringify({ originalName: fileName })
       );
     } catch (dbErr) {
-      console.warn("Aviso al registrar intención PENDING en Neon:", dbErr);
+      console.warn("Aviso al registrar intención PENDING en base de datos:", dbErr);
     }
 
     return NextResponse.json({
@@ -268,7 +268,7 @@ export async function POST(req: Request) {
           JSON.stringify({ originalName: file.name })
         );
       } catch (dbErr) {
-        console.error("Error al persistir evidencia en Neon tras subida a R2:", dbErr);
+        console.error("Error al persistir evidencia en base de datos tras subida a R2:", dbErr);
       }
 
       return NextResponse.json({
@@ -321,7 +321,7 @@ export async function POST(req: Request) {
         JSON.stringify({ originalName: file.name, inline: true })
       );
     } catch (dbErr) {
-      console.warn("Aviso al guardar evidencia inline en Neon:", dbErr);
+      console.warn("Aviso al guardar evidencia inline en base de datos:", dbErr);
     }
 
     return NextResponse.json({

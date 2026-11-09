@@ -75,7 +75,7 @@ export async function GET() {
     return NextResponse.json(users);
   } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || "Error al obtener usuarios en Neon PostgreSQL" },
+      { error: error.message || "Error al obtener usuarios en base de datos" },
       { status: 500 }
     );
   }
@@ -182,7 +182,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, ...created });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || "Error al crear usuario en Neon PostgreSQL" },
+      { error: error.message || "Error al crear usuario en base de datos" },
       { status: 400 }
     );
   }
@@ -275,7 +275,7 @@ export async function PUT(req: Request) {
     return NextResponse.json({ success: true, ...updated });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || "Error al actualizar usuario en Neon PostgreSQL" },
+      { error: error.message || "Error al actualizar usuario en base de datos" },
       { status: 400 }
     );
   }
@@ -314,7 +314,7 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || "Error al eliminar usuario en Neon PostgreSQL" },
+      { error: error.message || "Error al eliminar usuario en base de datos" },
       { status: 500 }
     );
   }

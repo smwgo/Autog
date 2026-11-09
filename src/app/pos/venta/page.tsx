@@ -1326,7 +1326,7 @@ export default function NuevaVentaPage() {
             }),
           });
         } catch (errCred) {
-          console.error("Error al registrar crédito en Neon DB:", errCred);
+          console.error("Error al registrar crédito en base de datos:", errCred);
         }
       }
 

@@ -133,7 +133,7 @@ export default function ServiciosPage() {
           }
         }
       } catch (e) {
-        console.error("Error al cargar servicios desde Neon DB:", e);
+        console.error("Error al cargar servicios desde base de datos:", e);
       } finally {
         setLoading(false);
       }

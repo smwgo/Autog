@@ -111,7 +111,7 @@ export async function GET(request: Request) {
   } catch (error: any) {
     console.error("Error en búsqueda global:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al buscar en Neon DB", results: [] },
+      { success: false, error: error.message || "Error al buscar en base de datos", results: [] },
       { status: 500 }
     );
   }

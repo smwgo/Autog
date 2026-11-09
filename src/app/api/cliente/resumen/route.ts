@@ -35,7 +35,7 @@ export async function GET() {
   } catch (error: any) {
     console.error("Error al obtener resumen de cliente:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al consultar resumen en Neon." },
+      { success: false, error: error.message || "Error al consultar resumen en base de datos." },
       { status: 500 }
     );
   }

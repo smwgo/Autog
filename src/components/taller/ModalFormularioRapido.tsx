@@ -767,7 +767,7 @@ export default function ModalFormularioRapido({
       }
       const data = await res.json();
       if (!data?.success) {
-        throw new Error(data?.error || "Error al guardar en Neon PostgreSQL");
+        throw new Error(data?.error || "Error al guardar en base de datos");
       }
 
       if (data.estructuraEspecialidades) {
@@ -802,8 +802,8 @@ export default function ModalFormularioRapido({
       ]);
       if (!modoInline) onClose();
     } catch (err: any) {
-      console.error("Error al registrar pedido en Neon:", err);
-      mostrarToast?.(err?.message || "Error al registrar el pedido en Neon", "err");
+      console.error("Error al registrar pedido en base de datos:", err);
+      mostrarToast?.(err?.message || "Error al registrar el pedido en base de datos", "err");
     } finally {
       setGuardando(false);
     }

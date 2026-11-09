@@ -144,7 +144,7 @@ export async function GET(request: Request) {
   } catch (error: any) {
     console.error("Error al obtener peticiones de repuestos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al consultar peticiones en Neon." },
+      { success: false, error: error.message || "Error al consultar peticiones en base de datos." },
       { status: 500 }
     );
   }
@@ -238,13 +238,13 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         requestNumber,
-        message: "Solicitud de repuestos registrada en Neon y enviada a Bodega/POS.",
+        message: "Solicitud de repuestos registrada en base de datos y enviada a Bodega/POS.",
       });
     });
   } catch (error: any) {
     console.error("Error al crear solicitud de repuestos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al crear solicitud en Neon." },
+      { success: false, error: error.message || "Error al crear solicitud en base de datos." },
       { status: 500 }
     );
   }
@@ -298,13 +298,13 @@ export async function PUT(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Estado de solicitud actualizado en Neon.",
+        message: "Estado de solicitud actualizado en base de datos.",
       });
     });
   } catch (error: any) {
     console.error("Error al actualizar solicitud de repuestos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al actualizar solicitud en Neon." },
+      { success: false, error: error.message || "Error al actualizar solicitud en base de datos." },
       { status: 500 }
     );
   }
@@ -331,13 +331,13 @@ export async function DELETE(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Solicitud eliminada de Neon.",
+        message: "Solicitud eliminada de base de datos.",
       });
     });
   } catch (error: any) {
     console.error("Error al eliminar solicitud de repuestos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al eliminar solicitud en Neon." },
+      { success: false, error: error.message || "Error al eliminar solicitud en base de datos." },
       { status: 500 }
     );
   }

@@ -63,7 +63,7 @@ export default function CreditosPage() {
         setCreditos(data.creditos);
       }
     } catch (err) {
-      console.error("Error cargando créditos desde Neon DB:", err);
+      console.error("Error cargando créditos desde base de datos:", err);
     } finally {
       setCargando(false);
     }

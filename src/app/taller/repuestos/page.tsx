@@ -81,7 +81,7 @@ export default function SolicitudRepuestosPage() {
         }
       }
     } catch (err) {
-      console.error("Error al cargar peticiones desde Neon:", err);
+      console.error("Error al cargar peticiones desde base de datos:", err);
     } finally {
       setCargando(false);
     }

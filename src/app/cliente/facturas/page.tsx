@@ -59,7 +59,7 @@ function FacturasPagosContent() {
         setInvoices(lista);
       }
     } catch (err) {
-      console.error('Error cargando facturas desde Neon DB:', err);
+      console.error('Error cargando facturas desde base de datos:', err);
     } finally {
       setLoading(false);
     }
@@ -177,9 +177,9 @@ function FacturasPagosContent() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Error al registrar pago en Neon DB');
+        throw new Error(data.error || 'Error al registrar pago en base de datos');
       }
-      showNotification(`¡Pago registrado en Neon DB para ${invoiceToPay.id}!`);
+      showNotification(`¡Pago registrado correctamente para ${invoiceToPay.id}!`);
       setInvoiceToPay(null);
       await fetchInvoices();
     } catch (err: any) {
@@ -209,12 +209,12 @@ function FacturasPagosContent() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Error al crear factura en Neon DB');
+        throw new Error(data.error || 'Error al crear factura en base de datos');
       }
       setIsNewModalOpen(false);
       setNewConcept('');
       setNewAmount('150.00');
-      showNotification(`Factura ${data.factura?.id || ''} creada en Neon DB.`);
+      showNotification(`Factura ${data.factura?.id || ''} creada correctamente.`);
       await fetchInvoices();
     } catch (err: any) {
       showNotification(`Error: ${err.message}`);
@@ -235,7 +235,7 @@ function FacturasPagosContent() {
         throw new Error(data.error || 'Error al eliminar factura');
       }
       setSelectedInvoiceModal(null);
-      showNotification(`Factura ${invId} eliminada de Neon DB.`);
+      showNotification(`Factura ${invId} eliminada correctamente.`);
       await fetchInvoices();
     } catch (err: any) {
       showNotification(`Error: ${err.message}`);
@@ -273,7 +273,7 @@ function FacturasPagosContent() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 text-xs font-mono bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 px-3 py-1 rounded-full border border-indigo-200 dark:border-indigo-800">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Facturas Neon DB ({invoices.length})</span>
+              <span>Facturas ({invoices.length})</span>
             </div>
             <div className="text-sm font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
               <span>RFC:</span>
@@ -664,7 +664,7 @@ function FacturasPagosContent() {
                 disabled={isProcessingPayment}
                 className="cursor-pointer min-h-[44px] h-11 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold text-base sm:text-xs transition-colors flex items-center justify-center"
               >
-                🗑️ Eliminar de Neon DB
+                🗑️ Eliminar
               </button>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -808,7 +808,7 @@ function FacturasPagosContent() {
               ✕
             </button>
             <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-4">
-              Emitir Nueva Factura (Neon DB)
+              Emitir Nueva Factura
             </h3>
             <form onSubmit={handleCreateInvoice} className="space-y-4">
               <div>
@@ -884,7 +884,7 @@ function FacturasPagosContent() {
                   disabled={isProcessingPayment}
                   className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base sm:text-sm flex items-center justify-center"
                 >
-                  {isProcessingPayment ? 'Guardando...' : 'Guardar en Neon DB'}
+                  {isProcessingPayment ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
             </form>

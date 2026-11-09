@@ -87,7 +87,7 @@ export async function GET(request: Request) {
   } catch (error: any) {
     console.error("Error GET /api/pos/creditos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al consultar créditos en Neon DB" },
+      { success: false, error: error.message || "Error al consultar créditos en base de datos" },
       { status: 500 }
     );
   }
@@ -188,7 +188,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("Error POST /api/pos/creditos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al crear línea de crédito en Neon DB" },
+      { success: false, error: error.message || "Error al crear línea de crédito en base de datos" },
       { status: 500 }
     );
   }
@@ -214,7 +214,7 @@ export async function PUT(req: Request) {
       );
 
       if (existingRows.length === 0) {
-        throw new Error("Cuenta de crédito no encontrada en Neon DB");
+        throw new Error("Cuenta de crédito no encontrada en base de datos");
       }
 
       const curr = existingRows[0];
@@ -290,7 +290,7 @@ export async function PUT(req: Request) {
   } catch (error: any) {
     console.error("Error PUT /api/pos/creditos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al actualizar cuenta de crédito en Neon DB" },
+      { success: false, error: error.message || "Error al actualizar cuenta de crédito en base de datos" },
       { status: 500 }
     );
   }
@@ -318,7 +318,7 @@ export async function DELETE(req: Request) {
   } catch (error: any) {
     console.error("Error DELETE /api/pos/creditos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al eliminar crédito de Neon DB" },
+      { success: false, error: error.message || "Error al eliminar crédito de base de datos" },
       { status: 500 }
     );
   }

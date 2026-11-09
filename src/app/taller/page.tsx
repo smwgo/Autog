@@ -4137,7 +4137,7 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
         }
       } catch (err) {
         if (!silent) {
-          mostrarToast("Error al consultar en Neon PostgreSQL", "err");
+          mostrarToast("Error al consultar en base de datos", "err");
         }
       } finally {
         setBuscandoVehiculo(false);
@@ -7032,8 +7032,8 @@ Próximo servicio preventivo recomendado a los 5,000 km o 6 meses.`;
           setModuloTaller(esp);
           mostrarToast(
             ordenActiva
-              ? `✅ ${itemsNuevos.length} trabajo(s) registrado(s) en Neon y agregado(s) a ${ordenActiva.plate}`
-              : `✅ ${itemsNuevos.length} trabajo(s) registrado(s) en catálogo Neon (${esp})`,
+              ? `✅ ${itemsNuevos.length} trabajo(s) registrado(s) y agregado(s) a ${ordenActiva.plate}`
+              : `✅ ${itemsNuevos.length} trabajo(s) registrado(s) en catálogo (${esp})`,
             "ok"
           );
         }}

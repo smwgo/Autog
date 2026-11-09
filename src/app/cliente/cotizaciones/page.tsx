@@ -63,7 +63,7 @@ export default function CotizacionesClientePage() {
         }
       }
     } catch (err) {
-      console.error('Error cargando cotizaciones desde Neon:', err);
+      console.error('Error cargando cotizaciones desde base de datos:', err);
     } finally {
       setLoading(false);
     }
@@ -93,7 +93,7 @@ export default function CotizacionesClientePage() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Error al actualizar estado en Neon DB');
+        throw new Error(data.error || 'Error al actualizar estado en base de datos');
       }
       showToast(
         newStatus === 'Aprobada'
@@ -128,12 +128,12 @@ export default function CotizacionesClientePage() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Error al crear cotización en Neon DB');
+        throw new Error(data.error || 'Error al crear cotización en base de datos');
       }
       setIsNewModalOpen(false);
       setNewNotes('');
       setNewItems([{ name: 'Diagnóstico Computarizado', price: 45, qty: 1 }]);
-      showToast(`Cotización ${data.cotizacion?.id || ''} creada en Neon DB.`);
+      showToast(`Cotización ${data.cotizacion?.id || ''} creada correctamente.`);
       await fetchQuotes();
       if (data.cotizacion?.id) {
         setSelectedQuoteId(data.cotizacion.id);
@@ -176,7 +176,7 @@ export default function CotizacionesClientePage() {
         throw new Error(data.error || 'Error al actualizar cotización');
       }
       setIsEditModalOpen(false);
-      showToast(`Cotización ${activeQuote.id} actualizada en Neon DB.`);
+      showToast(`Cotización ${activeQuote.id} actualizada correctamente.`);
       await fetchQuotes();
     } catch (err: any) {
       showToast(`Error: ${err.message}`);
@@ -196,7 +196,7 @@ export default function CotizacionesClientePage() {
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Error al eliminar cotización');
       }
-      showToast(`Cotización ${quoteId} eliminada de Neon DB.`);
+      showToast(`Cotización ${quoteId} eliminada correctamente.`);
       const remaining = quotes.filter((q) => q.id !== quoteId);
       setQuotes(remaining);
       if (selectedQuoteId === quoteId) {
@@ -238,7 +238,7 @@ export default function CotizacionesClientePage() {
           </Link>
           <div className="flex items-center gap-2 text-xs font-mono bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 px-3 py-1 rounded-full border border-purple-200 dark:border-purple-800">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Cotizaciones Neon DB ({quotes.length})</span>
+            <span>Cotizaciones ({quotes.length})</span>
           </div>
         </div>
 
@@ -553,7 +553,7 @@ export default function CotizacionesClientePage() {
                       </div>
                     ) : (
                       <div className="w-full py-4 min-h-[48px] rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400 font-bold text-center flex justify-center items-center gap-2">
-                        <span>✅</span> Este presupuesto ya fue aprobado en Neon DB
+                        <span>✅</span> Este presupuesto ya fue aprobado
                       </div>
                     )}
                   </div>
@@ -695,7 +695,7 @@ export default function CotizacionesClientePage() {
                   disabled={isSubmitting}
                   className="cursor-pointer flex-1 min-h-[44px] h-11 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-base sm:text-sm flex items-center justify-center"
                 >
-                  {isSubmitting ? 'Guardando...' : 'Guardar en Neon DB'}
+                  {isSubmitting ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
             </form>

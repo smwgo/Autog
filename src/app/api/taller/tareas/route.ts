@@ -102,7 +102,7 @@ export async function GET(request: Request) {
   } catch (error: any) {
     console.error("Error al obtener tareas de taller:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al consultar tareas en Neon." },
+      { success: false, error: error.message || "Error al consultar tareas en base de datos." },
       { status: 500 }
     );
   }
@@ -162,13 +162,13 @@ export async function POST(request: Request) {
               notes: r.notes || "",
             }
           : null,
-        message: "Tarea creada exitosamente en Neon.",
+        message: "Tarea creada exitosamente en base de datos.",
       });
     });
   } catch (error: any) {
     console.error("Error al crear tarea de taller:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al crear tarea en Neon." },
+      { success: false, error: error.message || "Error al crear tarea en base de datos." },
       { status: 500 }
     );
   }
@@ -211,13 +211,13 @@ export async function PUT(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Tarea actualizada en Neon.",
+        message: "Tarea actualizada en base de datos.",
       });
     });
   } catch (error: any) {
     console.error("Error al actualizar tarea:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al actualizar tarea en Neon." },
+      { success: false, error: error.message || "Error al actualizar tarea en base de datos." },
       { status: 500 }
     );
   }
@@ -244,13 +244,13 @@ export async function DELETE(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Tarea eliminada de Neon.",
+        message: "Tarea eliminada de base de datos.",
       });
     });
   } catch (error: any) {
     console.error("Error al eliminar tarea:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al eliminar tarea en Neon." },
+      { success: false, error: error.message || "Error al eliminar tarea en base de datos." },
       { status: 500 }
     );
   }

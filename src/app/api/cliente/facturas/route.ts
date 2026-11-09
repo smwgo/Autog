@@ -182,7 +182,7 @@ export async function GET(request: Request) {
   } catch (error: any) {
     console.error("Error al obtener facturas de cliente:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al consultar facturas en Neon." },
+      { success: false, error: error.message || "Error al consultar facturas en base de datos." },
       { status: 500 }
     );
   }
@@ -233,13 +233,13 @@ export async function POST(request: Request) {
         success: true,
         invoiceNumber,
         uuid,
-        message: "Factura registrada en Neon DB.",
+        message: "Factura registrada en base de datos.",
       });
     });
   } catch (error: any) {
     console.error("Error al crear factura:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al crear factura en Neon." },
+      { success: false, error: error.message || "Error al crear factura en base de datos." },
       { status: 500 }
     );
   }
@@ -276,13 +276,13 @@ export async function PUT(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Factura actualizada en Neon DB.",
+        message: "Factura actualizada en base de datos.",
       });
     });
   } catch (error: any) {
     console.error("Error al actualizar factura:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al actualizar factura en Neon." },
+      { success: false, error: error.message || "Error al actualizar factura en base de datos." },
       { status: 500 }
     );
   }
@@ -309,13 +309,13 @@ export async function DELETE(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Factura eliminada de Neon DB.",
+        message: "Factura eliminada de base de datos.",
       });
     });
   } catch (error: any) {
     console.error("Error al eliminar factura:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al eliminar factura en Neon." },
+      { success: false, error: error.message || "Error al eliminar factura en base de datos." },
       { status: 500 }
     );
   }

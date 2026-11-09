@@ -747,7 +747,7 @@ export default function ModuloLubricentroCatalogo({
         setVehiculosRegistrados(Array.isArray(data.vehicles) ? data.vehicles : []);
       }
     } catch (err) {
-      console.error("Error cargando Lubricentro desde Neon:", err);
+      console.error("Error cargando Lubricentro desde base de datos:", err);
     } finally {
       setCargando(false);
     }

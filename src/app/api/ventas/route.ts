@@ -198,9 +198,9 @@ export async function GET(request: Request) {
       totalVentas: filteredSales.length,
     });
   } catch (error: any) {
-    console.error("Error al obtener ventas de Neon:", error);
+    console.error("Error al obtener ventas de base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al consultar ventas en Neon" },
+      { success: false, error: error.message || "Error al consultar ventas en base de datos" },
       { status: 500 }
     );
   }
@@ -549,9 +549,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, venta: sale }, { status: 201 });
   } catch (error: any) {
-    console.error("Error al registrar venta en Neon:", error);
+    console.error("Error al registrar venta en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al guardar venta en Neon", stack: error.stack },
+      { success: false, error: error.message || "Error al guardar venta en base de datos", stack: error.stack },
       { status: 500 }
     );
   }
@@ -751,7 +751,7 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ success: true, venta: saleUpdated });
   } catch (error: any) {
-    console.error("Error al actualizar venta en Neon:", error);
+    console.error("Error al actualizar venta en base de datos:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Error al actualizar venta" },
       { status: 500 }
@@ -832,7 +832,7 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true, message: "Venta eliminada." });
   } catch (error: any) {
-    console.error("Error al eliminar venta en Neon:", error);
+    console.error("Error al eliminar venta en base de datos:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Error al eliminar venta" },
       { status: 500 }

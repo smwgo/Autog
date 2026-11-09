@@ -549,7 +549,7 @@ export function ModalServicioTecnicentroForm({
                 : "➕ Registrar Servicio de Tecnicentro"}
             </h3>
             <p className="text-xs text-zinc-400">
-              Guarda precios, tarifas por vehículo, filtros técnicos e imágenes R2 en Neon
+              Guarda precios, tarifas por vehículo, filtros técnicos e imágenes R2.
             </p>
           </div>
           <button
@@ -1113,7 +1113,7 @@ export function ModalNeumaticoProductoForm({
               {isEditing ? "✏️ Editar Neumático del Catálogo" : "🛞 Registrar Neumático en Catálogo"}
             </h3>
             <p className="text-xs text-zinc-400">
-              Se almacena en la tabla real Product de Neon con sus medidas técnicas
+              Se almacena en el catálogo de productos con sus medidas técnicas
             </p>
           </div>
           <button
@@ -1343,7 +1343,7 @@ export function ModalConfiguracionTecnicentro({
     try {
       setSaving(true);
       await onSaveConfig(draft);
-      mostrarToast("Configuración de Tecnicentro guardada en Neon", "ok");
+      mostrarToast("Configuración de Tecnicentro guardada correctamente", "ok");
       onClose();
     } finally {
       setSaving(false);

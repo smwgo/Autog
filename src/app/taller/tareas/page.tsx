@@ -62,7 +62,7 @@ export default function MisTareasPage() {
         setTasks(data.tasks);
       }
     } catch (err) {
-      console.error("Error al cargar tareas desde Neon:", err);
+      console.error("Error al cargar tareas desde base de datos:", err);
     } finally {
       setCargando(false);
     }

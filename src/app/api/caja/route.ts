@@ -258,9 +258,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error("Error al obtener datos de caja de Neon:", error);
+    console.error("Error al obtener datos de caja de base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al consultar caja en Neon" },
+      { success: false, error: error.message || "Error al consultar caja en base de datos" },
       { status: 500 }
     );
   }
@@ -341,7 +341,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         session: nuevaSesion,
-        message: "Caja abierta correctamente en Neon",
+        message: "Caja abierta correctamente en base de datos",
       });
     }
 
@@ -366,9 +366,9 @@ export async function POST(request: Request) {
       movement: nuevoMov,
     });
   } catch (error: any) {
-    console.error("Error al registrar en Neon:", error);
+    console.error("Error al registrar en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al registrar en Neon" },
+      { success: false, error: error.message || "Error al registrar en base de datos" },
       { status: 500 }
     );
   }
@@ -484,10 +484,10 @@ export async function PUT(request: Request) {
     return NextResponse.json({
       success: true,
       session: sesionCerrada,
-      message: "Cierre de caja guardado con éxito en Neon",
+      message: "Cierre de caja guardado con éxito en base de datos",
     });
   } catch (error: any) {
-    console.error("Error al procesar cierre de caja en Neon:", error);
+    console.error("Error al procesar cierre de caja en base de datos:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Error al guardar cierre de caja" },
       { status: 500 }

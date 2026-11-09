@@ -441,7 +441,7 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Vehículo ${plate || id} eliminado con éxito de Neon PostgreSQL.`,
+      message: `Vehículo ${plate || id} eliminado con éxito de base de datos.`,
     });
   } catch (error: any) {
     console.error("Error al eliminar vehículo:", error);

@@ -87,7 +87,7 @@ export async function GET(req: Request) {
       total: evidences.length,
     });
   } catch (error: any) {
-    console.error("Error al consultar evidencias de Neon:", error);
+    console.error("Error al consultar evidencias de base de datos:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Error al obtener evidencias." },
       { status: 500 }

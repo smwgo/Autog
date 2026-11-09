@@ -16,7 +16,7 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3, delayMs = 600)
     } catch (err: any) {
       lastError = err;
       const msg = err?.message || String(err);
-      console.warn(`[Neon DB Retry] Intento ${attempt}/${maxRetries} falló (${msg}). Reintentando...`);
+      console.warn(`[base de datos Retry] Intento ${attempt}/${maxRetries} falló (${msg}). Reintentando...`);
       if (attempt < maxRetries) {
         await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
       }
@@ -150,11 +150,11 @@ export async function GET(request: Request) {
       }
     });
   } catch (error: any) {
-    console.error("Error al consultar Neon DB:", error.message);
+    console.error("Error al consultar base de datos:", error.message);
     return NextResponse.json(
       {
         success: false,
-        error: "Error al conectar con la base de datos Neon: " + error.message,
+        error: "Error al conectar con la base de datos base de datos: " + error.message,
         servicios: [],
         categories: [],
         total: 0,
@@ -211,7 +211,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         servicio: nuevoServicio,
-        message: "Servicio registrado exitosamente en Neon.",
+        message: "Servicio registrado exitosamente en base de datos.",
       });
     } else {
       const id = generateId();
@@ -235,13 +235,13 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         servicio: rows?.[0],
-        message: "Servicio registrado exitosamente en Neon.",
+        message: "Servicio registrado exitosamente en base de datos.",
       });
     }
   } catch (error: any) {
-    console.error("Error al crear servicio en Neon:", error);
+    console.error("Error al crear servicio en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al crear servicio en Neon." },
+      { success: false, error: error.message || "Error al crear servicio en base de datos." },
       { status: 500 }
     );
   }
@@ -295,7 +295,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({
         success: true,
         servicio: servicioActualizado,
-        message: "Servicio actualizado correctamente en Neon.",
+        message: "Servicio actualizado correctamente en base de datos.",
       });
     } else {
       await prisma.$executeRawUnsafe(
@@ -328,13 +328,13 @@ export async function PUT(request: Request) {
       return NextResponse.json({
         success: true,
         servicio: rows?.[0],
-        message: "Servicio actualizado correctamente en Neon.",
+        message: "Servicio actualizado correctamente en base de datos.",
       });
     }
   } catch (error: any) {
-    console.error("Error al actualizar servicio en Neon:", error);
+    console.error("Error al actualizar servicio en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al actualizar servicio en Neon." },
+      { success: false, error: error.message || "Error al actualizar servicio en base de datos." },
       { status: 500 }
     );
   }
@@ -365,12 +365,12 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "Servicio eliminado exitosamente de Neon.",
+      message: "Servicio eliminado exitosamente de base de datos.",
     });
   } catch (error: any) {
-    console.error("Error al eliminar servicio en Neon:", error);
+    console.error("Error al eliminar servicio en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al eliminar servicio en Neon." },
+      { success: false, error: error.message || "Error al eliminar servicio en base de datos." },
       { status: 500 }
     );
   }

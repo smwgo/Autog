@@ -161,7 +161,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({
       success: true,
       cotizacion: updated,
-      message: "Cotización actualizada en Neon DB.",
+      message: "Cotización actualizada en base de datos.",
     });
   } catch (error: any) {
     console.error("Error al actualizar cotización:", error);

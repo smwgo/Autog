@@ -121,9 +121,9 @@ export async function GET(request: Request) {
       });
     });
   } catch (error: any) {
-    console.error("Error al obtener citas en Neon:", error);
+    console.error("Error al obtener citas en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al consultar citas en Neon." },
+      { success: false, error: error.message || "Error al consultar citas en base de datos." },
       { status: 500 }
     );
   }
@@ -185,13 +185,13 @@ export async function POST(request: Request) {
         success: true,
         appointmentNumber,
         appointment: rows?.[0],
-        message: "Cita agendada exitosamente en Neon DB.",
+        message: "Cita agendada exitosamente en base de datos.",
       });
     });
   } catch (error: any) {
-    console.error("Error al agendar cita en Neon:", error);
+    console.error("Error al agendar cita en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al agendar cita en Neon." },
+      { success: false, error: error.message || "Error al agendar cita en base de datos." },
       { status: 500 }
     );
   }
@@ -234,13 +234,13 @@ export async function PUT(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Cita actualizada en Neon DB.",
+        message: "Cita actualizada en base de datos.",
       });
     });
   } catch (error: any) {
     console.error("Error al actualizar cita:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al actualizar cita en Neon." },
+      { success: false, error: error.message || "Error al actualizar cita en base de datos." },
       { status: 500 }
     );
   }
@@ -267,13 +267,13 @@ export async function DELETE(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Cita eliminada de Neon DB.",
+        message: "Cita eliminada de base de datos.",
       });
     });
   } catch (error: any) {
     console.error("Error al eliminar cita:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al eliminar cita en Neon." },
+      { success: false, error: error.message || "Error al eliminar cita en base de datos." },
       { status: 500 }
     );
   }

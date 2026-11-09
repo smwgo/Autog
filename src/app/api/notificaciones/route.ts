@@ -107,7 +107,7 @@ export async function GET() {
       });
     });
   } catch (error: any) {
-    console.error("Error al consultar notificaciones en Neon DB:", error);
+    console.error("Error al consultar notificaciones en base de datos:", error);
     return NextResponse.json(
       { success: false, notificaciones: [], unreadCount: 0, error: error.message },
       { status: 500 }

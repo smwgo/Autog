@@ -131,7 +131,7 @@ function SeguimientoOrdenContent() {
           setChatMensajes(Array.isArray(data.order.internalChat) ? data.order.internalChat : []);
         } else {
           setOrden(null);
-          setError(data.error || "No hay órdenes activas registradas en Neon.");
+          setError(data.error || "No hay órdenes activas registradas.");
         }
       } catch {
         setError("Error de conexión al consultar el estado de tu orden.");

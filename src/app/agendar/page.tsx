@@ -88,7 +88,7 @@ function BookingForm() {
         }),
       });
     } catch (err) {
-      console.error("Error al registrar solicitud en Neon DB:", err);
+      console.error("Error al registrar solicitud en base de datos:", err);
     } finally {
       setIsSubmitting(false);
       setIsSubmitted(true);

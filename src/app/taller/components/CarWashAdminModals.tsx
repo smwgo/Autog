@@ -562,7 +562,7 @@ export function ModalServicioCarWashForm({
               {isEditing ? "✏️ Editar Servicio de Car Wash" : "➕ Nuevo Servicio de Car Wash"}
             </h3>
             <p className="text-xs text-zinc-400">
-              Configuración persistente en Neon PostgreSQL e imágenes en Cloudflare R2
+              Configuración persistente e imágenes almacenadas en Cloudflare R2
             </p>
           </div>
           <button
@@ -1013,7 +1013,7 @@ export function ModalConfiguracionCarWash({
     try {
       setSaving(true);
       await onSaveConfig(draft);
-      mostrarToast("Configuración de Car Wash guardada en Neon", "ok");
+      mostrarToast("Configuración de Car Wash guardada correctamente", "ok");
       onClose();
     } finally {
       setSaving(false);
@@ -1925,7 +1925,7 @@ export function ModalConfiguracionCarWash({
             onClick={handleSaveAll}
             className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black text-xs sm:text-sm font-black shadow-md cursor-pointer"
           >
-            {saving ? "Guardando en Neon..." : "💾 Guardar Toda la Configuración"}
+            {saving ? "Guardando..." : "💾 Guardar Toda la Configuración"}
           </button>
         </div>
       </div>

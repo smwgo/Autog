@@ -1711,7 +1711,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("Error en POST /api/taller/lubricentro:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al guardar el producto en Neon" },
+      { success: false, error: error.message || "Error al guardar el producto en base de datos" },
       { status: 500 }
     );
   }

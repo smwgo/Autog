@@ -778,14 +778,14 @@ export function ModalProductoLubricentroForm({
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Error al guardar producto en Neon");
+        throw new Error(data.error || "Error al guardar producto en base de datos");
       }
       if (data.config) {
         onConfigActualizada(data.config);
       }
       onGuardado(
         data.product,
-        esEdicion ? "Producto actualizado en Neon correctamente." : "Producto registrado en Neon correctamente."
+        esEdicion ? "Producto actualizado correctamente." : "Producto registrado correctamente."
       );
       onClose();
     } catch (err: any) {
@@ -837,7 +837,7 @@ export function ModalProductoLubricentroForm({
                 </span>
               </h3>
               <p className="text-xs text-zinc-500">
-                Conectado a la tabla real <code className="font-mono">Product</code> en Neon y almacenamiento Cloudflare R2.
+                Conectado al catálogo de productos y al almacenamiento de imágenes Cloudflare R2.
               </p>
             </div>
             <button
@@ -1863,7 +1863,7 @@ export function ModalProductoLubricentroForm({
                 className="h-10 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-bold cursor-pointer shadow-sm"
               >
                 {guardando
-                  ? "Guardando en Neon..."
+                  ? "Guardando..."
                   : esEdicion
                   ? "💾 Guardar Cambios"
                   : "💾 Registrar Producto"}
@@ -1940,7 +1940,7 @@ export function ModalConfiguracionManualLubricentro({
 
   const persistirConfigEnNeon = async (
     configAGuardar: LubricentroConfigData,
-    msgExito = "Configuración guardada en Neon correctamente."
+    msgExito = "Configuración guardada correctamente."
   ) => {
     setGuardando(true);
     setMensajeAlerta(null);
@@ -1952,14 +1952,14 @@ export function ModalConfiguracionManualLubricentro({
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Error al guardar configuración en Neon");
+        throw new Error(data.error || "Error al guardar configuración en base de datos");
       }
       setDraft(data.config);
       setMensajeAlerta({ texto: msgExito, tipo: "ok" });
       onConfigGuardada(data.config, msgExito);
     } catch (err: any) {
       setMensajeAlerta({
-        texto: err?.message || "No se pudo guardar en Neon",
+        texto: err?.message || "No se pudo guardar en base de datos",
         tipo: "err",
       });
     } finally {
@@ -2973,7 +2973,7 @@ export function ModalConfiguracionManualLubricentro({
             onClick={() => persistirConfigEnNeon(draft)}
             className="h-10 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-bold cursor-pointer shadow-sm"
           >
-            {guardando ? "Guardando en Neon..." : "💾 Guardar Configuración en Neon"}
+            {guardando ? "Guardando..." : "💾 Guardar Configuración"}
           </button>
         </div>
       </div>

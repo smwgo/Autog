@@ -33,7 +33,7 @@ export function GlobalSearch() {
           setResults(data.results);
         }
       } catch (e) {
-        console.error("Error al buscar en Neon DB:", e);
+        console.error("Error al buscar en base de datos:", e);
       } finally {
         setLoading(false);
       }

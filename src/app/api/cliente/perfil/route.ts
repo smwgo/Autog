@@ -92,9 +92,9 @@ export async function GET(request: Request) {
       });
     });
   } catch (error: any) {
-    console.error("Error al obtener perfil de cliente en Neon:", error);
+    console.error("Error al obtener perfil de cliente en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al consultar perfil en Neon." },
+      { success: false, error: error.message || "Error al consultar perfil en base de datos." },
       { status: 500 }
     );
   }
@@ -132,13 +132,13 @@ export async function PUT(request: Request) {
       return NextResponse.json({
         success: true,
         profile: updated,
-        message: "Perfil actualizado exitosamente en Neon DB.",
+        message: "Perfil actualizado exitosamente en base de datos.",
       });
     });
   } catch (error: any) {
-    console.error("Error al actualizar perfil en Neon:", error);
+    console.error("Error al actualizar perfil en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al actualizar perfil en Neon." },
+      { success: false, error: error.message || "Error al actualizar perfil en base de datos." },
       { status: 500 }
     );
   }
@@ -176,13 +176,13 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         profile: created,
-        message: "Nuevo perfil de cliente registrado en Neon DB.",
+        message: "Nuevo perfil de cliente registrado en base de datos.",
       });
     });
   } catch (error: any) {
-    console.error("Error al crear perfil en Neon:", error);
+    console.error("Error al crear perfil en base de datos:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al crear perfil en Neon." },
+      { success: false, error: error.message || "Error al crear perfil en base de datos." },
       { status: 500 }
     );
   }
@@ -204,13 +204,13 @@ export async function DELETE(request: Request) {
       await prisma.customer.delete({ where: { id } });
       return NextResponse.json({
         success: true,
-        message: "Perfil eliminado de Neon DB.",
+        message: "Perfil eliminado de base de datos.",
       });
     });
   } catch (error: any) {
     console.error("Error al eliminar perfil:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al eliminar perfil en Neon." },
+      { success: false, error: error.message || "Error al eliminar perfil en base de datos." },
       { status: 500 }
     );
   }

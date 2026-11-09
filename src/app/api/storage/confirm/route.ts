@@ -277,7 +277,7 @@ export async function POST(req: Request) {
       },
     });
   } catch (error: any) {
-    console.error("Error al confirmar evidencia en Neon:", error);
+    console.error("Error al confirmar evidencia en base de datos:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Error al registrar metadatos de evidencia." },
       { status: 500 }

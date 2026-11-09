@@ -86,7 +86,7 @@ export default function ControlTiemposPage() {
         if (data.stats) setStats(data.stats);
       }
     } catch (err) {
-      console.error("Error al cargar tiempos desde Neon:", err);
+      console.error("Error al cargar tiempos desde base de datos:", err);
     } finally {
       setCargando(false);
     }

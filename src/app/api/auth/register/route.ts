@@ -93,7 +93,7 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("Error en registro:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Error al crear la cuenta en Neon DB." },
+      { success: false, error: error.message || "Error al crear la cuenta en base de datos." },
       { status: 500 }
     );
   }
