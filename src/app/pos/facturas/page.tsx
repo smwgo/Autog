@@ -50,6 +50,7 @@ export default function FacturasPosPage() {
   
   // Modales
   const [ventaDetalle, setVentaDetalle] = useState<Sale | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{ type: "anular" | "eliminar"; sale: Sale } | null>(null);
 
   const [accionEnCurso, setAccionEnCurso] = useState(false);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
@@ -139,71 +140,61 @@ export default function FacturasPosPage() {
 
 
 
-  // UPDATE: Anular venta en Neon y devolver inventario
-  const handleAnular = async (v: Sale) => {
-    if (
-      !confirm(
-        `¿Seguro de anular la factura ${v.saleNumber}? Se reincorporará el stock de ${v.items?.length || 0} producto(s) y se ajustará el cuadre de caja si fue en efectivo.`
-      )
-    ) {
-      return;
-    }
+  // Ejecutar anulación o eliminación confirmada
+  const handleEjecutarConfirmacion = async () => {
+    if (!confirmModal) return;
+    const { type, sale: v } = confirmModal;
+    setConfirmModal(null);
+    setAccionEnCurso(true);
 
-    try {
-      setAccionEnCurso(true);
-      const res = await fetch("/api/ventas", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: v.id, status: "Anulada" }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setMensajeExito(`Factura ${v.saleNumber} anulada e inventario reabastecido.`);
-        setTimeout(() => setMensajeExito(null), 4000);
-        await cargarVentas(searchTerm, true);
-        if (ventaDetalle?.id === v.id) {
-          setVentaDetalle((prev) => (prev ? { ...prev, status: "Anulada" } : null));
+    if (type === "anular") {
+      try {
+        const res = await fetch("/api/ventas", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: v.id, status: "Anulada" }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setMensajeExito(`Factura ${v.saleNumber} anulada.`);
+          setTimeout(() => setMensajeExito(null), 4000);
+          await cargarVentas(searchTerm, true);
+          if (ventaDetalle?.id === v.id) {
+            setVentaDetalle((prev) => (prev ? { ...prev, status: "Anulada" } : null));
+          }
+        } else {
+          setErrorMensaje(data.error || "No se pudo anular la factura.");
+          setTimeout(() => setErrorMensaje(null), 4000);
         }
-      } else {
-        alert(data.error || "No se pudo anular la factura.");
+      } catch (err) {
+        console.error("Error al anular factura:", err);
+        setErrorMensaje("Error de conexión al anular la factura.");
+        setTimeout(() => setErrorMensaje(null), 4000);
+      } finally {
+        setAccionEnCurso(false);
       }
-    } catch (err) {
-      console.error("Error al anular factura:", err);
-      alert("Error de conexión al anular la factura.");
-    } finally {
-      setAccionEnCurso(false);
-    }
-  };
-
-  // DELETE: Eliminar venta definitivamente de Neon
-  const handleEliminar = async (v: Sale) => {
-    if (
-      !confirm(
-        `⚠️ ATENCIÓN: ¿Deseas ELIMINAR definitivamente la factura ${v.saleNumber}? Esta acción borrará el registro y sus líneas de detalle de forma permanente.`
-      )
-    ) {
-      return;
-    }
-
-    try {
-      setAccionEnCurso(true);
-      const res = await fetch(`/api/ventas?id=${v.id}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setMensajeExito(`Factura ${v.saleNumber} eliminada.`);
-        setTimeout(() => setMensajeExito(null), 4000);
-        if (ventaDetalle?.id === v.id) setVentaDetalle(null);
-        await cargarVentas(searchTerm, true);
-      } else {
-        alert(data.error || "No se pudo eliminar la factura.");
+    } else {
+      try {
+        const res = await fetch(`/api/ventas?id=${v.id}`, {
+          method: "DELETE",
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setMensajeExito(`Factura ${v.saleNumber} eliminada.`);
+          setTimeout(() => setMensajeExito(null), 4000);
+          if (ventaDetalle?.id === v.id) setVentaDetalle(null);
+          await cargarVentas(searchTerm, true);
+        } else {
+          setErrorMensaje(data.error || "No se pudo eliminar la factura.");
+          setTimeout(() => setErrorMensaje(null), 4000);
+        }
+      } catch (err) {
+        console.error("Error al eliminar venta:", err);
+        setErrorMensaje("Error de conexión al eliminar la factura.");
+        setTimeout(() => setErrorMensaje(null), 4000);
+      } finally {
+        setAccionEnCurso(false);
       }
-    } catch (err) {
-      console.error("Error al eliminar venta:", err);
-      alert("Error de conexión al eliminar la factura.");
-    } finally {
-      setAccionEnCurso(false);
     }
   };
 
@@ -912,7 +903,7 @@ export default function FacturasPosPage() {
                 {ventaDetalle.status?.toLowerCase() !== "anulada" && (
                   <button
                     type="button"
-                    onClick={() => handleAnular(ventaDetalle)}
+                    onClick={() => setConfirmModal({ type: "anular", sale: ventaDetalle })}
                     disabled={accionEnCurso}
                     className="h-11 px-4 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700/50 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
                   >
@@ -922,7 +913,7 @@ export default function FacturasPosPage() {
                 )}
                 <button
                   type="button"
-                  onClick={() => handleEliminar(ventaDetalle)}
+                  onClick={() => setConfirmModal({ type: "eliminar", sale: ventaDetalle })}
                   disabled={accionEnCurso}
                   className="h-11 px-3.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-300 dark:border-rose-700/50 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
                   title="Eliminar factura"
@@ -938,6 +929,58 @@ export default function FacturasPosPage() {
                 </button>
               </div>
 
+            </div>
+          </div>
+        )}
+
+        {/* MODAL CONFIRMACIÓN (ANULAR / ELIMINAR) */}
+        {confirmModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+            <div className="bg-[#0f141d] border border-zinc-800 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                  confirmModal.type === "anular"
+                    ? "bg-amber-500/10 text-amber-500"
+                    : "bg-rose-500/10 text-rose-500"
+                }`}>
+                  {confirmModal.type === "anular" ? (
+                    <span className="text-lg">🚫</span>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  )}
+                </div>
+                <h3 className="text-base font-bold text-white capitalize">{confirmModal.type}</h3>
+              </div>
+
+              <p className="text-sm text-zinc-300">
+                ¿{confirmModal.type === "anular" ? "Anular" : "Eliminar"}{" "}
+                <span className="font-bold text-white font-mono">{confirmModal.sale.saleNumber}</span>?
+              </p>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setConfirmModal(null)}
+                  disabled={accionEnCurso}
+                  className="h-10 rounded-xl border border-zinc-700 text-xs font-semibold hover:bg-zinc-800 transition cursor-pointer text-zinc-300"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={accionEnCurso}
+                  onClick={handleEjecutarConfirmacion}
+                  className={`h-10 rounded-xl text-white text-xs font-bold active:scale-95 disabled:opacity-50 transition cursor-pointer ${
+                    confirmModal.type === "anular"
+                      ? "bg-amber-600 hover:bg-amber-500"
+                      : "bg-rose-600 hover:bg-rose-500"
+                  }`}
+                >
+                  {accionEnCurso ? "..." : confirmModal.type === "anular" ? "Anular" : "Eliminar"}
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -13,10 +13,41 @@ export async function GET() {
         if (defaultUser?.name) defaultUserName = defaultUser.name;
       } catch {}
 
-      const rawSessions = await prisma.cashRegister.findMany({
+      let rawSessions: any[] = await prisma.cashRegister.findMany({
         orderBy: { openedAt: "desc" },
         include: { movements: true },
-      });
+      }).catch(() => []);
+
+      if (rawSessions.length === 0) {
+        try {
+          const legacy = await (prisma as any).orderRequest.findMany({
+            where: { type: { in: ["CAJA_SESSION", "CAJA_CIERRE"] } },
+            orderBy: { createdAt: "desc" },
+          });
+          if (legacy.length > 0) {
+            rawSessions = legacy.map((s: any) => {
+              const initial = parseFloat(s.totalEstimated?.toString() || "0");
+              return {
+                id: s.id,
+                sessionNumber: s.requestNumber || `CAJA-${s.id.slice(-6)}`,
+                status: s.status === "CERRADA" ? "CERRADA" : "ABIERTA",
+                notes: `Cajero: ${s.customerName && s.customerName !== "Apertura de Caja" ? s.customerName : defaultUserName}`,
+                branch: s.branch || "Principal",
+                openedAt: s.createdAt,
+                closedAt: s.status === "CERRADA" ? s.updatedAt || s.createdAt : null,
+                initialCash: initial,
+                totalSalesCash: 0,
+                totalSalesCard: 0,
+                totalSalesTransfer: 0,
+                totalExpenses: 0,
+                declaredCash: s.status === "CERRADA" ? initial : null,
+                differenceCash: 0,
+                movements: [],
+              };
+            });
+          }
+        } catch {}
+      }
 
       const sessions = rawSessions.map((s) => {
         let cashier = defaultUserName;
@@ -52,7 +83,7 @@ export async function GET() {
           declaredCash,
           differenceCash,
           notes: s.notes,
-          movements: (s.movements || []).map((m) => ({
+          movements: (s.movements || []).map((m: any) => ({
             id: m.id,
             type: m.type,
             amount: Number(m.amount || 0),

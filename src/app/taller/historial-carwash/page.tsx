@@ -448,7 +448,7 @@ function HistorialCarWashContenido() {
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
                 <span>⚡</span>
-                <span>Repetir lavado</span>
+                <span>Lavados</span>
               </h1>
               <div className="mt-0.5 flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
                 <span className="font-semibold text-zinc-900 dark:text-white">

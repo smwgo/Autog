@@ -291,7 +291,7 @@ export default function PosOrdenesPage() {
             <div>
               <div className="flex items-center gap-2.5">
                 <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-                  {seccionActiva === "HISTORIAL" ? "Historial de Órdenes" : "Órdenes"}
+                  Órdenes
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400">
                   {cargando ? "..." : totalOrdenes}

@@ -100,10 +100,12 @@ export default function InspeccionesPage() {
     }
   };
 
-  const handleEliminar = async (inspId: string, inspNumber: string) => {
-    if (!window.confirm(`¿Estás seguro de eliminar la inspección ${inspNumber}?`)) {
-      return;
-    }
+  const [deleteConfirm, setDeleteConfirm] = useState<{ inspId: string; inspNumber: string } | null>(null);
+
+  const handleEjecutarEliminar = async () => {
+    if (!deleteConfirm) return;
+    const { inspId } = deleteConfirm;
+    setDeleteConfirm(null);
 
     try {
       setEliminandoId(inspId);
@@ -331,7 +333,7 @@ export default function InspeccionesPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleEliminar(insp.dbId || insp.id, insp.id)}
+                      onClick={() => setDeleteConfirm({ inspId: insp.dbId || insp.id, inspNumber: insp.id })}
                       disabled={eliminandoId === insp.id || eliminandoId === insp.dbId}
                       title="Eliminar inspección"
                       aria-label="Eliminar inspección"
@@ -502,7 +504,7 @@ export default function InspeccionesPage() {
                           </button>
 
                           <button
-                            onClick={() => handleEliminar(insp.dbId || insp.id, insp.id)}
+                            onClick={() => setDeleteConfirm({ inspId: insp.dbId || insp.id, inspNumber: insp.id })}
                             disabled={eliminandoId === insp.id || eliminandoId === insp.dbId}
                             title="Eliminar inspección"
                             className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-all flex items-center justify-center text-xs active:scale-95 cursor-pointer shadow-xs"
@@ -622,6 +624,42 @@ export default function InspeccionesPage() {
                   className="w-full sm:w-auto h-11 px-6 rounded-xl bg-zinc-900 dark:bg-zinc-800 text-white text-xs font-bold cursor-pointer flex items-center justify-center"
                 >
                   Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* MODAL ELIMINAR INSPECCIÓN */}
+        {deleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+            <div className="bg-[#0f141d] border border-zinc-800 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <h3 className="text-base font-bold text-white">Eliminar</h3>
+              </div>
+
+              <p className="text-sm text-zinc-300">
+                ¿Eliminar inspección <span className="font-bold text-white font-mono">{deleteConfirm.inspNumber}</span>?
+              </p>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirm(null)}
+                  className="h-10 rounded-xl border border-zinc-700 text-xs font-semibold hover:bg-zinc-800 transition cursor-pointer text-zinc-300"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleEjecutarEliminar}
+                  className="h-10 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold active:scale-95 transition cursor-pointer"
+                >
+                  Eliminar
                 </button>
               </div>
             </div>

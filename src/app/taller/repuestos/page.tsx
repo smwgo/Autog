@@ -190,8 +190,13 @@ export default function SolicitudRepuestosPage() {
     }
   };
 
-  const handleEliminar = async (req: PartRequestRecord) => {
-    if (!window.confirm(`¿Eliminar la solicitud ${req.id}?`)) return;
+  const [deleteConfirm, setDeleteConfirm] = useState<PartRequestRecord | null>(null);
+
+  const handleEjecutarEliminar = async () => {
+    if (!deleteConfirm) return;
+    const req = deleteConfirm;
+    setDeleteConfirm(null);
+
     try {
       const id = req.dbId || req.id;
       setActualizandoId(id);
@@ -257,7 +262,7 @@ export default function SolicitudRepuestosPage() {
               </svg>
             </Link>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Solicitud de Repuestos
+              Repuestos
             </h1>
             <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-600 text-white shadow-sm shadow-indigo-500/20">
               {cargando ? "..." : requests.length}
@@ -437,7 +442,7 @@ export default function SolicitudRepuestosPage() {
                     {getUrgencyIcon(req.urgency)}
                     <button
                       type="button"
-                      onClick={() => handleEliminar(req)}
+                      onClick={() => setDeleteConfirm(req)}
                       title="Eliminar solicitud"
                       className="w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center text-zinc-400 hover:text-rose-500 rounded-xl transition-colors text-xs cursor-pointer"
                     >
@@ -819,6 +824,42 @@ export default function SolicitudRepuestosPage() {
                   </div>
                 </form>
               )}
+            </div>
+          </div>
+        )}
+        {/* MODAL ELIMINAR REPUESTOS */}
+        {deleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+            <div className="bg-[#0f141d] border border-zinc-800 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <h3 className="text-base font-bold text-white">Eliminar</h3>
+              </div>
+
+              <p className="text-sm text-zinc-300">
+                ¿Eliminar solicitud <span className="font-bold text-white font-mono">{deleteConfirm.requestNumber || deleteConfirm.id}</span>?
+              </p>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirm(null)}
+                  className="h-10 rounded-xl border border-zinc-700 text-xs font-semibold hover:bg-zinc-800 transition cursor-pointer text-zinc-300"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleEjecutarEliminar}
+                  className="h-10 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold active:scale-95 transition cursor-pointer"
+                >
+                  Eliminar
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -894,7 +894,9 @@
       "imageUrl": "/api/storage/download?key=productos%2F4bc83888-ff2e-43ce-9381-d4122eacb5ed.png",
       "createdAt": "2026-11-03T02:14:02.118Z",
       "updatedAt": "2026-11-05T04:11:04.533Z",
-      "tipo": "Lubricentro"
+      "tipo": "Lubricentro",
+      "subCategory": null,
+      "presentation": null
     },
     {
       "id": "cmw022c5n14xwluzg",
@@ -912,7 +914,9 @@
       "imageUrl": "/api/storage/download?key=productos%2F9396d027-07ba-41c3-aa23-f33bee776f66.png",
       "createdAt": "2026-11-03T02:15:13.163Z",
       "updatedAt": "2026-11-05T21:23:50.860Z",
-      "tipo": "Lubricentro"
+      "tipo": "Lubricentro",
+      "subCategory": null,
+      "presentation": null
     },
     {
       "id": "cmw03zdo3utjmwek2",
@@ -930,7 +934,9 @@
       "imageUrl": "/api/storage/download?key=productos%2F56e59077-f1e3-4e3e-8311-2849ea5de2d1.png",
       "createdAt": "2026-11-03T03:08:54.386Z",
       "updatedAt": "2026-11-05T04:11:05.580Z",
-      "tipo": "Lubricentro"
+      "tipo": "Lubricentro",
+      "subCategory": null,
+      "presentation": null
     },
     {
       "id": "cmw0413d5zrcr3qhe",
@@ -948,7 +954,9 @@
       "imageUrl": "/api/storage/download?key=productos%2Fef2fead0-9f87-4015-b998-753f3ecb4006.png",
       "createdAt": "2026-11-03T03:10:14.345Z",
       "updatedAt": "2026-11-05T04:11:06.064Z",
-      "tipo": "Lubricentro"
+      "tipo": "Lubricentro",
+      "subCategory": null,
+      "presentation": null
     },
     {
       "id": "cmw043j1w3lysggsd",
@@ -966,7 +974,9 @@
       "imageUrl": "/api/storage/download?key=productos%2Fe1637c8f-b773-4bf4-a4ff-0c1a414f228c.png",
       "createdAt": "2026-11-03T03:12:07.988Z",
       "updatedAt": "2026-11-05T04:11:06.578Z",
-      "tipo": "Lubricentro"
+      "tipo": "Lubricentro",
+      "subCategory": null,
+      "presentation": null
     },
     {
       "id": "cmw044rywqtmziav2",
@@ -984,7 +994,9 @@
       "imageUrl": "/api/storage/download?key=productos%2Fd218fc8e-65cd-4507-9383-3de2f3074fca.png",
       "createdAt": "2026-11-03T03:13:06.200Z",
       "updatedAt": "2026-11-05T04:11:07.087Z",
-      "tipo": "Lubricentro"
+      "tipo": "Lubricentro",
+      "subCategory": null,
+      "presentation": null
     },
     {
       "id": "cmw046d7x6qfvyt5t",
@@ -1002,7 +1014,9 @@
       "imageUrl": "/api/storage/download?key=productos%2Fbad77eca-dc59-44f4-966e-770bf9630306.png",
       "createdAt": "2026-11-03T03:14:20.397Z",
       "updatedAt": "2026-11-05T04:11:07.599Z",
-      "tipo": "Lubricentro"
+      "tipo": "Lubricentro",
+      "subCategory": null,
+      "presentation": null
     },
     {
       "id": "cmw04e5c0yjkbbbub",
@@ -1020,7 +1034,9 @@
       "imageUrl": "/api/storage/download?key=productos%2Fbce0dd0e-c2a3-4c56-806b-48e066f42573.png",
       "createdAt": "2026-11-03T03:20:23.424Z",
       "updatedAt": "2026-11-05T04:11:08.118Z",
-      "tipo": "Lubricentro"
+      "tipo": "Lubricentro",
+      "subCategory": null,
+      "presentation": null
     },
     {
       "id": "cmw04ficyq8onpty1",
@@ -1529,7 +1545,30 @@
       "updatedAt": "2026-11-07T03:46:03.225Z"
     }
   ],
-  "orderRequest": [],
+  "orderRequest": [
+    {
+      "id": "cmw43f0gu00013grdz7ec21j1",
+      "requestNumber": "CAJA-248648",
+      "type": "CAJA_SESSION",
+      "customerName": "Super Administrador",
+      "customerId": null,
+      "customerIdentification": null,
+      "customerPhone": null,
+      "customerEmail": null,
+      "customerAddress": null,
+      "vehicleInfo": null,
+      "vehiclePlate": null,
+      "vehicleModel": null,
+      "itemsSummary": "Fondo inicial asignado",
+      "itemsJson": null,
+      "totalEstimated": "25",
+      "notes": null,
+      "status": "ABIERTA",
+      "branch": "SUCURSAL",
+      "createdAt": "2026-11-05T22:04:08.863Z",
+      "updatedAt": "2026-11-05T22:04:08.863Z"
+    }
+  ],
   "user": [
     {
       "id": "cmw14z8k60000r1ba7n9bcqh1",

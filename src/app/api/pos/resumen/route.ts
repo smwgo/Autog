@@ -37,13 +37,18 @@ export async function GET() {
         safeCount("OrderRequest", `WHERE "status" = 'PENDIENTE'`),
       ]);
 
+      let cashCount = await safeCount("CashRegister");
+      if (cashCount === 0) {
+        cashCount = await safeCount("OrderRequest", `WHERE "type" IN ('CAJA_SESSION', 'CAJA_CIERRE')`);
+      }
+
       return {
         venta: pendingOrders,
         facturas: sales,
         clientes: customers,
         catalogo: products,
         servicios: services,
-        caja: cashSessions,
+        caja: cashCount,
         cotizaciones: quotes,
         creditos: credits,
       };
