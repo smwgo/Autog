@@ -1130,24 +1130,43 @@ model ClientQuote {
 }
 
 model ClientInvoice {
-  id            String   @id @default(cuid())
-  invoiceNumber String   @unique
-  uuid          String   @unique
-  date          String
-  concept       String
-  vehicle       String?
-  clientName    String   @default("Juan Pérez")
-  clientRfc     String   @default("XAXX010101000")
-  amount        Decimal  @default(0) @db.Decimal(12, 2)
-  status        String   @default("Pendiente")
-  paymentMethod String   @default("Por Definir")
-  itemsJson     String   @default("[]")
-  orderId       String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                 String    @id @default(cuid())
+  invoiceNumber      String    @unique
+  uuid               String    @unique
+  claveAcceso        String?   @unique
+  date               String
+  concept            String
+  vehicle            String?
+  clientName         String    @default("Consumidor Final")
+  clientRfc          String    @default("9999999999999")
+  tipoIdentificacion String    @default("07")
+  clientEmail        String?
+  clientPhone        String?
+  clientAddress      String?
+  amount             Decimal   @default(0) @db.Decimal(12, 2)
+  subtotal           Decimal   @default(0) @db.Decimal(12, 2)
+  iva                Decimal   @default(0) @db.Decimal(12, 2)
+  propina            Decimal   @default(0) @db.Decimal(12, 2)
+  status             String    @default("Pendiente")
+  estadoSri          String    @default("PENDIENTE")
+  numeroAutorizacion String?
+  fechaAutorizacion  String?
+  mensajesSri        String?   @db.Text
+  xmlFirmado         String?   @db.Text
+  xmlAutorizado      String?   @db.Text
+  correoEnviado      Boolean   @default(false)
+  fechaEnvioCorreo   DateTime?
+  paymentMethod      String    @default("Efectivo")
+  itemsJson          String    @default("[]")
+  orderId            String?
+  saleId             String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@index([invoiceNumber])
   @@index([status])
+  @@index([estadoSri])
+  @@index([saleId])
 }
 
 model PosPromotion {
@@ -1371,6 +1390,11 @@ model CompanyConfig {
   firmaFechaExpiracion  String?
   firmaClave            String?
   firmaEstado           String?  @default("Pendiente")
+  smtpHost              String?
+  smtpPort              Int?     @default(587)
+  smtpUser              String?
+  smtpPass              String?
+  smtpFrom              String?
   alertasStockBajo      Boolean  @default(true)
   umbralStockBajo       Int      @default(5)
   alertaDestinoWhatsapp String   @default("")

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { emitirFacturaElectronica } from "@/lib/sri/facturaService";
 
 let saleInvoiceDetailsSchemaEnsured = false;
 
@@ -547,7 +548,50 @@ export async function POST(request: Request) {
       return createdSale;
     });
 
-    return NextResponse.json({ success: true, venta: sale }, { status: 201 });
+    // 2. Facturación Electrónica SRI automática
+    let facturaElectronicaRes: any = null;
+    const debeEmitirFactura = body.emitirFacturaElectronica !== false;
+
+    if (debeEmitirFactura) {
+      try {
+        facturaElectronicaRes = await emitirFacturaElectronica({
+          clienteNombre: sale.customerName || "Consumidor Final",
+          clienteIdentificacion: sale.customerIdentification || "9999999999999",
+          clienteEmail: sale.customerEmail || undefined,
+          clienteTelefono: sale.customerPhone || undefined,
+          clienteDireccion: sale.customerAddress || undefined,
+          items: (sale.items || []).map((it: any) => ({
+            codigo: it.code || undefined,
+            descripcion: it.name || "Producto / Servicio",
+            cantidad: Number(it.quantity || 1),
+            precioUnitario: Number(it.price || 0),
+            descuento: 0,
+            tarifaIva: 15,
+          })),
+          metodoPago: sale.paymentMethod || "Efectivo",
+          observaciones: `Venta POS #${sale.saleNumber}${sale.vehiclePlate ? ` • Placa: ${sale.vehiclePlate}` : ""}`,
+          vehiculoInfo: sale.vehiclePlate ? `${sale.vehiclePlate}${sale.vehicleModel ? ` - ${sale.vehicleModel}` : ""}` : undefined,
+          options: {
+            saleId: sale.id,
+            orderId: sale.sourceOrderNumber || undefined,
+            enviarCorreo: Boolean(body.enviarCorreoCliente),
+            enviarInmediatoSri: Boolean(body.enviarInmediatoSri),
+          },
+        });
+      } catch (errFactura: any) {
+        console.warn("Aviso: no se pudo completar la emisión electrónica automática SRI:", errFactura.message);
+        facturaElectronicaRes = {
+          success: false,
+          error: errFactura.message,
+        };
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      venta: sale,
+      factura: facturaElectronicaRes,
+    }, { status: 201 });
   } catch (error: any) {
     console.error("Error al registrar venta en base de datos:", error);
     return NextResponse.json(

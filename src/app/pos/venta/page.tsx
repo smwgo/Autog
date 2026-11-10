@@ -289,6 +289,11 @@ export default function NuevaVentaPage() {
   const [procesandoVenta, setProcesandoVenta] = useState(false);
   const [ventaCompletada, setVentaCompletada] = useState<any | null>(null);
 
+  // Facturación Electrónica SRI Ecuador
+  const [emitirFacturaSri, setEmitirFacturaSri] = useState(true);
+  const [enviarFacturaCorreo, setEnviarFacturaCorreo] = useState(false);
+  const [correoClienteFactura, setCorreoClienteFactura] = useState("");
+
   // Cobro Mixto (Efectivo, Tarjeta, Transferencia, Crédito)
   const [montoMixtoEfectivo, setMontoMixtoEfectivo] = useState("");
   const [montoMixtoTarjeta, setMontoMixtoTarjeta] = useState("");
@@ -1260,8 +1265,10 @@ export default function NuevaVentaPage() {
         customerIdentification: clienteSeleccionado?.identification || null,
         customerName: custName,
         customerPhone: solicitudActiva?.customerPhone || custPhone || null,
-        customerEmail: solicitudActiva?.customerEmail || clienteSeleccionado?.email || null,
+        customerEmail: correoClienteFactura.trim() || solicitudActiva?.customerEmail || clienteSeleccionado?.email || null,
         customerAddress: solicitudActiva?.customerAddress || clienteSeleccionado?.address || null,
+        emitirFacturaElectronica: emitirFacturaSri,
+        enviarCorreoCliente: enviarFacturaCorreo,
         vehiclePlate: vehiculoSeleccionado?.plate || solicitudPlaca,
         vehicleModel: vehiculoSeleccionado
           ? `${vehiculoSeleccionado.brand} ${vehiculoSeleccionado.model}`
@@ -1351,6 +1358,7 @@ export default function NuevaVentaPage() {
 
       setVentaCompletada({
         ...data.venta,
+        factura: data.factura,
         subtotal,
         descuentoCalculado,
         tax,
@@ -3684,6 +3692,47 @@ export default function NuevaVentaPage() {
               </div>
             )}
 
+            {/* Opciones SRI Factura Electrónica */}
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10 p-3 flex flex-col gap-2 text-left">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={emitirFacturaSri}
+                  onChange={(e) => setEmitirFacturaSri(e.target.checked)}
+                  className="rounded text-amber-600 focus:ring-amber-500 w-4 h-4"
+                />
+                <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                  <span className="text-amber-500">⚡</span> Emitir Factura Electrónica SRI
+                </span>
+              </label>
+
+              {emitirFacturaSri && (
+                <div className="pl-6 flex flex-col gap-1.5 border-t border-amber-500/20 pt-2">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={enviarFacturaCorreo}
+                      onChange={(e) => setEnviarFacturaCorreo(e.target.checked)}
+                      className="rounded text-amber-600 focus:ring-amber-500 w-3.5 h-3.5"
+                    />
+                    <span className="text-[11px] text-zinc-700 dark:text-zinc-300">
+                      Enviar RIDE (PDF) y XML al correo del cliente
+                    </span>
+                  </label>
+
+                  {enviarFacturaCorreo && (
+                    <input
+                      type="email"
+                      value={correoClienteFactura || clienteSeleccionado?.email || ""}
+                      onChange={(e) => setCorreoClienteFactura(e.target.value)}
+                      placeholder="correo@ejemplo.com"
+                      className="h-8 px-2.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center gap-2.5">
               <button
                 onClick={() => setMostrarModalPago(false)}
@@ -3768,6 +3817,38 @@ export default function NuevaVentaPage() {
                   </div>
                 ) : null}
               </div>
+
+              {/* Banner Factura SRI Generada */}
+              {ventaCompletada.factura?.numeroFactura && (
+                <div className="w-full p-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10 text-xs text-left space-y-1.5 shadow-sm">
+                  <div className="flex items-center justify-between font-bold text-amber-700 dark:text-amber-400">
+                    <span className="flex items-center gap-1.5">
+                      <span>⚡</span> Factura SRI: {ventaCompletada.factura.numeroFactura}
+                    </span>
+                    <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/25">
+                      {ventaCompletada.factura.estadoSri}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate font-mono">
+                    Clave: {ventaCompletada.factura.claveAcceso}
+                  </p>
+                  {ventaCompletada.factura.correoEnviado && (
+                    <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <span>✓</span> Factura enviada al correo del cliente
+                    </p>
+                  )}
+                  <div className="pt-1 flex items-center gap-2">
+                    <a
+                      href={`/api/oficina/facturacion/${ventaCompletada.factura.invoiceId || ventaCompletada.factura.numeroFactura}/ride`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 py-1.5 text-center rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 font-bold text-xs hover:opacity-90 transition-opacity"
+                    >
+                      Descargar RIDE (PDF)
+                    </a>
+                  </div>
+                </div>
+              )}
 
               {/* Opciones de Impresión: Ticket y Carta NADA MÁS */}
               <div className="w-full space-y-2 pt-1">

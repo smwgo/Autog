@@ -28,6 +28,11 @@ export default function ConfiguracionSistema() {
     estabSecuencial: "001",
     ptoEmiSecuencial: "001",
     secuencialFactura: 1,
+    smtpHost: "",
+    smtpPort: 587,
+    smtpUser: "",
+    smtpPass: "",
+    smtpFrom: "",
     alertasStockBajo: true,
     umbralStockBajo: 5,
     alertaDestinoWhatsapp: "",
@@ -61,6 +66,74 @@ export default function ConfiguracionSistema() {
   const [validandoFirma, setValidandoFirma] = useState(false);
   const [validacionMensaje, setValidacionMensaje] = useState("");
   const [validacionError, setValidacionError] = useState("");
+  const [probandoSri, setProbandoSri] = useState(false);
+  const [sriStatusMsg, setSriStatusMsg] = useState<{ text: string; error: boolean } | null>(null);
+
+  const handleTestSri = async () => {
+    setProbandoSri(true);
+    setSriStatusMsg(null);
+    try {
+      const res = await fetch("/api/gerencia/configuracion/test-sri", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ambiente: firmaData.ambienteSri }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setSriStatusMsg({ text: `🟢 ${json.mensaje}`, error: false });
+      } else {
+        setSriStatusMsg({ text: `🔴 ${json.error || "No se pudo conectar con el SRI"}`, error: true });
+      }
+    } catch (e: any) {
+      setSriStatusMsg({ text: `🔴 Error de red: ${e.message}`, error: true });
+    } finally {
+      setProbandoSri(false);
+    }
+  };
+
+  const [mostrarSmtpPass, setMostrarSmtpPass] = useState(false);
+  const [probandoSmtp, setProbandoSmtp] = useState(false);
+  const [correoPruebaDestino, setCorreoPruebaDestino] = useState("");
+  const [smtpStatusMsg, setSmtpStatusMsg] = useState<{ text: string; error: boolean } | null>(null);
+
+  const handleTestSmtp = async () => {
+    if (!config.smtpHost || !config.smtpUser || !config.smtpPass) {
+      setSmtpStatusMsg({ text: "Debes ingresar el Servidor SMTP, Usuario y Contraseña antes de probar.", error: true });
+      return;
+    }
+    const destino = correoPruebaDestino.trim() || config.correo || config.smtpUser;
+    if (!destino || !destino.includes("@")) {
+      setSmtpStatusMsg({ text: "Ingresa un correo destinatario para recibir el mensaje de prueba.", error: true });
+      return;
+    }
+
+    setProbandoSmtp(true);
+    setSmtpStatusMsg(null);
+    try {
+      const res = await fetch("/api/gerencia/configuracion/test-smtp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          host: config.smtpHost,
+          port: config.smtpPort,
+          user: config.smtpUser,
+          pass: config.smtpPass,
+          from: config.smtpFrom || `"${config.nombreComercial || config.razonSocial || 'Facturación'}" <${config.smtpUser}>`,
+          to: destino,
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setSmtpStatusMsg({ text: `🟢 ${json.mensaje}`, error: false });
+      } else {
+        setSmtpStatusMsg({ text: `🔴 ${json.error || "Fallo de conexión SMTP"}`, error: true });
+      }
+    } catch (e: any) {
+      setSmtpStatusMsg({ text: `🔴 Error de red: ${e.message}`, error: true });
+    } finally {
+      setProbandoSmtp(false);
+    }
+  };
 
   const diasRestantes = (() => {
     if (!firmaData.fechaExpiracion) return 0;
@@ -169,6 +242,11 @@ export default function ConfiguracionSistema() {
             estabSecuencial: data.config.estabSecuencial || "001",
             ptoEmiSecuencial: data.config.ptoEmiSecuencial || "001",
             secuencialFactura: Number(data.config.secuencialFactura ?? 1),
+            smtpHost: data.config.smtpHost || "",
+            smtpPort: Number(data.config.smtpPort ?? 587),
+            smtpUser: data.config.smtpUser || "",
+            smtpPass: data.config.smtpPass || "",
+            smtpFrom: data.config.smtpFrom || "",
             alertasStockBajo: Boolean(data.config.alertasStockBajo ?? true),
             umbralStockBajo: Number(data.config.umbralStockBajo ?? 5),
             alertaDestinoWhatsapp: data.config.alertaDestinoWhatsapp || "",
@@ -748,8 +826,19 @@ export default function ConfiguracionSistema() {
                         </div>
                       )}
 
-                      {/* Botón Probar */}
-                      <div className="flex items-center justify-between gap-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                      {/* Estado de conexión SRI */}
+                      {sriStatusMsg && (
+                        <div className={`p-2.5 rounded-xl text-xs font-semibold ${
+                          sriStatusMsg.error
+                            ? "bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300"
+                            : "bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300"
+                        }`}>
+                          {sriStatusMsg.text}
+                        </div>
+                      )}
+
+                      {/* Botón Probar Firma y Probar Conexión SRI */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
                         <button
                           type="button"
                           onClick={handleValidarFirma}
@@ -757,9 +846,158 @@ export default function ConfiguracionSistema() {
                           className="h-10 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95"
                         >
                           <span>⚡</span>
-                          <span>{validandoFirma ? "Probando..." : "Probar"}</span>
+                          <span>{validandoFirma ? "Verificando..." : "Validar Firma .p12"}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleTestSri}
+                          disabled={probandoSri}
+                          className="h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95 shadow-sm"
+                        >
+                          <span>🌐</span>
+                          <span>{probandoSri ? "Conectando al SRI..." : "Probar Conexión SRI"}</span>
                         </button>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Tarjeta de Servidor de Correo (SMTP para Facturas SRI) */}
+                  <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">📧</span>
+                        <div>
+                          <h3 className="font-bold text-sm sm:text-base text-zinc-900 dark:text-white">
+                            Servidor de Correo (SMTP para Envío de Facturas y RIDE)
+                          </h3>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                            Envía automáticamente las facturas autorizadas (PDF y XML) al correo de tus clientes
+                          </p>
+                        </div>
+                      </div>
+                      {config.smtpHost && config.smtpUser ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200">
+                          Configurado
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium text-zinc-500 bg-zinc-100 dark:bg-zinc-800">
+                          Sin configurar
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                          Servidor SMTP (Host)
+                        </label>
+                        <input
+                          type="text"
+                          value={config.smtpHost}
+                          onChange={(e) => setConfig({ ...config, smtpHost: e.target.value })}
+                          placeholder="smtp.gmail.com o mail.tudominio.com"
+                          className="w-full h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent px-3.5 text-base sm:text-sm outline-none focus:border-blue-500 font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                          Puerto
+                        </label>
+                        <input
+                          type="number"
+                          value={config.smtpPort}
+                          onChange={(e) => setConfig({ ...config, smtpPort: Number(e.target.value) })}
+                          placeholder="587 o 465"
+                          className="w-full h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent px-3.5 text-base sm:text-sm outline-none focus:border-blue-500 font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                          Usuario / Correo Remitente
+                        </label>
+                        <input
+                          type="email"
+                          value={config.smtpUser}
+                          onChange={(e) => setConfig({ ...config, smtpUser: e.target.value })}
+                          placeholder="facturacion@mitaller.com"
+                          className="w-full h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent px-3.5 text-base sm:text-sm outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                          Contraseña de Aplicación / Password
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={mostrarSmtpPass ? "text" : "password"}
+                            autoComplete="off"
+                            value={config.smtpPass}
+                            onChange={(e) => setConfig({ ...config, smtpPass: e.target.value })}
+                            placeholder="••••••••••••••••"
+                            className="w-full h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent pl-3.5 pr-10 text-base sm:text-sm outline-none focus:border-blue-500 font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setMostrarSmtpPass(!mostrarSmtpPass)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-sm cursor-pointer"
+                            title={mostrarSmtpPass ? "Ocultar" : "Ver"}
+                          >
+                            {mostrarSmtpPass ? "🙈" : "👁️"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                        Nombre Visible del Remitente (Opcional)
+                      </label>
+                      <input
+                        type="text"
+                        value={config.smtpFrom}
+                        onChange={(e) => setConfig({ ...config, smtpFrom: e.target.value })}
+                        placeholder={`"${config.nombreComercial || config.razonSocial || 'Mi Taller'}" <${config.smtpUser || 'facturacion@mitaller.com'}>`}
+                        className="w-full h-11 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent px-3.5 text-base sm:text-sm outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    {/* Mensaje de prueba SMTP */}
+                    {smtpStatusMsg && (
+                      <div className={`p-2.5 rounded-xl text-xs font-semibold ${
+                        smtpStatusMsg.error
+                          ? "bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300"
+                          : "bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300"
+                      }`}>
+                        {smtpStatusMsg.text}
+                      </div>
+                    )}
+
+                    {/* Fila de prueba SMTP */}
+                    <div className="flex flex-col sm:flex-row items-center gap-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                      <div className="flex-grow w-full sm:w-auto">
+                        <input
+                          type="email"
+                          value={correoPruebaDestino}
+                          onChange={(e) => setCorreoPruebaDestino(e.target.value)}
+                          placeholder="correo-para-recibir-prueba@ejemplo.com"
+                          className="w-full h-10 px-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent text-xs sm:text-sm outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleTestSmtp}
+                        disabled={probandoSmtp}
+                        className="w-full sm:w-auto h-10 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95 shadow-sm shrink-0"
+                      >
+                        <span>📨</span>
+                        <span>{probandoSmtp ? "Enviando prueba..." : "Probar Envío de Correo"}</span>
+                      </button>
                     </div>
                   </div>
                 </div>

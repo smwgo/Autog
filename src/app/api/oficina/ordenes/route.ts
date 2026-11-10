@@ -32,13 +32,13 @@ export async function GET() {
       });
 
       // 2. Obtener cotizaciones tanto de OrderRequest (POS) como de ClientQuote
-      const [posQuotes, clientQuotes]: [any[], any[]] = await Promise.all([
+      const [posQuotes, clientQuotes] = (await Promise.all([
         (prisma as any).orderRequest.findMany({
           where: { type: "COTIZACION" },
           orderBy: { createdAt: "desc" },
         }).catch(() => []),
-        prisma.$queryRawUnsafe(`SELECT * FROM "ClientQuote" ORDER BY "createdAt" DESC`).catch(() => []),
-      ]);
+        prisma.$queryRawUnsafe(`SELECT * FROM "ClientQuote" ORDER BY "createdAt" DESC`).catch(() => []) as Promise<any[]>,
+      ])) as [any[], any[]];
 
       const formattedQuotes = [
         ...clientQuotes.map((q: any) => ({

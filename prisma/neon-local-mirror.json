@@ -2147,7 +2147,12 @@
       "firmaArchivoBase64": null,
       "umbralStockBajo": 5,
       "alertaDestinoWhatsapp": "",
-      "alertaDestinoCorreo": ""
+      "alertaDestinoCorreo": "",
+      "smtpHost": null,
+      "smtpPort": 587,
+      "smtpUser": null,
+      "smtpPass": null,
+      "smtpFrom": null
     }
   ],
   "saleItem": []
