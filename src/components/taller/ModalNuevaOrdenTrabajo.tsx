@@ -267,6 +267,67 @@ export default function ModalNuevaOrdenTrabajo({
   const [nuevoClienteEmail, setNuevoClienteEmail] = useState("");
   const [nuevoClienteDireccion, setNuevoClienteDireccion] = useState("");
   const [guardandoCliente, setGuardandoCliente] = useState(false);
+  const [nuevoClienteFoto, setNuevoClienteFoto] = useState<string | null>(null);
+  const [subiendoFotoCliente, setSubiendoFotoCliente] = useState(false);
+  const [mostrarMenuFotoCliente, setMostrarMenuFotoCliente] = useState(false);
+  const fileInputClienteCamaraRef = useRef<HTMLInputElement | null>(null);
+  const fileInputClienteGaleriaRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFotoClienteSeleccionada = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Vista previa inmediata instantánea
+    try {
+      const immediateUrl = URL.createObjectURL(file);
+      setNuevoClienteFoto(immediateUrl);
+    } catch {}
+
+    try {
+      setSubiendoFotoCliente(true);
+
+      // Conversión a Base64 garantizada en memoria
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const base64Data = await base64Promise;
+      setNuevoClienteFoto(base64Data);
+
+      // Respaldo en Cloudflare R2 con timeout de 3.5s
+      try {
+        const { file: optimizada } = await comprimirImagenEnNavegador(file);
+        const uploadTask = subirEvidenciaSegura({
+          archivo: optimizada,
+          tipo: "foto",
+          carpeta: "clientes_avatar",
+          nombreArchivo: `cliente_${Date.now()}.jpg`,
+          uploadedBy: ingresadoPor.trim() || empleadoLogueado.nombre,
+          branch: getClientActiveBranch("/taller") === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL",
+        });
+        const timeoutTask = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("TIMEOUT")), 3500)
+        );
+        const res = await Promise.race([uploadTask, timeoutTask]);
+        if (res && res.url) {
+          setNuevoClienteFoto(res.url);
+        }
+      } catch (uploadErr) {
+        console.warn("Respaldo R2 omitido, persistiendo en Base64:", uploadErr);
+      }
+
+      if (mostrarToast) mostrarToast("Foto de perfil cargada", "ok");
+    } catch (err: any) {
+      if (mostrarToast) mostrarToast(err?.message || "Error al procesar la foto", "err");
+    } finally {
+      setSubiendoFotoCliente(false);
+      if (fileInputClienteCamaraRef.current) fileInputClienteCamaraRef.current.value = "";
+      if (fileInputClienteGaleriaRef.current) fileInputClienteGaleriaRef.current.value = "";
+    }
+  };
 
   // =========================================================================
   // PASO 2: VEHÍCULO
@@ -280,6 +341,69 @@ export default function ModalNuevaOrdenTrabajo({
   const [vehiculoTipo, setVehiculoTipo] = useState("Auto");
   const [mostrarFormNuevoVehiculo, setMostrarFormNuevoVehiculo] = useState(false);
   const [subPasoVehiculo, setSubPasoVehiculo] = useState<"placa" | "marca" | "modelo" | "anio" | "tipo">("placa");
+  const [vehiculoFoto, setVehiculoFoto] = useState<string | null>(null);
+  const [subiendoFotoVehiculo, setSubiendoFotoVehiculo] = useState(false);
+  const [mostrarMenuFotoVehiculo, setMostrarMenuFotoVehiculo] = useState(false);
+  const fileInputVehiculoCamaraRef = useRef<HTMLInputElement | null>(null);
+  const fileInputVehiculoGaleriaRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFotoVehiculoSeleccionada = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Vista previa inmediata instantánea en pantalla
+    try {
+      const immediateUrl = URL.createObjectURL(file);
+      setVehiculoFoto(immediateUrl);
+    } catch {}
+
+    try {
+      setSubiendoFotoVehiculo(true);
+
+      // Conversión a Base64 garantizada en memoria
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const base64Data = await base64Promise;
+      setVehiculoFoto(base64Data);
+
+      // Respaldo en Cloudflare R2 con timeout de 3.5s
+      try {
+        const { file: optimizada } = await comprimirImagenEnNavegador(file);
+        const uploadTask = subirEvidenciaSegura({
+          archivo: optimizada,
+          tipo: "foto",
+          carpeta: "vehiculos_avatar",
+          nombreArchivo: `vehiculo_${vehiculoPlaca.trim() || "perfil"}_${Date.now()}.jpg`,
+          plate: vehiculoPlaca.trim().toUpperCase() || undefined,
+          uploadedBy: ingresadoPor.trim() || empleadoLogueado.nombre,
+          branch: getClientActiveBranch("/taller") === "SUCURSAL" ? "SUCURSAL" : "PRINCIPAL",
+        });
+        const timeoutTask = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("TIMEOUT")), 3500)
+        );
+        const res = await Promise.race([uploadTask, timeoutTask]);
+        if (res && res.url) {
+          setVehiculoFoto(res.url);
+        }
+      } catch (uploadErr) {
+        console.warn("Respaldo R2 omitido, persistiendo en Base64:", uploadErr);
+      }
+
+      if (mostrarToast) mostrarToast("Foto del vehículo cargada", "ok");
+    } catch (err: any) {
+      console.error("Error al procesar foto vehículo:", err);
+      if (mostrarToast) mostrarToast(err?.message || "Error al procesar la foto", "err");
+    } finally {
+      setSubiendoFotoVehiculo(false);
+      if (fileInputVehiculoCamaraRef.current) fileInputVehiculoCamaraRef.current.value = "";
+      if (fileInputVehiculoGaleriaRef.current) fileInputVehiculoGaleriaRef.current.value = "";
+    }
+  };
 
   // Selector flotante para Marca y Modelo
   const [mostrarFlotanteVehiculo, setMostrarFlotanteVehiculo] = useState(false);
@@ -1749,6 +1873,7 @@ export default function ModalNuevaOrdenTrabajo({
       setNuevoClienteEmail(cEmail);
       setNuevoClienteDireccion(cAddr);
       setEmailContacto(cEmail);
+      setNuevoClienteFoto(cust?.avatar || cust?.imageUrl || ord?.customer?.avatar || ord?.customer?.imageUrl || null);
 
       if (cust) {
         setClienteSeleccionado(cust);
@@ -1994,6 +2119,7 @@ export default function ModalNuevaOrdenTrabajo({
     setMostrarFormNuevoCliente(false);
     setBusquedaCliente(c.name || "");
     setEmailContacto(c.email || "");
+    setNuevoClienteFoto(c.avatar || c.imageUrl || null);
 
     // Si acaba de escanear una matrícula NUEVA que no existe en BD, mantener esa placa lista en Paso 2
     if (matriculaEscaneadaInfo && !matriculaEscaneadaInfo.existe && matriculaEscaneadaInfo.placa) {
@@ -2050,6 +2176,7 @@ export default function ModalNuevaOrdenTrabajo({
     setNuevoClienteTelefono("");
     setNuevoClienteEmail("");
     setNuevoClienteDireccion("");
+    setNuevoClienteFoto(null);
   };
 
   // Validar datos del cliente nuevo en memoria y pasar al paso de vehículo (solo se guarda en BD al completar la orden)
@@ -2107,6 +2234,7 @@ export default function ModalNuevaOrdenTrabajo({
     setVehiculoMarca(v.brand || "");
     setVehiculoModelo(v.model || "");
     setVehiculoKm(v.mileage ? String(v.mileage) : "");
+    setVehiculoFoto(v.imageUrl || null);
     setMostrarFormNuevoVehiculo(false);
     // Avanzar suavemente al paso de la orden
     setPasoActivo(3);
@@ -2130,12 +2258,14 @@ export default function ModalNuevaOrdenTrabajo({
     setNuevoClienteTelefono("");
     setNuevoClienteEmail("");
     setNuevoClienteDireccion("");
+    setNuevoClienteFoto(null);
     setVehiculoSeleccionadoId("NUEVO");
     setVehiculoPlaca("");
     setVehiculoMarca("");
     setVehiculoModelo("");
     setVehiculoKm("");
     setVehiculoTipo("Auto");
+    setVehiculoFoto(null);
     setMostrarFormNuevoVehiculo(false);
     setEmailContacto("");
     setMotivoIngreso("");
@@ -2215,6 +2345,8 @@ export default function ModalNuevaOrdenTrabajo({
           vehicleId: vehiculoSeleccionadoId !== "NUEVO" ? vehiculoSeleccionadoId : undefined,
           tipoCliente,
           nombres: nombreFinal,
+          avatar: nuevoClienteFoto || clienteSeleccionado?.avatar || clienteSeleccionado?.imageUrl || undefined,
+          imageUrl: nuevoClienteFoto || clienteSeleccionado?.imageUrl || clienteSeleccionado?.avatar || undefined,
           identificacion: (
             usarCamposEditados
               ? nuevoClienteIdentificacion
@@ -2244,6 +2376,7 @@ export default function ModalNuevaOrdenTrabajo({
           anio: vehiculoAnio.trim() || String(new Date().getFullYear()),
           tipoVehiculo: vehiculoTipo || "Auto",
           kilometraje: vehiculoKm ? parseInt(vehiculoKm, 10) : undefined,
+          vehicleImageUrl: vehiculoFoto || undefined,
           fuelLevel: nivelCombustible,
           receptionInventory: inventarioTrae,
           receptionPhotos: [
@@ -2790,13 +2923,6 @@ export default function ModalNuevaOrdenTrabajo({
                       Datos del Vehículo
                     </h4>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => abrirFlotanteVehiculo("marca")}
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer"
-                  >
-                    Catálogo de Marcas/Modelos →
-                  </button>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
@@ -3013,9 +3139,17 @@ export default function ModalNuevaOrdenTrabajo({
               {clienteSeleccionado && !mostrarFormNuevoCliente && (
                 <div className="p-4 rounded-2xl bg-blue-50/80 dark:bg-blue-600/[0.08] border border-blue-200 dark:border-blue-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in shadow-xs">
                   <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-bold flex items-center justify-center text-lg shadow-md shadow-blue-600/30 shrink-0">
-                      {(clienteSeleccionado.name || "C").charAt(0).toUpperCase()}
-                    </div>
+                    {clienteSeleccionado.avatar || clienteSeleccionado.imageUrl ? (
+                      <img
+                        src={clienteSeleccionado.avatar || clienteSeleccionado.imageUrl}
+                        alt={clienteSeleccionado.name}
+                        className="w-12 h-12 rounded-2xl object-cover shadow-md shrink-0 border border-white/10"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-bold flex items-center justify-center text-lg shadow-md shadow-blue-600/30 shrink-0">
+                        {(clienteSeleccionado.name || "C").charAt(0).toUpperCase()}
+                      </div>
+                    )}
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
@@ -3050,6 +3184,7 @@ export default function ModalNuevaOrdenTrabajo({
                         setNuevoClienteTelefono(clienteSeleccionado.phone || "");
                         setNuevoClienteEmail(clienteSeleccionado.email || "");
                         setNuevoClienteDireccion(clienteSeleccionado.address || "");
+                        setNuevoClienteFoto(clienteSeleccionado.avatar || clienteSeleccionado.imageUrl || null);
                         setTipoCliente(clienteSeleccionado.type === "Empresa" ? "Empresa" : "Persona");
                         setMostrarFormNuevoCliente(true);
                         setSubPasoCliente("nombre");
@@ -3269,21 +3404,140 @@ export default function ModalNuevaOrdenTrabajo({
                             </span>
                           </div>
 
-                          <div>
-                            <input
-                              type="text"
-                              value={nuevoClienteNombre}
-                              onChange={(e) => setNuevoClienteNombre(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  avanzarCliente();
-                                }
-                              }}
-                              placeholder={tipoCliente === "Empresa" ? "Ej: Transportes Andinos S.A." : "Ej: Juan Carlos Pérez"}
-                              className="w-full h-14 px-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
-                              autoFocus
-                            />
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1">
+                              <input
+                                type="text"
+                                value={nuevoClienteNombre}
+                                onChange={(e) => setNuevoClienteNombre(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    avanzarCliente();
+                                  }
+                                }}
+                                placeholder={tipoCliente === "Empresa" ? "Ej: Transportes Andinos S.A." : "Ej: Juan Carlos Pérez"}
+                                className="w-full h-14 px-4 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white text-lg font-semibold placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-sm"
+                                autoFocus
+                              />
+                            </div>
+
+                            {/* Icono para Tomar o Cargar Foto de Perfil (Lado Derecho) */}
+                            <div className="relative shrink-0 z-30">
+                              {/* Input para Cámara Móvil Directa */}
+                              <input
+                                ref={fileInputClienteCamaraRef}
+                                type="file"
+                                accept="image/*"
+                                capture="user"
+                                className="hidden"
+                                onChange={handleFotoClienteSeleccionada}
+                              />
+                              {/* Input para Galería / Archivo */}
+                              <input
+                                ref={fileInputClienteGaleriaRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleFotoClienteSeleccionada}
+                              />
+
+                              <button
+                                type="button"
+                                onClick={() => setMostrarMenuFotoCliente((prev) => !prev)}
+                                title="Tomar foto con el móvil o subir de galería"
+                                className="relative w-14 h-14 rounded-2xl border-2 border-dashed border-emerald-500/50 hover:border-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 dark:text-emerald-300 flex flex-col items-center justify-center transition-all cursor-pointer overflow-hidden group shadow-md active:scale-95"
+                              >
+                                {nuevoClienteFoto ? (
+                                  <div className="relative w-full h-full">
+                                    <img
+                                      src={nuevoClienteFoto}
+                                      alt="Foto perfil"
+                                      className="w-full h-full object-cover"
+                                    />
+                                    {subiendoFotoCliente && (
+                                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-emerald-400 border-t-transparent" />
+                                      </div>
+                                    )}
+                                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <span className="text-[10px] font-bold text-white bg-black/60 px-1.5 py-0.5 rounded">Cambiar</span>
+                                    </div>
+                                  </div>
+                                ) : subiendoFotoCliente ? (
+                                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-emerald-400 border-t-transparent" />
+                                ) : (
+                                  <div className="flex flex-col items-center justify-center text-emerald-400 dark:text-emerald-300 group-hover:scale-105 transition-transform">
+                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    <span className="text-[9px] font-bold mt-0.5 uppercase tracking-tighter">Foto</span>
+                                  </div>
+                                )}
+                              </button>
+
+                              {nuevoClienteFoto && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setNuevoClienteFoto(null);
+                                  }}
+                                  title="Quitar foto"
+                                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center shadow cursor-pointer transition-transform hover:scale-110 z-10"
+                                >
+                                  ✕
+                                </button>
+                              )}
+
+                              {/* Menú Flotante: Tomar con Cámara Móvil o Subir de Galería */}
+                              {mostrarMenuFotoCliente && (
+                                <>
+                                  <div
+                                    className="fixed inset-0 z-[90]"
+                                    onClick={() => setMostrarMenuFotoCliente(false)}
+                                  />
+                                  <div className="absolute right-0 top-full mt-2 w-40 p-1.5 rounded-2xl bg-zinc-950 border-2 border-emerald-500 shadow-2xl shadow-black/80 z-[100] animate-in fade-in zoom-in-95">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setMostrarMenuFotoCliente(false);
+                                        fileInputClienteCamaraRef.current?.click();
+                                      }}
+                                      className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-white hover:bg-emerald-500/20 hover:text-emerald-300 flex items-center gap-2 cursor-pointer transition-colors"
+                                    >
+                                      <span className="text-base">📸</span>
+                                      <span>Cámara</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setMostrarMenuFotoCliente(false);
+                                        fileInputClienteGaleriaRef.current?.click();
+                                      }}
+                                      className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-white hover:bg-emerald-500/20 hover:text-emerald-300 flex items-center gap-2 cursor-pointer transition-colors"
+                                    >
+                                      <span className="text-base">🖼️</span>
+                                      <span>Galería</span>
+                                    </button>
+                                    {nuevoClienteFoto && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setMostrarMenuFotoCliente(false);
+                                          setNuevoClienteFoto(null);
+                                        }}
+                                        className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-rose-400 hover:bg-rose-500/20 flex items-center gap-2 cursor-pointer transition-colors border-t border-white/10 mt-1 pt-1"
+                                      >
+                                        <span className="text-base">🗑️</span>
+                                        <span>Quitar</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                </>
+                              )}
+                            </div>
                           </div>
 
                           <div className="pt-2">
@@ -3473,7 +3727,15 @@ export default function ModalNuevaOrdenTrabajo({
                           {/* Resumen del Cliente Configurado */}
                           <div className="p-3.5 rounded-xl bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
                             <div className="flex items-center gap-2">
-                              <span className="text-emerald-500 font-bold">✓</span>
+                              {nuevoClienteFoto ? (
+                                <img
+                                  src={nuevoClienteFoto}
+                                  alt="Foto cliente"
+                                  className="w-6 h-6 rounded-full object-cover border border-emerald-500/40"
+                                />
+                              ) : (
+                                <span className="text-emerald-500 font-bold">✓</span>
+                              )}
                               <strong className="font-bold text-zinc-900 dark:text-white">
                                 {nuevoClienteNombre || "Sin nombre"}
                               </strong>
@@ -3837,7 +4099,7 @@ export default function ModalNuevaOrdenTrabajo({
                             </span>
                           </div>
 
-                          <div className="relative">
+                          <div className="relative z-30">
                             <input
                               type="text"
                               value={vehiculoPlaca}
@@ -3852,20 +4114,123 @@ export default function ModalNuevaOrdenTrabajo({
                               className="w-full h-16 pl-5 pr-16 rounded-2xl bg-zinc-50 dark:bg-black/50 border-2 border-zinc-300 dark:border-white/15 focus:border-emerald-500 text-zinc-900 dark:text-white font-mono font-bold uppercase text-2xl tracking-widest placeholder:text-zinc-300 dark:placeholder:text-zinc-600 focus:outline-none shadow-inner"
                               autoFocus
                             />
-                            <button
-                              type="button"
-                              onClick={abrirEscanerMatricula}
-                              title="Escanear placa con cámara"
-                              className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center cursor-pointer transition-all shadow-md active:scale-95"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                <circle cx="12" cy="13" r="3" />
-                              </svg>
-                            </button>
+
+                            {/* Botón Tomar Foto de Perfil del Vehículo (Visible con alto contraste en Modo Oscuro) */}
+                            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center z-40">
+                              {/* Input para Cámara Móvil Directa */}
+                              <input
+                                ref={fileInputVehiculoCamaraRef}
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                className="hidden"
+                                onChange={handleFotoVehiculoSeleccionada}
+                              />
+                              {/* Input para Galería / Archivo */}
+                              <input
+                                ref={fileInputVehiculoGaleriaRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={handleFotoVehiculoSeleccionada}
+                              />
+
+                              <button
+                                type="button"
+                                onClick={() => setMostrarMenuFotoVehiculo((prev) => !prev)}
+                                title="Tomar foto con el móvil o subir de galería"
+                                className="relative w-11 h-11 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/35 border-2 border-emerald-400 dark:border-emerald-400 text-emerald-300 dark:text-emerald-300 flex items-center justify-center cursor-pointer transition-all shadow-md shadow-emerald-500/20 active:scale-95 overflow-hidden group"
+                              >
+                                {vehiculoFoto ? (
+                                  <div className="relative w-full h-full">
+                                    <img
+                                      src={vehiculoFoto}
+                                      alt="Foto perfil vehículo"
+                                      className="w-full h-full object-cover"
+                                    />
+                                    {subiendoFotoVehiculo && (
+                                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-emerald-400 border-t-transparent" />
+                                      </div>
+                                    )}
+                                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <span className="text-[9px] font-bold text-white bg-black/60 px-1 py-0.5 rounded">Cambiar</span>
+                                    </div>
+                                  </div>
+                                ) : subiendoFotoVehiculo ? (
+                                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-emerald-400 border-t-transparent" />
+                                ) : (
+                                  <svg className="w-5 h-5 text-emerald-400 dark:text-emerald-300 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                    <circle cx="12" cy="13" r="3" />
+                                  </svg>
+                                )}
+                              </button>
+
+                              {vehiculoFoto && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setVehiculoFoto(null);
+                                  }}
+                                  title="Quitar foto"
+                                  className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-rose-500 hover:bg-rose-600 text-white text-[9px] font-bold flex items-center justify-center shadow cursor-pointer transition-transform hover:scale-110 z-10"
+                                >
+                                  ✕
+                                </button>
+                              )}
+
+                              {/* Menú Flotante: Tomar con Cámara Móvil o Subir de Galería */}
+                              {mostrarMenuFotoVehiculo && (
+                                <>
+                                  <div
+                                    className="fixed inset-0 z-[90]"
+                                    onClick={() => setMostrarMenuFotoVehiculo(false)}
+                                  />
+                                  <div className="absolute right-0 top-full mt-2 w-36 p-1.5 rounded-2xl bg-zinc-950 border-2 border-emerald-500 shadow-2xl shadow-black/90 z-[100] animate-in fade-in zoom-in-95">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setMostrarMenuFotoVehiculo(false);
+                                        fileInputVehiculoCamaraRef.current?.click();
+                                      }}
+                                      className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-white hover:bg-emerald-500/20 hover:text-emerald-300 flex items-center gap-2 cursor-pointer transition-colors"
+                                    >
+                                      <span className="text-base">📸</span>
+                                      <span>Cámara</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setMostrarMenuFotoVehiculo(false);
+                                        fileInputVehiculoGaleriaRef.current?.click();
+                                      }}
+                                      className="w-full px-3 py-2 rounded-xl text-left text-xs font-bold text-white hover:bg-emerald-500/20 hover:text-emerald-300 flex items-center gap-2 cursor-pointer transition-colors"
+                                    >
+                                      <span className="text-base">🖼️</span>
+                                      <span>Galería</span>
+                                    </button>
+                                    {vehiculoFoto && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setMostrarMenuFotoVehiculo(false);
+                                          setVehiculoFoto(null);
+                                        }}
+                                        className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-rose-400 hover:bg-rose-500/20 flex items-center gap-2 cursor-pointer transition-colors border-t border-white/10 mt-1 pt-1"
+                                      >
+                                        <span className="text-base">🗑️</span>
+                                        <span>Quitar</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                </>
+                              )}
+                            </div>
                           </div>
 
-                          <div className="pt-2">
+                          <div className="pt-2 relative z-10">
                             <button
                               type="button"
                               onClick={irASiguiente}
@@ -4227,7 +4592,15 @@ export default function ModalNuevaOrdenTrabajo({
                           {/* Resumen del Vehículo Configurado */}
                           <div className="p-3.5 rounded-xl bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
                             <div className="flex items-center gap-2">
-                              <span className="text-emerald-500 font-bold">✓</span>
+                              {vehiculoFoto ? (
+                                <img
+                                  src={vehiculoFoto}
+                                  alt="Foto vehículo"
+                                  className="w-6 h-6 rounded-lg object-cover border border-emerald-500/40"
+                                />
+                              ) : (
+                                <span className="text-emerald-500 font-bold">✓</span>
+                              )}
                               <span className="font-mono font-bold text-zinc-900 dark:text-white">
                                 {vehiculoPlaca || "SIN PLACA"}
                               </span>
@@ -6027,10 +6400,9 @@ export default function ModalNuevaOrdenTrabajo({
                 type="button"
                 onClick={handleCrearOrdenFinal}
                 disabled={creando}
-                className="px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-emerald-600/25 active:scale-95 min-h-[44px] disabled:opacity-50"
+                className="px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center justify-center shadow-md shadow-emerald-600/25 active:scale-95 min-h-[44px] disabled:opacity-50"
               >
-                <span>{creando ? "Guardando..." : "Guardar cambios"}</span>
-                <span>✓</span>
+                <span>{creando ? "Guardando..." : "Guardar"}</span>
               </button>
             )}
             {pasoActivo < 4 ? (
@@ -6084,11 +6456,11 @@ export default function ModalNuevaOrdenTrabajo({
                         d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
                       />
                     </svg>
-                    <span>{editOrderId ? "Guardando cambios..." : "Creando orden..."}</span>
+                    <span>{editOrderId ? "Guardando..." : "Creando orden..."}</span>
                   </>
                 ) : (
                   <>
-                    <span>{editOrderId ? "Guardar cambios" : "Crear orden"}</span>
+                    <span>{editOrderId ? "Guardar" : "Crear orden"}</span>
                     <span>✓</span>
                   </>
                 )}

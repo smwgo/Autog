@@ -1238,6 +1238,8 @@ export async function POST(request: Request) {
               email: cleanEmail,
               address: cleanAddress || null,
               type: dbType,
+              avatar: (body.avatar || body.imageUrl || "").toString().trim() || null,
+              imageUrl: (body.avatar || body.imageUrl || "").toString().trim() || null,
             },
             include: { vehicles: true },
           });
@@ -1251,6 +1253,7 @@ export async function POST(request: Request) {
               email: cleanEmail,
               address: cleanAddress || customer.address,
               type: dbType,
+              ...((body.avatar || body.imageUrl) ? { avatar: (body.avatar || body.imageUrl).toString().trim(), imageUrl: (body.avatar || body.imageUrl).toString().trim() } : {}),
               lastVisit: new Date(),
             },
             include: { vehicles: true },
@@ -1332,6 +1335,8 @@ export async function POST(request: Request) {
               email: cleanEmail,
               address: cleanAddress || null,
               type: dbType,
+              avatar: (body.avatar || body.imageUrl || "").toString().trim() || null,
+              imageUrl: (body.avatar || body.imageUrl || "").toString().trim() || null,
             },
             include: { vehicles: true },
           });
@@ -1344,6 +1349,7 @@ export async function POST(request: Request) {
               email: cleanEmail ?? customer.email,
               address: cleanAddress || customer.address,
               type: dbType,
+              ...((body.avatar || body.imageUrl) ? { avatar: (body.avatar || body.imageUrl).toString().trim(), imageUrl: (body.avatar || body.imageUrl).toString().trim() } : {}),
               lastVisit: new Date(),
             },
             include: { vehicles: true },
@@ -1361,6 +1367,7 @@ export async function POST(request: Request) {
 
           const yearNum = body.anio ? parseInt(String(body.anio), 10) || new Date().getFullYear() : new Date().getFullYear();
           const typeClean = (body.tipoVehiculo || "Auto").trim();
+          const vehicleImg = (body.vehicleImageUrl || body.vehiculoFoto || "").toString().trim() || null;
           if (!vehicle) {
             vehicle = await prisma.vehicle.create({
               data: {
@@ -1372,6 +1379,7 @@ export async function POST(request: Request) {
                 vehicleType: typeClean,
                 mileage: kilometraje ? parseInt(String(kilometraje), 10) || 0 : 0,
                 fuelType: "Gasolina",
+                imageUrl: vehicleImg,
               },
             });
           } else {
@@ -1384,6 +1392,7 @@ export async function POST(request: Request) {
                 year: body.anio ? yearNum : vehicle.year,
                 vehicleType: body.tipoVehiculo ? typeClean : vehicle.vehicleType,
                 mileage: kilometraje ? parseInt(String(kilometraje), 10) || vehicle.mileage : vehicle.mileage,
+                ...(vehicleImg ? { imageUrl: vehicleImg } : {}),
               },
             }).catch(() => vehicle);
           }
@@ -1624,6 +1633,8 @@ export async function POST(request: Request) {
               email: cleanEmail,
               address: cleanAddress || null,
               type: dbType,
+              avatar: (body.avatar || body.imageUrl || "").toString().trim() || null,
+              imageUrl: (body.avatar || body.imageUrl || "").toString().trim() || null,
             },
             include: { vehicles: true },
           });
@@ -1637,6 +1648,7 @@ export async function POST(request: Request) {
               email: cleanEmail ?? customer.email,
               address: cleanAddress || customer.address,
               type: dbType,
+              ...((body.avatar || body.imageUrl) ? { avatar: (body.avatar || body.imageUrl).toString().trim(), imageUrl: (body.avatar || body.imageUrl).toString().trim() } : {}),
               lastVisit: new Date(),
             },
             include: { vehicles: true },
@@ -1656,6 +1668,7 @@ export async function POST(request: Request) {
           vehicle = await prisma.vehicle.findUnique({ where: { plate: cleanPlateInput } }).catch(() => null);
         }
 
+        const vehicleImg = (body.vehicleImageUrl || body.vehiculoFoto || "").toString().trim() || null;
         if (vehicle) {
           vehicle = await prisma.vehicle.update({
             where: { id: vehicle.id },
@@ -1667,6 +1680,7 @@ export async function POST(request: Request) {
               year: yearNum,
               vehicleType: typeClean,
               mileage: kilometraje ? parseInt(String(kilometraje), 10) || 0 : vehicle.mileage,
+              ...(vehicleImg ? { imageUrl: vehicleImg } : {}),
             },
           }).catch(() => vehicle);
         } else if (cleanPlateInput) {
@@ -1680,6 +1694,7 @@ export async function POST(request: Request) {
               vehicleType: typeClean,
               mileage: kilometraje ? parseInt(String(kilometraje), 10) || 0 : 0,
               fuelType: "Gasolina",
+              imageUrl: vehicleImg,
             },
           }).catch(() => null);
         }
