@@ -15,6 +15,26 @@ export default function ComprasProveedores() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    id: string;
+    docType: "proveedor" | "orden";
+    name: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const [payModal, setPayModal] = useState<{
+    id: string;
+    name: string;
+    balance: number;
+    amount: string;
+  } | null>(null);
+  const [isPaying, setIsPaying] = useState(false);
+
+  const [receiveModal, setReceiveModal] = useState<{
+    id: string;
+    orderNumber: string;
+  } | null>(null);
+  const [isReceiving, setIsReceiving] = useState(false);
 
   const [form, setForm] = useState({
     docType: "proveedor",
@@ -22,10 +42,10 @@ export default function ComprasProveedores() {
     ruc: "",
     contact: "",
     email: "",
-    categories: "Lubricantes, Filtros",
-    balance: "0",
+    categories: "",
+    balance: "",
     supplierName: "",
-    expectedDate: "Mañana",
+    expectedDate: "",
     total: "",
     status: "Solicitado",
   });
@@ -56,10 +76,10 @@ export default function ComprasProveedores() {
       ruc: "",
       contact: "",
       email: "",
-      categories: "Repuestos, Lubricantes",
-      balance: "0",
-      supplierName: proveedores[0]?.name || "Importadora AutoParts Cía. Ltda.",
-      expectedDate: "Mañana",
+      categories: "",
+      balance: "",
+      supplierName: "",
+      expectedDate: "",
       total: "",
       status: "Solicitado",
     });
@@ -68,12 +88,13 @@ export default function ComprasProveedores() {
 
   const openEdit = (row: any, docType: "proveedor" | "orden") => {
     setEditingItem({ ...row, docType });
-    let catsStr = "General";
+    let catsStr = "";
     try {
       const parsed = JSON.parse(row.categories || "[]");
       if (Array.isArray(parsed)) catsStr = parsed.join(", ");
+      else catsStr = row.categories || "";
     } catch {
-      catsStr = row.categories || "General";
+      catsStr = row.categories || "";
     }
     setForm({
       docType,
@@ -82,10 +103,10 @@ export default function ComprasProveedores() {
       contact: row.contact || "",
       email: row.email || "",
       categories: catsStr,
-      balance: String(row.balance || 0),
+      balance: row.balance !== undefined && row.balance !== null ? String(row.balance) : "",
       supplierName: row.supplierName || "",
-      expectedDate: row.expectedDate || "Hoy",
-      total: String(row.total || 0),
+      expectedDate: row.expectedDate || "",
+      total: row.total !== undefined && row.total !== null ? String(row.total) : "",
       status: row.status || "Solicitado",
     });
     setModalOpen(true);
@@ -102,37 +123,110 @@ export default function ComprasProveedores() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (res.ok) {
-        setModalOpen(false);
-        await loadData();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || "Error al guardar en base de datos Neon.");
+        return;
       }
+      setModalOpen(false);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || "Error al conectar con la base de datos.");
     } finally {
       setSaving(false);
     }
   };
 
-  const handlePayBalance = async (sup: any) => {
-    await fetch("/api/oficina/proveedores", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: sup.id, docType: "proveedor", balance: 0 }),
+  const openPayModal = (sup: any) => {
+    const bal = Number(sup.balance || 0);
+    setPayModal({
+      id: sup.id,
+      name: sup.name,
+      balance: bal,
+      amount: bal > 0 ? bal.toFixed(2) : "0.00",
     });
-    await loadData();
   };
 
-  const handleMarkReceived = async (po: any) => {
-    await fetch("/api/oficina/proveedores", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: po.id, docType: "orden", status: "Recibido" }),
-    });
-    await loadData();
+  const handleExecutePay = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!payModal) return;
+    const payAmount = Number(payModal.amount);
+    if (isNaN(payAmount) || payAmount <= 0) {
+      alert("Ingresa un monto válido");
+      return;
+    }
+    setIsPaying(true);
+    try {
+      const newBalance = Math.max(0, payModal.balance - payAmount);
+      const res = await fetch("/api/oficina/proveedores", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: payModal.id, docType: "proveedor", balance: newBalance }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || "Error al liquidar saldo.");
+        return;
+      }
+      setPayModal(null);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || "Error al liquidar saldo en Neon.");
+    } finally {
+      setIsPaying(false);
+    }
   };
 
-  const handleDelete = async (id: string, docType: "proveedor" | "orden") => {
-    if (!confirm("¿Eliminar este registro?")) return;
-    await fetch(`/api/oficina/proveedores?id=${id}&docType=${docType}`, { method: "DELETE" });
-    await loadData();
+  const openReceiveModal = (po: any) => {
+    setReceiveModal({ id: po.id, orderNumber: po.orderNumber });
+  };
+
+  const handleExecuteReceive = async () => {
+    if (!receiveModal) return;
+    setIsReceiving(true);
+    try {
+      const res = await fetch("/api/oficina/proveedores", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: receiveModal.id, docType: "orden", status: "Recibido" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || "Error al actualizar estado.");
+        return;
+      }
+      setReceiveModal(null);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || "Error al actualizar estado en Neon.");
+    } finally {
+      setIsReceiving(false);
+    }
+  };
+
+  const confirmDelete = (id: string, docType: "proveedor" | "orden", name: string) => {
+    setDeleteConfirm({ id, docType, name });
+  };
+
+  const handleExecuteDelete = async () => {
+    if (!deleteConfirm) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/oficina/proveedores?id=${deleteConfirm.id}&docType=${deleteConfirm.docType}`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || "Error al eliminar en Neon.");
+        return;
+      }
+      setDeleteConfirm(null);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || "Error al eliminar en Neon.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const filteredSuppliers = proveedores.filter((p) =>
@@ -164,13 +258,8 @@ export default function ComprasProveedores() {
               </svg>
             </Link>
             <div>
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-1">
-                <Link href="/oficina" className="hover:text-blue-600 transition-colors">Oficina</Link>
-                <span>/</span>
-                <span className="text-zinc-900 dark:text-zinc-100 font-medium">Compras y Proveedores</span>
-              </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                Gestión de Abastecimiento
+                Proveedores
               </h1>
             </div>
           </div>
@@ -189,7 +278,7 @@ export default function ComprasProveedores() {
                 className="w-full sm:w-auto h-11 px-4 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 active:scale-[0.99] transition-all flex items-center justify-center gap-2 shadow-sm"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
-                Crear Orden de Compra
+                Nueva Orden
               </button>
             )}
           </div>
@@ -214,7 +303,7 @@ export default function ComprasProveedores() {
               </div>
               <div className="min-w-0">
                 <p className="text-lg sm:text-2xl font-bold text-rose-600 dark:text-rose-400 truncate">${totalPayable.toFixed(2)}</p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">Por Pagar</h3>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">Deuda</h3>
               </div>
             </div>
 
@@ -224,7 +313,7 @@ export default function ComprasProveedores() {
               </div>
               <div className="min-w-0">
                 <p className="text-lg sm:text-2xl font-bold text-amber-600 dark:text-amber-400">{transitOrders}</p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">En Tránsito</h3>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs sm:text-sm font-medium truncate">Tránsito</h3>
               </div>
             </div>
 
@@ -240,32 +329,46 @@ export default function ComprasProveedores() {
           </div>
         </CollapsibleMetrics>
 
-        {/* View Switcher & Filtros */}
-        <div className="order-2 sm:order-3 bg-white dark:bg-zinc-900 rounded-2xl sm:rounded-t-3xl border border-zinc-100 dark:border-zinc-800 p-3.5 sm:p-4 flex flex-col md:flex-row justify-between items-center gap-3 mb-4 sm:mb-0 shadow-sm">
-          <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl w-full md:w-auto">
+        {/* Controles: Buscador a la izquierda expandido y Selector de Pestañas a la derecha */}
+        <div className="order-2 sm:order-3 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 p-2.5 sm:p-3 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 mb-4 shadow-sm">
+          {/* Buscador a la izquierda más largo */}
+          <div className="relative flex-1 min-w-[220px]">
+            <input 
+              type="text" 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={tab === 'proveedores' ? "Buscar proveedor..." : "Buscar orden..."} 
+              className="w-full h-10 pl-10 pr-9 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/70 focus:bg-white dark:focus:bg-zinc-800 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-xs"
+            />
+            <svg className="w-4 h-4 absolute left-3.5 top-3 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="w-5 h-5 rounded-full bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 flex items-center justify-center text-zinc-500 dark:text-zinc-300 hover:text-zinc-800 dark:hover:text-zinc-100 text-[10px] font-bold absolute right-3 top-2.5 transition cursor-pointer"
+                title="Limpiar búsqueda"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Selector de Pestañas a la derecha */}
+          <div className="flex bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-xl shrink-0 w-full md:w-auto">
             <button 
               onClick={() => setTab("proveedores")}
-              className={`flex-1 md:flex-none px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${tab === 'proveedores' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+              className={`flex-1 md:flex-initial px-4 sm:px-5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${tab === 'proveedores' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
             >
               Proveedores ({proveedores.length})
             </button>
             <button 
               onClick={() => setTab("ordenes")}
-              className={`flex-1 md:flex-none px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${tab === 'ordenes' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+              className={`flex-1 md:flex-initial px-4 sm:px-5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${tab === 'ordenes' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
             >
               Órdenes de Compra ({ordenes.length})
             </button>
-          </div>
-          
-          <div className="relative w-full md:w-72">
-            <input 
-              type="text" 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={tab === 'proveedores' ? "Buscar proveedor o RUC..." : "Buscar orden OC-..."} 
-              className="w-full h-11 md:h-10 pl-10 pr-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-base sm:text-sm outline-none focus:border-indigo-500"
-            />
-            <svg className="w-4 h-4 absolute left-3.5 top-3.5 md:top-3 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
           </div>
         </div>
 
@@ -311,12 +414,14 @@ export default function ComprasProveedores() {
                         {bal > 0 && (
                           <button
                             type="button"
-                            onClick={() => handlePayBalance(row)}
-                            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 active:scale-95 transition-all cursor-pointer font-bold text-xs"
-                            title="Pagar Saldo"
-                            aria-label="Pagar Saldo"
+                            onClick={() => openPayModal(row)}
+                            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 active:scale-95 transition-all cursor-pointer"
+                            title="Pagar"
+                            aria-label="Pagar"
                           >
-                            💰
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
                           </button>
                         )}
                         <button
@@ -332,7 +437,7 @@ export default function ComprasProveedores() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDelete(row.id, "proveedor")}
+                          onClick={() => confirmDelete(row.id, "proveedor", row.name)}
                           className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-rose-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95 transition-all cursor-pointer"
                           title="Eliminar Proveedor"
                           aria-label="Eliminar Proveedor"
@@ -407,10 +512,10 @@ export default function ComprasProveedores() {
                       {row.status !== 'Recibido' && (
                         <button
                           type="button"
-                          onClick={() => handleMarkReceived(row)}
-                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 active:scale-95 transition-all cursor-pointer font-bold text-xs"
-                          title="Marcar como Recibido"
-                          aria-label="Marcar como Recibido"
+                          onClick={() => openReceiveModal(row)}
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 active:scale-95 transition-all cursor-pointer font-bold text-sm"
+                          title="Recibir"
+                          aria-label="Recibir"
                         >
                           ✓
                         </button>
@@ -428,7 +533,7 @@ export default function ComprasProveedores() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDelete(row.id, "orden")}
+                        onClick={() => confirmDelete(row.id, "orden", `Orden #${row.orderNumber}`)}
                         className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-zinc-500 hover:text-rose-600 bg-zinc-100 dark:bg-zinc-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 active:scale-95 transition-all cursor-pointer"
                         title="Eliminar Orden"
                         aria-label="Eliminar Orden"
@@ -517,9 +622,9 @@ export default function ComprasProveedores() {
                             <div className="flex items-center justify-center gap-1.5">
                               {bal > 0 && (
                                 <button
-                                  onClick={() => handlePayBalance(row)}
-                                  className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 transition-all active:scale-95 flex items-center justify-center shadow-xs"
-                                  title="Liquidar Saldo (Marcar Pagado)"
+                                  onClick={() => openPayModal(row)}
+                                  className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 transition-all active:scale-95 flex items-center justify-center shadow-xs cursor-pointer"
+                                  title="Pagar"
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                 </button>
@@ -532,7 +637,7 @@ export default function ComprasProveedores() {
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                               </button>
                               <button
-                                onClick={() => handleDelete(row.id, "proveedor")}
+                                onClick={() => confirmDelete(row.id, "proveedor", row.name)}
                                 className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
                                 title="Eliminar Proveedor"
                               >
@@ -570,9 +675,9 @@ export default function ComprasProveedores() {
                           <div className="flex items-center justify-center gap-1.5">
                             {row.status !== 'Recibido' && (
                               <button
-                                onClick={() => handleMarkReceived(row)}
-                                className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 transition-all active:scale-95 flex items-center justify-center shadow-xs"
-                                title="Marcar como Recibido"
+                                onClick={() => openReceiveModal(row)}
+                                className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 transition-all active:scale-95 flex items-center justify-center shadow-xs cursor-pointer"
+                                title="Recibir"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
                               </button>
@@ -585,7 +690,7 @@ export default function ComprasProveedores() {
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                             </button>
                             <button
-                              onClick={() => handleDelete(row.id, "orden")}
+                              onClick={() => confirmDelete(row.id, "orden", `Orden #${row.orderNumber}`)}
                               className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-xs"
                               title="Eliminar Orden"
                             >
@@ -610,19 +715,19 @@ export default function ComprasProveedores() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl max-w-md w-full p-5 sm:p-6 border border-zinc-200 dark:border-zinc-800 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white mb-4">
-              {editingItem ? "Editar Registro" : form.docType === "proveedor" ? "Nuevo Proveedor" : "Nueva Orden de Compra"}
+              {editingItem ? "Editar" : form.docType === "proveedor" ? "Proveedor" : "Orden"}
             </h2>
             <form onSubmit={handleSave} className="space-y-4">
               {form.docType === "proveedor" ? (
                 <>
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-500 mb-1">Razón Social del Proveedor</label>
+                    <label className="block text-xs font-semibold text-zinc-500 mb-1">Proveedor</label>
                     <input
                       required
                       type="text"
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      placeholder="Importadora AutoParts Cía. Ltda."
+                      placeholder="Nombre o empresa"
                       className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                     />
                   </div>
@@ -634,17 +739,18 @@ export default function ComprasProveedores() {
                         type="text"
                         value={form.ruc}
                         onChange={(e) => setForm({ ...form, ruc: e.target.value })}
-                        placeholder="0991234567001"
+                        placeholder="1792345678001"
                         className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-zinc-500 mb-1">Saldo por Pagar ($)</label>
+                      <label className="block text-xs font-semibold text-zinc-500 mb-1">Saldo</label>
                       <input
                         type="number"
                         step="0.01"
                         value={form.balance}
                         onChange={(e) => setForm({ ...form, balance: e.target.value })}
+                        placeholder="0.00"
                         className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                       />
                     </div>
@@ -657,7 +763,7 @@ export default function ComprasProveedores() {
                         type="text"
                         value={form.contact}
                         onChange={(e) => setForm({ ...form, contact: e.target.value })}
-                        placeholder="Mario Valdés"
+                        placeholder="Nombre contacto"
                         className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                       />
                     </div>
@@ -667,18 +773,18 @@ export default function ComprasProveedores() {
                         type="email"
                         value={form.email}
                         onChange={(e) => setForm({ ...form, email: e.target.value })}
-                        placeholder="ventas@autoparts.com"
+                        placeholder="correo@ejemplo.com"
                         className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-500 mb-1">Categorías (separadas por coma)</label>
+                    <label className="block text-xs font-semibold text-zinc-500 mb-1">Categorías</label>
                     <input
                       type="text"
                       value={form.categories}
                       onChange={(e) => setForm({ ...form, categories: e.target.value })}
-                      placeholder="Lubricantes, Filtros, Frenos"
+                      placeholder="Lubricantes, Filtros..."
                       className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                     />
                   </div>
@@ -690,33 +796,41 @@ export default function ComprasProveedores() {
                     <input
                       required
                       type="text"
+                      list="proveedores-datalist"
                       value={form.supplierName}
                       onChange={(e) => setForm({ ...form, supplierName: e.target.value })}
-                      placeholder="Importadora AutoParts Cía. Ltda."
+                      placeholder="Proveedor..."
                       className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                     />
+                    <datalist id="proveedores-datalist">
+                      {proveedores.map((p) => (
+                        <option key={p.id} value={p.name}>
+                          {p.ruc ? `RUC: ${p.ruc}` : ""}
+                        </option>
+                      ))}
+                    </datalist>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-zinc-500 mb-1">Fecha Esperada</label>
+                      <label className="block text-xs font-semibold text-zinc-500 mb-1">Fecha</label>
                       <input
                         required
                         type="text"
                         value={form.expectedDate}
                         onChange={(e) => setForm({ ...form, expectedDate: e.target.value })}
-                        placeholder="Mañana"
+                        placeholder="DD/MM/AAAA"
                         className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-zinc-500 mb-1">Total ($)</label>
+                      <label className="block text-xs font-semibold text-zinc-500 mb-1">Total</label>
                       <input
                         required
                         type="number"
                         step="0.01"
                         value={form.total}
                         onChange={(e) => setForm({ ...form, total: e.target.value })}
-                        placeholder="450.00"
+                        placeholder="0.00"
                         className="w-full h-11 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm"
                       />
                     </div>
@@ -753,6 +867,157 @@ export default function ComprasProveedores() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación para Eliminar */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                Eliminar
+              </h3>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-800">
+              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                {deleteConfirm.name}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                disabled={isDeleting}
+                className="h-10 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-700 dark:text-zinc-300 disabled:opacity-50 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteDelete}
+                disabled={isDeleting}
+                className="h-10 px-5 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-sm font-bold transition-all shadow-md shadow-rose-600/20 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+              >
+                {isDeleting ? "Eliminando..." : "Eliminar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Pagar */}
+      {payModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                Pagar
+              </h3>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate pr-2">
+                {payModal.name}
+              </p>
+              <span className="text-xs font-mono font-bold text-rose-600 dark:text-rose-400 shrink-0">
+                ${payModal.balance.toFixed(2)}
+              </span>
+            </div>
+
+            <form onSubmit={handleExecutePay} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 mb-1">Monto</label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-2.5 text-zinc-400 font-mono text-sm font-semibold">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    max={payModal.balance}
+                    value={payModal.amount}
+                    onChange={(e) => setPayModal({ ...payModal, amount: e.target.value })}
+                    required
+                    autoFocus
+                    className="w-full h-11 pl-8 pr-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-base sm:text-sm font-mono font-bold text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setPayModal(null)}
+                  disabled={isPaying}
+                  className="h-10 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-700 dark:text-zinc-300 disabled:opacity-50 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isPaying}
+                  className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-sm font-bold transition-all shadow-md shadow-emerald-600/20 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                >
+                  {isPaying ? "Pagando..." : "Pagar"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Recibir */}
+      {receiveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                Recibir
+              </h3>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-800">
+              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                #{receiveModal.orderNumber}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setReceiveModal(null)}
+                disabled={isReceiving}
+                className="h-10 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-700 dark:text-zinc-300 disabled:opacity-50 cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteReceive}
+                disabled={isReceiving}
+                className="h-10 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-sm font-bold transition-all shadow-md shadow-emerald-600/20 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+              >
+                {isReceiving ? "Recibiendo..." : "Recibir"}
+              </button>
+            </div>
           </div>
         </div>
       )}

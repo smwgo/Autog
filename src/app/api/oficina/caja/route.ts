@@ -1,119 +1,156 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@/lib/prisma";
 
-async function ensureCajaTables() {
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "FinancialTransaction" (
-      "id" TEXT NOT NULL PRIMARY KEY,
-      "dateLabel" TEXT NOT NULL,
-      "description" TEXT NOT NULL,
-      "category" TEXT NOT NULL DEFAULT 'Ventas',
-      "reference" TEXT NOT NULL,
-      "amount" DECIMAL(12,2) NOT NULL DEFAULT 0,
-      "isIncome" BOOLEAN NOT NULL DEFAULT true,
-      "method" TEXT NOT NULL DEFAULT 'Efectivo',
-      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-}
-
 export async function GET() {
   try {
     const data = await withRetry(async () => {
-      await ensureCajaTables();
+      let defaultUserName = "POS";
+      try {
+        const defaultUser = await prisma.user.findFirst({
+          select: { name: true },
+          orderBy: { createdAt: "asc" },
+        });
+        if (defaultUser?.name) defaultUserName = defaultUser.name;
+      } catch {}
 
-      let activeRegister = await prisma.cashRegister.findFirst({
-        where: { status: "ABIERTA" },
+      const rawSessions = await prisma.cashRegister.findMany({
         orderBy: { openedAt: "desc" },
+        include: { movements: true },
       });
 
-      if (!activeRegister) {
-        activeRegister = await prisma.cashRegister.findFirst({
-          orderBy: { openedAt: "desc" },
-        });
-      }
+      const sessions = rawSessions.map((s) => {
+        let cashier = defaultUserName;
+        if (s.notes && s.notes.includes("Cajero:")) {
+          cashier = s.notes.split("Cajero:")[1].trim();
+        } else if (s.notes && s.notes.includes("por ")) {
+          cashier = s.notes.split("por ")[1].trim();
+        }
 
-      if (!activeRegister) {
-        activeRegister = await prisma.cashRegister.create({
-          data: {
-            sessionNumber: `CAJ-${Math.floor(1000 + Math.random() * 9000)}`,
-            status: "ABIERTA",
-            initialCash: 100.00,
-            notes: "Apertura de turno por Ana Torres",
-          }
-        });
-      }
+        const initialCash = Number(s.initialCash || 0);
+        const totalSalesCash = Number(s.totalSalesCash || 0);
+        const totalSalesCard = Number(s.totalSalesCard || 0);
+        const totalSalesTransfer = Number(s.totalSalesTransfer || 0);
+        const totalSales = totalSalesCash + totalSalesCard + totalSalesTransfer;
+        const totalExpenses = Number(s.totalExpenses || 0);
+        const declaredCash = s.declaredCash !== null && s.declaredCash !== undefined ? Number(s.declaredCash) : null;
+        const differenceCash = s.differenceCash !== null && s.differenceCash !== undefined ? Number(s.differenceCash) : null;
 
-      const transactions: any[] = await prisma.$queryRawUnsafe(`SELECT * FROM "FinancialTransaction" ORDER BY "createdAt" DESC`);
-      return { register: activeRegister, transactions };
+        return {
+          id: s.id,
+          sessionNumber: s.sessionNumber,
+          status: s.status,
+          cashier,
+          branch: s.branch || "Principal",
+          openedAt: s.openedAt,
+          closedAt: s.closedAt,
+          initialCash,
+          totalSalesCash,
+          totalSalesCard,
+          totalSalesTransfer,
+          totalSales,
+          totalExpenses,
+          declaredCash,
+          differenceCash,
+          notes: s.notes,
+          movements: (s.movements || []).map((m) => ({
+            id: m.id,
+            type: m.type,
+            amount: Number(m.amount || 0),
+            reason: m.reason,
+            createdAt: m.createdAt,
+          })),
+        };
+      });
+
+      const totalSesiones = sessions.length;
+      const abiertas = sessions.filter((s) => s.status === "ABIERTA").length;
+      const cerradas = sessions.filter((s) => s.status === "CERRADA").length;
+      const ventasTotal = sessions.reduce((acc, s) => acc + s.totalSales, 0);
+      const fondoTotal = sessions.reduce((acc, s) => acc + s.initialCash, 0);
+
+      return {
+        sessions,
+        stats: {
+          totalSesiones,
+          abiertas,
+          cerradas,
+          ventasTotal,
+          fondoTotal,
+        },
+      };
     });
 
     return NextResponse.json(data);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Error al cargar caja" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Error al cargar cajas" }, { status: 500 });
   }
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { action } = body; // "movement" | "toggle_register"
+    const created = await withRetry(async () => {
+      const sessionNumber = body.sessionNumber || `CAJ-${Math.floor(1000 + Math.random() * 9000)}`;
+      const cashierName = body.cashier || "Administrador";
+      const notes = body.notes ? `${body.notes} (Cajero: ${cashierName})` : `Apertura por ${cashierName}`;
 
-    const result = await withRetry(async () => {
-      await ensureCajaTables();
+      const reg = await prisma.cashRegister.create({
+        data: {
+          sessionNumber,
+          status: body.status || "ABIERTA",
+          branch: body.branch || "Principal",
+          initialCash: Number(body.initialCash || 0),
+          notes,
+        },
+      });
 
-      if (action === "toggle_register") {
-        const current = await prisma.cashRegister.findFirst({ orderBy: { openedAt: "desc" } });
-        if (current && current.status === "ABIERTA") {
-          const closed = await prisma.cashRegister.update({
-            where: { id: current.id },
-            data: {
-              status: "CERRADA",
-              closedAt: new Date(),
-              declaredCash: body.declaredCash ? Number(body.declaredCash) : 485.50,
-              notes: body.notes || "Cierre y cuadre realizado desde Oficina",
-            }
-          });
-          return { register: closed };
-        } else {
-          const opened = await prisma.cashRegister.create({
-            data: {
-              sessionNumber: `CAJ-${Math.floor(1000 + Math.random() * 9000)}`,
-              status: "ABIERTA",
-              initialCash: Number(body.initialCash || 100),
-              notes: body.notes || "Apertura de turno desde Oficina",
-            }
-          });
-          return { register: opened };
-        }
-      }
-
-      const id = `ft_${Date.now()}`;
-      const nowTime = new Date().toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" });
-      const isIncome = body.type !== "EGRESO";
-      const amount = Number(body.amount || 0);
-
-      await prisma.$executeRawUnsafe(
-        `INSERT INTO "FinancialTransaction" ("id", "dateLabel", "description", "category", "reference", "amount", "isIncome", "method", "updatedAt")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)`,
-        id,
-        body.dateLabel || nowTime,
-        body.description || "Movimiento Manual",
-        body.category || (isIncome ? "Ventas" : "Operativos"),
-        body.reference || `MOV-${Math.floor(100 + Math.random() * 900)}`,
-        amount,
-        isIncome,
-        body.method || "Efectivo"
-      );
-
-      const rows: any[] = await prisma.$queryRawUnsafe(`SELECT * FROM "FinancialTransaction" WHERE "id" = $1`, id);
-      return { transaction: rows[0] };
+      return {
+        ...reg,
+        initialCash: Number(reg.initialCash || 0),
+      };
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json(created);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Error al registrar en caja" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Error al crear caja en Neon" }, { status: 500 });
+  }
+}
+
+export async function PUT(req: Request) {
+  try {
+    const body = await req.json();
+    const { id } = body;
+    if (!id) return NextResponse.json({ error: "ID requerido" }, { status: 400 });
+
+    const updated = await withRetry(async () => {
+      const dataToUpdate: any = {};
+      if (body.status) {
+        dataToUpdate.status = body.status;
+        if (body.status === "CERRADA" && !body.closedAt) {
+          dataToUpdate.closedAt = new Date();
+        } else if (body.status === "ABIERTA") {
+          dataToUpdate.closedAt = null;
+        }
+      }
+      if (body.branch) dataToUpdate.branch = body.branch;
+      if (body.notes !== undefined) dataToUpdate.notes = body.notes;
+      if (body.initialCash !== undefined) dataToUpdate.initialCash = Number(body.initialCash);
+      if (body.declaredCash !== undefined) dataToUpdate.declaredCash = Number(body.declaredCash);
+
+      const reg = await prisma.cashRegister.update({
+        where: { id },
+        data: dataToUpdate,
+      });
+
+      return {
+        ...reg,
+        initialCash: Number(reg.initialCash || 0),
+      };
+    });
+
+    return NextResponse.json(updated);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || "Error al actualizar caja en Neon" }, { status: 500 });
   }
 }
 
@@ -124,10 +161,21 @@ export async function DELETE(req: Request) {
     if (!id) return NextResponse.json({ error: "ID requerido" }, { status: 400 });
 
     await withRetry(async () => {
-      await prisma.$executeRawUnsafe(`DELETE FROM "FinancialTransaction" WHERE "id" = $1`, id);
+      // 1. Eliminar movimientos asociados
+      try {
+        await prisma.cashMovement.deleteMany({
+          where: { cashRegisterId: id },
+        });
+      } catch {}
+
+      // 2. Eliminar sesión de caja
+      await prisma.cashRegister.delete({
+        where: { id },
+      });
     });
+
     return NextResponse.json({ ok: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Error al eliminar movimiento" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Error al eliminar caja en Neon" }, { status: 500 });
   }
 }

@@ -203,16 +203,23 @@ export default function CitasAgenda() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar esta cita de la agenda?")) return;
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; clientName: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleExecuteDelete = async () => {
+    if (!deleteConfirm) return;
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/oficina/agenda?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      const res = await fetch(`/api/oficina/agenda?id=${encodeURIComponent(deleteConfirm.id)}`, { method: "DELETE" });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || "No se pudo eliminar la cita.");
+      setDeleteConfirm(null);
       await loadData();
     } catch (deleteError) {
       console.error("Error al eliminar la cita:", deleteError);
       setError(deleteError instanceof Error ? deleteError.message : "No se pudo eliminar la cita.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -250,7 +257,7 @@ export default function CitasAgenda() {
             </Link>
             <div>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
-                Agenda de citas
+                Agenda
               </h1>
             </div>
           </div>
@@ -409,7 +416,7 @@ export default function CitasAgenda() {
                       Editar
                     </button>
                     <button
-                      onClick={() => handleDelete(row.id)}
+                      onClick={() => setDeleteConfirm({ id: row.id, clientName: row.clientName || "Cita" })}
                       className="px-3 py-2 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold active:scale-95"
                       title="Eliminar cita"
                     >
@@ -500,7 +507,7 @@ export default function CitasAgenda() {
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                         </button>
                         <button
-                          onClick={() => handleDelete(row.id)}
+                          onClick={() => setDeleteConfirm({ id: row.id, clientName: row.clientName || "Cita" })}
                           className="p-1.5 text-zinc-400 hover:text-rose-600 transition-colors"
                           title="Eliminar Cita"
                         >
@@ -523,7 +530,7 @@ export default function CitasAgenda() {
             <div className="w-12 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto mb-4 sm:hidden" />
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white">
-                {editingItem ? "Editar cita" : "Agendar nueva cita"}
+                {editingItem ? "Editar" : "Agendar"}
               </h2>
               <button
                 type="button"
@@ -665,6 +672,45 @@ export default function CitasAgenda() {
           </div>
         </div>
       )}
+
+      {/* MODAL ELIMINAR */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-[#0f141d] border border-zinc-800 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <h3 className="text-base font-bold text-white">Eliminar</h3>
+            </div>
+
+            <p className="text-sm text-zinc-300">
+              ¿Eliminar <span className="font-bold text-white">{deleteConfirm.clientName}</span>?
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                className="h-10 rounded-xl border border-zinc-700 text-xs font-semibold hover:bg-zinc-800 transition cursor-pointer text-zinc-300"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleExecuteDelete}
+                className="h-10 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold active:scale-95 disabled:opacity-50 transition cursor-pointer"
+              >
+                {isDeleting ? "..." : "Eliminar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <OficinaMobileNav />
     </div>
   );

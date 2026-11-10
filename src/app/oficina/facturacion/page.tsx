@@ -4,10 +4,164 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { OficinaMobileNav } from "@/components/OficinaMobileNav";
 import { CollapsibleMetrics } from "@/components/CollapsibleMetrics";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 
 type PeriodoFiltro = "todos" | "semana" | "quincena" | "mes";
 type EstadoFiltro = "todos" | "PENDIENTE_ENVIO" | "AUTORIZADO" | "DEVUELTA" | "NO_ENVIAR";
+
+function ModernFilterDropdown<T extends string>({
+  label,
+  icon,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  value: T;
+  options: {
+    value: T;
+    label: string;
+    shortLabel?: string;
+    sublabel?: string;
+    badge?: number;
+    badgeColor?: "amber" | "emerald" | "rose" | "zinc" | "purple";
+  }[];
+  onChange: (val: T) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  const selected = options.find((o) => o.value === value) || options[0];
+  const isDefault = value === "todos";
+  const displayLabel = isDefault ? label : (selected?.shortLabel || selected?.label || label);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className={`h-10 px-3.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-xs ${
+          !isDefault
+            ? "border-purple-500/50 bg-purple-500/10 text-purple-600 dark:text-purple-300 ring-1 ring-purple-500/25"
+            : "border-zinc-200/90 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-200 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        }`}
+      >
+        <span className="shrink-0 text-zinc-500 dark:text-zinc-400 flex items-center">{icon}</span>
+        <span className="font-semibold">{displayLabel}</span>
+        {selected?.badge !== undefined && selected.badge > 0 && (
+          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400">
+            {selected.badge}
+          </span>
+        )}
+        <svg
+          className={`w-3.5 h-3.5 shrink-0 text-zinc-400 transition-transform duration-200 ${
+            open ? "rotate-180" : ""
+          }`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 w-64 rounded-2xl border border-zinc-200/90 dark:border-zinc-700/80 bg-white dark:bg-[#121824] p-1.5 shadow-2xl shadow-zinc-900/15 dark:shadow-black/70 backdrop-blur-xl z-50 animate-in fade-in zoom-in-95 duration-150">
+          <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-zinc-400 border-b border-zinc-100 dark:border-zinc-800/80 mb-1 flex items-center justify-between">
+            <span>Filtrar por {label}</span>
+            {!isDefault && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChange(options[0].value);
+                  setOpen(false);
+                }}
+                className="text-purple-600 dark:text-purple-400 hover:underline font-normal capitalize"
+              >
+                Restablecer
+              </button>
+            )}
+          </div>
+          <div className="space-y-0.5">
+            {options.map((opt) => {
+              const active = opt.value === value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.value);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition cursor-pointer ${
+                    active
+                      ? "bg-purple-600/10 text-purple-600 dark:text-purple-400 font-bold"
+                      : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/70"
+                  }`}
+                >
+                  <div className="flex flex-col min-w-0 pr-2">
+                    <span className="truncate">{opt.label}</span>
+                    {opt.sublabel && (
+                      <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-normal truncate">
+                        {opt.sublabel}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {opt.badge !== undefined && opt.badge > 0 && (
+                      <span
+                        className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          opt.badgeColor === "amber"
+                            ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                            : opt.badgeColor === "emerald"
+                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                            : opt.badgeColor === "rose"
+                            ? "bg-rose-500/15 text-rose-600 dark:text-rose-400"
+                            : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300"
+                        }`}
+                      >
+                        {opt.badge}
+                      </span>
+                    )}
+                    {active && (
+                      <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                          fillRule="evenodd"
+                          d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.2 7.26a1 1 0 0 1-1.42.003L3.294 9.17a1 1 0 1 1 1.412-1.416l4.086 4.078 6.498-6.548a1 1 0 0 1 1.414.006Z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function FacturacionSRI() {
   const [tab, setTab] = useState<"facturas" | "notas">("facturas");
@@ -22,6 +176,7 @@ export default function FacturacionSRI() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [procesandoLote, setProcesandoLote] = useState(false);
   const [resultadoLote, setResultadoLote] = useState<any | null>(null);
+  const [loteConfirm, setLoteConfirm] = useState<string[] | null>(null);
 
   // Transmisión individual y reintentos
   const [enviandoIndividualId, setEnviandoIndividualId] = useState<string | null>(null);
@@ -32,22 +187,6 @@ export default function FacturacionSRI() {
   const [targetEmail, setTargetEmail] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailMessage, setEmailMessage] = useState<{ text: string; error: boolean } | null>(null);
-
-  // Modal Emisión Manual
-  const [modalOpen, setModalOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    clientName: "",
-    clientRfc: "",
-    clientEmail: "",
-    clientPhone: "",
-    clientAddress: "",
-    concept: "",
-    amount: "",
-    paymentMethod: "Efectivo",
-    enviarInmediatoSri: false,
-    enviarCorreo: false,
-  });
 
   const loadData = async () => {
     setLoading(true);
@@ -236,17 +375,16 @@ export default function FacturacionSRI() {
   };
 
   // Procesar Lote de Facturas al SRI
-  const handleEnviarLoteSri = async (idsAEnviar?: string[]) => {
+  const handleEnviarLoteSri = (idsAEnviar?: string[]) => {
     const ids = idsAEnviar || selectedIds;
-    if (ids.length === 0) {
-      alert("No hay facturas seleccionadas para enviar al SRI.");
-      return;
-    }
+    if (ids.length === 0) return;
+    setLoteConfirm(ids);
+  };
 
-    if (!confirm(`¿Estás seguro de enviar al SRI este lote de ${ids.length} facturas?`)) {
-      return;
-    }
-
+  const handleEjecutarLoteSri = async () => {
+    if (!loteConfirm || loteConfirm.length === 0) return;
+    const ids = loteConfirm;
+    setLoteConfirm(null);
     setProcesandoLote(true);
     setResultadoLote(null);
 
@@ -339,60 +477,6 @@ export default function FacturacionSRI() {
     }
   };
 
-  // Emisión Manual
-  const openNew = () => {
-    setForm({
-      clientName: "",
-      clientRfc: "",
-      clientEmail: "",
-      clientPhone: "",
-      clientAddress: "",
-      concept: "Servicio Automotriz",
-      amount: "",
-      paymentMethod: "Efectivo",
-      enviarInmediatoSri: false,
-      enviarCorreo: false,
-    });
-    setModalOpen(true);
-  };
-
-  const handleEmitirFacturaManual = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      const res = await fetch("/api/oficina/facturacion", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          docType: "factura",
-          clientName: form.clientName || "Consumidor Final",
-          clientRfc: form.clientRfc || "9999999999999",
-          clientEmail: form.clientEmail || undefined,
-          clientPhone: form.clientPhone || undefined,
-          clientAddress: form.clientAddress || undefined,
-          concept: form.concept || "Servicio Automotriz",
-          amount: form.amount,
-          paymentMethod: form.paymentMethod,
-          enviarInmediatoSri: form.enviarInmediatoSri,
-          enviarCorreo: form.enviarCorreo,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || "Error al emitir factura");
-        return;
-      }
-
-      setModalOpen(false);
-      await loadData();
-    } catch (err: any) {
-      alert(err.message || "Error al conectar con el servidor");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950 font-sans pb-24 md:pb-0">
       <Header />
@@ -413,19 +497,7 @@ export default function FacturacionSRI() {
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                 Factura Electrónica
               </h1>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Control de emisión SRI: decide si enviar individual o por lote (Semana, Quincena o Mes)
-              </p>
             </div>
-          </div>
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
-            <button
-              onClick={openNew}
-              className="w-full sm:w-auto h-10 px-4 rounded-xl bg-purple-600 text-white font-semibold text-xs sm:text-sm hover:bg-purple-700 active:scale-[0.99] transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
-              Nueva Factura Manual
-            </button>
           </div>
         </div>
 
@@ -438,7 +510,7 @@ export default function FacturacionSRI() {
               </div>
               <div className="min-w-0">
                 <p className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white truncate">${totalAutorizado.toFixed(2)}</p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs font-medium truncate">Autorizado SRI</h3>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs font-medium truncate">Autorizado</h3>
               </div>
             </div>
             
@@ -448,7 +520,7 @@ export default function FacturacionSRI() {
               </div>
               <div className="min-w-0">
                 <p className="text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-400">{countPendientesEnvio}</p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs font-medium truncate">Pendientes Envío</h3>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs font-medium truncate">Pendientes</h3>
               </div>
             </div>
 
@@ -458,7 +530,7 @@ export default function FacturacionSRI() {
               </div>
               <div className="min-w-0">
                 <p className="text-lg sm:text-xl font-bold text-rose-600 dark:text-rose-400">{countRechazados}</p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs font-medium truncate">Rechazados SRI</h3>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs font-medium truncate">Rechazados</h3>
               </div>
             </div>
 
@@ -468,84 +540,112 @@ export default function FacturacionSRI() {
               </div>
               <div className="min-w-0">
                 <p className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white">{countNoEnviar}</p>
-                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs font-medium truncate">Excluidos (No Enviar)</h3>
+                <h3 className="text-zinc-500 dark:text-zinc-400 text-xs font-medium truncate">Excluidos</h3>
               </div>
             </div>
           </div>
         </CollapsibleMetrics>
 
-        {/* View Switcher, Periodos & Filtros */}
-        <div className="order-2 sm:order-3 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 p-3.5 mb-4 shadow-sm space-y-3">
-          <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
-            {/* Pestañas Principales */}
-            <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
-              <button 
-                onClick={() => setTab("facturas")}
-                className={`flex-1 md:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${tab === 'facturas' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
-              >
-                Facturas ({facturas.length})
-              </button>
-              <button 
-                onClick={() => setTab("notas")}
-                className={`flex-1 md:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${tab === 'notas' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
-              >
-                Notas de Crédito ({notas.length})
-              </button>
-            </div>
-
-            {/* Buscador */}
-            <div className="relative flex-grow md:max-w-xs">
-              <input 
-                type="text" 
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar cliente, RUC, o #..." 
-                className="w-full h-9 pl-9 pr-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-transparent text-xs outline-none focus:border-purple-500"
-              />
-              <svg className="w-4 h-4 absolute left-3 top-2.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            </div>
+        {/* Barra Unificada: Pestañas, Buscador Expandido y Filtros Desplegables Minimalistas */}
+        <div className="order-2 sm:order-3 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 p-2.5 sm:p-3 mb-4 shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center gap-2.5 sm:gap-3">
+          {/* Pestañas Principales */}
+          <div className="flex bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-xl shrink-0">
+            <button 
+              onClick={() => setTab("facturas")}
+              className={`flex-1 lg:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${tab === 'facturas' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+            >
+              Facturas ({facturas.length})
+            </button>
+            <button 
+              onClick={() => setTab("notas")}
+              className={`flex-1 lg:flex-none px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${tab === 'notas' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+            >
+              Notas ({notas.length})
+            </button>
           </div>
 
-          {/* Filtros de Decisión SRI: Periodo (Lote) y Estado */}
-          {tab === "facturas" && (
-            <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-zinc-100 dark:border-zinc-800/80 text-xs">
-              {/* Filtro por Periodo */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-zinc-500 font-semibold text-[11px] uppercase tracking-wider mr-1">
-                  📅 Periodo Lote:
-                </span>
-                {(["todos", "semana", "quincena", "mes"] as PeriodoFiltro[]).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPeriodo(p)}
-                    className={`px-3 py-1 rounded-lg font-medium transition-all cursor-pointer ${
-                      periodo === p
-                        ? "bg-purple-600 text-white shadow-xs font-bold"
-                        : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200"
-                    }`}
-                  >
-                    {p === "todos" ? "Todos" : p === "semana" ? "Esta Semana" : p === "quincena" ? "Esta Quincena" : "Este Mes"}
-                  </button>
-                ))}
-              </div>
+          {/* Buscador Más Largo y Flexible */}
+          <div className="relative flex-1 min-w-[240px]">
+            <input 
+              type="text" 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar..." 
+              className="w-full h-10 pl-10 pr-9 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/70 focus:bg-white dark:focus:bg-zinc-800 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all shadow-xs"
+            />
+            <svg className="w-4 h-4 absolute left-3.5 top-3 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="w-5 h-5 rounded-full bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 flex items-center justify-center text-zinc-500 dark:text-zinc-300 hover:text-zinc-800 dark:hover:text-zinc-100 text-[10px] font-bold absolute right-3 top-2.5 transition cursor-pointer"
+                title="Limpiar búsqueda"
+              >
+                ✕
+              </button>
+            )}
+          </div>
 
-              {/* Filtro por Estado SRI */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-zinc-500 font-semibold text-[11px] uppercase tracking-wider mr-1">
-                  ⚡ Estado:
-                </span>
-                <select
-                  value={estadoFiltro}
-                  onChange={(e) => setEstadoFiltro(e.target.value as EstadoFiltro)}
-                  className="h-8 px-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800 text-xs text-zinc-800 dark:text-zinc-200 font-medium outline-none"
+          {/* Filtros Desplegables Modernos y Minimalistas */}
+          {tab === "facturas" && (
+            <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
+              {/* Dropdown Periodo Lote */}
+              <ModernFilterDropdown
+                label="Periodo"
+                icon={
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" strokeWidth="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" strokeWidth="2" />
+                    <line x1="8" y1="2" x2="8" y2="6" strokeWidth="2" />
+                    <line x1="3" y1="10" x2="21" y2="10" strokeWidth="2" />
+                  </svg>
+                }
+                value={periodo}
+                options={[
+                  { value: "todos", label: "Todos los periodos", shortLabel: "Periodo", sublabel: "Sin restricción de fecha" },
+                  { value: "semana", label: "Esta Semana", shortLabel: "Semana", sublabel: "Lunes a Domingo actual" },
+                  { value: "quincena", label: "Esta Quincena", shortLabel: "Quincena", sublabel: "Quincena en curso (1-15 o 16-fin)" },
+                  { value: "mes", label: "Este Mes", shortLabel: "Mes", sublabel: "Mes calendario actual" },
+                ]}
+                onChange={(val) => setPeriodo(val as PeriodoFiltro)}
+              />
+
+              {/* Dropdown Estado SRI */}
+              <ModernFilterDropdown
+                label="Estado"
+                icon={
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                }
+                value={estadoFiltro}
+                options={[
+                  { value: "todos", label: "Todos los estados", shortLabel: "Estado" },
+                  { value: "PENDIENTE_ENVIO", label: "Pendientes de Envío", shortLabel: "Pendientes", badge: countPendientesEnvio, badgeColor: "amber", sublabel: "Listas para enviar al SRI" },
+                  { value: "AUTORIZADO", label: "Autorizadas SRI", shortLabel: "Autorizadas", badgeColor: "emerald", sublabel: "Aprobadas por el SRI" },
+                  { value: "DEVUELTA", label: "Rechazadas", shortLabel: "Rechazadas", badge: countRechazados, badgeColor: "rose", sublabel: "Devueltas o no autorizadas" },
+                  { value: "NO_ENVIAR", label: "Excluidas (No Enviar)", shortLabel: "Excluidas", badge: countNoEnviar, badgeColor: "zinc", sublabel: "Omitidas de la transmisión" },
+                ]}
+                onChange={(val) => setEstadoFiltro(val as EstadoFiltro)}
+              />
+
+              {/* Botón rápido para limpiar filtros activos */}
+              {(periodo !== "todos" || estadoFiltro !== "todos") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPeriodo("todos");
+                    setEstadoFiltro("todos");
+                  }}
+                  className="h-10 px-2.5 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 hover:border-zinc-400 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                  title="Restablecer filtros"
                 >
-                  <option value="todos">Todos los estados</option>
-                  <option value="PENDIENTE_ENVIO">⏳ Pendientes de Envío ({countPendientesEnvio})</option>
-                  <option value="AUTORIZADO">✓ Autorizadas SRI</option>
-                  <option value="DEVUELTA">❌ Rechazadas</option>
-                  <option value="NO_ENVIAR">🚫 Excluidas (No Enviar)</option>
-                </select>
-              </div>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  <span className="hidden xl:inline">Limpiar</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -561,7 +661,7 @@ export default function FacturacionSRI() {
                   onChange={toggleSelectAll}
                   className="w-4 h-4 rounded text-purple-600"
                 />
-                <span>Seleccionar Todas ({selectedIds.length}/{filteredFacturas.length})</span>
+                <span>Todas ({selectedIds.length}/{filteredFacturas.length})</span>
               </label>
 
               {pendientesVisibles.length > 0 && (
@@ -570,7 +670,7 @@ export default function FacturacionSRI() {
                   onClick={seleccionarSoloPendientes}
                   className="text-purple-600 dark:text-purple-400 hover:underline font-semibold text-[11px] cursor-pointer"
                 >
-                  Seleccionar solo pendientes ({pendientesVisibles.length})
+                  Pendientes ({pendientesVisibles.length})
                 </button>
               )}
             </div>
@@ -666,11 +766,7 @@ export default function FacturacionSRI() {
               <div className="p-8 text-center text-sm text-zinc-500 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
                 Cargando documentos...
               </div>
-            ) : filteredFacturas.length === 0 ? (
-              <div className="p-8 text-center text-sm text-zinc-500 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-                No hay comprobantes para el filtro seleccionado.
-              </div>
-            ) : (
+            ) : filteredFacturas.length === 0 ? null : (
               filteredFacturas.map((row) => {
                 const esPendiente =
                   row.estadoSri === "PENDIENTE_ENVIO" ||
@@ -806,12 +902,12 @@ export default function FacturacionSRI() {
                         className="w-4 h-4 rounded text-purple-600 cursor-pointer"
                       />
                     </th>
-                    <th className="py-3 px-4"># Factura</th>
+                    <th className="py-3 px-4">Factura</th>
                     <th className="py-3 px-4">Fecha</th>
-                    <th className="py-3 px-4">Cliente / Identificación</th>
+                    <th className="py-3 px-4">Cliente</th>
                     <th className="py-3 px-4 text-right">Total</th>
-                    <th className="py-3 px-4 text-center">Estado SRI</th>
-                    <th className="py-3 px-4 text-center">Decisión / Envío SRI</th>
+                    <th className="py-3 px-4 text-center">Estado</th>
+                    <th className="py-3 px-4 text-center">Acción</th>
                     <th className="py-3 px-4 text-center">Documentos</th>
                   </tr>
                 </thead>
@@ -820,11 +916,7 @@ export default function FacturacionSRI() {
                     <tr>
                       <td colSpan={8} className="px-6 py-8 text-center text-zinc-500">Cargando comprobantes...</td>
                     </tr>
-                  ) : filteredFacturas.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="px-6 py-8 text-center text-zinc-500">No hay comprobantes para el periodo y filtro seleccionado.</td>
-                    </tr>
-                  ) : (
+                  ) : filteredFacturas.length === 0 ? null : (
                     filteredFacturas.map((row) => {
                       const esPendiente =
                         row.estadoSri === "PENDIENTE_ENVIO" ||
@@ -1077,160 +1169,39 @@ export default function FacturacionSRI() {
         </div>
       )}
 
-      {/* MODAL: Nueva Factura Manual */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-5 sm:p-6 border border-zinc-200 dark:border-zinc-800 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-zinc-900 dark:text-white">
-                  Registrar Factura en Oficina
-                </h2>
-                <p className="text-xs text-zinc-500">
-                  Queda guardada como Pendiente de Envío o se transmite de inmediato
-                </p>
+      {/* MODAL TRANSMITIR SRI LOTE */}
+      {loteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-[#0f141d] border border-zinc-800 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
               </div>
-              <button
-                onClick={() => setModalOpen(false)}
-                className="w-8 h-8 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center text-zinc-400"
-              >
-                ✕
-              </button>
+              <h3 className="text-base font-bold text-white">Transmitir</h3>
             </div>
 
-            <form onSubmit={handleEmitirFacturaManual} className="space-y-3.5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-500 mb-1">RUC / Cédula</label>
-                  <input
-                    required
-                    type="text"
-                    value={form.clientRfc}
-                    onChange={(e) => setForm({ ...form, clientRfc: e.target.value })}
-                    placeholder="1792345678001"
-                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Razón Social / Cliente</label>
-                  <input
-                    required
-                    type="text"
-                    value={form.clientName}
-                    onChange={(e) => setForm({ ...form, clientName: e.target.value })}
-                    placeholder="Consumidor Final o Empresa"
-                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
-                  />
-                </div>
-              </div>
+            <p className="text-sm text-zinc-300">
+              ¿Enviar <span className="font-bold text-white font-mono">{loteConfirm.length}</span> facturas al SRI?
+            </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Correo Electrónico (opcional)</label>
-                  <input
-                    type="email"
-                    value={form.clientEmail}
-                    onChange={(e) => setForm({ ...form, clientEmail: e.target.value })}
-                    placeholder="cliente@mail.com"
-                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Teléfono (opcional)</label>
-                  <input
-                    type="text"
-                    value={form.clientPhone}
-                    onChange={(e) => setForm({ ...form, clientPhone: e.target.value })}
-                    placeholder="0991234567"
-                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-500 mb-1">Concepto / Servicio</label>
-                <input
-                  required
-                  type="text"
-                  value={form.concept}
-                  onChange={(e) => setForm({ ...form, concept: e.target.value })}
-                  placeholder="Mantenimiento preventivo y repuestos"
-                  className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Monto Subtotal ($)</label>
-                  <input
-                    required
-                    type="number"
-                    step="0.01"
-                    value={form.amount}
-                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                    placeholder="100.00"
-                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-transparent text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-500 mb-1">Método de Pago</label>
-                  <select
-                    value={form.paymentMethod}
-                    onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
-                    className="w-full h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm"
-                  >
-                    <option value="Efectivo">Efectivo</option>
-                    <option value="Tarjeta">Tarjeta de Débito / Crédito</option>
-                    <option value="Transferencia">Transferencia Bancaria</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={form.enviarInmediatoSri}
-                    onChange={(e) => setForm({ ...form, enviarInmediatoSri: e.target.checked })}
-                    className="rounded text-purple-600 focus:ring-purple-500"
-                  />
-                  <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                    Transmitir al SRI inmediatamente (desmarcar para dejar pendiente para lote)
-                  </span>
-                </label>
-
-                {form.enviarInmediatoSri && (
-                  <label className="flex items-center gap-2 cursor-pointer select-none pl-5">
-                    <input
-                      type="checkbox"
-                      checked={form.enviarCorreo}
-                      onChange={(e) => setForm({ ...form, enviarCorreo: e.target.checked })}
-                      className="rounded text-purple-600 focus:ring-purple-500 text-xs"
-                    />
-                    <span className="text-[11px] text-zinc-700 dark:text-zinc-300">
-                      Enviar por correo al cliente si se autoriza
-                    </span>
-                  </label>
-                )}
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="h-10 px-4 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="h-10 px-5 rounded-xl bg-purple-600 text-white text-sm font-bold hover:bg-purple-700 disabled:opacity-50 cursor-pointer"
-                >
-                  {saving ? "Guardando..." : "Guardar Factura"}
-                </button>
-              </div>
-            </form>
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setLoteConfirm(null)}
+                className="h-10 rounded-xl border border-zinc-700 text-xs font-semibold hover:bg-zinc-800 transition cursor-pointer text-zinc-300"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleEjecutarLoteSri}
+                className="h-10 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold active:scale-95 transition cursor-pointer"
+              >
+                Transmitir
+              </button>
+            </div>
           </div>
         </div>
       )}

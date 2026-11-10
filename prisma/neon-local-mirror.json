@@ -1569,52 +1569,7 @@
       "passwordHash": "$2b$12$A0iHiV9gpu2wr8qZqCjaEu4YCiSlx45gSm7nXehGVUdQ9PeialgRi"
     }
   ],
-  "cashRegister": [
-    {
-      "id": "cmw2ix7f60000i1g87oc66jfa",
-      "sessionNumber": "CAJ-6507",
-      "status": "ABIERTA",
-      "initialCash": "100",
-      "declaredCash": null,
-      "declaredCard": null,
-      "declaredTransfer": null,
-      "expectedCash": null,
-      "differenceCash": null,
-      "differenceCard": null,
-      "differenceTransfer": null,
-      "totalSalesCash": "69.6",
-      "totalSalesCard": "0",
-      "totalSalesTransfer": "0",
-      "totalExpenses": "0",
-      "notes": "Apertura de turno por Ana Torres",
-      "branch": "PRINCIPAL",
-      "openedAt": "2026-11-04T19:42:39.569Z",
-      "closedAt": null,
-      "movements": []
-    },
-    {
-      "id": "cmw43f0eq00003grdix9prlqm",
-      "sessionNumber": "CAJA-248648",
-      "status": "ABIERTA",
-      "initialCash": "25",
-      "declaredCash": null,
-      "declaredCard": null,
-      "declaredTransfer": null,
-      "expectedCash": "25",
-      "differenceCash": null,
-      "differenceCard": null,
-      "differenceTransfer": null,
-      "totalSalesCash": "0",
-      "totalSalesCard": "0",
-      "totalSalesTransfer": "0",
-      "totalExpenses": "0",
-      "notes": "Cajero: Super Administrador",
-      "branch": "SUCURSAL",
-      "openedAt": "2026-11-05T22:04:08.785Z",
-      "closedAt": null,
-      "movements": []
-    }
-  ],
+  "cashRegister": [],
   "sale": [],
   "clientInvoice": [
     {
@@ -1996,60 +1951,7 @@
       "updatedAt": "2026-11-08T02:26:38.879Z"
     }
   ],
-  "supplier": [
-    {
-      "id": "sup_3",
-      "ruc": "0998765432001",
-      "name": "Distribuidora Eléctrica Motors",
-      "contact": "Carlos Ruiz",
-      "email": "carlos@emotors.com",
-      "phone": "0991122334",
-      "categories": "[\"Eléctrico\",\"Baterías\"]",
-      "balance": "3000",
-      "status": "Activo",
-      "createdAt": "2026-11-04T19:42:41.497Z",
-      "updatedAt": "2026-11-04T19:42:41.497Z"
-    },
-    {
-      "id": "sup_2",
-      "ruc": "1792345678001",
-      "name": "Frenos del Pacífico S.A.",
-      "contact": "Lucía Paredes",
-      "email": "pedidos@frenospac.com",
-      "phone": "022987654",
-      "categories": "[\"Frenos\"]",
-      "balance": "0",
-      "status": "Activo",
-      "createdAt": "2026-11-04T19:42:40.939Z",
-      "updatedAt": "2026-11-04T19:42:40.939Z"
-    },
-    {
-      "id": "sup_4",
-      "ruc": "1798887776001",
-      "name": "Herramientas y Equipos Industriales",
-      "contact": "Ana Torres",
-      "email": "info@herramientasec.com",
-      "phone": "042111222",
-      "categories": "[\"Equipos Taller\"]",
-      "balance": "0",
-      "status": "Activo",
-      "createdAt": "2026-11-04T19:42:41.977Z",
-      "updatedAt": "2026-11-04T19:42:41.977Z"
-    },
-    {
-      "id": "sup_1",
-      "ruc": "0991234567001",
-      "name": "Importadora AutoParts Cía. Ltda.",
-      "contact": "Mario Valdés",
-      "email": "ventas@autoparts.com",
-      "phone": "042345678",
-      "categories": "[\"Lubricantes\",\"Filtros\"]",
-      "balance": "1250",
-      "status": "Activo",
-      "createdAt": "2026-11-04T19:42:40.414Z",
-      "updatedAt": "2026-11-04T19:42:40.414Z"
-    }
-  ],
+  "supplier": [],
   "financialTransaction": [
     {
       "id": "ft_1",
@@ -2155,5 +2057,6 @@
       "smtpFrom": null
     }
   ],
-  "saleItem": []
+  "saleItem": [],
+  "purchaseOrder": []
 }

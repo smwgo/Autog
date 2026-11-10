@@ -208,10 +208,25 @@ export default function OrdenesCotizaciones() {
     await loadData();
   };
 
-  const handleDelete = async (id: string, docType: "cotizacion" | "orden") => {
-    if (!confirm("¿Seguro que deseas eliminar este registro de la base de datos?")) return;
-    await fetch(`/api/oficina/ordenes?id=${id}&docType=${docType}`, { method: "DELETE" });
-    await loadData();
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; docType: "cotizacion" | "orden"; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const confirmDelete = (id: string, docType: "cotizacion" | "orden", name: string) => {
+    setDeleteConfirm({ id, docType, name });
+  };
+
+  const handleExecuteDelete = async () => {
+    if (!deleteConfirm) return;
+    setIsDeleting(true);
+    try {
+      await fetch(`/api/oficina/ordenes?id=${deleteConfirm.id}&docType=${deleteConfirm.docType}`, { method: "DELETE" });
+      setDeleteConfirm(null);
+      await loadData();
+    } catch (e) {
+      console.error("Error al eliminar:", e);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleExport = () => {
@@ -512,7 +527,7 @@ export default function OrdenesCotizaciones() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDelete(row.id, "cotizacion")}
+                          onClick={() => confirmDelete(row.id, "cotizacion", row.quoteNumber)}
                           className="w-10 h-10 rounded-xl flex items-center justify-center text-zinc-400 hover:text-rose-400 bg-zinc-100 dark:bg-zinc-800/80 active:scale-95 cursor-pointer"
                           title="Eliminar"
                         >
@@ -570,7 +585,7 @@ export default function OrdenesCotizaciones() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDelete(row.id, "orden")}
+                        onClick={() => confirmDelete(row.id, "orden", row.orderNumber)}
                         className="w-10 h-10 rounded-xl flex items-center justify-center text-zinc-400 hover:text-rose-400 bg-zinc-100 dark:bg-zinc-800/80 active:scale-95 cursor-pointer"
                         title="Eliminar"
                       >
@@ -662,7 +677,7 @@ export default function OrdenesCotizaciones() {
                                 </svg>
                               </button>
                               <button
-                                onClick={() => handleDelete(row.id, "cotizacion")}
+                                onClick={() => confirmDelete(row.id, "cotizacion", row.quoteNumber)}
                                 className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-rose-500/10 text-zinc-500 hover:text-rose-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
                                 title="Eliminar Cotización"
                               >
@@ -712,7 +727,7 @@ export default function OrdenesCotizaciones() {
                                 </svg>
                               </button>
                               <button
-                                onClick={() => handleDelete(row.id, "orden")}
+                                onClick={() => confirmDelete(row.id, "orden", row.orderNumber)}
                                 className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-rose-500/10 text-zinc-500 hover:text-rose-400 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
                                 title="Eliminar Orden"
                               >
@@ -861,6 +876,44 @@ export default function OrdenesCotizaciones() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ELIMINAR */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-[#0f141d] border border-zinc-800 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <h3 className="text-base font-bold text-white">Eliminar</h3>
+            </div>
+
+            <p className="text-sm text-zinc-300">
+              ¿Eliminar <span className="font-bold text-white font-mono">#{deleteConfirm.name}</span>?
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(null)}
+                className="h-10 rounded-xl border border-zinc-700 text-xs font-semibold hover:bg-zinc-800 transition cursor-pointer text-zinc-300"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleExecuteDelete}
+                className="h-10 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold active:scale-95 disabled:opacity-50 transition cursor-pointer"
+              >
+                {isDeleting ? "..." : "Eliminar"}
+              </button>
+            </div>
           </div>
         </div>
       )}
